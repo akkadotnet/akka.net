@@ -37,7 +37,7 @@ public sealed partial class AkkaSerializerGenerator
 
     private const string AkkaSerializerBaseTypeFullName = "Akka.Serialization.V2.AkkaSerializer";
 
-    private static SerializerInfo? ExtractSerializer(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    private static ExtractedSerializer ExtractSerializer(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -50,7 +50,19 @@ public sealed partial class AkkaSerializerGenerator
         // rejected with CS0579 ("Duplicate 'AkkaSerializer<>' attribute") even though IA and IB
         // differ, so at most one [AkkaSerializer<T>] ever reaches this method. No AKKASG030 is
         // needed for this case.
-        return ExtractSerializerCore(symbol, context.Attributes[0], context.SemanticModel.Compilation);
+        var attribute = context.Attributes[0];
+        var compilation = context.SemanticModel.Compilation;
+        var knownTypes = GetKnownTypes(compilation);
+
+        // One shared builder for every location entry this serializer contributes: its own
+        // attribute, each formatter/closed-generic registration attribute (appended below by
+        // BuildSerializerLocationBag), AND every [AkkaField] property of each closed-generic SCHEMA
+        // this serializer registers (appended inline by ExtractSerializerCore -> ExtractClosedGenericRegistrations
+        // -> ExtractMessageCore, the same inlining ExtractMessage below uses for ordinary messages).
+        var locationEntries = ImmutableArray.CreateBuilder<LocationEntry>();
+        var info = ExtractSerializerCore(symbol, attribute, compilation, knownTypes, locationEntries);
+        BuildSerializerLocationBag(locationEntries, symbol, attribute, info.Key, knownTypes, cancellationToken);
+        return new ExtractedSerializer(info, new LocationBag(locationEntries.ToImmutable()));
     }
 
     /// <summary>
@@ -71,10 +83,15 @@ public sealed partial class AkkaSerializerGenerator
         if (attribute == null)
             return null;
 
-        return ExtractSerializerCore(symbol, attribute, compilation);
+        return ExtractSerializerCore(symbol, attribute, compilation, GetKnownTypes(compilation));
     }
 
-    private static SerializerInfo ExtractSerializerCore(INamedTypeSymbol symbol, AttributeData attribute, Compilation compilation)
+    private static SerializerInfo ExtractSerializerCore(
+        INamedTypeSymbol symbol,
+        AttributeData attribute,
+        Compilation compilation,
+        KnownTypes knownTypes,
+        ImmutableArray<LocationEntry>.Builder? locationEntries = null)
     {
         string? name = null;
         var serializerId = 0;
@@ -99,14 +116,14 @@ public sealed partial class AkkaSerializerGenerator
         var protocolTypeKey = protocolType != null ? TypeKey.FromSymbol(protocolType) : default;
         var protocolTypeIsInterface = protocolType?.TypeKind == TypeKind.Interface;
 
-        var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
-        var formatters = ExtractFormatters(symbol, formatterAttributeType, extendedActorSystemType);
-        var (closedGenericRegistrations, closedGenericSchemas) = ExtractClosedGenericRegistrations(symbol, compilation);
+        var formatters = ExtractFormatters(symbol, knownTypes.FormatterAttribute, extendedActorSystemType);
+        var (closedGenericRegistrations, closedGenericSchemas) = ExtractClosedGenericRegistrations(symbol, compilation, knownTypes, locationEntries);
 
         return new SerializerInfo(
             GetNamespace(symbol),
             symbol.Name,
+            TypeKey.FromSymbol(symbol),
             GetFullyQualifiedTypeName(symbol),
             name ?? string.Empty,
             serializerId,
@@ -174,19 +191,21 @@ public sealed partial class AkkaSerializerGenerator
     /// with no matching schema entry, so AKKASG020 fires instead of the registration silently
     /// vanishing.
     /// </summary>
-    private static (ImmutableArray<ClosedGenericRegistrationInfo> Registrations, ImmutableArray<MessageInfo> Schemas) ExtractClosedGenericRegistrations(INamedTypeSymbol symbol, Compilation compilation)
+    private static (ImmutableArray<ClosedGenericRegistrationInfo> Registrations, ImmutableArray<MessageInfo> Schemas) ExtractClosedGenericRegistrations(
+        INamedTypeSymbol symbol,
+        Compilation compilation,
+        KnownTypes knownTypes,
+        ImmutableArray<LocationEntry>.Builder? locationEntries = null)
     {
-        var genericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
-        if (genericSerializableAttribute == null)
+        if (knownTypes.GenericSerializableAttribute == null)
             return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
         var attributes = symbol.GetAttributes()
-            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, genericSerializableAttribute))
+            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, knownTypes.GenericSerializableAttribute))
             .ToImmutableArray();
         if (attributes.IsEmpty)
             return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
-        var knownTypes = GetKnownTypes(compilation);
         var registrationsBuilder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
         var schemasBuilder = ImmutableArray.CreateBuilder<MessageInfo>();
         foreach (var attribute in attributes)
@@ -225,7 +244,8 @@ public sealed partial class AkkaSerializerGenerator
                 allowEmpty,
                 knownTypes,
                 compilation,
-                definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition));
+                definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition),
+                locationEntries);
             registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty));
             schemasBuilder.Add(message);
         }
@@ -350,7 +370,7 @@ public sealed partial class AkkaSerializerGenerator
         return hasParameterlessCtor ? FormatterCtorKind.Parameterless : FormatterCtorKind.None;
     }
 
-    private static MessageInfo? ExtractMessage(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    private static ExtractedMessage ExtractMessage(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -375,9 +395,10 @@ public sealed partial class AkkaSerializerGenerator
         // as Unsupported and produce a misleading AKKASG003 against the definition.
         if (symbol.IsGenericType)
         {
-            return new MessageInfo(
+            var definitionKey = BuildGenericDefinitionKey(symbol);
+            var definitionInfo = new MessageInfo(
                 symbol.Name,
-                BuildGenericDefinitionKey(symbol),
+                definitionKey,
                 manifest,
                 ImmutableArray<FieldInfo>.Empty,
                 GetProtocolNames(symbol),
@@ -386,9 +407,21 @@ public sealed partial class AkkaSerializerGenerator
                 definitionFullName: GetFullyQualifiedTypeName(symbol),
                 invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
                 constructionPlan: ConstructionPlan.Empty);
+
+            // A generic definition has no fields (see above), so it needs only its own type-level
+            // location entry -- no property walk at all.
+            return new ExtractedMessage(definitionInfo, BuildTypeOnlyLocationBag(symbol, definitionKey));
         }
 
-        return ExtractMessageCore(symbol, TypeKey.FromSymbol(symbol), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+        var key = TypeKey.FromSymbol(symbol);
+
+        // Field-level location capture is INLINED into ExtractMessageCore's own property walk (see
+        // this file's own header comment for why a second full re-walk here would be wasteful); only
+        // the type's own declaration entry is added here, once, up front.
+        var locationEntries = ImmutableArray.CreateBuilder<LocationEntry>();
+        AddLocationEntry(locationEntries, new LocationKey(key, string.Empty), FirstLocationOrNull(symbol.Locations));
+        var info = ExtractMessageCore(symbol, key, manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty, locationEntries);
+        return new ExtractedMessage(info, new LocationBag(locationEntries.ToImmutable()));
     }
 
     /// <summary>
@@ -475,7 +508,8 @@ public sealed partial class AkkaSerializerGenerator
         bool allowEmpty,
         KnownTypes knownTypes,
         Compilation compilation,
-        string definitionFullName)
+        string definitionFullName,
+        ImmutableArray<LocationEntry>.Builder? locationEntries = null)
     {
         var fields = new List<FieldInfo>();
         var fieldSymbols = new List<IPropertySymbol>();
@@ -486,6 +520,16 @@ public sealed partial class AkkaSerializerGenerator
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute));
             if (fieldAttribute == null || fieldAttribute.ConstructorArguments.Length != 1)
                 continue;
+
+            // S6 "locations": captured here, reusing the SAME [AkkaField] check above instead of a
+            // second GetAttributes() walk over every property -- see this file's own header comment.
+            // Every [AkkaField] property gets an entry, valid or structurally invalid alike (the
+            // static/getter checks below can still reject it), so AKKASG028 always finds its site.
+            // For a closed generic construction's SUBSTITUTED member, Locations still resolves back
+            // to the GENERIC DEFINITION's own declared property -- the right site, since the
+            // construction itself has no separate syntax.
+            if (locationEntries != null)
+                AddLocationEntry(locationEntries, new LocationKey(key, member.Name), FirstLocationOrNull(member.Locations));
 
             // A static or getter-inaccessible [AkkaField] property can never be read by the
             // generated Write path (`message.Property`) -- record it as invalid (AKKASG028) instead
@@ -1195,6 +1239,8 @@ public sealed partial class AkkaSerializerGenerator
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
             UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
+            FormatterAttribute = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
+            GenericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
             ActorRef = compilation.GetTypeByMetadataName("Akka.Actor.IActorRef");
@@ -1220,6 +1266,13 @@ public sealed partial class AkkaSerializerGenerator
         public INamedTypeSymbol? FieldAttribute { get; }
         public INamedTypeSymbol? UnionAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
+
+        /// <summary>The open <c>AkkaSerializerFormatterAttribute&lt;TTarget, TFormatter&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractFormatters"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
+        public INamedTypeSymbol? FormatterAttribute { get; }
+
+        /// <summary>The open <c>AkkaSerializableAttribute&lt;TMessage&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractClosedGenericRegistrations"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
+        public INamedTypeSymbol? GenericSerializableAttribute { get; }
+
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
         public INamedTypeSymbol? ActorRef { get; }

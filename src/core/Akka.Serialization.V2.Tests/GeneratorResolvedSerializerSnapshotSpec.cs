@@ -175,6 +175,12 @@ public sealed class GeneratorResolvedSerializerSnapshotSpec
 
     private static string RenderDiagnostic(AkkaSerializerGenerator.DiagnosticSpec diagnostic)
     {
-        return $"{diagnostic.Key}({string.Join(", ", diagnostic.MessageArgs)})";
+        // Additive over the pre-S6 rendering: appends the chosen LocationKey (owner type plus member,
+        // "" meaning "the type/attribute itself") so this snapshot also proves each diagnostic picked
+        // the right local reference site, not just the right key/message-args.
+        var at = diagnostic.At is { } key
+            ? $" @ {key.Owner}{(key.Member.Length == 0 ? string.Empty : "." + key.Member)}"
+            : string.Empty;
+        return $"{diagnostic.Key}({string.Join(", ", diagnostic.MessageArgs)}){at}";
     }
 }

@@ -14,6 +14,7 @@ using System.Reflection;
 using Akka.Serialization.V2.Generators;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using Xunit;
 
 namespace Akka.Serialization.V2.Tests;
@@ -40,9 +41,14 @@ namespace Akka.Serialization.V2.Tests;
 public sealed class GeneratorArchitectureSpec
 {
     /// <summary>
-    /// A type assignable to any of these can never be part of a cached pipeline model: all four are
-    /// tied to one specific compilation/parse and are never equal to their counterpart from the
-    /// next incremental run, even when they represent "the same" declaration.
+    /// A type assignable to any of these can never be part of a cached pipeline model: each is tied
+    /// to one specific compilation/parse and is never equal to its counterpart from the next
+    /// incremental run, even when it represents "the same" declaration. <see cref="TextSpan"/> is
+    /// included alongside <see cref="Location"/> (S6 "locations"): a raw span is exactly as
+    /// whitespace-sensitive as a full <see cref="Location"/>, so a cached model must carry neither --
+    /// only the value-equatable <c>LocationSpec</c>/<c>LocationKey</c> pair belongs beside a model,
+    /// never inside one. See <see cref="Akka.Serialization.V2.Generators.AkkaSerializerGenerator"/>'s
+    /// own AkkaSerializerGenerator.Locations.cs file header for the full rule.
     /// </summary>
     private static readonly Type[] ForbiddenBaseTypes =
     {
@@ -51,7 +57,8 @@ public sealed class GeneratorArchitectureSpec
         typeof(SyntaxNode),
         typeof(SyntaxTree),
         typeof(Location),
-        typeof(SyntaxReference)
+        typeof(SyntaxReference),
+        typeof(TextSpan)
     };
 
     private static IReadOnlyList<Type> ModelTypes { get; } = DiscoverModelTypes();

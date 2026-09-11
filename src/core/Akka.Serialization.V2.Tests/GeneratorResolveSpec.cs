@@ -282,6 +282,7 @@ public sealed class GeneratorResolveSpec
         return new AkkaSerializerGenerator.SerializerInfo(
             ns: "ResolveSample",
             className: className,
+            key: new AkkaSerializerGenerator.TypeKey($"ResolveSample.{className}", ImmutableArray<AkkaSerializerGenerator.TypeKey>.Empty, $"global::ResolveSample.{className}"),
             fullyQualifiedName: $"global::ResolveSample.{className}",
             name: "test-serializer",
             serializerId: 1,

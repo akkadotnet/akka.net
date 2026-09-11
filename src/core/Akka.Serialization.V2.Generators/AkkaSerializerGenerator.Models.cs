@@ -310,6 +310,7 @@ public sealed partial class AkkaSerializerGenerator
         public SerializerInfo(
             string ns,
             string className,
+            TypeKey key,
             string fullyQualifiedName,
             string name,
             int serializerId,
@@ -325,6 +326,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             Namespace = ns;
             ClassName = className;
+            Key = key;
             FullyQualifiedName = fullyQualifiedName;
             Name = name;
             SerializerId = serializerId;
@@ -341,6 +343,15 @@ public sealed partial class AkkaSerializerGenerator
 
         public string Namespace { get; }
         public string ClassName { get; }
+
+        /// <summary>
+        /// This serializer's own type key -- what a serializer-level <see cref="DiagnosticSpec.At"/>
+        /// (its <c>[AkkaSerializer&lt;TProtocol&gt;]</c> attribute, a formatter registration, or a
+        /// closed-generic registration) is keyed against in the location bag. See
+        /// <see cref="LocationKey"/>.
+        /// </summary>
+        public TypeKey Key { get; }
+
         public string FullyQualifiedName { get; }
         public string Name { get; }
         public int SerializerId { get; }
@@ -403,6 +414,7 @@ public sealed partial class AkkaSerializerGenerator
 
             return string.Equals(Namespace, other.Namespace, StringComparison.Ordinal)
                 && string.Equals(ClassName, other.ClassName, StringComparison.Ordinal)
+                && Key.Equals(other.Key)
                 && string.Equals(FullyQualifiedName, other.FullyQualifiedName, StringComparison.Ordinal)
                 && string.Equals(Name, other.Name, StringComparison.Ordinal)
                 && SerializerId == other.SerializerId
@@ -424,6 +436,7 @@ public sealed partial class AkkaSerializerGenerator
             var hash = ValueEquality.Seed;
             hash = ValueEquality.Combine(hash, Namespace);
             hash = ValueEquality.Combine(hash, ClassName);
+            hash = ValueEquality.Combine(hash, Key.GetHashCode());
             hash = ValueEquality.Combine(hash, FullyQualifiedName);
             hash = ValueEquality.Combine(hash, Name);
             hash = ValueEquality.Combine(hash, SerializerId);
@@ -1196,27 +1209,42 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// A diagnostic to report, with no live <see cref="Diagnostic"/>, <see cref="Location"/>, or
-    /// symbol reference: just <see cref="Key"/> (which <see cref="DiagnosticDescriptor"/> field --
-    /// see <see cref="DiagnosticKey"/>) and the already display-formatted message arguments (a
-    /// numeric argument, e.g. AKKASG002's serializer id or AKKASG005's field index, is converted to
-    /// its decimal string ahead of time, since <see cref="MessageArgs"/> is homogeneous). Pure
-    /// validation functions in AkkaSerializerGenerator.Validation.cs return these instead of calling
-    /// <c>SourceProductionContext.ReportDiagnostic</c> directly, so validation runs -- and can be
-    /// asserted against directly, by <see cref="Key"/> and <see cref="MessageArgs"/> rather than by
-    /// message substring -- with no driver, context, or <see cref="Compilation"/> at all. The private
-    /// DiagnosticRegistry in AkkaSerializerGenerator.Diagnostics.cs is the one place a
-    /// <see cref="DiagnosticSpec"/> is turned into a real <see cref="Diagnostic"/>, always at
-    /// <see cref="Location.None"/> (every diagnostic this generator has ever reported already was).
+    /// symbol reference: <see cref="Key"/> (which <see cref="DiagnosticDescriptor"/> field -- see
+    /// <see cref="DiagnosticKey"/>), the already display-formatted message arguments (a numeric
+    /// argument, e.g. AKKASG002's serializer id or AKKASG005's field index, is converted to its
+    /// decimal string ahead of time, since <see cref="MessageArgs"/> is homogeneous), and
+    /// <see cref="At"/> -- WHICH declared site this diagnostic belongs to, never WHERE that site is
+    /// (see <see cref="LocationKey"/>'s own doc comment for the rule each call site follows to choose
+    /// one). Pure validation functions in AkkaSerializerGenerator.Validation.cs return these instead
+    /// of calling <c>SourceProductionContext.ReportDiagnostic</c> directly, so validation runs -- and
+    /// can be asserted against directly, by <see cref="Key"/>, <see cref="MessageArgs"/>, and
+    /// <see cref="At"/> rather than by message substring or live <see cref="Diagnostic"/> -- with no
+    /// driver, context, or <see cref="Compilation"/> at all. The private DiagnosticRegistry in
+    /// AkkaSerializerGenerator.Diagnostics.cs is the one place a <see cref="DiagnosticSpec"/> is
+    /// turned into a real <see cref="Diagnostic"/>: it resolves <see cref="At"/> against the merged
+    /// <see cref="LocationBag"/> collected from every serializer/message declaration, falling back to
+    /// <see cref="Location.None"/> only when <see cref="At"/> is null or the bag has no entry for it
+    /// (a location this generator genuinely could not resolve).
     /// </summary>
     internal sealed class DiagnosticSpec : IEquatable<DiagnosticSpec>
     {
         public DiagnosticSpec(DiagnosticKey key, params string[] messageArgs)
+            : this(key, at: null, messageArgs)
+        {
+        }
+
+        public DiagnosticSpec(DiagnosticKey key, LocationKey? at, params string[] messageArgs)
         {
             Key = key;
+            At = at;
             MessageArgs = messageArgs.Length == 0 ? ImmutableArray<string>.Empty : ImmutableArray.Create(messageArgs);
         }
 
         public DiagnosticKey Key { get; }
+
+        /// <summary>Which declared site this diagnostic belongs to, or null when no site applies (falls back to <see cref="Location.None"/>).</summary>
+        public LocationKey? At { get; }
+
         public ImmutableArray<string> MessageArgs { get; }
 
         public bool Equals(DiagnosticSpec? other)
@@ -1227,7 +1255,7 @@ public sealed partial class AkkaSerializerGenerator
             if (other is null)
                 return false;
 
-            return Key == other.Key && ValueEquality.SequenceEquals(MessageArgs, other.MessageArgs);
+            return Key == other.Key && At.Equals(other.At) && ValueEquality.SequenceEquals(MessageArgs, other.MessageArgs);
         }
 
         public override bool Equals(object? obj) => Equals(obj as DiagnosticSpec);
@@ -1236,6 +1264,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             var hash = ValueEquality.Seed;
             hash = ValueEquality.Combine(hash, (int)Key);
+            hash = ValueEquality.Combine(hash, At?.GetHashCode() ?? 0);
             hash = ValueEquality.Combine(hash, MessageArgs);
             return hash;
         }

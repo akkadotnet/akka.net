@@ -52,9 +52,36 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
     /// </summary>
     public static class TrackingNames
     {
+        /// <summary>
+        /// The raw per-node serializer extraction transform: <see cref="ExtractedSerializer"/>, the
+        /// schema PLUS its location bag. Whitespace-SENSITIVE (a text-shifting edit anywhere earlier
+        /// in the file changes the location bag's spans), unlike every stage downstream of
+        /// <see cref="SerializerSchemas"/> -- see that constant's own doc comment.
+        /// </summary>
         public const string ExtractedSerializers = nameof(ExtractedSerializers);
+
+        /// <summary>
+        /// The schemas-only projection of <see cref="ExtractedSerializers"/> (<c>.Select(e =&gt;
+        /// e.Info)</c>): whitespace-INSENSITIVE, since <see cref="SerializerInfo"/> carries no
+        /// location. Feeds <see cref="CollectedSerializers"/>, <see cref="ResolvedSerializers"/>, and
+        /// code emission -- exactly what <see cref="ExtractedSerializers"/> itself used to feed before
+        /// S6 added locations, so those stages stay cached on an edit that only shifts spans. There is
+        /// deliberately NO locations-only counterpart to this stage: an earlier version of this
+        /// pipeline had one (<c>SerializerLocations</c>/<c>MessageLocations</c>), but a per-node Select
+        /// still builds its own incremental state table over every node on every edit, for a value read
+        /// back only once, batched -- see <see cref="Initialize"/>'s own comment on
+        /// <c>allLocations</c> for why collecting the raw extracted values directly is cheaper.
+        /// </summary>
+        public const string SerializerSchemas = nameof(SerializerSchemas);
+
         public const string CollectedSerializers = nameof(CollectedSerializers);
+
+        /// <summary>The message extraction transform's counterpart to <see cref="ExtractedSerializers"/>. See that constant's doc comment.</summary>
         public const string ExtractedMessages = nameof(ExtractedMessages);
+
+        /// <summary>The message extraction transform's counterpart to <see cref="SerializerSchemas"/>. See that constant's doc comment.</summary>
+        public const string MessageSchemas = nameof(MessageSchemas);
+
         public const string CollectedMessages = nameof(CollectedMessages);
 
         /// <summary>
@@ -83,30 +110,68 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         public const string CompilationFacts = nameof(CompilationFacts);
 
         public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
-            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages, ResolvedSerializers, CompilationFacts);
+            ExtractedSerializers, SerializerSchemas, CollectedSerializers,
+            ExtractedMessages, MessageSchemas, CollectedMessages,
+            ResolvedSerializers, CompilationFacts);
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var serializers = context.SyntaxProvider
+        // S6 "locations": the raw per-node transform returns the schema PLUS a location bag (see
+        // ExtractedSerializer/AkkaSerializerGenerator.Locations.cs) -- a text-shifting edit anywhere
+        // earlier in the file changes the bag's spans, so this raw stage is whitespace-SENSITIVE,
+        // unlike every stage before S6. A schemas-only projection immediately splits the schema back
+        // out and feeds Collect/Resolve/Emit exactly as the raw stage itself used to
+        // (whitespace-insensitive, since SerializerInfo carries no location). This is what lets a
+        // comment-only edit still report Collect/Resolve/Emit as Cached even though the raw
+        // extraction step itself reports Modified for it -- see GeneratorIncrementalScenariosSpec's
+        // scenario (c).
+        //
+        // There is deliberately NO separate locations-only Select node here (an earlier version of
+        // this stage had one per side): a per-node Select still builds its own incremental state
+        // table over every node on every edit, for a value (LocationBag) that is read back only once,
+        // batched, a few lines down. Collecting the raw ExtractedSerializer/ExtractedMessage values
+        // directly and reading .Locations inside MergeExtractedLocations gets the same merged bag one
+        // Select cheaper. The schemas-only projections below are NOT removed the same way: Resolve and
+        // Emit depend on them directly, so they earn their keep as separate nodes.
+        var extractedSerializers = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializerAttributeFullName,
                 static (node, _) => node is ClassDeclarationSyntax,
                 static (ctx, cancellationToken) => ExtractSerializer(ctx, cancellationToken))
-            .WithTrackingName(TrackingNames.ExtractedSerializers)
+            .WithTrackingName(TrackingNames.ExtractedSerializers);
+
+        var serializerSchemas = extractedSerializers
+            .Select(static (extracted, _) => extracted.Info)
+            .WithTrackingName(TrackingNames.SerializerSchemas);
+
+        var serializers = serializerSchemas
             .Where(static info => info != null)
             .Collect()
             .WithTrackingName(TrackingNames.CollectedSerializers);
 
-        var messages = context.SyntaxProvider
+        var extractedMessages = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializableAttributeFullName,
                 static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax,
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
-            .WithTrackingName(TrackingNames.ExtractedMessages)
+            .WithTrackingName(TrackingNames.ExtractedMessages);
+
+        var messageSchemas = extractedMessages
+            .Select(static (extracted, _) => extracted.Info)
+            .WithTrackingName(TrackingNames.MessageSchemas);
+
+        var messages = messageSchemas
             .Where(static info => info != null)
             .Collect()
             .WithTrackingName(TrackingNames.CollectedMessages);
+
+        // Every serializer's and message's location bag, merged into ONE compilation-wide lookup.
+        // Feeds every diagnostics-only Report output below, never Collect/Resolve/Emit -- see
+        // MergeExtractedLocations's own doc comment.
+        var allLocations = extractedSerializers.Collect()
+            .Combine(extractedMessages.Collect())
+            .Select(static (pair, cancellationToken) => MergeExtractedLocations(pair.Left, pair.Right, cancellationToken));
 
         // The per-serializer resolve stage: each serializer plus ALL collected messages (a message's
         // top-level/reachable status can only be judged against the full set) resolves, via
@@ -159,21 +224,40 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .WithTrackingName(TrackingNames.CompilationFacts);
 
         // Code emission consumes ONLY the cached, value-equatable, symbol-free ResolvedSerializer
-        // model -- never the Compilation, and never another serializer's data. Registered on the
-        // VALUES provider (one independent output per serializer) rather than a Collect()'d array,
-        // so editing a message owned by one serializer re-emits only that serializer's file: the
-        // driver skips this callback entirely for any OTHER serializer whose resolved model still
-        // compares equal to last run.
+        // model -- never the Compilation, never a location, and never another serializer's data.
+        // Registered on the VALUES provider (one independent output per serializer) rather than a
+        // Collect()'d array, so editing a message owned by one serializer re-emits only that
+        // serializer's file: the driver skips this callback entirely for any OTHER serializer whose
+        // resolved model still compares equal to last run. As of S6 this callback no longer reports
+        // any diagnostic (see ReportResolvedSerializerDiagnostics below) -- it only decides, from
+        // ResolvedSerializer.IsEmittable and ResolvedSerializer.ValidationDiagnostics' severities,
+        // whether to skip AddSource. That split keeps emission's own caching untouched by a
+        // location-only edit: this stage never combines the location bag, so it stays Cached exactly
+        // when it always did.
         context.RegisterSourceOutput(resolvedSerializers, static (ctx, resolved) => EmitResolvedSerializer(ctx, resolved));
+
+        // S6 "locations": ALL diagnostic reporting for a resolved serializer's own gate/validation
+        // diagnostics moved OUT of EmitResolvedSerializer and into this diagnostics-only output, so it
+        // can combine the merged location bag without dragging that whitespace-sensitive input into
+        // code emission's own cache key. Diagnostic id, text, and trigger conditions are unchanged --
+        // only WHERE they are reported from, and now WITH a real Location, has moved.
+        context.RegisterSourceOutput(
+            resolvedSerializers.Combine(allLocations),
+            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left, pair.Right));
 
         // The cross-serializer diagnostics (AKKASG013 duplicate ids, AKKASG031 duplicate protocol
         // bindings, AKKASG037 manifest ignored on a generic definition) cannot be attached to any
         // one serializer's ResolvedSerializer without either duplicating them or picking an
         // arbitrary "owner" -- see ReportCrossSerializerDiagnostics's doc comment. Reported exactly
-        // once each, from a small diagnostics-only output over the same two collected arrays.
+        // once each, from a small diagnostics-only output over the same two collected arrays, now also
+        // combined with the merged location bag so each can report at its chosen local site instead of
+        // Location.None. Kept as its OWN output (rather than folded into ReportResolvedSerializerDiagnostics
+        // above) because its input shape -- the whole collected arrays, not one resolved serializer at
+        // a time -- is genuinely different: folding them together would force this output to
+        // re-execute once per serializer instead of once per compilation change.
         context.RegisterSourceOutput(
-            serializers.Combine(messages),
-            static (ctx, pair) => ReportCrossSerializerDiagnostics(ctx, pair.Left, pair.Right));
+            serializers.Combine(messages).Combine(allLocations),
+            static (ctx, pair) => ReportCrossSerializerDiagnostics(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
 
         // AKKASG029's whole-compilation protocol-coverage check ("does any source-declared type
         // implement this protocol interface without [AkkaSerializable]?") no longer touches the
@@ -187,7 +271,12 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // runs, has moved. CompilationFacts still recomputes on every edit (it combines
         // context.CompilationProvider directly), but its OUTPUT compares equal whenever nothing it
         // tracks changed, which is what lets this output -- like code emission above -- report
-        // Cached instead of Modified for an edit these facts do not care about.
+        // Cached instead of Modified for an edit these facts do not care about. As of S6 this ALSO
+        // combines the merged location bag: AKKASG029 reports at the serializer's own attribute
+        // (LocationKey(serializer.Key, "")) because the unmarked implementor found by the facts stage
+        // is not itself an attributed type in this generator's model -- there is no local site on it
+        // to point at, and the facts stage must stay whitespace-insensitive to that implementor's own
+        // declaration (see ComputeCompilationFacts's doc comment).
         //
         // Design decision: coverage errors no longer gate emission (the old terminal stage skipped
         // AddSource for a serializer whose coverage check failed). This is the standard split for
@@ -197,7 +286,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // while the user fixes the gap) and lets the emission stage surface OTHER diagnostics that
         // the old early-return used to hide until the coverage error was fixed.
         context.RegisterSourceOutput(
-            resolvedSerializers.Combine(compilationFacts),
-            static (ctx, pair) => ReportProtocolCoverage(ctx, pair.Left, pair.Right));
+            resolvedSerializers.Combine(compilationFacts).Combine(allLocations),
+            static (ctx, pair) => ReportProtocolCoverage(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
     }
 }

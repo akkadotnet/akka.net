@@ -84,7 +84,9 @@ public sealed class GeneratorValidatorSpec
         var diagnostics = AkkaSerializerGenerator.Validate(serializer, ImmutableArray.Create(dupIndex));
 
         diagnostics.Should().Contain(new AkkaSerializerGenerator.DiagnosticSpec(
-            AkkaSerializerGenerator.DiagnosticKey.DuplicateFieldIndex, "ValidatorSample.DupIndex", "1"));
+            AkkaSerializerGenerator.DiagnosticKey.DuplicateFieldIndex,
+            new AkkaSerializerGenerator.LocationKey(dupIndex.Key, string.Empty),
+            "ValidatorSample.DupIndex", "1"));
     }
 
     [Fact(DisplayName = "Validate should report AKKASG006 when a top-level message has no manifest")]
@@ -111,7 +113,9 @@ public sealed class GeneratorValidatorSpec
         var diagnostics = AkkaSerializerGenerator.Validate(serializer, ImmutableArray.Create(noManifest));
 
         diagnostics.Should().Contain(new AkkaSerializerGenerator.DiagnosticSpec(
-            AkkaSerializerGenerator.DiagnosticKey.MissingManifest, "ValidatorSample.NoManifest"));
+            AkkaSerializerGenerator.DiagnosticKey.MissingManifest,
+            new AkkaSerializerGenerator.LocationKey(noManifest.Key, string.Empty),
+            "ValidatorSample.NoManifest"));
     }
 
     [Fact(DisplayName = "Validate should report AKKASG012 when two top-level messages of the same serializer duplicate a manifest")]
@@ -143,6 +147,7 @@ public sealed class GeneratorValidatorSpec
 
         diagnostics.Should().Contain(new AkkaSerializerGenerator.DiagnosticSpec(
             AkkaSerializerGenerator.DiagnosticKey.DuplicateManifest,
+            new AkkaSerializerGenerator.LocationKey(serializer.Key, string.Empty),
             "TestSerializer", "shared-v1", "ValidatorSample.MessageA, ValidatorSample.MessageB"));
     }
 
@@ -178,6 +183,7 @@ public sealed class GeneratorValidatorSpec
 
         diagnostics.Should().Contain(new AkkaSerializerGenerator.DiagnosticSpec(
             AkkaSerializerGenerator.DiagnosticKey.UnionMemberNotSerializable,
+            new AkkaSerializerGenerator.LocationKey(outer.Key, "Event"),
             "ValidatorSample.NotSerializable", "Event", "ValidatorSample.Outer"));
     }
 
@@ -365,6 +371,7 @@ public sealed class GeneratorValidatorSpec
         return new AkkaSerializerGenerator.SerializerInfo(
             ns: "ValidatorSample",
             className: "TestSerializer",
+            key: new AkkaSerializerGenerator.TypeKey("ValidatorSample.TestSerializer", ImmutableArray<AkkaSerializerGenerator.TypeKey>.Empty, "global::ValidatorSample.TestSerializer"),
             fullyQualifiedName: "global::ValidatorSample.TestSerializer",
             name: "test-serializer",
             serializerId: 1,
