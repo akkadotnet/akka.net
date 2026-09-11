@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Serialization TestKit for Akka.NET</Description>
+    <VersionSuffix>beta</VersionSuffix>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize;testkit</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Serialization.TestKit\AkkaSerializationSpec.cs">
+      <Link>AkkaSerializationSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\ContainerMessage.cs">
+      <Link>ContainerMessage.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\EmptyActor.cs">
+      <Link>EmptyActor.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\ImmutableMessage.cs">
+      <Link>ImmutableMessage.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\ImmutableMessageWithPrivateCtor.cs">
+      <Link>ImmutableMessageWithPrivateCtor.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\SomeMessage.cs">
+      <Link>SomeMessage.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Serialization.TestKit\UntypedContainerMessage.cs">
+      <Link>UntypedContainerMessage.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+</Project>

@@ -82,6 +82,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/contrib/serializers/Akka.Serialization.TestKit.Xunit2/Akka.Serialization.TestKit.Xunit2.csproj" />
     <Project Path="src/contrib/serializers/Akka.Serialization.TestKit/Akka.Serialization.TestKit.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
