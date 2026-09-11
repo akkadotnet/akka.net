@@ -91,7 +91,7 @@ To see the full set of changes in Akka.NET v1.5.71, [click here](https://github.
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.303" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />
