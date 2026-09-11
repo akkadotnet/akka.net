@@ -170,7 +170,7 @@ namespace Akka.Streams.Serialization
             var serializer = system.Serialization.FindSerializerFor(payload);
             var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
 
-            var p = new Payload
+            var p = new Proto.Msg.Payload
             {
                 EnclosedMessage = ByteString.CopyFrom(serializer.ToBinary(payload)),
                 SerializerId = serializer.Identifier
