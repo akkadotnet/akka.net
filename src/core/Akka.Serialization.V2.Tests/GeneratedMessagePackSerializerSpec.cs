@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -761,6 +762,29 @@ public sealed record AttributeOuterEnvelope(
 public sealed record AttributeInnerEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
     [property: AkkaField(2)] object Payload) : IGeneratedTestProtocol;
+
+// ---- object elements inside a collection: each element is its own envelope-payload boundary,
+// the same frame a property typed `object` already gets (see ObjectElementSpec) ----
+
+[AkkaSerializable(Manifest = "object-list-v1")]
+public sealed record ObjectListMessage(
+    [property: AkkaField(1)] List<object> Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-array-v1")]
+public sealed record ObjectArrayMessage(
+    [property: AkkaField(1)] object[] Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-list-nullable-v1")]
+public sealed record ObjectListNullableMessage(
+    [property: AkkaField(1)] List<object?> Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-dict-values-v1")]
+public sealed record ObjectDictValuesMessage(
+    [property: AkkaField(1)] Dictionary<string, object> Values) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-immutable-list-v1")]
+public sealed record ObjectImmutableListMessage(
+    [property: AkkaField(1)] ImmutableList<object> Items) : IGeneratedTestProtocol;
 
 public sealed record CustomProtobufPayload(string PayloadId, int Value);
 

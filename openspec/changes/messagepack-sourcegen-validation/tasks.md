@@ -58,6 +58,7 @@
 - [x] 5.14 Support foreign-type formatters via [AkkaSerializerFormatter] escape hatch (AddressFormatter/ActorPathFormatter built-ins, byte-compatible with Artery control-message wire format)
 - [x] 5.15 Honor declared accessibility of serializer partial classes (internal serializers)
 - [x] 5.16 Remove `[AkkaEnvelopePayload]`; an `object`-typed field is the serializer boundary on its own, AKKASG035 retired, AKKASG038 added (design.md Decision 20) — PR #8518
+- [x] 5.17 Extend Decision 20 to collection elements: a `List<object>`/`object[]`/any other natively-supported collection whose element type is `object` (or `object?`) treats each element as its own envelope-payload boundary, nullable-aware the same way a field is (`MapCollectionElement`, `EmitWriteElement`/`EmitReadElement`/`EmitSizeElement` `FieldKind.EnvelopePayload` cases). A dictionary KEY typed `object` is rejected with AKKASG003 instead (unstable round-tripped identity for hash/equality lookups, plus a null key crashing `Dictionary<TKey,TValue>` at runtime); dictionary VALUES typed `object` are supported. `ObjectElementSpec.cs`
 
 ## 6. Integration Validation
 
