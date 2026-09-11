@@ -238,9 +238,17 @@ public sealed class CrossAssemblyBaselineSpec
             d.GetMessage(null).Contains("Wrapper", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "Cross-assembly baseline: registering a closed generic construction of an unreachable, non-protocol referenced-assembly definition fires AKKASG034 and suppresses ALL emission for that serializer")]
+    [Fact(DisplayName = "Cross-assembly baseline: registering a closed generic construction of an unreachable, non-protocol referenced-assembly definition adopts it as its own top-level message (AKKASG034 retired, Decision 18)")]
     public void Unreachable_closed_generic_registration_of_customer_envelope()
     {
+        // Before Decision 18 this exact shape -- the customer's own motivating case, Envelope<T> in
+        // a referenced assembly, registered for a construction that implements no protocol and is
+        // reachable from no field -- was AKKASG034, and it suppressed emission of the WHOLE
+        // serializer. Decision 18 retires that check: a registration on the serializer ADOPTS its
+        // construction unconditionally, so Envelope<AcceptCassette> becomes CommsSerializer's own
+        // top-level message, dispatched by "env-dmac", with a concrete typeof() binding of its own
+        // (Envelope<T> cannot implement IComms across the assembly boundary, so the runtime binding
+        // lookup needs that extra binding to route it at all).
         const string sourceA = """
             #nullable enable
             using Akka.Serialization.V2;
@@ -276,20 +284,11 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case4.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // Why this case reports AKKASG034.
-        // Envelope<AcceptCassette> does not implement IComms. It is not a field of any reachable
-        // message. The registration has no effect, no matter where the generic definition lives.
-        all.Should().Contain(d =>
-            d.Id == "AKKASG034" &&
-            d.Severity == DiagnosticSeverity.Error &&
-            d.GetMessage(null).Contains("Envelope", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("IComms", StringComparison.Ordinal));
+        all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
 
-        // Why generatedSource is empty.
-        // AKKASG034 fails the coverage check for the whole serializer. The generator then skips
-        // AddSource for CommsSerializer. No partial file is written, so there is no registration
-        // list to inspect here.
-        generatedSource.Should().BeEmpty("AKKASG034 fails the whole serializer's coverage check, so the pipeline skips AddSource for CommsSerializer entirely");
+        generatedSource.Should().NotBeEmpty("Decision 18 adopts the construction instead of suppressing the whole serializer");
+        generatedSource.Should().Contain("env-dmac");
+        generatedSource.Should().Contain("typeof(global::CrossAssemblyBaseline.Case4.AssemblyA.Envelope<global::CrossAssemblyBaseline.Case4.AssemblyB.AcceptCassette>)");
     }
 
     [Fact(DisplayName = "Cross-assembly baseline: a generic property substituted to object, through a referenced-assembly definition and made reachable, is still recognized as an envelope payload")]

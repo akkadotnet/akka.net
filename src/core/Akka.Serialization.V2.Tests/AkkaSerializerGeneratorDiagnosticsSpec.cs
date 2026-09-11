@@ -1104,9 +1104,14 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             diagnostic.GetMessage(null).Contains("declared more than once", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG020 when a closed generic registration target is not generic")]
-    public void Generator_should_report_AKKASG020_when_closed_generic_registration_target_is_not_generic()
+    [Fact(DisplayName = "Generator should not report AKKASG020 for a non-generic [AkkaSerializable<T>] adoption, and its Manifest override should win (Decision 18)")]
+    public void Generator_should_adopt_a_non_generic_registration_and_apply_its_manifest_override()
     {
+        // Decision 18: a registration on the serializer class ADOPTS the registered type, generic or
+        // not; AKKASG020 no longer rejects a non-generic type argument. `Plain` already implements
+        // `IProtocol` under its own manifest ("plain-v1"), but the registration's own Manifest
+        // ("plain-again-v1") overrides it -- the same explicit-wins rule Decision 18 gives an
+        // expanded ManifestPrefix construction.
         const string source = """
             #nullable enable
             using Akka.Actor;
@@ -1131,7 +1136,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
         var diagnostics = RunGenerator(source);
 
-        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG020" && diagnostic.Severity == DiagnosticSeverity.Error);
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG020");
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
     [Fact(DisplayName = "Generator should report AKKASG022 when a generic protocol message has no closed generic registrations")]
@@ -1945,9 +1951,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG033");
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG034 when a closed generic registration neither implements the protocol nor is referenced anywhere")]
-    public void Generator_should_report_AKKASG034_when_registration_is_orphaned()
+    [Fact(DisplayName = "Generator should adopt a closed generic registration that neither implements the protocol nor is referenced anywhere (AKKASG034 retired, Decision 18)")]
+    public void Generator_should_adopt_an_orphaned_closed_generic_registration()
     {
+        // Before Decision 18 this exact shape was AKKASG034 ("the registration has no effect"), and
+        // it suppressed emission of the whole serializer. Decision 18 retires that check: a
+        // registration on the serializer ADOPTS the construction unconditionally, so Wrapper<int>
+        // becomes its own top-level message, dispatched by its own manifest, with no error.
         const string source = """
             #nullable enable
             using Akka.Actor;
@@ -1975,18 +1985,22 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
             """;
 
-        var diagnostics = RunGenerator(source);
+        var result = GeneratorTestHarness.Run(source);
 
-        diagnostics.Should().Contain(diagnostic =>
-            diagnostic.Id == "AKKASG034" &&
-            diagnostic.Severity == DiagnosticSeverity.Error &&
-            diagnostic.GetMessage(null).Contains("Wrapper", StringComparison.Ordinal) &&
-            diagnostic.GetMessage(null).Contains("SampleSerializer", StringComparison.Ordinal));
+        result.AllDiagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+
+        var generatedSource = result.GeneratedSources.Single(pair => pair.Key.Contains("SampleSerializer", StringComparison.Ordinal)).Value;
+        generatedSource.Should().Contain("wrapper-int-v1");
+        generatedSource.Should().Contain("typeof(global::DiagnosticSample.Wrapper<int>)");
     }
 
-    [Fact(DisplayName = "Generator should not report AKKASG034 when a closed generic registration is reachable as a nested field")]
-    public void Generator_should_not_report_AKKASG034_when_registration_reachable_as_nested_field()
+    [Fact(DisplayName = "Generator should not report an error when a closed generic registration is reachable as a nested field")]
+    public void Generator_should_not_report_an_error_when_registration_reachable_as_nested_field()
     {
+        // Decision 18: a registration on the serializer is now unconditionally a top-level message
+        // too (the adoption rule), not merely "reachable if some field happens to need it" -- so,
+        // unlike before Decision 18, this registration needs its own Manifest even though Wrapper<Payload>
+        // is also reachable as Outer's nested field.
         const string source = """
             #nullable enable
             using Akka.Actor;
@@ -2007,7 +2021,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record Payload([property: AkkaField(1)] string Value);
 
             [AkkaSerializer<IProtocol>("sample", 130018)]
-            [AkkaSerializable<Wrapper<Payload>>]
+            [AkkaSerializable<Wrapper<Payload>>(Manifest = "wrapper-payload-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -2020,11 +2034,11 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
         var diagnostics = RunGenerator(source);
 
-        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG034");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
-    [Fact(DisplayName = "Generator should not report AKKASG034 when a closed generic registration implements the protocol")]
-    public void Generator_should_not_report_AKKASG034_when_registration_implements_protocol()
+    [Fact(DisplayName = "Generator should not report an error when a closed generic registration implements the protocol")]
+    public void Generator_should_not_report_an_error_when_registration_implements_protocol()
     {
         const string source = """
             #nullable enable
@@ -2451,7 +2465,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic =>
             diagnostic.Id == "AKKASG003" &&
             diagnostic.Severity == DiagnosticSeverity.Error &&
-            diagnostic.GetMessage(null).Contains("Declare a closed member set with [AkkaUnion], or type the property as object.", StringComparison.Ordinal));
+            diagnostic.GetMessage(null).Contains("Declare a closed member set with [AkkaUnion], type it as the serializer's own protocol interface, or type the property as object.", StringComparison.Ordinal));
     }
 
     [Fact(DisplayName = "Generator should not append the cross-assembly hint to AKKASG007 when the nested type is declared in this same compilation")]

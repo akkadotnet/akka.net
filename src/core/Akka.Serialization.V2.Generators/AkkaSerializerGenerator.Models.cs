@@ -465,7 +465,11 @@ public sealed partial class AkkaSerializerGenerator
             ImmutableArray<InvalidFieldInfo> invalidFields,
             ConstructionPlan constructionPlan,
             bool isGenericDefinition = false,
-            string definitionFullName = "")
+            string definitionFullName = "",
+            bool isSealed = false,
+            bool isAbstract = false,
+            bool isValueType = false,
+            string foreignAssemblyName = "")
         {
             SimpleName = simpleName;
             Key = key;
@@ -477,6 +481,10 @@ public sealed partial class AkkaSerializerGenerator
             ConstructionPlan = constructionPlan;
             IsGenericDefinition = isGenericDefinition;
             DefinitionFullName = definitionFullName;
+            IsSealed = isSealed;
+            IsAbstract = isAbstract;
+            IsValueType = isValueType;
+            ForeignAssemblyName = foreignAssemblyName;
         }
 
         public string SimpleName { get; }
@@ -528,13 +536,36 @@ public sealed partial class AkkaSerializerGenerator
         public string DefinitionFullName { get; }
 
         /// <summary>
+        /// Whether this message's type is sealed (or a struct/enum, always effectively sealed).
+        /// Captured once at extraction so an implicit protocol/union closed set (Decision 18: a
+        /// field typed as the serializer's own protocol interface, or an <see cref="AkkaUnionAttribute"/>-marked
+        /// closed-set type argument) can be turned into <see cref="UnionMemberInfo"/> entries at
+        /// resolve time with no symbol access -- mirrors the same fact <c>ExtractUnionMembers</c>
+        /// already captures per explicit union member.
+        /// </summary>
+        public bool IsSealed { get; }
+
+        /// <summary>Whether this message's type is abstract. See <see cref="IsSealed"/>'s doc comment.</summary>
+        public bool IsAbstract { get; }
+
+        /// <summary>Whether this message's type is a value type. See <see cref="IsSealed"/>'s doc comment.</summary>
+        public bool IsValueType { get; }
+
+        /// <summary>
+        /// This message's declaring assembly name, but only when it is not the compilation this
+        /// generator is producing output for. Empty otherwise. See <see cref="IsSealed"/>'s doc
+        /// comment; mirrors <see cref="UnionMemberInfo.ForeignAssemblyName"/>.
+        /// </summary>
+        public string ForeignAssemblyName { get; }
+
+        /// <summary>
         /// Used by formatter resolution to swap in fields with a resolved <see cref="TypeMapping"/>.
         /// <see cref="ConstructionPlan"/> is keyed by field NAME, not by <see cref="FieldInfo"/>
         /// reference, so it stays valid across this substitution without needing to be rebuilt.
         /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName);
+            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName);
         }
 
         public bool Equals(MessageInfo? other)
@@ -551,6 +582,10 @@ public sealed partial class AkkaSerializerGenerator
                 && AllowEmpty == other.AllowEmpty
                 && IsGenericDefinition == other.IsGenericDefinition
                 && string.Equals(DefinitionFullName, other.DefinitionFullName, StringComparison.Ordinal)
+                && IsSealed == other.IsSealed
+                && IsAbstract == other.IsAbstract
+                && IsValueType == other.IsValueType
+                && string.Equals(ForeignAssemblyName, other.ForeignAssemblyName, StringComparison.Ordinal)
                 && ConstructionPlan.Equals(other.ConstructionPlan)
                 && ValueEquality.SequenceEquals(Fields, other.Fields)
                 && ValueEquality.SequenceEquals(Protocols, other.Protocols)
@@ -568,6 +603,10 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, AllowEmpty);
             hash = ValueEquality.Combine(hash, IsGenericDefinition);
             hash = ValueEquality.Combine(hash, DefinitionFullName);
+            hash = ValueEquality.Combine(hash, IsSealed);
+            hash = ValueEquality.Combine(hash, IsAbstract);
+            hash = ValueEquality.Combine(hash, IsValueType);
+            hash = ValueEquality.Combine(hash, ForeignAssemblyName);
             hash = ValueEquality.Combine(hash, ConstructionPlan.GetHashCode());
             hash = ValueEquality.Combine(hash, Fields);
             hash = ValueEquality.Combine(hash, Protocols);
@@ -717,11 +756,20 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     internal sealed class ClosedGenericRegistrationInfo : IEquatable<ClosedGenericRegistrationInfo>
     {
-        public ClosedGenericRegistrationInfo(TypeKey target, string manifest, bool allowEmpty)
+        public ClosedGenericRegistrationInfo(
+            TypeKey target,
+            string manifest,
+            bool allowEmpty,
+            string expansionGroup = "",
+            string manifestPrefix = "",
+            string expansionError = "")
         {
             Target = target;
             Manifest = manifest;
             AllowEmpty = allowEmpty;
+            ExpansionGroup = expansionGroup;
+            ManifestPrefix = manifestPrefix;
+            ExpansionError = expansionError;
         }
 
         public TypeKey Target { get; }
@@ -731,6 +779,31 @@ public sealed partial class AkkaSerializerGenerator
 
         public string Manifest { get; }
         public bool AllowEmpty { get; }
+
+        /// <summary>
+        /// Empty for a directly-written <c>[AkkaSerializable&lt;T&gt;]</c> registration. For a
+        /// construction synthesized by Decision 18's <c>ManifestPrefix</c> expansion, the display
+        /// name of the base registration's own type argument (for example
+        /// <c>"Envelope&lt;ICommsMessage&gt;"</c>) -- the group every construction expanded from the
+        /// same attribute shares, used to attribute the AKKASG042 construction-count diagnostic and
+        /// to resolve every expanded member's own location back to that one base attribute (see
+        /// <see cref="AkkaSerializerGenerator.ClosedGenericLocationMember"/>).
+        /// </summary>
+        public string ExpansionGroup { get; }
+
+        /// <summary>
+        /// The <c>ManifestPrefix</c> named argument, empty when not set. Only ever non-empty on a
+        /// BASE registration entry (<see cref="ExpansionGroup"/> empty); a synthesized expansion
+        /// member never carries its own prefix.
+        /// </summary>
+        public string ManifestPrefix { get; }
+
+        /// <summary>
+        /// Non-empty on a BASE entry when <see cref="ManifestPrefix"/> was set but the registration
+        /// cannot expand: the type argument is not generic, or one of its type arguments has no
+        /// closed member set. Drives AKKASG040. Empty for a valid registration, expanding or not.
+        /// </summary>
+        public string ExpansionError { get; }
 
         public bool Equals(ClosedGenericRegistrationInfo? other)
         {
@@ -742,7 +815,10 @@ public sealed partial class AkkaSerializerGenerator
 
             return Target.Equals(other.Target)
                 && string.Equals(Manifest, other.Manifest, StringComparison.Ordinal)
-                && AllowEmpty == other.AllowEmpty;
+                && AllowEmpty == other.AllowEmpty
+                && string.Equals(ExpansionGroup, other.ExpansionGroup, StringComparison.Ordinal)
+                && string.Equals(ManifestPrefix, other.ManifestPrefix, StringComparison.Ordinal)
+                && string.Equals(ExpansionError, other.ExpansionError, StringComparison.Ordinal);
         }
 
         public override bool Equals(object? obj) => Equals(obj as ClosedGenericRegistrationInfo);
@@ -753,6 +829,9 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Target.GetHashCode());
             hash = ValueEquality.Combine(hash, Manifest);
             hash = ValueEquality.Combine(hash, AllowEmpty);
+            hash = ValueEquality.Combine(hash, ExpansionGroup);
+            hash = ValueEquality.Combine(hash, ManifestPrefix);
+            hash = ValueEquality.Combine(hash, ExpansionError);
             return hash;
         }
     }
@@ -792,6 +871,20 @@ public sealed partial class AkkaSerializerGenerator
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
             return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField);
+        }
+
+        /// <summary>
+        /// Reclassifies this field as an implicit union (Decision 18: a field whose static type is
+        /// the serializer's own protocol interface, or an <see cref="AkkaUnionAttribute"/>-marked
+        /// closed-set type argument, is a union over that same closed set -- no field-level
+        /// <c>[AkkaUnion]</c> required). Used only by <see cref="AkkaSerializerGenerator.ResolveMessages"/>,
+        /// which is the one place a field's <see cref="Mapping"/> is still <see cref="FieldKind.Unsupported"/>
+        /// after extraction but the enclosing serializer's protocol (unknown at extraction time) makes
+        /// it a valid union after all.
+        /// </summary>
+        public FieldInfo WithUnion(ImmutableArray<UnionMemberInfo> unionMembers)
+        {
+            return new FieldInfo(Index, Name, TypeFullName, new TypeMapping(FieldKind.Union), IsNullable, Formatter, unionMembers, unionDeclaredOnObjectField: false);
         }
 
         public bool Equals(FieldInfo? other)
@@ -1201,12 +1294,14 @@ public sealed partial class AkkaSerializerGenerator
         DuplicateProtocolBinding,
         InvalidSerializerShape,
         ProtocolTypeMustBeInterface,
-        ClosedGenericRegistrationNotInProtocol,
         UnionMemberAbstract,
         ManifestIgnoredOnGenericDefinition,
         UnionDeclaredOnObjectField,
         NestedFieldNotAccessibleCrossAssembly,
-        UnionMemberNotAccessibleCrossAssembly
+        UnionMemberNotAccessibleCrossAssembly,
+        ClosedSetExpansionRequiresClosedSet,
+        AdoptedMessageOwnedByMultipleSerializers,
+        ClosedSetExpansionCount
     }
 
     /// <summary>

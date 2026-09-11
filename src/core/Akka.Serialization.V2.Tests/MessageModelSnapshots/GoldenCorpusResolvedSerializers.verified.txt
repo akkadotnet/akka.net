@@ -15,6 +15,7 @@ TopLevelMessages (closed set, declaration order):
   global::GoldenSample.Wrapper<int> (manifest=wrapper-int-v1, method=WrapperInt)
   global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> (manifest=wrapper-geo-v1, method=WrapperGeoPoint)
   global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> (manifest=wrapper-pair-v1, method=WrapperPairIntString)
+  global::GoldenSample.Pair<int, string> (manifest=pair-int-string-v1, method=PairIntString)
 ReachableMessages (19, reachability-walk order):
   global::GoldenSample.ScalarMessage
   global::GoldenSample.CollectionMessage
@@ -29,12 +30,12 @@ ReachableMessages (19, reachability-walk order):
   global::GoldenSample.Wrapper<int>
   global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>
   global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>
+  global::GoldenSample.Pair<int, string>
   global::GoldenSample.Reading
   global::GoldenSample.GeoPoint
   global::GoldenSample.OrderPlaced
   global::GoldenSample.OrderCancelled
   global::GoldenSample.OrderExpired
-  global::GoldenSample.Pair<int, string>
 ResolvedMessagesByType keys (sorted):
   global::GoldenSample.CollectionMessage
   global::GoldenSample.EnvelopeListMessage

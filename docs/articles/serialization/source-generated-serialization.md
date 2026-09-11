@@ -445,8 +445,171 @@ Diagnostics guard this shape. **AKKASG022** fires when a generic definition impl
 protocol with no closed registrations at all. **AKKASG023** fires when a field uses an
 unregistered closed construction. **AKKASG020** and **AKKASG021** guard the registration itself,
 catching an invalid or a duplicate one. **AKKASG037**, info, fires when a `Manifest` is set on the
-*open* definition, where the generator ignores it. **AKKASG034** fires when a registered
-construction implements no protocol and is unreachable from any field.
+*open* definition, where the generator ignores it.
+
+### A Registration Adopts Its Type
+
+A registration on the serializer class means **adopt this type into this serializer**. This holds
+for any `[AkkaSerializable]` type, generic or not, whether or not it implements the serializer's
+protocol:
+
+```csharp
+[AkkaSerializer<IComms>("comms", 8677751)]
+[AkkaSerializable<Envelope<AcceptCassette>>(Manifest = "env-dmac-v1")]  // a closed construction
+[AkkaSerializable<AuditStamp>(Manifest = "audit-v1")]                    // an ordinary concrete type
+public sealed partial class CommsSerializer : AkkaSerializer
+{
+    public static partial SerializerRegistration CreateRegistration();
+}
+```
+
+`AuditStamp` implements no protocol at all. The registration still makes it a top-level message of
+`CommsSerializer`: its own dispatch arm, its own private helpers, and its own concrete binding in
+the generated `CreateRegistration()`. That last part matters. A generic wrapper such as
+`Envelope<T>` usually lives in an assembly the protocol interface's own assembly cannot see, so it
+can never implement that protocol. Without its own binding, the runtime would never route a value
+of that exact type to this serializer at all. Three rules remain, checked at build time:
+
+* The adopted type must be `[AkkaSerializable]`, with its field schema readable from here, wherever
+  it lives (including a referenced assembly).
+* It needs a manifest. Its own attribute supplies one, or the registration's `Manifest` overrides
+  it.
+* One type, one owner. A message type belongs to only one serializer's closed set in a compilation.
+  See [The One-Owner Rule](#the-one-owner-rule).
+
+Anything the generator cannot see at build time does not exist. A construction assembled through
+`Activator.CreateInstance` and `MakeGenericType`, over a type argument outside every registered or
+expanded set, has no matching case. It fails at send time with an `ArgumentException` naming the
+unsupported type. Reflection is not a path the generator accommodates.
+
+### `ManifestPrefix`: Expanding a Registration over a Closed Set
+
+A registration's type argument can itself have a **closed set**: either the serializer's own
+protocol interface, or a type carrying a type-level `[AkkaUnion]`. Setting `ManifestPrefix` on such
+a registration expands it to one closed construction per member of that set, instead of the single
+construction named in the attribute:
+
+```csharp
+public interface ICommsMessage { }
+
+[AkkaSerializable(Manifest = "dmac")]
+public sealed record AcceptCassette([property: AkkaField(1)] int Layer) : ICommsMessage;
+
+[AkkaSerializable(Manifest = "ocan")]
+public sealed record OrderCancelled([property: AkkaField(1)] string OrderId) : ICommsMessage;
+
+[AkkaSerializable]
+public sealed record Envelope<T>(
+    [property: AkkaField(1)] T Message,
+    [property: AkkaField(2)] string TraceId);
+
+[AkkaSerializer<ICommsMessage>("comms", 8677751)]
+[AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
+public sealed partial class CommsSerializer : AkkaSerializer
+{
+    public static partial SerializerRegistration CreateRegistration();
+}
+```
+
+This one attribute registers `Envelope<AcceptCassette>` and `Envelope<OrderCancelled>` -- one
+construction per member of `ICommsMessage`'s closed set -- each with its own dispatch arm, private
+helpers, and a manifest derived from the member's own. It does **not** register the literal
+construction, `Envelope<ICommsMessage>` itself. Add `Manifest` alongside `ManifestPrefix` to also
+register that literal construction:
+
+```csharp
+[AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env", Manifest = "env-any")]
+```
+
+The two properties combine into four cases:
+
+| `Manifest` | `ManifestPrefix` | What gets registered |
+|---|---|---|
+| set | not set | Only the named construction. Today's behavior; no expansion. |
+| not set | set | Only the expansion. The literal construction is not registered. |
+| set | set | The literal construction under `Manifest`, plus the expansion under `ManifestPrefix`. |
+| not set | not set | **AKKASG006** (a top-level message needs a manifest), unchanged from today. |
+
+`ManifestPrefix` on a registration whose type argument is a concrete class, or has no closed set at
+all, is **AKKASG040**: there is nothing to expand over.
+
+### The Manifest Formula
+
+Every member of a closed set already has its own manifest: **AKKASG006** requires one on a
+top-level message, and **AKKASG016** requires one on a union member. The generator derives every
+expanded construction's manifest from these, by a fixed formula, evaluated once, at build time. Both
+sides of the wire produce the same literal strings; the runtime never builds or parses a manifest:
+
+```text
+manifest(explicit registration, Manifest = "m")   = "m"
+manifest(M) for a member of the set               = the top-level manifest of M
+manifest(G<M>, ManifestPrefix = "p")              = "p" + "/" + manifest(M)
+manifest(G<M1, M2>, ManifestPrefix = "p")         = "p" + "/" + manifest(M1) + "/" + manifest(M2)
+manifest(G<H<M>>, ManifestPrefix = "p")           = "p" + "/" + manifest(H<M>)
+```
+
+**Worked example 1: a single-argument expansion.** With the `CommsSerializer` example above,
+`Envelope<AcceptCassette>` derives `"env" + "/" + "dmac"`, or `env/dmac`. `Envelope<OrderCancelled>`
+derives `env/ocan`. Both are exact-inline constructions: the manifest already fixes `T`, so the
+payload carries no discriminator of its own.
+
+**Worked example 2: a nested construction.** Say `Envelope<AcceptCassette>` is *also* registered
+explicitly, with its own manifest: `[AkkaSerializable<Envelope<AcceptCassette>>(Manifest =
+"env-dmac-v2")]`. A second generic, `Pair<TFirst, TSecond>`, registers
+`[AkkaSerializable<Pair<ICommsMessage, Envelope<AcceptCassette>>>(ManifestPrefix = "pair")]`. Its
+first argument expands over the protocol set; its second argument, `Envelope<AcceptCassette>`, is a
+*fixed* nested construction, not itself a closed set, so its manifest comes from that explicit
+sibling registration: `manifest(Envelope<AcceptCassette>) = "env-dmac-v2"`. The derived manifest for
+`Pair<AcceptCassette, Envelope<AcceptCassette>>` is therefore `"pair" + "/" + "dmac" + "/" +
+"env-dmac-v2"`, or `pair/dmac/env-dmac-v2`. A nested construction that was never registered anywhere
+has no manifest to compose, which is **AKKASG040** too -- the same shape as **AKKASG023** for an
+unregistered nested field.
+
+An explicit registration for one specific construction keeps its own manifest, overriding the
+formula for that one member. This is how `Envelope<AcceptCassette>` above ended up with
+`env-dmac-v2` instead of the plain `env/dmac` the formula alone would have derived. It is also the
+only way to register a construction whose type argument is a concrete class, since a concrete class
+has nothing to expand over.
+
+Because every manifest is known at build time -- the explicit ones, each member's own, and every
+derived one -- **AKKASG012** checks the whole set for collisions, including a case where a member's
+own manifest contains the separator (for example prefix `env` with member `a/b`, against prefix
+`env/a` with member `b`). The separator is a literal `/`, fixed for this rule.
+
+The expansion rule applies to **every** type argument of a registration, not only the first. A
+multi-argument generic expands to the product of its arguments' own sets. Because the number of
+generated constructions can grow quickly, the generator reports it: **AKKASG042**, info, once per
+expanding registration, naming the resulting count. There is no size threshold; every expansion is
+reported.
+
+### A Protocol-Interface Field Is an Implicit Union
+
+A field whose static type is *exactly* the serializer's own protocol interface is a union over the
+protocol set, with no `[AkkaUnion]` attribute required. This is what makes the literal construction
+above encodable at all: `Envelope<ICommsMessage>`'s `Message` field is typed `ICommsMessage`, and
+without this rule it would be **AKKASG003**. The closed set is the same one `ManifestPrefix`
+expands over, and the wire frame is the same union frame any other union uses -- a discriminator
+manifest, then the member's own fields.
+
+This rule is narrow on purpose. It fires only when the field's *own* static type is the protocol
+interface, not a collection of it (`List<ICommsMessage>` is unaffected) and not some other
+interface a field happens to mention. Declare `[AkkaUnion]` for any other closed set.
+
+### The One-Owner Rule
+
+A message type belongs to only one serializer's closed set in one compilation, whether it gets
+there by implementing a protocol or by an explicit `[AkkaSerializable<T>]` adoption. Two serializers
+claiming the same type -- two adoptions, or one adoption colliding with the other serializer's own
+protocol membership -- is **AKKASG041**, reported at both serializers' own declarations. Across
+compilations that cannot see each other, this becomes a startup check instead, once a future change
+lets a serializer's protocol set span referenced assemblies (see
+[Limitations Today and Planned Changes](#limitations-today-and-planned-changes)).
+
+The protocol set `ManifestPrefix` expands over is scoped to the **current compilation only** today:
+every non-abstract, non-generic `[AkkaSerializable]` type this compilation can see that implements
+the protocol interface directly. A protocol implementor declared only in a referenced assembly is
+invisible to this expansion, the same limitation top-level dispatch already has; see
+[Limitations Today and Planned Changes](#limitations-today-and-planned-changes).
 
 ## Cross-Assembly Types
 
@@ -741,18 +904,22 @@ never the CLR type's name. Changing it is exactly as breaking as changing a fiel
 
 ## Diagnostics Reference
 
-Every id below is a `DiagnosticDescriptor` in `AkkaSerializerGenerator.cs`. Two ids are
+Every id below is a `DiagnosticDescriptor` in `AkkaSerializerGenerator.cs`. Three ids are
 intentionally absent. **AKKASG030** does not exist. The C# compiler itself already rejects
 duplicate `[AkkaSerializer<T>]` attributes on one class, as `CS0579`: "Duplicate attribute". So the
-generator never needs its own diagnostic for that case. **AKKASG035** does not exist either. It
-used to fire when a field carried both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. That attribute
-was retired, so the diagnostic was retired with it, and the id stays a permanent gap.
+generator never needs its own diagnostic for that case. **AKKASG034** does not exist either. It
+used to fire when a registered closed generic construction implemented no protocol and was
+unreachable from any field. A registration now unconditionally adopts its type (see
+[A Registration Adopts Its Type](#a-registration-adopts-its-type)), so that condition can no longer
+occur, and the id stays a permanent gap. **AKKASG035** does not exist either. It used to fire when a
+field carried both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. That attribute was retired, so the
+diagnostic was retired with it, and the id stays a permanent gap.
 
 | Id | Severity | Title | Meaning |
 |---|---|---|---|
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
-| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, or type the property as `object`. |
+| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
 | AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
@@ -769,7 +936,7 @@ was retired, so the diagnostic was retired with it, and the id stays a permanent
 | AKKASG017 | Error | Union member manifests must be unique | Two members of the same union share a manifest. |
 | AKKASG018 | Error | Union member is not assignable to the field type | A declared member isn't implicitly convertible to the field's static type. |
 | AKKASG019 | Error | Union member set is invalid | The union's member set itself is malformed (for example, a duplicate member type). |
-| AKKASG020 | Error | Closed generic registration is invalid | An `[AkkaSerializable<T>]` registration isn't a closed construction of a generic `[AkkaSerializable]` type. |
+| AKKASG020 | Error | Closed generic registration is invalid | An `[AkkaSerializable<T>]` registration's target isn't a closed type (generic or not) whose definition is `[AkkaSerializable]`. |
 | AKKASG021 | Error | Duplicate closed generic registration | The same closed construction is registered more than once on one serializer. |
 | AKKASG022 | Error | Generic serializable type requires closed generic registrations | A generic `[AkkaSerializable]` type implements the protocol but has no closed registrations. |
 | AKKASG023 | Error | Closed generic field type is not registered | A field uses a closed generic construction that was never registered with `[AkkaSerializable<T>]`. |
@@ -782,11 +949,13 @@ was retired, so the diagnostic was retired with it, and the id stays a permanent
 | AKKASG031 | Error | Protocol interface bound by multiple serializers | Two `[AkkaSerializer]` classes bind the same protocol interface. |
 | AKKASG032 | Error | Serializer class shape is invalid | The `[AkkaSerializer]` class isn't `partial`, is generic, or doesn't derive from `AkkaSerializer`. |
 | AKKASG033 | Error | Protocol type must be an interface | The `TProtocol` type argument to `[AkkaSerializer<TProtocol>]` isn't an interface. |
-| AKKASG034 | Error | Registered closed generic type does not implement the serializer protocol | A closed generic registration implements no protocol and is unreachable from any field, so it has no effect. |
 | AKKASG036 | Warning | Union member type is abstract | An abstract union member can never be the exact runtime type, so its dispatch branch is dead code. |
 | AKKASG037 | Info | Manifest on a generic [AkkaSerializable] definition is ignored | A `Manifest` set on the *open* generic definition is ignored; only closed constructions carry one. |
 | AKKASG038 | Error | Union declaration on an object-typed property | A property typed `object` also carries a field-level `[AkkaUnion]`. `object` is always an envelope payload boundary, so the union declaration is contradictory. |
 | AKKASG039 | Error | Referenced type or member is not accessible | A referenced-assembly nested field or union member type is `[AkkaSerializable]`, but this compilation cannot see it, or one of its own `[AkkaField]` properties, or a type it itself nests. See [Cross-assembly types](#cross-assembly-types). |
+| AKKASG040 | Error | ManifestPrefix has no closed set to expand | A registration sets `ManifestPrefix`, but its type argument isn't generic, is a concrete class, or otherwise has no closed member set (or a fixed nested argument was never itself registered). See [ManifestPrefix](#manifestprefix-expanding-a-registration-over-a-closed-set). |
+| AKKASG041 | Error | Message type is owned by more than one serializer | A type belongs to more than one serializer's closed set in this compilation, by protocol membership or adoption. See [The One-Owner Rule](#the-one-owner-rule). |
+| AKKASG042 | Info | Closed-set expansion produced constructions | A `ManifestPrefix` registration expanded; the message names how many constructions it produced. |
 
 ## Limitations Today and Planned Changes
 
@@ -807,12 +976,11 @@ The following work is planned. None of it ships on `dev` today. It is tracked ag
 [issue #8384](https://github.com/akkadotnet/akka.net/issues/8384) and
 `openspec/changes/messagepack-sourcegen-validation/design.md`:
 
-* **Expansion of a registration over a closed set with a `ManifestPrefix`.** One registration
-  will cover many closed constructions from a declared set. Today each construction needs its own
-  `[AkkaSerializable<T>]` attribute.
 * **Discovery of protocol implementors in referenced assemblies.** The generator will find types
   that implement a serializer's protocol interface across assembly boundaries. Today it looks only
-  in the current compilation.
+  in the current compilation -- including for `ManifestPrefix`'s own expansion (see
+  [The One-Owner Rule](#the-one-owner-rule)) and for a type-level `[AkkaUnion]` with no listed
+  members.
 * **Support for an `object` element inside a collection.** A collection element typed `object`,
   such as `List<object>` or `object[]`, is not yet a supported envelope boundary. It will follow
   the same rule a property's own `object` type already follows today.
