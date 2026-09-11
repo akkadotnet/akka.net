@@ -1,0 +1,47 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.TestKit.TUnit
+{
+    [System.AttributeUsage(System.AttributeTargets.Class, Inherited=true)]
+    public sealed class AkkaTUnitLifecycleAttribute : System.Attribute, TUnit.Core.Interfaces.IEventReceiver, TUnit.Core.Interfaces.ITestEndEventReceiver, TUnit.Core.Interfaces.ITestStartEventReceiver
+    {
+        public AkkaTUnitLifecycleAttribute() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask OnTestEnd(TUnit.Core.TestContext context) { }
+        public System.Threading.Tasks.ValueTask OnTestStart(TUnit.Core.TestContext context) { }
+    }
+    public sealed class TUnitAssertions : Akka.TestKit.ITestKitAssertions
+    {
+        public TUnitAssertions() { }
+        public void AssertEqual<T>(T expected, T actual, string format = "", params object[] args) { }
+        public void AssertEqual<T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args) { }
+        public void AssertFalse(bool condition, string format = "", params object[] args) { }
+        public System.Exception AssertThrows(System.Action action) { }
+        public TException AssertThrows<TException>(System.Action action)
+            where TException : System.Exception { }
+        public System.Threading.Tasks.Task<System.Exception> AssertThrowsAsync(System.Func<System.Threading.Tasks.Task> action) { }
+        public System.Threading.Tasks.Task<TException> AssertThrowsAsync<TException>(System.Func<System.Threading.Tasks.Task> action)
+            where TException : System.Exception { }
+        public void AssertTrue(bool condition, string format = "", params object[] args) { }
+        public void Fail(string format = "", params object[] args) { }
+    }
+    [Akka.TestKit.TUnit.AkkaTUnitLifecycle]
+    public class TestKit : Akka.TestKit.TestKitBase, System.IDisposable
+    {
+        public TestKit(Akka.Actor.ActorSystem? system = null, System.IO.TextWriter? output = null) { }
+        public TestKit(string config, System.IO.TextWriter? output = null) { }
+        public TestKit(Akka.Actor.Setup.ActorSystemSetup config, string? actorSystemName = null, System.IO.TextWriter? output = null) { }
+        public TestKit(Akka.Configuration.Config config, string? actorSystemName = null, System.IO.TextWriter? output = null) { }
+        protected System.IO.TextWriter? Output { get; }
+        public new Akka.Actor.ActorSystem Sys { get; }
+        public new Akka.Actor.IActorRef TestActor { get; }
+        protected static Akka.TestKit.TUnit.TUnitAssertions Assertions { get; }
+        public new static Akka.Configuration.Config DefaultConfig { get; }
+        public new static Akka.Configuration.Config FullDebugConfig { get; }
+        protected virtual void AfterAll() { }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        protected void InitializeLogger(Akka.Actor.ActorSystem system) { }
+        protected void InitializeLogger(Akka.Actor.ActorSystem system, string prefix) { }
+    }
+}

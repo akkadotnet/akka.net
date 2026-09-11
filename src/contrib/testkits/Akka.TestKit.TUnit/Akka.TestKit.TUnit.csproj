@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>TestKit for writing tests for Akka.NET using TUnit.</Description>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <PackageTags>$(AkkaPackageTags);testkit;tunit</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <TUnitImplicitUsings>false</TUnitImplicitUsings>
+    <TUnitAssertionsImplicitUsings>false</TUnitAssertionsImplicitUsings>
+    <EnableTUnitSourceGeneration>false</EnableTUnitSourceGeneration>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../core/Akka.TestKit/Akka.TestKit.csproj" />
+    <PackageReference Include="TUnit.Core" Version="$(TUnitVersion)" />
+    <PackageReference Include="TUnit.Assertions" Version="$(TUnitVersion)" />
+  </ItemGroup>
+
+</Project>
