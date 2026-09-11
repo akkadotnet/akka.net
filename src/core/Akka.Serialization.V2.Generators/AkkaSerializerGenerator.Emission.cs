@@ -36,7 +36,7 @@ internal readonly struct ResolvedSerializerMessages
     public ResolvedSerializerMessages(
         ImmutableArray<AkkaSerializerGenerator.MessageInfo> topLevelMessages,
         ImmutableArray<AkkaSerializerGenerator.MessageInfo> reachableMessages,
-        ImmutableDictionary<string, AkkaSerializerGenerator.MessageInfo> resolvedMessagesByType)
+        ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.MessageInfo> resolvedMessagesByType)
     {
         TopLevelMessages = topLevelMessages;
         ReachableMessages = reachableMessages;
@@ -45,7 +45,7 @@ internal readonly struct ResolvedSerializerMessages
 
     public ImmutableArray<AkkaSerializerGenerator.MessageInfo> TopLevelMessages { get; }
     public ImmutableArray<AkkaSerializerGenerator.MessageInfo> ReachableMessages { get; }
-    public ImmutableDictionary<string, AkkaSerializerGenerator.MessageInfo> ResolvedMessagesByType { get; }
+    public ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.MessageInfo> ResolvedMessagesByType { get; }
 }
 
 public sealed partial class AkkaSerializerGenerator
@@ -158,16 +158,18 @@ public sealed partial class AkkaSerializerGenerator
         var topLevelMessages = BuildClosedSet(resolved.TopLevelMessages);
         var usedFormatters = CollectUsedFormatters(resolved.ReachableMessages);
 
-        // PlanUnionHelpers and ResolveClosedGenericRegistrations both look up against
-        // resolved.ResolvedMessagesByType -- the FULL, whole-compilation dictionary
-        // ResolveSerializerMessages builds from declaredMessages, exactly as validation already
-        // does (see ValidateResolved). That full dictionary must NOT become the model's OWN stored
-        // ResolvedMessagesByType, though: it carries every OTHER serializer's messages too, so a
-        // serializer that adopts none of them would still see this model change shape whenever any
-        // of them do -- exactly the cross-serializer poisoning ResolvedSerializer.Equals must avoid
-        // (see BuildResolvedMessageTable's doc comment).
+        // PlanUnionHelpers looks up against resolved.ResolvedMessagesByType -- the FULL,
+        // whole-compilation table ResolveSerializerMessages builds from declaredMessages, exactly as
+        // validation already does (see ValidateResolved). That full table must NOT become the
+        // model's OWN stored ResolvedMessagesByType, though: it carries every OTHER serializer's
+        // messages too, so a serializer that adopts none of them would still see this model change
+        // shape whenever any of them do -- exactly the cross-serializer poisoning
+        // ResolvedSerializer.Equals must avoid (see BuildResolvedMessageTable's doc comment).
+        // ResolveClosedGenericSchemas is safe from that same poisoning by construction: it resolves
+        // ONLY this serializer's own ClosedGenericSchemas against its own Formatters, never touching
+        // declaredMessages at all.
         var unionPlan = PlanUnionHelpers(resolved.ReachableMessages, resolved.ResolvedMessagesByType);
-        var resolvedClosedGenericRegistrations = ResolveClosedGenericRegistrations(serializer.ClosedGenericRegistrations, resolved.ResolvedMessagesByType);
+        var resolvedClosedGenericSchemas = ResolveClosedGenericSchemas(serializer);
         var resolvedMessagesByType = BuildResolvedMessageTable(resolved.ReachableMessages);
 
         return ResolvedSerializer.Emittable(
@@ -176,7 +178,7 @@ public sealed partial class AkkaSerializerGenerator
             resolvedMessagesByType,
             topLevelMessages,
             resolved.ReachableMessages,
-            resolvedClosedGenericRegistrations,
+            resolvedClosedGenericSchemas,
             usedFormatters,
             unionPlan,
             validationDiagnostics.ToImmutable());
@@ -184,24 +186,42 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// The message table actually STORED on <see cref="ResolvedSerializer.ResolvedMessagesByType"/>:
-    /// only this serializer's own reachable messages, keyed by type name -- deliberately narrower
-    /// than the full, whole-compilation dictionary <see cref="ResolveSerializerMessages"/> builds
-    /// (and validation still uses, unchanged) internally. A serializer's cached
-    /// <see cref="ResolvedSerializer"/> must depend only on what actually shapes ITS OWN output; the
-    /// full dictionary includes every other serializer's messages too, so storing it verbatim would
-    /// make an untouched serializer's resolved model compare UNEQUAL whenever some unrelated
-    /// serializer's message changed -- defeating the per-serializer caching this stage exists for.
-    /// Every top-level message is already a member of <paramref name="reachableMessages"/> (see
-    /// <see cref="CollectReachableMessages"/>, which seeds its walk from the top-level set), so
-    /// nothing is lost by keying only off it.
+    /// only this serializer's own reachable messages, keyed by type -- deliberately narrower than the
+    /// full, whole-compilation dictionary <see cref="ResolveSerializerMessages"/> builds (and
+    /// validation still uses, unchanged) internally. A serializer's cached <see cref="ResolvedSerializer"/>
+    /// must depend only on what actually shapes ITS OWN output; the full dictionary includes every
+    /// other serializer's messages too, so storing it verbatim would make an untouched serializer's
+    /// resolved model compare UNEQUAL whenever some unrelated serializer's message changed --
+    /// defeating the per-serializer caching this stage exists for. Every top-level message is already
+    /// a member of <paramref name="reachableMessages"/> (see <see cref="CollectReachableMessages"/>,
+    /// which seeds its walk from the top-level set), so nothing is lost by keying only off it.
     /// </summary>
-    private static ImmutableDictionary<string, MessageInfo> BuildResolvedMessageTable(ImmutableArray<MessageInfo> reachableMessages)
+    private static ImmutableDictionary<TypeKey, MessageInfo> BuildResolvedMessageTable(ImmutableArray<MessageInfo> reachableMessages)
     {
-        var builder = ImmutableDictionary.CreateBuilder<string, MessageInfo>(StringComparer.Ordinal);
+        var builder = ImmutableDictionary.CreateBuilder<TypeKey, MessageInfo>();
         foreach (var message in reachableMessages)
-            builder[message.FullyQualifiedName] = message;
+            builder[message.Key] = message;
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Resolves this serializer's OWN closed-generic registrations -- <see cref="SerializerInfo.ClosedGenericSchemas"/>
+    /// -- to their formatter-substituted form, keyed by <see cref="TypeKey"/>: the "one schema table"
+    /// for this serializer's registrations. Deliberately self-scoped, exactly like
+    /// <see cref="BuildResolvedMessageTable"/>'s narrowing: it depends only on THIS serializer's own
+    /// <see cref="SerializerInfo.ClosedGenericSchemas"/> and <see cref="SerializerInfo.Formatters"/>,
+    /// reusing the SAME per-key-independent <see cref="ResolveMessages"/> transform every other
+    /// message goes through -- never the whole-compilation <c>declaredMessages</c> array -- so an
+    /// edit to an unrelated message can never change this table.
+    /// </summary>
+    private static ImmutableDictionary<TypeKey, MessageInfo> ResolveClosedGenericSchemas(SerializerInfo serializer)
+    {
+        if (serializer.ClosedGenericSchemas.IsDefaultOrEmpty)
+            return ImmutableDictionary<TypeKey, MessageInfo>.Empty;
+
+        var schemasByKey = serializer.ClosedGenericSchemas.ToImmutableDictionary(message => message.Key);
+        return ResolveMessages(schemasByKey, serializer.Formatters);
     }
 
     /// <summary>
@@ -245,33 +265,31 @@ public sealed partial class AkkaSerializerGenerator
     {
         var allMessages = declaredMessages
             .Where(message => !message.IsGenericDefinition)
-            .Concat(serializer.ClosedGenericRegistrations
-                .Where(registration => registration.Message != null)
-                .Select(registration => registration.Message!))
+            .Concat(serializer.ClosedGenericSchemas)
             .ToImmutableArray();
-        var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
+        var allMessagesByType = allMessages.ToImmutableDictionary(message => message.Key);
         var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
         var topLevelMessages = allMessages
             .Where(message => serializer.ProtocolTypeFullName.Length > 0 && message.Protocols.Contains(serializer.ProtocolTypeFullName))
-            .Select(message => resolvedMessagesByType[message.FullyQualifiedName])
+            .Select(message => resolvedMessagesByType[message.Key])
             .ToImmutableArray();
         var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
         return new ResolvedSerializerMessages(topLevelMessages, reachableMessages, resolvedMessagesByType);
     }
 
-    private static ImmutableDictionary<string, MessageInfo> ResolveMessages(
-        ImmutableDictionary<string, MessageInfo> allMessagesByType,
+    private static ImmutableDictionary<TypeKey, MessageInfo> ResolveMessages(
+        ImmutableDictionary<TypeKey, MessageInfo> allMessagesByType,
         ImmutableArray<FormatterInfo> formatters)
     {
         if (formatters.IsDefaultOrEmpty)
             return allMessagesByType;
 
-        var formattersByTarget = new Dictionary<string, FormatterInfo>(StringComparer.Ordinal);
+        var formattersByTarget = new Dictionary<TypeKey, FormatterInfo>();
         foreach (var formatter in formatters)
-            formattersByTarget[formatter.TargetTypeFullName] = formatter;
+            formattersByTarget[formatter.TargetTypeKey] = formatter;
 
-        var builder = ImmutableDictionary.CreateBuilder<string, MessageInfo>();
+        var builder = ImmutableDictionary.CreateBuilder<TypeKey, MessageInfo>();
         foreach (var pair in allMessagesByType)
         {
             var message = pair.Value;
@@ -282,9 +300,9 @@ public sealed partial class AkkaSerializerGenerator
             {
                 if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
                     field.Mapping.TypeFullName.Length > 0 &&
-                    formattersByTarget.TryGetValue(field.Mapping.TypeFullName, out var formatter))
+                    formattersByTarget.TryGetValue(field.Mapping.Key, out var formatter))
                 {
-                    resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.TypeFullName), formatter));
+                    resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.Key), formatter));
                     changed = true;
                 }
                 else
@@ -384,39 +402,9 @@ public sealed partial class AkkaSerializerGenerator
     {
         var builder = ImmutableArray.CreateBuilder<ClosedSetMember>(messages.Length);
         foreach (var message in messages)
-            builder.Add(new ClosedSetMember(message.FullyQualifiedName, message.Manifest, GetMessageMethodName(message)));
+            builder.Add(new ClosedSetMember(message.Key, message.Manifest, GetMessageMethodName(message)));
 
         return new ClosedSet(builder.ToImmutable());
-    }
-
-    /// <summary>
-    /// Rewrites each closed-generic registration's <see cref="ClosedGenericRegistrationInfo.Message"/>
-    /// to the FORMATTER-RESOLVED version of that message from <paramref name="resolvedMessagesByType"/>
-    /// (see <see cref="ResolveMessages"/>) -- a registration's message, as extracted, predates
-    /// per-serializer formatter substitution, exactly like every other message
-    /// <see cref="ResolveSerializerMessages"/> folds in. An invalid registration
-    /// (<see cref="ClosedGenericRegistrationInfo.Message"/> is null, or its type never made it into
-    /// the resolved table) passes through unchanged -- AKKASG020 already gates that case in
-    /// <see cref="EvaluateGate"/>, so this never actually happens for an emittable serializer, but a
-    /// bare pass-through is simpler than asserting it here too.
-    /// </summary>
-    private static ImmutableArray<ClosedGenericRegistrationInfo> ResolveClosedGenericRegistrations(
-        ImmutableArray<ClosedGenericRegistrationInfo> registrations,
-        ImmutableDictionary<string, MessageInfo> resolvedMessagesByType)
-    {
-        if (registrations.IsDefaultOrEmpty)
-            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
-
-        var builder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(registrations.Length);
-        foreach (var registration in registrations)
-        {
-            if (registration.Message != null && resolvedMessagesByType.TryGetValue(registration.Message.FullyQualifiedName, out var resolvedMessage))
-                builder.Add(new ClosedGenericRegistrationInfo(registration.TargetDisplayName, resolvedMessage));
-            else
-                builder.Add(registration);
-        }
-
-        return builder.ToImmutable();
     }
 
     private static ImmutableArray<FormatterInfo> CollectUsedFormatters(ImmutableArray<MessageInfo> reachableMessages)
@@ -957,7 +945,7 @@ public sealed partial class AkkaSerializerGenerator
     /// (field-level overrides), later ones -- ordered by signature for determinism -- get a numeric
     /// suffix.
     /// </summary>
-    private static UnionPlan PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
+    private static UnionPlan PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<TypeKey, MessageInfo> messagesByType)
     {
         var representatives = new Dictionary<string, FieldInfo>(StringComparer.Ordinal);
         foreach (var message in reachableMessages)
@@ -994,15 +982,15 @@ public sealed partial class AkkaSerializerGenerator
     /// messagesByType.ContainsKey(...)</c>) and reduced to the (type name, manifest, method name)
     /// triple every union write/read/size helper actually needs -- exactly a <see cref="ClosedSet"/>.
     /// </summary>
-    private static ClosedSet BuildUnionMembers(FieldInfo field, ImmutableDictionary<string, MessageInfo> messagesByType)
+    private static ClosedSet BuildUnionMembers(FieldInfo field, ImmutableDictionary<TypeKey, MessageInfo> messagesByType)
     {
         var builder = ImmutableArray.CreateBuilder<ClosedSetMember>();
         foreach (var member in field.UnionMembers)
         {
-            if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
+            if (!member.IsSupported || !messagesByType.TryGetValue(member.Key, out var memberMessage))
                 continue;
 
-            builder.Add(new ClosedSetMember(member.TypeFullName, memberMessage.Manifest, GetMessageMethodName(memberMessage)));
+            builder.Add(new ClosedSetMember(member.Key, memberMessage.Manifest, GetMessageMethodName(memberMessage)));
         }
 
         return new ClosedSet(builder.ToImmutable());

@@ -102,7 +102,7 @@ public sealed class GeneratorResolveSpec
         // implement IProtocol.
         resolved.TopLevelMessages.Members.Select(m => m.TypeFullName).Should().Equal(outer.FullyQualifiedName);
         resolved.ReachableMessages.Select(m => m.FullyQualifiedName).Should().BeEquivalentTo(new[] { outer.FullyQualifiedName, nested.FullyQualifiedName });
-        resolved.ResolvedMessagesByType.Keys.Should().BeEquivalentTo(new[] { outer.FullyQualifiedName, nested.FullyQualifiedName });
+        resolved.ResolvedMessagesByType.Keys.Select(key => key.DisplayName).Should().BeEquivalentTo(new[] { outer.FullyQualifiedName, nested.FullyQualifiedName });
     }
 
     [Fact(DisplayName = "ResolveSerializer should plan one union helper with members in declared order")]
@@ -262,11 +262,11 @@ public sealed class GeneratorResolveSpec
         return GeneratorTestHarness.Run(source).OutputCompilation;
     }
 
-    private static string ProtocolFullName(Compilation compilation, string metadataName = "ResolveSample.IProtocol")
+    private static AkkaSerializerGenerator.TypeKey ProtocolFullName(Compilation compilation, string metadataName = "ResolveSample.IProtocol")
     {
         var symbol = compilation.GetTypeByMetadataName(metadataName)
             ?? throw new InvalidOperationException($"Could not resolve '{metadataName}' in the harness compilation.");
-        return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return AkkaSerializerGenerator.TypeKey.FromSymbol(symbol);
     }
 
     private static AkkaSerializerGenerator.MessageInfo ParseMessage(Compilation compilation, string metadataName)
@@ -277,7 +277,7 @@ public sealed class GeneratorResolveSpec
             ?? throw new InvalidOperationException($"'{metadataName}' was not recognized as [AkkaSerializable].");
     }
 
-    private static AkkaSerializerGenerator.SerializerInfo BuildSerializerInfo(string protocolTypeFullName, string className = "TestSerializer")
+    private static AkkaSerializerGenerator.SerializerInfo BuildSerializerInfo(AkkaSerializerGenerator.TypeKey protocolTypeKey, string className = "TestSerializer")
     {
         return new AkkaSerializerGenerator.SerializerInfo(
             ns: "ResolveSample",
@@ -285,11 +285,12 @@ public sealed class GeneratorResolveSpec
             fullyQualifiedName: $"global::ResolveSample.{className}",
             name: "test-serializer",
             serializerId: 1,
-            protocolTypeFullName: protocolTypeFullName,
+            protocolTypeKey: protocolTypeKey,
             protocolTypeIsInterface: true,
             declaredAccessibility: Accessibility.Public,
             formatters: ImmutableArray<AkkaSerializerGenerator.FormatterInfo>.Empty,
             closedGenericRegistrations: ImmutableArray<AkkaSerializerGenerator.ClosedGenericRegistrationInfo>.Empty,
+            closedGenericSchemas: ImmutableArray<AkkaSerializerGenerator.MessageInfo>.Empty,
             isPartial: true,
             isGeneric: false,
             derivesFromAkkaSerializerBase: true);
