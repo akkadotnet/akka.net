@@ -441,6 +441,53 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// Decision 19's placement Rule 1 (design.md's "making the compiler complain" table, and the
+    /// maintainer's decision-record page): a type declared in THIS compilation implements a protocol
+    /// that an UPSTREAM serializer -- one declared in a referenced assembly -- already binds. That
+    /// upstream assembly compiles before this one and can never see this type, so it would never be
+    /// dispatched. Reported at the type's own declaration, the only local site this compilation has.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ProtocolOwnedUpstream = new(
+        "AKKASG043",
+        "Protocol is owned by an upstream serializer",
+        "Type '{0}' implements protocol '{1}', which is already bound upstream by {2}. That assembly cannot see this one, so this type will never be dispatched by it. Move the type upstream, or move the serializer to an assembly that references this one.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 19's placement Rule 2: a serializer with no messages in its own compilation, in any
+    /// referenced assembly, and no registrations of its own is very likely a placement mistake --
+    /// this serializer may have been declared upstream of the assembly that holds its messages,
+    /// which it can never see. Reported at the serializer's own attribute. Advisory only (Warning):
+    /// a message assembly whose serializer lives in a host below it is a legitimate shape too (see
+    /// design.md's Decision 19 section), so this cannot be an error.
+    /// </summary>
+    private static readonly DiagnosticDescriptor SerializerHasNoMessages = new(
+        "AKKASG044",
+        "Serializer has no messages",
+        "Serializer '{0}' for protocol '{1}' has no messages in this compilation or in any referenced assembly, and no registrations. If the messages are in assemblies that depend on this one, this serializer cannot see them.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 19's placement Rule 3: the cross-assembly extension of AKKASG031 (same id, per the
+    /// decision page's own "AKKASG031 across assemblies (extended)" labeling -- this is a variant of
+    /// that existing diagnostic, not a new one; see <see cref="DuplicateProtocolBinding"/>). Fires
+    /// when a LOCAL serializer's protocol is ALSO bound by a serializer declared in a referenced
+    /// assembly: the runtime binding lookup can only route a value to one serializer, so the two
+    /// collide. Reported at the local serializer's own attribute, naming the upstream one(s).
+    /// </summary>
+    private static readonly DiagnosticDescriptor DuplicateProtocolBindingCrossAssembly = new(
+        "AKKASG031",
+        "Protocol interface bound by multiple serializers",
+        "Protocol '{0}' is bound by serializer '{1}' here and by {2}. The runtime bindings collide; keep one serializer per protocol.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -495,6 +542,9 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.ClosedSetExpansionRequiresClosedSet => ClosedSetExpansionRequiresClosedSet,
             DiagnosticKey.AdoptedMessageOwnedByMultipleSerializers => AdoptedMessageOwnedByMultipleSerializers,
             DiagnosticKey.ClosedSetExpansionCount => ClosedSetExpansionCount,
+            DiagnosticKey.ProtocolOwnedUpstream => ProtocolOwnedUpstream,
+            DiagnosticKey.SerializerHasNoMessages => SerializerHasNoMessages,
+            DiagnosticKey.DuplicateProtocolBindingCrossAssembly => DuplicateProtocolBindingCrossAssembly,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

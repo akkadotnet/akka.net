@@ -358,3 +358,103 @@ one-owner conflict compares against, are both scoped to the current compilation 
       removed, AKKASG040/041/042 added, AKKASG020/003 descriptions updated); remove the delivered
       `ManifestPrefix` bullet from "Limitations Today and Planned Changes"; add an addendum under
       Decision 18 in design.md for choices the design text left to the implementation
+
+## 15. Referenced-Assembly Implementors, Serializer Placement, And Marked Union Bases (Decisions 19 And 21)
+
+Stacks on F2 (`feature/serialization-v2-expansion-adoption`, commit `ac3376ffa`). F3 of the
+follow-on cross-assembly work: the generator finds top-level protocol messages, and a marked
+union base's members, in every referenced assembly that itself references
+`Akka.Serialization.V2`, not only in the current compilation. A misplaced serializer becomes a
+compile-time error or warning instead of a silent gap. Does not migrate `ManifestPrefix`
+expansion's own closed-set walk to a shared per-compilation stage; it is cross-assembly-correct
+but still runs per-registration, a documented caching-granularity follow-up (see design.md's
+Decision 19 addendum).
+
+- [x] 15.1 Move closed-set discovery into `CompilationFacts` (`AkkaSerializerGenerator.Facts.cs`):
+      `LocalMarkedImplementorsByClosedSetKey` and a REAL `ReferencedAssemblyImplementorsByProtocol`
+      (the F2 skeleton always returned empty), both keyed by every protocol key a collected
+      serializer declares and every discovered-mode union field's own static-type key.
+      `LocalMarkedImplementorsByClosedSetKey` is a pure filter over the already-collected `messages`
+      array (no symbol walk: see 15.13); the referenced-assembly half, and the two `ManifestPrefix`-
+      expansion walks in `AkkaSerializerGenerator.Extraction.cs` that still run per registration,
+      share one membership test, `ImplementsOrDerivesFromClosedSetKey` (interfaces via
+      `AllInterfaces`, a marked abstract class via the base-type chain)
+- [x] 15.2 Extend `ComputeMetadataSchemas` (Decision 16's stage, `AkkaSerializerGenerator.MetadataSchemas.cs`)
+      to also seed its resolution walk from `CompilationFacts`' referenced-assembly implementor
+      keys, so a referenced-assembly top-level implementor gets a full extracted schema the same way
+      a locally-named nested field's foreign type already does
+- [x] 15.3 Wire `CompilationFacts` and the extended `MetadataSchemas` directly into
+      `ResolvedSerializers`' own inputs (previously deferred, per F2's own `TrackingNames.CompilationFacts`
+      doc comment); `ResolveSerializerMessages` (`AkkaSerializerGenerator.Emission.cs`) adds every
+      referenced-assembly implementor's resolved schema to the same compilation-wide candidate pool
+      `declaredMessages` already populates, so the existing top-level filter and the existing
+      protocol-interface-implicit-union rule (Decision 18) both widen with no further change
+- [x] 15.4 Widen AKKASG029 (protocol coverage) to a new `ReferencedAssemblyUnmarkedImplementorsByProtocol`
+      bucket, reported the same way a local unmarked implementor is, at the serializer's own
+      attribute. AKKASG012 (manifest uniqueness) widens for free, since it already runs over
+      `topLevelMessages`, which now includes the referenced-assembly members
+- [x] 15.5 Add `[AkkaUnion]`'s parameterless constructor (extend-only; `Attributes.cs`) and its
+      generator support: `ExtractUnionMembers` recognizes zero constructor arguments as "discovered,
+      resolve later" (an empty `UnionMembers` array on a `FieldKind.Union` mapping is the unambiguous
+      signal, since the explicit form can never produce it); `MessageInfo` gains `BaseTypeNames` (a
+      marked abstract-class base needs a class-hierarchy fact `Protocols`, built from
+      `AllInterfaces`, cannot carry); `ResolveMessages` generalizes Decision 18's protocol-interface
+      reclassification into one shared, per-closed-set-key member cache serving both rules
+- [x] 15.6 Add AKKASG043 (`ProtocolOwnedUpstream`, Error) and AKKASG044 (`SerializerHasNoMessages`,
+      Warning); extend AKKASG031 (`DuplicateProtocolBindingCrossAssembly`, a second message-text
+      variant sharing the existing id, matching the decision page's own "AKKASG031 across assemblies
+      (extended)" labeling) across assemblies. All three reported from a new diagnostics-only output,
+      `ReportPlacementDiagnostics` (`AkkaSerializerGenerator.Placement.cs`), consuming the collected
+      serializers and messages plus `CompilationFacts` (including a new
+      `UpstreamSerializerBindingsByProtocol` walk for `[AkkaSerializer<TProtocol>]` declarations found
+      in a referenced assembly). The fourth placement rule (the runtime "unsupported generated
+      serializer type" exception) carries no id; its text now names both the failing value's own
+      runtime assembly and the assembly the serializer was generated in
+      (`SerializerInfo.CompilationAssemblyName`, new)
+- [x] 15.7 Add the startup one-owner check to `SerializerRegistration.CreateSetup` (`src/core/Akka.Serialization.V2/SerializerRegistration.cs`):
+      one dictionary pass over every composed registration's own `UseFor` set, throwing naming both
+      colliding registrations' aliases, run once when registrations are composed
+- [x] 15.8 Flip `CrossAssemblyBaselineSpec`'s case 6 (`Protocol_implementor_declared_only_in_referenced_assembly`)
+      from a pinned "invisible, no dispatch arm" failure to a pinned success: the referenced-assembly
+      implementor now gets a Manifest dispatch arm, a `typeof()` binding, and its own generated helpers
+- [x] 15.9 Add `MarkedUnionBaseSpec.cs` (local discovery, cross-assembly discovery, the empty-set
+      exemption, and the explicit list's regression coverage), `PlacementDiagnosticsSpec.cs`
+      (AKKASG043, AKKASG044, the extended AKKASG031, the widened AKKASG029, and the improved runtime
+      exception text), and `SerializerRegistrationOneOwnerSpec.cs` (the startup check, disjoint and
+      colliding registrations, three-or-more registrations)
+- [x] 15.10 Add `ReferencedAssemblyImplementorGoldenOutputSpec.cs`: three golden cases pinned against
+      checked-in baselines -- a referenced-assembly top-level implementor, a marked union base with
+      implementors on both sides of the boundary, and a `ManifestPrefix` expansion whose closed set
+      spans the boundary
+- [x] 15.11 Add a caching-proof scenario to `GeneratorIncrementalScenariosSpec.cs`: adding a new
+      local marked implementor of a protocol marks `CompilationFacts` Modified and re-emits only the
+      serializer whose closed set changed, leaving the other serializer's own resolved model
+      `Unchanged`
+- [x] 15.12 Update the user guide: a new "Marked Union Bases" subsection, the "Cross-Assembly Types"
+      section rewritten for the real walk, a new "Serializer Placement" section (the four rules) and
+      "The Startup One-Owner Check" subsection, the diagnostics table gains AKKASG043/044 and
+      AKKASG031's extended wording, and the delivered "discovery of protocol implementors" bullet is
+      removed from "Limitations Today and Planned Changes"; add addenda under Decisions 19 and 21 in
+      design.md for choices the design text and the maintainer's decision-record page left to the
+      implementation, including the one place the page and this design text disagree (Rule 1's fix
+      list naming an unimplemented serializer part)
+- [x] 15.13 Fix an allocation regression an initial pass at 15.1 left in place (up to ~20% over
+      baseline on the `SourceGeneratorBenchmarks` corpus, whose reference set includes
+      `Akka.Remote`): `ComputeLocalMarkedImplementorsFromMessages` replaces a redundant local symbol
+      walk with a pure filter over the collected `messages` array, and `ComputeReferencedAssemblyFacts`
+      (the genuinely-needed referenced-assembly symbol walk) is memoized in a process-lifetime
+      `ConditionalWeakTable`, so it runs once per reference rather than once per edit. Re-measured
+      against `ac3376ffa`: all four benchmark rows' allocations landed within ~1% of baseline
+      (previously 7-20% over)
+- [x] 15.14 Fix a real (not flaky-only-in-appearance) cache miss 15.13's cache left in place: keying
+      on `IAssemblySymbol` relies on Roslyn reusing the same symbol instance across compilations,
+      which only happens while an earlier bound symbol for the reference is still reachable through
+      Roslyn's own weak symbol cache -- observed to fail under memory pressure, re-walking on every
+      edit in exactly the conditions an IDE creates constantly. Rekeyed on
+      `Compilation.GetMetadataReference(assemblySymbol)`, falling back to the assembly symbol only
+      when a compilation has no separate reference for it. Proven by a counter-based test asserting a
+      delta across a three-run sequence (`GeneratorCompilationFactsSpec.ReferencedAssemblyWalk_is_cached_per_metadata_reference_not_per_assembly_symbol`):
+      zero additional walks across an edit reusing the same reference, exactly one more against a
+      freshly compiled, distinct reference over identical source -- and neutralizes an incidental
+      confound in the test harness itself (its own base reference set independently qualifies the
+      executing test assembly for this same walk) by warming that entry before measuring

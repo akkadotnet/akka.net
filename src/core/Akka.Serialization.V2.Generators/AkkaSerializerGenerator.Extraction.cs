@@ -137,7 +137,8 @@ public sealed partial class AkkaSerializerGenerator
             closedGenericSchemas,
             IsPartial(symbol),
             symbol.IsGenericType,
-            DerivesFromAkkaSerializerBase(symbol, compilation));
+            DerivesFromAkkaSerializerBase(symbol, compilation),
+            compilationAssemblyName: compilation.AssemblyName ?? string.Empty);
     }
 
     /// <summary>
@@ -478,12 +479,15 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// Whether <paramref name="argument"/> has a Decision 18 closed member set: the serializer's own
-    /// protocol interface (its set is every LOCAL, non-generic <c>[AkkaSerializable]</c> implementor
-    /// -- the referenced-assembly walk from Decision 19 is a follow-up, out of scope here), or a type
-    /// carrying a type-level <c>[AkkaUnion]</c> with an explicit member list (works regardless of
-    /// where each listed member lives, exactly like the existing field-level union path). Each member
-    /// is paired with its own top-level manifest (<see cref="GetOwnManifest"/>), sorted by metadata
-    /// name for a deterministic expansion order.
+    /// protocol interface, or a type carrying a type-level <c>[AkkaUnion]</c>. Its set is every
+    /// <c>[AkkaSerializable]</c> implementor this compilation can see -- LOCAL (<see cref="ComputeLocalMarkedProtocolImplementors"/>)
+    /// plus, as of Decision 19, every referenced assembly that itself references
+    /// <c>Akka.Serialization.V2</c> (<see cref="EnumerateReferencedAssemblyMarkedImplementors"/>) --
+    /// or, for an EXPLICIT type-level <c>[AkkaUnion(typeof(A), typeof(B))]</c>, exactly its listed
+    /// member set (works regardless of where each listed member lives, exactly like the existing
+    /// field-level union path; unaffected by Decision 19/21, since the list is already whatever the
+    /// author wrote). Each member is paired with its own top-level manifest
+    /// (<see cref="GetOwnManifest"/>), sorted by metadata name for a deterministic expansion order.
     /// </summary>
     private static bool TryGetClosedSetMembers(
         ITypeSymbol argument,
@@ -500,9 +504,7 @@ public sealed partial class AkkaSerializerGenerator
 
         if (protocolType != null && SymbolEqualityComparer.Default.Equals(namedArgument, protocolType))
         {
-            foreach (var implementor in ComputeLocalMarkedProtocolImplementors(compilation, protocolType, knownTypes, cancellationToken))
-                members.Add((implementor, GetOwnManifest(implementor, knownTypes) ?? string.Empty));
-
+            AddDiscoveredClosedSetMembers(namedArgument, compilation, knownTypes, cancellationToken, members);
             return true;
         }
 
@@ -511,7 +513,19 @@ public sealed partial class AkkaSerializerGenerator
 
         var unionAttribute = namedArgument.OriginalDefinition.GetAttributes()
             .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
-        if (unionAttribute is not { ConstructorArguments.Length: 2 })
+        if (unionAttribute == null)
+            return false;
+
+        // Decision 21: a marked union base (parameterless [AkkaUnion], no listed members) expands
+        // the SAME way the protocol interface does above -- every visible [AkkaSerializable]
+        // implementor, local and referenced-assembly.
+        if (unionAttribute.ConstructorArguments.Length == 0)
+        {
+            AddDiscoveredClosedSetMembers(namedArgument, compilation, knownTypes, cancellationToken, members);
+            return true;
+        }
+
+        if (unionAttribute.ConstructorArguments.Length != 2)
             return false;
 
         if (unionAttribute.ConstructorArguments[0].Value is INamedTypeSymbol first && !first.IsUnboundGenericType)
@@ -527,22 +541,46 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// The LOCAL, non-generic, non-abstract <c>[AkkaSerializable]</c> implementors of
-    /// <paramref name="protocolType"/> -- the current compilation's scope of Decision 19's future
-    /// referenced-assembly walk (see <c>ComputeLocalUnmarkedImplementorsByProtocol</c> in
-    /// AkkaSerializerGenerator.Facts.cs for its unmarked/AKKASG029 counterpart). A member of the set
-    /// that is itself a generic construction is out of scope for this compilation-only, symbol-based
-    /// walk; the "G&lt;H&lt;M&gt;&gt;" nested case in the Decision 18 formula covers that shape
-    /// instead, through an explicit sibling registration (<see cref="TryResolveFixedArgumentManifest"/>).
-    /// Sorted by fully-qualified name (ordinal) so expansion order -- and with it, generated dispatch
-    /// order and the AKKASG042 count -- is deterministic across runs.
+    /// Adds every visible <c>[AkkaSerializable]</c> implementor of <paramref name="closedSetKeySymbol"/>
+    /// -- local, then referenced-assembly -- to <paramref name="members"/>, each paired with its own
+    /// top-level manifest. Shared by <see cref="TryGetClosedSetMembers"/>'s protocol-interface and
+    /// marked-union-base branches: both are the same "discover the set" rule, over a different key.
+    /// </summary>
+    private static void AddDiscoveredClosedSetMembers(
+        INamedTypeSymbol closedSetKeySymbol,
+        Compilation compilation,
+        KnownTypes knownTypes,
+        CancellationToken cancellationToken,
+        List<(INamedTypeSymbol Symbol, string Manifest)> members)
+    {
+        foreach (var implementor in ComputeLocalMarkedProtocolImplementors(compilation, closedSetKeySymbol, knownTypes, cancellationToken))
+            members.Add((implementor, GetOwnManifest(implementor, knownTypes) ?? string.Empty));
+
+        foreach (var implementor in EnumerateReferencedAssemblyMarkedImplementors(compilation, closedSetKeySymbol, knownTypes, cancellationToken))
+            members.Add((implementor, GetOwnManifest(implementor, knownTypes) ?? string.Empty));
+    }
+
+    /// <summary>
+    /// The LOCAL, non-generic, non-abstract <c>[AkkaSerializable]</c> implementors of (or, for an
+    /// abstract-class closed-set key, derivers of) <paramref name="closedSetKeySymbol"/> --
+    /// <see cref="ImplementsOrDerivesFromClosedSetKey"/> handles both shapes, so this serves a
+    /// protocol interface (Decision 18) and a marked union base (Decision 21) alike. See
+    /// <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/> in AkkaSerializerGenerator.Facts.cs
+    /// for its unmarked/AKKASG029 counterpart, and <see cref="EnumerateReferencedAssemblyMarkedImplementors"/>
+    /// for its Decision 19 referenced-assembly sibling. A member of the set that is itself a generic
+    /// construction is out of scope for this symbol-based walk; the "G&lt;H&lt;M&gt;&gt;" nested case
+    /// in the Decision 18 formula covers that shape instead, through an explicit sibling registration
+    /// (<see cref="TryResolveFixedArgumentManifest"/>). Sorted by fully-qualified name (ordinal) so
+    /// expansion order -- and with it, generated dispatch order and the AKKASG042 count -- is
+    /// deterministic across runs.
     /// </summary>
     private static ImmutableArray<INamedTypeSymbol> ComputeLocalMarkedProtocolImplementors(
-        Compilation compilation, INamedTypeSymbol protocolType, KnownTypes knownTypes, CancellationToken cancellationToken)
+        Compilation compilation, INamedTypeSymbol closedSetKeySymbol, KnownTypes knownTypes, CancellationToken cancellationToken)
     {
         if (knownTypes.SerializableAttribute == null)
             return ImmutableArray<INamedTypeSymbol>.Empty;
 
+        var key = TypeKey.FromSymbol(closedSetKeySymbol, includeDisplayName: false);
         var results = new List<INamedTypeSymbol>();
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
@@ -555,13 +593,60 @@ public sealed partial class AkkaSerializerGenerator
             if (!isMarked)
                 continue;
 
-            var implementsProtocol = candidate.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, protocolType));
-            if (implementsProtocol)
+            if (ImplementsOrDerivesFromClosedSetKey(candidate, key))
                 results.Add(candidate);
         }
 
         results.Sort((a, b) => string.CompareOrdinal(GetFullyQualifiedTypeName(a), GetFullyQualifiedTypeName(b)));
         return results.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Decision 19's referenced-assembly counterpart of <see cref="ComputeLocalMarkedProtocolImplementors"/>,
+    /// for <c>ManifestPrefix</c> expansion (Decision 18): every accessible, non-generic, non-abstract
+    /// <c>[AkkaSerializable]</c> implementor of (or deriver of) <paramref name="closedSetKeySymbol"/>
+    /// declared in a referenced assembly that itself references <c>Akka.Serialization.V2</c>. This is
+    /// the SAME walk <c>ComputeReferencedAssemblyImplementors</c> in AkkaSerializerGenerator.Facts.cs
+    /// runs for top-level dispatch widening and the implicit protocol/union-field rule -- but run
+    /// here, PER REGISTRATION, from this per-serializer-node extraction step, rather than consuming
+    /// that stage's own once-per-compilation result: <c>ExtractSerializerCore</c> (this method's own
+    /// caller's caller) is itself the per-node transform CompilationFacts is built FROM, so it cannot
+    /// consume CompilationFacts' cached value without a circular pipeline dependency. Functionally
+    /// complete (the expansion sees the same cross-assembly closed set top-level dispatch does); the
+    /// caching refinement of sharing CompilationFacts' own walk result is a follow-up, not part of
+    /// this change -- see design.md's Decision 19 implementation addendum.
+    /// </summary>
+    private static IEnumerable<INamedTypeSymbol> EnumerateReferencedAssemblyMarkedImplementors(
+        Compilation compilation, INamedTypeSymbol closedSetKeySymbol, KnownTypes knownTypes, CancellationToken cancellationToken)
+    {
+        if (knownTypes.SerializableAttribute == null)
+            yield break;
+
+        var key = TypeKey.FromSymbol(closedSetKeySymbol, includeDisplayName: false);
+        foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!ReferencesAkkaSerializationV2(assembly))
+                continue;
+
+            foreach (var candidate in GetSourceDeclaredTypes(assembly.GlobalNamespace))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract || candidate.IsGenericType)
+                    continue;
+
+                if (!compilation.IsSymbolAccessibleWithin(candidate, compilation.Assembly))
+                    continue;
+
+                if (!HasSerializableAttribute(candidate, knownTypes))
+                    continue;
+
+                if (ImplementsOrDerivesFromClosedSetKey(candidate, key))
+                    yield return candidate;
+            }
+        }
     }
 
     /// <summary>A type's own top-level manifest, from its own (non-generic-registration) <c>[AkkaSerializable(Manifest = ...)]</c> attribute. Null when it has none.</summary>
@@ -906,8 +991,14 @@ public sealed partial class AkkaSerializerGenerator
             // typed `object` that ALSO carries a field-level [AkkaUnion] is contradictory author
             // intent, not a harmless no-op -- AKKASG038 (error) fires on it below. A TYPE-LEVEL
             // [AkkaUnion] is irrelevant here: `object`'s own type never carries one.
+            //
+            // The Union mapping carries the field's own static-type key even for an EXPLICIT member
+            // list (harmless there -- ResolveMessages only consults it when field.UnionMembers is
+            // empty, Decision 21's discovered form; see that key's own doc comment). A field-level
+            // [AkkaUnion] on a non-named-type field (impossible in practice: the attribute target
+            // list does not include arrays/pointers, but this stays defensive) leaves the key default.
             var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
-                : hasUnionAttribute ? new TypeMapping(FieldKind.Union)
+                : hasUnionAttribute ? new TypeMapping(FieldKind.Union, member.Type is INamedTypeSymbol namedFieldType ? TypeKey.FromSymbol(namedFieldType) : default)
                 : MapType(member.Type, knownTypes);
             fields.Add(new FieldInfo(
                 index,
@@ -936,7 +1027,27 @@ public sealed partial class AkkaSerializerGenerator
             isSealed: symbol.IsSealed || symbol.TypeKind == TypeKind.Struct,
             isAbstract: symbol.IsAbstract,
             isValueType: symbol.IsValueType,
-            foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes));
+            foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes),
+            baseTypeNames: GetBaseTypeNames(symbol));
+    }
+
+    /// <summary>
+    /// Fully-qualified display names of every base class (direct and transitive, excluding
+    /// <c>object</c>) of <paramref name="symbol"/> -- Decision 21's class-hierarchy counterpart of
+    /// <see cref="GetProtocolNames"/>, since a marked <c>[AkkaUnion]</c> base can be an abstract
+    /// class, and <see cref="ITypeSymbol.AllInterfaces"/> never reports a class. Empty for a struct
+    /// (structs have no base class of their own) or a class whose only base is <c>object</c>.
+    /// </summary>
+    private static ImmutableArray<string> GetBaseTypeNames(INamedTypeSymbol symbol)
+    {
+        if (symbol.BaseType == null || symbol.BaseType.SpecialType == SpecialType.System_Object)
+            return ImmutableArray<string>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<string>();
+        for (var baseType = symbol.BaseType; baseType != null && baseType.SpecialType != SpecialType.System_Object; baseType = baseType.BaseType)
+            builder.Add(baseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+        return builder.ToImmutable();
     }
 
     /// <summary>
@@ -1124,16 +1235,29 @@ public sealed partial class AkkaSerializerGenerator
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
         }
 
-        // AkkaUnionAttribute(Type first, params Type[] rest): TWO constructor arguments now, not
-        // one -- [0] is the mandatory `first` member, [1] is the `params` array holding the rest.
-        // The full declared member set is the concatenation of both; reading only
-        // ConstructorArguments[0].Values (the pre-Seed-2 shape, when the whole set arrived as a
-        // single `params Type[] memberTypes` array) would silently see only `first` and drop every
-        // other declared member.
-        if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 2)
+        if (unionAttribute == null)
             return ImmutableArray<UnionMemberInfo>.Empty;
 
         hasUnionAttribute = true;
+
+        // Decision 21: AkkaUnionAttribute() -- the parameterless form -- declares the field's
+        // static type a wire contract with no listed member set. The set is resolved later, once
+        // per compilation (ResolveMessages, against CompilationFacts' closed-set data), not here:
+        // this method has no whole-compilation view to discover it with. An empty UnionMembers
+        // array on a FieldKind.Union field is exactly that "not resolved yet" signal -- unambiguous,
+        // since the explicit form below always produces at least one member (`first` is mandatory).
+        if (unionAttribute.ConstructorArguments.Length == 0)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
+        // AkkaUnionAttribute(Type first, params Type[] rest): TWO constructor arguments for the
+        // explicit-list form -- [0] is the mandatory `first` member, [1] is the `params` array
+        // holding the rest. The full declared member set is the concatenation of both; reading only
+        // ConstructorArguments[0].Values (the pre-Seed-2 shape, when the whole set arrived as a
+        // single `params Type[] memberTypes` array) would silently see only `first` and drop every
+        // other declared member.
+        if (unionAttribute.ConstructorArguments.Length != 2)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
         var restArguments = unionAttribute.ConstructorArguments[1].Values;
         var arguments = ImmutableArray.CreateBuilder<TypedConstant>(1 + restArguments.Length);
         arguments.Add(unionAttribute.ConstructorArguments[0]);
@@ -1589,6 +1713,7 @@ public sealed partial class AkkaSerializerGenerator
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
             UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
+            SerializerAttribute = compilation.GetTypeByMetadataName(SerializerAttributeFullName);
             FormatterAttribute = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
             GenericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
@@ -1616,6 +1741,9 @@ public sealed partial class AkkaSerializerGenerator
         public INamedTypeSymbol? FieldAttribute { get; }
         public INamedTypeSymbol? UnionAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
+
+        /// <summary>The open <c>AkkaSerializerAttribute&lt;TProtocol&gt;</c> definition -- resolved once per compilation, used by the Decision 19 upstream-serializer-binding walk (<see cref="AkkaSerializerGenerator.ComputeUpstreamSerializerBindings"/>).</summary>
+        public INamedTypeSymbol? SerializerAttribute { get; }
 
         /// <summary>The open <c>AkkaSerializerFormatterAttribute&lt;TTarget, TFormatter&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractFormatters"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
         public INamedTypeSymbol? FormatterAttribute { get; }

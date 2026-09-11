@@ -45,15 +45,24 @@ public sealed partial class AkkaSerializerGenerator
     /// Builds the whole-compilation <see cref="MetadataSchemaTable"/>: resolves every referenced-
     /// assembly type reachable (directly, or nested arbitrarily deep through other referenced-assembly
     /// types) from <paramref name="messages"/>' and <paramref name="serializers"/>' own foreign
-    /// Object/union references, the same way <c>ExtractMessageCore</c> resolves a local type.
+    /// Object/union references, PLUS -- as of Decisions 19 and 21 -- every referenced-assembly
+    /// protocol or marked-union-base implementor <paramref name="facts"/>' own walk found (see
+    /// <see cref="CompilationFacts.ReferencedAssemblyImplementorsByProtocol"/>), the same way
+    /// <c>ExtractMessageCore</c> resolves a local type. This is the "construction extraction" for a
+    /// plain (non-generic) referenced-assembly implementor: it needs no symbol beyond the one this
+    /// method already resolves per key, unlike a <c>ManifestPrefix</c> expansion member (a closed
+    /// GENERIC construction), which still resolves its own symbols inline in
+    /// <c>ExpandClosedGenericRegistration</c> (AkkaSerializerGenerator.Extraction.cs) -- see that
+    /// method's own doc comment for why.
     /// </summary>
     internal static MetadataSchemaTable ComputeMetadataSchemas(
         Compilation compilation,
         ImmutableArray<MessageInfo?> messages,
         ImmutableArray<SerializerInfo?> serializers,
+        CompilationFacts facts,
         CancellationToken cancellationToken)
     {
-        var seeds = ComputeReferencedTypeKeys(messages, serializers);
+        var seeds = ComputeReferencedTypeKeys(messages, serializers, facts);
         if (seeds.IsEmpty)
             return MetadataSchemaTable.Empty;
 
@@ -200,7 +209,7 @@ public sealed partial class AkkaSerializerGenerator
     /// at all). <see cref="CollectForeignReferences(MessageInfo,HashSet{TypeKey})"/> instead writes
     /// directly into a reused <see cref="HashSet{T}"/>.
     /// </remarks>
-    private static ImmutableArray<TypeKey> ComputeReferencedTypeKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers)
+    private static ImmutableArray<TypeKey> ComputeReferencedTypeKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers, CompilationFacts facts)
     {
         var seen = new HashSet<TypeKey>();
 
@@ -219,6 +228,17 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var schema in serializer.ClosedGenericSchemas)
                 CollectForeignReferences(schema, seen);
+        }
+
+        // Decisions 19 and 21: every referenced-assembly protocol/marked-union-base implementor
+        // CompilationFacts' own walk found also needs its full schema extracted here -- it is a
+        // plain (non-generic, per ComputeReferencedAssemblyImplementors) type, so the SAME
+        // resolve-by-metadata-name walk this method already runs for a locally-named foreign type
+        // resolves it too.
+        foreach (var implementors in facts.ReferencedAssemblyImplementorsByProtocol.Values)
+        {
+            foreach (var key in implementors)
+                seen.Add(key);
         }
 
         if (seen.Count == 0)

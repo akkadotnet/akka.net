@@ -322,7 +322,8 @@ public sealed partial class AkkaSerializerGenerator
             ImmutableArray<MessageInfo> closedGenericSchemas,
             bool isPartial,
             bool isGeneric,
-            bool derivesFromAkkaSerializerBase)
+            bool derivesFromAkkaSerializerBase,
+            string compilationAssemblyName = "")
         {
             Namespace = ns;
             ClassName = className;
@@ -339,6 +340,7 @@ public sealed partial class AkkaSerializerGenerator
             IsPartial = isPartial;
             IsGeneric = isGeneric;
             DerivesFromAkkaSerializerBase = derivesFromAkkaSerializerBase;
+            CompilationAssemblyName = compilationAssemblyName;
         }
 
         public string Namespace { get; }
@@ -404,6 +406,17 @@ public sealed partial class AkkaSerializerGenerator
         /// <summary>Whether the class derives (directly or transitively) from <c>Akka.Serialization.V2.AkkaSerializer</c>. See AKKASG032.</summary>
         public bool DerivesFromAkkaSerializerBase { get; }
 
+        /// <summary>
+        /// This compilation's own assembly name (<c>Compilation.AssemblyName</c>), captured once at
+        /// extraction. Used only by Decision 19's Rule 4 (the improved "unsupported generated
+        /// serializer type" runtime exception text): the generated message names both the failing
+        /// value's own runtime assembly (known only at run time, via <c>obj.GetType().Assembly</c>)
+        /// and the assembly this serializer was generated in (known at build time, here). Never
+        /// consulted for anything else -- a purely local, build-time fact that cannot affect
+        /// cross-serializer or incremental-caching behavior.
+        /// </summary>
+        public string CompilationAssemblyName { get; }
+
         public bool Equals(SerializerInfo? other)
         {
             if (ReferenceEquals(this, other))
@@ -424,6 +437,7 @@ public sealed partial class AkkaSerializerGenerator
                 && IsPartial == other.IsPartial
                 && IsGeneric == other.IsGeneric
                 && DerivesFromAkkaSerializerBase == other.DerivesFromAkkaSerializerBase
+                && string.Equals(CompilationAssemblyName, other.CompilationAssemblyName, StringComparison.Ordinal)
                 && ValueEquality.SequenceEquals(Formatters, other.Formatters)
                 && ValueEquality.SequenceEquals(ClosedGenericRegistrations, other.ClosedGenericRegistrations)
                 && ValueEquality.SequenceEquals(ClosedGenericSchemas, other.ClosedGenericSchemas);
@@ -446,6 +460,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, IsPartial);
             hash = ValueEquality.Combine(hash, IsGeneric);
             hash = ValueEquality.Combine(hash, DerivesFromAkkaSerializerBase);
+            hash = ValueEquality.Combine(hash, CompilationAssemblyName);
             hash = ValueEquality.Combine(hash, Formatters);
             hash = ValueEquality.Combine(hash, ClosedGenericRegistrations);
             hash = ValueEquality.Combine(hash, ClosedGenericSchemas);
@@ -469,7 +484,8 @@ public sealed partial class AkkaSerializerGenerator
             bool isSealed = false,
             bool isAbstract = false,
             bool isValueType = false,
-            string foreignAssemblyName = "")
+            string foreignAssemblyName = "",
+            ImmutableArray<string> baseTypeNames = default)
         {
             SimpleName = simpleName;
             Key = key;
@@ -485,6 +501,7 @@ public sealed partial class AkkaSerializerGenerator
             IsAbstract = isAbstract;
             IsValueType = isValueType;
             ForeignAssemblyName = foreignAssemblyName;
+            BaseTypeNames = baseTypeNames.IsDefault ? ImmutableArray<string>.Empty : baseTypeNames;
         }
 
         public string SimpleName { get; }
@@ -559,13 +576,23 @@ public sealed partial class AkkaSerializerGenerator
         public string ForeignAssemblyName { get; }
 
         /// <summary>
+        /// Fully-qualified display names of every base class (direct and transitive, excluding
+        /// <c>object</c>) of this message's type. Decision 21: a marked <c>[AkkaUnion]</c> base can
+        /// be an abstract class as well as an interface, and <see cref="Protocols"/> (built from
+        /// <c>AllInterfaces</c>) never contains a class. This is the class-hierarchy counterpart
+        /// consulted for that case; empty for the common case of a type with no base class of its
+        /// own (or one whose only base is <c>object</c>).
+        /// </summary>
+        public ImmutableArray<string> BaseTypeNames { get; }
+
+        /// <summary>
         /// Used by formatter resolution to swap in fields with a resolved <see cref="TypeMapping"/>.
         /// <see cref="ConstructionPlan"/> is keyed by field NAME, not by <see cref="FieldInfo"/>
         /// reference, so it stays valid across this substitution without needing to be rebuilt.
         /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName);
+            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName, BaseTypeNames);
         }
 
         public bool Equals(MessageInfo? other)
@@ -589,7 +616,8 @@ public sealed partial class AkkaSerializerGenerator
                 && ConstructionPlan.Equals(other.ConstructionPlan)
                 && ValueEquality.SequenceEquals(Fields, other.Fields)
                 && ValueEquality.SequenceEquals(Protocols, other.Protocols)
-                && ValueEquality.SequenceEquals(InvalidFields, other.InvalidFields);
+                && ValueEquality.SequenceEquals(InvalidFields, other.InvalidFields)
+                && ValueEquality.SequenceEquals(BaseTypeNames, other.BaseTypeNames);
         }
 
         public override bool Equals(object? obj) => Equals(obj as MessageInfo);
@@ -611,6 +639,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Fields);
             hash = ValueEquality.Combine(hash, Protocols);
             hash = ValueEquality.Combine(hash, InvalidFields);
+            hash = ValueEquality.Combine(hash, BaseTypeNames);
             return hash;
         }
     }
@@ -950,7 +979,15 @@ public sealed partial class AkkaSerializerGenerator
 
         public FieldKind Kind { get; }
 
-        /// <summary>This mapping's type key, for a kind that names a type (Object, Formatted, Enum, MissingSerializableDefinition, UnsupportedEnumUnderlyingType); default for every scalar/collection kind.</summary>
+        /// <summary>
+        /// This mapping's type key, for a kind that names a type (Object, Formatted, Enum,
+        /// MissingSerializableDefinition, UnsupportedEnumUnderlyingType); default for every
+        /// scalar/collection kind. For Union, carries the field's own static-type key (set at
+        /// extraction time regardless of whether the member set is explicit or, Decision 21,
+        /// discovered) -- consulted only when <see cref="FieldInfo.UnionMembers"/> is still empty
+        /// after extraction, the discovered-mode signal <c>ResolveMessages</c> resolves against
+        /// <see cref="CompilationFacts"/>' closed-set data.
+        /// </summary>
         public TypeKey Key { get; }
 
         /// <summary>Fully-qualified display name derived from <see cref="Key"/> -- the single source of truth for display, emission, and dictionary-key matching by display text.</summary>
@@ -1301,7 +1338,10 @@ public sealed partial class AkkaSerializerGenerator
         UnionMemberNotAccessibleCrossAssembly,
         ClosedSetExpansionRequiresClosedSet,
         AdoptedMessageOwnedByMultipleSerializers,
-        ClosedSetExpansionCount
+        ClosedSetExpansionCount,
+        ProtocolOwnedUpstream,
+        SerializerHasNoMessages,
+        DuplicateProtocolBindingCrossAssembly
     }
 
     /// <summary>
@@ -1730,20 +1770,71 @@ public sealed partial class AkkaSerializerGenerator
     /// <see cref="AkkaSerializerGenerator.TrackingNames.CompilationFacts"/> for why this is NOT yet
     /// combined into <see cref="ResolvedSerializer"/>'s own inputs.
     /// </summary>
+    /// <summary>
+    /// One <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declaration found while walking a referenced
+    /// assembly, for the Decision 19 placement diagnostics: which upstream assembly binds a given
+    /// protocol, and under what serializer class name. Symbol-free -- carries only display strings.
+    /// </summary>
+    internal sealed class UpstreamSerializerBinding : IEquatable<UpstreamSerializerBinding>
+    {
+        public UpstreamSerializerBinding(string assemblyName, string serializerFullName)
+        {
+            AssemblyName = assemblyName;
+            SerializerFullName = serializerFullName;
+        }
+
+        /// <summary>The referenced assembly's own simple name (e.g. "Core").</summary>
+        public string AssemblyName { get; }
+
+        /// <summary>Fully-qualified display name of the <c>[AkkaSerializer&lt;TProtocol&gt;]</c> class found there.</summary>
+        public string SerializerFullName { get; }
+
+        public bool Equals(UpstreamSerializerBinding? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(AssemblyName, other.AssemblyName, StringComparison.Ordinal)
+                && string.Equals(SerializerFullName, other.SerializerFullName, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as UpstreamSerializerBinding);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, AssemblyName);
+            hash = ValueEquality.Combine(hash, SerializerFullName);
+            return hash;
+        }
+    }
+
     internal sealed class CompilationFacts : IEquatable<CompilationFacts>
     {
         public static readonly CompilationFacts Empty = new(
             ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
             ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableDictionary<TypeKey, ImmutableArray<UpstreamSerializerBinding>>.Empty,
             ImmutableArray<string>.Empty);
 
         public CompilationFacts(
             ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> localUnmarkedImplementorsByProtocol,
-            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyImplementorsByProtocol,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> localMarkedImplementorsByClosedSetKey,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyImplementorsByClosedSetKey,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyUnmarkedImplementorsByProtocol,
+            ImmutableDictionary<TypeKey, ImmutableArray<UpstreamSerializerBinding>> upstreamSerializerBindingsByProtocol,
             ImmutableArray<string> referencedAssembliesUsingV2)
         {
             LocalUnmarkedImplementorsByProtocol = localUnmarkedImplementorsByProtocol;
-            ReferencedAssemblyImplementorsByProtocol = referencedAssemblyImplementorsByProtocol;
+            LocalMarkedImplementorsByClosedSetKey = localMarkedImplementorsByClosedSetKey;
+            ReferencedAssemblyImplementorsByProtocol = referencedAssemblyImplementorsByClosedSetKey;
+            ReferencedAssemblyUnmarkedImplementorsByProtocol = referencedAssemblyUnmarkedImplementorsByProtocol;
+            UpstreamSerializerBindingsByProtocol = upstreamSerializerBindingsByProtocol;
             ReferencedAssembliesUsingV2 = referencedAssembliesUsingV2.IsDefault ? ImmutableArray<string>.Empty : referencedAssembliesUsingV2;
         }
 
@@ -1759,21 +1850,54 @@ public sealed partial class AkkaSerializerGenerator
         public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> LocalUnmarkedImplementorsByProtocol { get; }
 
         /// <summary>
-        /// Per protocol key, the type keys of every <c>[AkkaSerializable]</c>-marked implementor of
-        /// that protocol (or of a marked union base, per Decision 21) DECLARED IN A REFERENCED
-        /// ASSEMBLY -- Decision 19's input. EMPTY for every compilation today: the enumeration
-        /// behind it is a skeleton that always returns no implementors (see
-        /// <see cref="AkkaSerializerGenerator.EnumerateReferencedAssemblyImplementors"/>); only
-        /// <see cref="ReferencedAssembliesUsingV2"/> (the filter that walk will use) is real yet.
+        /// Per closed-set key (a serializer's own protocol interface, Decision 19, OR an interface
+        /// or abstract class marked with a parameterless <c>[AkkaUnion]</c>, Decision 21), the type
+        /// keys of every non-generic, non-abstract <c>[AkkaSerializable]</c> implementor DECLARED IN
+        /// THIS COMPILATION. Replaces the former per-serializer-node, whole-compilation walk
+        /// (<c>ComputeLocalMarkedProtocolImplementors</c>, called once per <c>ManifestPrefix</c>
+        /// registration): this dictionary is computed exactly once per compilation change, for
+        /// every closed-set key any collected serializer or message actually asks about, and shared
+        /// by every consumer (top-level dispatch widening, the implicit protocol/marked-union field
+        /// rule, and <c>ManifestPrefix</c> expansion). Sorted by <see cref="TypeKey.MetadataName"/>
+        /// (ordinal).
+        /// </summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> LocalMarkedImplementorsByClosedSetKey { get; }
+
+        /// <summary>
+        /// Per closed-set key (see <see cref="LocalMarkedImplementorsByClosedSetKey"/>), the type
+        /// keys of every <c>[AkkaSerializable]</c>-marked implementor of that key DECLARED IN A
+        /// REFERENCED ASSEMBLY that itself references <c>Akka.Serialization.V2</c> -- Decision 19's
+        /// (and, for a marked union base, Decision 21's) walk. Real: walks each qualifying
+        /// referenced assembly's public type table from metadata exactly once per compilation
+        /// change, testing each candidate against every requested key. Sorted by
+        /// <see cref="TypeKey.MetadataName"/> (ordinal).
         /// </summary>
         public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> ReferencedAssemblyImplementorsByProtocol { get; }
 
         /// <summary>
+        /// Per protocol key, the type keys of every non-abstract class/struct DECLARED IN A
+        /// REFERENCED ASSEMBLY that implements the protocol interface without an
+        /// <c>[AkkaSerializable]</c> attribute -- AKKASG029's Decision 19 widening. Unlike
+        /// <see cref="LocalMarkedImplementorsByClosedSetKey"/>, this is scoped to protocol keys
+        /// only: a marked-union-base implementor missing the attribute is simply invisible to the
+        /// walk (see design.md's Decision 19/21 addenda for why AKKASG029 is not widened for the
+        /// union case in this change).
+        /// </summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> ReferencedAssemblyUnmarkedImplementorsByProtocol { get; }
+
+        /// <summary>
+        /// Per protocol key, every <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declaration found while
+        /// walking a referenced assembly that itself references <c>Akka.Serialization.V2</c> -- the
+        /// input to the four placement diagnostics (design.md Decision 19's "making the compiler
+        /// complain" rules; AKKASG043-AKKASG046).
+        /// </summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<UpstreamSerializerBinding>> UpstreamSerializerBindingsByProtocol { get; }
+
+        /// <summary>
         /// The sorted (ordinal) names of every referenced assembly that itself references
-        /// Akka.Serialization.V2 -- the set the eventual Decision 19 implementor walk will need to
-        /// visit. An assembly that does not reference V2 cannot declare an
-        /// <c>[AkkaSerializable]</c> type (the attribute lives in V2), so narrowing to this set
-        /// first is what keeps that future walk cheap.
+        /// Akka.Serialization.V2 -- the set the Decision 19 implementor walk needs to visit. An
+        /// assembly that does not reference V2 cannot declare an <c>[AkkaSerializable]</c> type
+        /// (the attribute lives in V2), so narrowing to this set first is what keeps that walk cheap.
         /// </summary>
         public ImmutableArray<string> ReferencedAssembliesUsingV2 { get; }
 
@@ -1787,7 +1911,10 @@ public sealed partial class AkkaSerializerGenerator
 
             return ValueEquality.SequenceEquals(ReferencedAssembliesUsingV2, other.ReferencedAssembliesUsingV2)
                 && ValueEquality.ArrayDictionaryEquals(LocalUnmarkedImplementorsByProtocol, other.LocalUnmarkedImplementorsByProtocol)
-                && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyImplementorsByProtocol, other.ReferencedAssemblyImplementorsByProtocol);
+                && ValueEquality.ArrayDictionaryEquals(LocalMarkedImplementorsByClosedSetKey, other.LocalMarkedImplementorsByClosedSetKey)
+                && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyImplementorsByProtocol, other.ReferencedAssemblyImplementorsByProtocol)
+                && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyUnmarkedImplementorsByProtocol, other.ReferencedAssemblyUnmarkedImplementorsByProtocol)
+                && ValueEquality.ArrayDictionaryEquals(UpstreamSerializerBindingsByProtocol, other.UpstreamSerializerBindingsByProtocol);
         }
 
         public override bool Equals(object? obj) => Equals(obj as CompilationFacts);
@@ -1797,7 +1924,10 @@ public sealed partial class AkkaSerializerGenerator
             var hash = ValueEquality.Seed;
             hash = ValueEquality.Combine(hash, ReferencedAssembliesUsingV2);
             hash = ValueEquality.CombineArrayDictionary(hash, LocalUnmarkedImplementorsByProtocol);
+            hash = ValueEquality.CombineArrayDictionary(hash, LocalMarkedImplementorsByClosedSetKey);
             hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyImplementorsByProtocol);
+            hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyUnmarkedImplementorsByProtocol);
+            hash = ValueEquality.CombineArrayDictionary(hash, UpstreamSerializerBindingsByProtocol);
             return hash;
         }
     }

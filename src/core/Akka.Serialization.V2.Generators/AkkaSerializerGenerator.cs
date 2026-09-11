@@ -101,16 +101,19 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         public const string ResolvedSerializers = nameof(ResolvedSerializers);
 
         /// <summary>
-        /// The S5 whole-compilation facts stage: <c>context.CompilationProvider.Combine(CollectedSerializers).Select(...)</c>,
+        /// The S5 whole-compilation facts stage: <c>context.CompilationProvider.Combine(CollectedSerializers).Combine(CollectedMessages).Select(...)</c>,
         /// producing one cached <see cref="CompilationFacts"/> value per compilation change (see
-        /// <see cref="ComputeCompilationFacts"/>). Feeds the AKKASG029 coverage output in place of
-        /// the raw <see cref="Compilation"/> that output used to combine with directly -- see
-        /// <see cref="ReportProtocolCoverage"/>. Deliberately NOT combined into
-        /// <see cref="ResolvedSerializers"/>'s own inputs yet: nothing this stage computes today
-        /// (Decision 19's referenced-assembly implementor map is always empty in this change) is
-        /// something <see cref="ResolveSerializer"/> needs to consume, so wiring it in now would add
-        /// an equality-risk surface for no behavioral change. That wiring is expected once Decision
-        /// 19's referenced-assembly implementor walk is real.
+        /// <see cref="ComputeCompilationFacts"/>). Feeds the AKKASG029 coverage output and the
+        /// placement-diagnostics output in place of the raw <see cref="Compilation"/> those outputs
+        /// used to combine with directly -- see <see cref="ReportProtocolCoverage"/> and
+        /// <see cref="ReportPlacementDiagnostics"/>. As of Decisions 19 and 21, this IS combined
+        /// directly into <see cref="ResolvedSerializers"/>'s own inputs: a referenced-assembly
+        /// protocol or marked-union-base implementor's closed-set membership must be visible to
+        /// <see cref="ResolveSerializerMessages"/> for top-level dispatch widening and the implicit
+        /// protocol/union-field rule to resolve at all -- the same reason <see cref="MetadataSchemas"/>
+        /// is combined in directly. This stage's own walk (<see cref="ComputeLocalMarkedImplementorsByClosedSetKey"/>,
+        /// <see cref="ComputeReferencedAssemblyImplementors"/>, <see cref="ComputeUpstreamSerializerBindings"/>)
+        /// is real, not a skeleton.
         /// </summary>
         public const string CompilationFacts = nameof(CompilationFacts);
 
@@ -201,6 +204,24 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .Combine(extractedMessages.Collect())
             .Select(static (pair, cancellationToken) => MergeExtractedLocations(pair.Left, pair.Right, cancellationToken));
 
+        // The S5 whole-compilation facts stage: everything the pipeline needs to know about the
+        // WHOLE compilation, computed ONCE per compilation change and shared by every serializer --
+        // see ComputeCompilationFacts and CompilationFacts's own doc comment. Combines the live
+        // Compilation (this stage genuinely needs it, exactly like the coverage scan it replaces)
+        // with the collected serializers (their protocol keys: which protocol interfaces anyone
+        // actually asked about) and, as of Decisions 19 and 21, the collected messages too (every
+        // discovered-mode union field's own static-type key -- a marked union base with no listed
+        // members). The OUTPUT is symbol-free and value-equatable, so -- unlike the raw Compilation
+        // this used to be combined with directly -- a downstream consumer wired to THIS stage can
+        // report Unchanged/Cached whenever nothing these facts care about changed, even though the
+        // stage itself reruns on every edit (the CompilationProvider input never itself compares
+        // equal across edits).
+        var compilationFacts = context.CompilationProvider
+            .Combine(serializers)
+            .Combine(messages)
+            .Select(static (pair, cancellationToken) => ComputeCompilationFacts(pair.Left.Left, pair.Left.Right, pair.Right, cancellationToken))
+            .WithTrackingName(TrackingNames.CompilationFacts);
+
         // Decision 16's whole-compilation metadata-schema stage: everything the pipeline needs to
         // read a nested field's or a union member's schema from a REFERENCED assembly's compiled
         // metadata, computed once per compilation change and shared by every serializer -- see
@@ -208,34 +229,41 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // resulting run-reason trade-off. Combines the live Compilation (real symbol resolution is
         // unavoidable here, exactly like CompilationFacts) with the collected messages and serializers
         // (only for the referenced type keys they actually name -- ComputeReferencedTypeKeys -- so
-        // the resolution walk below only ever visits types someone actually referenced).
+        // the resolution walk below only ever visits types someone actually referenced) and, as of
+        // Decisions 19 and 21, compilationFacts too: a referenced-assembly protocol/marked-union-base
+        // implementor CompilationFacts' own walk found also needs its full schema extracted here, the
+        // same way a locally-named nested field's foreign type already does.
         var metadataSchemas = context.CompilationProvider
             .Combine(messages)
             .Combine(serializers)
-            .Select(static (pair, cancellationToken) => ComputeMetadataSchemas(pair.Left.Left, pair.Left.Right, pair.Right, cancellationToken))
+            .Combine(compilationFacts)
+            .Select(static (pair, cancellationToken) => ComputeMetadataSchemas(pair.Left.Left.Left, pair.Left.Left.Right, pair.Left.Right, pair.Right, cancellationToken))
             .WithTrackingName(TrackingNames.MetadataSchemas);
 
         // The per-serializer resolve stage: each serializer plus ALL collected messages (a message's
         // top-level/reachable status can only be judged against the full set) resolves, via
         // ResolveSerializer, to ONE cached, value-equatable ResolvedSerializer. SelectMany splits the
-        // single (serializers, messages, metadataSchemas) combined value back out into one
-        // independently-cached element per serializer -- the driver diffs each element against its
-        // previous run by VALUE (ResolvedSerializer.Equals), so a serializer whose resolved model is
-        // unaffected by an edit reports Unchanged here even though the whole stage recomputed. See
-        // ResolveSerializer's doc comment for why this dependency shape is unavoidable, and the
-        // RegisterSourceOutput below for why an Unchanged/Cached element here is what makes that
-        // serializer's own emitted file Cached, not just this stage. metadataSchemas is combined in
-        // directly (unlike CompilationFacts, further below): a referenced-assembly nested field or
-        // union member needs its schema visible to ResolveSerializerMessages to resolve at all, so
-        // this combine is what makes Decision 16 real. See TrackingNames.MetadataSchemas's own doc
-        // comment for why this third combined input does not, in practice, cost this stage its
-        // Cached best case for an edit metadataSchemas itself does not care about.
+        // single (serializers, messages, metadataSchemas, compilationFacts) combined value back out
+        // into one independently-cached element per serializer -- the driver diffs each element
+        // against its previous run by VALUE (ResolvedSerializer.Equals), so a serializer whose
+        // resolved model is unaffected by an edit reports Unchanged here even though the whole stage
+        // recomputed. See ResolveSerializer's doc comment for why this dependency shape is
+        // unavoidable, and the RegisterSourceOutput below for why an Unchanged/Cached element here is
+        // what makes that serializer's own emitted file Cached, not just this stage. metadataSchemas
+        // and compilationFacts are BOTH combined in directly, as of Decisions 19 and 21: a
+        // referenced-assembly nested field, union member, or top-level protocol/marked-union-base
+        // implementor needs its schema (metadataSchemas) and its closed-set membership
+        // (compilationFacts) visible to ResolveSerializerMessages to resolve at all. See
+        // TrackingNames.MetadataSchemas and TrackingNames.CompilationFacts for the run-reason
+        // consequence: neither, in practice, costs this stage its Cached best case for an edit that
+        // stage itself does not care about.
         var resolvedSerializers = serializers
             .Combine(messages)
             .Combine(metadataSchemas)
+            .Combine(compilationFacts)
             .SelectMany(static (pair, cancellationToken) =>
             {
-                var ((allSerializers, allMessages), schemas) = pair;
+                var (((allSerializers, allMessages), schemas), facts) = pair;
                 var duplicateSerializerIds = ComputeDuplicateSerializerIds(allSerializers);
                 var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(allSerializers);
                 var declaredMessages = ComputeDeclaredMessages(allMessages);
@@ -248,28 +276,12 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
                         continue;
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    builder.Add(ResolveSerializer(serializer, declaredMessages, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions, schemas));
+                    builder.Add(ResolveSerializer(serializer, declaredMessages, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions, schemas, facts));
                 }
 
                 return builder.ToImmutable();
             })
             .WithTrackingName(TrackingNames.ResolvedSerializers);
-
-        // The S5 whole-compilation facts stage: everything the pipeline needs to know about the
-        // WHOLE compilation, computed ONCE per compilation change and shared by every serializer --
-        // see ComputeCompilationFacts and CompilationFacts's own doc comment. Combines the live
-        // Compilation (this stage genuinely needs it, exactly like the coverage scan it replaces)
-        // with the collected serializers (only for their protocol keys: which protocol interfaces
-        // anyone actually asked about, so the local-implementor walk below doesn't have to consider
-        // every interface of every source-declared type). The OUTPUT is symbol-free and
-        // value-equatable, so -- unlike the raw Compilation this used to be combined with directly
-        // -- a downstream consumer wired to THIS stage can report Unchanged/Cached whenever nothing
-        // these facts care about changed, even though the stage itself reruns on every edit (the
-        // CompilationProvider input never itself compares equal across edits).
-        var compilationFacts = context.CompilationProvider
-            .Combine(serializers)
-            .Select(static (pair, cancellationToken) => ComputeCompilationFacts(pair.Left, pair.Right, cancellationToken))
-            .WithTrackingName(TrackingNames.CompilationFacts);
 
         // Code emission consumes ONLY the cached, value-equatable, symbol-free ResolvedSerializer
         // model -- never the Compilation, never a location, and never another serializer's data.
@@ -336,5 +348,17 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(
             resolvedSerializers.Combine(compilationFacts).Combine(allLocations),
             static (ctx, pair) => ReportProtocolCoverage(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
+
+        // Decision 19's four placement diagnostics ("making the compiler complain: the pit of
+        // success" in design.md): a misplaced serializer or message becomes a compile-time error or
+        // warning instead of a silent gap. A whole-compilation, cross-serializer concern -- like
+        // ReportCrossSerializerDiagnostics and ReportProtocolCoverage above -- so it is its own
+        // diagnostics-only output over the collected serializers and messages plus the cached
+        // CompilationFacts (for the upstream-serializer-binding and referenced-assembly-implementor
+        // input every rule needs), combined with the merged location bag so each can report at its
+        // own local site (a message's own declaration, or a serializer's own attribute).
+        context.RegisterSourceOutput(
+            serializers.Combine(messages).Combine(compilationFacts).Combine(allLocations),
+            static (ctx, pair) => ReportPlacementDiagnostics(ctx, pair.Left.Left.Left, pair.Left.Left.Right, pair.Left.Right, pair.Right));
     }
 }

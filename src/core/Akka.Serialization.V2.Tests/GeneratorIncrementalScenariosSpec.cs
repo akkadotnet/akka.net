@@ -92,6 +92,15 @@ public sealed class GeneratorIncrementalScenariosSpec
         "[property: AkkaField(1)] int Count) : IAlphaProtocol;",
         "[property: AkkaField(1)] int Total) : IAlphaProtocol;");
 
+    // Decision 19: a NEW local, marked implementor of IAlphaProtocol, appended after the fixture's
+    // own last declaration. Adding it changes CompilationFacts.LocalMarkedImplementorsByClosedSetKey
+    // for IAlphaProtocol's own key (a new member) but touches nothing IBetaProtocol's own bucket
+    // depends on -- the scenario this feeds proves the resulting CompilationFacts.Modified re-emits
+    // only AlphaSerializer, never BetaSerializer.
+    private static readonly string FixtureWithNewAlphaImplementorAdded = FixtureSource +
+        "\n[AkkaSerializable(Manifest = \"alpha-four-v1\")]\n" +
+        "public sealed record AlphaFour([property: AkkaField(1)] string Extra) : IAlphaProtocol;\n";
+
     private static readonly string FixtureWithCommentInsideBetaTwo = FixtureSource.Replace(
         "[property: AkkaField(1)] long Value) : IBetaProtocol;",
         "[property: AkkaField(1)] /* a trailing comment, no semantic change */ long Value) : IBetaProtocol;");
@@ -480,12 +489,17 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
-        // TARGET (S5): CompilationFacts is NOT combined into ResolvedSerializers' inputs (see
-        // TrackingNames.CompilationFacts's own doc comment for why that wiring is deliberately
-        // deferred), so a CompilationFacts change alone cannot move ResolvedSerializers -- both
-        // serializers stay Cached even though CompilationFacts itself reports Modified below.
+        // As of Decisions 19 and 21, CompilationFacts IS combined directly into ResolvedSerializers'
+        // inputs (a referenced-assembly protocol/marked-union-base implementor's closed-set
+        // membership must be visible to ResolveSerializerMessages to resolve at all -- see
+        // TrackingNames.CompilationFacts's own doc comment). CompilationFacts reports Modified below
+        // (a genuine value change), so this stage's own combined input changed and it MUST re-execute
+        // for every element -- but MarkerMessage implements neither protocol, so each serializer's
+        // OWN resolved model still compares equal to its previous run: Unchanged (recomputed, but
+        // equal), not Cached (skipped without recomputing). This is exactly the same downgrade
+        // MetadataSchemas' own doc comment already describes for its combined input.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
-            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
+            IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
 
         // THE SCENARIO FLIP: the newly added reference DOES reference Akka.Serialization.V2, so
         // CompilationFacts.ReferencedAssembliesUsingV2 gains an entry -- the computed CompilationFacts
@@ -495,8 +509,9 @@ public sealed class GeneratorIncrementalScenariosSpec
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Modified);
 
         // No serializer's own message table changed and MarkerMessage implements neither protocol,
-        // so -- even though CompilationFacts itself changed -- no file is re-emitted and no new
-        // AKKASG029 diagnostic appears.
+        // so -- even though CompilationFacts itself changed, and ResolvedSerializers recomputed for
+        // it -- no file is re-emitted (RegisterSourceOutput skips an Unchanged/Cached element just
+        // the same) and no new AKKASG029 diagnostic appears.
         ChangedHintNames(result).Should().BeEmpty();
         result.After.RunResult.Diagnostics.Where(d => d.Id == "AKKASG029").Should().BeEmpty();
     }
@@ -611,6 +626,33 @@ public sealed class GeneratorIncrementalScenariosSpec
 
         // Only AlphaSerializer owns AlphaOne; BetaSerializer's resolved model is untouched.
         ChangedHintNames(result).Should().BeEquivalentTo(new[] { "AlphaSerializer.AkkaSerialization.g.cs" });
+    }
+
+    [Fact(DisplayName = "Scenario (h): adding a new local marked implementor of a protocol marks CompilationFacts Modified and re-emits only the serializer whose closed set changed")]
+    public void Scenario_h_new_local_marked_implementor_added()
+    {
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Main.cs", FixtureSource) },
+            new[] { new SourceFile("Main.cs", FixtureWithNewAlphaImplementorAdded) });
+
+        // AlphaFour is a NEW [AkkaSerializable] implementor of IAlphaProtocol -- CompilationFacts'
+        // own local-marked-implementor walk (Decision 19) now finds it, so the produced
+        // CompilationFacts value genuinely differs from the previous run.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Modified);
+
+        // ResolvedSerializers combines CompilationFacts directly (Decisions 19 and 21), so both
+        // serializers' own SelectMany elements re-execute -- but only AlphaSerializer's RESOLVED
+        // MODEL actually changes (AlphaFour joins its top-level dispatch); BetaSerializer's compares
+        // equal to its previous run, since IBetaProtocol's own bucket is untouched.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Modified, IncrementalStepRunReason.Unchanged);
+
+        // Only AlphaSerializer's generated file actually changes text (it gains AlphaFour's dispatch
+        // arm and helpers); BetaSerializer's is skipped entirely.
+        ChangedHintNames(result).Should().BeEquivalentTo(new[] { "AlphaSerializer.AkkaSerialization.g.cs" });
+
+        var alphaSource = result.After.GeneratedSources["AlphaSerializer.AkkaSerialization.g.cs"];
+        alphaSource.Should().Contain("AlphaFour").And.Contain("alpha-four-v1");
     }
 
     private static void AssertReasons(IncrementalGeneratorRunResult result, string trackingName, params IncrementalStepRunReason[] expected)
