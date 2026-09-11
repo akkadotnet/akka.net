@@ -114,6 +114,54 @@ public sealed partial class AkkaSerializerGenerator
 
             return Combine(hash, entriesHash);
         }
+
+        /// <summary>
+        /// Value equality for an <see cref="ImmutableDictionary{TKey,TValue}"/>-shaped cached model
+        /// member whose VALUE is itself an <see cref="ImmutableArray{T}"/> (<see cref="CompilationFacts"/>'s
+        /// two implementor-by-protocol maps): same key set, and for each key, the same ORDERED
+        /// element sequence via <see cref="SequenceEquals{T}"/> -- deliberately NOT
+        /// <see cref="DictionaryEquals{TKey,TValue}"/>'s <c>EqualityComparer&lt;TValue&gt;.Default</c>,
+        /// which for <c>TValue</c> = <see cref="ImmutableArray{T}"/> would resolve to
+        /// <see cref="ImmutableArray{T}"/>'s OWN <see cref="IEquatable{T}"/> implementation --
+        /// reference equality on the wrapped array, not a structural compare -- and would wrongly
+        /// treat two independently-built arrays with identical content as unequal.
+        /// </summary>
+        public static bool ArrayDictionaryEquals<TKey, TValue>(ImmutableDictionary<TKey, ImmutableArray<TValue>> left, ImmutableDictionary<TKey, ImmutableArray<TValue>> right)
+            where TKey : notnull
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (left.Count != right.Count)
+                return false;
+
+            foreach (var pair in left)
+            {
+                if (!right.TryGetValue(pair.Key, out var otherValue) || !SequenceEquals(pair.Value, otherValue))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>Order-independent hash companion to <see cref="ArrayDictionaryEquals{TKey,TValue}"/>, mirroring <see cref="CombineDictionary{TKey,TValue}"/>.</summary>
+        public static int CombineArrayDictionary<TKey, TValue>(int hash, ImmutableDictionary<TKey, ImmutableArray<TValue>> dictionary)
+            where TKey : notnull
+        {
+            hash = Combine(hash, dictionary.Count);
+
+            var entriesHash = 0;
+            foreach (var pair in dictionary)
+            {
+                var entryHash = Combine(Combine(Seed, EqualityComparer<TKey>.Default.GetHashCode(pair.Key)), pair.Value);
+                unchecked
+                {
+                    entriesHash += entryHash;
+                }
+            }
+
+            return Combine(hash, entriesHash);
+        }
     }
 
     /// <summary>
@@ -1537,6 +1585,93 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, ValidationDiagnostics);
             hash = ValueEquality.CombineDictionary(hash, ResolvedMessagesByType);
             hash = ValueEquality.CombineDictionary(hash, ClosedGenericSchemas);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// The S5 compilation-facts stage's cached output (see <see cref="ComputeCompilationFacts"/>):
+    /// everything the pipeline needs to know about the WHOLE compilation, computed once per
+    /// compilation change and shared by every serializer, rather than recomputed per serializer
+    /// inside a diagnostics-only output that also consumed the live <see cref="Compilation"/>
+    /// directly (the pre-S5 shape of <c>ValidateProtocolCoverage</c>). Symbol-free and
+    /// value-equatable like every other cached pipeline model, so this stage's OUTPUT compares equal
+    /// across two compilations that differ only by something none of these facts cares about (an
+    /// edit to an unrelated file, a metadata reference that does not touch Akka.Serialization.V2),
+    /// keeping the AKKASG029 coverage output -- and, per Decision 19 in
+    /// openspec/changes/messagepack-sourcegen-validation/design.md, eventually the resolve stage too
+    /// -- cached instead of re-diagnosing on every keystroke. See
+    /// <see cref="AkkaSerializerGenerator.TrackingNames.CompilationFacts"/> for why this is NOT yet
+    /// combined into <see cref="ResolvedSerializer"/>'s own inputs.
+    /// </summary>
+    internal sealed class CompilationFacts : IEquatable<CompilationFacts>
+    {
+        public static readonly CompilationFacts Empty = new(
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableArray<string>.Empty);
+
+        public CompilationFacts(
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> localUnmarkedImplementorsByProtocol,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyImplementorsByProtocol,
+            ImmutableArray<string> referencedAssembliesUsingV2)
+        {
+            LocalUnmarkedImplementorsByProtocol = localUnmarkedImplementorsByProtocol;
+            ReferencedAssemblyImplementorsByProtocol = referencedAssemblyImplementorsByProtocol;
+            ReferencedAssembliesUsingV2 = referencedAssembliesUsingV2.IsDefault ? ImmutableArray<string>.Empty : referencedAssembliesUsingV2;
+        }
+
+        /// <summary>
+        /// Per protocol key, the type keys of every non-abstract class/struct DECLARED IN THIS
+        /// COMPILATION that implements the protocol interface without an <c>[AkkaSerializable]</c>
+        /// attribute -- the AKKASG029 input (see <see cref="AkkaSerializerGenerator.ValidateProtocolCoverage"/>).
+        /// Sorted by <see cref="TypeKey.MetadataName"/> (ordinal) for a deterministic diagnostic
+        /// order. One entry per protocol key that at least one collected
+        /// <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declares, even when that entry's array is empty
+        /// (a protocol with clean coverage) -- see <see cref="AkkaSerializerGenerator.ComputeLocalUnmarkedImplementorsByProtocol"/>.
+        /// </summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> LocalUnmarkedImplementorsByProtocol { get; }
+
+        /// <summary>
+        /// Per protocol key, the type keys of every <c>[AkkaSerializable]</c>-marked implementor of
+        /// that protocol (or of a marked union base, per Decision 21) DECLARED IN A REFERENCED
+        /// ASSEMBLY -- Decision 19's input. EMPTY for every compilation today: the enumeration
+        /// behind it is a skeleton that always returns no implementors (see
+        /// <see cref="AkkaSerializerGenerator.EnumerateReferencedAssemblyImplementors"/>); only
+        /// <see cref="ReferencedAssembliesUsingV2"/> (the filter that walk will use) is real yet.
+        /// </summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> ReferencedAssemblyImplementorsByProtocol { get; }
+
+        /// <summary>
+        /// The sorted (ordinal) names of every referenced assembly that itself references
+        /// Akka.Serialization.V2 -- the set the eventual Decision 19 implementor walk will need to
+        /// visit. An assembly that does not reference V2 cannot declare an
+        /// <c>[AkkaSerializable]</c> type (the attribute lives in V2), so narrowing to this set
+        /// first is what keeps that future walk cheap.
+        /// </summary>
+        public ImmutableArray<string> ReferencedAssembliesUsingV2 { get; }
+
+        public bool Equals(CompilationFacts? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(ReferencedAssembliesUsingV2, other.ReferencedAssembliesUsingV2)
+                && ValueEquality.ArrayDictionaryEquals(LocalUnmarkedImplementorsByProtocol, other.LocalUnmarkedImplementorsByProtocol)
+                && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyImplementorsByProtocol, other.ReferencedAssemblyImplementorsByProtocol);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as CompilationFacts);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, ReferencedAssembliesUsingV2);
+            hash = ValueEquality.CombineArrayDictionary(hash, LocalUnmarkedImplementorsByProtocol);
+            hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyImplementorsByProtocol);
             return hash;
         }
     }

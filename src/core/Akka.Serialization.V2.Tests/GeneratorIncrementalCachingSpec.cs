@@ -175,6 +175,24 @@ public sealed class GeneratorIncrementalCachingSpec
             .ToList();
         resolvedSerializerReasons.Should().HaveCount(1);
         ((AkkaSerializerGenerator.ResolvedSerializer)resolvedSerializerReasons[0].Value).IsEmittable.Should().BeTrue();
+
+        // CompilationFacts specifically (the S5 whole-compilation facts stage): exactly one value
+        // (it is a Combine/Select, not a per-element SelectMany like ResolvedSerializers), and it
+        // must carry REAL data -- a false-Cached read that silently produced an empty/default facts
+        // value would defeat the point of this guard just as surely as for ResolvedSerializers above.
+        // IProtocol has two source-declared implementors (Wrapper<T>'s generic definition and
+        // Outer), both [AkkaSerializable]-marked, so its local-unmarked-implementor bucket exists
+        // (SampleSerializer declared [AkkaSerializer<IProtocol>]) but is empty -- clean coverage.
+        // ReferencedAssembliesUsingV2 is non-empty because this very test assembly references
+        // Akka.Serialization.V2 (it uses AkkaSerializableAttribute throughout), which is exactly the
+        // shape ComputeReferencedAssembliesUsingV2 is meant to detect.
+        var compilationFactsReasons = trackedSteps[AkkaSerializerGenerator.TrackingNames.CompilationFacts]
+            .SelectMany(step => step.Outputs)
+            .ToList();
+        compilationFactsReasons.Should().HaveCount(1);
+        var compilationFacts = (AkkaSerializerGenerator.CompilationFacts)compilationFactsReasons[0].Value;
+        compilationFacts.ReferencedAssembliesUsingV2.Should().NotBeEmpty();
+        compilationFacts.LocalUnmarkedImplementorsByProtocol.Values.SelectMany(implementors => implementors).Should().BeEmpty();
     }
 
     [Fact(DisplayName = "Generator should emit source alongside an AKKASG029 coverage error")]
