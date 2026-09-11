@@ -12,7 +12,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
@@ -780,42 +779,6 @@ public class StressSpec : MultiNodeClusterSpec
         MuteDeadLetters(sys, typeof(AggregatedClusterResult), typeof(StatsResult), typeof(PhiResult), typeof(RetryTick));
     }
 
-
-    /// <summary>
-    /// Removes a churn system from the ring the way the cluster is designed to do it: an
-    /// explicit, awaited Leave (Leaving -> Exiting -> Removed by gossip), and only then a
-    /// terminate of the process-local system.
-    ///
-    /// MultiNodeSpec.BaseConfig sets akka.coordinated-shutdown.run-by-actor-system-terminate =
-    /// off, so a bare ActorSystem.Terminate() takes ActorSystemImpl.FinalTerminate() and performs
-    /// NO cluster leave. The member just vanishes and removal falls to the failure detector plus
-    /// the SplitBrainResolver. That arms a ~13s window (acceptable-heartbeat-pause plus
-    /// stable-after) at the exact moment this node is terminating a second ActorSystem, so the
-    /// host lands in the same unreachable set as the member it just killed and KeepMajority downs
-    /// both. Build 131156: KeepMajority downed [49169, 49380, 49381] in one decision, and 49169
-    /// was node-2's own main system.
-    /// </summary>
-    private async Task LeaveAndShutdownAsync(ActorSystem sys)
-    {
-        var cluster = Cluster.Get(sys);
-        using var cts = new CancellationTokenSource(Dilated(TimeSpan.FromSeconds(20)));
-        try
-        {
-            // completes when this member reaches Removed in the cluster's own view
-            await cluster.LeaveAsync(cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // A graceful leave still needs gossip and leader actions, and both ride the same
-            // scheduler that starvation stops. Fall back rather than fail the phase here.
-            Sys.Log.Warning(
-                "Churn system [{0}] did not confirm Removed in time; falling back to Terminate",
-                cluster.SelfAddress);
-        }
-
-        await ShutdownAsync(sys);
-    }
-
     public StressSpec() : this(new StressSpecConfig()){ }
 
     protected StressSpec(StressSpecConfig config) : base(config, typeof(StressSpec))
@@ -986,6 +949,36 @@ public class StressSpec : MultiNodeClusterSpec
     public TimeSpan ConvergenceWithin(TimeSpan baseDuration, int nodes)
     {
         return TimeSpan.FromMilliseconds(baseDuration.TotalMilliseconds * Settings.ConvergenceWithinFactor * nodes);
+    }
+
+    /// <summary>
+    /// How long it takes an abruptly-terminated churn member to actually disappear from the
+    /// ring: the phi accrual failure detector must first mark it unreachable, the
+    /// SplitBrainResolver must then sit through its stable-after window before downing it, and
+    /// the leader needs a further gossip round or two to move Down -> Removed and have that
+    /// reach every observer.
+    ///
+    /// Detection = heartbeat-interval + acceptable-heartbeat-pause + 3 * min-std-deviation (the
+    /// phi accrual detector's own crossing-threshold expectation -- see the failure-detector
+    /// comment on the spec config above). At this spec's config that is 1s + 20s + 3 * 0.1s =
+    /// 21.3s.
+    /// Then + split-brain-resolver.stable-after (10s here) before KeepMajority decides, plus a
+    /// 3 * gossip-interval (3 * 1s = 3s) margin for the leader's Down -> Removed gossip round to
+    /// actually reach the observers. Total at this spec's config: 21.3s + 10s + 3s = 34.3s.
+    /// </summary>
+    public TimeSpan ChurnMemberRemovalWithin()
+    {
+        var failureDetectorConfig = Cluster.Settings.FailureDetectorConfig;
+        var detection = Cluster.Settings.HeartbeatInterval
+                        + failureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause")
+                        + TimeSpan.FromTicks(failureDetectorConfig.GetTimeSpan("min-std-deviation").Ticks * 3);
+
+        var stableAfter = Sys.Settings.Config.GetTimeSpan("akka.cluster.split-brain-resolver.stable-after");
+
+        // margin for the leader's Down -> Removed gossip round to reach every observer
+        var leaderRemovalMargin = TimeSpan.FromTicks(Cluster.Settings.GossipInterval.Ticks * 3);
+
+        return detection + stableAfter + leaderRemovalMargin;
     }
 
     public async Task JoinOneAsync()
@@ -1285,7 +1278,13 @@ public class StressSpec : MultiNodeClusterSpec
     public async Task ExerciseJoinRemoveAsync(string title, TimeSpan duration)
     {
         var activeRoles = Roles.Take(Settings.NumberOfNodesJoinRemove).ToArray();
-        var loopDuration = TimeSpan.FromSeconds(10) +
+
+        // Each round tears down the previous round's churn system abruptly (no cluster Leave --
+        // see ChurnMemberRemovalWithin), so the round's Within budget has to cover the full
+        // detector + resolver + leader removal path in addition to the new churn system joining
+        // and the ring converging. At this spec's config: ~34.3s removal (ChurnMemberRemovalWithin)
+        // + 10s + ConvergenceWithin(4s, members).
+        var loopDuration = ChurnMemberRemovalWithin() + TimeSpan.FromSeconds(10) +
                            ConvergenceWithin(TimeSpan.FromSeconds(4), NbrUsedRoles + activeRoles.Length);
         var rounds = (int)Math.Max(1.0d, (duration - loopDuration).TotalMilliseconds / loopDuration.TotalMilliseconds);
         var usedRoles = Roles.Take(NbrUsedRoles).ToArray();
@@ -1316,10 +1315,14 @@ public class StressSpec : MultiNodeClusterSpec
 
                     if (activeRoles.Contains(Myself))
                     {
-                        // await the teardown instead of blocking on it: the sync Shutdown pins a thread
-                        // pool thread for the whole wait, starving this node's own heartbeat sender.
+                        // Abrupt shutdown -- no cluster Leave. The previous churn member has to
+                        // vanish and be removed by the failure detector plus the
+                        // SplitBrainResolver, the property this phase exists to prove (see
+                        // ChurnMemberRemovalWithin). Await the teardown instead of blocking on it:
+                        // the sync Shutdown pins a thread pool thread for the whole wait, starving
+                        // this node's own heartbeat sender.
                         if (previousAs.HasValue)
-                            await LeaveAndShutdownAsync(previousAs.Value);
+                            await ShutdownAsync(previousAs.Value);
 
                         var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                         MuteLog(sys);
@@ -1360,17 +1363,17 @@ public class StressSpec : MultiNodeClusterSpec
             return await Loop(counter + 1, nextAs, nextAddresses);
         }
 
-        // await the teardown instead of blocking on it: the sync Shutdown pins a thread pool thread for the
-        // whole wait, which on a busy agent starves this node's own heartbeat sender and gets it downed.
+        // Abrupt shutdown here too -- no cluster Leave. Await the teardown instead of blocking on
+        // it: the sync Shutdown pins a thread pool thread for the whole wait, which on a busy
+        // agent starves this node's own heartbeat sender and gets it downed.
         var lastAs = await Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty);
         if (lastAs.HasValue)
-            await LeaveAndShutdownAsync(lastAs.Value);
+            await ShutdownAsync(lastAs.Value);
 
-        // AwaitMembersUpAsync(NbrUsedRoles) stays as-is and is the right thing to await. LeaveAsync
-        // resolves on the LEAVING node's own view, which proves nothing about the ten observers that
-        // are about to enter the barrier. "10 members, all Up" on the observers is the post-removal
-        // state, and after an explicit Leave it converges in a gossip round or two instead of waiting
-        // out acceptable-heartbeat-pause plus stable-after.
+        // The last churn member also vanishes rather than leaving, so the observers see
+        // "NbrUsedRoles members, all Up" only after that member goes through the same
+        // detector + resolver + leader removal path as every round before it. loopDuration
+        // already budgets for that full removal window (see ChurnMemberRemovalWithin).
         await WithinAsync(loopDuration, async () =>
         {
             await RunOnAsync(async () =>
