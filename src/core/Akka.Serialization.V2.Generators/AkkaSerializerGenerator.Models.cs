@@ -62,6 +62,54 @@ public sealed partial class AkkaSerializerGenerator
 
             return hash;
         }
+
+        /// <summary>
+        /// Value equality for an <see cref="ImmutableDictionary{TKey,TValue}"/>-shaped cached model
+        /// member (<see cref="ResolvedSerializer.ResolvedMessagesByType"/>): same key set, same value
+        /// (by <see cref="IEquatable{T}"/>/<see cref="EqualityComparer{T}.Default"/>) for every key.
+        /// <see cref="ImmutableDictionary{TKey,TValue}"/> has no such built-in equality of its own (its
+        /// default <c>Equals</c> is reference equality on the underlying node), so every dictionary-typed
+        /// model member must be compared through this helper instead of a bare <c>==</c>/<c>Equals</c>.
+        /// </summary>
+        public static bool DictionaryEquals<TValue>(ImmutableDictionary<string, TValue> left, ImmutableDictionary<string, TValue> right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+
+            if (left.Count != right.Count)
+                return false;
+
+            foreach (var pair in left)
+            {
+                if (!right.TryGetValue(pair.Key, out var otherValue) || !EqualityComparer<TValue>.Default.Equals(pair.Value, otherValue))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Order-independent hash companion to <see cref="DictionaryEquals{TValue}"/>: entries are
+        /// combined with an order-insensitive operator (addition) so two dictionaries holding the same
+        /// key/value pairs in a different enumeration order still hash equal, honoring the
+        /// Equals/GetHashCode contract <see cref="DictionaryEquals{TValue}"/> establishes.
+        /// </summary>
+        public static int CombineDictionary<TValue>(int hash, ImmutableDictionary<string, TValue> dictionary)
+        {
+            hash = Combine(hash, dictionary.Count);
+
+            var entriesHash = 0;
+            foreach (var pair in dictionary)
+            {
+                var entryHash = Combine(Combine(Seed, pair.Key), pair.Value == null ? 0 : EqualityComparer<TValue>.Default.GetHashCode(pair.Value));
+                unchecked
+                {
+                    entriesHash += entryHash;
+                }
+            }
+
+            return Combine(hash, entriesHash);
+        }
     }
 
     internal sealed class SerializerInfo : IEquatable<SerializerInfo>
@@ -937,6 +985,345 @@ public sealed partial class AkkaSerializerGenerator
             var hash = ValueEquality.Seed;
             hash = ValueEquality.Combine(hash, (int)Key);
             hash = ValueEquality.Combine(hash, MessageArgs);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One member of a <see cref="ClosedSet"/>: everything a top-level dispatch switch or a union
+    /// write/read/size helper needs to name and call into ONE message's generated methods --
+    /// nothing else. Reduced from a full <see cref="MessageInfo"/> (which also carries every field,
+    /// irrelevant to dispatch) so a <see cref="ClosedSet"/> stays cheap to hold inside a cached
+    /// <see cref="ResolvedSerializer"/>. <see cref="MethodName"/> is the same
+    /// <see cref="GetMessageMethodName"/> result the corresponding <c>Write&lt;name&gt;</c>/
+    /// <c>Read&lt;name&gt;</c>/<c>SizeOf&lt;name&gt;</c> methods use, computed once so every dispatch
+    /// site (top-level or union) agrees on it without recomputing <see cref="FoldTypeName"/>.
+    /// </summary>
+    internal sealed class ClosedSetMember : IEquatable<ClosedSetMember>
+    {
+        public ClosedSetMember(string typeFullName, string manifest, string methodName)
+        {
+            TypeFullName = typeFullName;
+            Manifest = manifest;
+            MethodName = methodName;
+        }
+
+        public string TypeFullName { get; }
+        public string Manifest { get; }
+        public string MethodName { get; }
+
+        public bool Equals(ClosedSetMember? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal)
+                && string.Equals(Manifest, other.Manifest, StringComparison.Ordinal)
+                && string.Equals(MethodName, other.MethodName, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as ClosedSetMember);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, TypeFullName);
+            hash = ValueEquality.Combine(hash, Manifest);
+            hash = ValueEquality.Combine(hash, MethodName);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// An ORDERED, closed set of <see cref="ClosedSetMember"/>s -- today, a serializer's top-level
+    /// dispatch set (<see cref="ResolvedSerializer.TopLevelMessages"/>) and one union field's
+    /// declared member set (<see cref="UnionHelperPlan.Members"/>). Order is significant and
+    /// preserved exactly as the pipeline has always produced it (declaration order for top-level
+    /// messages, [AkkaUnion] declaration order for union members) -- emitted switch/dispatch text is
+    /// ordered the same way, so re-ordering here would change emitted output. This is Decision 18's
+    /// single representation for "a closed, explicitly-enumerated set of message types": later work
+    /// on registration expansion is expected to build its own <see cref="ClosedSet"/>s the same way.
+    /// </summary>
+    internal sealed class ClosedSet : IEquatable<ClosedSet>
+    {
+        public static readonly ClosedSet Empty = new(ImmutableArray<ClosedSetMember>.Empty);
+
+        public ClosedSet(ImmutableArray<ClosedSetMember> members)
+        {
+            Members = members;
+        }
+
+        public ImmutableArray<ClosedSetMember> Members { get; }
+
+        public bool Equals(ClosedSet? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(Members, other.Members);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as ClosedSet);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Members);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One planned union dispatch helper (a Write/Read/SizeOf trio): its dedup identity
+    /// (<see cref="Signature"/>, from <see cref="BuildUnionSignature"/>), its generated method-name
+    /// suffix (<see cref="HelperName"/>), the union field's static type
+    /// (<see cref="FieldTypeFullName"/> -- the helper trio's shared parameter/return type), and its
+    /// declared member set already resolved to a <see cref="ClosedSet"/> (see
+    /// <see cref="PlanUnionHelpers"/>) so generation never needs to re-consult the message dictionary.
+    /// </summary>
+    internal sealed class UnionHelperPlan : IEquatable<UnionHelperPlan>
+    {
+        public UnionHelperPlan(string signature, string helperName, string fieldTypeFullName, ClosedSet members)
+        {
+            Signature = signature;
+            HelperName = helperName;
+            FieldTypeFullName = fieldTypeFullName;
+            Members = members;
+        }
+
+        /// <summary>The union's dedup identity: static type plus ordered member set. See <see cref="BuildUnionSignature"/>.</summary>
+        public string Signature { get; }
+
+        public string HelperName { get; }
+        public string FieldTypeFullName { get; }
+        public ClosedSet Members { get; }
+
+        public bool Equals(UnionHelperPlan? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(Signature, other.Signature, StringComparison.Ordinal)
+                && string.Equals(HelperName, other.HelperName, StringComparison.Ordinal)
+                && string.Equals(FieldTypeFullName, other.FieldTypeFullName, StringComparison.Ordinal)
+                && Members.Equals(other.Members);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as UnionHelperPlan);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Signature);
+            hash = ValueEquality.Combine(hash, HelperName);
+            hash = ValueEquality.Combine(hash, FieldTypeFullName);
+            hash = ValueEquality.Combine(hash, Members.GetHashCode());
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One serializer's full union dispatch plan: every distinct union helper it needs to generate,
+    /// ALREADY ordered by <see cref="UnionHelperPlan.HelperName"/> (the order
+    /// <see cref="GenerateUnionHelpers"/> emits them in) -- replaces the pipeline's former
+    /// string-keyed <c>ImmutableDictionary&lt;string, (string HelperName, FieldInfo Field)&gt;</c>,
+    /// which was neither a named model nor cheaply value-equatable (a <see cref="FieldInfo"/> per
+    /// entry pulled in every field of some arbitrary representative message).
+    /// </summary>
+    internal sealed class UnionPlan : IEquatable<UnionPlan>
+    {
+        public static readonly UnionPlan Empty = new(ImmutableArray<UnionHelperPlan>.Empty);
+
+        public UnionPlan(ImmutableArray<UnionHelperPlan> helpers)
+        {
+            Helpers = helpers;
+        }
+
+        /// <summary>Ordered by <see cref="UnionHelperPlan.HelperName"/>. See <see cref="PlanUnionHelpers"/>.</summary>
+        public ImmutableArray<UnionHelperPlan> Helpers { get; }
+
+        public bool Equals(UnionPlan? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(Helpers, other.Helpers);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as UnionPlan);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Helpers);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One serializer, fully resolved: the cached, value-equatable output of
+    /// <see cref="ResolveSerializer"/>, and the pipeline's terminal per-serializer model --
+    /// <see cref="EmitResolvedSerializer"/> reports its diagnostics and emits its source, PURELY from
+    /// this type, with no further symbol/<see cref="Compilation"/> access. Two resolves over equal
+    /// inputs produce an EQUAL <see cref="ResolvedSerializer"/> (see <see cref="GeneratorResolveSpec"/>),
+    /// which is exactly what lets an unrelated serializer's <c>RegisterSourceOutput</c> report
+    /// <see cref="Microsoft.CodeAnalysis.IncrementalStepRunReason.Cached"/> instead of re-emitting
+    /// when only ANOTHER serializer's message changed.
+    /// </summary>
+    /// <remarks>
+    /// When <see cref="IsEmittable"/> is false (the serializer's own declaration failed
+    /// <see cref="EvaluateGate"/>), every field below <see cref="GateDiagnostics"/> is empty/default:
+    /// a serializer that never clears the gate has no message table to resolve in the first place --
+    /// see <see cref="NotEmittable"/>.
+    /// </remarks>
+    internal sealed class ResolvedSerializer : IEquatable<ResolvedSerializer>
+    {
+        public ResolvedSerializer(
+            SerializerInfo serializer,
+            bool isEmittable,
+            ImmutableArray<DiagnosticSpec> gateDiagnostics,
+            ImmutableDictionary<string, MessageInfo> resolvedMessagesByType,
+            ClosedSet topLevelMessages,
+            ImmutableArray<MessageInfo> reachableMessages,
+            ImmutableArray<ClosedGenericRegistrationInfo> resolvedClosedGenericRegistrations,
+            ImmutableArray<FormatterInfo> usedFormatters,
+            UnionPlan unionPlan,
+            ImmutableArray<DiagnosticSpec> validationDiagnostics)
+        {
+            Serializer = serializer;
+            IsEmittable = isEmittable;
+            GateDiagnostics = gateDiagnostics;
+            ResolvedMessagesByType = resolvedMessagesByType;
+            TopLevelMessages = topLevelMessages;
+            ReachableMessages = reachableMessages;
+            ResolvedClosedGenericRegistrations = resolvedClosedGenericRegistrations;
+            UsedFormatters = usedFormatters;
+            UnionPlan = unionPlan;
+            ValidationDiagnostics = validationDiagnostics;
+        }
+
+        /// <summary>The serializer declaration this model resolves. Never null, even when <see cref="IsEmittable"/> is false.</summary>
+        public SerializerInfo Serializer { get; }
+
+        /// <summary>The result of <see cref="EvaluateGate"/>: whether this serializer's own declaration is usable as a codegen target at all.</summary>
+        public bool IsEmittable { get; }
+
+        /// <summary>Diagnostics from <see cref="EvaluateGate"/>. Reported unconditionally (gate diagnostics fire whether or not the gate itself passes).</summary>
+        public ImmutableArray<DiagnosticSpec> GateDiagnostics { get; }
+
+        /// <summary>Every message this serializer knows about, with formatters resolved. Empty when <see cref="IsEmittable"/> is false.</summary>
+        public ImmutableDictionary<string, MessageInfo> ResolvedMessagesByType { get; }
+
+        /// <summary>This serializer's top-level dispatch set (Manifest/Serialize/Deserialize/SizeHint switches), in declaration order.</summary>
+        public ClosedSet TopLevelMessages { get; }
+
+        /// <summary>Every message reachable from a top-level message -- the ones that need generated Write/Read/SizeOf methods.</summary>
+        public ImmutableArray<MessageInfo> ReachableMessages { get; }
+
+        /// <summary>
+        /// This serializer's <c>[AkkaSerializable&lt;T&gt;]</c> registrations, with each registration's
+        /// <see cref="ClosedGenericRegistrationInfo.Message"/> resolved to its formatter-substituted
+        /// form from <see cref="ResolvedMessagesByType"/> (see <see cref="ResolveClosedGenericRegistrations"/>).
+        /// </summary>
+        public ImmutableArray<ClosedGenericRegistrationInfo> ResolvedClosedGenericRegistrations { get; }
+
+        /// <summary>The distinct hand-written formatters actually used by <see cref="ReachableMessages"/>, sorted for deterministic field/constructor emission. See <see cref="CollectUsedFormatters"/>.</summary>
+        public ImmutableArray<FormatterInfo> UsedFormatters { get; }
+
+        /// <summary>This serializer's union dispatch helpers. See <see cref="PlanUnionHelpers"/>.</summary>
+        public UnionPlan UnionPlan { get; }
+
+        /// <summary>Diagnostics from validating <see cref="ReachableMessages"/>/<see cref="TopLevelMessages"/>. Empty when <see cref="IsEmittable"/> is false (there is nothing to validate).</summary>
+        public ImmutableArray<DiagnosticSpec> ValidationDiagnostics { get; }
+
+        /// <summary>A serializer whose own declaration failed <see cref="EvaluateGate"/>: nothing past the gate was ever computed.</summary>
+        public static ResolvedSerializer NotEmittable(SerializerInfo serializer, ImmutableArray<DiagnosticSpec> gateDiagnostics)
+        {
+            return new ResolvedSerializer(
+                serializer,
+                isEmittable: false,
+                gateDiagnostics: gateDiagnostics,
+                resolvedMessagesByType: ImmutableDictionary<string, MessageInfo>.Empty,
+                topLevelMessages: ClosedSet.Empty,
+                reachableMessages: ImmutableArray<MessageInfo>.Empty,
+                resolvedClosedGenericRegistrations: ImmutableArray<ClosedGenericRegistrationInfo>.Empty,
+                usedFormatters: ImmutableArray<FormatterInfo>.Empty,
+                unionPlan: UnionPlan.Empty,
+                validationDiagnostics: ImmutableArray<DiagnosticSpec>.Empty);
+        }
+
+        /// <summary>A serializer that cleared <see cref="EvaluateGate"/>, with its fully resolved message table and dispatch plans.</summary>
+        public static ResolvedSerializer Emittable(
+            SerializerInfo serializer,
+            ImmutableArray<DiagnosticSpec> gateDiagnostics,
+            ImmutableDictionary<string, MessageInfo> resolvedMessagesByType,
+            ClosedSet topLevelMessages,
+            ImmutableArray<MessageInfo> reachableMessages,
+            ImmutableArray<ClosedGenericRegistrationInfo> resolvedClosedGenericRegistrations,
+            ImmutableArray<FormatterInfo> usedFormatters,
+            UnionPlan unionPlan,
+            ImmutableArray<DiagnosticSpec> validationDiagnostics)
+        {
+            return new ResolvedSerializer(
+                serializer,
+                isEmittable: true,
+                gateDiagnostics,
+                resolvedMessagesByType,
+                topLevelMessages,
+                reachableMessages,
+                resolvedClosedGenericRegistrations,
+                usedFormatters,
+                unionPlan,
+                validationDiagnostics);
+        }
+
+        public bool Equals(ResolvedSerializer? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return IsEmittable == other.IsEmittable
+                && Serializer.Equals(other.Serializer)
+                && TopLevelMessages.Equals(other.TopLevelMessages)
+                && UnionPlan.Equals(other.UnionPlan)
+                && ValueEquality.SequenceEquals(GateDiagnostics, other.GateDiagnostics)
+                && ValueEquality.SequenceEquals(ReachableMessages, other.ReachableMessages)
+                && ValueEquality.SequenceEquals(ResolvedClosedGenericRegistrations, other.ResolvedClosedGenericRegistrations)
+                && ValueEquality.SequenceEquals(UsedFormatters, other.UsedFormatters)
+                && ValueEquality.SequenceEquals(ValidationDiagnostics, other.ValidationDiagnostics)
+                && ValueEquality.DictionaryEquals(ResolvedMessagesByType, other.ResolvedMessagesByType);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as ResolvedSerializer);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, IsEmittable);
+            hash = ValueEquality.Combine(hash, Serializer.GetHashCode());
+            hash = ValueEquality.Combine(hash, TopLevelMessages.GetHashCode());
+            hash = ValueEquality.Combine(hash, UnionPlan.GetHashCode());
+            hash = ValueEquality.Combine(hash, GateDiagnostics);
+            hash = ValueEquality.Combine(hash, ReachableMessages);
+            hash = ValueEquality.Combine(hash, ResolvedClosedGenericRegistrations);
+            hash = ValueEquality.Combine(hash, UsedFormatters);
+            hash = ValueEquality.Combine(hash, ValidationDiagnostics);
+            hash = ValueEquality.CombineDictionary(hash, ResolvedMessagesByType);
             return hash;
         }
     }

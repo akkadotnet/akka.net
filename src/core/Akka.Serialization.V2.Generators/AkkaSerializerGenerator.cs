@@ -32,8 +32,9 @@ namespace Akka.Serialization.V2.Generators;
 //                                             reporting: ValidateMessages, ValidateUnionField,
 //                                             ValidateClosedGenericProtocolCoverage,
 //                                             CollectReachableMessages, the Report* helpers.
-//   AkkaSerializerGenerator.Emission.cs    - source emission: EmitSerializers, Generate*, union
-//                                             helper planning, naming/folding, collision handling.
+//   AkkaSerializerGenerator.Emission.cs    - the per-serializer resolve stage (ResolveSerializer)
+//                                             and source emission: EmitResolvedSerializer, Generate*,
+//                                             union helper planning, naming/folding, collision handling.
 //   AkkaSerializerGenerator.Models.cs      - the model records (SerializerInfo, MessageInfo,
 //                                             FieldInfo, TypeMapping, UnionMemberInfo, ...).
 [Generator]
@@ -52,8 +53,19 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         public const string ExtractedMessages = nameof(ExtractedMessages);
         public const string CollectedMessages = nameof(CollectedMessages);
 
+        /// <summary>
+        /// The per-serializer <see cref="ResolvedSerializer"/> stage: a <c>Select</c> over each
+        /// serializer PLUS the full collected messages array (see <see cref="ResolveSerializer"/>).
+        /// An edit to any message recomputes every serializer's step here -- that dependency cannot
+        /// be avoided, since a message's top-level/reachable status depends on every other message
+        /// too -- but the RESULT for a serializer untouched by the edit compares equal to its
+        /// previous run, which is what lets code emission (registered directly on this stage) skip
+        /// re-emitting that one serializer's file.
+        /// </summary>
+        public const string ResolvedSerializers = nameof(ResolvedSerializers);
+
         public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
-            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages);
+            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages, ResolvedSerializers);
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -78,18 +90,64 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .Collect()
             .WithTrackingName(TrackingNames.CollectedMessages);
 
-        // Code emission consumes ONLY the collected, value-equatable, symbol-free models -- never
-        // the Compilation. An edit anywhere that does not change an extracted model therefore
-        // reuses the cached emission output instead of regenerating every serializer per keystroke.
+        // The per-serializer resolve stage: each serializer plus ALL collected messages (a message's
+        // top-level/reachable status can only be judged against the full set) resolves, via
+        // ResolveSerializer, to ONE cached, value-equatable ResolvedSerializer. SelectMany splits the
+        // single (serializers, messages) combined value back out into one independently-cached
+        // element per serializer -- the driver diffs each element against its previous run by VALUE
+        // (ResolvedSerializer.Equals), so a serializer whose resolved model is unaffected by an
+        // edit reports Unchanged here even though the whole stage recomputed. See ResolveSerializer's
+        // doc comment for why this dependency shape is unavoidable, and the RegisterSourceOutput
+        // below for why an Unchanged/Cached element here is what makes that serializer's own emitted
+        // file Cached, not just this stage.
+        var resolvedSerializers = serializers
+            .Combine(messages)
+            .SelectMany(static (pair, cancellationToken) =>
+            {
+                var (allSerializers, allMessages) = pair;
+                var duplicateSerializerIds = ComputeDuplicateSerializerIds(allSerializers);
+                var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(allSerializers);
+                var declaredMessages = ComputeDeclaredMessages(allMessages);
+                var genericDefinitions = ComputeGenericDefinitions(declaredMessages);
+
+                var builder = ImmutableArray.CreateBuilder<ResolvedSerializer>();
+                foreach (var serializer in allSerializers)
+                {
+                    if (serializer == null)
+                        continue;
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    builder.Add(ResolveSerializer(serializer, declaredMessages, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions));
+                }
+
+                return builder.ToImmutable();
+            })
+            .WithTrackingName(TrackingNames.ResolvedSerializers);
+
+        // Code emission consumes ONLY the cached, value-equatable, symbol-free ResolvedSerializer
+        // model -- never the Compilation, and never another serializer's data. Registered on the
+        // VALUES provider (one independent output per serializer) rather than a Collect()'d array,
+        // so editing a message owned by one serializer re-emits only that serializer's file: the
+        // driver skips this callback entirely for any OTHER serializer whose resolved model still
+        // compares equal to last run.
+        context.RegisterSourceOutput(resolvedSerializers, static (ctx, resolved) => EmitResolvedSerializer(ctx, resolved));
+
+        // The cross-serializer diagnostics (AKKASG013 duplicate ids, AKKASG031 duplicate protocol
+        // bindings, AKKASG037 manifest ignored on a generic definition) cannot be attached to any
+        // one serializer's ResolvedSerializer without either duplicating them or picking an
+        // arbitrary "owner" -- see ReportCrossSerializerDiagnostics's doc comment. Reported exactly
+        // once each, from a small diagnostics-only output over the same two collected arrays.
         context.RegisterSourceOutput(
             serializers.Combine(messages),
-            static (ctx, pair) => EmitSerializers(ctx, pair.Left, pair.Right));
+            static (ctx, pair) => ReportCrossSerializerDiagnostics(ctx, pair.Left, pair.Right));
 
         // AKKASG029's whole-compilation protocol-coverage scan (ValidateProtocolCoverage) is the
         // one check that genuinely needs the Compilation ("does any source-declared type implement
         // this protocol interface without [AkkaSerializable]?"), so it lives in this SEPARATE,
         // diagnostics-only output: the Compilation input changes on every edit, but only this cheap
-        // re-scan pays for that -- code emission above stays cached.
+        // re-scan pays for that -- code emission above stays cached. It combines the cached
+        // ResolvedSerializer (for its gate) with the live Compilation (for the scan itself), so a
+        // serializer's own gate is decided once, by ResolveSerializer, and never recomputed here.
         //
         // Design decision: coverage errors no longer gate emission (the old terminal stage skipped
         // AddSource for a serializer whose coverage check failed). This is the standard split for
@@ -99,7 +157,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // while the user fixes the gap) and lets the emission stage surface OTHER diagnostics that
         // the old early-return used to hide until the coverage error was fixed.
         context.RegisterSourceOutput(
-            serializers.Combine(messages).Combine(context.CompilationProvider),
-            static (ctx, tuple) => ReportProtocolCoverage(ctx, tuple.Left.Left, tuple.Left.Right, tuple.Right));
+            resolvedSerializers.Combine(context.CompilationProvider),
+            static (ctx, pair) => ReportProtocolCoverage(ctx, pair.Left, pair.Right));
     }
 }

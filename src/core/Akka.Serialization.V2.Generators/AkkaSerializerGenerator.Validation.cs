@@ -48,38 +48,23 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Diagnostics-only output for AKKASG029 (see the comment in <see cref="Initialize"/>). To
     /// preserve the old terminal stage's semantics, a serializer only reaches the coverage scan
-    /// after it passes the same gate <see cref="EmitSerializers"/> runs (see <see cref="EvaluateGate"/>)
-    /// -- evaluated here SILENTLY (its <see cref="SerializerGate.Diagnostics"/> are discarded): the
-    /// emission output above is the one that reports them, and reporting them twice would duplicate
-    /// every pre-coverage diagnostic.
+    /// when it is emittable -- consuming <see cref="ResolvedSerializer.IsEmittable"/> directly
+    /// instead of re-evaluating <see cref="EvaluateGate"/> from the raw collected arrays, now that
+    /// the gate has already been decided once, per serializer, by <see cref="ResolveSerializer"/>.
+    /// <see cref="ResolvedSerializer.GateDiagnostics"/> are NOT reported here (they are reported
+    /// once, by <see cref="EmitResolvedSerializer"/>); reporting them again here would duplicate
+    /// every pre-coverage diagnostic. This output still combines the live <see cref="Compilation"/>
+    /// (AKKASG029's whole-compilation scan genuinely needs it), so it re-runs on every edit exactly
+    /// as before -- only the GATE check underneath it got cheaper.
     /// </summary>
-    private static void ReportProtocolCoverage(
-        SourceProductionContext context,
-        ImmutableArray<SerializerInfo?> serializers,
-        ImmutableArray<MessageInfo?> messages,
-        Compilation compilation)
+    private static void ReportProtocolCoverage(SourceProductionContext context, ResolvedSerializer resolved, Compilation compilation)
     {
-        var duplicateSerializerIds = ComputeDuplicateSerializerIds(serializers);
-        var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(serializers);
-        var genericDefinitions = messages
-            .Where(message => message != null)
-            .Cast<MessageInfo>()
-            .Where(message => message.IsGenericDefinition)
-            .ToImmutableArray();
+        if (!resolved.IsEmittable)
+            return;
 
-        foreach (var serializer in serializers)
-        {
-            if (serializer == null)
-                continue;
-
-            var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
-            if (!gate.IsEmittable)
-                continue;
-
-            var protocolCoverageDiagnostics = ValidateProtocolCoverage(serializer, compilation, context.CancellationToken);
-            foreach (var diagnostic in protocolCoverageDiagnostics)
-                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
-        }
+        var protocolCoverageDiagnostics = ValidateProtocolCoverage(resolved.Serializer, compilation, context.CancellationToken);
+        foreach (var diagnostic in protocolCoverageDiagnostics)
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
     }
 
     private static ImmutableDictionary<int, string> ComputeDuplicateSerializerIds(ImmutableArray<SerializerInfo?> serializers)
@@ -107,17 +92,19 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// The per-serializer gate every codegen target must clear before its message table is even
     /// looked at: is the declaration itself usable (name, id, uniqueness, shape, protocol type,
-    /// formatters, closed-generic registrations, generic-definition coverage)? Both
-    /// <see cref="EmitSerializers"/> (which reports <see cref="SerializerGate.Diagnostics"/>) and
-    /// <see cref="ReportProtocolCoverage"/> (which discards them, silently replicating the gate) call
-    /// this SAME method, so the two outputs can never disagree about which serializers are gated out.
-    /// Mirrors the old single-output stage's check order exactly: each step below short-circuits the
-    /// ones after it, but a single step (formatters, closed-generic registrations, generic
-    /// definitions) can itself append more than one diagnostic before failing.
-    /// <paramref name="duplicateSerializerIds"/> and <paramref name="duplicateProtocolBindings"/> are
-    /// precomputed by the caller (each output computes its own copy from the same input array) so a
-    /// serializer that is part of either duplicate group is gated out WITHOUT a diagnostic here --
-    /// that diagnostic was already reported once, in bulk, by the caller.
+    /// formatters, closed-generic registrations, generic-definition coverage)? Called exactly once
+    /// per serializer, by <see cref="ResolveSerializer"/>, whose <see cref="ResolvedSerializer"/>
+    /// result then feeds BOTH <see cref="EmitResolvedSerializer"/> (which reports
+    /// <see cref="ResolvedSerializer.GateDiagnostics"/>) and <see cref="ReportProtocolCoverage"/>
+    /// (which only reads <see cref="ResolvedSerializer.IsEmittable"/>) -- so the two outputs can
+    /// never disagree about which serializers are gated out, without either recomputing the gate
+    /// independently. Mirrors the old single-output stage's check order exactly: each step below
+    /// short-circuits the ones after it, but a single step (formatters, closed-generic
+    /// registrations, generic definitions) can itself append more than one diagnostic before
+    /// failing. <paramref name="duplicateSerializerIds"/> and <paramref name="duplicateProtocolBindings"/>
+    /// are precomputed by the caller (every caller computes its own copy from the same input array)
+    /// so a serializer that is part of either duplicate group is gated out WITHOUT a diagnostic here
+    /// -- that diagnostic is reported once, in bulk, by <see cref="ReportCrossSerializerDiagnostics"/>.
     /// </summary>
     internal static SerializerGate EvaluateGate(
         SerializerInfo serializer,
@@ -183,10 +170,28 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Shared by <see cref="Validate"/> and <see cref="EmitSerializers"/> so both run the exact same
-    /// validation over the exact same <see cref="ResolvedSerializerMessages"/> -- emission calls this
-    /// with a table it also reuses for code generation; <see cref="Validate"/> computes one just for
-    /// the call. <see cref="ValidateClosedGenericProtocolCoverage"/> runs only when
+    /// Test-only entry point for <see cref="ResolveSerializer"/>, with no duplicate-id/duplicate-
+    /// protocol-binding group and no generic-definition list to hand-build: a scenario driving this
+    /// directly (see GeneratorResolveSpec.cs) has exactly the one serializer under test in scope, so
+    /// those three cross-serializer inputs are trivially empty/derived from <paramref name="messages"/>
+    /// itself -- mirroring how <see cref="Validate"/> is <see cref="ResolveSerializer"/>'s
+    /// single-serializer counterpart for validation alone.
+    /// </summary>
+    internal static ResolvedSerializer ResolveSerializerForTests(SerializerInfo serializer, ImmutableArray<MessageInfo> messages)
+    {
+        return ResolveSerializer(
+            serializer,
+            messages,
+            ImmutableDictionary<int, string>.Empty,
+            ImmutableDictionary<string, string>.Empty,
+            ComputeGenericDefinitions(messages));
+    }
+
+    /// <summary>
+    /// Shared by <see cref="Validate"/> and <see cref="ResolveSerializer"/> so both run the exact same
+    /// validation over the exact same <see cref="ResolvedSerializerMessages"/> -- <see cref="ResolveSerializer"/>
+    /// calls this with a table it also reuses for code generation; <see cref="Validate"/> computes one
+    /// just for the call. <see cref="ValidateClosedGenericProtocolCoverage"/> runs only when
     /// <see cref="ValidateMessages"/> found no error, mirroring the old stage's short-circuit exactly
     /// (a message-level error already means nothing will be emitted, so the AKKASG034 coverage scan
     /// over a table already known to be broken is skipped, exactly as before).

@@ -146,7 +146,12 @@ public sealed class GeneratorIncrementalCachingSpec
         // ...and, stronger, every named pipeline stage must have been served from cache
         // (Cached: not re-run; Unchanged: re-run but produced an equal value). Any other reason
         // means a model stopped comparing equal across compilations -- a symbol or other
-        // non-equatable state leaked into a cached model.
+        // non-equatable state leaked into a cached model. This loop over TrackingNames.All already
+        // covers ResolvedSerializers (the per-serializer resolve stage added in the S3 architecture
+        // pass) automatically -- see the dedicated assertion below for what "reused" means for THAT
+        // stage specifically: its cached ResolvedSerializer model must exercise every cached shape
+        // this fixture declares (formatter, closed generic registration, union, collections, plain
+        // scalar fields -- see SerializerSource's doc comment) without any of them defeating equality.
         var trackedSteps = secondRun.Results.Single().TrackedSteps;
         foreach (var trackingName in AkkaSerializerGenerator.TrackingNames.All)
         {
@@ -160,6 +165,16 @@ public sealed class GeneratorIncrementalCachingSpec
                 }
             }
         }
+
+        // ResolvedSerializers specifically: exactly one resolved model (SampleSerializer, the
+        // fixture's only [AkkaSerializer]), and it must be marked emittable -- a false-Cached read
+        // that silently skipped over a broken/non-emittable model would defeat the point of this
+        // guard.
+        var resolvedSerializerReasons = trackedSteps[AkkaSerializerGenerator.TrackingNames.ResolvedSerializers]
+            .SelectMany(step => step.Outputs)
+            .ToList();
+        resolvedSerializerReasons.Should().HaveCount(1);
+        ((AkkaSerializerGenerator.ResolvedSerializer)resolvedSerializerReasons[0].Value).IsEmittable.Should().BeTrue();
     }
 
     [Fact(DisplayName = "Generator should emit source alongside an AKKASG029 coverage error")]

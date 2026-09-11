@@ -107,16 +107,20 @@ public sealed class GeneratorIncrementalScenariosSpec
     [Fact(DisplayName = "Tracked pipeline stages should match TrackingNames.All exactly (a new stage must update this spec)")]
     public void TrackingNames_should_match_expected_stage_count()
     {
-        // Pins today's stage count. Adding a fifth (or removing one) named pipeline stage is a
+        // Pins today's stage count. Adding a sixth (or removing one) named pipeline stage is a
         // deliberate architectural change -- this assertion makes it fail loudly here instead of
-        // only surfacing as a silent gap in the scenarios below.
-        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(4);
+        // only surfacing as a silent gap in the scenarios below. ResolvedSerializers (the
+        // per-serializer resolve stage from the S3 architecture pass) is the fifth: it was ADDED
+        // downstream of the four stages above, which is why scenarios (a)/(c)/(d)/(e) below still
+        // pin the exact same reasons for those four as before.
+        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(5);
         AkkaSerializerGenerator.TrackingNames.All.Should().BeEquivalentTo(new[]
         {
             AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             AkkaSerializerGenerator.TrackingNames.CollectedSerializers,
             AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
-            AkkaSerializerGenerator.TrackingNames.CollectedMessages
+            AkkaSerializerGenerator.TrackingNames.CollectedMessages,
+            AkkaSerializerGenerator.TrackingNames.ResolvedSerializers
         });
     }
 
@@ -152,12 +156,18 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
+        // ResolvedSerializers' own input (serializers.Combine(messages)) is unchanged (both
+        // component values are the SAME cached references as before), so the SelectMany transform
+        // is skipped entirely for both serializers -- Cached, not merely Unchanged.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
+
         // TARGET: none -- this IS the caching discipline PR 1 pins as the baseline; PRs 2, 3, 5, 6
         // must not regress it. No hint name's text should change.
         ChangedHintNames(result).Should().BeEmpty();
     }
 
-    [Fact(DisplayName = "Scenario (b): renaming one message's field re-emits every serializer's output, byte-identically except the affected one")]
+    [Fact(DisplayName = "Scenario (b): renaming one message's field re-emits only the serializer that owns it")]
     public void Scenario_b_message_field_renamed()
     {
         var result = GeneratorTestHarness.RunIncremental(FixtureSource, FixtureWithAlphaTwoFieldRenamed);
@@ -176,12 +186,24 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Modified);
 
-        // TARGET: only AlphaSerializer's generated file should change once emission is split
-        // per-serializer (PR 3/5). Today EmitSerializers is ONE RegisterSourceOutput over the whole
-        // (serializers, messages) pair, so it re-executes and re-emits BOTH generated files on any
-        // message edit -- but BetaSerializer's re-emitted text is nonetheless byte-identical to
-        // before (it does not depend on AlphaTwo), so it is correctly excluded from the CHANGED set
-        // computed here (text-equality, not "did this hint name get touched by AddSource again").
+        // THE SCENARIO FLIP (S3): CollectedMessages changing forces the ResolvedSerializers
+        // SelectMany transform to rerun for EVERY serializer (its input, serializers.Combine(messages),
+        // changed) -- but AlphaSerializer is declared first and BetaSerializer second, and only
+        // AlphaSerializer's resolve actually OWNS AlphaTwo, so only ITS resulting ResolvedSerializer
+        // differs (Modified). BetaSerializer's resolved model, though recomputed, compares EQUAL to
+        // its previous run (Unchanged) -- ResolvedSerializer.ResolvedMessagesByType is deliberately
+        // scoped to each serializer's OWN reachable messages (see BuildResolvedMessageTable), so it
+        // is never poisoned by an unrelated serializer's message.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Modified, IncrementalStepRunReason.Unchanged);
+
+        // Because RegisterSourceOutput is now registered directly on the ResolvedSerializers values
+        // provider (one independent output per serializer, not one output over the whole collected
+        // pair), BetaSerializer's Unchanged resolved model means its AddSource callback is never
+        // re-invoked at all (Cached) -- unlike the pre-S3 architecture, where EmitSerializers's
+        // single RegisterSourceOutput re-executed for BOTH serializers on any message edit and
+        // merely happened to re-emit byte-identical text for Beta. Only AlphaSerializer's generated
+        // file changes here.
         ChangedHintNames(result).Should().BeEquivalentTo(new[] { "AlphaSerializer.AkkaSerialization.g.cs" });
     }
 
@@ -202,6 +224,11 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
+
+        // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
+        // steps are skipped entirely (Cached).
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
 
         // TARGET: unchanged from today -- a comment-only edit re-emitting nothing is already the
         // desired behavior; no migration PR needs to touch this.
@@ -225,18 +252,24 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
+
+        // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
+        // steps are skipped entirely (Cached).
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         ChangedHintNames(result).Should().BeEmpty();
 
         // TARGET: the coverage scan (AKKASG029, ReportProtocolCoverage) is registered on
-        // serializers.Combine(messages).Combine(context.CompilationProvider) with NO tracking
-        // name -- it is not gated by the same equality contract as the four named stages above, and
+        // resolvedSerializers.Combine(context.CompilationProvider) with NO tracking name of its
+        // own -- it is not gated by the same equality contract as the five named stages above, and
         // is not observable through GetRunResult().Results[0].TrackedSteps at all. OBSERVED today:
         // it produces the SAME (empty) diagnostics both before and after this trivial edit -- the
         // fixture is coverage-clean -- which is the externally-visible half of "it still re-runs
         // every time": the CompilationProvider input this output depends on changes identity on
         // every edit, so the scan re-executes on this one too, it just has nothing new to report.
-        // PR 5/6 (moving coverage scanning onto the cached message/serializer models instead of the
-        // raw Compilation) is expected to make this scan cacheable too.
+        // As of S3, this scan's per-serializer GATE check is read straight off the cached
+        // ResolvedSerializer instead of being recomputed -- only the whole-compilation scan itself
+        // still re-runs every time, which is unavoidable (it genuinely needs the live Compilation).
         result.Before.CompileDiagnostics.Where(d => d.Id == "AKKASG029").Should().BeEmpty();
         result.After.CompileDiagnostics.Where(d => d.Id == "AKKASG029").Should().BeEmpty();
         result.Before.RunResult.Diagnostics.Where(d => d.Id == "AKKASG029").Should().BeEmpty();
@@ -264,6 +297,11 @@ public sealed class GeneratorIncrementalScenariosSpec
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
+
+        // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
+        // steps are skipped entirely (Cached).
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
 
         // TARGET: unchanged from today -- an unused added reference re-emitting nothing is already
         // the desired behavior; no migration PR needs to touch this.

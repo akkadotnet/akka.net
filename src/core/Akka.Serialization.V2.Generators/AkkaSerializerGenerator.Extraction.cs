@@ -49,8 +49,32 @@ public sealed partial class AkkaSerializerGenerator
         // rejected with CS0579 ("Duplicate 'AkkaSerializer<>' attribute") even though IA and IB
         // differ, so at most one [AkkaSerializer<T>] ever reaches this method. No AKKASG030 is
         // needed for this case.
-        var attribute = context.Attributes[0];
-        var compilation = context.SemanticModel.Compilation;
+        return ExtractSerializerCore(symbol, context.Attributes[0], context.SemanticModel.Compilation);
+    }
+
+    /// <summary>
+    /// Test-only entry point: extracts a <see cref="SerializerInfo"/> straight from a symbol and its
+    /// <see cref="Compilation"/>, with no <see cref="GeneratorAttributeSyntaxContext"/> syntax hook
+    /// to drive it -- the serializer-side counterpart of <see cref="ParseMessageForTests"/>. Finds
+    /// the <c>[AkkaSerializer&lt;TProtocol&gt;]</c> attribute directly off the symbol (the only
+    /// thing <see cref="GeneratorAttributeSyntaxContext.Attributes"/> would otherwise supply) and
+    /// delegates everything else to the same, unmodified <see cref="ExtractSerializerCore"/> routine
+    /// the real pipeline uses -- so a snapshot built from this reflects REAL extraction, not a
+    /// hand-typed approximation of it (see GeneratorResolvedSerializerSnapshotSpec.cs).
+    /// </summary>
+    internal static SerializerInfo? ExtractSerializerForTests(INamedTypeSymbol symbol, Compilation compilation)
+    {
+        var serializerAttributeType = compilation.GetTypeByMetadataName(SerializerAttributeFullName);
+        var attribute = symbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass != null && SymbolEqualityComparer.Default.Equals(attr.AttributeClass.OriginalDefinition, serializerAttributeType));
+        if (attribute == null)
+            return null;
+
+        return ExtractSerializerCore(symbol, attribute, compilation);
+    }
+
+    private static SerializerInfo ExtractSerializerCore(INamedTypeSymbol symbol, AttributeData attribute, Compilation compilation)
+    {
         string? name = null;
         var serializerId = 0;
 
