@@ -35,12 +35,12 @@
     <MessagePackVersion>3.1.8</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
-    <FsharpVersion>10.1.302</FsharpVersion>
+    <FsharpVersion>10.1.401</FsharpVersion>
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>3.4.0</FsCheckVersion>
-    <FsCheck3Version>3.3.3</FsCheck3Version>
+    <FsCheck3Version>3.4.0</FsCheck3Version>
     <CsCheckVersion>4.8.0</CsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
