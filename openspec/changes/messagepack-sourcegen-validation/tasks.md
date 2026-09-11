@@ -221,3 +221,50 @@ added generator-level validation of the `[AkkaSerializer]` class shape itself. C
       either, since C# does not allow an unbound generic type as an attribute type argument)
 - [x] 12.8 Remove `global::`-qualified type names from hand-written runtime code and generator
       diagnostic message text in favor of human-readable names (`ToDisplayName`; commit `278e9a4a0`)
+
+## 13. Schemas From Referenced-Assembly Metadata (Decision 16)
+
+Stacks on S1-S6 (`feature/serialization-v2-generator-locations`, PRs #8525/#8526/#8527/#8528/#8530/#8532/#8533).
+F1 of the follow-on cross-assembly work: builds a nested field's or a union member's schema from a
+referenced assembly's compiled metadata, closing the gap `CrossAssemblyBaselineSpec` pinned. Does
+not implement Decisions 17-21 (later PRs).
+
+- [x] 13.1 Add a per-compilation metadata-schema stage (`ComputeMetadataSchemas`,
+      `AkkaSerializerGenerator.MetadataSchemas.cs`): resolves every non-generic, foreign-assembly
+      type a local message's nested field or union member names, checks it is `[AkkaSerializable]`
+      and accessible, and extracts its schema through the same `ExtractMessageCore` a local type
+      uses. Walks nested foreign references breadth-first, so a type nested arbitrarily deep in a
+      referenced assembly still resolves. New model: `MetadataSchemaTable`
+      (`AkkaSerializerGenerator.Models.cs`), symbol-free and value-equatable, wired into
+      `ResolveSerializerMessages` beneath local/closed-generic messages (local declarations keep
+      priority) so every downstream stage (reachability, union planning, emission) treats a metadata
+      schema exactly like a local one
+- [x] 13.2 Add AKKASG039 (`NestedFieldNotAccessibleCrossAssembly` /
+      `UnionMemberNotAccessibleCrossAssembly`, Error): a referenced type carries `[AkkaSerializable]`
+      but this compilation cannot see it, or one of its own `[AkkaField]` properties, or a type it
+      itself nests. Type-level accessibility uses `Compilation.IsSymbolAccessibleWithin`; member-level
+      accessibility is read back from `ExtractMessageCore`'s own `InvalidFields`/`ConstructionPlan.Errors`
+      output (a wholly inaccessible member is invisible to `GetMembers()` and cannot be diagnosed at
+      all -- see design.md Decision 16's implementation addendum). A nested failure propagates to a
+      fixed point, so a problem one level down is attributed to the actual broken type while still
+      reporting at the local reference site
+- [x] 13.3 Confirm the existing AKKASG023/AKKASG007/AKKASG015 mislabel fix (a prior branch) still
+      reports correctly once metadata schemas exist for the residual "not `[AkkaSerializable]`
+      anywhere" failure path; no code change needed, covered by `CrossAssemblyBaselineSpec`
+- [x] 13.4 Flip `CrossAssemblyBaselineSpec`'s nested-field and union-member cases from a pinned
+      failure to a pinned success, rewriting their ASCII diagrams; add three new AKKASG039 cases
+      (non-public property, an internal union member, and one level down). The other four baseline
+      cases (generic definition, unreachable closed-generic registration, envelope payload on a
+      generic property, protocol implementor only in a referenced assembly) stay pinned, unaffected
+      by this decision
+- [x] 13.5 Add cross-assembly golden-output coverage (`CrossAssemblyGoldenOutputSpec.cs`): a nested
+      field, a union member, and a closed generic from a referenced assembly, pinned against a
+      checked-in baseline and proven byte-identical to the same declarations made locally except for
+      the namespace
+- [x] 13.6 Add the `MetadataSchemas` tracking name and two caching-proof scenarios to
+      `GeneratorIncrementalScenariosSpec.cs`: an unrelated edit with a metadata schema in play
+      re-emits nothing, and editing the local message that references it re-emits only the owning
+      serializer
+- [x] 13.7 Document cross-assembly support in the user guide (new "Cross-Assembly Types" section,
+      AKKASG039 in the diagnostics table, updated Limitations section) and record the implementation
+      choices the design text did not cover as an addendum under Decision 16 in design.md

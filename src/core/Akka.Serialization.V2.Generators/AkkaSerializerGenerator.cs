@@ -32,6 +32,11 @@ namespace Akka.Serialization.V2.Generators;
 //                                             and its helpers (the local-implementor walk, the
 //                                             referenced-assembly-references-V2 filter, and the
 //                                             Decision 19 referenced-assembly implementor skeleton).
+//   AkkaSerializerGenerator.MetadataSchemas.cs - Decision 16's metadata-schema stage: ComputeMetadataSchemas
+//                                             and its helpers. A second per-compilation stage, next to
+//                                             Facts.cs but kept separate because it does real
+//                                             extraction work (resolves a referenced-assembly symbol
+//                                             and runs it through ExtractMessageCore), not just a walk.
 //   AkkaSerializerGenerator.Validation.cs  - validation over the collected models and diagnostic
 //                                             reporting: ValidateMessages, ValidateUnionField,
 //                                             ValidateClosedGenericProtocolCoverage,
@@ -109,10 +114,33 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public const string CompilationFacts = nameof(CompilationFacts);
 
+        /// <summary>
+        /// Decision 16's whole-compilation metadata-schema stage: <c>context.CompilationProvider.Combine(messages).Combine(serializers).Select(...)</c>,
+        /// producing one cached <see cref="MetadataSchemaTable"/> value per compilation change (see
+        /// <see cref="ComputeMetadataSchemas"/>). Unlike <see cref="CompilationFacts"/> -- which is
+        /// deliberately NOT combined into <see cref="ResolvedSerializers"/>' own inputs yet -- this
+        /// stage IS combined directly into <see cref="ResolvedSerializers"/>: a referenced-assembly
+        /// nested field or union member cannot resolve at all unless <see cref="ResolveSerializerMessages"/>
+        /// can see its schema. Because this stage combines <see cref="Microsoft.CodeAnalysis.IIncrementalGenerator"/>'s
+        /// <c>CompilationProvider</c> directly, it recomputes on every edit like
+        /// <see cref="CompilationFacts"/> does -- but its OUTPUT compares equal whenever the
+        /// referenced type-key set and everything it resolves to are unchanged: an edit that touches
+        /// neither the referenced-assembly reference list nor any message that names a
+        /// referenced-assembly type leaves this stage reporting
+        /// <see cref="Microsoft.CodeAnalysis.IncrementalStepRunReason.Unchanged"/> (recomputed, but
+        /// equal). Empirically (see GeneratorIncrementalScenariosSpec's scenario (f)) that equality is
+        /// enough for the driver to still recognize <see cref="ResolvedSerializers"/>' own combined
+        /// input as unchanged and report <see cref="Microsoft.CodeAnalysis.IncrementalStepRunReason.Cached"/>
+        /// for it too, exactly like scenario (a)'s pre-existing <c>serializers.Combine(messages)</c>
+        /// input -- adding this third combined input does not, in practice, downgrade
+        /// <see cref="ResolvedSerializers"/>' best case for an edit this stage does not care about.
+        /// </summary>
+        public const string MetadataSchemas = nameof(MetadataSchemas);
+
         public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
             ExtractedSerializers, SerializerSchemas, CollectedSerializers,
             ExtractedMessages, MessageSchemas, CollectedMessages,
-            ResolvedSerializers, CompilationFacts);
+            ResolvedSerializers, CompilationFacts, MetadataSchemas);
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -173,21 +201,41 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .Combine(extractedMessages.Collect())
             .Select(static (pair, cancellationToken) => MergeExtractedLocations(pair.Left, pair.Right, cancellationToken));
 
+        // Decision 16's whole-compilation metadata-schema stage: everything the pipeline needs to
+        // read a nested field's or a union member's schema from a REFERENCED assembly's compiled
+        // metadata, computed once per compilation change and shared by every serializer -- see
+        // ComputeMetadataSchemas and TrackingNames.MetadataSchemas's own doc comment for the
+        // resulting run-reason trade-off. Combines the live Compilation (real symbol resolution is
+        // unavoidable here, exactly like CompilationFacts) with the collected messages and serializers
+        // (only for the referenced type keys they actually name -- ComputeReferencedTypeKeys -- so
+        // the resolution walk below only ever visits types someone actually referenced).
+        var metadataSchemas = context.CompilationProvider
+            .Combine(messages)
+            .Combine(serializers)
+            .Select(static (pair, cancellationToken) => ComputeMetadataSchemas(pair.Left.Left, pair.Left.Right, pair.Right, cancellationToken))
+            .WithTrackingName(TrackingNames.MetadataSchemas);
+
         // The per-serializer resolve stage: each serializer plus ALL collected messages (a message's
         // top-level/reachable status can only be judged against the full set) resolves, via
         // ResolveSerializer, to ONE cached, value-equatable ResolvedSerializer. SelectMany splits the
-        // single (serializers, messages) combined value back out into one independently-cached
-        // element per serializer -- the driver diffs each element against its previous run by VALUE
-        // (ResolvedSerializer.Equals), so a serializer whose resolved model is unaffected by an
-        // edit reports Unchanged here even though the whole stage recomputed. See ResolveSerializer's
-        // doc comment for why this dependency shape is unavoidable, and the RegisterSourceOutput
-        // below for why an Unchanged/Cached element here is what makes that serializer's own emitted
-        // file Cached, not just this stage.
+        // single (serializers, messages, metadataSchemas) combined value back out into one
+        // independently-cached element per serializer -- the driver diffs each element against its
+        // previous run by VALUE (ResolvedSerializer.Equals), so a serializer whose resolved model is
+        // unaffected by an edit reports Unchanged here even though the whole stage recomputed. See
+        // ResolveSerializer's doc comment for why this dependency shape is unavoidable, and the
+        // RegisterSourceOutput below for why an Unchanged/Cached element here is what makes that
+        // serializer's own emitted file Cached, not just this stage. metadataSchemas is combined in
+        // directly (unlike CompilationFacts, further below): a referenced-assembly nested field or
+        // union member needs its schema visible to ResolveSerializerMessages to resolve at all, so
+        // this combine is what makes Decision 16 real. See TrackingNames.MetadataSchemas's own doc
+        // comment for why this third combined input does not, in practice, cost this stage its
+        // Cached best case for an edit metadataSchemas itself does not care about.
         var resolvedSerializers = serializers
             .Combine(messages)
+            .Combine(metadataSchemas)
             .SelectMany(static (pair, cancellationToken) =>
             {
-                var (allSerializers, allMessages) = pair;
+                var ((allSerializers, allMessages), schemas) = pair;
                 var duplicateSerializerIds = ComputeDuplicateSerializerIds(allSerializers);
                 var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(allSerializers);
                 var declaredMessages = ComputeDeclaredMessages(allMessages);
@@ -200,7 +248,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
                         continue;
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    builder.Add(ResolveSerializer(serializer, declaredMessages, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions));
+                    builder.Add(ResolveSerializer(serializer, declaredMessages, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions, schemas));
                 }
 
                 return builder.ToImmutable();
