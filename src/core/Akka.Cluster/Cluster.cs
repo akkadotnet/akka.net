@@ -14,11 +14,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Configuration;
 
 namespace Akka.Cluster
 {
@@ -118,7 +118,7 @@ namespace Akka.Cluster
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
-            
+
             // log a warning if the user has set auto-down-unreachable-after to any value other than "off"
             // obsolete setting, so suppress obsolete warning
 #pragma warning disable CS0618
@@ -129,7 +129,7 @@ namespace Akka.Cluster
                     "The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET. " +
                     "The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.");
             }
-            
+
 
             CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
@@ -146,30 +146,16 @@ namespace Akka.Cluster
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
+            // Fire-and-forget: kick off non-blocking initialization of the cluster daemon tree. The
+            // daemon creates its children on receipt of this Init and hands the resolved core-daemon
+            // ref back via SetClusterCoreRef (which logs "Started up successfully"). The constructor
+            // must NEVER wait on that round-trip - see the XML doc on ClusterCore; a blocking ask
+            // here deadlocked small dispatcher pools for a decade.
+            _clusterDaemons.Tell(new InternalClusterAction.Init(this));
+
             _readView = new ClusterReadView(this);
 
-            // force the underlying system to start
-            _clusterCore = GetClusterCoreRef().Result;
-
             system.RegisterOnTermination(Shutdown);
-
-            LogInfo("Started up successfully");
-        }
-
-        private async Task<IActorRef> GetClusterCoreRef()
-        {
-            var timeout = System.Settings.CreationTimeout;
-            try
-            {
-                return await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), timeout).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
-                Shutdown();
-                System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
-                return System.DeadLetters;
-            }
         }
 
         /// <summary>
@@ -276,7 +262,7 @@ namespace Akka.Cluster
         {
             if (_isTerminated.Value)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
-            
+
             if (IsUp)
                 return Task.CompletedTask;
 
@@ -290,12 +276,12 @@ namespace Akka.Cluster
                         $"Node has not managed to join the cluster using provided address: {address}"));
                 });
             }
-            
+
             RegisterOnMemberUp(() =>
             {
                 completion.TrySetResult(NotUsed.Instance);
             });
-            
+
             Join(address);
 
             return completion.Task;
@@ -351,10 +337,10 @@ namespace Akka.Cluster
         {
             if (_isTerminated.Value)
                 throw new ClusterJoinFailedException("Cluster has already been terminated");
-            
+
             if (IsUp)
                 return Task.CompletedTask;
-            
+
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             var nodes = seedNodes.ToList();
 
@@ -366,12 +352,12 @@ namespace Akka.Cluster
                         $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
                 });
             }
-            
+
             RegisterOnMemberUp(() =>
             {
                 completion.TrySetResult(NotUsed.Instance);
             });
-            
+
             JoinSeedNodes(nodes);
 
             return completion.Task;
@@ -437,19 +423,26 @@ namespace Akka.Cluster
 
             // It's assumed here that once the member left the cluster, it won't get back again.
             // So, the member removal event being memoized in TaskCompletionSource and never reset.
-            if (leaveTask != null)
-                return leaveTask;
-
-            // Subscribe to MemberRemoved events
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+            if (leaveTask == null)
             {
-                tcs.TrySetResult(null);
-            }));
+                // Subscribe to MemberRemoved events. Only the call that wins the CAS above needs to
+                // do this -- every later call returns the same memoized task.
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+                {
+                    tcs.TrySetResult(null);
+                }));
+            }
 
-            // Send leave message
+            // Send the leave message on every call, outside the CAS-guarded block above, so that a
+            // later LeaveAsync()/Leave() re-sends it. A single Leave can be lost in the field (most
+            // notably while the core daemon is still starting up -- see the comment on ClusterCore),
+            // and without a retry that loss used to wedge every subsequent LeaveAsync() call for the
+            // lifetime of the process, since the task was already memoized above. Re-sending is safe:
+            // ClusterCoreDaemon.Leaving(address) is idempotent for a member that isn't
+            // Joining/WeaklyUp/Up, so a Leave that arrives after the member already left is a no-op.
             ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
 
-            return tcs.Task;
+            return leaveTask ?? tcs.Task;
         }
 
         /// <summary>
@@ -554,7 +547,7 @@ namespace Akka.Cluster
         /// Determine whether the cluster is in the UP state.
         /// </summary>
         public bool IsUp => SelfMember.Status is MemberStatus.Up or MemberStatus.WeaklyUp;
-        
+
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
@@ -616,22 +609,55 @@ namespace Akka.Cluster
         }
 
         private readonly IActorRef _clusterDaemons;
-        private IActorRef _clusterCore;
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        ///
+        /// Confirms that the <see cref="ClusterCoreSupervisor"/> has finished creating the
+        /// core-daemon actor tree, and emits the "Started up successfully" log line. The resolved
+        /// ref is intentionally not retained: <see cref="ClusterCore"/> always targets
+        /// <c>/system/cluster</c> instead, for the reasons documented there.
         /// </summary>
-        internal IActorRef ClusterCore
+        /// <param name="clusterCore">The resolved cluster core daemon (not stored; kept as a parameter so the call site stays unchanged).</param>
+        internal void SetClusterCoreRef(IActorRef clusterCore)
         {
-            get
-            {
-                if (_clusterCore == null)
-                {
-                    _clusterCore = GetClusterCoreRef().Result;
-                }
-                return _clusterCore;
-            }
+            LogInfo("Started up successfully");
         }
+
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// The actor that all cluster commands (Subscribe, Join, Leave, Down, ...) are sent to.
+        /// <para>
+        /// Always <c>/system/cluster</c> (the <see cref="ClusterDaemon"/>), for the entire lifetime
+        /// of the extension. This getter used to switch to a direct reference to the resolved core
+        /// daemon once one became available, but that broke ordering: Akka's FIFO delivery guarantee
+        /// holds only per (sender, receiver) pair, and re-targeting mid-stream changes the receiver
+        /// between two sends from the same caller. A caller that issued a <c>Join</c> before the
+        /// switch and a <c>Leave</c> right after it (no <c>await</c> in between) could have the two
+        /// commands ride different mailboxes for part of the trip and arrive at the core daemon
+        /// out of order. <see cref="ClusterCoreDaemon"/>'s <c>Uninitialized</c> behavior does not
+        /// handle <see cref="ClusterUserAction.Leave"/> or <see cref="ClusterUserAction.Down"/>, so a
+        /// reordered <c>Leave</c> was silently dead-lettered instead of applied -- and because
+        /// <c>LeaveSelf</c> used to send its <c>Leave</c> only once, that loss was unrecoverable for
+        /// the life of the process. Keeping the receiver fixed at <c>/system/cluster</c> restores the
+        /// FIFO guarantee for everything a user can issue, at the cost of two extra local mailbox
+        /// hops on what is a low-traffic control plane (a handful of subscriptions at startup, one
+        /// join, one leave). Peer gossip, <c>ExitingConfirmed</c>, and heartbeats are unaffected --
+        /// they address the daemon actors directly by path, not through this getter.
+        /// </para>
+        /// <para>
+        /// This getter is unconditionally non-blocking and never returns null: until
+        /// <see cref="InternalClusterAction.Init"/> has been processed, sends are buffered by
+        /// <see cref="ClusterDaemon"/>'s stash and forwarded on once initialized. It never issues an
+        /// <c>Ask</c>. A blocking implementation here -- an <c>Ask</c> bounded by
+        /// <c>akka.actor.creation-timeout</c> -- deadlocked small dispatcher pools for a decade: an
+        /// actor spawned during startup that reached this getter parked the only thread the daemon
+        /// needed in order to reply, the ask timed out, and the timeout handler shut a healthy node
+        /// down. <c>ClusterStartupFuzzSpec</c> is the regression gate for that class of failure.
+        /// </para>
+        /// </summary>
+        internal IActorRef ClusterCore => _clusterDaemons;
 
         /// <summary>
         /// INTERNAL API.
@@ -678,7 +704,7 @@ namespace Akka.Cluster
             /// <param name="message">The message being logged.</param>
             internal void LogInfo(string message)
             {
-                if(_settings.LogInfo)
+                if (_settings.LogInfo)
                     _log.Info("Cluster Node [{0}] - {1}", _selfAddress, message);
             }
 

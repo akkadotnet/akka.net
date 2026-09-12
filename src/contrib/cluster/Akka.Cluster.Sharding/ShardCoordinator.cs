@@ -1609,6 +1609,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly IActorRef _ignoreRef;
         private readonly Cluster _cluster;
+        private readonly CoordinatedShutdown _coordShutdown;
         private readonly TimeSpan _removalMargin;
         private readonly int _minMembers;
         private bool _allRegionsRegistered = false;
@@ -1657,6 +1658,7 @@ namespace Akka.Cluster.Sharding
             _ignoreRef = context.System.IgnoreRef;
 
             _cluster = Cluster.Get(context.System);
+            _coordShutdown = CoordinatedShutdown.Get(context.System);
             _removalMargin = _cluster.DowningProvider.DownRemovalMargin;
 
             if (string.IsNullOrEmpty(settings.Role))
@@ -1969,9 +1971,48 @@ namespace Akka.Cluster.Sharding
             return ReceiveTerminated(message);
         }
 
+        /// <summary>
+        /// <c>true</c> when this node is on its way out of the cluster. A <c>ClusterSingletonManager</c>
+        /// hand-over is not always a shutdown, so the coordinator may only tear the local <see cref="ShardRegion"/>
+        /// down along with itself when the node is leaving.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Cluster.SelfMember"/> reads a snapshot that a separate actor updates, so it can lag by one
+        /// mailbox hop. The only route where that matters is a self <c>MemberDowned</c>, and on a <c>Down</c> the
+        /// <see cref="ShardRegion"/> already skips its own graceful shutdown, so a stale read costs nothing.
+        /// <c>Removed</c> is deliberately not in the list: the read view synthesizes a <c>Removed</c> self member
+        /// whenever self is absent from its snapshot, including before the node has joined, and a real removal
+        /// stops the singleton manager outright, so no termination message is sent in that state.
+        /// </remarks>
+        private bool SelfIsLeavingCluster
+        {
+            get
+            {
+                if (_cluster.IsTerminated)
+                    return true;
+                if (_coordShutdown.ShutdownReason != null)
+                    return true;
+                // Leaving matters on its own: a peer can send HandOverToMe as soon as the leader moves us to
+                // Exiting, and that can beat the gossip that makes us run CoordinatedShutdown. In that window
+                // ShutdownReason is still null.
+                return _cluster.SelfMember.Status
+                    is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down;
+            }
+        }
+
         private void HandleTerminate()
         {
-            if (_aliveRegions.Any(i => i.Path.Address.HasLocalScope) || _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope))
+            // A hand-over is not always a shutdown. While a cluster forms, two members of the same role can both
+            // reach Oldest; the loser hands the singleton over and stays in the cluster. Stopping our own
+            // ShardRegion there is permanent: ClusterShardingGuardian watches the region and drops it from
+            // ClusterSharding's cache, so ClusterSharding.Get(sys).ShardRegion(typeName) throws for the rest
+            // of the process. The region only goes down with the coordinator when it is already handing off
+            // (the coordinated-shutdown path, which runs cluster-sharding-shutdown-region before cluster-exiting)
+            // or when this node is leaving.
+            var localRegionHandingOff = _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope);
+            var localRegionAlive = _aliveRegions.Any(i => i.Path.Address.HasLocalScope);
+
+            if (localRegionHandingOff || (localRegionAlive && SelfIsLeavingCluster))
             {
                 foreach (var region in _aliveRegions.Where(i => i.Path.Address.HasLocalScope))
                 {
@@ -1984,6 +2025,12 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
+                if (localRegionAlive)
+                    Log.Debug(
+                        "{0}: Coordinator singleton is handing over while this node stays in the cluster (self is [{1}]). Leaving the local ShardRegion running.",
+                        TypeName,
+                        _cluster.SelfMember.Status);
+
                 if (_rebalanceInProgress.Count == 0)
                     Log.Debug("{0}: Received termination message.", TypeName);
                 else if (Log.IsDebugEnabled)

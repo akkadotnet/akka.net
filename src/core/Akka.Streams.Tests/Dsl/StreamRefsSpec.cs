@@ -12,10 +12,10 @@ using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
@@ -135,7 +135,7 @@ namespace Akka.Streams.Tests
                         //                        driver.Request(2);
                         //                        driver.ExpectNext();
                         //                        driver.ExpectNext();
-                        //                        driver.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                        //                        driver.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
                         //                        driver.Request(30);
                         //                        driver.ExpectNextN(30);
                         //
@@ -189,23 +189,28 @@ namespace Akka.Streams.Tests
         }
     }
 
-    public class StreamRefsSpec : AkkaSpec, IAsyncLifetime
+    public class StreamRefsSpec : AkkaSpec
     {
+        // One cold stream-ref handshake is three one-way remote hops. Budget it
+        // explicitly, between the product's own two clocks: demand redelivery retries
+        // every 1 s, and the subscription timeout fires at 30 s. 15 s allows fourteen
+        // redeliveries and still fails before the product's guard would mask it.
+        private static readonly TimeSpan RemoteTimeout = TimeSpan.FromSeconds(15);
+
         public static Config Config()
         {
-            var address = TestUtils.TemporaryServerAddress();
-            return ConfigurationFactory.ParseString($@"        
-            akka {{
+            return ConfigurationFactory.ParseString(@"
+            akka {
               loglevel = INFO
-              actor {{
+              actor {
                 provider = remote
                 serialize-messages = off
-              }}
-              remote.dot-netty.tcp {{
-                port = {address.Port}
-                hostname = ""{address.Address}""
-              }}
-            }}").WithFallback(ConfigurationFactory.Load());
+              }
+              remote.dot-netty.tcp {
+                port = 0
+                hostname = ""127.0.0.1""
+              }
+            }").WithFallback(ConfigurationFactory.Load());
         }
 
         public StreamRefsSpec(ITestOutputHelper output) : this(Config(), output: output)
@@ -220,8 +225,10 @@ namespace Akka.Streams.Tests
             _probe = CreateTestProbe();
         }
 
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
+
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
@@ -229,9 +236,17 @@ namespace Akka.Streams.Tests
             _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
         }
 
-        public ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
-            return new ValueTask(Task.CompletedTask);
+            // Remote system first: its DataSourceActor holds a direct IActorRef into the
+            // local Sys. ShutdownAsync does not pin a thread pool thread the way the
+            // synchronous Shutdown() does, which matters on a 2-vCPU agent.
+            await ShutdownAsync(RemoteSystem);
+
+            // base chains Dispose(true) -> AfterAll() -> BeforeTermination() ->
+            // Materializer.Dispose(), then shuts Sys down without blocking. This keeps
+            // the original teardown order: remote system, local materializer, local Sys.
+            await base.DisposeAsync();
         }
 
         protected readonly ActorSystem RemoteSystem;
@@ -245,158 +260,165 @@ namespace Akka.Streams.Tests
             Materializer.Dispose();
         }
 
-        protected override void AfterAll()
-        {
-            Shutdown(RemoteSystem);
-            base.AfterAll();
-        }
-
         [Fact]
-        public void SourceRef_must_send_messages_via_remoting()
+        public async Task SourceRef_must_send_messages_via_remoting()
         {
             _remoteActor.Tell("give", TestActor);
-            var sourceRef = ExpectMsg<ISourceRef<string>>();
+            var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
-            _probe.ExpectMsg("hello");
-            _probe.ExpectMsg("world");
-            _probe.ExpectMsg("<COMPLETE>");
+            await _probe.ExpectMsgAsync("hello");
+            await _probe.ExpectMsgAsync("world");
+            await _probe.ExpectMsgAsync("<COMPLETE>");
         }
 
         [Fact]
-        public void SourceRef_must_fail_when_remote_source_failed()
+        public async Task SourceRef_must_fail_when_remote_source_failed()
         {
             _remoteActor.Tell("give-fail", TestActor);
-            var sourceRef = ExpectMsg<ISourceRef<string>>();
+            var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
-            var f = _probe.ExpectMsg<Status.Failure>();
+            var f = await _probe.ExpectMsgAsync<Status.Failure>();
             f.Cause.Message.Should().Contain("Remote stream (");
             f.Cause.Message.Should().Contain("Boom!");
         }
 
         [Fact]
-        public void SourceRef_must_complete_properly_when_remote_source_is_empty()
+        public async Task SourceRef_must_complete_properly_when_remote_source_is_empty()
         {
             // this is a special case since it makes sure that the remote stage is still there when we connect to it
             _remoteActor.Tell("give-complete-asap", TestActor);
-            var sourceRef = ExpectMsg<ISourceRef<string>>();
+            var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
-            _probe.ExpectMsg("<COMPLETE>");
+            await _probe.ExpectMsgAsync("<COMPLETE>");
         }
 
         [Fact]
-        public void SourceRef_must_respect_backpressure_from_implied_by_target_Sink()
+        public async Task SourceRef_must_respect_backpressure_from_implied_by_target_Sink()
         {
             _remoteActor.Tell("give-infinite", TestActor);
-            var sourceRef = ExpectMsg<ISourceRef<string>>();
+            var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
             var probe = sourceRef.Source.RunWith(this.SinkProbe<string>(), Materializer);
 
-            probe.EnsureSubscription();
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await probe.EnsureSubscriptionAsync();
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             probe.Request(1);
-            probe.ExpectNext("ping-1");
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNextAsync("ping-1");
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             probe.Request(20);
-            probe.ExpectNextN(Enumerable.Range(1, 20).Select(i => "ping-" + (i + 1)));
+            await probe.ExpectNextNAsync(Enumerable.Range(1, 20).Select(i => "ping-" + (i + 1)));
             probe.Cancel();
 
             // since no demand anyway
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             // should not cause more pulling, since we issued a cancel already
             probe.Request(10);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
-        public void SourceRef_must_receive_timeout_if_subscribing_too_late_to_the_source_ref()
+        public async Task SourceRef_must_receive_timeout_if_subscribing_too_late_to_the_source_ref()
         {
             _remoteActor.Tell("give-subscribe-timeout", TestActor);
-            var sourceRef = ExpectMsg<ISourceRef<string>>();
+            var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
 
-            // not materializing it, awaiting the timeout...
-            Thread.Sleep(800);
+            // not materializing it, awaiting the timeout... There is no observable event to
+            // wait on here (the subscription timeout fires on the remote side with nothing
+            // materialized locally to signal it), so this is a genuine wall-clock wait for the
+            // 500 ms subscription timeout to elapse.
+            await Task.Delay(Dilated(800.Milliseconds()));
 
             var probe = sourceRef.Source.RunWith(this.SinkProbe<string>(), Materializer);
 
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
-            probe.EnsureSubscription();
-            var ex = probe.ExpectError();
+            await probe.EnsureSubscriptionAsync();
+            var ex = await probe.ExpectErrorAsync();
             ex.Message.Should().Contain("has terminated unexpectedly");
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
+        public async Task SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
         {
             _remoteActor.Tell("give-subscribe-timeout", TestActor);
-            var remoteSource = ExpectMsg<ISourceRef<string>>();
+            var remoteSource = await ExpectMsgAsync<ISourceRef<string>>();
             // materialize directly and start consuming, timeout is 500ms
             var eventualString = remoteSource.Source
                 .Throttle(1, 100.Milliseconds(), 1, ThrottleMode.Shaping)
                 .Take(60)
                 .RunWith(Sink.Seq<string>(), Materializer);
 
-            eventualString.Wait(8.Seconds()).Should().BeTrue();
+            (await eventualString.AwaitWithTimeout(8.Seconds())).Should().BeTrue();
         }
 
         [Fact]
-        public void SourceRef_must_not_receive_timeout_when_data_is_being_sent()
+        public async Task SourceRef_must_not_receive_timeout_when_data_is_being_sent()
         {
             _remoteActor.Tell("give-infinite", TestActor);
-            var remoteSource = ExpectMsg<ISourceRef<string>>();
+            var remoteSource = await ExpectMsgAsync<ISourceRef<string>>();
 
             var done = remoteSource.Source
                 .Throttle(1, 200.Milliseconds(), 1, ThrottleMode.Shaping)
                 .TakeWithin(5.Seconds()) // which is > than the subscription timeout (so we make sure the timeout was cancelled
                 .RunWith(Sink.Seq<string>(), Materializer);
 
-            done.Wait(8.Seconds()).Should().BeTrue();
+            (await done.AwaitWithTimeout(8.Seconds())).Should().BeTrue();
         }
 
         [Fact]
-        public void SinkRef_must_receive_elements_via_remoting()
+        public async Task SinkRef_must_receive_elements_via_remoting()
         {
             _remoteActor.Tell("receive", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
 
-            Source.From(new[] { "hello", "world" })
+            // one wire round trip plus a remote materialization
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>(RemoteTimeout);
+
+            // WatchTermination sits between the source and the SinkRef stage. Source.From
+            // can only emit once the stage pulls, and the stage only pulls once
+            // CumulativeDemand has come back over the wire. So this task completing IS the
+            // handshake, asserted as an event instead of as a wall-clock window.
+            var sent = Source.From(new[] { "hello", "world" })
+                .WatchTermination(Keep.Right)
                 .To(remoteSink.Sink)
                 .Run(Materializer);
 
-            _probe.ExpectMsg("hello");
-            _probe.ExpectMsg("world");
-            _probe.ExpectMsg("<COMPLETE>");
+            (await sent.AwaitWithTimeout(RemoteTimeout))
+                .Should().BeTrue("the SinkRef demand handshake should complete");
+
+            await _probe.ExpectMsgAsync("hello", RemoteTimeout);
+            await _probe.ExpectMsgAsync("world", RemoteTimeout);
+            await _probe.ExpectMsgAsync("<COMPLETE>", RemoteTimeout);
         }
 
         [Fact]
-        public void SinkRef_must_fail_origin_if_remote_Sink_gets_a_failure()
+        public async Task SinkRef_must_fail_origin_if_remote_Sink_gets_a_failure()
         {
             _remoteActor.Tell("receive", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
 
             Source.Failed<string>(new Exception("Boom!"))
                 .To(remoteSink.Sink)
                 .Run(Materializer);
 
-            var failure = _probe.ExpectMsg<Status.Failure>();
+            var failure = await _probe.ExpectMsgAsync<Status.Failure>();
             failure.Cause.Message.Should().Contain("Remote stream (");
             failure.Cause.Message.Should().Contain("Boom!");
         }
 
         [Fact]
-        public void SinkRef_must_receive_hundreds_of_elements_via_remoting()
+        public async Task SinkRef_must_receive_hundreds_of_elements_via_remoting()
         {
             _remoteActor.Tell("receive", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
 
             var msgs = Enumerable.Range(1, 100).Select(i => "payload-" + i).ToArray();
 
@@ -404,35 +426,38 @@ namespace Akka.Streams.Tests
 
             foreach (var msg in msgs)
             {
-                _probe.ExpectMsg(msg);
+                await _probe.ExpectMsgAsync(msg);
             }
 
-            _probe.ExpectMsg("<COMPLETE>");
+            await _probe.ExpectMsgAsync("<COMPLETE>");
         }
 
         [Fact]
-        public void SinkRef_must_receive_timeout_if_subscribing_too_late_to_the_sink_ref()
+        public async Task SinkRef_must_receive_timeout_if_subscribing_too_late_to_the_sink_ref()
         {
             _remoteActor.Tell("receive-subscribe-timeout", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
 
-            // not materializing it, awaiting the timeout...
-            Thread.Sleep(800);
+            // not materializing it, awaiting the timeout... There is no observable event to
+            // wait on here (the subscription timeout fires on the remote side with nothing
+            // materialized locally to signal it), so this is a genuine wall-clock wait for the
+            // 500 ms subscription timeout to elapse.
+            await Task.Delay(Dilated(800.Milliseconds()));
 
             var probe = this.SourceProbe<string>().To(remoteSink.Sink).Run(Materializer);
 
-            var failure = _probe.ExpectMsg<Status.Failure>();
+            var failure = await _probe.ExpectMsgAsync<Status.Failure>();
             failure.Cause.Message.Should().Contain("Remote side did not subscribe (materialize) handed out Sink reference");
 
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
-            probe.ExpectCancellation();
+            await probe.ExpectCancellationAsync();
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
+        public async Task SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
         {
             _remoteActor.Tell("receive-subscribe-timeout", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
             Source.Repeat("whatever")
                 .Throttle(1, 100.Milliseconds(), 1, ThrottleMode.Shaping)
                 .Take(10)
@@ -440,17 +465,17 @@ namespace Akka.Streams.Tests
 
             for (int i = 0; i < 10; i++)
             {
-                _probe.ExpectMsg("whatever");
+                await _probe.ExpectMsgAsync("whatever");
             }
 
-            _probe.ExpectMsg("<COMPLETE>");
+            await _probe.ExpectMsgAsync("<COMPLETE>");
         }
 
         [Fact]
-        public void SinkRef_must_not_receive_timeout_while_data_is_being_sent()
+        public async Task SinkRef_must_not_receive_timeout_while_data_is_being_sent()
         {
             _remoteActor.Tell("receive-ignore", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
 
             var done =
                 Source.Repeat("hello-24934")
@@ -460,35 +485,35 @@ namespace Akka.Streams.Tests
                     .To(remoteSink.Sink)
                     .Run(Materializer);
 
-            done.Wait(8.Seconds()).Should().BeTrue();
+            (await done.AwaitWithTimeout(8.Seconds())).Should().BeTrue();
 
         }
 
         [Fact(Skip = "FIXME: how to pass test assertions to remote system?")]
-        public void SinkRef_must_respect_backpressure_implied_by_origin_Sink()
+        public async Task SinkRef_must_respect_backpressure_implied_by_origin_Sink()
         {
             _remoteActor.Tell("receive-32", TestActor);
-            var sinkRef = ExpectMsg<ISinkRef<string>>();
+            var sinkRef = await ExpectMsgAsync<ISinkRef<string>>();
 
             Source.Repeat("hello").RunWith(sinkRef.Sink, Materializer);
 
             // if we get this message, it means no checks in the request/expect semantics were broken, good!
-            _probe.ExpectMsg("<COMPLETED>");
+            await _probe.ExpectMsgAsync("<COMPLETED>");
         }
 
         [Fact]
-        public void SinkRef_must_not_allow_materializing_multiple_times()
+        public async Task SinkRef_must_not_allow_materializing_multiple_times()
         {
             _remoteActor.Tell("receive-subscribe-timeout", TestActor);
-            var sinkRef = ExpectMsg<ISinkRef<string>>();
+            var sinkRef = await ExpectMsgAsync<ISinkRef<string>>();
 
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            p1.EnsureSubscription();
-            var req = p1.ExpectRequest();
+            await p1.EnsureSubscriptionAsync();
+            var req = await p1.ExpectRequestAsync();
 
             var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
-            p2.ExpectCancellation();
+            await p2.EnsureSubscriptionAsync(); // will be cancelled immediately, since it's 2nd
+            await p2.ExpectCancellationAsync();
         }
 
         [Fact]

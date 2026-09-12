@@ -7,6 +7,7 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -75,10 +76,11 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(TestLease.Configuration);
 
-        TimeSpan shortDuration = TimeSpan.FromMilliseconds(200);
-        Cluster cluster;
-        string leaseOwner;
-        TestLeaseExt testLeaseExt;
+        readonly TimeSpan shortDuration = TimeSpan.FromMilliseconds(200);
+        readonly Cluster cluster;
+        readonly string leaseOwner;
+        readonly TestLeaseExt testLeaseExt;
+        readonly bool rememberEntities;
 
         const string typeName = "echo";
         IActorRef region;
@@ -93,26 +95,40 @@ namespace Akka.Cluster.Sharding.Tests
             cluster = Cluster.Get(Sys);
             leaseOwner = cluster.SelfMember.Address.HostPort();
             testLeaseExt = TestLeaseExt.Get(Sys);
-
-            cluster.Join(cluster.SelfAddress);
-            AwaitAssert(() =>
-            {
-                cluster.SelfMember.Status.ShouldBe(MemberStatus.Up);
-            });
-            ClusterSharding.Get(Sys).Start(
-              typeName: typeName,
-              entityProps: SimpleEchoActor.Props(),
-              settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
-              messageExtractor: new MessageExtractor());
-
-            region = ClusterSharding.Get(Sys).ShardRegion(typeName);
+            this.rememberEntities = rememberEntities;
         }
 
+        // Cluster formation used to run here in the constructor, behind a blocking AwaitAssert
+        // wrapper (AwaitAssertAsync(...).WaitAndUnwrapException, i.e. Task.Wait). MemberUp needs
+        // about six thread-pool dispatches, and akka.cluster.use-dispatcher is empty, so all of
+        // them run on akka.actor.default-dispatcher, which is the .NET thread pool. A CI run
+        // measured MemberUp at 3.462 s against the flat 3 s single-expect-default and missed by
+        // 462 ms, because xUnit never raises MinThreads in this assembly (parallelization is off,
+        // so SetupParallelism, the only caller of ThreadPool.SetMinThreads, never runs) and the
+        // pool floor stays at ProcessorCount.
+        //
+        // JoinAsync waits on the real MemberUp signal instead of polling a volatile field, and
+        // awaiting it here parks nothing: xUnit v3 awaits InitializeAsync inside its own async
+        // pipeline, so the worker goes back to the pool while the cluster forms. StartAsync avoids
+        // ClusterSharding.Start's Ask(...).Result on the same thread.
+        public override async ValueTask InitializeAsync()
+        {
+            await base.InitializeAsync();
 
-        private TestLease LeaseForShard(int shardId)
+            using var cts = new CancellationTokenSource(Dilated(TimeSpan.FromSeconds(30)));
+            await cluster.JoinAsync(cluster.SelfAddress, cts.Token);
+
+            region = await ClusterSharding.Get(Sys).StartAsync(
+                typeName: typeName,
+                entityProps: SimpleEchoActor.Props(),
+                settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
+                messageExtractor: new MessageExtractor());
+        }
+
+        private async Task<TestLease> LeaseForShardAsync(int shardId)
         {
             TestLease lease = null;
-            AwaitAssert(() =>
+            await AwaitAssertAsync(() =>
             {
                 lease = testLeaseExt.GetTestLease(LeaseNameFor(shardId));
             }, TimeSpan.FromSeconds(6));
@@ -122,67 +138,73 @@ namespace Akka.Cluster.Sharding.Tests
         private string LeaseNameFor(int shardId, string typeName = typeName) => $"{Sys.Name}-shard-{typeName}-{shardId}";
 
         [Fact]
-        public void Cluster_sharding_with_lease_should_not_start_until_lease_is_acquired()
+        public async Task Cluster_sharding_with_lease_should_not_start_until_lease_is_acquired()
         {
-            region.Tell(1);
-            ExpectNoMsg(shortDuration);
-            var testLease = LeaseForShard(1);
+            region.Tell(1, TestActor);
+            await ExpectNoMsgAsync(shortDuration);
+            var testLease = await LeaseForShardAsync(1);
             testLease.InitialPromise.SetResult(true);
-            ExpectMsg(1);
+            await ExpectMsgAsync(1);
         }
 
         [Fact]
-        public void Cluster_sharding_with_lease_should_retry_if_initial_acquire_is_false()
+        public async Task Cluster_sharding_with_lease_should_retry_if_initial_acquire_is_false()
         {
-            region.Tell(2);
-            ExpectNoMsg(shortDuration);
-            var testLease = LeaseForShard(2);
+            region.Tell(2, TestActor);
+            await ExpectNoMsgAsync(shortDuration);
+            var testLease = await LeaseForShardAsync(2);
             testLease.InitialPromise.SetResult(false);
-            ExpectNoMsg(shortDuration);
+            await ExpectNoMsgAsync(shortDuration);
             testLease.SetNextAcquireResult(Task.FromResult(true));
-            ExpectMsg(2);
+            await ExpectMsgAsync(2);
         }
 
         [Fact]
-        public void Cluster_sharding_with_lease_should_retry_if_initial_acquire_fails()
+        public async Task Cluster_sharding_with_lease_should_retry_if_initial_acquire_fails()
         {
-            region.Tell(3);
-            ExpectNoMsg(shortDuration);
-            var testLease = LeaseForShard(3);
+            region.Tell(3, TestActor);
+            await ExpectNoMsgAsync(shortDuration);
+            var testLease = await LeaseForShardAsync(3);
             testLease.InitialPromise.SetException(new LeaseFailed("oh no"));
-            ExpectNoMsg(shortDuration);
+            await ExpectNoMsgAsync(shortDuration);
             testLease.SetNextAcquireResult(Task.FromResult(true));
-            ExpectMsg(3);
+            await ExpectMsgAsync(3);
         }
 
         [Fact]
-        public void Cluster_sharding_with_lease_should_recover_if_lease_lost()
+        public async Task Cluster_sharding_with_lease_should_recover_if_lease_lost()
         {
-            region.Tell(4);
-            ExpectNoMsg(shortDuration);
-            var testLease = LeaseForShard(4);
+            // Explicit sender: region.Tell(msg) reads the [ThreadStatic] implicit sender directly
+            // and never runs EnsureImplicitSender, so it must not be the first thing a fact does
+            // now that InitializeAsync moves us to a different thread.
+            region.Tell(4, TestActor);
+            await ExpectNoMsgAsync(shortDuration);
+            var testLease = await LeaseForShardAsync(4);
             testLease.InitialPromise.SetResult(true);
-            ExpectMsg(4);
+            await ExpectMsgAsync(4);
             testLease.GetCurrentCallback()(new LeaseFailed("oh dear"));
-            AwaitAssert(() =>
+            // Inner budget was the default 3 s inside a 10 s outer loop, which bought three
+            // attempts. TestLease re-acquire returns an already-completed task, so 1 s is ample
+            // and the outer loop now gets about ten attempts.
+            await AwaitAssertAsync(async () =>
             {
-                region.Tell(4);
-                ExpectMsg(4);
+                region.Tell(4, TestActor);
+                await ExpectMsgAsync(4, TimeSpan.FromSeconds(1));
             }, TimeSpan.FromSeconds(10));
         }
 
         [Fact]
-        public void Cluster_sharding_with_lease_should_release_lease_when_shard_stopped()
+        public async Task Cluster_sharding_with_lease_should_release_lease_when_shard_stopped()
         {
-            region.Tell(5);
-            ExpectNoMsg(shortDuration);
-            var testLease = LeaseForShard(5);
+            region.Tell(5, TestActor);
+            await ExpectNoMsgAsync(shortDuration);
+            var testLease = await LeaseForShardAsync(5);
             testLease.InitialPromise.SetResult(true);
-            testLease.Probe.ExpectMsg(new TestLease.AcquireReq(leaseOwner));
-            ExpectMsg(5);
+            await testLease.Probe.ExpectMsgAsync(new TestLease.AcquireReq(leaseOwner));
+            await ExpectMsgAsync(5);
 
-            region.Tell(new ShardCoordinator.HandOff("5"));
-            testLease.Probe.ExpectMsg(new TestLease.ReleaseReq(leaseOwner));
+            region.Tell(new ShardCoordinator.HandOff("5"), TestActor);
+            await testLease.Probe.ExpectMsgAsync(new TestLease.ReleaseReq(leaseOwner));
         }
     }
 
