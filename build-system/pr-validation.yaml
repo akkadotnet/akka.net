@@ -103,6 +103,10 @@ jobs:
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
+      env:
+        # 2-vCPU hosted agents can't comfortably run StressSpec's 13-node default; 7 is the
+        # smallest count StressSpecConfig.BuildConfig can still fit (see its doc comment).
+        MNTR_STRESSSPEC_NODECOUNT: "7"
 
   - template: azure-pipeline.template.yaml
     parameters:
