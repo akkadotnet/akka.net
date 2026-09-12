@@ -29,7 +29,7 @@
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.35.1</ProtobufVersion>
+    <ProtobufVersion>3.36.1</ProtobufVersion>
     <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
     <MessagePackVersion>3.1.8</MessagePackVersion>
@@ -39,7 +39,7 @@
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>3.3.3</FsCheckVersion>
+    <FsCheckVersion>3.4.0</FsCheckVersion>
     <FsCheck3Version>3.3.3</FsCheck3Version>
     <CsCheckVersion>4.8.0</CsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
@@ -64,7 +64,7 @@
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.303" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />

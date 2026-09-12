@@ -195,7 +195,7 @@ namespace Akka.Remote.Tests.Artery
             protected override bool Receive(object message) => true;
         }
 
-        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SystemMessageEnvelope wrapping a Watch, nesting the inner system message via [AkkaEnvelopePayload] (design.md gate G3)")]
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SystemMessageEnvelope wrapping a Watch, nesting the inner system message via its object-typed envelope field (design.md gate G3)")]
         public void Should_round_trip_SystemMessageEnvelope_wrapping_Watch()
         {
             var watchee = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());

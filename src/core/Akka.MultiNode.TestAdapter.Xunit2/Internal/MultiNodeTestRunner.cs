@@ -17,6 +17,7 @@ using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Configuration;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Akka.MultiNode.TestAdapter.NodeRunner;
+using Akka.Remote.TestKit;
 using Xunit.Sdk;
 using TestFailed = Xunit.Sdk.TestFailed;
 using TestFinished = Xunit.Sdk.TestFinished;
@@ -38,7 +39,8 @@ namespace Akka.MultiNode.TestAdapter.Internal
             IActorRef sinkCoordinator,
             IActorRef timelineCollector,
             MultiNodeTestRunnerOptions options,
-            CancellationTokenSource cancellationTokenSource) 
+            CancellationTokenSource cancellationTokenSource,
+            TaskCompletionSource<int> conductorPortSource = null)
         {
             _test = test;
             _messageBus = messageBus;
@@ -49,7 +51,14 @@ namespace Akka.MultiNode.TestAdapter.Internal
             _options = options;
             _cancellationTokenSource = cancellationTokenSource;
             _skipReason = skipReason;
+            _conductorPortSource = conductorPortSource;
         }
+
+        /// <summary>
+        /// Set only for the conductor node. Completed with the port the node's TestConductor bound
+        /// to, as soon as that node prints its sentinel line.
+        /// </summary>
+        private readonly TaskCompletionSource<int> _conductorPortSource;
 
         private readonly MultiNodeTestRunnerOptions _options;
         private readonly IActorRef _sinkCoordinator;
@@ -218,6 +227,19 @@ namespace Akka.MultiNode.TestAdapter.Internal
             }
         }
 
+        /// <summary>
+        /// Picks the conductor's bound port out of the node's output. Only the conductor node
+        /// carries a port source; every other node ignores the line.
+        /// </summary>
+        private void ExtractConductorPort(string data)
+        {
+            if (_conductorPortSource is null)
+                return;
+
+            if (ConductorPortSentinel.TryParse(data, out var port))
+                _conductorPortSource.TrySetResult(port);
+        }
+
         private async Task<int> RunNode()
         {
             var nodeInfo = new TimelineLogCollectorActor.NodeInfo(_test.Node, _test.Role, _options.Platform, TestCase.DisplayName);
@@ -235,6 +257,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                     _timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, data));
 
                     ExtractExceptionData(data);
+                    ExtractConductorPort(data);
                 }
             }
 

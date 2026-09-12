@@ -438,19 +438,26 @@ namespace Akka.Cluster
 
             // It's assumed here that once the member left the cluster, it won't get back again.
             // So, the member removal event being memoized in TaskCompletionSource and never reset.
-            if (leaveTask != null)
-                return leaveTask;
-
-            // Subscribe to MemberRemoved events
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+            if (leaveTask == null)
             {
-                tcs.TrySetResult(null);
-            }));
+                // Subscribe to MemberRemoved events. Only the call that wins the CAS above needs to
+                // do this -- every later call returns the same memoized task.
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+                {
+                    tcs.TrySetResult(null);
+                }));
+            }
 
-            // Send leave message
+            // Send the leave message on every call, outside the CAS-guarded block above, so that a
+            // later LeaveAsync()/Leave() re-sends it. A single Leave can be lost in the field (most
+            // notably while the core daemon is still starting up -- see the comment on ClusterCore),
+            // and without a retry that loss used to wedge every subsequent LeaveAsync() call for the
+            // lifetime of the process, since the task was already memoized above. Re-sending is safe:
+            // ClusterCoreDaemon.Leaving(address) is idempotent for a member that isn't
+            // Joining/WeaklyUp/Up, so a Leave that arrives after the member already left is a no-op.
             ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
 
-            return tcs.Task;
+            return leaveTask ?? tcs.Task;
         }
 
         /// <summary>
@@ -617,20 +624,18 @@ namespace Akka.Cluster
         }
 
         private readonly IActorRef _clusterDaemons;
-        private volatile IActorRef _clusterCore;
 
         /// <summary>
         /// INTERNAL API.
         ///
-        /// Records the resolved cluster core-daemon <see cref="IActorRef"/> once the
-        /// <see cref="ClusterCoreSupervisor"/> has created it. Called (once) from the daemon tree in
-        /// response to the <see cref="InternalClusterAction.Init"/> message the constructor sent,
-        /// and emits the "Started up successfully" log line so it keeps meaning "core confirmed".
+        /// Confirms that the <see cref="ClusterCoreSupervisor"/> has finished creating the
+        /// core-daemon actor tree, and emits the "Started up successfully" log line. The resolved
+        /// ref is intentionally not retained: <see cref="ClusterCore"/> always targets
+        /// <c>/system/cluster</c> instead, for the reasons documented there.
         /// </summary>
-        /// <param name="clusterCore">The resolved cluster core daemon.</param>
+        /// <param name="clusterCore">The resolved cluster core daemon (not stored; kept as a parameter so the call site stays unchanged).</param>
         internal void SetClusterCoreRef(IActorRef clusterCore)
         {
-            _clusterCore = clusterCore;
             LogInfo("Started up successfully");
         }
 
@@ -639,21 +644,35 @@ namespace Akka.Cluster
         ///
         /// The actor that all cluster commands (Subscribe, Join, Leave, Down, ...) are sent to.
         /// <para>
-        /// This getter is unconditionally non-blocking and never returns null: until the daemon
-        /// hands the resolved core-daemon ref back via <see cref="SetClusterCoreRef"/>, it returns
-        /// the <c>/system/cluster</c> daemon itself. Pre-<see cref="InternalClusterAction.Init"/>
-        /// sends are buffered by that daemon and, post-Init, forwarded on to the core daemon. It
-        /// never issues an <c>Ask</c>.
+        /// Always <c>/system/cluster</c> (the <see cref="ClusterDaemon"/>), for the entire lifetime
+        /// of the extension. This getter used to switch to a direct reference to the resolved core
+        /// daemon once one became available, but that broke ordering: Akka's FIFO delivery guarantee
+        /// holds only per (sender, receiver) pair, and re-targeting mid-stream changes the receiver
+        /// between two sends from the same caller. A caller that issued a <c>Join</c> before the
+        /// switch and a <c>Leave</c> right after it (no <c>await</c> in between) could have the two
+        /// commands ride different mailboxes for part of the trip and arrive at the core daemon
+        /// out of order. <see cref="ClusterCoreDaemon"/>'s <c>Uninitialized</c> behavior does not
+        /// handle <see cref="ClusterUserAction.Leave"/> or <see cref="ClusterUserAction.Down"/>, so a
+        /// reordered <c>Leave</c> was silently dead-lettered instead of applied -- and because
+        /// <c>LeaveSelf</c> used to send its <c>Leave</c> only once, that loss was unrecoverable for
+        /// the life of the process. Keeping the receiver fixed at <c>/system/cluster</c> restores the
+        /// FIFO guarantee for everything a user can issue, at the cost of two extra local mailbox
+        /// hops on what is a low-traffic control plane (a handful of subscriptions at startup, one
+        /// join, one leave). Peer gossip, <c>ExitingConfirmed</c>, and heartbeats are unaffected --
+        /// they address the daemon actors directly by path, not through this getter.
         /// </para>
         /// <para>
-        /// A blocking implementation here — an <c>Ask</c> bounded by
-        /// <c>akka.actor.creation-timeout</c> — deadlocked small dispatcher pools for a decade: an
+        /// This getter is unconditionally non-blocking and never returns null: until
+        /// <see cref="InternalClusterAction.Init"/> has been processed, sends are buffered by
+        /// <see cref="ClusterDaemon"/>'s stash and forwarded on once initialized. It never issues an
+        /// <c>Ask</c>. A blocking implementation here -- an <c>Ask</c> bounded by
+        /// <c>akka.actor.creation-timeout</c> -- deadlocked small dispatcher pools for a decade: an
         /// actor spawned during startup that reached this getter parked the only thread the daemon
         /// needed in order to reply, the ask timed out, and the timeout handler shut a healthy node
         /// down. <c>ClusterStartupFuzzSpec</c> is the regression gate for that class of failure.
         /// </para>
         /// </summary>
-        internal IActorRef ClusterCore => _clusterCore ?? _clusterDaemons;
+        internal IActorRef ClusterCore => _clusterDaemons;
 
         /// <summary>
         /// INTERNAL API.

@@ -38,7 +38,15 @@ namespace Akka.Cluster.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
             Fourth = Role("fourth");
-            CommonConfig = ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off")
+            // The master's end-of-spec path is now its 20s wait for End followed by up to 25s waiting
+            // for the victim to go unreachable, 45s back to back, while first and third are already
+            // parked on the final barrier. The conductor arms the barrier's clock at the FIRST arrival
+            // and never extends it, so the default 30s barrier could expire before the master's own
+            // assertion reports. 60s is the value InitialHeartbeatSpec and six other multi-node specs
+            // use for the same reason.
+            CommonConfig = ConfigurationFactory.ParseString(@"
+                akka.remote.log-remote-lifecycle-events = off
+                akka.testconductor.barrier-timeout = 60s")
                 .WithFallback(DebugConfig(false)).WithFallback(MultiNodeClusterSpec.ClusterConfig());
             TestTransport = true; // need to use the throttler and blackhole
         }
@@ -145,7 +153,7 @@ namespace Akka.Cluster.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 MarkNodeAsUnavailable(GetAddress(_victim.Value));
-                var victimNodeAddress = Node(_victim.Value).Address;
+                var victimNodeAddress = GetAddress(_victim.Value);
                 await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // victim becomes unreachable
@@ -219,7 +227,7 @@ namespace Akka.Cluster.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 // will shutdown ActorSystem of victim
-                await TestConductor.Shutdown(_victim.Value);
+                await TestConductor.ShutdownAsync(_victim.Value);
             }, _config.First);
 
             await RunOnAsync(async () =>
@@ -276,24 +284,28 @@ namespace Akka.Cluster.Tests.MultiNode
                     // before the handshake depends on it, and a failure names that problem
                     // instead of showing up as a missing EndAck.
                     var endProbe = CreateTestProbe(freshSystem);
-                    var masterEndActor = await freshSystem
+                    // ResolveOne throws (rather than returning null) if the actor can't be found,
+                    // so there is nothing left to assert here.
+                    await freshSystem
                         .ActorSelection(new RootActorPath(masterAddress) / "user" / "end")
                         .ResolveOne(Dilated(TimeSpan.FromSeconds(20)));
-                    Assert.NotNull(masterEndActor);
 
                     var endActor = freshSystem.ActorOf(Props.Create(() => new EndActor(endProbe.Ref, masterAddress)),
                         "end");
                     endActor.Tell(EndActor.SendEnd.Instance);
 
-                    // The master waits up to 20s for End, so the victim has to wait longer than
-                    // that for the EndAck. The old code inherited the 15s single-expect default,
-                    // which was the smallest budget in the spec and guarded the step needing the
-                    // most time.
-                    await endProbe.ExpectMsgAsync<EndActor.EndAck>(TimeSpan.FromSeconds(30));
+                    // The master now stays alive until it sees this system go unreachable (below),
+                    // so the ack is written by a provably live peer over a lane the resolve above
+                    // just proved hot - the sub-second path measured for this handshake, not the
+                    // ~30s a dead master would need. 10s is roughly 1000x that measured cost and
+                    // comfortably below the master's 25s wait, so a genuinely lost ack is reported
+                    // here, by the victim, with a message that names the problem - instead of the
+                    // master timing out first with a message that names nothing.
+                    await endProbe.ExpectMsgAsync<EndActor.EndAck>(TimeSpan.FromSeconds(10));
                 }
                 finally
                 {
-                    Shutdown(freshSystem);
+                    await ShutdownAsync(freshSystem, TimeSpan.FromSeconds(5));
                 }
                 // no barrier here, because it is not part of testConductor roles any more
             }, _victim.Value);
@@ -305,6 +317,36 @@ namespace Akka.Cluster.Tests.MultiNode
                 await RunOnAsync(async () =>
                 {
                     await ExpectMsgAsync<EndActor.End>(TimeSpan.FromSeconds(20));
+
+                    // Receiving End is not proof the victim is done - the EndAck this node just
+                    // emitted, in the same OnReceive that released the ExpectMsg above, still has
+                    // to reach it, and that ack is an ordinary, at-most-once Artery message. If we
+                    // return now, one already-parked barrier and xunit's teardown put this node
+                    // into ActorSystem.Terminate() within tens of milliseconds, /user stops, and
+                    // the outbound stream dies with it before any shutdown flush can run - so the
+                    // ack can be lost with no trace (no Dropped, no dead letter, nothing).
+                    //
+                    // Wait instead for the event that proves the victim no longer needs us: its
+                    // departure. The fresh system shuts itself down as soon as its
+                    // ExpectMsg<EndAck> returns OR throws, so "victim unreachable" is causally
+                    // downstream of the ack either landing or being given up on - this node
+                    // cannot begin terminating before that has happened. On the run that exposed
+                    // this race, the failure detector marked the victim unreachable 3.5-4.5s after
+                    // it terminated (heartbeat-interval/reaper 500ms each, MultiNodeClusterSpec.cs
+                    // :53/:56); 25s undilated is comfortably above that with headroom for the
+                    // victim's own 10s ack wait plus its 5s shutdown.
+                    //
+                    // Match on address, not uid: downing-provider-class is empty for multi-node
+                    // specs, so this member is never removed and Members never changes - only
+                    // reachability does. Waiting on Members would hang forever.
+                    var victimAddress = GetAddress(_victim.Value);
+                    await AwaitAssertAsync(() =>
+                    {
+                        var unreachable = ClusterView.UnreachableMembers.Select(m => m.Address).ToImmutableHashSet();
+                        Assert.True(unreachable.Contains(victimAddress),
+                            $"[{victimAddress}] should have become unreachable once the fresh victim " +
+                            $"system terminated; currently unreachable: [{string.Join(", ", unreachable)}]");
+                    }, TimeSpan.FromSeconds(25), TimeSpan.FromMilliseconds(250));
                 }, _master.Value);
                 await EndBarrierAsync();
             }, AllBut(_victim.Value).ToArray());

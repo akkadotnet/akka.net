@@ -1,0 +1,572 @@
+//-----------------------------------------------------------------------
+// <copyright file="AkkaSerializerGenerator.Diagnostics.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+namespace Akka.Serialization.V2.Generators;
+public sealed partial class AkkaSerializerGenerator
+{
+    // AkkaSerializerAttribute<TProtocol>(string name, int serializerId) requires both arguments at
+    // every call site -- there is no longer a way to OMIT Name or SerializerId, so AKKASG001/002
+    // no longer guard "missing" registration. They still guard the argument VALUES: a caller can
+    // still write [AkkaSerializer<T>(null!, 0)] or an empty/whitespace name or a non-positive id,
+    // and those remain compile-time errors from this generator.
+    private static readonly DiagnosticDescriptor InvalidSerializerName = new(
+        "AKKASG001",
+        "Serializer name must be a non-empty string",
+        "[AkkaSerializer] class '{0}' specifies an invalid Name: it must not be null, empty, or consist only of whitespace",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidSerializerId = new(
+        "AKKASG002",
+        "Serializer id must be a positive integer",
+        "[AkkaSerializer] class '{0}' specifies SerializerId {1}, which must be a positive, non-zero integer unique within the actor system",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnsupportedFieldType = new(
+        "AKKASG003",
+        "Unsupported field type",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // Same id/title/severity as UnsupportedFieldType. Used only for an interface, abstract class,
+    // or type parameter field, which is usually a forgotten [AkkaUnion], or a field that should
+    // simply be typed object.
+    private static readonly DiagnosticDescriptor UnsupportedFieldTypePolymorphic = new(
+        "AKKASG003",
+        "Unsupported field type",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Declare a closed member set with [AkkaUnion], type it as the serializer's own protocol interface, or type the property as object.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor MissingFields = new(
+        "AKKASG004",
+        "No serializable fields",
+        "[AkkaSerializable] type '{0}' must declare at least one [AkkaField] property, or set AllowEmpty = true if the message is deliberately fieldless",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateFieldIndex = new(
+        "AKKASG005",
+        "Duplicate field index",
+        "[AkkaSerializable] type '{0}' has duplicate [AkkaField] index {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor MissingManifest = new(
+        "AKKASG006",
+        "Top-level message manifest is required",
+        "[AkkaSerializable] top-level protocol message '{0}' must specify Manifest for serializer dispatch",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor MissingNestedSerializableDefinition = new(
+        "AKKASG007",
+        "Nested value object serialization definition is required",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}', which must be annotated with [AkkaSerializable] and explicit [AkkaField] fields",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // Same id/title/severity as MissingNestedSerializableDefinition. Used only when the nested
+    // type's assembly is not the one being compiled. This generator can only read a schema from
+    // the current compilation, so the type may already carry both attributes in its own assembly
+    // and still be unreadable from here. The message must name only the fixes that work today, and
+    // must not claim the type lacks the attributes.
+    private static readonly DiagnosticDescriptor MissingNestedSerializableDefinitionCrossAssembly = new(
+        "AKKASG007",
+        "Nested value object serialization definition is required",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}', which is declared in assembly '{3}'. " +
+        "This generator cannot read a schema from a referenced assembly yet. " +
+        "Register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or declare the type in this assembly.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint on
+    // AkkaSerializerFormatterAttribute<TTarget, TFormatter> now makes interface conformance a
+    // compile-time error at the attribute usage site, so this narrows to the one thing a generic
+    // constraint cannot express: TFormatter must not be abstract (an abstract type still satisfies
+    // the constraint, and there is deliberately no `new()` clause to rule it out, since a formatter
+    // with only an ExtendedActorSystem constructor is legitimate).
+    private static readonly DiagnosticDescriptor InvalidFormatterType = new(
+        "AKKASG008",
+        "Formatter type must not be abstract",
+        "Formatter '{0}' on serializer '{1}' must not be abstract: it cannot be instantiated as the runtime IAkkaMessagePackFormatter<{2}>",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateFormatterRegistration = new(
+        "AKKASG009",
+        "Duplicate formatter registration",
+        "Serializer '{0}' registers multiple formatters for type '{1}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FormatterConstructorNotUsable = new(
+        "AKKASG010",
+        "Formatter constructor not usable",
+        "Formatter '{0}' on serializer '{1}' must have a public parameterless constructor or a public constructor taking ExtendedActorSystem",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FormatterTargetNotSupported = new(
+        "AKKASG011",
+        "Formatter target type is not supported",
+        "Formatter target type '{0}' on serializer '{1}' must be a non-generic, non-array named type",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateManifest = new(
+        "AKKASG012",
+        "Duplicate top-level message manifest",
+        "Serializer '{0}' has multiple top-level [AkkaSerializable] messages with manifest '{1}': {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateSerializerId = new(
+        "AKKASG013",
+        "Duplicate serializer id",
+        "SerializerId {0} is used by multiple [AkkaSerializer] classes: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnsupportedEnumUnderlyingType = new(
+        "AKKASG014",
+        "Enum underlying type is not supported",
+        "Property '{0}' on type '{1}' uses enum type '{2}' whose underlying type '{3}' is not fully int32-representable; " +
+        "generated serializers encode enums as int32, so use an enum backed by sbyte, byte, short, ushort, or int",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotSerializable = new(
+        "AKKASG015",
+        "Union member type is not serializable",
+        "Union member '{0}' on property '{1}' of type '{2}' must be an [AkkaSerializable] class or struct handled by this serializer",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // Same id/title/severity as UnionMemberNotSerializable. Used only when the member type's
+    // assembly is not the one being compiled. See MissingNestedSerializableDefinitionCrossAssembly
+    // for why the member may already carry [AkkaSerializable] and still be unreadable from here.
+    private static readonly DiagnosticDescriptor UnionMemberNotSerializableCrossAssembly = new(
+        "AKKASG015",
+        "Union member type is not serializable",
+        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}'. " +
+        "This generator cannot read a schema from a referenced assembly yet. " +
+        "Register [AkkaSerializerFormatter<{0}, TFormatter>] on '{4}', or declare the member in this assembly.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberMissingManifest = new(
+        "AKKASG016",
+        "Union member manifest is required",
+        "Union member '{0}' on property '{1}' of type '{2}' must specify Manifest in its [AkkaSerializable] attribute: the manifest is the union discriminator",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberManifestCollision = new(
+        "AKKASG017",
+        "Union member manifests must be unique",
+        "Union on property '{0}' of type '{1}' has multiple members with manifest '{2}': {3}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotAssignable = new(
+        "AKKASG018",
+        "Union member is not assignable to the field type",
+        "Union member '{0}' on property '{1}' of type '{2}' is not implicitly convertible to the field type '{3}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidUnionMemberSet = new(
+        "AKKASG019",
+        "Union member set is invalid",
+        "Union on property '{0}' of type '{1}' has an invalid member set: {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidClosedGenericRegistration = new(
+        "AKKASG020",
+        "Closed generic registration is invalid",
+        "[AkkaSerializable<T>] registration '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateClosedGenericRegistration = new(
+        "AKKASG021",
+        "Duplicate closed generic registration",
+        "Serializer '{0}' registers the closed construction '{1}' more than once",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor GenericSerializableRequiresRegistration = new(
+        "AKKASG022",
+        "Generic serializable type requires closed generic registrations",
+        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializable<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializable<T>(Manifest = ...)] on the serializer class",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnregisteredClosedGenericField = new(
+        "AKKASG023",
+        "Closed generic field type is not registered",
+        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializable<T>]",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateGeneratedName = new(
+        "AKKASG024",
+        "Generated member name collision",
+        "Serializer '{0}' produces the same generated member name '{1}' for distinct message types {2}; rename one of the types to disambiguate",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotSealed = new(
+        "AKKASG025",
+        "Union member type is not sealed",
+        "Union member '{0}' on property '{1}' of type '{2}' is not sealed; union write dispatch matches the exact runtime type, so an undeclared subtype of '{0}' fails serialization -- consider sealing it",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor NoMatchingConstructor = new(
+        "AKKASG026",
+        "No matching constructor",
+        "[AkkaSerializable] type '{0}' cannot be reconstructed on deserialize: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ConstructorParameterNotCovered = new(
+        "AKKASG027",
+        "Constructor parameter not covered by [AkkaField]",
+        "Constructor parameter '{0}' of [AkkaSerializable] type '{1}' has a default value and is not covered by any [AkkaField] property; it silently resets to its default value on every deserialize",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FieldPropertyNotAccessible = new(
+        "AKKASG028",
+        "[AkkaField] must be on an accessible instance property",
+        "[AkkaField] property '{0}' on type '{1}' {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ProtocolMessageNotSerializable = new(
+        "AKKASG029",
+        "Protocol message type is not [AkkaSerializable]",
+        "Type '{0}' implements protocol '{1}' of serializer '{2}' but is not [AkkaSerializable]; it is invisible to the generated Manifest/Serialize/Deserialize switches and fails only at runtime, when it is first sent",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateProtocolBinding = new(
+        "AKKASG031",
+        "Protocol interface bound by multiple serializers",
+        "Protocol '{0}' is bound by multiple [AkkaSerializer] classes: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidSerializerShape = new(
+        "AKKASG032",
+        "Serializer class shape is invalid",
+        "[AkkaSerializer] class '{0}' {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ProtocolTypeMustBeInterface = new(
+        "AKKASG033",
+        "Protocol type must be an interface",
+        "[AkkaSerializer<{1}>] class '{0}' specifies a protocol type that is not an interface; dispatch matches messages via AllInterfaces, so a non-interface protocol type silently generates a serializer with empty Manifest/Serialize/Deserialize switches",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // AKKASG034 stays a permanent gap. Decision 18 (openspec/changes/messagepack-sourcegen-validation/design.md)
+    // retires it: a registration on the serializer class now ADOPTS the registered type into the
+    // serializer, whether or not it implements the protocol or is reachable from any [AkkaField]
+    // property -- see ResolveSerializerMessages's adoption rule. The condition this diagnostic used
+    // to guard ("the registration has no effect") can no longer occur, the same way AKKASG030 and
+    // AKKASG035 are permanent gaps left by earlier decisions.
+
+    private static readonly DiagnosticDescriptor UnionMemberAbstract = new(
+        "AKKASG036",
+        "Union member type is abstract",
+        "Union member '{0}' on property '{1}' of type '{2}' is abstract; union write dispatch matches the exact runtime type, and an abstract type is never a runtime type, so this member's dispatch branch is dead code -- declare its concrete subtypes as union members instead",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ManifestIgnoredOnGenericDefinition = new(
+        "AKKASG037",
+        "Manifest on a generic [AkkaSerializable] definition is ignored",
+        "Generic [AkkaSerializable] type '{0}' specifies Manifest '{1}', which is ignored: a generic definition is never serialized directly, and each closed construction registered with [AkkaSerializable<T>] supplies its own Manifest",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// An object-typed property is ALWAYS the envelope-payload boundary (Decision 20): the static
+    /// type alone carries that meaning, with no attribute involved. A field-level <c>[AkkaUnion]</c>
+    /// on such a property is therefore contradictory author intent -- not a harmless no-op -- so
+    /// this is an ERROR, unlike the retired AKKASG035 advisory it replaces (deliberately a
+    /// different id; AKKASG035 stays a permanent gap).
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionDeclaredOnObjectField = new(
+        "AKKASG038",
+        "Union declaration on an object-typed property",
+        "Property '{0}' on type '{1}' is typed object, which is always an envelope payload boundary, but carries a field-level [AkkaUnion]. Type the property as the union's base type, or remove the attribute.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 16 (openspec/changes/messagepack-sourcegen-validation/design.md): a referenced-
+    /// assembly type carries <c>[AkkaSerializable]</c>, but this compilation cannot see it, or one of
+    /// its own <c>[AkkaField]</c> properties, or a type it itself nests. Distinct from
+    /// <see cref="MissingNestedSerializableDefinitionCrossAssembly"/> (the type is not
+    /// <c>[AkkaSerializable]</c> anywhere): here the schema exists, but this assembly is not allowed
+    /// to read it. Reports at the LOCAL nested-field property, per Decision 16's placement rule; the
+    /// message names both the directly-referenced type and, via <c>{4}</c>, the actual failing
+    /// type/member, which may sit one or more levels below it.
+    /// </summary>
+    private static readonly DiagnosticDescriptor NestedFieldNotAccessibleCrossAssembly = new(
+        "AKKASG039",
+        "Referenced type or member is not accessible",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}' from assembly '{3}', but {4}. " +
+        "Make it public, or internal with [InternalsVisibleTo] granted to this assembly, or register [AkkaSerializerFormatter<{2}, TFormatter>] on '{5}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // Same id/title/severity as NestedFieldNotAccessibleCrossAssembly. Used only for a union member
+    // whose type is [AkkaSerializable] but not accessible from this assembly, or one of its own
+    // members. Reports at the LOCAL union field, per Decision 16's placement rule.
+    private static readonly DiagnosticDescriptor UnionMemberNotAccessibleCrossAssembly = new(
+        "AKKASG039",
+        "Referenced type or member is not accessible",
+        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}', but {4}. " +
+        "Make it public, or internal with [InternalsVisibleTo] granted to this assembly, or register [AkkaSerializerFormatter<{0}, TFormatter>] on '{5}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 18: <c>ManifestPrefix</c> expands a registration over a type argument's closed
+    /// member set. A type argument has a closed set only when it is the serializer's own protocol
+    /// interface, or a type carrying a type-level <c>[AkkaUnion]</c> with an explicit member list.
+    /// Fires at the registration itself when <c>ManifestPrefix</c> is set but no type argument has
+    /// one -- including a non-generic target, which has no type argument to expand over at all.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ClosedSetExpansionRequiresClosedSet = new(
+        "AKKASG040",
+        "ManifestPrefix has no closed set to expand",
+        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' has no closed member set to expand: {3}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 18's one-owner rule: a message type belongs to only one serializer's closed set in
+    /// one compilation, whether it gets there by implementing a protocol or by an explicit
+    /// <c>[AkkaSerializable&lt;T&gt;]</c> adoption (a literal registration or a <c>ManifestPrefix</c>
+    /// expansion member). Two serializers claiming the same type is a build error reported at BOTH
+    /// serializers. Across compilations that cannot see each other this becomes a startup check
+    /// instead (Decision 19, not part of this change).
+    /// </summary>
+    private static readonly DiagnosticDescriptor AdoptedMessageOwnedByMultipleSerializers = new(
+        "AKKASG041",
+        "Message type is owned by more than one serializer",
+        "Type '{0}' belongs to more than one serializer's closed set in this compilation: {1}. A message type may have only one owner.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 18: "the generator reports the number of constructions it produced as an info
+    /// diagnostic, so nobody is surprised by the size of the output" -- unconditionally, for every
+    /// <c>ManifestPrefix</c> expansion; the design specifies no size threshold.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ClosedSetExpansionCount = new(
+        "AKKASG042",
+        "Closed-set expansion produced constructions",
+        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' expanded to {3} closed generic construction(s)",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 19's placement Rule 1 (design.md's "making the compiler complain" table, and the
+    /// maintainer's decision-record page): a type declared in THIS compilation implements a protocol
+    /// that an UPSTREAM serializer -- one declared in a referenced assembly -- already binds. That
+    /// upstream assembly compiles before this one and can never see this type, so it would never be
+    /// dispatched. Reported at the type's own declaration, the only local site this compilation has.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ProtocolOwnedUpstream = new(
+        "AKKASG043",
+        "Protocol is owned by an upstream serializer",
+        "Type '{0}' implements protocol '{1}', which is already bound upstream by {2}. That assembly cannot see this one, so this type will never be dispatched by it. Move the type upstream, or move the serializer to an assembly that references this one.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 19's placement Rule 2: a serializer with no messages in its own compilation, in any
+    /// referenced assembly, and no registrations of its own is very likely a placement mistake --
+    /// this serializer may have been declared upstream of the assembly that holds its messages,
+    /// which it can never see. Reported at the serializer's own attribute. Advisory only (Warning):
+    /// a message assembly whose serializer lives in a host below it is a legitimate shape too (see
+    /// design.md's Decision 19 section), so this cannot be an error.
+    /// </summary>
+    private static readonly DiagnosticDescriptor SerializerHasNoMessages = new(
+        "AKKASG044",
+        "Serializer has no messages",
+        "Serializer '{0}' for protocol '{1}' has no messages in this compilation or in any referenced assembly, and no registrations. If the messages are in assemblies that depend on this one, this serializer cannot see them.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 19's placement Rule 3: the cross-assembly extension of AKKASG031 (same id, per the
+    /// decision page's own "AKKASG031 across assemblies (extended)" labeling -- this is a variant of
+    /// that existing diagnostic, not a new one; see <see cref="DuplicateProtocolBinding"/>). Fires
+    /// when a LOCAL serializer's protocol is ALSO bound by a serializer declared in a referenced
+    /// assembly: the runtime binding lookup can only route a value to one serializer, so the two
+    /// collide. Reported at the local serializer's own attribute, naming the upstream one(s).
+    /// </summary>
+    private static readonly DiagnosticDescriptor DuplicateProtocolBindingCrossAssembly = new(
+        "AKKASG031",
+        "Protocol interface bound by multiple serializers",
+        "Protocol '{0}' is bound by serializer '{1}' here and by {2}. The runtime bindings collide; keep one serializer per protocol.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
+    /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
+    /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
+    /// never needs to cross the incremental boundary or appear in a test assertion, since every
+    /// caller either builds a <see cref="DiagnosticSpec"/> for this to resolve, or -- in tests --
+    /// asserts on the <see cref="DiagnosticSpec"/> itself and never calls this at all.
+    /// </summary>
+    private static class DiagnosticRegistry
+    {
+        public static DiagnosticDescriptor Resolve(DiagnosticKey key) => key switch
+        {
+            DiagnosticKey.InvalidSerializerName => InvalidSerializerName,
+            DiagnosticKey.InvalidSerializerId => InvalidSerializerId,
+            DiagnosticKey.UnsupportedFieldType => UnsupportedFieldType,
+            DiagnosticKey.UnsupportedFieldTypePolymorphic => UnsupportedFieldTypePolymorphic,
+            DiagnosticKey.MissingFields => MissingFields,
+            DiagnosticKey.DuplicateFieldIndex => DuplicateFieldIndex,
+            DiagnosticKey.MissingManifest => MissingManifest,
+            DiagnosticKey.MissingNestedSerializableDefinition => MissingNestedSerializableDefinition,
+            DiagnosticKey.MissingNestedSerializableDefinitionCrossAssembly => MissingNestedSerializableDefinitionCrossAssembly,
+            DiagnosticKey.InvalidFormatterType => InvalidFormatterType,
+            DiagnosticKey.DuplicateFormatterRegistration => DuplicateFormatterRegistration,
+            DiagnosticKey.FormatterConstructorNotUsable => FormatterConstructorNotUsable,
+            DiagnosticKey.FormatterTargetNotSupported => FormatterTargetNotSupported,
+            DiagnosticKey.DuplicateManifest => DuplicateManifest,
+            DiagnosticKey.DuplicateSerializerId => DuplicateSerializerId,
+            DiagnosticKey.UnsupportedEnumUnderlyingType => UnsupportedEnumUnderlyingType,
+            DiagnosticKey.UnionMemberNotSerializable => UnionMemberNotSerializable,
+            DiagnosticKey.UnionMemberNotSerializableCrossAssembly => UnionMemberNotSerializableCrossAssembly,
+            DiagnosticKey.UnionMemberMissingManifest => UnionMemberMissingManifest,
+            DiagnosticKey.UnionMemberManifestCollision => UnionMemberManifestCollision,
+            DiagnosticKey.UnionMemberNotAssignable => UnionMemberNotAssignable,
+            DiagnosticKey.InvalidUnionMemberSet => InvalidUnionMemberSet,
+            DiagnosticKey.InvalidClosedGenericRegistration => InvalidClosedGenericRegistration,
+            DiagnosticKey.DuplicateClosedGenericRegistration => DuplicateClosedGenericRegistration,
+            DiagnosticKey.GenericSerializableRequiresRegistration => GenericSerializableRequiresRegistration,
+            DiagnosticKey.UnregisteredClosedGenericField => UnregisteredClosedGenericField,
+            DiagnosticKey.DuplicateGeneratedName => DuplicateGeneratedName,
+            DiagnosticKey.UnionMemberNotSealed => UnionMemberNotSealed,
+            DiagnosticKey.NoMatchingConstructor => NoMatchingConstructor,
+            DiagnosticKey.ConstructorParameterNotCovered => ConstructorParameterNotCovered,
+            DiagnosticKey.FieldPropertyNotAccessible => FieldPropertyNotAccessible,
+            DiagnosticKey.ProtocolMessageNotSerializable => ProtocolMessageNotSerializable,
+            DiagnosticKey.DuplicateProtocolBinding => DuplicateProtocolBinding,
+            DiagnosticKey.InvalidSerializerShape => InvalidSerializerShape,
+            DiagnosticKey.ProtocolTypeMustBeInterface => ProtocolTypeMustBeInterface,
+            DiagnosticKey.UnionMemberAbstract => UnionMemberAbstract,
+            DiagnosticKey.ManifestIgnoredOnGenericDefinition => ManifestIgnoredOnGenericDefinition,
+            DiagnosticKey.UnionDeclaredOnObjectField => UnionDeclaredOnObjectField,
+            DiagnosticKey.NestedFieldNotAccessibleCrossAssembly => NestedFieldNotAccessibleCrossAssembly,
+            DiagnosticKey.UnionMemberNotAccessibleCrossAssembly => UnionMemberNotAccessibleCrossAssembly,
+            DiagnosticKey.ClosedSetExpansionRequiresClosedSet => ClosedSetExpansionRequiresClosedSet,
+            DiagnosticKey.AdoptedMessageOwnedByMultipleSerializers => AdoptedMessageOwnedByMultipleSerializers,
+            DiagnosticKey.ClosedSetExpansionCount => ClosedSetExpansionCount,
+            DiagnosticKey.ProtocolOwnedUpstream => ProtocolOwnedUpstream,
+            DiagnosticKey.SerializerHasNoMessages => SerializerHasNoMessages,
+            DiagnosticKey.DuplicateProtocolBindingCrossAssembly => DuplicateProtocolBindingCrossAssembly,
+            _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
+        };
+
+        /// <summary>
+        /// Turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>, resolving
+        /// <see cref="DiagnosticSpec.At"/> against <paramref name="locations"/> -- the ONE place in
+        /// this generator a <see cref="Location"/> is ever attached to a reported diagnostic. Falls
+        /// back to <see cref="Location.None"/> when <see cref="DiagnosticSpec.At"/> is null or
+        /// <paramref name="locations"/> has no entry for it (a site this generator could not resolve,
+        /// for example because the underlying syntax reference could not be re-materialized).
+        /// </summary>
+        public static Diagnostic ToDiagnostic(DiagnosticSpec spec, LocationBag locations)
+        {
+            var args = new object[spec.MessageArgs.Length];
+            for (var i = 0; i < spec.MessageArgs.Length; i++)
+                args[i] = spec.MessageArgs[i];
+
+            var location = spec.At is { } key && locations.TryGetLocation(key, out var found)
+                ? found.ToLocation()
+                : Location.None;
+
+            return Diagnostic.Create(Resolve(spec.Key), location, args);
+        }
+    }
+}

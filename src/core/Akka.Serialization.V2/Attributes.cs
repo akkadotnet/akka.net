@@ -92,14 +92,6 @@ public sealed class AkkaFieldAttribute : Attribute
 }
 
 /// <summary>
-/// Marks an <see cref="AkkaFieldAttribute"/> property as an Akka serializer boundary.
-/// </summary>
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-public sealed class AkkaEnvelopePayloadAttribute : Attribute
-{
-}
-
-/// <summary>
 /// Declares a closed, explicitly-enumerated union of concrete
 /// <see cref="AkkaSerializableAttribute"/> member types for an interface or abstract base -- or,
 /// applied to an <see cref="AkkaFieldAttribute"/> property, overrides the member set for that one
@@ -114,14 +106,14 @@ public sealed class AkkaEnvelopePayloadAttribute : Attribute
 /// set for that field only (for example, to narrow the members a particular schema accepts).
 /// </para>
 /// <para>
-/// Unlike <see cref="AkkaEnvelopePayloadAttribute"/> (a runtime serializer boundary for payloads
-/// whose concrete type may live in an assembly unknown at compile time), a union field is encoded
-/// structurally inline: the generator emits compile-time dispatch over the declared member set,
-/// discriminated by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member
-/// must be <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable
-/// to the field's static type. A runtime value whose exact type is not a declared member fails
-/// serialization. When both this attribute and <see cref="AkkaEnvelopePayloadAttribute"/> are
-/// present on a field, the envelope payload marker wins (consistent with its precedence over
+/// Unlike a field typed <c>object</c> (a runtime serializer boundary for payloads whose concrete
+/// type may live in an assembly unknown at compile time), a union field is encoded structurally
+/// inline: the generator emits compile-time dispatch over the declared member set, discriminated
+/// by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member must be
+/// <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable to the
+/// field's static type. A runtime value whose exact type is not a declared member fails
+/// serialization. This attribute has no effect on a field whose static type is <c>object</c>: the
+/// static type alone already selects the envelope boundary (consistent with its precedence over
 /// formatter registrations).
 /// </para>
 /// </remarks>
@@ -129,11 +121,13 @@ public sealed class AkkaEnvelopePayloadAttribute : Attribute
 public sealed class AkkaUnionAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class.
+    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with an explicit,
+    /// listed member set.
     /// </summary>
     /// <param name="first">
     /// The first concrete member type this field may hold. A union is never empty: at least one
-    /// member is always required, so <c>[AkkaUnion()]</c> (an empty member set) does not compile.
+    /// member is always required, so <c>[AkkaUnion()]</c> with a comma-separated list does not
+    /// compile.
     /// </param>
     /// <param name="rest">Any additional concrete member types this field may hold.</param>
     public AkkaUnionAttribute(Type first, params Type[] rest)
@@ -145,7 +139,27 @@ public sealed class AkkaUnionAttribute : Attribute
     }
 
     /// <summary>
-    /// The closed set of concrete member types this field may hold.
+    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with no listed
+    /// member set: the closed set is every <see cref="AkkaSerializableAttribute"/> implementor the
+    /// generator can see, in this compilation and in a referenced assembly that itself references
+    /// <c>Akka.Serialization.V2</c>.
+    /// </summary>
+    /// <remarks>
+    /// Use this parameterless form when the union's base type sits upstream of its members in a
+    /// layered codebase: an assembly cannot name a type from an assembly that references it, so a
+    /// listed member set is not merely tedious there, it is uncompilable. The marker alone declares
+    /// the interface or abstract class a wire contract; the generator finds its members at build
+    /// time. <see cref="MemberTypes"/> is empty for this form -- an empty array here means
+    /// "discover the set", not "the set is empty".
+    /// </remarks>
+    public AkkaUnionAttribute()
+    {
+        MemberTypes = Array.Empty<Type>();
+    }
+
+    /// <summary>
+    /// The closed set of concrete member types this field may hold, or empty when this attribute
+    /// was declared with the parameterless constructor (the set is discovered at build time).
     /// </summary>
     public Type[] MemberTypes { get; }
 }
@@ -175,7 +189,46 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
     /// construction implements the serializer's protocol interface (top-level dispatch); also the
     /// union discriminator when the construction is an <see cref="AkkaUnionAttribute"/> member.
     /// </summary>
+    /// <remarks>
+    /// A registration on the serializer class means <em>adopt this type into this serializer</em>:
+    /// <typeparamref name="TMessage"/> need not implement the serializer's protocol interface, and
+    /// need not be a closed generic construction at all. When <typeparamref name="TMessage"/> also
+    /// has a <see cref="ManifestPrefix"/> set, <see cref="Manifest"/> registers the literal
+    /// construction alongside the expansion <see cref="ManifestPrefix"/> produces, overriding the
+    /// manifest the formula would otherwise derive for that one construction.
+    /// </remarks>
     public string? Manifest { get; init; }
+
+    /// <summary>
+    /// Expands this registration over the closed member set of <typeparamref name="TMessage"/>'s
+    /// type argument, instead of registering only the single construction named by
+    /// <typeparamref name="TMessage"/> itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A type argument has a closed set when it is the serializer's own protocol interface (see
+    /// <see cref="AkkaSerializerAttribute{TProtocol}"/>), or an interface or abstract class carrying
+    /// a type-level <see cref="AkkaUnionAttribute"/>. For example,
+    /// <c>[AkkaSerializable&lt;Envelope&lt;ICommsMessage&gt;&gt;(ManifestPrefix = "env")]</c> on a
+    /// serializer whose protocol is <c>ICommsMessage</c> registers one closed construction of
+    /// <c>Envelope&lt;T&gt;</c> per member of the protocol set -- <c>Envelope&lt;AcceptCassette&gt;</c>,
+    /// <c>Envelope&lt;OrderCancelled&gt;</c>, and so on -- each with its own generated dispatch arm,
+    /// private helpers, and a manifest derived from <see cref="ManifestPrefix"/> and the member's own
+    /// manifest: <c>"env/dmac"</c>, <c>"env/ocan"</c>, and so on. The rule applies to every type
+    /// argument, so a multi-argument generic expands to the product of its arguments' closed sets.
+    /// </para>
+    /// <para>
+    /// <see cref="ManifestPrefix"/> alone does not register the literal construction (the one whose
+    /// type argument is the closed-set type itself, for example <c>Envelope&lt;ICommsMessage&gt;</c>);
+    /// set <see cref="Manifest"/> as well to also register it. A field whose static type is the
+    /// closed-set type -- the protocol interface, or a type-level <see cref="AkkaUnionAttribute"/>
+    /// base -- is treated as a union over that same closed set, with no
+    /// <see cref="AkkaUnionAttribute"/> needed on the field. Setting <see cref="ManifestPrefix"/> on
+    /// a registration whose type argument has no closed set (a concrete class, for example) is a
+    /// compile-time error: a concrete class has nothing to expand over.
+    /// </para>
+    /// </remarks>
+    public string? ManifestPrefix { get; init; }
 }
 
 /// <summary>
@@ -189,8 +242,8 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
 /// serializer-scoped: the same foreign type may be handled by different formatters (or not at all)
 /// in different serializers. A formatter registration overrides every field-kind resolution the
 /// generator would otherwise infer for <typeparamref name="TTarget"/> (including
-/// <c>Nullable&lt;T&gt;</c> of a value type), except an
-/// <see cref="AkkaEnvelopePayloadAttribute"/>-marked field, which always wins.
+/// <c>Nullable&lt;T&gt;</c> of a value type), except a field whose static type is <c>object</c>
+/// (or <c>object?</c>), which is always the envelope boundary and always wins.
 /// The <c>where TFormatter : IAkkaMessagePackFormatter&lt;TTarget&gt;</c> constraint is enforced by
 /// the compiler at the attribute usage site: <typeparamref name="TFormatter"/> can never be
 /// something that does not implement the formatter interface for <typeparamref name="TTarget"/>.

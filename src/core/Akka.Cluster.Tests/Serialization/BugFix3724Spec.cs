@@ -42,8 +42,11 @@ namespace Akka.Cluster.Tests.Serialization
                 typeof(ClusterEvent.MemberUp));
             await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                // Expect 0 means we have to wait for the full duration
-                await EventFilter.Exception<Exception>().ExpectAsync(0, async () =>
+                // A zero-count filter waits out its window after the action runs; with no explicit
+                // window it falls back to the Within's remaining time, so the block runs to its own
+                // deadline by construction. 3s is akka.test.filter-leeway, the window Pekko uses for
+                // this and the one this spec used before #7541. The block is now T_join + 3s under a 10s ceiling.
+                await EventFilter.Exception<Exception>().ExpectAsync(0, TimeSpan.FromSeconds(3), async () =>
                 {
                     // wait for a singleton cluster to fully form and publish a member up event
                     await _cluster.JoinAsync(_selfAddress);

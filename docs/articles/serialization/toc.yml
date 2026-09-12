@@ -1,4 +1,6 @@
 - name: Overview
   href: serialization.md
+- name: Source-Generated MessagePack Serialization
+  href: source-generated-serialization.md
 - name: Built-in Serializer Ids
   href: codes.md

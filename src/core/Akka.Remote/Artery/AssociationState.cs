@@ -34,41 +34,66 @@ namespace Akka.Remote.Artery
     /// explicit <see cref="Quarantine"/> call does that, and only for the <em>current</em> uid
     /// (a stale-uid quarantine request is ignored).
     /// </para>
+    /// <para>
+    /// <b>Compare snapshots by REFERENCE, never with <c>==</c>/<see cref="object.Equals(object)"/>.</b>
+    /// Being a record, this type has compiler-generated value equality — which is shallow over
+    /// <see cref="QuarantinedUids"/> (<see cref="ImmutableHashSet{T}"/> does not define structural
+    /// equality) and therefore means nothing useful here. Every caller that matters is asking
+    /// "is this the SAME snapshot I already had?", which is exactly what the transition methods
+    /// promise by returning <c>this</c> unchanged on a no-op, and what the CAS loops in
+    /// <see cref="Association"/> rely on.
+    /// </para>
     /// </summary>
-    internal sealed class AssociationState
+    internal sealed record AssociationState
     {
-        private AssociationState(int incarnation, UniqueAddress? uniqueRemoteAddress, ImmutableHashSet<long> quarantinedUids)
+        private AssociationState(
+            int incarnation,
+            UniqueAddress? uniqueRemoteAddress,
+            bool outboundHandshakeCompleted,
+            ImmutableHashSet<long> quarantinedUids)
         {
             Incarnation = incarnation;
             UniqueRemoteAddress = uniqueRemoteAddress;
+            OutboundHandshakeCompleted = outboundHandshakeCompleted;
             QuarantinedUids = quarantinedUids;
         }
 
         /// <summary>
         /// The initial state for a freshly-materialized association: no peer UID known yet
-        /// (<c>Associating</c>), incarnation 1, no quarantined UIDs.
+        /// (<c>Associating</c>), incarnation 1, our own handshake unanswered, no quarantined UIDs.
         /// </summary>
-        public static AssociationState Create() => new(incarnation: 1, uniqueRemoteAddress: null, quarantinedUids: ImmutableHashSet<long>.Empty);
+        public static AssociationState Create() =>
+            new(incarnation: 1, uniqueRemoteAddress: null, outboundHandshakeCompleted: false, quarantinedUids: ImmutableHashSet<long>.Empty);
 
         /// <summary>
         /// Monotonically increasing incarnation counter. Starts at 1; incremented only when
         /// <see cref="CompleteHandshake"/> observes a peer UID different from the current one
         /// (the remote system restarted under the same address).
         /// </summary>
-        public int Incarnation { get; }
+        public int Incarnation { get; init; }
 
         /// <summary>
         /// The peer's address + UID once the handshake has completed at least once for this
         /// incarnation; <c>null</c> while <c>Associating</c> (UID unknown).
         /// </summary>
-        public UniqueAddress? UniqueRemoteAddress { get; }
+        public UniqueAddress? UniqueRemoteAddress { get; init; }
+
+        /// <summary>
+        /// Whether THIS side's own <see cref="HandshakeReq"/> has been answered for the CURRENT
+        /// incarnation. Set ONLY by <see cref="CompleteOutboundHandshake"/>; a uid change resets it
+        /// and <see cref="Quarantine"/> clears it, so it never outlives the incarnation it
+        /// describes. <see cref="UniqueRemoteAddress"/> cannot stand in for it: the inbound
+        /// direction (the peer's own Req) sets that field too, and knowing the peer's uid says
+        /// nothing about whether the peer knows OURS (issue #8496).
+        /// </summary>
+        public bool OutboundHandshakeCompleted { get; init; }
 
         /// <summary>
         /// The set of peer UIDs (for this association's remote address) that have been
         /// explicitly quarantined. A uid change alone does not add the superseded uid here —
         /// see the type-level remarks.
         /// </summary>
-        public ImmutableHashSet<long> QuarantinedUids { get; }
+        public ImmutableHashSet<long> QuarantinedUids { get; init; }
 
         /// <summary>
         /// Whether <paramref name="uid"/> has been quarantined.
@@ -80,21 +105,50 @@ namespace Akka.Remote.Artery
         /// with <paramref name="peer"/>:
         /// <list type="bullet">
         /// <item><description><c>Associating</c> → <c>Associated</c>: adopts <paramref name="peer"/>, incarnation unchanged.</description></item>
-        /// <item><description>Same uid as the current <see cref="UniqueRemoteAddress"/>: no-op — returns <c>this</c> (reference-equal, so the CAS loop in <see cref="Association"/> can skip the compare-exchange).</description></item>
+        /// <item><description>Same uid as the current <see cref="UniqueRemoteAddress"/>: no-op — returns <c>this</c> (reference-equal, so the CAS loop in <see cref="Association"/> can skip the compare-exchange), except for the one-way <see cref="OutboundHandshakeCompleted"/> flip in <see cref="CompleteOutboundHandshake"/>.</description></item>
         /// <item><description>Different uid (remote restart): a new incarnation — <see cref="Incarnation"/> + 1, <see cref="UniqueRemoteAddress"/> replaced, <see cref="QuarantinedUids"/> carried over UNCHANGED (the old uid is deliberately not auto-quarantined).</description></item>
         /// </list>
         /// </summary>
-        public AssociationState CompleteHandshake(UniqueAddress peer)
+        public AssociationState CompleteHandshake(UniqueAddress peer) => Apply(peer, answeredOurReq: false);
+
+        /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but for the ONE event that proves the peer has
+        /// registered our uid: a <see cref="HandshakeRsp"/>, which a peer only sends after handling
+        /// a <see cref="HandshakeReq"/> of ours. Sets <see cref="OutboundHandshakeCompleted"/> --
+        /// nothing else does. A same-uid call that only flips that flag still returns a NEW
+        /// snapshot (it is a real transition, not the documented no-op).
+        /// </summary>
+        public AssociationState CompleteOutboundHandshake(UniqueAddress peer) => Apply(peer, answeredOurReq: true);
+
+        private AssociationState Apply(UniqueAddress peer, bool answeredOurReq)
         {
             if (UniqueRemoteAddress is { } current)
             {
                 if (current.Uid == peer.Uid)
-                    return this;
+                {
+                    // Returning THIS (not a `with` copy) is load-bearing: the CAS loops in
+                    // Association detect "nothing to publish" by reference.
+                    if (!answeredOurReq || OutboundHandshakeCompleted)
+                        return this;
 
-                return new AssociationState(Incarnation + 1, peer, QuarantinedUids);
+                    return this with { OutboundHandshakeCompleted = true };
+                }
+
+                // A different uid is a new incarnation; QuarantinedUids carries over untouched,
+                // which is what `with` does for every field this transition does not name.
+                return this with
+                {
+                    Incarnation = Incarnation + 1,
+                    UniqueRemoteAddress = peer,
+                    OutboundHandshakeCompleted = answeredOurReq
+                };
             }
 
-            return new AssociationState(Incarnation, peer, QuarantinedUids);
+            return this with
+            {
+                UniqueRemoteAddress = peer,
+                OutboundHandshakeCompleted = answeredOurReq
+            };
         }
 
         /// <summary>
@@ -113,7 +167,13 @@ namespace Akka.Remote.Artery
             if (QuarantinedUids.Contains(uid))
                 return (this, true);
 
-            return (new AssociationState(Incarnation, UniqueRemoteAddress, QuarantinedUids.Add(uid)), true);
+            // OutboundHandshakeCompleted is cleared with the incarnation it describes: this uid is
+            // cut off, so no later stream may trust "the peer knows us" on its behalf.
+            return (this with
+            {
+                OutboundHandshakeCompleted = false,
+                QuarantinedUids = QuarantinedUids.Add(uid)
+            }, true);
         }
     }
 }
