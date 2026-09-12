@@ -355,8 +355,11 @@ namespace Akka.MultiNode.TestAdapter.Internal
 
                 try
                 {
+                    // Process.Kill(bool entireProcessTree) isn't part of netstandard2.0's surface
+                    // (this project's single target here) - only the parameterless overload is
+                    // available, matching the convention already used in RemoteHost.cs.
                     if (!process.HasExited)
-                        process.Kill(entireProcessTree: true);
+                        process.Kill();
                 }
                 catch (Exception ex)
                 {
