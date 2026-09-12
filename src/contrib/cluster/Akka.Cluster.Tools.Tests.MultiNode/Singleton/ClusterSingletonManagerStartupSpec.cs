@@ -34,8 +34,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.retry-gate-closed-for = 1s #fast restart
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI heartbeat stalls during formation (default 3s)
-                akka.cluster.auto-down-unreachable-after = 5s")
+                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI heartbeat stalls during formation (default 3s)")
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());

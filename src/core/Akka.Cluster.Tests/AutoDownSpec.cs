@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -17,6 +18,11 @@ namespace Akka.Cluster.Tests
 {
     public class AutoDownSpec : AkkaSpec
     {
+        public AutoDownSpec(ITestOutputHelper output)
+            : base(output)
+        {
+        }
+
         sealed class DownCalled
         {
             readonly Address _address;
@@ -47,7 +53,7 @@ namespace Akka.Cluster.Tests
         {
             readonly IActorRef _probe;
 
-            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, IActorRef probe): base(autoDownUnreachableAfter)
+            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, IActorRef probe) : base(autoDownUnreachableAfter)
             {
                 _probe = probe;
             }

@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
+using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.DistributedData;
@@ -59,7 +60,6 @@ public class ClusterShardingSpecConfig : MultiNodeClusterShardingConfig
         CommonConfig = ConfigurationFactory.ParseString($@"
                 akka.cluster.sharding.verbose-debug-logging = on
                 #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
-                akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.roles = [""backend""]
                 akka.cluster.distributed-data.gossip-interval = 1s
                 akka.persistence.journal.sqlite-shared.timeout = 10s #the original default, base test uses 5s
@@ -84,7 +84,10 @@ public class ClusterShardingSpecConfig : MultiNodeClusterShardingConfig
                     }}
                 }}
                 akka.testconductor.barrier-timeout = 70s
-              ").WithFallback(PersistenceConfig()).WithFallback(Common);
+              ")
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.Zero))
+            .WithFallback(PersistenceConfig())
+            .WithFallback(Common);
 
         NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
     }

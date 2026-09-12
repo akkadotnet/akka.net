@@ -331,7 +331,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 akka {
                   loglevel = INFO
                   cluster {
-                    auto-down-unreachable-after = 10s
                     min-nr-of-members = 2
                   }
                   actor.provider = ""cluster""

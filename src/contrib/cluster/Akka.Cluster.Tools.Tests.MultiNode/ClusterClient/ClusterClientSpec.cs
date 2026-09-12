@@ -48,7 +48,6 @@ public class ClusterClientSpecConfig : MultiNodeConfig
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
                 akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: cluster-level FD (distinct from client FD below); absorb CI stalls during formation
                 akka.cluster.client.heartbeat-interval = 1s
                 akka.cluster.client.acceptable-heartbeat-pause = 3s
@@ -60,6 +59,7 @@ public class ClusterClientSpecConfig : MultiNodeConfig
                 akka.cluster.client.receptionist.failure-detection-interval = 1s
                 akka.test.filter-leeway = 10s
             ")
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.Zero))
             .WithFallback(ClusterClientReceptionist.DefaultConfig())
             .WithFallback(DistributedPubSub.DefaultConfig());
 
