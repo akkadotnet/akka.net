@@ -220,8 +220,11 @@ namespace Akka.Cluster.Tests
             await ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
 
             // Join cluster. Awaiting MemberUp before issuing any further command orders everything
-            // behind the join. Cluster.ClusterCore re-targets from the supervisor to the core daemon
-            // when the ref is published, and a later command can otherwise overtake the join.
+            // behind the join, guaranteeing the daemon has already processed it. Cluster.ClusterCore
+            // always targets /system/cluster for the life of the extension, so two commands from the
+            // same sender are already delivered in order without this wait; the MemberUp wait is
+            // still the stronger barrier, since it proves the join was processed, not merely
+            // enqueued, before Leave is sent.
             _cluster.Join(_selfAddress);
             await ExpectMsgAsync<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(10));
 

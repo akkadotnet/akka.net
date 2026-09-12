@@ -56,12 +56,14 @@ public class StressSpecConfig : MultiNodeConfig
     /// Builds the `akka.test.cluster-stress-spec` (plus supporting actor/remote) config for a run
     /// of <paramref name="totalNumberOfNodes"/> nodes.
     ///
-    /// The reference node count is 13, and with the full 13-node `nr-of-nodes-*` defaults below,
-    /// 13 is also the *smallest* count that fits every phase -- see the arithmetic in
-    /// <see cref="Settings"/>'s constructor. The joining phases need >= 11 nodes on their own (3
-    /// seed nodes + 4 double-sized singleton join phases), and the leaving/shutdown phases
-    /// together remove 8 nodes' worth of `nr-of-nodes-*`, which requires
-    /// `totalNumberOfNodes - 3 >= 8`, i.e. `totalNumberOfNodes >= 11`. So on the 2-vCPU hosted CI
+    /// The reference node count is 13 -- v1.5's original default, kept as the full, unshrunk
+    /// baseline below. At full size, the arithmetic in <see cref="Settings"/>'s constructor puts
+    /// the true minimum that fits every phase at 11, not 13: the joining phases need >= 11 nodes
+    /// on their own (3 seed nodes + 4 double-sized singleton join phases), and the
+    /// leaving/shutdown phases together remove 8 nodes' worth of `nr-of-nodes-*`, which requires
+    /// `totalNumberOfNodes - 3 >= 8`, i.e. `totalNumberOfNodes >= 11`. This method shrinks phase
+    /// counts for anything below 13 anyway, rather than only below 11, so 13 stays the boundary
+    /// at which every phase runs at its full, doubled size. So on the 2-vCPU hosted CI
     /// agents, lowering `MNTR_STRESSSPEC_NODECOUNT` below 13 by itself is not enough -- <see cref="Settings"/>
     /// throws unless the phase counts shrink too. Below 13 nodes, this method halves every
     /// joining phase that defaults to 2 back to 1, drops the two "-large" one-by-one

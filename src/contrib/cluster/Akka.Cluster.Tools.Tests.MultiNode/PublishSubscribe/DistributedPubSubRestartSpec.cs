@@ -305,15 +305,17 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             await readyProbe.ExpectMsgAsync<string>(
                 msg => msg == DistributedPubSubRestartSpecConfig.ReadySignal, 60.Seconds());
 
-            // ActorSelection.Tell, not ResolveOne + a resolved ref: only an ActorSelectionMessage
-            // pierces a quarantined association (a plain Tell to a quarantined peer is dropped at
-            // the transport layer; Pekko's Association.scala carries the identical carve-out, and
-            // upstream's own restart spec relies on exactly that). The ready-ping above is
-            // guaranteed to have healed the association by this point: readyProbe could only have
-            // received the ping above once first's inbound handshake to third's new incarnation
-            // had already completed (see the comment on that wait). So this loop is a short
-            // closed-loop confirmation, not the thing racing third's restart cost the way the
-            // old, Shutdown()-anchored window did.
+            // ActorSelection.Tell, not ResolveOne + a resolved ref: this re-resolves by path on
+            // every send, so it reaches whichever incarnation is live at that path right now rather
+            // than a stale, cached ref. On v1.5's classic remoting, a Tell to a quarantined peer is
+            // not dropped: EndpointManager's Quarantined case creates a brand-new writing endpoint
+            // for it (EndpointManager.cs). It is the separate *Gated* policy that dead-letters a
+            // Send while its release deadline is unexpired, which is not what this call depends on.
+            // The ready-ping above is guaranteed to have healed the association by this point:
+            // readyProbe could only have received the ping above once first's inbound handshake to
+            // third's new incarnation had already completed (see the comment on that wait). So
+            // this loop is a short closed-loop confirmation, not the thing racing third's restart
+            // cost the way the old, Shutdown()-anchored window did.
             var shutdownSelection = Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown");
             await AwaitAssertAsync(async () =>
             {
