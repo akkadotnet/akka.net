@@ -109,7 +109,14 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             // on the same host:port below. dot-netty's tcp-reuse-addr is off-for-windows, so that rebind
             // is exactly the kind of thing that fails on Windows and nowhere else. Terminate() runs
             // CoordinatedShutdown to completion: the hand-over to sys2 finishes and the port is released.
-            await _sys1.Terminate();
+            //
+            // A failure here means sys2 never logged the hand-over confirmation from sys1 - i.e. the
+            // "Hand-over in progress at" message that ClusterSingletonManager.BecomingOldest logs on
+            // receiving HandOverToMe (see #8589 for the transport-level loss that can cause this). Naming
+            // it here turns a later, unrelated-looking timeout into a filter failure at the point the
+            // hand-over actually broke.
+            await CreateEventFilter(_sys2).Info(start: "Hand-over in progress at")
+                .ExpectOneAsync(async () => { await _sys1.Terminate(); });
             // it will be downed by the join attempts of the new incarnation
 
             // ReSharper disable once PossibleInvalidOperationException
@@ -141,15 +148,30 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             await AwaitProxyReplyAsync(_sys2, proxy2, "hello2", TimeSpan.FromSeconds(5));
 
-            Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
+            // As above: a failure here means sys3 never saw the "Hand-over in progress at" confirmation
+            // from sys2, which is what happened in PR #8588 build 131555 - sys2's HandOverInProgress and
+            // HandOverDone were written to the socket before it closed, but a TCP RST on Windows (see
+            // #8589) discarded them on the wire, so sys3 never cancelled its hand-over retry timer and
+            // fell back to the removal-margin/hand-over-retries path instead. That path does eventually
+            // recover the singleton, but only after 20s+ (removal margin) or ~27s (hand-over retries
+            // exhausted, manager crash-restart) - both well outside the 5s AwaitProxyReplyAsync budget
+            // below, which is sized for the designed hand-over path (HandOverDone reaches sys3 about
+            // 1ms after sys2 starts handing over, before sys2's system terminates). The budget is deliberately not widened to cover the fallback: doing
+            // so would only make the test pass on a path where the hand-over was lost and the manager had
+            // to crash to recover, which defeats the point of a spec named after the hand-over.
+            await CreateEventFilter(_sys3).Info(start: "Hand-over in progress at")
+                .ExpectOneAsync(async () =>
+                {
+                    Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
 
-            await AwaitAssertAsync(() =>
-            {
-                Cluster.Get(_sys3)
-                    .State.Members.Select(x => x.UniqueAddress)
-                    .Should()
-                    .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
-            }, TimeSpan.FromSeconds(15));
+                    await AwaitAssertAsync(() =>
+                    {
+                        Cluster.Get(_sys3)
+                            .State.Members.Select(x => x.UniqueAddress)
+                            .Should()
+                            .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
+                    }, TimeSpan.FromSeconds(15));
+                });
 
             var proxy3 =
                 _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),
