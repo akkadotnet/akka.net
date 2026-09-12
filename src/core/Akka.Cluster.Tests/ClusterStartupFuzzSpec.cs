@@ -491,7 +491,7 @@ namespace Akka.Cluster.Tests
                         break;
                     }
 
-                    if (joinTask.IsCompletedSuccessfully)
+                    if (joinTask.Status == TaskStatus.RanToCompletion)
                     {
                         outcome = Outcome.ReachedUp;
                         break;
@@ -512,7 +512,7 @@ namespace Akka.Cluster.Tests
                 {
                     if (cluster.IsTerminated || FuzzFailureSink.TryGet(name, out marker))
                         outcome = terminatedAtCreate ? Outcome.KillImmediate : Outcome.KillDelayed;
-                    else if (joinTask.IsCompletedSuccessfully)
+                    else if (joinTask.Status == TaskStatus.RanToCompletion)
                         outcome = Outcome.ReachedUp;
                     else
                         outcome = Outcome.Pass; // survived the whole window without termination

@@ -68,11 +68,11 @@ akka {
             // OnMemberStatusChangedListener actor's dispatcher (a channel-executor/ThreadPool
             // thread) - this keeps the awaiting test continuation from running inline on that
             // dispatcher thread inside the actor's message processing.
-            var memberUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var memberUp = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
             var cluster = Cluster.Get(Sys);
             cluster.RegisterOnMemberUp(() =>
             {
-                memberUp.TrySetResult();
+                memberUp.TrySetResult(Done.Instance);
             });
 
             // Self-join programmatically - the downingProvider actor is created in
