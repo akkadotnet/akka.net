@@ -335,6 +335,68 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public async Task A_cluster_must_resend_Leave_on_a_later_LeaveAsync_call_after_an_earlier_send_was_lost()
+        {
+            // Discriminates the LeaveSelf re-send fix directly (the sibling test above does not).
+            // Calling LeaveAsync() before any Join sends a ClusterUserAction.Leave to ClusterCore
+            // (always /system/cluster -- see the XML doc on that property in Cluster.cs). Any
+            // traffic that arrives before ClusterDaemon has processed its own Init is stashed there
+            // and forwarded once initialized (see ClusterDaemon.Uninitialized), so the Leave still
+            // reaches the core daemon even if it beats Init -- but since no Join has happened yet,
+            // it lands on ClusterCoreDaemon's own Uninitialized behavior, which has no case for
+            // ClusterUserAction.Leave: the command is unhandled and dropped. LeaveSelf() has already
+            // memoized a Task tied to MemberRemoved by this point. Pre-fix, LeaveSelf() sent Leave
+            // only on the call that won the CAS, so that lost send was the only one that would ever
+            // go out: every later LeaveAsync() call for the life of the process returned the same
+            // never-completing memoized task. Post-fix, the Leave send repeats on every call, so the
+            // second call below actually reaches the now-joined member and the memoized task
+            // completes.
+            // Assert the premise instead of merely assuming it: ClusterCoreDaemon.Uninitialized
+            // (see the default case there) has no branch for ClusterUserAction.Leave, so it falls
+            // through to ReceiveExitingCompleted (false for a Leave) and then Unhandled, whose
+            // ClusterCoreDaemon override only special-cases ITick/Gossip*/ExitingConfirmed -- so it
+            // calls the base ActorBase.Unhandled, which publishes an UnhandledMessage to the
+            // EventStream. Subscribing a dedicated probe for that lets this fact fail here, instead
+            // of silently no longer discriminating, if ClusterCoreDaemon.Uninitialized ever grows a
+            // case for Leave.
+            var unhandledProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe(unhandledProbe.Ref, typeof(UnhandledMessage));
+
+            var leaveBeforeJoin = _cluster.LeaveAsync();
+
+            await unhandledProbe.ExpectMsgAsync<UnhandledMessage>(
+                u => u.Message is ClusterUserAction.Leave
+                     && u.Recipient.Path.ToStringWithoutAddress().EndsWith("/system/cluster/core/daemon"),
+                RemainingOrDefault,
+                hint: "the pre-Join Leave should be dropped by ClusterCoreDaemon.Uninitialized and published as an UnhandledMessage");
+            Sys.EventStream.Unsubscribe(unhandledProbe.Ref, typeof(UnhandledMessage));
+
+            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp));
+            await ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
+
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
+            await ExpectMsgAsync<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(10));
+
+            // Not completed yet: nothing has driven Leaving -> Exiting -> Removed at this point.
+            leaveBeforeJoin.IsCompleted.Should().BeFalse();
+
+            // Same memoized task as the first call -- only the Leave send itself repeats.
+            var leaveAfterJoin = _cluster.LeaveAsync();
+            leaveAfterJoin.Should().BeSameAs(leaveBeforeJoin);
+
+            // Leaving to Exiting takes exactly one leader pass, and removal follows from the
+            // coordinated-shutdown round trip that pass starts, so no further tick is needed.
+            LeaderActions();
+
+            // Dilated, consistent with the sibling facts above (RemainingOrDefault / dilated
+            // ExpectMsgAsync) -- equivalent to the raw 10s today (this spec sets no timefactor),
+            // but scales correctly if one is ever introduced.
+            await leaveAfterJoin.WaitAsync(Dilated(TimeSpan.FromSeconds(10)));
+            leaveAfterJoin.IsCompleted.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
