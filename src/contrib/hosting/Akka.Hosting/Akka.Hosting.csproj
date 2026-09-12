@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>Akka.NET Microsoft.Extensions.Hosting support.</Description>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Akka.DependencyInjection" Version="$(AkkaVersion)" />
+    <PackageReference Include="Akka.Streams" Version="$(AkkaVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="OpenTelemetry" Version="[1.10.0,)" />
+  </ItemGroup>
+</Project>

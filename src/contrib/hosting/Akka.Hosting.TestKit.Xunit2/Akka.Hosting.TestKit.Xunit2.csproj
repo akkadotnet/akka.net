@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>TestKit for writing tests for Akka.NET using Akka.Hosting and xUnit.</Description>
+        <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsPackable>true</IsPackable>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Akka.TestKit.Xunit2" Version="$(AkkaVersion)" />
+        <PackageReference Include="Akka.Persistence.TestKit" Version="$(AkkaVersion)" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="xunit" Version="$(XunitVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+      <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\TestKitLoggerFactoryLogger.cs">
+        <Link>Internals\TestKitLoggerFactoryLogger.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\XUnitLogger.cs">
+        <Link>Internals\XUnitLogger.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\XUnitLoggerProvider.cs">
+        <Link>Internals\XUnitLoggerProvider.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\PersistenceTestKit.cs">
+        <Link>PersistenceTestKit.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\TestKit.Shared.cs">
+        <Link>TestKit.Shared.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>

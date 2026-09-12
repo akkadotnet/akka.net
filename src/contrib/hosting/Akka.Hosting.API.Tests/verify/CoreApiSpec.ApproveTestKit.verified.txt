@@ -1,0 +1,72 @@
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Hosting.TestKit.Tests")]
+namespace Akka.Hosting.TestKit.Internals
+{
+    public class TestKitLoggerFactoryLogger : Akka.Hosting.Logging.LoggerFactoryLogger
+    {
+        public TestKitLoggerFactoryLogger() { }
+        protected override bool Receive(object message) { }
+    }
+    public class XUnitLogger : Microsoft.Extensions.Logging.ILogger
+    {
+        public XUnitLogger(string category, Xunit.ITestOutputHelper helper, Microsoft.Extensions.Logging.LogLevel logLevel) { }
+        public System.IDisposable? BeginScope<TState>(TState state)
+            where TState :  notnull { }
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) { }
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, System.Exception? exception, System.Func<TState, System.Exception?, string> formatter) { }
+    }
+    public class XUnitLoggerProvider : Microsoft.Extensions.Logging.ILoggerProvider, System.IDisposable
+    {
+        public XUnitLoggerProvider(Xunit.ITestOutputHelper helper, Microsoft.Extensions.Logging.LogLevel logLevel) { }
+        public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName) { }
+        public void Dispose() { }
+    }
+}
+namespace Akka.Hosting.TestKit
+{
+    public abstract class PersistenceTestKit : Akka.Hosting.TestKit.TestKit
+    {
+        public static readonly Akka.Configuration.Config DefaultConfiguration;
+        public PersistenceTestKit(string? actorSystemName = null, Xunit.ITestOutputHelper? output = null, System.TimeSpan? startupTimeout = default, Microsoft.Extensions.Logging.LogLevel logLevel = 2) { }
+        public Akka.Persistence.TestKit.ITestJournal Journal { get; }
+        public Akka.Actor.IActorRef JournalActorRef { get; }
+        public Akka.Persistence.TestKit.ITestSnapshotStore Snapshots { get; }
+        public Akka.Actor.IActorRef SnapshotsActorRef { get; }
+        protected override void ConfigureAkka(Akka.Hosting.AkkaConfigurationBuilder builder, System.IServiceProvider provider) { }
+        public System.Threading.Tasks.Task WithJournalRecovery(System.Func<Akka.Persistence.TestKit.JournalRecoveryBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Action execution) { }
+        public System.Threading.Tasks.Task WithJournalRecovery(System.Func<Akka.Persistence.TestKit.JournalRecoveryBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Func<System.Threading.Tasks.Task> execution) { }
+        public System.Threading.Tasks.Task WithJournalWrite(System.Func<Akka.Persistence.TestKit.JournalWriteBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Action execution) { }
+        public System.Threading.Tasks.Task WithJournalWrite(System.Func<Akka.Persistence.TestKit.JournalWriteBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Func<System.Threading.Tasks.Task> execution) { }
+        public System.Threading.Tasks.Task WithSnapshotDelete(System.Func<Akka.Persistence.TestKit.SnapshotStoreDeleteBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Action execution) { }
+        public System.Threading.Tasks.Task WithSnapshotDelete(System.Func<Akka.Persistence.TestKit.SnapshotStoreDeleteBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Func<System.Threading.Tasks.Task> execution) { }
+        public System.Threading.Tasks.Task WithSnapshotLoad(System.Func<Akka.Persistence.TestKit.SnapshotStoreLoadBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Action execution) { }
+        public System.Threading.Tasks.Task WithSnapshotLoad(System.Func<Akka.Persistence.TestKit.SnapshotStoreLoadBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Func<System.Threading.Tasks.Task> execution) { }
+        public System.Threading.Tasks.Task WithSnapshotSave(System.Func<Akka.Persistence.TestKit.SnapshotStoreSaveBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Action execution) { }
+        public System.Threading.Tasks.Task WithSnapshotSave(System.Func<Akka.Persistence.TestKit.SnapshotStoreSaveBehavior, System.Threading.Tasks.Task> behaviorSelector, System.Func<System.Threading.Tasks.Task> execution) { }
+    }
+    [Akka.TestKit.Xunit.Attributes.AkkaCleanAmbientContext]
+    public abstract class TestKit : Akka.TestKit.TestKitBase, System.IAsyncDisposable, Xunit.IAsyncLifetime
+    {
+        protected TestKit(string? actorSystemName = null, Xunit.ITestOutputHelper? output = null, System.TimeSpan? startupTimeout = default, Microsoft.Extensions.Logging.LogLevel logLevel = 2) { }
+        public Akka.Hosting.ActorRegistry ActorRegistry { get; }
+        public string ActorSystemName { get; }
+        protected virtual Akka.Configuration.Config? Config { get; }
+        public Microsoft.Extensions.Hosting.IHost Host { get; }
+        public Microsoft.Extensions.Logging.LogLevel LogLevel { get; }
+        public Xunit.ITestOutputHelper? Output { get; }
+        public System.TimeSpan StartupTimeout { get; }
+        public new Akka.Actor.ActorSystem Sys { get; }
+        protected static Akka.TestKit.Xunit.XunitAssertions Assertions { get; }
+        protected virtual System.Threading.Tasks.Task AfterAllAsync() { }
+        protected virtual System.Threading.Tasks.Task BeforeTestStart() { }
+        protected abstract void ConfigureAkka(Akka.Hosting.AkkaConfigurationBuilder builder, System.IServiceProvider provider);
+        protected virtual void ConfigureAppConfiguration(Microsoft.Extensions.Hosting.HostBuilderContext context, Microsoft.Extensions.Configuration.IConfigurationBuilder builder) { }
+        protected virtual void ConfigureHostBuilder(Microsoft.Extensions.Hosting.IHostBuilder builder) { }
+        protected virtual void ConfigureHostConfiguration(Microsoft.Extensions.Configuration.IConfigurationBuilder builder) { }
+        protected virtual void ConfigureLogging(Microsoft.Extensions.Logging.ILoggingBuilder builder) { }
+        protected virtual void ConfigureServices(Microsoft.Extensions.Hosting.HostBuilderContext context, Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [Akka.Annotations.InternalApi]
+        public System.Threading.Tasks.ValueTask InitializeAsync() { }
+        protected override sealed void InitializeTest(Akka.Actor.ActorSystem system, Akka.Actor.Setup.ActorSystemSetup config, string actorSystemName, string testActorName) { }
+    }
+}

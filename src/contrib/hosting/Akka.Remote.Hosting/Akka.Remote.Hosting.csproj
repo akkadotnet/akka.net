@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>Akka.Remote Microsoft.Extensions.Hosting support.</Description>
+    <LangVersion>Latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Akka.Remote" Version="$(AkkaVersion)" />
+  </ItemGroup>
+</Project>

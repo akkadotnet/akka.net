@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Description>Akka.Persistence Microsoft.Extensions.Hosting support.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Akka.Persistence" Version="$(AkkaVersion)" />
+    </ItemGroup>
+
+</Project>

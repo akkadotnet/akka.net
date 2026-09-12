@@ -1,0 +1,8 @@
+﻿LogLevel: Information
+Message: [LEVEL][DateTime][Thread 0001][ActorSystem(test)] Server started successfully
+State:
+  [{OriginalFormat}] = Server started successfully
+  [ActorPath] = akka://test/...
+  [LogSource] = LogSource
+  [Thread] = 1
+  [Timestamp] = DateTime
