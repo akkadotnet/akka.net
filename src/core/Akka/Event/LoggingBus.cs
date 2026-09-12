@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="LoggingBus.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -105,29 +105,51 @@ namespace Akka.Event
         internal void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
-            var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
             var shouldRemoveStandardOutLogger = true;
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
+            // Check for programmatic LoggerSetup first (AOT-compatible path)
+            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
+
             var taskInfos = new Dictionary<Task, string>();
-            foreach (var strLoggerType in loggerTypes)
+            if (loggerSetupOpt.HasValue)
             {
-                var loggerType = Type.GetType(strLoggerType);
-                if (loggerType == null)
+                // Use programmatically registered loggers instead of HOCON
+                foreach (var registration in loggerSetupOpt.Value.Loggers)
                 {
-                    throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
-                }
+                    var loggerType = registration.LoggerType;
+                    if (loggerType != null && typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                    {
+                        shouldRemoveStandardOutLogger = false;
+                        continue;
+                    }
 
-                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                    var (task, name) = AddLogger(system, registration, logName);
+                    taskInfos[task] = name;
+                }
+            }
+            else
+            {
+                // Fall back to HOCON-configured loggers
+                foreach (var strLoggerType in system.Settings.Loggers)
                 {
-                    shouldRemoveStandardOutLogger = false;
-                    continue;
-                }
+                    var loggerType = Type.GetType(strLoggerType);
+                    if (loggerType == null)
+                    {
+                        throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
+                    }
 
-                var (task, name) = AddLogger(system, loggerType, logName);
-                taskInfos[task] = name;
+                    if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                    {
+                        shouldRemoveStandardOutLogger = false;
+                        continue;
+                    }
+
+                    var (task, name) = AddLogger(system, loggerType, logName);
+                    taskInfos[task] = name;
+                }
             }
 
             if (!Task.WaitAll(taskInfos.Keys.ToArray(), timeout))
@@ -203,6 +225,21 @@ namespace Akka.Event
             var loggerName = CreateLoggerName(loggerType);
             var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
+            return StartLogger(logger, fullLoggerName, loggingBusName);
+        }
+
+        private (Task task, string name) AddLogger(ActorSystemImpl system, LoggerRegistration registration, string loggingBusName)
+        {
+            var effectiveType = registration.EffectiveType(system);
+            var loggerName = CreateLoggerName(effectiveType);
+            var fullLoggerName = $"{loggerName} [{effectiveType.FullName}]";
+            var props = registration.CreateProps(system).WithDispatcher(system.Settings.LoggersDispatcher);
+            var logger = system.SystemActorOf(props, loggerName);
+            return StartLogger(logger, fullLoggerName, loggingBusName);
+        }
+
+        private (Task task, string name) StartLogger(IActorRef logger, string fullLoggerName, string loggingBusName)
+        {
             var askTask = logger.Ask(new InitializeLogger(this), Timeout.InfiniteTimeSpan, _shutdownCts.Token);
 
             // Return the continuation task, not the ask task, so callers wait for
