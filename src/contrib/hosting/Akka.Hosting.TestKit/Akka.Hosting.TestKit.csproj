@@ -2,24 +2,26 @@
 
     <PropertyGroup>
         <Description>TestKit for writing tests for Akka.NET using Akka.Hosting and xUnit.</Description>
-        <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;testkit;xunit</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
         <IsPackable>true</IsPackable>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Akka.TestKit.Xunit" Version="$(AkkaVersion)" />
-        <PackageReference Include="Akka.Persistence.TestKit" Version="$(AkkaVersion)" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtHostingVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtHostingVersion)" />
         <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsVersion)" />
-        <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
     </ItemGroup>
-    
+
     <ItemGroup>
-      <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
-      <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+        <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
     </ItemGroup>
 
 </Project>

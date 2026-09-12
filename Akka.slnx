@@ -69,6 +69,20 @@
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/Akka.DependencyInjection.Tests.csproj" />
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection/Akka.DependencyInjection.csproj" />
   </Folder>
+  <Folder Name="/Contrib/Hosting/">
+    <Project Path="src/contrib/hosting/Akka.Cluster.Hosting.Tests/Akka.Cluster.Hosting.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Cluster.Hosting/Akka.Cluster.Hosting.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Tests/Akka.Hosting.TestKit.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Xunit2.Tests/Akka.Hosting.TestKit.Xunit2.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Xunit2/Akka.Hosting.TestKit.Xunit2.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.TestKit/Akka.Hosting.TestKit.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.Tests/Akka.Hosting.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting/Akka.Hosting.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Persistence.Hosting.Tests/Akka.Persistence.Hosting.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Persistence.Hosting/Akka.Persistence.Hosting.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Remote.Hosting.Tests/Akka.Remote.Hosting.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Remote.Hosting/Akka.Remote.Hosting.csproj" />
+  </Folder>
   <Folder Name="/Contrib/Persistence/">
     <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory.Tests/Akka.Persistence.Query.InMemory.Tests.csproj" />
     <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory/Akka.Persistence.Query.InMemory.csproj" />
@@ -282,6 +296,11 @@
   </Folder>
   <Folder Name="/Examples/HelloAkka/">
     <Project Path="src/examples/HelloAkka/HelloWorld/HelloWorld.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Hosting/">
+    <Project Path="src/examples/Hosting/Akka.Hosting.Asp.LoggingDemo/Akka.Hosting.Asp.LoggingDemo.csproj" />
+    <Project Path="src/examples/Hosting/Akka.Hosting.LoggingDemo/Akka.Hosting.LoggingDemo.csproj" />
+    <Project Path="src/examples/Hosting/Akka.Hosting.SimpleDemo/Akka.Hosting.SimpleDemo.csproj" />
   </Folder>
   <Folder Name="/Examples/Persistence/">
     <Project Path="src/examples/Akka.Persistence.Custom.Tests/Akka.Persistence.Custom.Tests.csproj" />

@@ -30,7 +30,7 @@ public sealed class AkkaHealthCheckRegistration
     /// is <c>null</c>, then <see cref="HealthStatus.Unhealthy"/> will be reported.
     /// </param>
     /// <param name="tags">A list of tags that can be used for filtering health checks.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <see cref="name"/> or <see cref="instance"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="name"/> or <paramref name="instance"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if a negative timeout other than <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is used.</exception>
     public AkkaHealthCheckRegistration(string name, IAkkaHealthCheck instance, HealthStatus? failureStatus,
         IEnumerable<string>? tags) : this(name, instance, failureStatus, tags, default)
@@ -49,7 +49,7 @@ public sealed class AkkaHealthCheckRegistration
     /// </param>
     /// <param name="tags">A list of tags that can be used for filtering health checks.</param>
     /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <see cref="name"/> or <see cref="instance"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="name"/> or <paramref name="instance"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if a negative timeout other than <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is used.</exception>
     public AkkaHealthCheckRegistration(string name, IAkkaHealthCheck instance, HealthStatus? failureStatus,
         IEnumerable<string>? tags, TimeSpan? timeout)
@@ -81,7 +81,7 @@ public sealed class AkkaHealthCheckRegistration
     /// </param>
     /// <param name="tags">A list of tags that can be used for filtering health checks.</param>
     /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <see cref="name"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="name"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if a negative timeout other than <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is used.</exception>
     internal AkkaHealthCheckRegistration(string name, Func<IServiceProvider, IAkkaHealthCheck> factory, HealthStatus? failureStatus,
         IEnumerable<string>? tags, TimeSpan? timeout)

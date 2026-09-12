@@ -1,32 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\xunitSettings.props" />
 
-    <PropertyGroup>
-        <TargetFramework>$(TestsNetCoreFramework)</TargetFramework>
-        <OutputType>Exe</OutputType>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Akka.Persistence.Query.InMemory" Version="$(AkkaVersion)" />
-        <PackageReference Include="Akka.TestKit.Xunit" Version="$(AkkaVersion)" />
-        <PackageReference Include="FluentAssertions" Version="6.12.2" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-        <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunneVisualstudio)">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Hosting.TestKit\Akka.Hosting.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
+    <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Akka.Hosting.TestKit\Akka.Hosting.TestKit.csproj" />
-      <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Update="xunit.runner.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
-
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
+  </ItemGroup>
 </Project>

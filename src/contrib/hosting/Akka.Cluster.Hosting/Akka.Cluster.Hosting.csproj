@@ -1,17 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Description>Akka.Cluster and Akka.Cluster.Sharding Microsoft.Extensions.Hosting support.</Description>
-  </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
-    <ProjectReference Include="..\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
-  </ItemGroup>
+    <PropertyGroup>
+        <Description>Akka.Cluster and Akka.Cluster.Sharding Microsoft.Extensions.Hosting support.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;cluster;sharding</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Akka.Cluster.Sharding" Version="$(AkkaVersion)" />
-    <PackageReference Include="Akka.DistributedData" Version="$(AkkaVersion)" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
+        <ProjectReference Include="..\..\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
+        <ProjectReference Include="..\..\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
+    </ItemGroup>
+
 </Project>

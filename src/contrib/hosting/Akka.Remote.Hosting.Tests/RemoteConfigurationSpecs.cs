@@ -402,7 +402,7 @@ public class RemoteConfigurationSpecs
     public void WithRemotingOptionsSslEnabledCertificateTest()
     {
         // arrange
-        var certificate = new X509Certificate2("./Resources/akka-validcert.pfx", "password");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("./Resources/akka-validcert.pfx", "password");
         var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "test");
         builder.WithRemoting(new RemoteOptions
         {
@@ -426,7 +426,7 @@ public class RemoteConfigurationSpecs
     public void WithRemotingOptionsSslDisabledCertificateTest()
     {
         // arrange
-        var certificate = new X509Certificate2("./Resources/akka-validcert.pfx", "password");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("./Resources/akka-validcert.pfx", "password");
         var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "test");
         builder.WithRemoting(new RemoteOptions
         {
@@ -486,7 +486,7 @@ public class RemoteConfigurationSpecs
     public void WithRemotingNewSslSettingsDotNettySslSetupTest()
     {
         // arrange
-        var certificate = new X509Certificate2("./Resources/akka-validcert.pfx", "password");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("./Resources/akka-validcert.pfx", "password");
         var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "test");
         builder.WithRemoting(new RemoteOptions
         {
@@ -516,7 +516,7 @@ public class RemoteConfigurationSpecs
     public void WithRemotingCustomValidatorDotNettySslSetupTest()
     {
         // arrange
-        var certificate = new X509Certificate2("./Resources/akka-validcert.pfx", "password");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("./Resources/akka-validcert.pfx", "password");
         var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "test");
 
         // Create a simple custom validator for testing
@@ -555,7 +555,7 @@ public class RemoteConfigurationSpecs
     public void WithRemotingDefaultSslSettingsTest()
     {
         // arrange
-        var certificate = new X509Certificate2("./Resources/akka-validcert.pfx", "password");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("./Resources/akka-validcert.pfx", "password");
         var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "test");
         builder.WithRemoting(new RemoteOptions
         {

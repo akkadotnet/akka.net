@@ -21,7 +21,7 @@ namespace Akka.Hosting
     public interface IRequiredActor<TActor>
     {
         /// <summary>
-        /// The underlying actor resolved via <see cref="ActorRegistry"/> using the given <see cref="TActor"/> key.
+        /// The underlying actor resolved via <see cref="ActorRegistry"/> using the given <typeparamref name="TActor"/> key.
         /// </summary>
         IActorRef ActorRef { get; }
 
@@ -266,7 +266,7 @@ namespace Akka.Hosting
         }
 
         /// <summary>
-        /// Try to retrieve an <see cref="IActorRef"/> with the given <see cref="TKey"/>.
+        /// Try to retrieve an <see cref="IActorRef"/> with the given <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="actor">The bound <see cref="IActorRef"/>, if any. Is set to <see cref="ActorRefs.Nobody"/> if key is not found.</param>
         /// <returns><c>true</c> if an actor with this key exists, <c>false</c> otherwise.</returns>
@@ -397,14 +397,14 @@ namespace Akka.Hosting
     public interface IReadOnlyActorRegistry : IEnumerable<KeyValuePair<Type, IActorRef>>
     {
         /// <summary>
-        /// Try to retrieve an <see cref="IActorRef"/> with the given <see cref="TKey"/>.
+        /// Try to retrieve an <see cref="IActorRef"/> with the given <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="actor">The bound <see cref="IActorRef"/>, if any. Is set to <see cref="ActorRefs.Nobody"/> if key is not found.</param>
         /// <returns><c>true</c> if an actor with this key exists, <c>false</c> otherwise.</returns>
         bool TryGet<TKey>(out IActorRef actor);
 
         /// <summary>
-        /// Try to retrieve an <see cref="IActorRef"/> with the given <see cref="TKey"/>.
+        /// Try to retrieve an <see cref="IActorRef"/> with the given <paramref name="key"/>.
         /// </summary>
         /// <param name="key">The key for a particular actor.</param>
         /// <param name="actor">The bound <see cref="IActorRef"/>, if any. Is set to <see cref="ActorRefs.Nobody"/> if key is not found.</param>

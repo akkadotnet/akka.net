@@ -1,17 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>$(LibraryFramework);$(NetLibraryFramework)</TargetFrameworks>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Description>Akka.Remote Microsoft.Extensions.Hosting support.</Description>
-    <LangVersion>Latest</LangVersion>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
-  </ItemGroup>
+    <PropertyGroup>
+        <Description>Akka.Remote Microsoft.Extensions.Hosting support.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;remoting</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Akka.Remote" Version="$(AkkaVersion)" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj" />
+    </ItemGroup>
+
 </Project>

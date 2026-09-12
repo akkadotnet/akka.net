@@ -177,7 +177,7 @@ namespace Akka.Hosting
         }
         
         /// <summary>
-        /// Automatically loads the given HOCON file from <see cref="hoconFilePath"/>
+        /// Automatically loads the given HOCON file from <paramref name="hoconFilePath"/>
         /// and inserts it into the <see cref="ActorSystem"/>s' configuration.
         /// </summary>
         /// <param name="builder">The builder instance being configured.</param>

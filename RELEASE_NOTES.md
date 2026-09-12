@@ -2,6 +2,11 @@
 
 Akka.NET v1.5.72 backports a non-blocking Cluster extension startup, test-infrastructure hardening, a Cluster.Sharding hand-over fix, and a batch of de-flaked specs from `dev`.
 
+Starting with this release, **Akka.Hosting ships from this repository**. The `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit`, and `Akka.Hosting.TestKit.Xunit2` packages are now built, tested, and published alongside every Akka.NET release at the same version number.
+
+**Akka.Hosting**
+* Akka.Hosting moves into the akka.net repository - The six Hosting packages now live under `src/contrib/hosting` and share the Akka.NET version and release cadence. No package IDs, namespaces, or public APIs changed; bump `Akka.Hosting.*` to the same version as `Akka.*`. Hosting-only hotfix versions (such as `1.5.60.1`) no longer exist: a Hosting fix ships in the next Akka.NET patch release. The documentation moved to [getakka.net/articles/hosting](https://getakka.net/articles/hosting/index.html). The [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository will be archived and keeps the full commit history and release notes for versions up to 1.5.71; the import was taken from commit [`cefe3c4c`](https://github.com/akkadotnet/Akka.Hosting/commit/cefe3c4ccdc3149c2a2b1c8980f956b303bf1b1a).
+
 **Akka.TestKit / Akka.TestKit.Xunit**
 * [TestKit.Xunit: implement the async dispose chain](https://github.com/akkadotnet/akka.net/pull/8545) - `Akka.TestKit.Xunit.TestKit` now implements `InitializeAsync`/`DisposeAsync` directly instead of relying on a derived class's own no-op overrides. **Breaking change**: a derived spec that already declares its own `InitializeAsync`/`DisposeAsync` must mark them `override` and call the base method, or the build fails with `CS0114`. `Dispose(bool)` no longer terminates the `ActorSystem` by itself; the public `Dispose()`/`DisposeAsync()` entry points do, after calling the base chain.
 * [Put the DotNetty batching override under akka.remote](https://github.com/akkadotnet/akka.net/pull/8561) - The TestKit's write-batching override now lands under the key the transport actually reads. Every TestKit-hosted and multi-node test system runs with DotNetty write batching genuinely off for the first time.

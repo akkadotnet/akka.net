@@ -24,7 +24,7 @@ namespace Akka.Hosting.Logging
     /// This struct is used to propagate trace context (TraceId, SpanId, TraceFlags) from the
     /// originating actor thread to the logging infrastructure, solving the problem that
     /// <see cref="Activity.Current"/> doesn't flow across actor mailbox boundaries because
-    /// it uses <see cref="AsyncLocal{T}"/>.
+    /// it uses <see cref="System.Threading.AsyncLocal{T}"/>.
     /// </para>
     /// </remarks>
     internal readonly struct AkkaLogState : IEnumerable<KeyValuePair<string, object?>>

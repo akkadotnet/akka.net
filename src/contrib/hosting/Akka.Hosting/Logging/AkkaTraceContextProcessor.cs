@@ -18,7 +18,7 @@ namespace Akka.Hosting.Logging
     /// <remarks>
     /// <para>
     /// This processor solves the problem that <see cref="Activity.Current"/> doesn't flow
-    /// across actor mailbox boundaries because it uses <see cref="AsyncLocal{T}"/>.
+    /// across actor mailbox boundaries because it uses <see cref="System.Threading.AsyncLocal{T}"/>.
     /// </para>
     /// <para>
     /// When <see cref="LoggerFactoryLogger"/> emits logs, it includes the original

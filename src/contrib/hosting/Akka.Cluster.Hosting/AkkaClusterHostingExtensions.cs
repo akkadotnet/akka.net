@@ -334,7 +334,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Settings for the Distributed Data replicator.
-        ///         The <see cref="ShardingDDataOptions.Role"/> property is not used. The distributed-data
+        ///         The <see cref="DDataOptions.Role"/> property is not used. The distributed-data
         ///         role will be the same as <see cref="ShardOptions.Role"/>.
         ///         Note that there is one Replicator per role and it's not possible
         ///         to have different distributed-data settings for different sharding entity types.
@@ -785,8 +785,8 @@ namespace Akka.Cluster.Hosting
         }
         
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -822,8 +822,8 @@ namespace Akka.Cluster.Hosting
         }
 
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -866,8 +866,8 @@ namespace Akka.Cluster.Hosting
         }
 
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -906,8 +906,8 @@ namespace Akka.Cluster.Hosting
         }
 
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -953,8 +953,8 @@ namespace Akka.Cluster.Hosting
         }
 
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -1013,8 +1013,8 @@ namespace Akka.Cluster.Hosting
         }
 
         /// <summary>
-        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <see cref="typeName"/>
-        ///     and registers the ShardRegion <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     Starts a <see cref="ShardRegion"/> actor for the given entity <paramref name="typeName"/>
+        ///     and registers the ShardRegion <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="builder">
@@ -1081,7 +1081,7 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     Starts a ShardRegionProxy that points to a <see cref="ShardRegion"/> hosted on a different role inside the cluster
-        ///     and registers the <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     and registers the <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>. 
         /// </summary>
         /// <param name="builder">
@@ -1126,7 +1126,7 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     Starts a ShardRegionProxy that points to a <see cref="ShardRegion"/> hosted on a different role inside the cluster
-        ///     and registers the <see cref="IActorRef"/> with <see cref="TKey"/> in the
+        ///     and registers the <see cref="IActorRef"/> with <typeparamref name="TKey"/> in the
         ///     <see cref="ActorRegistry"/> for this <see cref="ActorSystem"/>. 
         /// </summary>
         /// <param name="builder">
@@ -1321,12 +1321,12 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     <para>
-        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <see cref="propsFactory"/>.
+        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <paramref name="propsFactory"/>.
         ///     </para>
         ///
         ///     If <paramref name="createProxyToo"/> is set to <c>true</c> then this method will also create a
         ///     <see cref="ClusterSingletonProxy"/> that will be added to the <see cref="ActorRegistry"/> using the key
-        ///     <see cref="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
+        ///     <typeparamref name="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
         ///     <list type="bullet">
         ///         <item>
         ///             The complete singleton manager actor path name will be
@@ -1374,11 +1374,11 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     <para>
-        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <see cref="propsFactory"/>.
+        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <paramref name="propsFactory"/>.
         ///     </para>
         ///     If <paramref name="createProxyToo"/> is set to <c>true</c> then this method will also create a
         ///     <see cref="ClusterSingletonProxy"/> that will be added to the <see cref="ActorRegistry"/> using the key
-        ///     <see cref="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
+        ///     <typeparamref name="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
         ///     <list type="bullet">
         ///         <item>
         ///             The complete singleton manager actor path name will be
@@ -1459,12 +1459,12 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     <para>
-        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <see cref="actorProps"/>.
+        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <paramref name="actorProps"/>.
         ///     </para>
         ///
         ///     If <paramref name="createProxyToo"/> is set to <c>true</c> then this method will also create a
         ///     <see cref="ClusterSingletonProxy"/> that will be added to the <see cref="ActorRegistry"/> using the key
-        ///     <see cref="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
+        ///     <typeparamref name="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
         ///     <list type="bullet">
         ///         <item>
         ///             The complete singleton manager actor path name will be
@@ -1517,12 +1517,12 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     <para>
-        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <see cref="actorProps"/>.
+        ///         Creates a new <see cref="ClusterSingletonManager"/> to host an actor created via <paramref name="actorProps"/>.
         ///     </para>
         ///
         ///     If <paramref name="createProxyToo"/> is set to <c>true</c> then this method will also create a
         ///     <see cref="ClusterSingletonProxy"/> that will be added to the <see cref="ActorRegistry"/> using the key
-        ///     <see cref="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
+        ///     <typeparamref name="TKey"/>. Otherwise, this method will register nothing with the <see cref="ActorRegistry"/>.
         ///     <list type="bullet">
         ///         <item>
         ///             The complete singleton manager actor path name will be
@@ -1588,7 +1588,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Creates a <see cref="ClusterSingletonProxy"/> and adds it to the <see cref="ActorRegistry"/> using
-        ///         the given <see cref="TKey"/>.
+        ///         the given <typeparamref name="TKey"/>.
         ///     </para>
         /// 
         ///     The complete singleton proxy actor path name will be <c>akka://MyActorSystem/user/singletonName-proxy</c>
@@ -1644,7 +1644,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Creates a <see cref="ClusterSingletonProxy"/> and adds it to the <see cref="ActorRegistry"/> using
-        ///         the given <see cref="TKey"/>.
+        ///         the given <typeparamref name="TKey"/>.
         ///     </para>
         /// 
         ///     The complete singleton proxy actor path name will be <c>akka://MyActorSystem/user/singletonName-proxy</c>
@@ -1736,7 +1736,7 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///     <see cref="TKey"/>.
+        ///     <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="builder">
         ///     The builder instance being configured.
@@ -1778,7 +1778,7 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///     <see cref="TKey"/>.
+        ///     <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="builder">
         ///     The builder instance being configured.
@@ -1812,7 +1812,7 @@ namespace Akka.Cluster.Hosting
 
         /// <summary>
         ///     Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///     <see cref="TKey"/>.
+        ///     <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="builder">
         ///     The builder instance being configured.
@@ -1847,7 +1847,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///         <see cref="TKey"/>.
+        ///         <typeparamref name="TKey"/>.
         ///     </para>
         ///     Instead of using an initial contact list, the <see cref="ClusterClient"/> will leverage
         ///     <see cref="ClusterClientDiscovery"/> to discover the needed initial contacts inside the declared
@@ -1916,7 +1916,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///         <see cref="TKey"/>.
+        ///         <typeparamref name="TKey"/>.
         ///     </para>
         ///     Instead of using an initial contact list, the <see cref="ClusterClient"/> will leverage
         ///     <see cref="ClusterClientDiscovery"/> to discover the needed initial contacts inside the declared
@@ -1946,7 +1946,7 @@ namespace Akka.Cluster.Hosting
         /// <summary>
         ///     <para>
         ///         Creates a <see cref="ClusterClient"/> and adds it to the <see cref="ActorRegistry"/> using the given
-        ///         <see cref="TKey"/>.
+        ///         <typeparamref name="TKey"/>.
         ///     </para>
         ///     Instead of using an initial contact list, the <see cref="ClusterClient"/> will leverage
         ///     <see cref="ClusterClientDiscovery"/> to discover the needed initial contacts inside the declared
