@@ -44,11 +44,9 @@
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
-    <MsExtVersion>[6.0.*,)</MsExtVersion>
+    <MsExtVersion>[10.0.0,)</MsExtVersion>
     <MsExtTestVersion>10.0.5</MsExtTestVersion>
-    <!-- Akka.Hosting packages require a Microsoft.Extensions.* floor of 9.0.0 -->
-    <MsExtHostingVersion>[9.0.0,)</MsExtHostingVersion>
-    <OpenTelemetryVersion>[1.12.0,)</OpenTelemetryVersion>
+    <OpenTelemetryVersion>[1.15.3,)</OpenTelemetryVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
@@ -89,17 +87,6 @@
 
 To see the full set of changes in Akka.NET v1.5.71, [click here](https://github.com/akkadotnet/akka.net/milestone/154?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
-  <!--
-    GHSA-g94r-2vxg-569j (moderate): excessive allocation while parsing W3C propagation headers in
-    OpenTelemetry.Api. First patched in 1.15.3, but OpenTelemetry >= 1.14.0 requires
-    Microsoft.Extensions.* 10.0.0, which would raise the Microsoft.Extensions floor for every
-    Akka.Hosting consumer on the v1.5 maintenance line from 9.0.0 to 10.0.0. Akka.Hosting only uses
-    the OpenTelemetry logging pipeline (BaseProcessor<LogRecord>); it never parses propagation
-    headers. Revisit when the Microsoft.Extensions floor moves to 10.0.0.
-  -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-g94r-2vxg-569j" />
-  </ItemGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
   </ItemGroup>

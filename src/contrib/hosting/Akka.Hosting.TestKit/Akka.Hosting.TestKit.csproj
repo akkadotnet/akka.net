@@ -12,8 +12,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtHostingVersion)" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtHostingVersion)" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
         <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" />
     </ItemGroup>
 
