@@ -240,3 +240,6 @@ launchSettings.json
 
 # Claude worktree management
 .claude-wt/worktrees
+
+# Test certificate for Akka.Remote.Hosting.Tests (the Akka.Remote.Tests ones are force-added)
+!src/contrib/hosting/Akka.Remote.Hosting.Tests/Resources/akka-validcert.pfx
