@@ -69,7 +69,7 @@ public class ShardedDaemonProcessProxySpecs: Akka.Hosting.TestKit.TestKit
         await AwaitAssertAsync(() =>
         {
             Assert.Equal(1, Cluster.Get(Sys).State.Members.Count(x => x.Status == MemberStatus.Up));
-        });
+        }, TimeSpan.FromSeconds(30));
         
         // <PushDaemon>
         var host = await Host.Services.GetRequiredService<ActorRegistry>().GetAsync<ShardedDaemonRouter>();
@@ -90,12 +90,14 @@ public class ShardedDaemonProcessProxySpecs: Akka.Hosting.TestKit.TestKit
             proxySystem = new ProxySystem(Output, Sys);
             await proxySystem.InitializeAsync();
             
-            // validate that we have a 2 node cluster with both members marked as up
+            // validate that we have a 2 node cluster with both members marked as up.
+            // Joining plus gossip convergence to Up regularly takes longer than the TestKit's
+            // default 3 s assertion budget on CI (akkadotnet/Akka.Hosting#663), so give it room.
             await AwaitAssertAsync(() =>
             {
                 Assert.Equal(2, Cluster.Get(Sys).State.Members.Count(x => x.Status == MemberStatus.Up));
                 Assert.Equal(2, Cluster.Get(proxySystem.Sys).State.Members.Count(x => x.Status == MemberStatus.Up));
-            });
+            }, TimeSpan.FromSeconds(30));
             
             var proxyRouter = await proxySystem.Host.Services
                 .GetRequiredService<ActorRegistry>().GetAsync<ShardedDaemonRouter>();
@@ -109,7 +111,8 @@ public class ShardedDaemonProcessProxySpecs: Akka.Hosting.TestKit.TestKit
         }
         finally
         {
-            proxySystem?.DisposeAsync();
+            if (proxySystem is not null)
+                await proxySystem.DisposeAsync();
         }
         // </PushDaemonProxy>
     }
