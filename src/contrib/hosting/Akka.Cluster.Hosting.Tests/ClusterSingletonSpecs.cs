@@ -279,7 +279,9 @@ public class ClusterSingletonSpecs
         // act
         
         // verify round-trip to the singleton proxy and back
-        var respond = await singletonProxy.Ask<string>("hit", 3.Seconds());
+        // two nodes: the proxy host has to join the singleton host over seed nodes, reach Up, and
+        // the proxy has to locate the singleton before this round-trip can complete
+        var respond = await singletonProxy.Ask<string>("hit", 30.Seconds());
 
         // assert
         Assert.Equal("hit", respond);
