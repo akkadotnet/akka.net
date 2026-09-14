@@ -110,7 +110,7 @@ public class ShardedDaemonProcessSpecs: Akka.Hosting.TestKit.TestKit
     {
         _cluster = Cluster.Get(Sys);
         
-        await AwaitAssertAsync(() => Assert.Equal(MemberStatus.Up, _cluster.SelfMember.Status), 3.Seconds());
+        await AwaitAssertAsync(() => Assert.Equal(MemberStatus.Up, _cluster.SelfMember.Status), 30.Seconds());
     }
 
     [Fact]

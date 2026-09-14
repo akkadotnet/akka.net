@@ -41,7 +41,8 @@ public class ClusterSingletonSpecs
         // act
         
         // verify round-trip to the singleton proxy and back
-        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(3));
+        // the proxy buffers until the singleton exists, which needs the node to be Up and Oldest first
+        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(30));
 
         // assert
         Assert.Equal("hit", respond);
@@ -82,7 +83,9 @@ public class ClusterSingletonSpecs
     private static async Task AssertSingletonSelectionAsync(ActorSelection singletonSelector)
     {
         var startTime = DateTime.UtcNow;
-        var timeout = TimeSpan.FromSeconds(3);
+        // The node has to join itself, be promoted to Up by the leader, become Oldest and only then
+        // start the singleton. On a busy CI agent that regularly takes more than a few seconds.
+        var timeout = TimeSpan.FromSeconds(30);
         await Test();
         return;
 
@@ -93,13 +96,14 @@ public class ClusterSingletonSpecs
             {
                 try
                 {
-                    var identify = await singletonSelector.ResolveOne(100.Milliseconds());
+                    var identify = await singletonSelector.ResolveOne(250.Milliseconds());
                     Assert.NotEqual(ActorRefs.Nobody, identify);
                     return;
                 }
                 catch (Exception)
                 {
-                    // suppress
+                    // not there yet; back off briefly and try again
+                    await Task.Delay(100.Milliseconds());
                 }
             }
             
@@ -222,7 +226,8 @@ public class ClusterSingletonSpecs
         // act
         
         // verify round-trip to the singleton proxy and back
-        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(3));
+        // the proxy buffers until the singleton exists, which needs the node to be Up and Oldest first
+        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(30));
 
         // assert
         Assert.Equal("hit", respond);

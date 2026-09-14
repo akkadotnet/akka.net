@@ -75,7 +75,8 @@ public class ClusterSingletonWithDiSpecs : Akka.Hosting.TestKit.TestKit
         // act
         
         // verify round-trip to the singleton proxy and back
-        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(3));
+        // the proxy buffers until the singleton exists, which needs the node to be Up and Oldest first
+        var respond = await singletonProxy.Ask<string>("hit", TimeSpan.FromSeconds(30));
 
         // assert
         Assert.Equal(thing.ThingId, respond);

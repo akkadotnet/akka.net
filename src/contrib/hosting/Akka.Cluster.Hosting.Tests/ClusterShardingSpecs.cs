@@ -102,9 +102,10 @@ public class ClusterShardingSpecs
         var shardRegion = actorRegistry.Get<MyEntityActor>();
         
         // act
-        var id = await shardRegion.Ask<string>(new MyEntityActor.GetId("foo"), TimeSpan.FromSeconds(3));
+        // the region buffers until the coordinator singleton is up, which needs a formed cluster first
+        var id = await shardRegion.Ask<string>(new MyEntityActor.GetId("foo"), TimeSpan.FromSeconds(30));
         var sourceRef =
-            await shardRegion.Ask<IActorRef>(new MyEntityActor.GetSourceRef("foo"), TimeSpan.FromSeconds(3));
+            await shardRegion.Ask<IActorRef>(new MyEntityActor.GetSourceRef("foo"), TimeSpan.FromSeconds(30));
 
         // assert
         Assert.Equal("foo", id);
