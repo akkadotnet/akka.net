@@ -8,6 +8,7 @@
   "failOnNoProjects": false,
   "skip": [
     "**/.Tests.MultiNode.csproj",
+    "**/Akka.TestKit.TUnit.Tests.csproj",
     "src/examples/**"
   ],
   "target": [

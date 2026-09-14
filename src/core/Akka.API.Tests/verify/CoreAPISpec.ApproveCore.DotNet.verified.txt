@@ -30,6 +30,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit.TUnit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit.Xunit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit.Xunit2")]

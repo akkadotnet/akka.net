@@ -102,6 +102,24 @@ jobs:
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: "tunit_tests_windows"
+      displayName: "TUnit Tests (Windows)"
+      vmImage: "windows-latest"
+      command: "dotnet run --project src/contrib/testkits/Akka.TestKit.TUnit.Tests/Akka.TestKit.TUnit.Tests.csproj -c Release --no-build --no-launch-profile -- --progress off --report-trx --results-directory TestResults/tunit"
+      outputDirectory: "TestResults/tunit"
+      artifactName: "tunit_tests_windows-$(Build.BuildId)"
+
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: "tunit_tests_linux"
+      displayName: "TUnit Tests (Linux)"
+      vmImage: "ubuntu-latest"
+      command: "dotnet run --project src/contrib/testkits/Akka.TestKit.TUnit.Tests/Akka.TestKit.TUnit.Tests.csproj -c Release --no-build --no-launch-profile -- --progress off --report-trx --results-directory TestResults/tunit"
+      outputDirectory: "TestResults/tunit"
+      artifactName: "tunit_tests_linux-$(Build.BuildId)"
+
   - template: azure-pipeline.mntr-template.yaml
     parameters:
       name: "net_mntr_windows"

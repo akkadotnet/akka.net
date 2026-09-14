@@ -3,6 +3,8 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <!-- This is an xUnit API-approval project; TUnit analyzers arrive transitively from the adapter under approval. -->
+    <NoWarn>$(NoWarn);TUnit0055</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +13,7 @@
     <ProjectReference Include="..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.TUnit\Akka.TestKit.TUnit.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
     <ProjectReference Include="..\Akka.Discovery\Akka.Discovery.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />

@@ -10,6 +10,34 @@ As with any piece of software, automated tests are a very important part of the 
 
 Akka.Net comes with a dedicated module `Akka.TestKit` for supporting tests at different levels.
 
+## Test Framework Adapters
+
+Install the adapter for your test framework and derive your test class from its `TestKit`:
+
+* `Akka.TestKit.TUnit` for [TUnit](https://tunit.dev/)
+* `Akka.TestKit.Xunit` for xUnit v3
+* `Akka.TestKit.Xunit2` for xUnit v2
+
+The TUnit adapter captures the current test output, preserves the implicit actor sender across asynchronous continuations, and shuts down its actor system when TUnit disposes the test instance.
+
+```csharp
+using Akka.Actor;
+using TUnit.Core;
+
+public sealed class MyActorSpec : Akka.TestKit.TUnit.TestKit
+{
+    [Test]
+    public async Task Should_receive_a_message()
+    {
+        TestActor.Tell("hello", ActorRefs.NoSender);
+
+        await ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
+    }
+}
+```
+
+Use the asynchronous TestKit APIs in asynchronous tests so the test runner is never blocked.
+
 ## Asynchronous Testing: TestKit
 
 Testkit allows you to test your actors in a controlled but realistic environment. The definition of the environment depends of course very much on the problem at hand and the level at which you intend to test, ranging from simple checks to full system tests.

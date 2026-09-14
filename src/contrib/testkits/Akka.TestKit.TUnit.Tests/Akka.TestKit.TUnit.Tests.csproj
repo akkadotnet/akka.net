@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <TUnitImplicitUsings>false</TUnitImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" Version="$(TUnitVersion)" />
+    <ProjectReference Include="../Akka.TestKit.TUnit/Akka.TestKit.TUnit.csproj" />
+  </ItemGroup>
+
+</Project>
