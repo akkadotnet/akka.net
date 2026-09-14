@@ -76,14 +76,15 @@ public class CustomLoggerEnd2EndSpecs : TestKit.TestKit
 
         Sys.Log.Log(level, formatStr, args);
 
-        // formatting the event must not throw, regardless of the placeholder style used
-        var logEvent = await ExpectMsgAsync<LogEvent>();
+        // The log level is Debug, so unrelated system events (actor lifecycle, logger start-up)
+        // can land on the EventStream before ours does. Fish for the event this test emitted
+        // instead of asserting on whichever LogEvent arrives first.
+        // Formatting the event must not throw, regardless of the placeholder style used.
+        var logEvent = await FishForMessageAsync<LogEvent>(e => e.ToString().Contains("test case"));
         logEvent.LogLevel().Should().Be(level);
-        logEvent.ToString().Should().NotBeEmpty();
 
         // ...and the custom logger must have received and formatted the same event
-        var captured = await ExpectMsgAsync<CapturedLogEntry>();
+        var captured = await FishForMessageAsync<CapturedLogEntry>(e => e.Message.Contains("test case"));
         captured.Level.Should().Be(level);
-        captured.Message.Should().NotBeEmpty();
     }
 }
