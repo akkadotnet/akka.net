@@ -1,0 +1,9 @@
+﻿LogLevel: Information
+Message: [LEVEL][DateTime][Thread 0001][ActorSystem(test)] User 99 logged in
+State:
+  [{OriginalFormat}] = User {0} logged in
+  [0] = 99
+  [ActorPath] = akka://test/...
+  [LogSource] = LogSource
+  [Thread] = 1
+  [Timestamp] = DateTime

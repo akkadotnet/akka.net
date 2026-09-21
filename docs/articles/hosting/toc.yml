@@ -1,0 +1,14 @@
+- name: Overview
+  href: index.md
+- name: The AkkaConfigurationBuilder API
+  href: configuration-builder.md
+- name: Dependency Injection Outside and Inside Akka.NET
+  href: dependency-injection.md
+- name: Microsoft.Extensions.Configuration Integration
+  href: configuration.md
+- name: Microsoft.Extensions.Logging Integration
+  href: logging.md
+- name: OpenTelemetry Trace Correlation
+  href: opentelemetry.md
+- name: Microsoft.Extensions.Diagnostics.HealthChecks Integration
+  href: health-checks.md
