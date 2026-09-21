@@ -1,14 +1,45 @@
-#### 1.6.0 August 15th, 2025 ####
+#### 1.6.0-beta1 September 21st, 2026 ####
 
-**Placeholder for nightly build**
+Akka.NET 1.6 is the biggest release in the project's history. It rebuilds the two hottest paths in any distributed system — remoting and serialization — around a modern, allocation-light, source-generated foundation, and modernizes the underlying Akka.IO transport to match. This beta is the first public preview of that work.
 
-* Akka.Hosting: Akka.Hosting now ships from this repository. The `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit` and `Akka.Hosting.TestKit.Xunit2` packages live under `src/contrib/hosting` and share the Akka.NET version and release cadence (forward-port of [#8591](https://github.com/akkadotnet/akka.net/pull/8591)). No package IDs, namespaces or public APIs changed; bump `Akka.Hosting.*` to the same version as `Akka.*`. Hosting-only hotfix versions no longer exist. Documentation moved to [getakka.net/articles/hosting](https://getakka.net/articles/hosting/index.html); the [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository will be archived and keeps the history for versions up to 1.5.71. **Breaking on 1.6**: the Hosting packages target `net10.0` only, matching the rest of Akka.NET 1.6.
-* Build: Microsoft.Extensions minimum version moves to 10.0 for `Akka`, `Akka.DependencyInjection` and all `Akka.Hosting.*` packages (previously 6.0 for the core packages and 9.0 for Akka.Hosting). Akka.Hosting's `OpenTelemetry` dependency moves to 1.15.3 or later, which clears [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j).
-* Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
+**Heads-up for 1.6:** all `Akka.*` packages now target **`net10.0` only**, and Akka.Hosting ships from this repository (see below).
+
+**Artery-style TCP remoting (new high-throughput path)**
+
+* Akka.Remote gains a new Artery-style TCP remoting stack beside classic remoting. `ArteryRemoting` is selected via configuration and uses Akka.Streams `Tcp` as its substrate, with `AKKA` TCP framing (magic + stream-id header, 4-byte little-endian frame lengths) and a binary envelope codec built on the `SerializerV2` payload contract.
+* The Artery path adds an association registry with UID-scoped state, a handshake carrying address and UID, a dedicated control stream (handshake, liveness, quarantine, system-message ACK/NACK), and reliable system-message delivery that is independent of user traffic.
+* Classic remoting remains fully available and wire-compatible with its existing protocol. Artery is a new protocol path, not a replacement, and does not need to be wire-compatible with classic remoting.
+* System / address UIDs are widened from 32-bit to 64-bit as an Artery prerequisite, removing a scaling ceiling for large or long-lived clusters.
+
+**SerializerV2 — the new canonical serialization abstraction**
+
+* A new `SerializerV2` base class in core Akka makes serialization codec-agnostic and `IBufferWriter<byte>` / `ReadOnlySequence<byte>`-based, removing the allocation-per-call `byte[]` round-trips that forced churn on every serialize/deserialize path.
+* `Serialization` is now V2-first internally. Legacy `Serializer` / `SerializerWithStringManifest` implementations are auto-wrapped via `SerializerV1Adapter` behind the scenes, so existing V1 serializers and HOCON / `SerializationSetup` registrations keep working unchanged.
+* Classic remoting, Akka.Persistence (events and snapshots), and Akka.Delivery integrate with V2 while preserving existing wire, stored-event, and snapshot compatibility. Public lookup APIs keep returning `Serializer` for compatibility.
+
+**Source-generated MessagePack serializers for internal messages**
+
+* The hand-written protobuf serializers that run on the hottest steady-state cluster paths — gossip, deltas, heartbeats, delivery flow-control, shard routing — move to source-generated MessagePack V2 serializers (`Akka.Serialization.V2`, MessagePack-CSharp 3.1.7). This cuts allocations and CPU on those paths.
+* The migration is rolling-upgrade safe and reversible: a mixed cluster must never observe serialization mismatches. Performance improvement is the acceptance gate for the migration, not an afterthought.
+* Internal serializer customers — Akka.Cluster, Akka.DistributedData, Akka.Delivery, Akka.Cluster.Sharding — migrate in place through the new V2 buffer-first path.
+
+**Modernized Akka.IO transport with TLS**
+
+* Akka.IO's TCP stack is modernized around an `IStreamProvider` abstraction backed by `Stream` + `Pipe` (replacing `SocketAsyncEventArgs`), which in turn unlocks native TLS support.
+* TLS is now a simple `TlsStreamProvider` that wraps `SslStream` around the network stream, with server-side handshake in the incoming-connection path. All existing DotNetty TLS configuration keys (`akka.remote.dot-netty.tcp.ssl.*`) keep working — no config changes required.
+
+**Akka.Hosting now ships from this repository**
+
+* The `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit` and `Akka.Hosting.TestKit.Xunit2` packages now live in this repository under `src/contrib/hosting` and share the Akka.NET version and release cadence (forward-port of [#8591](https://github.com/akkadotnet/akka.net/pull/8591)). No package IDs, namespaces or public APIs changed; bump `Akka.Hosting.*` to the same version as `Akka.*`. Hosting-only hotfix versions no longer exist. The [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository keeps history up to 1.5.71 and will be archived. **Breaking on 1.6:** the Hosting packages target `net10.0` only, matching the rest of Akka.NET 1.6.
+* Build: Microsoft.Extensions minimum version moves to 10.0 for `Akka`, `Akka.DependencyInjection` and all `Akka.Hosting.*` packages (previously 6.0 for the core packages and 9.0 for Akka.Hosting). Akka.Hosting's `OpenTelemetry` dependency moves to 1.15.3 or later, clearing [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j).
+
+**Other highlights**
+
+* Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger.
 * Akka.Streams: Add cancellation-aware `Source.Queue` offers so backpressured pending offers can be canceled without later emitting the canceled element.
 * Akka.Streams: Fixed `Source.From(IAsyncEnumerable<T>)` cleanup so cancellation waits for any in-flight `MoveNextAsync()` before disposing the async enumerator and its cancellation token source.
-* Build: Bump `MessagePack` to 3.1.7 to address [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x) (LZ4 decompression out-of-bounds read)
-* [Core: Fix consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/issues/8031) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031) (forward-port of [#8294](https://github.com/akkadotnet/akka.net/pull/8294)): When two virtual nodes collided in the 32-bit consistent-hash ring (increasingly likely at high routee counts, e.g. when the ring was rebuilt after a node was downed), `ConsistentHash.Create` threw `"An entry with the same key already exists"`. The consistent-hashing router swallowed the exception and returned `NoRoutee` for **every** subsequent message until a manual restart. The ring now re-hashes and linear-probes to the next free slot on a collision instead of throwing. This keeps the hash distribution unchanged and produces a byte-identical ring to prior versions whenever no collision occurs (safe for rolling upgrades), and also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
+* Build: Bump `MessagePack` to 3.1.7 to address [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x) (LZ4 decompression out-of-bounds read).
+* [Core: Fix consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/issues/8031) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031) (forward-port of [#8294](https://github.com/akkadotnet/akka.net/pull/8294)). The ring now re-hashes and linear-probes to the next free slot on a hash collision instead of throwing, keeping the hash distribution unchanged and producing a byte-identical ring whenever no collision occurs (safe for rolling upgrades). Also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
 
 #### 1.5.47 August 12th, 2025 ####
 
