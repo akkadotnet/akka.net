@@ -88,6 +88,11 @@ public sealed record SubmitOrder(
 (`SubmitOrder` and `IOrderBenchmarkProtocol` are trimmed fixtures from
 `src/benchmark/Akka.Benchmarks/Serialization/GeneratedMessagePackSerializerBenchmarks.cs`.)
 
+> [!NOTE]
+> On positional records, `property:` is required: `[property: AkkaField(n)]` annotates the
+> generated property. Without it, C# targets the constructor parameter and rejects the attribute.
+> See [Records and Init-only Properties](#records-and-init-only-properties) for an example.
+
 ### The Serializer Class
 
 Declare a `sealed partial class` that derives from `AkkaSerializer`. Annotate it with
@@ -212,6 +217,23 @@ public sealed record ShipmentMessage(
     [property: AkkaField(1)] string OrderId,
     [property: AkkaField(2)] ShippingAddress Address) : IGeneratedTestProtocol;
 ```
+
+> [!NOTE]
+> **Record attribute targets:** Use `[property: AkkaField(n)]` on positional parameters of
+> record classes and record structs. Without `property:`, C# targets the constructor parameter
+> and reports that `AkkaField` is only valid on properties. This is a C# compiler error, not a
+> source-generator diagnostic.
+
+For example, a strongly typed session identity can retain its positional declaration, conversion
+operator, and `ToString()` override:
+
+[!code-csharp[SessionId](../../../src/core/Akka.Serialization.V2.Tests/FieldlessAndStructFieldSpec.cs?name=SessionId)]
+
+`[AkkaSerializable]` opts this nested value type into the generator. The separate `[Serializable]`
+attribute can remain, but does not opt a type into source-generated serialization on its own.
+
+Ordinary class primary constructors do not generate properties. Declare a property explicitly,
+initialize it from the constructor parameter, and apply `[AkkaField(n)]` to that property.
 
 It also works for a plain class with `init`-only properties and no declared constructor. Every
 `[AkkaField]` property is assigned through an object initializer:
