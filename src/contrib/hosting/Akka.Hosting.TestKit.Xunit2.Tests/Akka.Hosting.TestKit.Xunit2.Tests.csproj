@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\xunitSettings.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Hosting.TestKit.Xunit2\Akka.Hosting.TestKit.Xunit2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Hosting.TestKit.Tests\DiPropsFailTest.cs">
+      <Link>DiPropsFailTest.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Hosting.TestKit.Tests\HostingSpecSpec.cs">
+      <Link>HostingSpecSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Hosting.TestKit.Tests\LoggerSpec.cs">
+      <Link>LoggerSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Hosting.TestKit.Tests\NoImplicitSenderSpec.cs">
+      <Link>NoImplicitSenderSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Hosting.TestKit.Tests\TestActorStartupDeadlockSpec.cs">
+      <Link>TestActorStartupDeadlockSpec.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtVersion)" />
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)" />
+  </ItemGroup>
+
+</Project>

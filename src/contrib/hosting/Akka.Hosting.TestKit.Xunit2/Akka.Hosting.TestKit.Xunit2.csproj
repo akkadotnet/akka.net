@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>TestKit for writing tests for Akka.NET using Akka.Hosting and xUnit v2.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;testkit;xunit</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+        <IsPackable>true</IsPackable>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
+        <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+        <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\TestKitLoggerFactoryLogger.cs">
+        <Link>Internals\TestKitLoggerFactoryLogger.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\XUnitLogger.cs">
+        <Link>Internals\XUnitLogger.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\Internals\XUnitLoggerProvider.cs">
+        <Link>Internals\XUnitLoggerProvider.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\PersistenceTestKit.cs">
+        <Link>PersistenceTestKit.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Hosting.TestKit\TestKit.Shared.cs">
+        <Link>TestKit.Shared.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>
