@@ -60,6 +60,7 @@
         "overridable",
         "parallelizable",
         "partitioner",
+        "parseable",
         "Passivation",
         "Petabridge",
         "pluggable",

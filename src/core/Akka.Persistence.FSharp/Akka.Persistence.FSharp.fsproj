@@ -17,4 +17,12 @@
         <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- Pin the SDK-implicit FSharp.Core so restore doesn't depend on which SDK the
+             build agent has installed (implicit-version drift causes NU1605 downgrade errors
+             against Akka.FSharp, which pins $(FsharpVersion)). Use Update (not Include) so we
+             don't duplicate the implicit reference (NU1504). -->
+        <PackageReference Update="FSharp.Core" Version="$(FsharpVersion)"/>
+    </ItemGroup>
+
 </Project>

@@ -95,7 +95,7 @@ Generally speaking, unreachable nodes are usually caused by environment problems
 
 #### Use Akka.Hosting
 
-When you use [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting), this ensures that your `ActorSystem` is managed with the best lifecycle management practices for Akka.NET. Part of this includes making sure that when an Akka.NET process is shutdown it cleanly leaves the cluster first before terminating. One common reason for reachability problems is that during deployments users simply abort the Akka.NET process without letting the `ActorSystem` gracefully terminate, which leaves behind an unreachable node. Akka.Hosting eliminates this problem.
+When you use [Akka.Hosting](xref:akka-hosting), this ensures that your `ActorSystem` is managed with the best lifecycle management practices for Akka.NET. Part of this includes making sure that when an Akka.NET process is shutdown it cleanly leaves the cluster first before terminating. One common reason for reachability problems is that during deployments users simply abort the Akka.NET process without letting the `ActorSystem` gracefully terminate, which leaves behind an unreachable node. Akka.Hosting eliminates this problem.
 
 #### Increase Failure Detector Thresholds
 
@@ -120,7 +120,7 @@ Please create an issue in our GitHub at [https://github.com/akkadotnet/akka.net]
 
 This typically means that one of the optional serializers built on top of Akka.Cluster is not registered on this node, but this node is still receiving messages from other nodes who are using it. [`DistributedPubSub`](xref:distributed-publish-subscribe) is the most likely culprit when this occurs.
 
-To fix this issue, either use [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) or manually register the serializers in your HOCON when you start your `ActorSystem`:
+To fix this issue, either use [Akka.Hosting](xref:akka-hosting) or manually register the serializers in your HOCON when you start your `ActorSystem`:
 
 ```csharp
 Config myHocon = ConfigurationFactory.ParseString("{hocon}");
