@@ -444,13 +444,16 @@ namespace Akka.Actor.Internal
         {
             try
             {
-                Type providerType = Type.GetType(_settings.ProviderClass);
-                if (providerType is null)
-                    throw new ConfigurationException(
-                        $"Could not resolve provider type [{_settings.ProviderClass}]. Ensure the type name is fully qualified.");
-                var provider =
-                    (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-                _provider = provider;
+                // The three built-in providers are resolved from compile-time constant type names so
+                // the trimmer / Native AOT compiler can see which type each call site loads and keep it.
+                // Anything else falls back to the fully dynamic path below.
+                _provider = _settings.ProviderSelectionType switch
+                {
+                    ProviderSelection.Local => new LocalActorRefProvider(_name, _settings, _eventStream),
+                    ProviderSelection.Remote => CreateRemoteProvider(_name, _settings, _eventStream),
+                    ProviderSelection.Cluster => CreateClusterProvider(_name, _settings, _eventStream),
+                    _ => CreateCustomProvider(_settings.ProviderClass, _name, _settings, _eventStream)
+                };
             }
             catch (Exception)
             {
@@ -461,6 +464,44 @@ namespace Akka.Actor.Internal
                 }
                 throw;
             }
+        }
+
+        /// <summary>
+        /// The <see cref="Type.GetType(string)"/> call and the <see cref="Activator.CreateInstance(Type, object[])"/>
+        /// call have to live in the same method with the constant inlined: that is what lets the trimmer
+        /// resolve the assembly-qualified name statically and preserve the type plus its constructor.
+        /// </summary>
+        private static IActorRefProvider CreateRemoteProvider(string name, Settings settings, EventStream eventStream)
+        {
+            var providerType = Type.GetType(ProviderSelection.RemoteActorRefProvider);
+            if (providerType is null)
+                throw new ConfigurationException(
+                    "akka.actor.provider = remote, but Akka.Remote is not referenced by this application.");
+
+            return (IActorRefProvider)Activator.CreateInstance(providerType, name, settings, eventStream);
+        }
+
+        /// <summary>
+        /// See the remark on <see cref="CreateRemoteProvider"/> - the constant must be inlined here.
+        /// </summary>
+        private static IActorRefProvider CreateClusterProvider(string name, Settings settings, EventStream eventStream)
+        {
+            var providerType = Type.GetType(ProviderSelection.ClusterActorRefProvider);
+            if (providerType is null)
+                throw new ConfigurationException(
+                    "akka.actor.provider = cluster, but Akka.Cluster is not referenced by this application.");
+
+            return (IActorRefProvider)Activator.CreateInstance(providerType, name, settings, eventStream);
+        }
+
+        private static IActorRefProvider CreateCustomProvider(string providerClass, string name, Settings settings, EventStream eventStream)
+        {
+            var providerType = Type.GetType(providerClass);
+            if (providerType is null)
+                throw new ConfigurationException(
+                    $"Could not resolve provider type [{providerClass}]. Ensure the type name is fully qualified.");
+
+            return (IActorRefProvider)Activator.CreateInstance(providerType, name, settings, eventStream);
         }
 
         private void ConfigureLoggers()
