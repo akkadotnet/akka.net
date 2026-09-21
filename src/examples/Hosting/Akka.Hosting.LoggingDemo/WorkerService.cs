@@ -47,9 +47,14 @@ public class WorkerService: IHostedService
                 }
             }
         }
-        catch
+        catch (OperationCanceledException) when (_cancellationTokenSource.IsCancellationRequested)
         {
-            // no-op
+            // StopAsync cancelled the token: this is the normal way out of the loop.
+            _logger.LogInformation("Echo loop stopped because the service is shutting down");
+        }
+        finally
+        {
+            periodicTimer.Dispose();
         }
     }
 }

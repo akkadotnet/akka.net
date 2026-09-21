@@ -176,12 +176,8 @@ public class ReceiveTests : TestKit
     {
         var probe = CreateTestProbe("probe");
         probe.Ref.Tell(3, TestActor);
-        try
-        {
-            await probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxMessages: 0);
-            Assert.Fail("we should never get here");
-        }
-        catch (XunitException) { }
+        await Awaiting(() => probe.WaitForRadioSilenceAsync(max: TimeSpan.FromMilliseconds(0), maxMessages: 0))
+            .Should().ThrowAsync<XunitException>();
     }
 
     [Fact]

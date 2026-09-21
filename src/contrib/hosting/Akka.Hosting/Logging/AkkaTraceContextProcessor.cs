@@ -6,6 +6,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 
@@ -109,60 +110,62 @@ namespace Akka.Hosting.Logging
             return null;
         }
 
+        // LogRecord's TraceId, SpanId and TraceFlags setters are internal, so they are set through
+        // reflection. The property lookups happen once. If a SetValue call ever fails (an OpenTelemetry
+        // release changing those setters), we stop trying for the rest of the process rather than pay
+        // for a failing reflection call on every log record. The trace context attributes remain in
+        // the log state either way, so nothing is lost except the strongly typed fields.
+        private static readonly PropertyInfo? TraceIdProperty = typeof(LogRecord).GetProperty("TraceId");
+        private static readonly PropertyInfo? SpanIdProperty = typeof(LogRecord).GetProperty("SpanId");
+        private static readonly PropertyInfo? TraceFlagsProperty = typeof(LogRecord).GetProperty("TraceFlags");
+        private static volatile bool _traceContextSettersUnavailable;
+
         private static void SetTraceContext(LogRecord record, ActivityTraceId traceId, ActivitySpanId spanId, ActivityTraceFlags traceFlags)
         {
-            // LogRecord has internal setters, so we need to use reflection
+            if (_traceContextSettersUnavailable)
+                return;
+
             try
             {
-                var recordType = typeof(LogRecord);
-
-                var traceIdProp = recordType.GetProperty("TraceId");
-                var spanIdProp = recordType.GetProperty("SpanId");
-                var traceFlagsProp = recordType.GetProperty("TraceFlags");
-
-                traceIdProp?.SetValue(record, traceId);
-                spanIdProp?.SetValue(record, spanId);
-                traceFlagsProp?.SetValue(record, traceFlags);
+                TraceIdProperty?.SetValue(record, traceId);
+                SpanIdProperty?.SetValue(record, spanId);
+                TraceFlagsProperty?.SetValue(record, traceFlags);
             }
-            catch
+            catch (Exception ex) when (ex is TargetInvocationException or TargetException or ArgumentException or MethodAccessException)
             {
-                // Silently ignore reflection failures
-                // The trace context attributes are still present in the log state
+                _traceContextSettersUnavailable = true;
             }
         }
 
         private static ActivityTraceId? TryParseTraceId(string traceIdStr)
         {
-            try
-            {
-                // ActivityTraceId expects a 32 character hex string
-                if (traceIdStr.Length == 32)
-                {
-                    return ActivityTraceId.CreateFromString(traceIdStr.AsSpan());
-                }
-            }
-            catch
-            {
-                // Ignore parse failures
-            }
-            return null;
+            // ActivityTraceId.CreateFromString requires exactly 32 lowercase hex characters and throws
+            // on anything else, so validate first instead of catching.
+            return IsLowercaseHex(traceIdStr.AsSpan(), 32)
+                ? ActivityTraceId.CreateFromString(traceIdStr.AsSpan())
+                : null;
         }
 
         private static ActivitySpanId? TryParseSpanId(string spanIdStr)
         {
-            try
+            // ActivitySpanId.CreateFromString requires exactly 16 lowercase hex characters.
+            return IsLowercaseHex(spanIdStr.AsSpan(), 16)
+                ? ActivitySpanId.CreateFromString(spanIdStr.AsSpan())
+                : null;
+        }
+
+        private static bool IsLowercaseHex(ReadOnlySpan<char> value, int expectedLength)
+        {
+            if (value.Length != expectedLength)
+                return false;
+
+            foreach (var c in value)
             {
-                // ActivitySpanId expects a 16 character hex string
-                if (spanIdStr.Length == 16)
-                {
-                    return ActivitySpanId.CreateFromString(spanIdStr.AsSpan());
-                }
+                if (!(c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+                    return false;
             }
-            catch
-            {
-                // Ignore parse failures
-            }
-            return null;
+
+            return true;
         }
     }
 }

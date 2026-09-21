@@ -420,9 +420,13 @@ namespace Akka.Hosting.TestKit
                         await _host.StopAsync(cts.Token);
                     }
                 }
-                catch
+                catch (Exception shutdownException)
                 {
-                    // no-op
+                    // A failed or timed-out shutdown must not mask the test's own outcome, and a
+                    // teardown problem is not a test failure. Report it to the test output so it
+                    // is visible when someone is chasing a leaked ActorSystem or a hung host.
+                    Output?.WriteLine(
+                        $"[{nameof(TestKit)}] Shutting down the ActorSystem/host in {nameof(DisposeAsyncCore)} failed: {shutdownException}");
                 }
                 finally
                 {
