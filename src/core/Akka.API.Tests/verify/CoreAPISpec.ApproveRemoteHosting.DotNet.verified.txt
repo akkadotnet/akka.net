@@ -1,0 +1,71 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+namespace Akka.Remote.Hosting
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static AkkaRemoteHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] string hostname = null, System.Nullable<int> port = null, [System.Runtime.CompilerServices.NullableAttribute(2)] string publicHostname = null, System.Nullable<int> publicPort = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.RemoteOptions> configure) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Remote.Hosting.RemoteOptions options) { }
+    }
+    public class DeadlineFailureDetectorOptions
+    {
+        public DeadlineFailureDetectorOptions() { }
+        public System.Nullable<System.TimeSpan> AcceptableHeartbeatPause { get; set; }
+        public System.Nullable<System.TimeSpan> HeartbeatInterval { get; set; }
+        public System.Text.StringBuilder ToHocon() { }
+    }
+    public class PhiAccrualFailureDetectorOptions
+    {
+        public PhiAccrualFailureDetectorOptions() { }
+        public System.Nullable<System.TimeSpan> AcceptableHeartbeatPause { get; set; }
+        public System.Nullable<System.TimeSpan> ExpectedResponseAfter { get; set; }
+        public System.Nullable<System.TimeSpan> HeartbeatInterval { get; set; }
+        public System.Nullable<int> MaxSampleSize { get; set; }
+        public System.Nullable<System.TimeSpan> MinStandardDeviation { get; set; }
+        public System.Nullable<double> Threshold { get; set; }
+        public System.Nullable<System.TimeSpan> UnreachableNodesReaperInterval { get; set; }
+        public System.Text.StringBuilder ToHocon() { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class RemoteOptions
+    {
+        public RemoteOptions() { }
+        public System.Nullable<bool> EnableSsl { get; set; }
+        public string HostName { get; set; }
+        public System.Nullable<long> MaxFrameSize { get; set; }
+        public System.Nullable<int> Port { get; set; }
+        public string PublicHostName { get; set; }
+        public System.Nullable<int> PublicPort { get; set; }
+        public System.Nullable<long> ReceiveBufferSize { get; set; }
+        public System.Nullable<long> SendBufferSize { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.Remote.Hosting.SslOptions Ssl { get; set; }
+        public Akka.Remote.Hosting.DeadlineFailureDetectorOptions TransportFailureDetector { get; set; }
+        public Akka.Remote.Hosting.PhiAccrualFailureDetectorOptions WatchFailureDetector { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class SslCertificateOptions
+    {
+        public SslCertificateOptions() { }
+        public string Password { get; set; }
+        public string Path { get; set; }
+        public string StoreLocation { get; set; }
+        public string StoreName { get; set; }
+        public string Thumbprint { get; set; }
+        public System.Nullable<bool> UseThumbprintOverFile { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class SslOptions
+    {
+        public SslOptions() { }
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.Remote.Hosting.SslCertificateOptions CertificateOptions { get; set; }
+        public Akka.Remote.Transport.DotNetty.CertificateValidationCallback CustomValidator { get; set; }
+        public System.Nullable<bool> RequireMutualAuthentication { get; set; }
+        public System.Nullable<bool> SuppressValidation { get; set; }
+        public System.Nullable<bool> ValidateCertificateHostname { get; set; }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2 X509Certificate { get; set; }
+    }
+}

@@ -120,5 +120,35 @@ namespace Akka.API.Tests
         {
             return VerifyAssembly<TestKit.Xunit2.TestKit>();
         }
+
+        [Fact]
+        public Task ApproveHosting()
+        {
+            return VerifyAssembly<Hosting.ActorRegistry>();
+        }
+
+        [Fact]
+        public Task ApproveRemoteHosting()
+        {
+            return VerifyAssembly<Remote.Hosting.RemoteOptions>();
+        }
+
+        [Fact]
+        public Task ApproveClusterHosting()
+        {
+            return VerifyAssembly<Cluster.Hosting.SBR.SplitBrainResolverOption>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceHosting()
+        {
+            return VerifyAssembly<Persistence.Hosting.JournalOptions>();
+        }
+
+        [Fact]
+        public Task ApproveHostingTestKit()
+        {
+            return VerifyAssembly<global::Akka.Hosting.TestKit.TestKit>();
+        }
     }
 }

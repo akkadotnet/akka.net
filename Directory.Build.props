@@ -44,8 +44,9 @@
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
-    <MsExtVersion>[6.0.*,)</MsExtVersion>
+    <MsExtVersion>[10.0.0,)</MsExtVersion>
     <MsExtTestVersion>10.0.5</MsExtTestVersion>
+    <OpenTelemetryVersion>[1.15.3,)</OpenTelemetryVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
