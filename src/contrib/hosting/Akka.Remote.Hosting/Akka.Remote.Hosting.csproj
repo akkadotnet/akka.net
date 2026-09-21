@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Akka.Remote Microsoft.Extensions.Hosting support.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <Nullable>enable</Nullable>
         <PackageTags>$(AkkaPackageTags);hosting;remoting</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>

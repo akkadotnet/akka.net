@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Akka.Persistence Microsoft.Extensions.Hosting support.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <Nullable>enable</Nullable>
         <PackageTags>$(AkkaPackageTags);hosting;persistence;event sourcing</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>

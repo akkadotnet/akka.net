@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>TestKit for writing tests for Akka.NET using Akka.Hosting and xUnit v2.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <Nullable>enable</Nullable>
         <PackageTags>$(AkkaPackageTags);hosting;testkit;xunit</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -12,7 +12,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsExtVersion)" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
         <PackageReference Include="xunit" Version="$(XunitVersion)" />
     </ItemGroup>

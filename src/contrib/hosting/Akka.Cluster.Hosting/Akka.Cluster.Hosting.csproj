@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Akka.Cluster and Akka.Cluster.Sharding Microsoft.Extensions.Hosting support.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <Nullable>enable</Nullable>
         <PackageTags>$(AkkaPackageTags);hosting;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
