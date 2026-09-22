@@ -27,26 +27,42 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
         
         [Fact]
-        public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
+        public async Task ClusterSingletonProxy_must_correctly_identify_the_singleton()
         {
             var seed = new ActorSys();
             seed.Cluster.Join(seed.Cluster.SelfAddress);
 
-            var testSystems =
-                Enumerable.Range(0, 4).Select(_ => new ActorSys(joinTo: seed.Cluster.SelfAddress))
-                .Concat(new[] {seed})
-                .ToList();
+            var testSystems = new List<ActorSys>();
+            for (var i = 0; i < 4; i++)
+                testSystems.Add(new ActorSys(joinTo: seed.Cluster.SelfAddress));
+            testSystems.Add(seed);
 
             try
             {
-                testSystems.ForEach(s => s.TestProxy("Hello"));
-                testSystems.ForEach(s => s.TestProxy("World"));
+                // Every node has to see the whole cluster Up before the oldest member - and therefore the
+                // singleton's home - is settled. The explicit interval matters: AwaitCondition polls at
+                // max/10, so a 30s bound would otherwise only look every 3s.
+                await AwaitConditionAsync(
+                    () => Task.FromResult(testSystems.All(s =>
+                        s.Cluster.State.Members.Count(m => m.Status == MemberStatus.Up) == testSystems.Count)),
+                    TimeSpan.FromSeconds(30),
+                    TimeSpan.FromMilliseconds(200));
+
+                // Then wait for each proxy to actually resolve it, rather than folding cluster formation,
+                // singleton startup and identification into the 25s message timeout below.
+                foreach (var s in testSystems)
+                    await s.AwaitSingletonIdentifiedAsync(TimeSpan.FromSeconds(30));
+
+                foreach (var s in testSystems)
+                    await s.TestProxyAsync("Hello");
+                foreach (var s in testSystems)
+                    await s.TestProxyAsync("World");
             }
             finally
             {
-                // force everything to cleanup
-                Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()))
-                    .Wait(TimeSpan.FromSeconds(30));
+                // force everything to cleanup - the old Wait(30s) discarded its result, so on a slow
+                // agent five cluster systems could still be shutting down while the next test ran
+                await Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()));
             }
         }
 
@@ -57,20 +73,21 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             seed.Cluster.Join(seed.Cluster.SelfAddress);
 
             var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
-            
-            // have to wait for cluster singleton to be ready, otherwise message will be rejected
-            await AwaitConditionAsync(
-                () => Task.FromResult(Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2),
-                TimeSpan.FromSeconds(30));
+
+            // Buffering is off here, so a message sent before the proxy has resolved the singleton is
+            // dropped, not queued - and TestProxyAsync sends once and then waits out its full 25s. Wait
+            // on the proxy's own result rather than on membership, which does not imply identification.
+            await testSystem.AwaitSingletonIdentifiedAsync(TimeSpan.FromSeconds(30));
 
             try
             {
-                testSystem.TestProxy("Hello");
+                await testSystem.TestProxyAsync("Hello");
             }
             finally
             {
-                // force everything to cleanup
-                Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
+                // force everything to cleanup - the seed was left running before, and this assembly runs
+                // its tests sequentially in one process, so it kept gossiping through everything after it
+                await Task.WhenAll(testSystem.Sys.Terminate(), seed.Sys.Terminate());
             }
         }
 
@@ -100,8 +117,12 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 testSystem.Sys.EventStream.Subscribe<ClusterSingletonProxy.IdentifySingletonResult>(testSystem
                     .TestActor);
                 testSystem.Cluster.Join(seed.Cluster.SelfAddress);
-                await AwaitConditionAsync(() =>
-                    Task.FromResult(testSystem.Cluster.State.Members.Count(m => m.Status == MemberStatus.Up) == 2));
+                // explicit bound: with none this inherited akka.test.single-expect-default (3s) and
+                // polled at a third of a second, which is not a lot of room for a two-node join
+                await AwaitConditionAsync(
+                    () => Task.FromResult(testSystem.Cluster.State.Members.Count(m => m.Status == MemberStatus.Up) == 2),
+                    TimeSpan.FromSeconds(30),
+                    TimeSpan.FromMilliseconds(200));
                 testSystem.IgnoreNoMessages();
                 
                 // proxy will emit IdentifySingletonTimedOut event locally if it could not find its associated singleton
@@ -182,13 +203,18 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 testSystem.Sys.EventStream.Subscribe<ClusterSingletonProxy.IdentifySingletonResult>(testSystem.TestActor);
                 testSystem.Cluster.Join(seed.Cluster.SelfAddress);
 
-                await AwaitAssertAsync(async () =>
-                {
-                    var result = await testSystem.ExpectMsgAsync<ClusterSingletonProxy.IdentifySingletonResult>();
-                    result.Result.Should().Be(ClusterSingletonProxy.IdentifyResult.Success);
-                });
-                
-                testSystem.TestProxy("hello");
+                // Fish rather than read-and-retry. This proxy publishes a Timeout result every 500ms until
+                // it resolves the singleton, so the queue holds Timeouts ahead of the Success; the retry
+                // loop that used to be here consumed one per attempt and got roughly one attempt anyway,
+                // because AwaitAssertAsync with no bound and testSystem.ExpectMsgAsync with no bound each
+                // resolved to the same 3s default and they belong to different TestKit instances, so the
+                // budgets do not nest.
+                await testSystem.FishForMessageAsync<ClusterSingletonProxy.IdentifySingletonResult>(
+                    r => r.Result == ClusterSingletonProxy.IdentifyResult.Success,
+                    TimeSpan.FromSeconds(30),
+                    "waiting for the singleton proxy to identify the singleton");
+
+                await testSystem.TestProxyAsync("hello");
 
                 // timeout event should not fire
                 await testSystem.ExpectNoMsgAsync(1.Seconds());
@@ -207,12 +233,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 // First seed node which homed the singleton left the cluster
                 await seed.Sys.Terminate();
                 
-                await AwaitAssertAsync(async () =>
-                    {
-                        var result = await testSystem.ExpectMsgAsync<ClusterSingletonProxy.IdentifySingletonResult>();
-                        result.Result.Should().Be(ClusterSingletonProxy.IdentifyResult.Timeout);
-                    },
-                    TimeSpan.FromSeconds(30));
+                await testSystem.FishForMessageAsync<ClusterSingletonProxy.IdentifySingletonResult>(
+                    r => r.Result == ClusterSingletonProxy.IdentifyResult.Timeout,
+                    TimeSpan.FromSeconds(30),
+                    "waiting for the singleton proxy to report the lost singleton");
 
                 // Proxy will emit IdentifySingletonTimedOut event locally because it lost the singleton reference
                 // and no nodes are eligible to home the singleton
@@ -236,6 +260,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         
         private class ActorSys : TestKit.Xunit.TestKit
         {
+            private readonly TestProbe _identifyProbe;
+
             public Cluster Cluster { get; }
 
             public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null, int bufferSize = 1000, string config = null, bool startSingleton = true, ITestOutputHelper output = null)
@@ -262,23 +288,43 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     });
                 }
 
+                // Subscribe before the proxy exists so its first result cannot be missed - the proxy
+                // publishes on the event stream from PreStart onwards.
+                _identifyProbe = CreateTestProbe("singleton-identify");
+                Sys.EventStream.Subscribe<ClusterSingletonProxy.IdentifySingletonResult>(_identifyProbe.Ref);
+
                 Proxy =
                     Sys.ActorOf(
                         ClusterSingletonProxy.Props(
                             "user/singletonmanager",
-                            ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)), 
+                            ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)),
                         $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
             }
 
             public IActorRef Proxy { get; private set; }
 
-            public void TestProxy(string msg)
+            /// <summary>
+            /// Waits until this node's proxy has resolved the singleton. Membership alone does not prove
+            /// that: a proxy with no singleton reference buffers what it is sent, and with BufferSize 0
+            /// it drops it outright, so a send before this point can be lost with no trace.
+            /// The proxy also publishes Timeout results on a timer that starts with no initial delay,
+            /// so fish for the Success rather than reading the first result off the queue.
+            /// </summary>
+            public async Task AwaitSingletonIdentifiedAsync(TimeSpan max)
+            {
+                await _identifyProbe.FishForMessageAsync<ClusterSingletonProxy.IdentifySingletonResult>(
+                    r => r.Result == ClusterSingletonProxy.IdentifyResult.Success,
+                    max,
+                    "waiting for the singleton proxy to identify the singleton");
+            }
+
+            public async Task TestProxyAsync(string msg)
             {
                 var probe = CreateTestProbe();
                 probe.Send(Proxy, msg);
 
                 // 25 seconds to make sure the singleton was started up
-                probe.ExpectMsg("Got " + msg, TimeSpan.FromSeconds(25));
+                await probe.ExpectMsgAsync("Got " + msg, TimeSpan.FromSeconds(25));
             }
 
             private static readonly string _cfg = @"

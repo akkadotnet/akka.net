@@ -36,7 +36,7 @@ namespace Akka.TestKit
         /// <param name="testKit">TBD</param>
         /// <param name="count">TBD</param>
         /// <param name="defaultTimeout">TBD</param>
-        public TestBarrier(TestKitBase testKit, int count, TimeSpan? defaultTimeout=null)
+        public TestBarrier(TestKitBase testKit, int count, [AutoDilate] TimeSpan? defaultTimeout=null)
         {
             _testKit = testKit;
             _count = count;
@@ -56,7 +56,7 @@ namespace Akka.TestKit
         /// TBD
         /// </summary>
         /// <param name="timeout">TBD</param>
-        public void Await(TimeSpan timeout)
+        public void Await([AutoDilate] TimeSpan timeout)
         {
             _barrier.SignalAndWait(_testKit.Dilated(timeout));
         }

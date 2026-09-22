@@ -117,8 +117,8 @@ namespace Akka.Remote.Artery
     /// mirroring today's ordinary-message fallback for an absent sender.
     /// </para>
     /// <para>
-    /// <b>Sourcegen swap field-id note.</b> <see cref="Message"/> is marked
-    /// <see cref="AkkaEnvelopePayloadAttribute"/>, routing it through the generated serializer's
+    /// <b>Sourcegen swap field-id note.</b> <see cref="Message"/> is typed <see langword="object"/>,
+    /// which the generator always routes through the generated serializer's
     /// <c>WriteEnvelopePayload</c>/<c>ReadEnvelopePayload</c> calls -- the SAME
     /// <see cref="Akka.Serialization.V2.AkkaSerializer"/> base-class helpers the
     /// prior hand-rolled <see cref="ArteryControlMessageSerializer"/> used, confirming the generator
@@ -136,7 +136,7 @@ namespace Akka.Remote.Artery
     /// <param name="RecipientPath">The resolved wire-format path of the recipient actor.</param>
     [AkkaSerializable(Manifest = ArteryControlMessageSerializer.SystemMessageEnvelopeManifest)]
     internal sealed record SystemMessageEnvelope(
-        [property: AkkaField(1), AkkaEnvelopePayload] ISystemMessage Message,
+        [property: AkkaField(1)] object Message,
         [property: AkkaField(2)] long SeqNo,
         [property: AkkaField(3)] UniqueAddress AckReplyTo,
         [property: AkkaField(4)] string RecipientPath) : IArterySystemMessageDeliveryMessage;

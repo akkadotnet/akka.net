@@ -357,6 +357,17 @@ namespace Akka.Cluster
         /// <param name="b">The second collection of members.</param>
         /// <returns>An immutable hash set containing the members with the highest priority.</returns>
         public static ImmutableHashSet<Member> PickHighestPriority(IEnumerable<Member> a, IEnumerable<Member> b)
+            => PickHighestPriority(a, b, ImmutableHashSet<UniqueAddress>.Empty);
+
+        /// <summary>
+        /// Combines and sorts two lists of <see cref="Member"/> into a single list ordered by highest prioirity
+        /// </summary>
+        /// <param name="a">The first collection of members.</param>
+        /// <param name="b">The second collection of members.</param>
+        /// <param name="tombstones">Nodes the cluster has removed.</param>
+        /// <returns>An immutable hash set containing the members with the highest priority.</returns>
+        public static ImmutableHashSet<Member> PickHighestPriority(IEnumerable<Member> a, IEnumerable<Member> b,
+            IImmutableSet<UniqueAddress> tombstones)
         {
             // group all members by Address => Seq[Member]
             var groupedByAddress = (a.Concat(b)).GroupBy(x => x.UniqueAddress);
@@ -368,8 +379,12 @@ namespace Akka.Cluster
                 if (g.Count() == 2) acc.Add(HighestPriorityOf(g.First(), g.Skip(1).First()));
                 else
                 {
+                    // Present on one side only. Either the other side removed it, or the other side has not
+                    // heard of it yet. A tombstone says which. Down and Exiting are terminal, so they are
+                    // still read as evidence of a removal even without one.
                     var m = g.First();
-                    if (!MembershipState.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
+                    if (!tombstones.Contains(m.UniqueAddress)
+                        && !MembershipState.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
                 }
             }
             return acc.ToImmutableHashSet();

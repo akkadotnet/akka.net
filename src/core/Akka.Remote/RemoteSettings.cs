@@ -138,7 +138,11 @@ namespace Akka.Remote
         public TimeSpan FlushWait { get; set; }
 
         /// <summary>
-        /// TBD
+        /// The fully-qualified HOCON config paths of the enabled classic remoting transports,
+        /// read from <c>akka.remote.enabled-transports</c> (default:
+        /// <c>akka.remote.dot-netty.tcp</c>). Only governs classic remoting -- the Artery
+        /// transport is switched on separately via <c>akka.remote.artery.enabled</c> and
+        /// carries its own configuration block.
         /// </summary>
         public IList<string> TransportNames { get; set; }
 
@@ -148,7 +152,9 @@ namespace Akka.Remote
         public IDictionary<string, string> Adapters { get; set; }
 
         /// <summary>
-        /// TBD
+        /// The <see cref="TransportSettings"/> resolved from each config block named in
+        /// <see cref="TransportNames"/>; classic remoting instantiates one transport driver
+        /// per entry.
         /// </summary>
         public TransportSettings[] Transports { get; set; }
         /// <summary>

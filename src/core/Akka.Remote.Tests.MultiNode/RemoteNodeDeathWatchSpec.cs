@@ -16,6 +16,7 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using FluentAssertions;
 using static Akka.Remote.Tests.MultiNode.RemoteNodeDeathWatchMultiNetSpec;
 
 namespace Akka.Remote.Tests.MultiNode;
@@ -112,8 +113,7 @@ public class RemoteNodeDeathWatchMultiNetSpec : MultiNodeConfig
 public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 {
     private readonly RemoteNodeDeathWatchMultiNetSpec _config;
-    private readonly Lazy<IActorRef> _remoteWatcher;
-    private readonly Func<RoleName, string, IActorRef> _identify;
+    private IActorRef _remoteWatcher;
 
     protected RemoteNodeDeathWatchSpec(Type type) : this(new RemoteNodeDeathWatchMultiNetSpec(), type)
     {
@@ -122,18 +122,6 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
     protected RemoteNodeDeathWatchSpec(RemoteNodeDeathWatchMultiNetSpec config, Type type) : base(config, type)
     {
         _config = config;
-
-        _remoteWatcher = new Lazy<IActorRef>(() =>
-        {
-            Sys.ActorSelection("/system/remote-watcher").Tell(new Identify(null));
-            return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-        });
-
-        _identify = (role, actorName) =>
-        {
-            Sys.ActorSelection(Node(role) / "user" / actorName).Tell(new Identify(actorName));
-            return ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-        };
 
         MuteDeadLetters(null, typeof(Heartbeat));
     }
@@ -144,6 +132,67 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 
     protected abstract Func<Task> SleepAsync { get; }
 
+    private async Task<IActorRef> GetRemoteWatcherAsync()
+    {
+        if (_remoteWatcher is null)
+        {
+            Sys.ActorSelection("/system/remote-watcher").Tell(new Identify(null));
+            _remoteWatcher = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(10))).Subject;
+        }
+
+        return _remoteWatcher;
+    }
+
+    /// <summary>
+    /// Upstream (Pekko) asserts <c>actorIdentity.ref.isDefined</c> before unwrapping the identity; the
+    /// .NET port had dropped that assertion, so a node that never created the requested actor handed a
+    /// null <see cref="ActorIdentity.Subject"/> straight into <c>Context.Watch(null)</c> downstream. That
+    /// throws off the test thread, and the failure that surfaces is an unrelated Ack timeout rather than
+    /// the real "this actor doesn't exist" cause. Restoring the assertion here makes a missing actor fail
+    /// at the identify, naming the actor path.
+    /// </summary>
+    private async Task<IActorRef> IdentifyAsync(RoleName role, string actorName)
+    {
+        Sys.ActorSelection(await NodeAsync(role) / "user" / actorName).Tell(new Identify(actorName));
+        var identity = await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(10));
+        identity.Subject.Should().NotBeNull(
+            "node [{0}] must answer for /user/{1}", role.Name, actorName);
+        return identity.Subject;
+    }
+
+    /// <summary>
+    /// Bound for a <see cref="WrappedTerminated"/> expected after the peer has already proven (via a
+    /// barrier entered only once its own local watch observed the death, see
+    /// <see cref="RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stoppedAsync"/>) that
+    /// the <c>DeathWatchNotification</c> system message was already handed to remoting. Nominal cost from
+    /// there is one one-way hop on an association this phase has already exercised in both directions
+    /// (identify out, "helloN" back), plus three local mailbox hops on the receiving side
+    /// (/system/remote-watcher, then the watcher actor, then the TestActor) - single-digit ms. A lost or
+    /// unacked frame is recovered by system-message redelivery: on classic remoting the repeating
+    /// AttemptSysMsgRedelivery timer at akka.remote.resend-interval (Remote.conf, 2s), which is the value
+    /// read below; Artery resends at akka.remote.artery.advanced.system-message-resend-interval (1s), so
+    /// the same budget covers it with more room. Budget two resend cycles plus one hop and dispatcher
+    /// scheduling slack on a loaded CI agent: 2s + 2s + 2s = 6s.
+    ///
+    /// NOT derived from the watch failure detector: the peer stays alive and keeps heartbeating in this
+    /// scenario, so RemoteWatcher never marks it unreachable and AddressTerminated never fires. The FD is
+    /// the backstop for a dead node, not for a single lost notification on a live one.
+    ///
+    /// The old bound was the flat 3s akka.test.single-expect-default, which is shorter than one resend
+    /// cycle plus a hop - it could not survive a single dropped system message by construction.
+    ///
+    /// Pass this value undilated: ExpectMsgAsync's timeout parameter is [AutoDilate] and dilates
+    /// internally, so pre-dilating here would square the time factor.
+    /// </summary>
+    private TimeSpan RemoteTerminationTimeout
+    {
+        get
+        {
+            var resend = RARP.For(Sys).Provider.RemoteSettings.SysResendTimeout; // classic resend-interval, 2s
+            return resend + resend + TimeSpan.FromSeconds(2);                   // = 6s
+        }
+    }
+
     private async Task AssertCleanup(TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromSeconds(5);
@@ -152,7 +201,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
         {
             await AwaitAssertAsync(async () =>
             {
-                _remoteWatcher.Value.Tell(RemoteWatcher.Stats.Empty);
+                (await GetRemoteWatcherAsync()).Tell(RemoteWatcher.Stats.Empty);
                 await ExpectMsgAsync<RemoteWatcher.Stats>(s => Equals(s, RemoteWatcher.Stats.Empty));
             });
         });
@@ -179,7 +228,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             var watcher = Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "watcher1");
             await EnterBarrierAsync("actors-started-1");
 
-            var subject = _identify(_config.Second, "subject1");
+            var subject = await IdentifyAsync(_config.Second, "subject1");
             watcher.Tell(new WatchIt(subject));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             subject.Tell("hello1");
@@ -187,7 +236,8 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("watch-established-1");
 
             await SleepAsync();
-            (await ExpectMsgAsync<WrappedTerminated>()).T.ActorRef.ShouldBe(subject);
+            await EnterBarrierAsync("subject-stopped-1");
+            (await ExpectMsgAsync<WrappedTerminated>(RemoteTerminationTimeout)).T.ActorRef.ShouldBe(subject);
         }, _config.First);
 
         await RunOnAsync(async () =>
@@ -200,7 +250,19 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("watch-established-1");
 
             await SleepAsync();
+            // A local watch on second's own TestActor + Sys.Stop proves the subject is dead on second
+            // before first's window opens. ActorCell.TellWatchersWeDied notifies REMOTE watchers in a
+            // strictly earlier loop than LOCAL watchers (second's TestActor here). The remote watcher
+            // recorded on the subject is first's /system/remote-watcher, which re-issued watcher1's
+            // watch over the wire (RemoteActorRef intercepts Watch; RemoteWatcher forwards the
+            // notification to watcher1 locally). So by the time ExpectTerminatedAsync completes, the
+            // DeathWatchNotification bound for first has already been handed to the remoting stack.
+            // That closes out the independent Task.Delay(3000) timer-skew term that used to be part
+            // of first's wait budget.
+            await WatchAsync(subject);
             Sys.Stop(subject);
+            await ExpectTerminatedAsync(subject);
+            await EnterBarrierAsync("subject-stopped-1");
         }, _config.Second);
 
         await RunOnAsync(async () =>
@@ -208,6 +270,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("actors-started-1");
             await EnterBarrierAsync("hello1-message-sent");
             await EnterBarrierAsync("watch-established-1");
+            await EnterBarrierAsync("subject-stopped-1");
         }, _config.Third);
 
         await EnterBarrierAsync("terminated-verified-1");
@@ -227,7 +290,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             var watcher = Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "watcher2");
             await EnterBarrierAsync("actors-started-2");
 
-            var subject = _identify(_config.Second, "subject2");
+            var subject = await IdentifyAsync(_config.Second, "subject2");
             watcher.Tell(new WatchIt(subject));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             await EnterBarrierAsync("watch-2");
@@ -239,8 +302,12 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("unwatch-2");
         }, _config.First);
 
-        RunOn(() => Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "subject2"), _config.Second);
-            
+        await RunOnAsync(() =>
+        {
+            Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "subject2");
+            return Task.CompletedTask;
+        }, _config.Second);
+
         await RunOnAsync(async () =>
         {
             await EnterBarrierAsync("actors-started-2");
@@ -265,7 +332,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("actors-started-3");
 
             var other = Myself == _config.First ? _config.Second : _config.First;
-            var subject = _identify(other, "subject3");
+            var subject = await IdentifyAsync(other, "subject3");
             watcher.Tell(new WatchIt(subject));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             await EnterBarrierAsync("watch-3");
@@ -303,8 +370,8 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("actors-started-4");
 
             var other = Myself == _config.First ? _config.Second : _config.First;
-            var subject1 = _identify(other, "s1");
-            var subject2 = _identify(other, "s2");
+            var subject1 = await IdentifyAsync(other, "s1");
+            var subject2 = await IdentifyAsync(other, "s2");
             watcher1.Tell(new WatchIt(subject1));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             watcher2.Tell(new WatchIt(subject2));
@@ -322,7 +389,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 
             Sys.Stop(s2);
             await EnterBarrierAsync("stop-s2-4");
-            (await ExpectMsgAsync<WrappedTerminated>()).T.ActorRef.ShouldBe(subject2);
+            (await ExpectMsgAsync<WrappedTerminated>(RemoteTerminationTimeout)).T.ActorRef.ShouldBe(subject2);
         }, _config.First, _config.Second);
 
         await RunOnAsync(async () =>
@@ -355,9 +422,9 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 
             await EnterBarrierAsync("actors-started-5");
 
-            var b1 = _identify(_config.Second, "b1");
-            var b2 = _identify(_config.Second, "b2");
-            var b3 = _identify(_config.Second, "b3");
+            var b1 = await IdentifyAsync(_config.Second, "b1");
+            var b2 = await IdentifyAsync(_config.Second, "b2");
+            var b3 = await IdentifyAsync(_config.Second, "b3");
 
             a1.Tell(new WatchIt(b1));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
@@ -399,9 +466,9 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 
             await EnterBarrierAsync("actors-started-5");
 
-            var a1 = _identify(_config.First, "a1");
-            var a2 = _identify(_config.First, "a2");
-            var a3 = _identify(_config.First, "a3");
+            var a1 = await IdentifyAsync(_config.First, "a1");
+            var a2 = await IdentifyAsync(_config.First, "a2");
+            var a3 = await IdentifyAsync(_config.First, "a3");
 
             b1.Tell(new WatchIt(a1));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
@@ -418,7 +485,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await EnterBarrierAsync("watch-established-5");
             await EnterBarrierAsync("stopped-5");
 
-            p1.ReceiveN(2, TimeSpan.FromSeconds(20))
+            (await p1.ReceiveNAsync(2, TimeSpan.FromSeconds(20)).ToListAsync())
                 .Cast<WrappedTerminated>()
                 .Select(w => w.T.ActorRef)
                 .OrderBy(r => r.Path.Name)
@@ -455,7 +522,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             var watcher2 = Sys.ActorOf(Props.Create(() => new ProbeActor(Sys.DeadLetters)));
             await EnterBarrierAsync("actors-started-6");
 
-            var subject = _identify(_config.Second, "subject6");
+            var subject = await IdentifyAsync(_config.Second, "subject6");
             watcher.Tell(new WatchIt(subject));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             watcher2.Tell(new WatchIt(subject));
@@ -506,7 +573,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             var watcher = Sys.ActorOf(Props.Create(() => new ProbeActor(TestActor)), "watcher7");
             await EnterBarrierAsync("actors-started-7");
 
-            var subject = _identify(_config.First, "subject7");
+            var subject = await IdentifyAsync(_config.First, "subject7");
             watcher.Tell(new WatchIt(subject));
             await ExpectMsgAsync<RemoteNodeDeathWatchMultiNetSpec.Ack>(TimeSpan.FromSeconds(1));
             subject.Tell("hello7");

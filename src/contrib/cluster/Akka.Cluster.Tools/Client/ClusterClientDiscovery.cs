@@ -59,6 +59,14 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
     private readonly CancellationTokenSource _shutdownCts = new ();
     private int _discoveryFailedBackoffCounter;
 
+    /// <summary>
+    /// Contact-point subscribers tracked at the supervisor level so their subscriptions can be
+    /// re-established on the freshly-created <see cref="ClusterClient"/> child after each rediscovery.
+    /// The child is recreated on every rediscovery and starts with an empty subscriber list, so without
+    /// this a subscriber would silently stop receiving contact-point events once the client rediscovers.
+    /// </summary>
+    private ImmutableHashSet<IActorRef> _contactPointSubscribers = ImmutableHashSet<IActorRef>.Empty;
+
     private readonly bool _verboseLogging;
     
     public ClusterClientDiscovery(ClusterClientSettings settings)
@@ -363,6 +371,13 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         
         var clusterClient = Context.ActorOf(Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local));
         Context.Watch(clusterClient);
+
+        // Re-establish any contact-point subscriptions on the freshly-created child so subscribers keep
+        // receiving ContactPoints / ContactPointAdded / ContactPointRemoved across rediscovery. Sending on
+        // the subscriber's behalf makes the child register it and reply with the current snapshot.
+        foreach (var subscriber in _contactPointSubscribers)
+            clusterClient.Tell(SubscribeContactPoints.Instance, subscriber);
+
         Stash.UnstashAll();
 
         return message =>
@@ -374,17 +389,36 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                     {
                         if(_verboseLogging && _log.IsInfoEnabled)
                             _log.Info("Cluster client failed to reconnect to all receptionists, rediscovering.");
-                        
+
                         // Kickoff discovery lookup
                         Self.Tell(DiscoverTick.Instance);
                         Become(Discovering);
+                    }
+                    else if (_contactPointSubscribers.Contains(terminated.ActorRef))
+                    {
+                        // A contact-point subscriber terminated — stop tracking it (auto-unsubscribe).
+                        _contactPointSubscribers = _contactPointSubscribers.Remove(terminated.ActorRef);
                     }
                     else
                     {
                         clusterClient.Forward(message);
                     }
                     break;
-                
+
+                case SubscribeContactPoints:
+                    // Track at the supervisor (so we can re-subscribe on the next child) and forward to the
+                    // current child so it registers the sender and replies with the initial snapshot.
+                    _contactPointSubscribers = _contactPointSubscribers.Add(Sender);
+                    Context.Watch(Sender);
+                    clusterClient.Forward(message);
+                    break;
+
+                case UnsubscribeContactPoints:
+                    _contactPointSubscribers = _contactPointSubscribers.Remove(Sender);
+                    Context.Unwatch(Sender);
+                    clusterClient.Forward(message);
+                    break;
+
                 default:
                     clusterClient.Forward(message);
                     break;

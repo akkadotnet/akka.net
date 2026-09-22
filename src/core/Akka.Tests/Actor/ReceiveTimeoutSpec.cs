@@ -28,16 +28,16 @@ namespace Akka.Tests.Actor
     {
         public class TimeoutActor : ActorBase
         {
-            private TestLatch _timeoutLatch;
+            private readonly IActorRef _probe;
 
-            public TimeoutActor(TestLatch timeoutLatch)
-                : this(timeoutLatch, TimeSpan.FromMilliseconds(500))
+            public TimeoutActor(IActorRef probe)
+                : this(probe, TimeSpan.FromMilliseconds(500))
             {
             }
 
-            public TimeoutActor(TestLatch timeoutLatch, TimeSpan? timeout)
+            public TimeoutActor(IActorRef probe, TimeSpan? timeout)
             {
-                _timeoutLatch = timeoutLatch;
+                _probe = probe;
                 Context.SetReceiveTimeout(timeout.GetValueOrDefault());
             }
 
@@ -45,7 +45,7 @@ namespace Akka.Tests.Actor
             {
                 if (message is ReceiveTimeout)
                 {
-                    _timeoutLatch.Open();
+                    _probe.Tell("timeout");
                     return true;
                 }
 
@@ -65,15 +65,15 @@ namespace Akka.Tests.Actor
         
         public class AsyncTimeoutActor : ReceiveActor
         {
-            public AsyncTimeoutActor(TestLatch timeoutLatch)
-                : this(timeoutLatch, TimeSpan.FromMilliseconds(500))
+            public AsyncTimeoutActor(IActorRef probe)
+                : this(probe, TimeSpan.FromMilliseconds(500))
             {
             }
 
-            public AsyncTimeoutActor(TestLatch timeoutLatch, TimeSpan? timeout)
+            public AsyncTimeoutActor(IActorRef probe, TimeSpan? timeout)
             {
                 var log = Context.GetLogger();
-                
+
                 Context.SetReceiveTimeout(timeout.GetValueOrDefault());
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -81,7 +81,7 @@ namespace Akka.Tests.Actor
                 ReceiveAsync<ReceiveTimeout>(async _ =>
                 {
                     log.Info($"Received {nameof(ReceiveTimeout)}");
-                    timeoutLatch.Open();
+                    probe.Tell("timeout");
                 });
 
                 ReceiveAsync<TransparentTick>(async _ =>
@@ -101,12 +101,12 @@ namespace Akka.Tests.Actor
 
         public class TurnOffTimeoutActor : ActorBase
         {
-            private TestLatch _timeoutLatch;
+            private readonly IActorRef _probe;
             private readonly AtomicCounter _counter;
 
-            public TurnOffTimeoutActor(TestLatch timeoutLatch, AtomicCounter counter)
+            public TurnOffTimeoutActor(IActorRef probe, AtomicCounter counter)
             {
-                _timeoutLatch = timeoutLatch;
+                _probe = probe;
                 _counter = counter;
                 Context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
             }
@@ -116,7 +116,7 @@ namespace Akka.Tests.Actor
                 if (message is ReceiveTimeout)
                 {
                     _counter.IncrementAndGet();
-                    _timeoutLatch.Open();
+                    _probe.Tell("timeout");
                     Context.SetReceiveTimeout(null);
                     return true;
                 }
@@ -132,18 +132,18 @@ namespace Akka.Tests.Actor
 
         public class NoTimeoutActor : ActorBase
         {
-            private TestLatch _timeoutLatch;
+            private readonly IActorRef _probe;
 
-            public NoTimeoutActor(TestLatch timeoutLatch)
+            public NoTimeoutActor(IActorRef probe)
             {
-                _timeoutLatch = timeoutLatch;
+                _probe = probe;
             }
 
             protected override bool Receive(object message)
             {
                 if (message is ReceiveTimeout)
                 {
-                    _timeoutLatch.Open();
+                    _probe.Tell("timeout");
                     return true;
                 }
 
@@ -161,57 +161,62 @@ namespace Akka.Tests.Actor
         }
         
         [Fact]
-        public void An_actor_with_receive_timeout_must_get_timeout()
+        public async Task An_actor_with_receive_timeout_must_get_timeout()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
+            var probe = CreateTestProbe();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(probe.Ref, TimeSpan.FromMilliseconds(500))));
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_reschedule_timeout_after_regular_receive()
+        public async Task An_actor_with_receive_timeout_must_reschedule_timeout_after_regular_receive()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
+            var probe = CreateTestProbe();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(probe.Ref, TimeSpan.FromMilliseconds(500))));
 
             timeoutActor.Tell(new Tick());
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", TestKitSettings.DefaultTimeout);
 
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_be_able_to_turn_off_timeout_if_desired()
+        public async Task An_actor_with_receive_timeout_must_be_able_to_turn_off_timeout_if_desired()
         {
             var count = new AtomicCounter(0);
 
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TurnOffTimeoutActor(timeoutLatch, count)));
+            var probe = CreateTestProbe();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TurnOffTimeoutActor(probe.Ref, count)));
 
             timeoutActor.Tell(new Tick());
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", TestKitSettings.DefaultTimeout);
             count.Current.ShouldBe(1);
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_not_receive_timeout_message_when_not_specified()
+        public async Task An_actor_with_receive_timeout_must_not_receive_timeout_message_when_not_specified()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
+            var probe = CreateTestProbe();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(probe.Ref)));
 
-            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestKitSettings.DefaultTimeout));
+            // No receive-timeout was ever set, so no "timeout" should arrive. This also stops
+            // parking a pool worker for the duration of the wait: ExpectNoMsgAsync awaits instead
+            // of blocking a thread for TestKitSettings.DefaultTimeout.
+            await probe.ExpectNoMsgAsync(TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
+        public async Task An_actor_with_receive_timeout_must_get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromSeconds(1))));
-            
+            var probe = CreateTestProbe();
+            var receiveTimeout = TimeSpan.FromSeconds(1);
+            var slack = TimeSpan.FromSeconds(4);
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(probe.Ref, receiveTimeout)));
+
             var cancelable = Sys.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
                 TimeSpan.FromMilliseconds(100),
                 TimeSpan.FromMilliseconds(100),
@@ -221,17 +226,19 @@ namespace Akka.Tests.Actor
                     timeoutActor.Tell(new Identify(null));
                 });
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
             cancelable.Cancel();
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_async_actor_with_receive_timeout_must_get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
+        public async Task An_async_actor_with_receive_timeout_must_get_timeout_while_receiving_NotInfluenceReceiveTimeout_messages()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new AsyncTimeoutActor(timeoutLatch, TimeSpan.FromSeconds(1))));
-            
+            var probe = CreateTestProbe();
+            var receiveTimeout = TimeSpan.FromSeconds(1);
+            var slack = TimeSpan.FromSeconds(4);
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new AsyncTimeoutActor(probe.Ref, receiveTimeout)));
+
             var cancelable = Sys.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
                 TimeSpan.FromMilliseconds(100),
                 TimeSpan.FromMilliseconds(100),
@@ -241,45 +248,73 @@ namespace Akka.Tests.Actor
                     //timeoutActor.Tell(new Identify(null));
                 });
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
             cancelable.Cancel();
             Sys.Stop(timeoutActor);
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_get_timeout_while_receiving_only_NotInfluenceReceiveTimeout_messages()
+        public async Task An_actor_with_receive_timeout_must_get_timeout_while_receiving_only_NotInfluenceReceiveTimeout_messages()
         {
-            var timeoutLatch = new TestLatch(2);
+            var probe = CreateTestProbe();
+            var receiveTimeout = TimeSpan.FromSeconds(1);
+
+            // Slack for scheduler lateness and mailbox dispatch. ExpectMsgAsync runs every budget
+            // through Dilated(), so this scales with akka.test.timefactor. TestLatch built with
+            // "new TestLatch(...)" does not dilate, which is why the latch had to go.
+            var slack = TimeSpan.FromSeconds(4);
+
+            // The tick is a local self-tell that never leaves the process; it does not need the
+            // same margin as a real scheduled receive-timeout cycle. 1s is still generous for a
+            // sub-millisecond event and keeps this de-flake from hiding a genuinely stuck mailbox.
+            var tickSlack = TimeSpan.FromSeconds(1);
 
             Action<IActorDsl> actor = d =>
             {
-                d.OnPreStart = c => c.SetReceiveTimeout(TimeSpan.FromSeconds(1));
+                d.OnPreStart = c => c.SetReceiveTimeout(receiveTimeout);
                 d.Receive<ReceiveTimeout>((_, c) =>
                 {
                     c.Self.Tell(new TransparentTick());
-                    timeoutLatch.CountDown();
+                    probe.Ref.Tell("timeout");
                 });
-                d.Receive<TransparentTick>((_, _) => { });
+                d.Receive<TransparentTick>((_, _) => probe.Ref.Tell("tick"));
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
-            Sys.Stop(timeoutActor);
+            try
+            {
+                // Phase 1: actor start plus one full receive-timeout period.
+                await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
+
+                // The INotInfluenceReceiveTimeout message must really reach the actor. This is the
+                // message whose handling has to leave the pending timer alone.
+                await probe.ExpectMsgAsync("tick", tickSlack);
+
+                // Phase 2, budgeted from phase 1 rather than from the start of the test. This is the
+                // assertion the test is named for: the TransparentTick neither cancelled nor
+                // re-armed the receive-timeout timer.
+                await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
+            }
+            finally
+            {
+                Sys.Stop(timeoutActor);
+            }
         }
 
         [Fact]
         public async Task Issue469_An_actor_with_receive_timeout_must_cancel_receive_timeout_when_terminated()
         {
             //This test verifies that bug #469 "ReceiveTimeout isn't cancelled when actor terminates" has been fixed
-            var timeoutLatch = CreateTestLatch();
+            var probe = CreateTestProbe();
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(probe.Ref, TimeSpan.FromMilliseconds(500))));
 
             //make sure TestActor gets a notification when timeoutActor terminates
             Watch(timeoutActor);
 
-            // wait for first ReceiveTimeout message, in which the latch is opened
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            // Wait for the first ReceiveTimeout message on a probe kept separate from TestActor,
+            // so it cannot be confused with the DeadLetter check below.
+            await probe.ExpectMsgAsync("timeout", TestKitSettings.DefaultTimeout);
 
             //Stop and wait for the actor to terminate
             Sys.Stop(timeoutActor);
@@ -291,37 +326,38 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_be_able_to_turn_on_timeout_in_NotInfluenceReceiveTimeout_message_handler()
+        public async Task An_actor_with_receive_timeout_must_be_able_to_turn_on_timeout_in_NotInfluenceReceiveTimeout_message_handler()
         {
-            var timeoutLatch = new TestLatch();
+            var probe = CreateTestProbe();
 
             Action<IActorDsl> actor = d =>
             {
                 d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(500.Milliseconds()));
-                d.Receive<ReceiveTimeout>((_, _) => timeoutLatch.Open());
+                d.Receive<ReceiveTimeout>((_, _) => probe.Ref.Tell("timeout"));
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
             timeoutActor.Tell(new TransparentTick());
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
+            await probe.ExpectMsgAsync("timeout", TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
-        
+
         [Fact]
-        public void An_actor_with_receive_timeout_must_be_able_to_turn_off_timeout_in_NotInfluenceReceiveTimeout_message_handler()
+        public async Task An_actor_with_receive_timeout_must_be_able_to_turn_off_timeout_in_NotInfluenceReceiveTimeout_message_handler()
         {
-            var timeoutLatch = new TestLatch();
+            var probe = CreateTestProbe();
 
             Action<IActorDsl> actor = d =>
             {
                 d.OnPreStart = c => c.SetReceiveTimeout(500.Milliseconds());
                 d.Receive<TransparentTick>((_, c) => c.SetReceiveTimeout(null));
-                d.Receive<ReceiveTimeout>((_, _) => timeoutLatch.Open());
+                d.Receive<ReceiveTimeout>((_, _) => probe.Ref.Tell("timeout"));
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
             timeoutActor.Tell(new TransparentTick());
 
-            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(1.Seconds()));
+            // The timer was turned off before it could fire, so no "timeout" ever arrives.
+            await probe.ExpectNoMsgAsync(1.Seconds());
             Sys.Stop(timeoutActor);
         }
     }

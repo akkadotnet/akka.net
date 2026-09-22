@@ -6,10 +6,11 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Cluster.Tools.Client
 {
-    public sealed class ClusterClient : Akka.Actor.ActorBase
+    public sealed class ClusterClient : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
     {
         public ClusterClient(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
-        protected override void PostStop() { }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
+        protected override void PreStart() { }
         protected override bool Receive(object message) { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         [System.Serializable]

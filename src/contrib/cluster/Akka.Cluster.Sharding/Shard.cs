@@ -1337,10 +1337,13 @@ namespace Akka.Cluster.Sharding
             var startTime = DateTime.UtcNow;
             var update = new RememberEntitiesShardStore.Update(started: storingStarts, stopped: storingStops);
             store.Tell(update);
+            // `updating-state-timeout` is documented (reference.conf) as also being the timeout for
+            // remember-entities writes, and DDataRememberEntitiesShardStore sizes its write-majority
+            // retries (3 retries at updating-state-timeout / 4) against that same value.
             Timers.StartSingleTimer(
                 RememberEntityTimeoutKey,
                 new RememberEntityTimeout(update),
-                _settings.TuningParameters.WaitingForStateTimeout);
+                _settings.TuningParameters.UpdatingStateTimeout);
 
             Context.Become(WaitingForRememberEntitiesStore(update, startTime));
         }

@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 
@@ -44,6 +43,17 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
         /// </summary>
         private readonly Dictionary<int, IActorRef> _nodeActors;
 
+        /// <summary>
+        /// The original sender of <see cref="EndSpec"/>, awaiting the aggregated <see cref="FactData"/>.
+        /// </summary>
+        private IActorRef _endSpecSender;
+
+        /// <summary>
+        /// <see cref="NodeData"/> replies collected from the child <see cref="NodeDataActor"/> instances
+        /// while handling <see cref="EndSpec"/>.
+        /// </summary>
+        private readonly List<NodeData> _collectedNodeData = new List<NodeData>();
+
         #region Actor Lifecycle
 
         protected override void PreStart()
@@ -69,7 +79,7 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
             });
             Receive<MultiNodeMessage>(message => RouteToNodeActor(message));
             Receive<EndSpec>(spec => HandleEndSpec(spec));
-            Receive<NodeData[]>(datum => HandleNodeDatum(datum));
+            Receive<NodeData>(nodeData => HandleNodeData(nodeData));
         }
 
         /// <summary>
@@ -83,41 +93,52 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
         }
 
         /// <summary>
-        /// Wait for all child <see cref="NodeDataActor"/> instances to finish processing
-        /// and report their results
+        /// Ask every child <see cref="NodeDataActor"/> to report its results, then collect the replies.
+        /// Each child replies exactly once with its <see cref="NodeData"/>, so aggregation completes
+        /// deterministically as soon as all <see cref="Nodes"/> have reported — there is no Ask timeout
+        /// to race under dispatcher load.
         /// </summary>
-        /// <returns>An awaitable task, since this operation uses the <see cref="Futures.Ask"/> pattern</returns>
         private void HandleEndSpec(EndSpec endSpec)
         {
-            var futures = new Task<NodeData>[Nodes.Count];
+            _endSpecSender = Context.Sender;
 
-            var i = 0;
-            foreach (var node in _nodeActors)
+            // No child actors (e.g. a spec with no nodes) — nothing to collect, reply immediately.
+            if (_nodeActors.Count == 0)
             {
-                futures[i] = node.Value.Ask<NodeData>(endSpec, TimeSpan.FromSeconds(1));
-                i++;
+                CompleteAndReply();
+                return;
             }
 
-            var sender = Context.Sender;
-
-            //wait for all Ask operations to complete and pipe the result back to ourselves, including the ref for the original sender
-            Task.WhenAll(futures)
-                .PipeTo(Self, sender);
+            // Tell (not Ask-with-timeout): each child replies to us with its NodeData.Copy().
+            foreach (var node in _nodeActors)
+                node.Value.Tell(endSpec);
         }
 
         /// <summary>
-        /// When the result of a <see cref="HandleEndSpec"/> finally gets finished...
+        /// Collect a <see cref="NodeData"/> reply from a child <see cref="NodeDataActor"/>. Once every
+        /// node has reported, aggregate the results and return the completed <see cref="FactData"/>.
         /// </summary>
-        /// <param name="nodeDatum">An envelope with all of the <see cref="NodeData"/> messages we processed from earlier</param>
-        private void HandleNodeDatum(NodeData[] nodeDatum)
+        private void HandleNodeData(NodeData nodeData)
         {
-            FactData.AddNodes(nodeDatum);
+            _collectedNodeData.Add(nodeData);
+
+            if (_collectedNodeData.Count == _nodeActors.Count)
+                CompleteAndReply();
+        }
+
+        /// <summary>
+        /// Aggregate every collected <see cref="NodeData"/>, mark the spec complete, return the
+        /// <see cref="FactData"/> to the original <see cref="EndSpec"/> sender, and shut down.
+        /// </summary>
+        private void CompleteAndReply()
+        {
+            FactData.AddNodes(_collectedNodeData.ToArray());
 
             //mark this test as complete
             FactData.Complete();
 
-            //Send our FactData back to the sender
-            Sender.Tell(FactData.Copy());
+            //Send our FactData back to the original EndSpec sender
+            _endSpecSender.Tell(FactData.Copy());
 
             //Shut ourselves down
             Self.GracefulStop(TimeSpan.FromSeconds(1));

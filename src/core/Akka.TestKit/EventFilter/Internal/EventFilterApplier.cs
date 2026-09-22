@@ -75,7 +75,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     }
         
     public void ExpectOne(
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Action action,
         CancellationToken cancellationToken = default)
     {
@@ -87,7 +87,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     /// Async version of <see cref="ExpectOne(System.TimeSpan,System.Action,CancellationToken) "/>
     /// </summary>
     public async Task ExpectOneAsync(
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<Task> action,
         CancellationToken cancellationToken = default)
     {
@@ -130,7 +130,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     public async Task ExpectAsync(
         int expectedCount,
         Func<Task> actionAsync,
-        TimeSpan? timeout,
+        [AutoDilate] TimeSpan? timeout,
         CancellationToken cancellationToken = default)
     {
         await InternalExpectAsync(
@@ -144,7 +144,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
         
     public void Expect(
         int expectedCount,
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Action action,
         CancellationToken cancellationToken = default)
     {
@@ -157,7 +157,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     /// </summary>
     public async Task ExpectAsync(
         int expectedCount,
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<Task> action,
         CancellationToken cancellationToken = default)
     {
@@ -170,7 +170,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
             ;
     }
 
-    public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
+    public async Task ExpectAsync(int expectedCount, [AutoDilate] TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
     {
         await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
         return;
@@ -204,7 +204,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     }
         
     public T ExpectOne<T>(
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<T> func,
         CancellationToken cancellationToken = default)
     {
@@ -216,7 +216,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     /// Async version of ExpectOne
     /// </summary>
     public Task<T> ExpectOneAsync<T>(
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<Task<T>> func,
         CancellationToken cancellationToken = default)
     {
@@ -257,7 +257,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
         
     public T Expect<T>(
         int expectedCount,
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<T> func,
         CancellationToken cancellationToken = default)
     {
@@ -271,7 +271,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     /// </summary>
     public Task<T> ExpectAsync<T>(
         int expectedCount,
-        TimeSpan timeout,
+        [AutoDilate] TimeSpan timeout,
         Func<Task<T>> func,
         CancellationToken cancellationToken = default)
     {
@@ -358,7 +358,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     protected T Intercept<T>(
         Func<T> func,
         ActorSystem system,
-        TimeSpan? timeout,
+        [AutoDilate] TimeSpan? timeout,
         int? expectedOccurrences, 
         MatchedEventHandler? matchedEventHandler = null,
         CancellationToken cancellationToken = default)
@@ -379,7 +379,7 @@ public class InternalEventFilterApplier : IEventFilterApplier
     protected async Task<T> InterceptAsync<T>(
         Func<Task<T>> func,
         ActorSystem system,
-        TimeSpan? timeout,
+        [AutoDilate] TimeSpan? timeout,
         int? expectedOccurrences,
         MatchedEventHandler? matchedEventHandler = null,
         CancellationToken cancellationToken = default)

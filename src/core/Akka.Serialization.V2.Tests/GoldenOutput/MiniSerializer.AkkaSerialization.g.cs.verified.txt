@@ -26,7 +26,7 @@ internal sealed partial class MiniSerializer
         return obj switch
         {
             global::GoldenSample.MiniMessage => "mini-v1",
-            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj))
+            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj))
         };
     }
 
@@ -47,7 +47,7 @@ internal sealed partial class MiniSerializer
                 WriteMiniMessage(ref writer, message);
                 break;
             default:
-                throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj));
+                throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
         }
     }
 

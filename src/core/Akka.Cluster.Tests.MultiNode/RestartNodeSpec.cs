@@ -61,7 +61,11 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             _config = config;
             _secondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
-            _secondRestartedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + _secondUniqueAddress.Address.Port)
+            // Pin the restarted system to the SAME wire address for BOTH transports - under
+            // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
+            // system would bind a random artery canonical.port instead.
+            _secondRestartedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + _secondUniqueAddress.Address.Port
+                    + "\nakka.remote.artery.canonical.port=" + _secondUniqueAddress.Address.Port)
                 .WithFallback(Sys.Settings.Config)));
         }
 

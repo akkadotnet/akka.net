@@ -48,6 +48,15 @@ namespace Akka.Remote.Artery
         AssociationState CompleteHandshake(UniqueAddress peer);
 
         /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but for a <see cref="HandshakeRsp"/> -- which the
+        /// peer only sends after registering the uid in a <see cref="HandshakeReq"/> of OURS. This
+        /// is the only call that records <see cref="AssociationState.OutboundHandshakeCompleted"/>,
+        /// the signal an ordinary/large outbound stream needs before releasing user traffic
+        /// (issue #8496).
+        /// </summary>
+        AssociationState CompleteOutboundHandshake(UniqueAddress peer);
+
+        /// <summary>
         /// Sends <paramref name="message"/> over the control channel to <paramref name="to"/>.
         /// Used by <see cref="InboundHandshakeStage"/> to reply with a <see cref="HandshakeRsp"/>.
         /// </summary>
@@ -73,6 +82,27 @@ namespace Akka.Remote.Artery
         /// <c>InboundEnvelope.association.remoteAddress</c> lookup.
         /// </summary>
         Address? TryResolveOriginAddress(long originUid);
+
+        /// <summary>
+        /// Tells the caller if <paramref name="originUid"/> is quarantined.
+        ///
+        /// <para>
+        /// The lookup uses the <see cref="AssociationRegistry"/> reverse index to find the
+        /// association, then reads that association's quarantine flag.
+        /// <see cref="IsKnownOrigin"/> uses the same index.
+        /// </para>
+        ///
+        /// <para>
+        /// The result is <see langword="false"/> for an unknown uid. A uid is unknown if the
+        /// handshake did not complete, or if a later incarnation replaced it.
+        /// </para>
+        ///
+        /// <para>
+        /// <see cref="InboundQuarantineCheckStage"/> calls this method to discard traffic from a
+        /// quarantined peer.
+        /// </para>
+        /// </summary>
+        bool IsQuarantined(long originUid);
     }
 
     /// <summary>
@@ -109,6 +139,9 @@ namespace Akka.Remote.Artery
         public AssociationState CompleteHandshake(UniqueAddress peer) => _registry.CompleteHandshake(peer.Address, peer);
 
         /// <inheritdoc/>
+        public AssociationState CompleteOutboundHandshake(UniqueAddress peer) => _registry.CompleteOutboundHandshake(peer.Address, peer);
+
+        /// <inheritdoc/>
         public void SendControl(Address to, object message) => _sendControl(to, message);
 
         /// <inheritdoc/>
@@ -116,5 +149,8 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public Address? TryResolveOriginAddress(long originUid) => _registry.TryGetByUid(originUid)?.RemoteAddress;
+
+        /// <inheritdoc/>
+        public bool IsQuarantined(long originUid) => _registry.TryGetByUid(originUid)?.IsQuarantined(originUid) ?? false;
     }
 }

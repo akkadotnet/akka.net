@@ -7,6 +7,7 @@
 
 using System;
 using System.Net.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
@@ -21,6 +22,7 @@ namespace Akka.Remote.Tests.Transport
     public class CertificateValidationHelpersSpec : AkkaSpec
     {
         private const string ValidCertPath = "Resources/akka-validcert.pfx";
+        private const string ClientCertPath = "Resources/akka-client-cert.pfx";
         private const string Password = "password";
         private readonly ILoggingAdapter _log;
 
@@ -134,6 +136,67 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(cert, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
+            });
+        }
+
+        #endregion
+
+        #region ValidateHostname Tests
+
+        [Fact(DisplayName = "ValidateHostname should compare an explicitly supplied expected hostname")]
+        public void ValidateHostname_should_compare_explicit_expected_hostname()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var matchingValidator = CertificateValidation.ValidateHostname("AkkaTestClient");
+            var rejectingValidator = CertificateValidation.ValidateHostname("unrelated.invalid");
+
+            Assert.True(matchingValidator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+            EventFilter.Error(contains: "expected 'unrelated.invalid'").ExpectOne(() =>
+            {
+                Assert.False(rejectingValidator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should match any DNS subject alternative name")]
+        public void ValidateHostname_should_match_any_DNS_subject_alternative_name()
+        {
+            using var key = RSA.Create(2048);
+            var request = new CertificateRequest("CN=client.internal", key, HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1);
+            var subjectAlternativeNames = new SubjectAlternativeNameBuilder();
+            subjectAlternativeNames.AddDnsName("first.internal");
+            subjectAlternativeNames.AddDnsName("second.internal");
+            request.CertificateExtensions.Add(subjectAlternativeNames.Build());
+            using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1),
+                DateTimeOffset.UtcNow.AddMinutes(5));
+            var validator = CertificateValidation.ValidateHostname("second.internal");
+
+            Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+        }
+
+        [Fact(DisplayName = "ValidateHostname without an expected hostname should use SslStream policy errors")]
+        public void ValidateHostname_without_expected_hostname_should_use_policy_errors()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname();
+
+            Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+            EventFilter.Error(contains: "Hostname validation failed").ExpectOne(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer",
+                    SslPolicyErrors.RemoteCertificateNameMismatch, _log));
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should reject an invalid explicit hostname")]
+        public void ValidateHostname_should_reject_invalid_explicit_hostname()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("not a valid hostname!");
+
+            EventFilter.Error(contains: "unable to validate expected hostname").ExpectOne(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
             });
         }
 

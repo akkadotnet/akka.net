@@ -79,6 +79,8 @@ namespace Akka.Actor
             switch (providerClass)
             {
                 case "local":
+                case "Akka.Actor.LocalActorRefProvider": // additional case for the bare type name used by akka.conf
+                case LocalActorRefProvider: // additional case for older configurations
                     return Local.Instance;
                 case "remote":
                 case RemoteActorRefProvider: // additional case for older configurations

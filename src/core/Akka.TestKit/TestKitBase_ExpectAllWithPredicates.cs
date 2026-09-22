@@ -44,13 +44,13 @@ public abstract partial class TestKitBase
         }
     }
 
-    public IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(TimeSpan max, params PredicateInfo[] predicates)
+    public IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates([AutoDilate] TimeSpan max, params PredicateInfo[] predicates)
     {
         using var cts = new CancellationTokenSource(RemainingOrDefault);
         return ExpectMsgAllOfMatchingPredicates(max, predicates, cts.Token);
     }
 
-    public IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(TimeSpan max,
+    public IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates([AutoDilate] TimeSpan max,
         IReadOnlyCollection<PredicateInfo> predicates, CancellationToken cancellationToken)
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(max, predicates, cancellationToken)
@@ -59,7 +59,7 @@ public abstract partial class TestKitBase
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
-        TimeSpan max,
+        [AutoDilate] TimeSpan max,
         IReadOnlyCollection<PredicateInfo> predicates,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {

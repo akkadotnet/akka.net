@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -38,49 +39,123 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+
+            // route the other systems' logs into the test output, the way ClusterSingletonRestart2Spec
+            // does - without them a CI failure here shows nothing about the cluster that caused it
+            InitializeLogger(_sys1);
+            InitializeLogger(_sys2);
         }
 
-        public void Join(ActorSystem from, ActorSystem to)
+        public async Task JoinAsync(ActorSystem from, ActorSystem to)
         {
             from.ActorOf(ClusterSingletonManager.Props(Echo.Props,
                 PoisonPill.Instance,
                 ClusterSingletonManagerSettings.Create(from)), "echo");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            var fromCluster = Cluster.Get(from);
+            var toAddress = Cluster.Get(to).SelfAddress;
+
+            // The join is re-issued on every attempt because sys3 reuses sys1's host:port: the target
+            // refuses it until the previous incarnation has been downed and removed, and a single Join
+            // would then sit out akka.cluster.retry-unsuccessful-join-after (10s). Half a second between
+            // attempts covers a gossip round trip; the old 100ms cadence re-sent JoinTo ten times a
+            // second, and a JoinTo received while the daemon is still in TryingToJoin drops it back to
+            // Uninitialized and restarts the handshake (ClusterDaemon.cs:1273), so the retry itself was
+            // adding load to the daemon it was waiting on.
+            // Both assertions read one members snapshot - the original read Cluster.State twice and
+            // could see two different gossip versions inside a single attempt.
+            await AwaitAssertAsync(() =>
             {
-                AwaitAssert(() =>
-                {
-                    Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
-                    Cluster.Get(from).State.Members.Select(x => x.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
-                    Cluster.Get(from)
-                        .State.Members.Select(x => x.Status)
-                        .ToImmutableHashSet()
-                        .Should()
-                        .Equal(ImmutableHashSet<MemberStatus>.Empty.Add(MemberStatus.Up));
-                });
-            });
+                fromCluster.Join(toAddress);
+                var members = fromCluster.State.Members;
+                members.Select(x => x.UniqueAddress).Should().Contain(fromCluster.SelfUniqueAddress);
+                members.Select(x => x.Status)
+                    .ToImmutableHashSet()
+                    .Should()
+                    .Equal(ImmutableHashSet<MemberStatus>.Empty.Add(MemberStatus.Up));
+            }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(500));
+        }
+
+        // Sends a message through the proxy until the singleton answers. The send is retried because the
+        // proxy buffers or drops traffic while it holds no singleton reference, but the probe is built
+        // once. CreateTestProbe blocks the caller until the probe's PreStart has run on the test-actor
+        // dispatcher (TestKitBase.cs:739) and replaces the calling thread's SynchronizationContext
+        // (TestKitBase.cs:194), so one per attempt puts a blocking wait, a context swap and a leaked
+        // system actor inside the retry loop - on a starved agent that wait is competing for the very
+        // thread that has to run the probe it is waiting for.
+        private async Task AwaitProxyReplyAsync(ActorSystem system, IActorRef proxy, string message, TimeSpan max)
+        {
+            var probe = CreateTestProbe(system);
+            await AwaitAssertAsync(async () =>
+            {
+                proxy.Tell(message, probe.Ref);
+                await probe.ExpectMsgAsync(message, TimeSpan.FromSeconds(1));
+            }, max);
+        }
+
+        /// <summary>
+        /// Runs <paramref name="handOver"/> and then waits for <paramref name="newOldest"/> to log the
+        /// "Hand-over in progress at" INFO line that <see cref="ClusterSingletonManager"/> writes when it
+        /// receives <c>HandOverInProgress</c> from the previous oldest - the confirmation that the hand-over
+        /// started. A failure here names the broken hand-over instead of letting it surface as an unrelated
+        /// timeout further down (see #8589 for the transport-level loss that can cause it).
+        /// </summary>
+        /// <remarks>
+        /// At least one, deliberately not exactly one: the new oldest arms HandOverRetryTimer at
+        /// hand-over-retry-interval (1s) on entering BecomingOldest, so if the first confirmation has not been
+        /// processed by the time that timer fires it re-sends HandOverToMe, and the previous oldest answers
+        /// every repeat with another HandOverInProgress while it is still in HandingOver
+        /// (ClusterSingletonManager.cs, the "// retry" case). Two log lines is correct behavior under
+        /// scheduling jitter, not a bug, so an exact EventFilter count fails on a loaded agent whenever the
+        /// round trip exceeds 1s. Fishing returns on the first match and ignores any repeats.
+        /// </remarks>
+        private async Task AwaitHandOverConfirmationAsync(ActorSystem newOldest, TimeSpan max, Func<Task> handOver)
+        {
+            // subscribe before the hand-over runs, so a confirmation that lands while it is still in flight
+            // is buffered on the probe rather than missed
+            var probe = CreateTestProbe(newOldest);
+            newOldest.EventStream.Subscribe(probe.Ref, typeof(Info));
+            try
+            {
+                await handOver();
+
+                await probe.FishForMessageAsync(
+                    m => m is Info info &&
+                         info.Message?.ToString()?.StartsWith("Hand-over in progress at") == true,
+                    max,
+                    $"[{newOldest.Name}] never logged the hand-over confirmation from the previous oldest");
+            }
+            finally
+            {
+                newOldest.EventStream.Unsubscribe(probe.Ref, typeof(Info));
+            }
         }
 
         [Fact]
-        public void Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
+        public async Task Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
         {
-            Join(_sys1, _sys1);
-            Join(_sys2, _sys1);
+            await JoinAsync(_sys1, _sys1);
+            await JoinAsync(_sys2, _sys1);
 
             var proxy2 = _sys2.ActorOf(
                 ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys2)), "proxy2");
 
-            Within(TimeSpan.FromSeconds(5), () =>
-            {
-                AwaitAssert(() =>
-                {
-                    var probe = CreateTestProbe(_sys2);
-                    proxy2.Tell("hello", probe.Ref);
-                    probe.ExpectMsg("hello", TimeSpan.FromSeconds(1));
-                });
-            });
+            await AwaitProxyReplyAsync(_sys2, proxy2, "hello", TimeSpan.FromSeconds(5));
 
-            Shutdown(_sys1);
+            // Await the graceful stop rather than TestKit's Shutdown helper. That one blocks the calling
+            // thread on Terminate().Wait(Dilated(5s)) and then silently force-stops the user guardian -
+            // which does not stop /system, so remoting keeps sys1's listener bound while sys3 is created
+            // on the same host:port below. dot-netty's tcp-reuse-addr is off-for-windows, so that rebind
+            // is exactly the kind of thing that fails on Windows and nowhere else. Terminate() runs
+            // CoordinatedShutdown to completion: the hand-over to sys2 finishes and the port is released.
+            //
+            // A failure here means sys2 never logged the hand-over confirmation from sys1 - i.e. the
+            // "Hand-over in progress at" message that ClusterSingletonManager.BecomingOldest logs on
+            // receiving HandOverToMe (see #8589 for the transport-level loss that can cause this). Naming
+            // it here turns a later, unrelated-looking timeout into a failure at the point the hand-over
+            // actually broke.
+            await AwaitHandOverConfirmationAsync(_sys2, TimeSpan.FromSeconds(10),
+                async () => { await _sys1.Terminate(); });
             // it will be downed by the join attempts of the new incarnation
 
             // ReSharper disable once PossibleInvalidOperationException
@@ -88,45 +163,59 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             var sys3Config = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=" + sys1Port)
                 .WithFallback(_sys1.Settings.Config);
             _sys3 = ActorSystem.Create(_sys1.Name, sys3Config);
+            InitializeLogger(_sys3);
 
-            Join(_sys3, _sys2);
+            await JoinAsync(_sys3, _sys2);
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            // JoinAsync only proves sys3's own view. sys2 has to see sys3 reach Up as well, because
+            // sys2's singleton manager picks its hand-over target from its own member list. If sys2
+            // leaves while it still sees sys3 as Joining there is no target, and the cluster-exiting
+            // CoordinatedShutdown phase runs to its 10s timeout before sys2 can be removed - which is
+            // what puts the removal assertion below over its budget.
+            await AwaitAssertAsync(() =>
             {
-                AwaitAssert(() =>
+                foreach (var system in new[] { _sys2, _sys3 })
                 {
-                    var probe = CreateTestProbe(_sys2);
-                    proxy2.Tell("hello2", probe.Ref);
-                    probe.ExpectMsg("hello2", TimeSpan.FromSeconds(1));
-                });
-            });
+                    var members = Cluster.Get(system).State.Members;
+                    members.Select(x => x.Status)
+                        .ToImmutableHashSet()
+                        .Should()
+                        .Equal(ImmutableHashSet<MemberStatus>.Empty.Add(MemberStatus.Up));
+                    members.Count.Should().Be(2);
+                }
+            }, TimeSpan.FromSeconds(10));
 
-            Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
+            await AwaitProxyReplyAsync(_sys2, proxy2, "hello2", TimeSpan.FromSeconds(5));
 
-            Within(TimeSpan.FromSeconds(15), () =>
+            // As above: a failure here means sys3 never saw the "Hand-over in progress at" confirmation
+            // from sys2, which is what happened in PR #8588 build 131555 - sys2's HandOverInProgress and
+            // HandOverDone were written to the socket before it closed, but a TCP RST on Windows (see
+            // #8589) discarded them on the wire, so sys3 never cancelled its hand-over retry timer and
+            // fell back to the removal-margin/hand-over-retries path instead. That path does eventually
+            // recover the singleton, but only after 20s+ (removal margin) or ~27s (hand-over retries
+            // exhausted, manager crash-restart) - both well outside the 5s AwaitProxyReplyAsync budget
+            // below, which is sized for the designed hand-over path (HandOverDone reaches sys3 about
+            // 1ms after sys2 starts handing over, before sys2's system terminates). The budget is deliberately not widened to cover the fallback: doing
+            // so would only make the test pass on a path where the hand-over was lost and the manager had
+            // to crash to recover, which defeats the point of a spec named after the hand-over.
+            await AwaitHandOverConfirmationAsync(_sys3, TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
+
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.Get(_sys3)
                         .State.Members.Select(x => x.UniqueAddress)
                         .Should()
                         .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
-                });
+                }, TimeSpan.FromSeconds(15));
             });
 
             var proxy3 =
                 _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),
                     "proxy3");
 
-            Within(TimeSpan.FromSeconds(5), () =>
-            {
-                AwaitAssert(() =>
-                {
-                    var probe = CreateTestProbe(_sys3);
-                    proxy3.Tell("hello3", probe.Ref);
-                    probe.ExpectMsg("hello3", TimeSpan.FromSeconds(1));
-                });
-            });
+            await AwaitProxyReplyAsync(_sys3, proxy3, "hello3", TimeSpan.FromSeconds(5));
         }
 
         protected override void AfterAll()

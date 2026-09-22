@@ -2,6 +2,8 @@
 
 **Placeholder for nightly build**
 
+* Akka.Hosting: Akka.Hosting now ships from this repository. The `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit` and `Akka.Hosting.TestKit.Xunit2` packages live under `src/contrib/hosting` and share the Akka.NET version and release cadence (forward-port of [#8591](https://github.com/akkadotnet/akka.net/pull/8591)). No package IDs, namespaces or public APIs changed; bump `Akka.Hosting.*` to the same version as `Akka.*`. Hosting-only hotfix versions no longer exist. Documentation moved to [getakka.net/articles/hosting](https://getakka.net/articles/hosting/index.html); the [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository will be archived and keeps the history for versions up to 1.5.71. **Breaking on 1.6**: the Hosting packages target `net10.0` only, matching the rest of Akka.NET 1.6.
+* Build: Microsoft.Extensions minimum version moves to 10.0 for `Akka`, `Akka.DependencyInjection` and all `Akka.Hosting.*` packages (previously 6.0 for the core packages and 9.0 for Akka.Hosting). Akka.Hosting's `OpenTelemetry` dependency moves to 1.15.3 or later, which clears [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j).
 * Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
 * Akka.Streams: Add cancellation-aware `Source.Queue` offers so backpressured pending offers can be canceled without later emitting the canceled element.
 * Akka.Streams: Fixed `Source.From(IAsyncEnumerable<T>)` cleanup so cancellation waits for any in-flight `MoveNextAsync()` before disposing the async enumerator and its cancellation token source.

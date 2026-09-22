@@ -59,7 +59,7 @@ namespace Akka.Cluster.Sharding
             string typeName,
             ClusterShardingSettings settings,
             IShardAllocationStrategy allocationStrategy,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap,
             IRememberEntitiesProvider rememberEntitiesStoreProvider)
         {
@@ -75,7 +75,7 @@ namespace Akka.Cluster.Sharding
 
         private const string RememberEntitiesTimeoutKey = "RememberEntityTimeout";
 
-        private readonly IActorRef _replicator;
+        private readonly ICanTell _replicator;
         private readonly ShardCoordinator _baseImpl;
         private bool VerboseDebug => _baseImpl.VerboseDebug;
 
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Sharding
             string typeName,
             ClusterShardingSettings settings,
             IShardAllocationStrategy allocationStrategy,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap,
             IRememberEntitiesProvider? rememberEntitiesStoreProvider)
         {
@@ -583,7 +583,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetCoordinatorState()
         {
-            _replicator.Tell(Dsl.Get(_coordinatorStateKey, _stateReadConsistency));
+            _replicator.Tell(Dsl.Get(_coordinatorStateKey, _stateReadConsistency), Self);
         }
 
         private void GetAllRememberedShards()
@@ -606,7 +606,7 @@ namespace Akka.Cluster.Sharding
                 new LWWRegister<CoordinatorState>(_selfUniqueAddress, _initEmptyState),
                 _stateWriteConsistency,
                 evt,
-                reg => reg.WithValue(_selfUniqueAddress, s)));
+                reg => reg.WithValue(_selfUniqueAddress, s)), Self);
         }
 
         private void RememberShardAllocated(string newShard)

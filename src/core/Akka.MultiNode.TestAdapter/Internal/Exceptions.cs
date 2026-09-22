@@ -39,6 +39,19 @@ namespace Akka.MultiNode.TestAdapter.Internal
         { }
     }
     
+    /// <summary>
+    /// Reported for the nodes a multi-node spec never started, because the node hosting the
+    /// TestConductor did not publish the port it bound.
+    /// </summary>
+    internal class ConductorStartupException : Exception
+    {
+        public ConductorStartupException(string message) : base(message)
+        { }
+
+        // No stack trace: this exception is built to describe a failure, not thrown from one.
+        public override string StackTrace => "";
+    }
+
     internal class TestFailedException : Exception
     {
         private readonly string _stackTrace;

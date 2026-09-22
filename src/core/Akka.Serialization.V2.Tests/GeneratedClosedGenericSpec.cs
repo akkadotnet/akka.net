@@ -66,7 +66,7 @@ public sealed class GeneratedClosedGenericSpec : IAsyncLifetime
     [Fact(DisplayName = "Closed construction wire format should inline the substituted payload with no discriminator")]
     public void Closed_construction_wire_format_should_inline_payload()
     {
-        // Contrast with both [AkkaEnvelopePayload] ({id, manifest, bytes}) and [AkkaUnion]
+        // Contrast with both an object-typed envelope field ({id, manifest, bytes}) and [AkkaUnion]
         // ({manifest, fields}): a T-typed field in a registered construction is statically known,
         // so it encodes as a plain nested field map with NO discriminator of any kind.
         var message = new Wrapper<OrderRequest>("wrap-4", new OrderRequest("order-4", 9), null);

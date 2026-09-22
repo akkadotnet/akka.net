@@ -97,11 +97,20 @@ namespace Akka.Actor
             ProviderClass = ProviderSelectionType.Fqn;
             HasCluster = ProviderSelectionType.HasCluster;
 
-            var providerType = Type.GetType(ProviderClass);
-            if (providerType == null)
-                throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
-            if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
+            // The three built-in providers do not need to be validated here: their type names are
+            // compile-time constants and ActorSystemImpl.ConfigureProvider resolves each one from
+            // its own constant so the trimmer / Native AOT compiler can keep the type. Validating
+            // them through the ProviderClass property would reintroduce a dynamic Type.GetType call
+            // that the trimmer cannot see through (IL2057), and under Native AOT it would fail here
+            // even though the provider itself is perfectly resolvable.
+            if (ProviderSelectionType is ProviderSelection.Custom)
+            {
+                var providerType = Type.GetType(ProviderClass);
+                if (providerType == null)
+                    throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
+                if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
+                    throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
+            }
 
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 

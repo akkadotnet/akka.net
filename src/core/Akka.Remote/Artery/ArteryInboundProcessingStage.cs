@@ -126,6 +126,11 @@ namespace Akka.Remote.Artery
         /// (task 10.2) -- matches Pekko's <c>maximum-large-frame-size</c>.
         /// </param>
         /// <param name="serialization">The receiving actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
+        /// <param name="timeProvider">
+        /// Clock for the lane path's unknown-origin drop-warning rate limit -- see
+        /// <see cref="TimeProvider"/>. <see langword="null"/> resolves to the materializing
+        /// system's scheduler.
+        /// </param>
         /// <param name="inboundLanes">
         /// Number of inbound lanes ordinary-stream messages are fanned out across (see the
         /// type-level "Inbound lanes" remarks). <see langword="1"/> (the default -- and the
@@ -140,10 +145,20 @@ namespace Akka.Remote.Artery
         /// &gt; 1. Ignored (and may be 0) at the default <paramref name="inboundLanes"/> of 1.
         /// </param>
         /// <param name="inboundContext">
-        /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: an Ordinary-stream connection's
-        /// lane path bypasses <see cref="InboundHandshakeStage"/> for its own ordinary traffic (see
-        /// the type-level remarks on why that stage is a structural no-op for such a connection)
-        /// but still needs its <see cref="IInboundContext.IsKnownOrigin"/> gate, reused as-is here.
+        /// Necessary only when <paramref name="inboundLanes"/> is more than 1.
+        ///
+        /// <para>
+        /// The ordinary traffic of such a connection goes to the lanes. It does not go through
+        /// <see cref="InboundHandshakeStage"/> or <see cref="InboundQuarantineCheckStage"/>. The
+        /// type-level remarks tell why those two stages do nothing for such a connection.
+        /// </para>
+        ///
+        /// <para>
+        /// The lane path must do the checks of those two stages itself. It calls
+        /// <see cref="IInboundContext.IsKnownOrigin"/> and
+        /// <see cref="IInboundContext.IsQuarantined"/> for the checks, and
+        /// <see cref="IInboundContext.SendControl"/> to send the quarantine notice.
+        /// </para>
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
@@ -168,6 +183,7 @@ namespace Akka.Remote.Artery
             int maxFrameLength,
             int maxLargeFrameLength,
             Akka.Serialization.Serialization serialization,
+            ITimeProvider? timeProvider = null,
             int inboundLanes = 1,
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
@@ -184,6 +200,7 @@ namespace Akka.Remote.Artery
             MaxFrameLength = maxFrameLength;
             MaxLargeFrameLength = maxLargeFrameLength;
             Serialization = serialization;
+            TimeProvider = timeProvider;
             InboundLanes = inboundLanes;
             InboundLaneBufferSize = inboundLaneBufferSize;
             InboundContext = inboundContext;
@@ -230,6 +247,14 @@ namespace Akka.Remote.Artery
         public int MaxLargeFrameLength { get; }
 
         public Akka.Serialization.Serialization Serialization { get; }
+
+        /// <summary>
+        /// Clock for the lane path's unknown-origin drop-warning rate limit, or
+        /// <see langword="null"/> to use the materializing system's scheduler. See
+        /// <see cref="InboundHandshakeStage.TimeProvider"/>, which owns the non-lane half of the
+        /// same warning.
+        /// </summary>
+        public ITimeProvider? TimeProvider { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public int InboundLanes { get; }
@@ -318,8 +343,25 @@ namespace Akka.Remote.Artery
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            /// <summary>
+            /// Rate limit for this connection's unknown-origin drop warnings -- the lane path's
+            /// half of the pair <see cref="InboundHandshakeStage"/> owns the other half of; see
+            /// that stage for the rationale.
+            /// </summary>
+            private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
+
             private readonly ArteryInboundProcessingStage _stage;
             private readonly Queue<IInboundEnvelope> _pending = new();
+            /// <summary>
+            /// Clock reading at the last warning; <see langword="null"/> until the first one. Uses
+            /// <see cref="ITimeProvider.Now"/> -- the reading <c>TestScheduler</c> virtualizes.
+            /// </summary>
+            private DateTimeOffset? _lastUnknownOriginWarning;
+
+            private long _suppressedUnknownOriginDrops;
+
+            /// <summary>Resolved once at <see cref="PreStart"/>; see <see cref="ArteryInboundProcessingStage.TimeProvider"/>.</summary>
+            private ITimeProvider _timeProvider = null!;
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
@@ -385,6 +427,13 @@ namespace Akka.Remote.Artery
                     };
                 }
             }
+
+            public override void PreStart() =>
+                _timeProvider = _stage.TimeProvider
+                                ?? (Materializer as ActorMaterializer)?.System.Scheduler
+                                ?? throw new InvalidOperationException(
+                                    "No ITimeProvider available: this stream was not materialized " +
+                                    "by an ActorMaterializer, so pass one to the stage explicitly.");
 
             public void OnPush()
             {
@@ -752,9 +801,66 @@ namespace Akka.Remote.Artery
                 // user-message dispatch per connection" holds for the lane path too.
                 if (!_stage.InboundContext!.IsKnownOrigin(decoded.Header.OriginUid))
                 {
+                    var now = _timeProvider.Now;
+                    if (_lastUnknownOriginWarning is not { } lastWarning ||
+                        now - lastWarning >= UnknownOriginWarnInterval)
+                    {
+                        Log.Warning(
+                            "Dropping inbound lane-routed Artery message from unknown origin uid [{0}]: no completed handshake for this uid yet. " +
+                            "The message is LOST - ordinary messages are not resent. [{1}] further drop(s) suppressed since the last warning.",
+                            decoded.Header.OriginUid, _suppressedUnknownOriginDrops);
+                        _lastUnknownOriginWarning = now;
+                        _suppressedUnknownOriginDrops = 0;
+                    }
+                    else
+                    {
+                        _suppressedUnknownOriginDrops++;
+                    }
+
+                    return true;
+                }
+
+                // The quarantine check for the lane path. It does what InboundQuarantineCheckStage
+                // does, because lane traffic does not go through the sink that holds that stage.
+                // The checks from InboundHandshakeStage and InboundTestStage are inlined here for
+                // the same reason.
+                //
+                // This code deserializes the message here, which lane mode otherwise leaves to the
+                // lane consumer. Two reasons make this acceptable:
+                //   - Only frames from a quarantined uid get this far, so a healthy connection
+                //     never runs this code.
+                //   - ShouldNotifyOrigin must examine the message to decide about the notice.
+                if (_stage.InboundContext!.IsQuarantined(decoded.Header.OriginUid))
+                {
+                    var quarantinedOrigin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
+                    object quarantinedMessage;
+                    try
+                    {
+                        quarantinedMessage = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The code discards the frame in all conditions. A deserialization failure
+                        // only prevents the notice for this one frame. The next discarded frame
+                        // sends it.
+                        Log.Debug(
+                            ex,
+                            "Dropping message (serializer id [{0}]) from [{1}#{2}] because the system is quarantined (payload not deserializable).",
+                            decoded.Header.SerializerId, quarantinedOrigin, decoded.Header.OriginUid);
+                        return true;
+                    }
+
                     Log.Debug(
-                        "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
-                        decoded.Header.OriginUid);
+                        "Dropping message [{0}] from [{1}#{2}] because the system is quarantined",
+                        quarantinedMessage.GetType(), quarantinedOrigin, decoded.Header.OriginUid);
+
+                    if (InboundQuarantineCheckStage.ShouldNotifyOrigin(quarantinedMessage) && quarantinedOrigin is not null)
+                    {
+                        _stage.InboundContext!.SendControl(
+                            quarantinedOrigin,
+                            new ArteryQuarantined(_stage.InboundContext!.LocalAddress, decoded.Header.OriginUid));
+                    }
+
                     return true;
                 }
 

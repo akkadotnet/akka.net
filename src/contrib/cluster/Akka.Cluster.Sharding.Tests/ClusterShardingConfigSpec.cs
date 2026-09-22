@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void Should_cluster_sharding_settings_have_default_config()
         {
-            ClusterSharding.Get(Sys);
+            var clusterSharding = ClusterSharding.Get(Sys);
             var config = Sys.Settings.Config.GetConfig("akka.cluster.sharding");
 
             var clusterShardingSettings = ClusterShardingSettings.Create(Sys);
@@ -55,6 +55,10 @@ namespace Akka.Cluster.Sharding.Tests
 
             Assert.Equal(1, config.GetInt("least-shard-allocation-strategy.rebalance-threshold"));
             Assert.Equal(3, config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance"));
+            Assert.Equal(20, config.GetInt("least-shard-allocation-strategy.rebalance-absolute-limit"));
+            Assert.Equal(0.1, config.GetDouble("least-shard-allocation-strategy.rebalance-relative-limit"));
+            clusterSharding.DefaultShardAllocationStrategy(clusterShardingSettings)
+                .Should().BeOfType<Sharding.Internal.LeastShardAllocationStrategy>();
 
             Assert.Equal("all", config.GetString("entity-recovery-strategy"));
             Assert.Equal(TimeSpan.FromMilliseconds(100), config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"));

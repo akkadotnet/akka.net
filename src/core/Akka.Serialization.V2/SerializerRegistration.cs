@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
 
@@ -56,6 +57,8 @@ public sealed class SerializerRegistration
 
     public static SerializationSetup CreateSetup(params SerializerRegistration[] registrations)
     {
+        ValidateOneOwnerPerType(registrations);
+
         return SerializationSetup.Create(system =>
         {
             var builder = ImmutableHashSet.CreateBuilder<SerializerDetails>();
@@ -66,5 +69,33 @@ public sealed class SerializerRegistration
 
             return builder.ToImmutable();
         });
+    }
+
+    /// <summary>
+    /// The startup one-owner check (Serialization.V2 design.md Decision 19): no two composed
+    /// registrations may claim the same message type. A source generator's own compilation can
+    /// catch two visible serializers adopting the same type (AKKASG031/AKKASG041), but two
+    /// serializers declared in assemblies that cannot see each other are invisible to each other at
+    /// build time. This is the last line of defense for that case, run once when the registrations
+    /// are composed -- one dictionary pass over every registration's <see cref="UseFor"/> set, not
+    /// on every message send.
+    /// </summary>
+    private static void ValidateOneOwnerPerType(SerializerRegistration[] registrations)
+    {
+        var ownerByType = new Dictionary<Type, string>();
+        foreach (var registration in registrations)
+        {
+            foreach (var type in registration.UseFor)
+            {
+                if (ownerByType.TryGetValue(type, out var owner) && !string.Equals(owner, registration.Alias, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Type '{type}' is claimed by more than one serializer registration: '{owner}' and '{registration.Alias}'. " +
+                        "A message type may have only one owner.");
+                }
+
+                ownerByType[type] = registration.Alias;
+            }
+        }
     }
 }

@@ -8,7 +8,7 @@ This change runs after the atomic `serializer-v2` foundation. It is not a late o
 
 - Add `Akka.Serialization.V2` package for user-facing generated serializers.
 - Use direct MessagePack-CSharp reader/writer cursors in generated serializers.
-- Add attributes such as `[AkkaSerializable]`, `[AkkaField]`, and serializer configuration attributes (`[AkkaSerializer<TProtocol>]`, `[AkkaEnvelopePayload]`, `[AkkaSerializerFormatter<TTarget, TFormatter>]`).
+- Add attributes such as `[AkkaSerializable]`, `[AkkaField]`, and serializer configuration attributes (`[AkkaSerializer<TProtocol>]`, `[AkkaSerializerFormatter<TTarget, TFormatter>]`); an `object`-typed field is the serializer boundary.
 - Add manifest-discriminated closed unions (`[AkkaUnion]`) and closed generic type registrations (`[AkkaSerializable<T>]`) so the generator can serialize a bounded polymorphic field or a closed construction of a generic message type.
 - Add a Roslyn incremental source generator that emits V2 serializers.
 - Register generated serializers explicitly through per-serializer generated helpers; do not use runtime assembly scanning.

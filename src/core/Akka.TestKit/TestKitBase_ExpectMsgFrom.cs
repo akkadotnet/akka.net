@@ -34,7 +34,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsgFrom<T>(
             IActorRef sender,
-            TimeSpan? duration = null,
+            [AutoDilate] TimeSpan? duration = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -48,7 +48,7 @@ namespace Akka.TestKit
 
         public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
-            TimeSpan? duration = null,
+            [AutoDilate] TimeSpan? duration = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -81,7 +81,7 @@ namespace Akka.TestKit
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             T message,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -97,7 +97,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             T message,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -131,7 +131,7 @@ namespace Akka.TestKit
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -147,7 +147,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -182,7 +182,7 @@ namespace Akka.TestKit
         public T ExpectMsgFrom<T>(
             Predicate<IActorRef> isSender, 
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -198,7 +198,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgFromAsync<T>(
             Predicate<IActorRef> isSender,
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -250,7 +250,7 @@ namespace Akka.TestKit
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             Action<T> assertMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -266,7 +266,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgFromAsync<T>(
             IActorRef sender,
             Action<T> assertMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -297,7 +297,7 @@ namespace Akka.TestKit
         public T ExpectMsgFrom<T>(
             Action<IActorRef> assertSender, 
             Action<T> assertMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -313,7 +313,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgFromAsync<T>(
             Action<IActorRef> assertSender, 
             Action<T> assertMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {

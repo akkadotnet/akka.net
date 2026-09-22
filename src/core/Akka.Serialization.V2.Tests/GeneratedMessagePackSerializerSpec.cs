@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -396,12 +397,12 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
 
             var customRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, customEnvelope);
             customRecovered.Should().Be(customEnvelope);
-            customRecovered.Inner.Payload.Should().BeOfType<CustomProtobufPayload>();
+            ((AttributeInnerEnvelope)customRecovered.Inner).Payload.Should().BeOfType<CustomProtobufPayload>();
             envelopeSerializer.SizeHint(customEnvelope).Should().Be(SerializerV2.UnknownSize);
 
             var generatedRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, generatedEnvelope);
             generatedRecovered.Should().Be(generatedEnvelope);
-            generatedRecovered.Inner.Payload.Should().BeOfType<RequiredMessage>();
+            ((AttributeInnerEnvelope)generatedRecovered.Inner).Payload.Should().BeOfType<RequiredMessage>();
             envelopeSerializer.SizeHint(generatedEnvelope).Should().Be(system.Serialization.Serialize(generatedEnvelope).Length);
         }
         finally
@@ -755,12 +756,35 @@ public sealed record OpaqueSerializedPayload(
 [AkkaSerializable(Manifest = "attribute-outer-envelope-v1")]
 public sealed record AttributeOuterEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
-    [property: AkkaField(2), AkkaEnvelopePayload] AttributeInnerEnvelope Inner) : IGeneratedTestProtocol;
+    [property: AkkaField(2)] object Inner) : IGeneratedTestProtocol;
 
 [AkkaSerializable(Manifest = "attribute-inner-envelope-v1")]
 public sealed record AttributeInnerEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
-    [property: AkkaField(2), AkkaEnvelopePayload] object Payload) : IGeneratedTestProtocol;
+    [property: AkkaField(2)] object Payload) : IGeneratedTestProtocol;
+
+// ---- object elements inside a collection: each element is its own envelope-payload boundary,
+// the same frame a property typed `object` already gets (see ObjectElementSpec) ----
+
+[AkkaSerializable(Manifest = "object-list-v1")]
+public sealed record ObjectListMessage(
+    [property: AkkaField(1)] List<object> Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-array-v1")]
+public sealed record ObjectArrayMessage(
+    [property: AkkaField(1)] object[] Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-list-nullable-v1")]
+public sealed record ObjectListNullableMessage(
+    [property: AkkaField(1)] List<object?> Items) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-dict-values-v1")]
+public sealed record ObjectDictValuesMessage(
+    [property: AkkaField(1)] Dictionary<string, object> Values) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "object-immutable-list-v1")]
+public sealed record ObjectImmutableListMessage(
+    [property: AkkaField(1)] ImmutableList<object> Items) : IGeneratedTestProtocol;
 
 public sealed record CustomProtobufPayload(string PayloadId, int Value);
 

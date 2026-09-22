@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Akka.Persistence Microsoft.Extensions.Hosting support.</Description>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;persistence;event sourcing</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Hosting\Akka.Hosting.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
+    </ItemGroup>
+
+</Project>

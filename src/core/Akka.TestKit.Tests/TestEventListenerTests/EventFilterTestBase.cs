@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit, IAsyncLifetime
+    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit
     {
         /// <summary>
         /// Used to signal that the test was successful and that we should ensure no more messages were logged
@@ -24,25 +24,22 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
         }
 
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
+
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            
+
             // Retry logger initialization to handle race conditions where logging system isn't ready yet
             await AwaitAssertAsync(async () =>
             {
                 SendRawLogEventMessage(initLoggerMessage);
                 await ExpectMsgAsync("OK", TimeSpan.FromSeconds(1));
             }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
-            
-            //From now on we know that all messages will be forwarded to TestActor
-        }
 
-        public ValueTask DisposeAsync()
-        {
-            return new ValueTask(Task.CompletedTask);
+            //From now on we know that all messages will be forwarded to TestActor
         }
 
         protected abstract void SendRawLogEventMessage(object message);

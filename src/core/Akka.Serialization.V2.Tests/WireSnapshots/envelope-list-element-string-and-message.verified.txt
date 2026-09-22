@@ -1,0 +1,10 @@
+﻿case: envelope-list-element-string-and-message
+message-type: ObjectListMessage
+manifest: object-list-v1
+serializer-id: 120101
+byte-count: 52
+
+0000  81 01 92 83 01 01 02 a0  03 c4 06 22 6e 6f 74 65  |..........."note|
+0010  22 83 01 ce 00 01 d5 25  02 ab 72 65 71 75 69 72  |"......%..requir|
+0020  65 64 2d 76 31 03 c4 0c  82 01 a7 6f 72 64 65 72  |ed-v1......order|
+0030  2d 31 02 2a                                       |-1.*|

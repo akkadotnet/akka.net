@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding.Internal
             ShardId shardId,
             string typeName,
             ClusterShardingSettings settings,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap)
         {
             return Actor.Props.Create(() => new DDataRememberEntitiesShardStore(shardId, typeName, settings, replicator, majorityMinCap));
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Sharding.Internal
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly IActorRef _replicator;
+        private readonly ICanTell _replicator;
 
         private readonly Cluster _node;
         private readonly UniqueAddress _selfUniqueAddress;
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Sharding.Internal
             ShardId shardId,
             string typeName,
             ClusterShardingSettings settings,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap)
         {
             _replicator = replicator;
@@ -305,7 +305,7 @@ namespace Akka.Cluster.Sharding.Internal
 
             foreach (var u in ddataUpdates)
             {
-                _replicator.Tell(u.Value.Update);
+                _replicator.Tell(u.Value.Update, Self);
             }
 
             Context.Become(WaitingForUpdates(Sender, update, ddataUpdates));
@@ -341,7 +341,7 @@ namespace Akka.Cluster.Sharding.Internal
                             if (retriesLeft > 0)
                             {
                                 _log.Debug("Retrying update because of write timeout, tries left [{0}]", retriesLeft);
-                                _replicator.Tell(updateForEvts);
+                                _replicator.Tell(updateForEvts, Self);
                                 Context.Become(Next(updatesLeft.SetItem(evts, (updateForEvts, retriesLeft - 1))));
                             }
                             else
@@ -387,7 +387,7 @@ namespace Akka.Cluster.Sharding.Internal
             foreach (var i in Enumerable.Range(0, numberOfKeys))
             {
                 var key = _keys[i];
-                _replicator.Tell(Dsl.Get(key, _readMajority, i));
+                _replicator.Tell(Dsl.Get(key, _readMajority, i), Self);
             }
         }
     }

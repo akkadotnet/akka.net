@@ -57,6 +57,8 @@
 - [x] 5.13 Support `[AkkaEnvelopePayload]` fields through runtime Akka serializer lookup
 - [x] 5.14 Support foreign-type formatters via [AkkaSerializerFormatter] escape hatch (AddressFormatter/ActorPathFormatter built-ins, byte-compatible with Artery control-message wire format)
 - [x] 5.15 Honor declared accessibility of serializer partial classes (internal serializers)
+- [x] 5.16 Remove `[AkkaEnvelopePayload]`; an `object`-typed field is the serializer boundary on its own, AKKASG035 retired, AKKASG038 added (design.md Decision 20) — PR #8518
+- [x] 5.17 Extend Decision 20 to collection elements: a `List<object>`/`object[]`/any other natively-supported collection whose element type is `object` (or `object?`) treats each element as its own envelope-payload boundary, nullable-aware the same way a field is (`MapCollectionElement`, `EmitWriteElement`/`EmitReadElement`/`EmitSizeElement` `FieldKind.EnvelopePayload` cases). A dictionary KEY typed `object` is rejected with AKKASG003 instead (unstable round-tripped identity for hash/equality lookups, plus a null key crashing `Dictionary<TKey,TValue>` at runtime); dictionary VALUES typed `object` are supported. `ObjectElementSpec.cs`
 
 ## 6. Integration Validation
 
@@ -219,3 +221,317 @@ added generator-level validation of the `[AkkaSerializer]` class shape itself. C
       either, since C# does not allow an unbound generic type as an attribute type argument)
 - [x] 12.8 Remove `global::`-qualified type names from hand-written runtime code and generator
       diagnostic message text in favor of human-readable names (`ToDisplayName`; commit `278e9a4a0`)
+
+## 13. Schemas From Referenced-Assembly Metadata (Decision 16)
+
+Stacks on S1-S6 (`feature/serialization-v2-generator-locations`, PRs #8525/#8526/#8527/#8528/#8530/#8532/#8533).
+F1 of the follow-on cross-assembly work: builds a nested field's or a union member's schema from a
+referenced assembly's compiled metadata, closing the gap `CrossAssemblyBaselineSpec` pinned. Does
+not implement Decisions 17-21 (later PRs).
+
+- [x] 13.1 Add a per-compilation metadata-schema stage (`ComputeMetadataSchemas`,
+      `AkkaSerializerGenerator.MetadataSchemas.cs`): resolves every non-generic, foreign-assembly
+      type a local message's nested field or union member names, checks it is `[AkkaSerializable]`
+      and accessible, and extracts its schema through the same `ExtractMessageCore` a local type
+      uses. Walks nested foreign references breadth-first, so a type nested arbitrarily deep in a
+      referenced assembly still resolves. New model: `MetadataSchemaTable`
+      (`AkkaSerializerGenerator.Models.cs`), symbol-free and value-equatable, wired into
+      `ResolveSerializerMessages` beneath local/closed-generic messages (local declarations keep
+      priority) so every downstream stage (reachability, union planning, emission) treats a metadata
+      schema exactly like a local one
+- [x] 13.2 Add AKKASG039 (`NestedFieldNotAccessibleCrossAssembly` /
+      `UnionMemberNotAccessibleCrossAssembly`, Error): a referenced type carries `[AkkaSerializable]`
+      but this compilation cannot see it, or one of its own `[AkkaField]` properties, or a type it
+      itself nests. Type-level accessibility uses `Compilation.IsSymbolAccessibleWithin`; member-level
+      accessibility is read back from `ExtractMessageCore`'s own `InvalidFields`/`ConstructionPlan.Errors`
+      output (a wholly inaccessible member is invisible to `GetMembers()` and cannot be diagnosed at
+      all -- see design.md Decision 16's implementation addendum). A nested failure propagates to a
+      fixed point, so a problem one level down is attributed to the actual broken type while still
+      reporting at the local reference site
+- [x] 13.3 Confirm the existing AKKASG023/AKKASG007/AKKASG015 mislabel fix (a prior branch) still
+      reports correctly once metadata schemas exist for the residual "not `[AkkaSerializable]`
+      anywhere" failure path; no code change needed, covered by `CrossAssemblyBaselineSpec`
+- [x] 13.4 Flip `CrossAssemblyBaselineSpec`'s nested-field and union-member cases from a pinned
+      failure to a pinned success, rewriting their ASCII diagrams; add three new AKKASG039 cases
+      (non-public property, an internal union member, and one level down). The other four baseline
+      cases (generic definition, unreachable closed-generic registration, envelope payload on a
+      generic property, protocol implementor only in a referenced assembly) stay pinned, unaffected
+      by this decision
+- [x] 13.5 Add cross-assembly golden-output coverage (`CrossAssemblyGoldenOutputSpec.cs`): a nested
+      field, a union member, and a closed generic from a referenced assembly, pinned against a
+      checked-in baseline and proven byte-identical to the same declarations made locally except for
+      the namespace
+- [x] 13.6 Add the `MetadataSchemas` tracking name and two caching-proof scenarios to
+      `GeneratorIncrementalScenariosSpec.cs`: an unrelated edit with a metadata schema in play
+      re-emits nothing, and editing the local message that references it re-emits only the owning
+      serializer
+- [x] 13.7 Document cross-assembly support in the user guide (new "Cross-Assembly Types" section,
+      AKKASG039 in the diagnostics table, updated Limitations section) and record the implementation
+      choices the design text did not cover as an addendum under Decision 16 in design.md
+
+## 14. Closed-Set Expansion And Adoption On The Serializer (Decisions 17 And 18)
+
+Stacks on F1 (`feature/serialization-v2-metadata-schemas`, PR #8534). F2 of the follow-on
+cross-assembly work. Decision 17 ("Unknown Union Members: The Generator Throws, The Caller
+Decides") needed no code change: the generated union write/read dispatch already throws
+`SerializationException` on an unmatched runtime type or an unrecognized manifest, confirmed by
+inspection of `GenerateUnionWrite`/`GenerateUnionRead` and unchanged by this phase. Decision 18
+("Closed-Set Expansion And Adoption On The Serializer") is the substance of this phase. Does not
+implement Decisions 19 or 21 (the referenced-assembly implementor walk and the union-without-a-
+member-list form; later PRs) -- the closed set `ManifestPrefix` expands over, and the walk a
+one-owner conflict compares against, are both scoped to the current compilation only.
+
+- [x] 14.1 Add `ManifestPrefix` to `AkkaSerializableAttribute<TMessage>` (extend-only; `Attributes.cs`),
+      alongside the existing `Manifest`. `ClosedGenericRegistrationInfo` gains `ManifestPrefix`,
+      `ExpansionGroup` (empty for a directly-written registration; the base target's display name for
+      a synthesized expansion member), and `ExpansionError` (non-empty when a `ManifestPrefix`
+      registration could not expand)
+- [x] 14.2 Relax `ExtractClosedGenericRegistrations`'s target validity check to accept a non-generic
+      concrete type (Decision 18's adoption rule), not only a closed generic construction; AKKASG020
+      stops rejecting a non-generic type argument
+- [x] 14.3 Implement `ManifestPrefix` expansion (`ExpandClosedGenericRegistration`,
+      `AkkaSerializerGenerator.Extraction.cs`): a type argument's closed set is either the
+      serializer's own protocol interface (`TryGetClosedSetMembers`, walking this compilation's own
+      non-generic `[AkkaSerializable]` implementors, `ComputeLocalMarkedProtocolImplementors`) or a
+      type-level `[AkkaUnion]`'s explicit member list. Every type argument is tested independently, so
+      a multi-argument registration expands to the product of its arguments' sets
+      (`CartesianProduct`); an argument with no closed set must instead resolve to exactly one
+      already-known manifest (`TryResolveFixedArgumentManifest`) -- its own, for an ordinary concrete
+      type, or a sibling literal registration's, for a nested generic construction. Each combination
+      is `Construct()`-ed off the open generic definition and run through the same `ExtractMessageCore`
+      every other schema uses, with a manifest derived by the formula
+      `prefix + "/" + string.Join("/", memberManifests)`. An explicit registration for one specific
+      construction is skipped during expansion and keeps its own manifest, overriding the derived one
+- [x] 14.4 Add AKKASG040 (`ClosedSetExpansionRequiresClosedSet`, Error): a `ManifestPrefix`
+      registration whose target has no closed set to expand (not generic, a concrete class, or one
+      of its arguments resolves to neither a closed set nor a registered sibling manifest). Gate-level,
+      alongside AKKASG020/AKKASG021 in `ValidateClosedGenericRegistrations`
+- [x] 14.5 Add AKKASG042 (`ClosedSetExpansionCount`, Info): reported once per successfully-expanding
+      `ManifestPrefix` registration, naming the resulting construction count. Unconditional -- the
+      design specifies no size threshold
+- [x] 14.6 Implement the adoption rule in `ResolveSerializerMessages`
+      (`AkkaSerializerGenerator.Emission.cs`): every registered/expanded closed-generic-schema target
+      is unconditionally top-level, whether or not it implements the protocol. Retire AKKASG034 (its
+      descriptor, `DiagnosticKey` entry, and registry mapping removed; the id stays a permanent gap
+      like AKKASG030/AKKASG035) -- the "registration has no effect" condition it guarded can no
+      longer occur. `GenerateRegistration` binds the concrete type of every entry in
+      `SerializerInfo.ClosedGenericSchemas`, not only the protocol interface, sorted by fully-qualified
+      name for deterministic output
+- [x] 14.7 Implement the protocol-interface-field-as-union rule in `ResolveMessages`
+      (`AkkaSerializerGenerator.Emission.cs`): a field whose static type is exactly the serializer's
+      own protocol interface is reclassified from `FieldKind.Unsupported` to a union over the
+      protocol closed set, with no `[AkkaUnion]` attribute needed. `MessageInfo` gains `IsSealed`/
+      `IsAbstract`/`IsValueType`/`ForeignAssemblyName` (captured once at extraction) so the implicit
+      union's `UnionMemberInfo` list needs no symbol access at resolve time; `FieldInfo.WithUnion`
+      performs the reclassification. AKKASG003's polymorphic hint text gains the protocol-interface
+      option
+- [x] 14.8 Add AKKASG041 (`AdoptedMessageOwnedByMultipleSerializers`, Error): the one-owner rule.
+      `ComputeMultiOwnedMessages` (`AkkaSerializerGenerator.Emission.cs`) maps every message type to
+      its owning serializer(s) -- by protocol membership or by `ClosedGenericSchemas` adoption --
+      across the whole compilation; a type with more than one owner is reported at every owning
+      serializer's own attribute, from `ReportCrossSerializerDiagnostics`
+- [x] 14.9 Fix a duplicate-key crash `ResolveSerializerMessages` would otherwise hit when a
+      non-generic type is both ordinarily declared (`declaredMessages`) and separately adopted
+      (`ClosedGenericSchemas`): the adopted entry wins and the plain declaration is excluded from the
+      concat, preserving declaration order and the registration's own manifest override
+- [x] 14.10 Rewrite `CrossAssemblyBaselineSpec`'s case 4 (`Unreachable_closed_generic_registration_of_customer_envelope`)
+      from a pinned AKKASG034 failure to a pinned adoption success: the customer's own motivating
+      shape now emits, dispatches by its derived/explicit manifest, and gets its own concrete
+      `typeof()` binding. Rewrite the AKKASG020/AKKASG034 cases in `GeneratorValidatorSpec.cs` and
+      `AkkaSerializerGeneratorDiagnosticsSpec.cs` the same way; add a `Manifest` to the golden
+      corpus's nested-only `Pair<int, string>` registration, now that every registration is
+      unconditionally top-level too
+- [x] 14.11 Add `GeneratedClosedGenericExpansionSpec.cs` (round-trip specs: derived manifest,
+      explicit-override manifest, the literal construction's implicit protocol union, a multi-argument
+      expansion with a nested fixed-argument manifest lookup, a non-generic non-protocol adoption with
+      a manifest override, and reflection-built constructions both inside and outside the registered
+      set) and `ClosedGenericExpansionDiagnosticsSpec.cs` (AKKASG040, AKKASG041, AKKASG042, an
+      AKKASG012 collision from a derived manifest, and AKKASG003's non-firing for a protocol-interface
+      field)
+- [x] 14.12 Add `ClosedGenericExpansionGoldenOutputSpec.cs`: golden-output coverage for a derived
+      manifest, an explicit override, the implicit protocol union, a nested nested-fixed-argument
+      construction, and a concrete type adopted from a referenced assembly, each pinned against a
+      checked-in baseline
+- [x] 14.13 Document `ManifestPrefix`, the manifest formula (with worked examples), the adoption
+      rule, the protocol-interface-field-as-union rule, and the one-owner rule in the user guide (new
+      subsections under "Closed Generic Registrations"); update the diagnostics table (AKKASG034
+      removed, AKKASG040/041/042 added, AKKASG020/003 descriptions updated); remove the delivered
+      `ManifestPrefix` bullet from "Limitations Today and Planned Changes"; add an addendum under
+      Decision 18 in design.md for choices the design text left to the implementation
+
+## 15. Referenced-Assembly Implementors, Serializer Placement, And Marked Union Bases (Decisions 19 And 21)
+
+Stacks on F2 (`feature/serialization-v2-expansion-adoption`, commit `ac3376ffa`). F3 of the
+follow-on cross-assembly work: the generator finds top-level protocol messages, and a marked
+union base's members, in every referenced assembly that itself references
+`Akka.Serialization.V2`, not only in the current compilation. A misplaced serializer becomes a
+compile-time error or warning instead of a silent gap. Does not migrate `ManifestPrefix`
+expansion's own closed-set walk to a shared per-compilation stage; it is cross-assembly-correct
+but still runs per-registration, a documented caching-granularity follow-up (see design.md's
+Decision 19 addendum).
+
+- [x] 15.1 Move closed-set discovery into `CompilationFacts` (`AkkaSerializerGenerator.Facts.cs`):
+      `LocalMarkedImplementorsByClosedSetKey` and a REAL `ReferencedAssemblyImplementorsByProtocol`
+      (the F2 skeleton always returned empty), both keyed by every protocol key a collected
+      serializer declares and every discovered-mode union field's own static-type key.
+      `LocalMarkedImplementorsByClosedSetKey` is a pure filter over the already-collected `messages`
+      array (no symbol walk: see 15.13); the referenced-assembly half, and the two `ManifestPrefix`-
+      expansion walks in `AkkaSerializerGenerator.Extraction.cs` that still run per registration,
+      share one membership test, `ImplementsOrDerivesFromClosedSetKey` (interfaces via
+      `AllInterfaces`, a marked abstract class via the base-type chain)
+- [x] 15.2 Extend `ComputeMetadataSchemas` (Decision 16's stage, `AkkaSerializerGenerator.MetadataSchemas.cs`)
+      to also seed its resolution walk from `CompilationFacts`' referenced-assembly implementor
+      keys, so a referenced-assembly top-level implementor gets a full extracted schema the same way
+      a locally-named nested field's foreign type already does
+- [x] 15.3 Wire `CompilationFacts` and the extended `MetadataSchemas` directly into
+      `ResolvedSerializers`' own inputs (previously deferred, per F2's own `TrackingNames.CompilationFacts`
+      doc comment); `ResolveSerializerMessages` (`AkkaSerializerGenerator.Emission.cs`) adds every
+      referenced-assembly implementor's resolved schema to the same compilation-wide candidate pool
+      `declaredMessages` already populates, so the existing top-level filter and the existing
+      protocol-interface-implicit-union rule (Decision 18) both widen with no further change
+- [x] 15.4 Widen AKKASG029 (protocol coverage) to a new `ReferencedAssemblyUnmarkedImplementorsByProtocol`
+      bucket, reported the same way a local unmarked implementor is, at the serializer's own
+      attribute. AKKASG012 (manifest uniqueness) widens for free, since it already runs over
+      `topLevelMessages`, which now includes the referenced-assembly members
+- [x] 15.5 Add `[AkkaUnion]`'s parameterless constructor (extend-only; `Attributes.cs`) and its
+      generator support: `ExtractUnionMembers` recognizes zero constructor arguments as "discovered,
+      resolve later" (an empty `UnionMembers` array on a `FieldKind.Union` mapping is the unambiguous
+      signal, since the explicit form can never produce it); `MessageInfo` gains `BaseTypeNames` (a
+      marked abstract-class base needs a class-hierarchy fact `Protocols`, built from
+      `AllInterfaces`, cannot carry); `ResolveMessages` generalizes Decision 18's protocol-interface
+      reclassification into one shared, per-closed-set-key member cache serving both rules
+- [x] 15.6 Add AKKASG043 (`ProtocolOwnedUpstream`, Error) and AKKASG044 (`SerializerHasNoMessages`,
+      Warning); extend AKKASG031 (`DuplicateProtocolBindingCrossAssembly`, a second message-text
+      variant sharing the existing id, matching the decision page's own "AKKASG031 across assemblies
+      (extended)" labeling) across assemblies. All three reported from a new diagnostics-only output,
+      `ReportPlacementDiagnostics` (`AkkaSerializerGenerator.Placement.cs`), consuming the collected
+      serializers and messages plus `CompilationFacts` (including a new
+      `UpstreamSerializerBindingsByProtocol` walk for `[AkkaSerializer<TProtocol>]` declarations found
+      in a referenced assembly). The fourth placement rule (the runtime "unsupported generated
+      serializer type" exception) carries no id; its text now names both the failing value's own
+      runtime assembly and the assembly the serializer was generated in
+      (`SerializerInfo.CompilationAssemblyName`, new)
+- [x] 15.7 Add the startup one-owner check to `SerializerRegistration.CreateSetup` (`src/core/Akka.Serialization.V2/SerializerRegistration.cs`):
+      one dictionary pass over every composed registration's own `UseFor` set, throwing naming both
+      colliding registrations' aliases, run once when registrations are composed
+- [x] 15.8 Flip `CrossAssemblyBaselineSpec`'s case 6 (`Protocol_implementor_declared_only_in_referenced_assembly`)
+      from a pinned "invisible, no dispatch arm" failure to a pinned success: the referenced-assembly
+      implementor now gets a Manifest dispatch arm, a `typeof()` binding, and its own generated helpers
+- [x] 15.9 Add `MarkedUnionBaseSpec.cs` (local discovery, cross-assembly discovery, the empty-set
+      exemption, and the explicit list's regression coverage), `PlacementDiagnosticsSpec.cs`
+      (AKKASG043, AKKASG044, the extended AKKASG031, the widened AKKASG029, and the improved runtime
+      exception text), and `SerializerRegistrationOneOwnerSpec.cs` (the startup check, disjoint and
+      colliding registrations, three-or-more registrations)
+- [x] 15.10 Add `ReferencedAssemblyImplementorGoldenOutputSpec.cs`: three golden cases pinned against
+      checked-in baselines -- a referenced-assembly top-level implementor, a marked union base with
+      implementors on both sides of the boundary, and a `ManifestPrefix` expansion whose closed set
+      spans the boundary
+- [x] 15.11 Add a caching-proof scenario to `GeneratorIncrementalScenariosSpec.cs`: adding a new
+      local marked implementor of a protocol marks `CompilationFacts` Modified and re-emits only the
+      serializer whose closed set changed, leaving the other serializer's own resolved model
+      `Unchanged`
+- [x] 15.12 Update the user guide: a new "Marked Union Bases" subsection, the "Cross-Assembly Types"
+      section rewritten for the real walk, a new "Serializer Placement" section (the four rules) and
+      "The Startup One-Owner Check" subsection, the diagnostics table gains AKKASG043/044 and
+      AKKASG031's extended wording, and the delivered "discovery of protocol implementors" bullet is
+      removed from "Limitations Today and Planned Changes"; add addenda under Decisions 19 and 21 in
+      design.md for choices the design text and the maintainer's decision-record page left to the
+      implementation, including the one place the page and this design text disagree (Rule 1's fix
+      list naming an unimplemented serializer part)
+- [x] 15.13 Fix an allocation regression an initial pass at 15.1 left in place (up to ~20% over
+      baseline on the `SourceGeneratorBenchmarks` corpus, whose reference set includes
+      `Akka.Remote`): `ComputeLocalMarkedImplementorsFromMessages` replaces a redundant local symbol
+      walk with a pure filter over the collected `messages` array, and `ComputeReferencedAssemblyFacts`
+      (the genuinely-needed referenced-assembly symbol walk) is memoized in a process-lifetime
+      `ConditionalWeakTable`, so it runs once per reference rather than once per edit. Re-measured
+      against `ac3376ffa`: all four benchmark rows' allocations landed within ~1% of baseline
+      (previously 7-20% over)
+- [x] 15.14 Fix a real (not flaky-only-in-appearance) cache miss 15.13's cache left in place: keying
+      on `IAssemblySymbol` relies on Roslyn reusing the same symbol instance across compilations,
+      which only happens while an earlier bound symbol for the reference is still reachable through
+      Roslyn's own weak symbol cache -- observed to fail under memory pressure, re-walking on every
+      edit in exactly the conditions an IDE creates constantly. Rekeyed on
+      `Compilation.GetMetadataReference(assemblySymbol)`, falling back to the assembly symbol only
+      when a compilation has no separate reference for it. Proven by a counter-based test asserting a
+      delta across a three-run sequence (`GeneratorCompilationFactsSpec.ReferencedAssemblyWalk_is_cached_per_metadata_reference_not_per_assembly_symbol`):
+      zero additional walks across an edit reusing the same reference, exactly one more against a
+      freshly compiled, distinct reference over identical source -- and neutralizes an incidental
+      confound in the test harness itself (its own base reference set independently qualifies the
+      executing test assembly for this same walk) by warming that entry before measuring
+
+## 16. ManifestPrefix Expansion Hoisted To A Per-Compilation Stage (S7)
+
+Stacks on F3 (`feature/serialization-v2-implementor-walk`, commit `ab82136da`). Closes the
+caching-granularity gap 15's own intro text and design.md's F3 addendum both flagged and
+deliberately deferred: `ManifestPrefix` expansion (Decision 18) still ran its own closed-set walk
+and construction/schema extraction once per registration, inside the per-node serializer
+extraction transform, instead of sharing `CompilationFacts`' own cached buckets the way top-level
+dispatch and the implicit-union rules already do. Behavior-neutral: no new diagnostic, no changed
+diagnostic text, no changed generated output for any existing fixture.
+
+- [x] 16.1 Replace `ExpandClosedGenericRegistration`/`TryGetClosedSetMembers`/`AddDiscoveredClosedSetMembers`/
+      `ComputeLocalMarkedProtocolImplementors`/`EnumerateReferencedAssemblyMarkedImplementors`
+      (`AkkaSerializerGenerator.Extraction.cs`) with `BuildPrefixExpansionSpec`/`TryClassifyPrefixArgumentPosition`:
+      classifies each `ManifestPrefix` target's own type-argument position from the argument's own
+      symbol alone (no walk of the compilation's declared types), recording a light
+      `PrefixExpansionSpec` (`SerializerInfo.PrefixExpansions`) for a registration with at least one
+      protocol- or `[AkkaUnion]`-flavored position. An invalid target, an unresolvable fixed
+      argument, or no closed-set-flavored position at all is still resolved as an AKKASG040 error
+      entirely in the transform, exactly as before -- none of those depend on a whole-compilation
+      walk. `ImplementsOrDerivesFromClosedSetKey` (`AkkaSerializerGenerator.Facts.cs`), whose only
+      callers were the two removed walks, is deleted alongside them
+- [x] 16.2 Add the S7 expansion stage, `ComputeClosedGenericExpansions` (`AkkaSerializerGenerator.Expansion.cs`),
+      a per-compilation stage next to `CompilationFacts`/`ComputeMetadataSchemas`: consumes the
+      collected serializers' own `PrefixExpansions` plus `CompilationFacts`' `LocalMarkedImplementorsByClosedSetKey`/
+      `ReferencedAssemblyImplementorsByProtocol` buckets, re-resolves each candidate `TypeKey` back
+      to a symbol (`ResolveTypeSymbol`, recursing through `TypeKey.TypeArguments` for a candidate
+      that is itself a closed generic construction -- `Compilation.GetTypeByMetadataName` alone only
+      ever resolves a type's own open definition), runs the same cartesian product and manifest
+      formula F2 ran inline, and extracts each construction's schema through the same
+      `ExtractMessageCore`. `ComputeDistinctClosedSetKeys` (`AkkaSerializerGenerator.Facts.cs`) is
+      extended to also request every `PrefixExpansionSpec`'s own discovered-mode keys, so
+      `CompilationFacts`' shared buckets already cover them. Tracking name
+      `TrackingNames.ClosedGenericExpansions`, added to `TrackingNames.All`
+      (`GeneratorIncrementalScenariosSpec`'s stage-count pin updated 9 -> 10)
+- [x] 16.3 Merge the expansion stage's own table back into each `SerializerInfo` with ONE function,
+      `SerializerInfo.WithClosedGenericExpansion` (called from `MergeSerializerClosedGenericExpansions`,
+      producing `effectiveSerializers`, which `ComputeMetadataSchemas`, the per-serializer resolve
+      stage, and every diagnostics output now combine instead of the raw collected array), splicing
+      each `PrefixExpansionGroup` back into `ClosedGenericRegistrations`/`ClosedGenericSchemas` at
+      the exact insertion point (`PrefixExpansionSpec.RegistrationInsertionIndex`/`SchemaInsertionIndex`,
+      `SpliceExpansionGroups<T>`) F2/F3's own inline, per-attribute expansion left them at -- an
+      append-only first version of this merge reordered the golden corpus's own dispatch switch and
+      failed the byte-identical gate
+- [x] 16.4 Redirect `MessageTypeLocationKey` (`AkkaSerializerGenerator.Locations.cs`) to resolve an
+      expansion member's own type-level location through `ClosedGenericRegistrationInfo.ExpansionGroup`
+      (the base attribute's own location entry `BuildSerializerLocationBag` already records) instead
+      of a per-member entry, so the expansion stage needs no attribute-location plumbing of its own;
+      field-level locations for an expanded member's own `[AkkaField]` properties still resolve
+      through `ExtractMessageCore`'s existing inlined capture, carried in the expansion stage's own
+      raw `LocationBag` half (`ExpandedPrefixRegistrations`) and merged into `allLocations`
+- [x] 16.5 Add three caching-proof scenarios to `GeneratorIncrementalScenariosSpec.cs` over a new
+      fixture with a `ManifestPrefix` registration (scenarios (i)/(j)/(k)): an unrelated edit and a
+      whitespace edit inside a message both leave `ResolvedSerializers` `Cached` and re-emit nothing
+      (the expansion stage's own tracked, table-only projection reports `Cached` when its raw input
+      compares equal -- the same "Unchanged upstream lets a trivial downstream projection go
+      Cached" shape `SerializerSchemas`/`MessageSchemas` already document -- or `Unchanged` when a
+      location-only shift forces the raw stage to rerun but its own table half still compares
+      equal); adding a new local marked implementor of the expanded protocol marks `CompilationFacts`
+      and the expansion stage `Modified` and re-emits only the serializer whose closed set changed
+- [x] 16.6 Add a `PrefixVariant` corpus variant to `SourceGeneratorBenchmarks`/`SourceGeneratorBenchmarkCorpus`
+      (`src/benchmark/Akka.Benchmarks/Serialization/SourceGeneratorBenchmarks.cs`): one serializer
+      additionally registers `Envelope0<IProtocol0>` with `ManifestPrefix`, expanding over all 100 of
+      its own protocol messages. Measured against `ab82136da` (ShortRun, same machine, back to
+      back): the existing (non-prefix) corpus lands within ~1% on allocations for every row; the
+      prefix variant's rows that do not force a re-emission (trailing whitespace/comment edit,
+      unrelated file edited) drop ~8-9% on allocations, and the fresh/cold run drops ~2% (one fewer
+      redundant walk over the same closed set `CompilationFacts` already covers for top-level
+      dispatch); the field-rename row drops a smaller ~3% because it still forces a genuine
+      re-emission of the owning serializer's file (the renamed message's own field is part of the
+      emitted text), independent of this hoist. Wall-clock (`Mean`) numbers were noisy under
+      `ShortRun`'s three iterations on a shared machine; `Allocated` (deterministic per run) is the
+      metric actually compared
+- [x] 16.7 Add design.md's own S7 addendum under Decision 18: what moved, where it lives now, the
+      merge point, why an append-only first version of the merge failed the byte-identical gate and
+      needed a splice instead, the `ResolveTypeSymbol` fix for a nested closed-generic candidate, and
+      the run-reason shape for the three new caching-proof scenarios

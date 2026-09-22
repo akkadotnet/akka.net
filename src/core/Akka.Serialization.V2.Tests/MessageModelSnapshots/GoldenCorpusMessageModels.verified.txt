@@ -1,0 +1,363 @@
+﻿Type: global::GoldenSample.CollectionMessage
+SimpleName: CollectionMessage
+Manifest: collections-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.CollectionMessage>
+Fields:
+  [1] Codes: kind=Array, type=int[] (nullable: False)
+  [2] Names: kind=List, type=global::System.Collections.Generic.List<string> (nullable: False)
+  [3] Samples: kind=ReadOnlyList, type=global::System.Collections.Generic.IReadOnlyList<double> (nullable: False)
+  [4] Ids: kind=ReadOnlyCollection, type=global::System.Collections.Generic.IReadOnlyCollection<global::System.Guid> (nullable: False)
+  [5] Tags: kind=Dictionary, type=global::System.Collections.Generic.Dictionary<string, string> (nullable: False)
+  [6] ReadingsById: kind=ReadOnlyDictionary, type=global::System.Collections.Generic.IReadOnlyDictionary<int, global::GoldenSample.Reading> (nullable: False)
+  [7] Points: kind=ImmutableArray, type=global::System.Collections.Immutable.ImmutableArray<int> (nullable: False)
+  [8] Readings: kind=ImmutableList, type=global::System.Collections.Immutable.ImmutableList<global::GoldenSample.Reading> (nullable: False)
+  [9] Labels: kind=ImmutableHashSet, type=global::System.Collections.Immutable.ImmutableHashSet<string> (nullable: False)
+  [10] Counters: kind=ImmutableDictionary, type=global::System.Collections.Immutable.ImmutableDictionary<string, long> (nullable: False)
+  [11] MaybeTrack: kind=ImmutableArray, type=global::System.Collections.Immutable.ImmutableArray<global::GoldenSample.GeoPoint>? (nullable: True)
+  [12] MaybeNumbers: kind=List, type=global::System.Collections.Generic.List<int> (nullable: True)
+  [13] Matrix: kind=List, type=global::System.Collections.Generic.List<global::System.Collections.Generic.List<int>> (nullable: False)
+  [14] History: kind=Dictionary, type=global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.List<global::GoldenSample.Reading>> (nullable: False)
+  [15] SparseReadings: kind=List, type=global::System.Collections.Generic.List<global::GoldenSample.Reading> (nullable: False)
+  [16] Track: kind=List, type=global::System.Collections.Generic.List<global::GoldenSample.GeoPoint> (nullable: False)
+  [17] SparseTrack: kind=List, type=global::System.Collections.Generic.List<global::GoldenSample.GeoPoint?> (nullable: False)
+  [18] SparseCodes: kind=List, type=global::System.Collections.Generic.List<int?> (nullable: False)
+  [19] SparseNames: kind=List, type=global::System.Collections.Generic.List<string> (nullable: False)
+  [20] Jagged: kind=Array, type=int[][] (nullable: False)
+  [21] Palette: kind=List, type=global::System.Collections.Generic.List<global::GoldenSample.Color> (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Codes <- Codes
+    Names <- Names
+    Samples <- Samples
+    Ids <- Ids
+    Tags <- Tags
+    ReadingsById <- ReadingsById
+    Points <- Points
+    Readings <- Readings
+    Labels <- Labels
+    Counters <- Counters
+    MaybeTrack <- MaybeTrack
+    MaybeNumbers <- MaybeNumbers
+    Matrix <- Matrix
+    History <- History
+    SparseReadings <- SparseReadings
+    Track <- Track
+    SparseTrack <- SparseTrack
+    SparseCodes <- SparseCodes
+    SparseNames <- SparseNames
+    Jagged <- Jagged
+    Palette <- Palette
+
+================================================================================
+Type: global::GoldenSample.EnvelopeListMessage
+SimpleName: EnvelopeListMessage
+Manifest: envelope-list-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.EnvelopeListMessage>
+Fields:
+  [1] Items: kind=List, type=global::System.Collections.Generic.List<object> (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Items <- Items
+
+================================================================================
+Type: global::GoldenSample.EnvelopeMessage
+SimpleName: EnvelopeMessage
+Manifest: envelope-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.EnvelopeMessage>
+Fields:
+  [1] CorrelationId: kind=String, type=string (nullable: False)
+  [2] Payload: kind=EnvelopePayload, type=object (nullable: False)
+  [3] MaybePayload: kind=EnvelopePayload, type=object (nullable: True)
+ConstructionPlan: valid=True
+  Arguments:
+    CorrelationId <- CorrelationId
+    Payload <- Payload
+    MaybePayload <- MaybePayload
+
+================================================================================
+Type: global::GoldenSample.EscapedManifestMessage
+SimpleName: EscapedManifestMessage
+Manifest: esc-"quote"-\-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.EscapedManifestMessage>
+Fields:
+  [1] Text: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Text <- Text
+
+================================================================================
+Type: global::GoldenSample.GeoPoint
+SimpleName: GeoPoint
+Manifest: (none)
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::System.IEquatable<global::GoldenSample.GeoPoint>
+Fields:
+  [1] Lat: kind=Double, type=double (nullable: False)
+  [2] Lon: kind=Double, type=double (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Lat <- Lat
+    Lon <- Lon
+
+================================================================================
+Type: global::GoldenSample.HybridMessage
+SimpleName: HybridMessage
+Manifest: hybrid-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol
+Fields:
+  [1] Id: kind=String, type=string (nullable: False)
+  [2] Count: kind=Int32, type=int (nullable: False)
+  [3] Event: kind=String, type=string (nullable: False)
+  [4] Note: kind=String, type=string (nullable: True)
+  [5] Origin: kind=Object, type=global::GoldenSample.GeoPoint (nullable: False, valueType)
+ConstructionPlan: valid=True
+  Arguments:
+    id <- Id
+    count <- Count
+    event <- Event
+  InitializerFields: Note, Origin
+
+================================================================================
+Type: global::GoldenSample.MiniMessage
+SimpleName: MiniMessage
+Manifest: mini-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IMiniProtocol, global::System.IEquatable<global::GoldenSample.MiniMessage>
+Fields:
+  [1] Text: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Text <- Text
+
+================================================================================
+Type: global::GoldenSample.NestedMessage
+SimpleName: NestedMessage
+Manifest: nested-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.NestedMessage>
+Fields:
+  [1] Primary: kind=Object, type=global::GoldenSample.Reading (nullable: False)
+  [2] Secondary: kind=Object, type=global::GoldenSample.Reading (nullable: True)
+  [3] Location: kind=Object, type=global::GoldenSample.GeoPoint (nullable: False, valueType)
+  [4] MaybeLocation: kind=Object, type=global::GoldenSample.GeoPoint? (nullable: True, valueType)
+  [5] Foreign: kind=MissingSerializableDefinition, type=global::GoldenSample.Foreign (nullable: False)
+  [6] MaybeForeign: kind=MissingSerializableDefinition, type=global::GoldenSample.Foreign (nullable: True)
+  [7] Temperature: kind=MissingSerializableDefinition, type=global::GoldenSample.Temperature (nullable: False)
+  [8] MaybeTemperature: kind=MissingSerializableDefinition, type=global::GoldenSample.Temperature? (nullable: True)
+  [9] WrappedCount: kind=Object, type=global::GoldenSample.Wrapper<int> (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Primary <- Primary
+    Secondary <- Secondary
+    Location <- Location
+    MaybeLocation <- MaybeLocation
+    Foreign <- Foreign
+    MaybeForeign <- MaybeForeign
+    Temperature <- Temperature
+    MaybeTemperature <- MaybeTemperature
+    WrappedCount <- WrappedCount
+
+================================================================================
+Type: global::GoldenSample.OrderCancelled
+SimpleName: OrderCancelled
+Manifest: order-cancelled-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IOrderEvent, global::System.IEquatable<global::GoldenSample.OrderCancelled>
+Fields:
+  [1] OrderId: kind=String, type=string (nullable: False)
+  [2] Reason: kind=String, type=string (nullable: True)
+ConstructionPlan: valid=True
+  Arguments:
+    OrderId <- OrderId
+    Reason <- Reason
+
+================================================================================
+Type: global::GoldenSample.OrderExpired
+SimpleName: OrderExpired
+Manifest: order-expired-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IOrderEvent, global::System.IEquatable<global::GoldenSample.OrderExpired>
+Fields:
+  [1] ExpiredAtTicks: kind=Int64, type=long (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    ExpiredAtTicks <- ExpiredAtTicks
+
+================================================================================
+Type: global::GoldenSample.OrderPlaced
+SimpleName: OrderPlaced
+Manifest: order-placed-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IOrderEvent, global::System.IEquatable<global::GoldenSample.OrderPlaced>
+Fields:
+  [1] OrderId: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    OrderId <- OrderId
+
+================================================================================
+Type: global::GoldenSample.Pair
+SimpleName: Pair
+Manifest: (none)
+AllowEmpty: True
+IsGenericDefinition: True
+DefinitionFullName: global::GoldenSample.Pair
+Protocols: global::System.IEquatable<global::GoldenSample.Pair<TA, TB>>
+Fields:
+  (none)
+ConstructionPlan: valid=True
+
+================================================================================
+Type: global::GoldenSample.Ping
+SimpleName: Ping
+Manifest: ping-v1
+AllowEmpty: True
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.Ping>
+Fields:
+  (none)
+ConstructionPlan: valid=True
+
+================================================================================
+Type: global::GoldenSample.Reading
+SimpleName: Reading
+Manifest: (none)
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::System.IEquatable<global::GoldenSample.Reading>
+Fields:
+  [1] Sensor: kind=String, type=string (nullable: False)
+  [2] Value: kind=Double, type=double (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Sensor <- Sensor
+    Value <- Value
+
+================================================================================
+Type: global::GoldenSample.ScalarMessage
+SimpleName: ScalarMessage
+Manifest: scalars-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.ScalarMessage>
+Fields:
+  [1] Name: kind=String, type=string (nullable: False)
+  [2] Event: kind=ByteArray, type=byte[] (nullable: False)
+  [3] Lock: kind=Int32, type=int (nullable: False)
+  [4] Params: kind=Int64, type=long (nullable: False)
+  [5] FieldCount: kind=Boolean, type=bool (nullable: False)
+  [6] EntryIndex: kind=Double, type=double (nullable: False)
+  [7] Amount: kind=Decimal, type=decimal (nullable: False)
+  [8] Id: kind=Guid, type=global::System.Guid (nullable: False)
+  [9] CreatedAt: kind=DateTime, type=global::System.DateTime (nullable: False)
+  [10] UpdatedAt: kind=DateTimeOffset, type=global::System.DateTimeOffset (nullable: False)
+  [11] Sender: kind=ActorRef, type=global::Akka.Actor.IActorRef (nullable: False)
+  [12] Color: kind=Enum, type=global::GoldenSample.Color (nullable: False)
+  [13] Priority: kind=Enum, type=global::GoldenSample.Priority (nullable: False)
+  [14] MaybeCount: kind=Int32, type=int? (nullable: True)
+  [15] MaybeId: kind=Guid, type=global::System.Guid? (nullable: True)
+  [16] MaybeColor: kind=Enum, type=global::GoldenSample.Color? (nullable: True)
+  [17] MaybeName: kind=String, type=string (nullable: True)
+  [18] Foo: kind=String, type=string (nullable: False)
+  [19] HasFoo: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Name <- Name
+    Event <- Event
+    Lock <- Lock
+    Params <- Params
+    FieldCount <- FieldCount
+    EntryIndex <- EntryIndex
+    Amount <- Amount
+    Id <- Id
+    CreatedAt <- CreatedAt
+    UpdatedAt <- UpdatedAt
+    Sender <- Sender
+    Color <- Color
+    Priority <- Priority
+    MaybeCount <- MaybeCount
+    MaybeId <- MaybeId
+    MaybeColor <- MaybeColor
+    MaybeName <- MaybeName
+    Foo <- Foo
+    HasFoo <- HasFoo
+
+================================================================================
+Type: global::GoldenSample.StructMessage
+SimpleName: StructMessage
+Manifest: struct-msg-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.StructMessage>
+Fields:
+  [1] A: kind=Int32, type=int (nullable: False)
+  [2] B: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    A <- A
+    B <- B
+
+================================================================================
+Type: global::GoldenSample.UnionMessage
+SimpleName: UnionMessage
+Manifest: union-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.UnionMessage>
+Fields:
+  [1] Event: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: False)
+      union member: global::GoldenSample.OrderCancelled (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
+      union member: global::GoldenSample.OrderExpired (valueType=True, assignable=True, supported=True, sealed=True, abstract=False)
+      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
+  [2] MaybeEvent: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: True)
+      union member: global::GoldenSample.OrderCancelled (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
+      union member: global::GoldenSample.OrderExpired (valueType=True, assignable=True, supported=True, sealed=True, abstract=False)
+      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
+  [3] Narrowed: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: False)
+      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
+ConstructionPlan: valid=True
+  Arguments:
+    Event <- Event
+    MaybeEvent <- MaybeEvent
+    Narrowed <- Narrowed
+
+================================================================================
+Type: global::GoldenSample.Wrapper
+SimpleName: Wrapper
+Manifest: (none)
+AllowEmpty: True
+IsGenericDefinition: True
+DefinitionFullName: global::GoldenSample.Wrapper
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.Wrapper<T>>
+Fields:
+  (none)
+ConstructionPlan: valid=True
+
+================================================================================
+Type: global::RootMessage
+SimpleName: RootMessage
+Manifest: root-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::IRootProtocol, global::System.IEquatable<global::RootMessage>
+Fields:
+  [1] Value: kind=String, type=string (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Value <- Value

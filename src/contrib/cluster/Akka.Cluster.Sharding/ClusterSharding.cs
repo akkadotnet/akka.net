@@ -1475,8 +1475,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                // TODO: remove this in v1.6 and force all users to use only the new strategy going forward
-                // old algorithm
+                // Explicit compatibility mode for deployments that still use the legacy strategy.
                 var threshold = settings.TuningParameters.LeastShardAllocationRebalanceThreshold;
                 var maxSimultaneousRebalance = settings.TuningParameters.LeastShardAllocationMaxSimultaneousRebalance;
 #pragma warning disable CS0618 // Type or member is obsolete

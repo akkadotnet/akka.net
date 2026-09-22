@@ -51,7 +51,11 @@ public sealed class GeneratorGoldenOutputSpec
     /// emission path, plus a second, internal serializer covering the 'internal' accessibility
     /// keyword path.
     /// </summary>
-    private const string GoldenSource = """
+    /// <remarks>
+    /// Internal (not private) so <c>GeneratorMessageModelSnapshotSpec</c> can parse the exact same
+    /// corpus through the extraction layer instead of maintaining a parallel copy that could drift.
+    /// </remarks>
+    internal const string GoldenSource = """
         #nullable enable
         using System;
         using System.Collections.Generic;
@@ -210,8 +214,15 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializable(Manifest = "envelope-v1")]
         public sealed record EnvelopeMessage(
             [property: AkkaField(1)] string CorrelationId,
-            [property: AkkaField(2), AkkaEnvelopePayload] object Payload,
-            [property: AkkaField(3), AkkaEnvelopePayload] object? MaybePayload) : IProtocol;
+            [property: AkkaField(2)] object Payload,
+            [property: AkkaField(3)] object? MaybePayload) : IProtocol;
+
+        // ---- object element inside a collection: each element is its own envelope-payload
+        // boundary, the same frame a property typed `object` already gets above ----
+
+        [AkkaSerializable(Manifest = "envelope-list-v1")]
+        public sealed record EnvelopeListMessage(
+            [property: AkkaField(1)] List<object> Items) : IProtocol;
 
         // ---- hybrid reconstruction: case-insensitive ctor matching, a keyword-named ctor
         // parameter, and leftover properties assigned via object initializer ----
@@ -280,7 +291,11 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         [AkkaSerializable<Wrapper<GeoPoint>>(Manifest = "wrapper-geo-v1")]
         [AkkaSerializable<Wrapper<Pair<int, string>>>(Manifest = "wrapper-pair-v1")]
-        [AkkaSerializable<Pair<int, string>>]
+        // Decision 18: a registration is now unconditionally a top-level message too (the adoption
+        // rule), not merely "reachable if some field needs it" -- so, unlike before Decision 18,
+        // this needs its own Manifest even though Pair<int, string> is also reachable as a nested
+        // field of Wrapper<Pair<int, string>> above.
+        [AkkaSerializable<Pair<int, string>>(Manifest = "pair-int-string-v1")]
         public sealed partial class GoldenSerializer : AkkaSerializer
         {
             public static partial SerializerRegistration CreateRegistration();
@@ -306,7 +321,8 @@ public sealed class GeneratorGoldenOutputSpec
     /// Second syntax tree, GLOBAL namespace: covers the namespace-less emission branch (no
     /// <c>namespace ...;</c> line in the generated file).
     /// </summary>
-    private const string GlobalNamespaceSource = """
+    /// <remarks>See <see cref="GoldenSource"/>'s remarks on why this is internal, not private.</remarks>
+    internal const string GlobalNamespaceSource = """
         #nullable enable
         using Akka.Serialization.V2;
 

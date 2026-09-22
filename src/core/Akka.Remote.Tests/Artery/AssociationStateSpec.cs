@@ -94,6 +94,65 @@ namespace Akka.Remote.Tests.Artery
             newState.IsQuarantined(firstPeer.Uid).Should().BeFalse();
         }
 
+        [Fact(DisplayName = "Only CompleteOutboundHandshake should set OutboundHandshakeCompleted (issue #8496)")]
+        public void Only_CompleteOutboundHandshake_should_set_outbound_completed()
+        {
+            var peer = new UniqueAddress(RemoteAddress, 1L);
+
+            var fromPeersReq = AssociationState.Create().CompleteHandshake(peer);
+            fromPeersReq.UniqueRemoteAddress.Should().Be(peer, "the peer's own Req still registers its uid");
+            fromPeersReq.OutboundHandshakeCompleted.Should().BeFalse("the peer has learned nothing about US from its own Req");
+
+            AssociationState.Create().CompleteOutboundHandshake(peer).OutboundHandshakeCompleted
+                .Should().BeTrue("a Rsp is proof the peer registered our uid");
+        }
+
+        [Fact(DisplayName = "CompleteOutboundHandshake should flip OutboundHandshakeCompleted after an inbound-only handshake, then be an idempotent no-op")]
+        public void CompleteOutboundHandshake_should_flip_the_flag_then_be_idempotent()
+        {
+            var peer = new UniqueAddress(RemoteAddress, 1L);
+            var inboundOnly = AssociationState.Create().CompleteHandshake(peer);
+
+            var answered = inboundOnly.CompleteOutboundHandshake(peer);
+
+            answered.Should().NotBeSameAs(inboundOnly, "the false -> true flip is a real transition, not a no-op");
+            answered.Incarnation.Should().Be(inboundOnly.Incarnation, "the peer did not restart");
+            answered.OutboundHandshakeCompleted.Should().BeTrue();
+
+            answered.CompleteOutboundHandshake(peer).Should().BeSameAs(answered, "re-answering is an idempotent no-op");
+            answered.CompleteHandshake(peer).Should().BeSameAs(answered, "a later inbound Req must not clear what we already proved");
+        }
+
+        [Fact(DisplayName = "A new incarnation (peer restart) should reset OutboundHandshakeCompleted")]
+        public void New_incarnation_should_reset_outbound_completed()
+        {
+            var oldPeer = new UniqueAddress(RemoteAddress, 1L);
+            var newPeer = new UniqueAddress(RemoteAddress, 2L);
+            var answered = AssociationState.Create().CompleteOutboundHandshake(oldPeer);
+
+            var restarted = answered.CompleteHandshake(newPeer);
+
+            restarted.Incarnation.Should().Be(answered.Incarnation + 1);
+            restarted.OutboundHandshakeCompleted.Should().BeFalse(
+                "the RESTARTED peer has never answered a Req of ours -- what the previous incarnation knew about us died with it");
+
+            answered.CompleteOutboundHandshake(newPeer).OutboundHandshakeCompleted
+                .Should().BeTrue("unless the very message that changed the uid was itself a Rsp");
+        }
+
+        [Fact(DisplayName = "Quarantine should clear OutboundHandshakeCompleted")]
+        public void Quarantine_should_clear_outbound_completed()
+        {
+            var peer = new UniqueAddress(RemoteAddress, 1L);
+            var answered = AssociationState.Create().CompleteOutboundHandshake(peer);
+
+            var (quarantined, acted) = answered.Quarantine(peer.Uid);
+
+            acted.Should().BeTrue();
+            quarantined.OutboundHandshakeCompleted.Should().BeFalse();
+            quarantined.UniqueRemoteAddress.Should().Be(peer, "quarantine is uid-scoped -- it does not forget which uid it applies to");
+        }
+
         [Fact(DisplayName = "Quarantine should act on the current uid and mark it quarantined")]
         public void Quarantine_should_act_on_current_uid()
         {

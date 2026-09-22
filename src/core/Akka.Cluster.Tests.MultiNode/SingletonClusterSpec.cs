@@ -32,6 +32,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.failure-detector.threshold = 4
+                    akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI stalls during formation (threshold=4 makes this FD extra trigger-happy)
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
         }

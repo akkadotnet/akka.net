@@ -20,14 +20,12 @@ namespace Akka.TestKit.Xunit.Tests;
 // This project provides its own xunit.runner.json with parallel collections
 // enabled so CI and local runs exercise the reported failure mode by default.
 
-public abstract class ParallelAmbientContextSpecBase : TestKit, IAsyncLifetime
+public abstract class ParallelAmbientContextSpecBase : TestKit
 {
     // Forces the post-ctor continuation onto a different SC worker — the
     // thread pollution only manifests when the body thread differs from the
     // ctor thread.
-    public async ValueTask InitializeAsync() => await Task.Yield();
-
-    public ValueTask DisposeAsync() => default;
+    public override async ValueTask InitializeAsync() => await Task.Yield();
 
     [Fact]
     public async Task Implicit_sender_should_resolve_to_own_TestActor()
@@ -67,11 +65,9 @@ public class ParallelAmbientContextSpec16 : ParallelAmbientContextSpecBase { }
 // Current must be null both at body entry (pre-await prefix) and across any
 // await continuations resumed on a reused worker thread that a sibling's
 // Before hook may have pinned with a non-null cell.
-public abstract class ParallelNoImplicitSenderSpecBase : TestKit, IAsyncLifetime, INoImplicitSender
+public abstract class ParallelNoImplicitSenderSpecBase : TestKit, INoImplicitSender
 {
-    public async ValueTask InitializeAsync() => await Task.Yield();
-
-    public ValueTask DisposeAsync() => default;
+    public override async ValueTask InitializeAsync() => await Task.Yield();
 
     [Fact]
     public async Task Current_should_be_null_both_pre_and_post_await()

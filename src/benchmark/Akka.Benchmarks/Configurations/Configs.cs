@@ -97,6 +97,23 @@ namespace Akka.Benchmarks.Configurations
         }
     }
 
+    /// <summary>
+    /// BenchmarkDotNet configuration for benchmarks that must finish in minutes, not tens of
+    /// minutes -- <see cref="Job.ShortRun"/> (1 launch, a handful of warmup/target iterations)
+    /// traded for statistical depth. Intended for baseline/directional numbers (for example
+    /// source-generator driver timings), not for numbers a release note would cite.
+    /// </summary>
+    public class ShortRunBenchmarkConfig : ManualConfig
+    {
+        public ShortRunBenchmarkConfig()
+        {
+            AddDiagnoser(MemoryDiagnoser.Default);
+            AddExporter(MarkdownExporter.GitHub);
+            AddLogger(ConsoleLogger.Default);
+            AddJob(Job.ShortRun);
+        }
+    }
+
     public class MacroBenchmarkConfig : ManualConfig
     {
         public MacroBenchmarkConfig()

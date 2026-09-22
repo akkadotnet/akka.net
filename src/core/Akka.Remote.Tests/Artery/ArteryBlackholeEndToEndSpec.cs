@@ -120,6 +120,54 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Fact(DisplayName = "after an A<->B blackhole is fully healed, a brand-new peer C (never seen before) can still complete its handshake and exchange traffic")]
+        public async Task Should_Allow_New_Peer_Handshake_After_Unrelated_Heal()
+        {
+            var remoteSysB = ActorSystem.Create("blackhole-heal-residue-b", ArteryTestModeConfig);
+            var remoteSysC = ActorSystem.Create("blackhole-heal-residue-c", ArteryTestModeConfig);
+            try
+            {
+                remoteSysB.ActorOf(Props.Create(() => new Echo()), "echo");
+                remoteSysC.ActorOf(Props.Create(() => new Echo()), "echo");
+
+                var addressB = AddressOf(remoteSysB);
+                var selectionB = Sys.ActorSelection($"akka://{remoteSysB.Name}@127.0.0.1:{addressB.Port}/user/echo");
+
+                // 1. Establish A<->B, blackhole it, confirm the drop, then heal it. This is the
+                //    ONLY blackhole ever set on A's transport, and it is fully healed before C
+                //    ever contacts A.
+                await AwaitRoundTripAsync(selectionB, "b-before-blackhole");
+
+                var transport = TransportOf(Sys);
+                (await transport.ManagementCommand(new SetThrottle(addressB, ThrottleTransportAdapter.Direction.Both, Blackhole.Instance)))
+                    .Should().BeTrue();
+
+                var duringProbe = CreateTestProbe();
+                selectionB.Tell("b-during-blackhole", duringProbe.Ref);
+                await duringProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+
+                (await transport.ManagementCommand(new SetThrottle(addressB, ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance)))
+                    .Should().BeTrue();
+                await AwaitRoundTripAsync(selectionB, "b-after-heal");
+
+                // 2. A has never talked to C before, so C is an unknown origin at A until their
+                //    handshake completes. If healing the A<->B blackhole left ANY residue in A's
+                //    SharedTestState, AnyBlackholePresent() would still report true and A's
+                //    InboundTestStage would drop every unknown-origin envelope except a
+                //    HandshakeReq -- including C's HandshakeRsp -- wedging C's association
+                //    forever even though nothing involving C was ever blackholed. A successful
+                //    round-trip here proves the heal left no such residue.
+                var addressC = AddressOf(remoteSysC);
+                var selectionC = Sys.ActorSelection($"akka://{remoteSysC.Name}@127.0.0.1:{addressC.Port}/user/echo");
+                await AwaitRoundTripAsync(selectionC, "c-handshake-after-heal");
+            }
+            finally
+            {
+                await remoteSysB.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10));
+                await remoteSysC.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            }
+        }
+
         [Fact(DisplayName = "blackhole(Send) applied on the REMOTE system drops traffic at ITS stages (inbound drop of our pings); PassThrough heals")]
         public async Task Should_Blackhole_And_Heal_From_Remote_Side()
         {

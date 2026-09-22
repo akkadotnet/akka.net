@@ -34,14 +34,14 @@ namespace Akka.TestKit
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         /// <param name="cancellationToken"></param>
-        public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public void AwaitAssert(Action assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             AwaitAssertAsync(assertion, duration, interval, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>
-        public async Task AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public async Task AwaitAssertAsync(Action assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
@@ -91,7 +91,7 @@ namespace Akka.TestKit
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         /// <param name="cancellationToken"></param>
-        public async Task AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public async Task AwaitAssertAsync(Func<Task> assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;

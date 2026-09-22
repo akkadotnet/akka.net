@@ -96,6 +96,32 @@ System messages SHALL be delivered with explicit ACK/NACK and resend semantics i
 - **WHEN** the bounded system-message buffer overflows
 - **THEN** the association SHALL be quarantined
 
+### Requirement: Quarantine is one-directional and uid-scoped
+
+Quarantine SHALL block traffic for the quarantined uid in both directions on the
+quarantining system, with a deliberate outbound exemption that lets the sender
+discover a restarted peer. The exemption MAY deliver a message to the quarantined
+incarnation itself; the sender cannot know whether the peer restarted without
+sending to it. The reply from a quarantined incarnation SHALL NOT be delivered.
+
+#### Scenario: ActorSelection pierces outbound quarantine
+- **WHEN** an `ActorSelectionMessage` is sent toward a quarantined association
+- **THEN** it SHALL be transmitted to the peer address, even if the peer is still running as the quarantined uid
+
+#### Scenario: Inbound traffic from a quarantined uid is dropped
+- **WHEN** an envelope arrives whose origin uid this system has quarantined
+- **THEN** the envelope SHALL be dropped before dispatch, system messages included
+- **AND** a quarantine control notice SHALL be sent to the origin, unless the dropped message is itself a quarantine notice or a heartbeat
+
+#### Scenario: New incarnation lifts quarantine
+- **WHEN** a completed handshake installs a different uid for a quarantined association
+- **THEN** traffic to and from the new uid SHALL flow normally
+- **AND** the old uid SHALL remain quarantined
+
+#### Scenario: Quarantined peer does not retaliate
+- **WHEN** a system receives notice that a peer has quarantined it
+- **THEN** it SHALL publish `ThisActorSystemQuarantinedEvent` and SHALL NOT quarantine the peer in return, because a reciprocal quarantine can split a cluster
+
 ### Requirement: Outbound queues are bounded
 
 Artery remoting SHALL use bounded outbound queues for user and control traffic.

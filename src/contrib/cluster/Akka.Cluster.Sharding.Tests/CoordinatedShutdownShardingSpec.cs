@@ -25,9 +25,9 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ActorSystem _sys2;
         private readonly ActorSystem _sys3;
 
-        private readonly IActorRef _region1;
-        private readonly IActorRef _region2;
-        private readonly IActorRef _region3;
+        private IActorRef _region1;
+        private IActorRef _region2;
+        private IActorRef _region3;
 
         private readonly TestProbe _probe1;
         private readonly TestProbe _probe2;
@@ -72,23 +72,6 @@ namespace Akka.Cluster.Sharding.Tests
             _sys3 = Sys;
             InitializeLogger(_sys1, "[Sys1]");
             InitializeLogger(_sys2, "[Sys2]");
-
-            var props = Props.Create(() => new EchoActor());
-            _region1 = ClusterSharding.Get(_sys1).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys1),
-                new MessageExtractor());
-            _region2 = ClusterSharding.Get(_sys2).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys2),
-                new MessageExtractor());
-            _region3 = ClusterSharding.Get(_sys3).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys3),
-                new MessageExtractor());
 
             _probe1 = CreateTestProbe(_sys1);
             _probe2 = CreateTestProbe(_sys2);
@@ -139,12 +122,40 @@ namespace Akka.Cluster.Sharding.Tests
             }, TimeSpan.FromSeconds(60));
         }
 
-        [Fact]
-        public async Task Sharding_and_CoordinatedShutdown_must_run_successfully()
+        [Theory]
+        [InlineData(StateStoreMode.Persistence)]
+        [InlineData(StateStoreMode.DData)]
+        public async Task Sharding_and_CoordinatedShutdown_must_run_successfully(StateStoreMode stateStoreMode)
         {
+            StartSharding(stateStoreMode);
             await InitCluster();
-            await RunCoordinatedShutdownWhenLeaving();
-            await RunCoordinatedShutdownWhenDowning();
+            await CreateEventFilter(_sys1)
+                .Error(start: "Cluster Sharding DData replicator")
+                .ExpectAsync(0, 100.Milliseconds(), RunCoordinatedShutdownWhenLeaving);
+            await CreateEventFilter(_sys3)
+                .Error(start: "Cluster Sharding DData replicator")
+                .ExpectAsync(0, 100.Milliseconds(), RunCoordinatedShutdownWhenDowning);
+        }
+
+        private void StartSharding(StateStoreMode stateStoreMode)
+        {
+            var props = Props.Create(() => new EchoActor());
+            var messageExtractor = new MessageExtractor();
+            _region1 = ClusterSharding.Get(_sys1).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys1).WithStateStoreMode(stateStoreMode),
+                messageExtractor);
+            _region2 = ClusterSharding.Get(_sys2).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys2).WithStateStoreMode(stateStoreMode),
+                messageExtractor);
+            _region3 = ClusterSharding.Get(_sys3).Start(
+                "type1",
+                props,
+                ClusterShardingSettings.Create(_sys3).WithStateStoreMode(stateStoreMode),
+                messageExtractor);
         }
 
         private async Task InitCluster()

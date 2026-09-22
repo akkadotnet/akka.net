@@ -34,6 +34,12 @@
     <Compile Include="..\Akka.Remote.TestKit\Conductor.cs">
       <Link>Conductor.cs</Link>
     </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\ConductorBindException.cs">
+      <Link>ConductorBindException.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\ConductorPortSentinel.cs">
+      <Link>ConductorPortSentinel.cs</Link>
+    </Compile>
     <Compile Include="..\Akka.Remote.TestKit\Controller.cs">
       <Link>Controller.cs</Link>
     </Compile>

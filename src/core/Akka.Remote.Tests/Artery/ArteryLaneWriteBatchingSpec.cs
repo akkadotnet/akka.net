@@ -186,5 +186,49 @@ namespace Akka.Remote.Tests.Artery
                 TimeSpan.FromSeconds(3),
                 TimeSpan.FromMilliseconds(20));
         }
+
+        /// <summary>
+        /// Companion to <see cref="Should_DisposeRetainedBatch_When_DownstreamCancels"/>: the same
+        /// retained-batch-on-cancel shape, but asserting the OTHER half of PostStop's job. Freeing
+        /// the pooled buffer is memory hygiene; without <c>onDropped</c> that is ALL that happened --
+        /// the bytes a producer had already handed to this stage vanished with no
+        /// <see cref="Akka.Event.Dropped"/> event and no log at any level, exactly the "silent
+        /// discard" shape <see cref="OutboundHandshakeStage.Logic.PostStop"/> used to have before it
+        /// started returning its held element through <see cref="IOutboundContext.ReturnUndelivered"/>.
+        /// This stage cannot do that -- it sits downstream of encode and the lane merge, so there is
+        /// no single <see cref="IOutboundEnvelope"/> left to hand back -- but it can, and after this
+        /// fix does, make the loss OBSERVABLE.
+        /// </summary>
+        [Fact(DisplayName = "Should_ReportBytesDropped_When_DownstreamCancelsWithARetainedBatch")]
+        public async Task Should_ReportBytesDropped_When_DownstreamCancelsWithARetainedBatch()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var publisher = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
+            var subscriber = this.CreateSubscriberProbe<ReadOnlySequence<byte>>();
+            var (frame, owner) = EncodeStageStyleFrame(Pattern(128, seed: 3));
+
+            long? reportedBytes = null;
+
+            Source.FromPublisher(publisher)
+                .Via(Flow.FromGraph(new LaneWriteBatchStage(16 * 1024, onDropped: bytes => reportedBytes = bytes)))
+                .To(Sink.FromSubscriber(subscriber))
+                .Run(materializer);
+
+            var subscription = subscriber.EnsureSubscription();
+            publisher.SendNext(frame);
+            owner.DisposeCount.Should().Be(0);
+            reportedBytes.Should().BeNull();
+
+            subscription.Cancel();
+
+            await AwaitAssertAsync(
+                () =>
+                {
+                    owner.DisposeCount.Should().Be(1);
+                    reportedBytes.Should().Be(frame.Length);
+                },
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromMilliseconds(20));
+        }
     }
 }

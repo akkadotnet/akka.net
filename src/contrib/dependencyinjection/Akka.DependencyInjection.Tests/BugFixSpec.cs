@@ -19,7 +19,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.DependencyInjection.Tests
 {
-    public class BugFixSpec: AkkaSpec, IAsyncLifetime
+    public class BugFixSpec: AkkaSpec
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AkkaService _akkaService;
@@ -35,16 +35,16 @@ namespace Akka.DependencyInjection.Tests
         }
 
         [Fact(DisplayName = "DI should log an error if DI provider does not contain required parameter")]
-        public void ShouldLogAnErrorIfParameterInjectionFailed()
+        public async Task ShouldLogAnErrorIfParameterInjectionFailed()
         {
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             var probe = CreateTestProbe(system);
             system.EventStream.Subscribe(probe, typeof(Error));
-            
+
             var props = DependencyResolver.For(system).Props<TestDiActor>();
             var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActor");
 
-            probe.ExpectMsg<Error>().Cause.Should().BeOfType<ActorInitializationException>();
+            (await probe.ExpectMsgAsync<Error>()).Cause.Should().BeOfType<ActorInitializationException>();
         }
 
         internal class TestDiActor : ReceiveActor
@@ -59,24 +59,25 @@ namespace Akka.DependencyInjection.Tests
         }
         
         
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
             await _akkaService.StartAsync(default);
             InitializeLogger(_akkaService.ActorSystem);
         }
 
-        protected override void AfterAll()
+        public override async ValueTask DisposeAsync()
         {
-            var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
-            Shutdown(sys);
-            base.AfterAll();
+            // The DI-created "TestSystem" ActorSystem is separate from Sys and is not torn
+            // down by the base dispose chain, so it must be shut down explicitly here.
+            // ShutdownAsync does not block a thread pool thread the way the synchronous
+            // Shutdown() does. This keeps the original teardown order: the DI-managed
+            // system first, then the base class's own AfterAll()/Sys shutdown.
+            await ShutdownAsync(_akkaService.ActorSystem);
+
+            await base.DisposeAsync();
         }
 
-        public ValueTask DisposeAsync()
-        {
-            return new ValueTask(Task.CompletedTask);
-        }
-        
         internal class AkkaService : IHostedService
         {
             public ActorSystem ActorSystem { get; private set; }

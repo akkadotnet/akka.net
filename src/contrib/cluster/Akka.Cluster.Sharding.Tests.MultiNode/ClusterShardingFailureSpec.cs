@@ -170,136 +170,150 @@ public abstract class ClusterShardingFailureSpec : MultiNodeClusterShardingSpec<
 
     private async Task ClusterSharding_with_flaky_journal_network_must_join_cluster()
     {
-        await WithinAsync(TimeSpan.FromSeconds(20), async () =>
+        // No outer Within: EnterBarrierAsync derives its timeout from RemainingOr(barrier-timeout)
+        // (MultiNodeSpec.cs:603), which clamps to zero once an enclosing Within's deadline has
+        // passed. Each expectation below carries its own explicit bound instead, so the barrier
+        // always gets the full akka.testconductor.barrier-timeout (30s default) rather than
+        // whatever scraps a shared clock left over.
+        await StartPersistenceIfNeededAsync(Config.Controller, CancellationToken.None, Config.First, Config.Second);
+
+        await JoinAsync(Config.First, Config.First);
+        await JoinAsync(Config.Second, Config.First);
+
+        await RunOnAsync(async () =>
         {
-            await StartPersistenceIfNeededAsync(Config.Controller, CancellationToken.None, Config.First, Config.Second);
-
-            await JoinAsync(Config.First, Config.First);
-            await JoinAsync(Config.Second, Config.First);
-
-            await RunOnAsync(async () =>
-            {
-                var region = _region.Value;
-                region.Tell(new Add("10", 1));
-                region.Tell(new Add("20", 2));
-                region.Tell(new Add("21", 3));
-                region.Tell(new Get("10"));
-                await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 1);
-                region.Tell(new Get("20"));
-                await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 2);
-                region.Tell(new Get("21"));
-                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3);
-            }, Config.First);
-            await EnterBarrierAsync("after-2");
-        });
+            var region = _region.Value;
+            region.Tell(new Add("10", 1));
+            region.Tell(new Add("20", 2));
+            region.Tell(new Add("21", 3));
+            region.Tell(new Get("10"));
+            await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 1, TimeSpan.FromSeconds(5));
+            region.Tell(new Get("20"));
+            await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 2, TimeSpan.FromSeconds(5));
+            region.Tell(new Get("21"));
+            await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3, TimeSpan.FromSeconds(5));
+        }, Config.First);
+        await EnterBarrierAsync("after-2");
     }
 
     private async Task ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure()
     {
-        await WithinAsync(TimeSpan.FromSeconds(20), async () =>
+        // No outer Within here (see the join-cluster phase above for why barriers must stay
+        // outside one). The Get("21") retry below is the one operation in this phase that is
+        // *expected* to take multiple seconds: the coordinator/shard must ride out
+        // coordinator-failure-backoff / shard-failure-backoff (3s each,
+        // ClusterShardingFailureSpecConfig) against the shared journal's 5s ask-timeout
+        // (MemoryJournalShared, MultiNodeClusterShardingConfig.PersistenceConfig) before they can
+        // recover from the blackhole. It gets its own bound, sized off those constants, instead
+        // of borrowing from a shared clock that would starve the barriers and assertions after it.
+        await RunOnAsync(async () =>
         {
-            await RunOnAsync(async () =>
+            if (PersistenceIsNeeded)
             {
-                if (PersistenceIsNeeded)
-                {
-                    await TestConductor.BlackholeAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
-                    await TestConductor.BlackholeAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
-                }
-                else
-                {
-                    await TestConductor.BlackholeAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
-                }
-            }, Config.Controller);
-            await EnterBarrierAsync("journal-backholded");
+                await TestConductor.BlackholeAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.BlackholeAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
+            }
+            else
+            {
+                await TestConductor.BlackholeAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
+            }
+        }, Config.Controller);
+        await EnterBarrierAsync("journal-backholded");
 
-            await RunOnAsync(async () =>
-            {
-                // try with a new shard, will not reply until journal/network is available again
-                var region = _region.Value;
-                region.Tell(new Add("40", 4));
-                var probe = CreateTestProbe();
-                region.Tell(new Get("40"), probe.Ref);
-                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            }, Config.First);
-            await EnterBarrierAsync("first-delayed");
+        await RunOnAsync(async () =>
+        {
+            // try with a new shard, will not reply until journal/network is available again
+            var region = _region.Value;
+            region.Tell(new Add("40", 4));
+            var probe = CreateTestProbe();
+            region.Tell(new Get("40"), probe.Ref);
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+        }, Config.First);
+        await EnterBarrierAsync("first-delayed");
 
-            await RunOnAsync(async () =>
+        await RunOnAsync(async () =>
+        {
+            if (PersistenceIsNeeded)
             {
-                if (PersistenceIsNeeded)
-                {
-                    await TestConductor.PassThroughAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
-                    await TestConductor.PassThroughAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
-                }
-                else
-                {
-                    await TestConductor.PassThroughAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
-                }
-            }, Config.Controller);
-            await EnterBarrierAsync("journal-ok");
+                await TestConductor.PassThroughAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.PassThroughAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
+            }
+            else
+            {
+                await TestConductor.PassThroughAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
+            }
+        }, Config.Controller);
+        await EnterBarrierAsync("journal-ok");
 
-            await RunOnAsync(async () =>
+        await RunOnAsync(async () =>
+        {
+            var region = _region.Value;
+
+            // Confirm the ShardCoordinator/Shard have recovered and are routing again.
+            // A single-shot expectation can legitimately lose a race against the coordinator's
+            // and shard's own failure-backoff retry loop, so retry the request itself - bounded
+            // by roughly two worst-case retry cycles (5s journal timeout + 3s backoff each) -
+            // rather than gambling on one wait being long enough.
+            IActorRef entity21 = null;
+            await AwaitAssertAsync(async () =>
             {
-                var region = _region.Value;
                 region.Tell(new Get("21"));
-                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3);
-                var entity21 = LastSender;
-                var shard2 = Sys.ActorSelection(entity21.Path.Parent);
+                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3, TimeSpan.FromSeconds(3));
+                entity21 = LastSender;
+            }, TimeSpan.FromSeconds(30));
+            var shard2 = Sys.ActorSelection(entity21.Path.Parent);
 
+            //Test the ShardCoordinator allocating shards after a journal/network failure
+            region.Tell(new Add("30", 3));
 
-                //Test the ShardCoordinator allocating shards after a journal/network failure
-                region.Tell(new Add("30", 3));
+            //Test the Shard starting entities and persisting after a journal/network failure
+            region.Tell(new Add("11", 1));
 
-                //Test the Shard starting entities and persisting after a journal/network failure
-                region.Tell(new Add("11", 1));
+            //Test the Shard passivate works after a journal failure
+            shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
 
-                //Test the Shard passivate works after a journal failure
-                shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
-
-                await AwaitAssertAsync(async () =>
-                {
-                    // Note that the order between this Get message to 21 and the above Passivate to 21 is undefined.
-                    // If this Get arrives first the reply will be Value("21", 3) and then it is retried by the
-                    // awaitAssert.
-                    // Also note that there is no timeout parameter on below expectMsg because messages should not
-                    // be lost here. They should be buffered and delivered also after Passivate completed.
-                    region.Tell(new Get("21"));
-                    // counter reset to 0 when started again
-                    await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 0, hint: "Passivating did not reset Value down to 0");
-                });
-
-                region.Tell(new Add("21", 1));
-
-                region.Tell(new Get("21"));
-                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 1);
-
-                region.Tell(new Get("30"));
-                await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 3);
-
-                region.Tell(new Get("11"));
-                await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 1);
-
-                region.Tell(new Get("40"));
-                await ExpectMsgAsync<Value>(v => v.Id == "40" && v.N == 4);
-            }, Config.First);
-            await EnterBarrierAsync("verified-first");
-
-            await RunOnAsync(async () =>
+            await AwaitAssertAsync(async () =>
             {
-                var region = _region.Value;
-                region.Tell(new Add("10", 1));
-                region.Tell(new Add("20", 2));
-                region.Tell(new Add("30", 3));
-                region.Tell(new Add("11", 4));
-                region.Tell(new Get("10"));
-                await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 2);
-                region.Tell(new Get("11"));
-                await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 5);
-                region.Tell(new Get("20"));
-                await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 4);
-                region.Tell(new Get("30"));
-                await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 6);
-            }, Config.Second);
-            await EnterBarrierAsync("after-3");
-        });
+                // Note that the order between this Get message to 21 and the above Passivate to 21 is undefined.
+                // If this Get arrives first the reply will be Value("21", 3) and then it is retried by the
+                // awaitAssert.
+                region.Tell(new Get("21"));
+                // counter reset to 0 when started again
+                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 0, TimeSpan.FromSeconds(3), hint: "Passivating did not reset Value down to 0");
+            }, TimeSpan.FromSeconds(10));
+
+            region.Tell(new Add("21", 1));
+
+            region.Tell(new Get("21"));
+            await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 1, TimeSpan.FromSeconds(5));
+
+            region.Tell(new Get("30"));
+            await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 3, TimeSpan.FromSeconds(5));
+
+            region.Tell(new Get("11"));
+            await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 1, TimeSpan.FromSeconds(5));
+
+            region.Tell(new Get("40"));
+            await ExpectMsgAsync<Value>(v => v.Id == "40" && v.N == 4, TimeSpan.FromSeconds(5));
+        }, Config.First);
+        await EnterBarrierAsync("verified-first");
+
+        await RunOnAsync(async () =>
+        {
+            var region = _region.Value;
+            region.Tell(new Add("10", 1));
+            region.Tell(new Add("20", 2));
+            region.Tell(new Add("30", 3));
+            region.Tell(new Add("11", 4));
+            region.Tell(new Get("10"));
+            await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 2, TimeSpan.FromSeconds(5));
+            region.Tell(new Get("11"));
+            await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 5, TimeSpan.FromSeconds(5));
+            region.Tell(new Get("20"));
+            await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 4, TimeSpan.FromSeconds(5));
+            region.Tell(new Get("30"));
+            await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 6, TimeSpan.FromSeconds(5));
+        }, Config.Second);
+        await EnterBarrierAsync("after-3");
     }
 }

@@ -24,7 +24,7 @@ public sealed partial class RootSerializer
         return obj switch
         {
             global::RootMessage => "root-v1",
-            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj))
+            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj))
         };
     }
 
@@ -45,7 +45,7 @@ public sealed partial class RootSerializer
                 WriteRootMessage(ref writer, message);
                 break;
             default:
-                throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj));
+                throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
         }
     }
 

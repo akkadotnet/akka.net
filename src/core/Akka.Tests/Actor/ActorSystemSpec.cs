@@ -118,6 +118,23 @@ namespace Akka.Tests.Actor
             try
             {
                 var testKit = new TestKit.Xunit.TestKit(sys);
+
+                // The system's DeadLetterListener (which produces the "not delivered" Info log) is started via
+                // a fire-and-forget SystemActorOf call in ActorSystemImpl.Start() - unlike the configured
+                // akka.loggers (TestEventListener), it does NOT go through a synchronous startup handshake
+                // before ActorSystem.Create returns. That leaves a real window, right after system creation,
+                // where the first dead letter published can race DeadLetterListener's own PreStart() (which
+                // subscribes to DeadLetter on the EventStream) and be silently dropped - never reaching
+                // DeadLetterListener at all, so no "not delivered" log is ever produced. This is a genuine,
+                // reproducible race (confirmed independently, not just theorized), not merely a tight timeout.
+                //
+                // Resolving /system/deadLetterListener via Identify/ActorIdentity forces a real happens-before:
+                // an actor's Create system message (which triggers PreStart) is always fully processed before
+                // any user message, Identify included. A successful ResolveOne here is proof that
+                // DeadLetterListener's DeadLetter subscription has already happened.
+                await sys.ActorSelection("/system/deadLetterListener")
+                    .ResolveOne(testKit.TestKitSettings.TestKitStartupTimeout);
+
                 var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
