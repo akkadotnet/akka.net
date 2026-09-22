@@ -2884,6 +2884,7 @@ namespace Akka.Dispatch
         [System.Diagnostics.Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args) { }
     }
+    [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
     public abstract class MailboxType
     {
         protected readonly Akka.Configuration.Config Config;
@@ -2898,11 +2899,11 @@ namespace Akka.Dispatch
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
         public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
-        public System.Type GetRequiredType(System.Type actorType) { }
-        public bool HasRequiredType(System.Type actorType) { }
+        public System.Type GetRequiredType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type actorType) { }
+        public bool HasRequiredType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type actorType) { }
         public Akka.Dispatch.MailboxType Lookup(string id) { }
         public Akka.Dispatch.MailboxType LookupByQueueType(System.Type queueType) { }
-        public bool ProducesMessageQueue(System.Type mailboxType) { }
+        public bool ProducesMessageQueue([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type mailboxType) { }
         [Akka.Annotations.InternalApi]
         public int StashCapacity(string dispatcher, string mailbox) { }
     }

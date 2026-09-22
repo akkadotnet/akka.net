@@ -161,9 +161,12 @@ namespace Akka.Dispatch
         /// <summary>
         /// Check if this actor class can have a required message queue type.
         /// </summary>
-        /// <param name="actorType">The type to check.</param>
+        /// <param name="actorType">
+        /// The type to check. Annotated with <see cref="DynamicallyAccessedMemberTypes.Interfaces"/> so that trimming
+        /// keeps <see cref="IRequiresMessageQueue{T}"/> on the actor type the caller passes in.
+        /// </param>
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
-        public bool HasRequiredType(Type actorType)
+        public bool HasRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -181,9 +184,13 @@ namespace Akka.Dispatch
         /// <summary>
         /// Check if this <see cref="MailboxType"/> implements the <see cref="IProducesMessageQueue{TQueue}"/> interface.
         /// </summary>
-        /// <param name="mailboxType">The type of the <see cref="MailboxType"/> to check.</param>
+        /// <param name="mailboxType">
+        /// The type of the <see cref="MailboxType"/> to check. Annotated with
+        /// <see cref="DynamicallyAccessedMemberTypes.Interfaces"/> so that trimming keeps
+        /// <see cref="IProducesMessageQueue{TQueue}"/> on the mailbox type the caller passes in.
+        /// </param>
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
-        public bool ProducesMessageQueue(Type mailboxType)
+        public bool ProducesMessageQueue([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type mailboxType)
         {
             var interfaces = mailboxType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -339,11 +346,18 @@ namespace Akka.Dispatch
         private static readonly Type RequiresMessageQueueGenericType = typeof (IRequiresMessageQueue<>);
 
         /// <summary>
-        /// TBD
+        /// Returns the <see cref="IMessageQueue"/> type this actor class requires via
+        /// <see cref="IRequiresMessageQueue{T}"/>, or <c>null</c> if it does not require one.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
-        public Type GetRequiredType(Type actorType)
+        /// <param name="actorType">
+        /// The actor type to inspect. Annotated with <see cref="DynamicallyAccessedMemberTypes.Interfaces"/> so that
+        /// trimming keeps <see cref="IRequiresMessageQueue{T}"/> on the actor type the caller passes in.
+        /// </param>
+        /// <returns>
+        /// The required message queue type, or <c>null</c> when <paramref name="actorType"/> does not implement
+        /// <see cref="IRequiresMessageQueue{T}"/>.
+        /// </returns>
+        public Type GetRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
