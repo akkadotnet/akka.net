@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -92,6 +93,44 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }, max);
         }
 
+        /// <summary>
+        /// Runs <paramref name="handOver"/> and then waits for <paramref name="newOldest"/> to log the
+        /// "Hand-over in progress at" INFO line that <see cref="ClusterSingletonManager"/> writes when it
+        /// receives <c>HandOverInProgress</c> from the previous oldest - the confirmation that the hand-over
+        /// started. A failure here names the broken hand-over instead of letting it surface as an unrelated
+        /// timeout further down (see #8589 for the transport-level loss that can cause it).
+        /// </summary>
+        /// <remarks>
+        /// At least one, deliberately not exactly one: the new oldest arms HandOverRetryTimer at
+        /// hand-over-retry-interval (1s) on entering BecomingOldest, so if the first confirmation has not been
+        /// processed by the time that timer fires it re-sends HandOverToMe, and the previous oldest answers
+        /// every repeat with another HandOverInProgress while it is still in HandingOver
+        /// (ClusterSingletonManager.cs, the "// retry" case). Two log lines is correct behavior under
+        /// scheduling jitter, not a bug, so an exact EventFilter count fails on a loaded agent whenever the
+        /// round trip exceeds 1s. Fishing returns on the first match and ignores any repeats.
+        /// </remarks>
+        private async Task AwaitHandOverConfirmationAsync(ActorSystem newOldest, TimeSpan max, Func<Task> handOver)
+        {
+            // subscribe before the hand-over runs, so a confirmation that lands while it is still in flight
+            // is buffered on the probe rather than missed
+            var probe = CreateTestProbe(newOldest);
+            newOldest.EventStream.Subscribe(probe.Ref, typeof(Info));
+            try
+            {
+                await handOver();
+
+                await probe.FishForMessageAsync(
+                    m => m is Info info &&
+                         info.Message?.ToString()?.StartsWith("Hand-over in progress at") == true,
+                    max,
+                    $"[{newOldest.Name}] never logged the hand-over confirmation from the previous oldest");
+            }
+            finally
+            {
+                newOldest.EventStream.Unsubscribe(probe.Ref, typeof(Info));
+            }
+        }
+
         [Fact]
         public async Task Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
         {
@@ -113,10 +152,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             // A failure here means sys2 never logged the hand-over confirmation from sys1 - i.e. the
             // "Hand-over in progress at" message that ClusterSingletonManager.BecomingOldest logs on
             // receiving HandOverToMe (see #8589 for the transport-level loss that can cause this). Naming
-            // it here turns a later, unrelated-looking timeout into a filter failure at the point the
-            // hand-over actually broke.
-            await CreateEventFilter(_sys2).Info(start: "Hand-over in progress at")
-                .ExpectOneAsync(async () => { await _sys1.Terminate(); });
+            // it here turns a later, unrelated-looking timeout into a failure at the point the hand-over
+            // actually broke.
+            await AwaitHandOverConfirmationAsync(_sys2, TimeSpan.FromSeconds(10),
+                async () => { await _sys1.Terminate(); });
             // it will be downed by the join attempts of the new incarnation
 
             // ReSharper disable once PossibleInvalidOperationException
@@ -159,19 +198,18 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             // 1ms after sys2 starts handing over, before sys2's system terminates). The budget is deliberately not widened to cover the fallback: doing
             // so would only make the test pass on a path where the hand-over was lost and the manager had
             // to crash to recover, which defeats the point of a spec named after the hand-over.
-            await CreateEventFilter(_sys3).Info(start: "Hand-over in progress at")
-                .ExpectOneAsync(async () =>
-                {
-                    Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
+            await AwaitHandOverConfirmationAsync(_sys3, TimeSpan.FromSeconds(10), async () =>
+            {
+                Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
 
-                    await AwaitAssertAsync(() =>
-                    {
-                        Cluster.Get(_sys3)
-                            .State.Members.Select(x => x.UniqueAddress)
-                            .Should()
-                            .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
-                    }, TimeSpan.FromSeconds(15));
-                });
+                await AwaitAssertAsync(() =>
+                {
+                    Cluster.Get(_sys3)
+                        .State.Members.Select(x => x.UniqueAddress)
+                        .Should()
+                        .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
+                }, TimeSpan.FromSeconds(15));
+            });
 
             var proxy3 =
                 _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),
