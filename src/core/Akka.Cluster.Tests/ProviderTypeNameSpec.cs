@@ -15,22 +15,27 @@ using Xunit;
 namespace Akka.Cluster.Tests
 {
     /// <summary>
-    /// <see cref="ProviderSelection.ClusterActorRefProvider"/> is a compile-time constant that
-    /// <c>ActorSystemImpl.ConfigureProvider</c> hands to <see cref="Type.GetType(string)"/> so the trimmer can
-    /// keep the type. A rename or a move of <see cref="ClusterActorRefProvider"/> would not break the build,
-    /// only the runtime lookup - this spec turns that into a compile-and-test failure instead.
+    /// The <see cref="ProviderSelection"/> type-name constants are the only thing standing between
+    /// <c>akka.actor.provider</c> and the provider type now that <c>ActorSystemImpl.CreateProvider</c> resolves
+    /// them through an annotated string parameter. Renaming or moving a provider would not break the build --
+    /// only the runtime lookup, and only in a trimmed or AOT-published app. This spec turns that into a test
+    /// failure. It lives in Akka.Cluster.Tests because that project references Akka.Remote as well, so all
+    /// three constants resolve here.
     /// </summary>
     public class ProviderTypeNameSpec
     {
-        [Fact(DisplayName = "Should_resolve_ClusterActorRefProvider_When_loading_the_ProviderSelection_constant")]
-        public void Should_resolve_ClusterActorRefProvider_When_loading_the_ProviderSelection_constant()
+        [Theory(DisplayName = "Should_resolve_an_IActorRefProvider_When_loading_a_ProviderSelection_type_name_constant")]
+        [InlineData(ProviderSelection.LocalActorRefProvider)]
+        [InlineData(ProviderSelection.RemoteActorRefProvider)]
+        [InlineData(ProviderSelection.ClusterActorRefProvider)]
+        public void Should_resolve_an_IActorRefProvider_When_loading_a_ProviderSelection_type_name_constant(string typeName)
         {
-            var providerType = Type.GetType(ProviderSelection.ClusterActorRefProvider);
+            var providerType = Type.GetType(typeName);
 
             providerType.Should().NotBeNull(
-                $"[{ProviderSelection.ClusterActorRefProvider}] must stay resolvable - ActorSystemImpl resolves the cluster provider from this constant");
-            typeof(IActorRefProvider).IsAssignableFrom(providerType).Should().BeTrue();
-            providerType.Should().Be(typeof(ClusterActorRefProvider));
+                $"[{typeName}] must stay resolvable - ActorSystemImpl resolves built-in providers from these constants");
+            typeof(IActorRefProvider).IsAssignableFrom(providerType).Should().BeTrue(
+                $"[{typeName}] must name an {nameof(IActorRefProvider)} implementation");
         }
     }
 }
