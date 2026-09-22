@@ -4,6 +4,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/AOT/">
+    <Project Path="src/aot/Akka.AOT.App/Akka.AOT.App.csproj" />
+  </Folder>
   <Folder Name="/Benchmark/">
     <Project Path="src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" />
     <Project Path="src/benchmark/Akka.Cluster.Benchmarks/Akka.Cluster.Benchmarks.csproj" />
