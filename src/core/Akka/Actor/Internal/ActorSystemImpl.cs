@@ -186,7 +186,7 @@ namespace Akka.Actor.Internal
         /// This exception is thrown when deployment, dispatcher or mailbox configuration is incorrect.
         /// </exception>
         /// <returns>A reference to the underlying actor.</returns>
-        public override IActorRef SystemActorOf<TActor>(string name = null)
+        public override IActorRef SystemActorOf<[DynamicallyAccessedMembers(Props.ActorTypeMembers)] TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.AttachChild(Props.Create<TActor>(), true, name);
         }

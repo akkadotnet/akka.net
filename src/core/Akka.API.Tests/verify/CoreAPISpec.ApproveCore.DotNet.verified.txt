@@ -297,7 +297,7 @@ namespace Akka.Actor
     }
     public static class ActorRefFactoryExtensions
     {
-        public static Akka.Actor.IActorRef ActorOf<TActor>(this Akka.Actor.IActorRefFactory factory, string name = null)
+        public static Akka.Actor.IActorRef ActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(this Akka.Actor.IActorRefFactory factory, string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public static Akka.Actor.ActorSelection ActorSelection(this Akka.Actor.IActorRefFactory factory, Akka.Actor.IActorRef anchorRef, string actorPath) { }
     }
@@ -422,9 +422,9 @@ namespace Akka.Actor
     {
         public static T WithExtension<T>(this Akka.Actor.ActorSystem system)
             where T :  class, Akka.Actor.IExtension { }
-        public static T WithExtension<T>(this Akka.Actor.ActorSystem system, System.Type extensionId)
+        public static T WithExtension<T>(this Akka.Actor.ActorSystem system, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] System.Type extensionId)
             where T :  class, Akka.Actor.IExtension { }
-        public static T WithExtension<T, TI>(this Akka.Actor.ActorSystem system)
+        public static T WithExtension<T, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]  TI>(this Akka.Actor.ActorSystem system)
             where T :  class, Akka.Actor.IExtension
             where TI : Akka.Actor.IExtensionId { }
     }
@@ -759,7 +759,7 @@ namespace Akka.Actor
         public abstract void Abort();
         public abstract string PrintTree();
         public abstract Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null);
-        public abstract Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
+        public abstract Akka.Actor.IActorRef SystemActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new ();
     }
     public abstract class ExtensionIdProvider<T> : Akka.Actor.IExtensionId, Akka.Actor.IExtensionId<T>
@@ -1124,6 +1124,7 @@ namespace Akka.Actor
     }
     public interface IIndirectActorProducer
     {
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
         System.Type ActorType { get; }
         Akka.Actor.ActorBase Produce();
         void Release(Akka.Actor.ActorBase actor);
@@ -1483,12 +1484,12 @@ namespace Akka.Actor
         public static readonly Akka.Actor.Props None;
         protected Props() { }
         protected Props(Akka.Actor.Props copy) { }
-        public Props(System.Type type) { }
-        public Props(System.Type type, object[] args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, params object[] args) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, params object[] args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, object[] args) { }
+        public Props(Akka.Actor.Deploy deploy, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
+        public Props(Akka.Actor.Deploy deploy, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, params object[] args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, params object[] args) { }
         public object[] Arguments { get; }
         public Akka.Actor.Deploy Deploy { get; protected set; }
         [Newtonsoft.Json.JsonIgnore]
@@ -1499,6 +1500,7 @@ namespace Akka.Actor
         public Akka.Routing.RouterConfig RouterConfig { get; }
         public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; protected set; }
         [Newtonsoft.Json.JsonIgnore]
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
         public System.Type Type { get; }
         public string TypeName { get; }
         public static Akka.Actor.Props Empty { get; }
@@ -1514,17 +1516,17 @@ namespace Akka.Actor
         public Akka.Actor.Props WithRouter(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Actor.Props WithStashCapacity(int stashCapacity) { }
         public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
-        public static Akka.Actor.Props Create(System.Type type, params object[] args) { }
-        public static Akka.Actor.Props Create<TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
+        public static Akka.Actor.Props Create([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, params object[] args) { }
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
             where TActor : Akka.Actor.ActorBase, new () { }
-        public static Akka.Actor.Props Create<TActor>(params object[] args)
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(params object[] args)
             where TActor : Akka.Actor.ActorBase { }
-        public static Akka.Actor.Props Create<TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
             where TActor : Akka.Actor.ActorBase { }
         public static Akka.Actor.Props CreateBy(Akka.Actor.IIndirectActorProducer producer, params object[] args) { }
         [System.Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] arg" +
             "s) instead")]
-        public static Akka.Actor.Props CreateBy<TProducer>(params object[] args)
+        public static Akka.Actor.Props CreateBy<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TProducer>(params object[] args)
             where TProducer :  class, Akka.Actor.IIndirectActorProducer { }
         public class PropsSurrogate : Akka.Util.ISurrogate
         {
@@ -2040,7 +2042,7 @@ namespace Akka.Actor.Internal
         public void Start() { }
         public override void Stop(Akka.Actor.IActorRef actor) { }
         public override Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null) { }
-        public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
+        public override Akka.Actor.IActorRef SystemActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public override System.Threading.Tasks.Task Terminate() { }
         public override string ToString() { }
