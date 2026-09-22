@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -444,13 +445,25 @@ namespace Akka.Actor.Internal
         {
             try
             {
-                Type providerType = Type.GetType(_settings.ProviderClass);
-                if (providerType is null)
-                    throw new ConfigurationException(
-                        $"Could not resolve provider type [{_settings.ProviderClass}]. Ensure the type name is fully qualified.");
-                var provider =
-                    (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-                _provider = provider;
+                // The two built-in out-of-process providers are resolved from compile-time constant type
+                // names so the trimmer / Native AOT compiler can see which type each call site loads and
+                // keep it. Anything else is named only at runtime and stays fully dynamic.
+                _provider = _settings.ProviderSelectionType switch
+                {
+                    ProviderSelection.Local => new LocalActorRefProvider(_name, _settings, _eventStream),
+                    ProviderSelection.Remote => CreateProvider(
+                        ProviderSelection.RemoteActorRefProvider,
+                        "akka.actor.provider = remote, but Akka.Remote is not referenced by this application.",
+                        _name, _settings, _eventStream),
+                    ProviderSelection.Cluster => CreateProvider(
+                        ProviderSelection.ClusterActorRefProvider,
+                        "akka.actor.provider = cluster, but Akka.Cluster is not referenced by this application.",
+                        _name, _settings, _eventStream),
+                    _ => CreateProvider(
+                        _settings.ProviderClass,
+                        $"Could not resolve provider type [{_settings.ProviderClass}]. Ensure the type name is fully qualified.",
+                        _name, _settings, _eventStream)
+                };
             }
             catch (Exception)
             {
@@ -461,6 +474,33 @@ namespace Akka.Actor.Internal
                 }
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Resolves an <see cref="IActorRefProvider"/> from its type name and constructs it.
+        /// </summary>
+        /// <remarks>
+        /// <paramref name="typeName"/> carries <see cref="DynamicallyAccessedMembersAttribute"/>, which is what
+        /// makes this trimmer-safe: the trimmer treats a <see cref="string"/> parameter annotated that way as a
+        /// type name, so a call site passing a compile-time constant - the <see cref="ProviderSelection"/>
+        /// constants for the built-in providers - has its type resolved statically and kept, along with the public
+        /// constructor this method invokes. The annotation flows into <see cref="Type.GetType(string)"/> here, so
+        /// neither that call nor the <see cref="Activator.CreateInstance(Type, object[])"/> below needs the
+        /// constant inlined in this method. A call site that passes a string only known at runtime cannot be
+        /// analyzed and warns there instead, which is the honest answer for a provider named only in HOCON.
+        /// </remarks>
+        private static IActorRefProvider CreateProvider(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] string typeName,
+            string notResolvedMessage,
+            string name,
+            Settings settings,
+            EventStream eventStream)
+        {
+            var providerType = Type.GetType(typeName);
+            if (providerType is null)
+                throw new ConfigurationException(notResolvedMessage);
+
+            return (IActorRefProvider)Activator.CreateInstance(providerType, name, settings, eventStream);
         }
 
         private void ConfigureLoggers()
