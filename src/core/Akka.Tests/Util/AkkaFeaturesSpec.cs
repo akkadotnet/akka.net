@@ -55,7 +55,7 @@ namespace Akka.Tests.Util
         /// <c>true</c> - which is the value <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> reports
         /// for an unset switch anyway.
         /// </remarks>
-        private static async Task WithDynamicTypeLoading(bool enabled, Func<Task> body)
+        internal static async Task WithDynamicTypeLoading(bool enabled, Func<Task> body)
         {
             var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
             AppContext.SetSwitch(SwitchName, enabled);
