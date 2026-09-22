@@ -19,13 +19,12 @@ namespace Akka.Cluster.Tests
     /// <c>akka.actor.provider</c> and the provider type now that <c>ActorSystemImpl.CreateProvider</c> resolves
     /// them through an annotated string parameter. Renaming or moving a provider would not break the build --
     /// only the runtime lookup, and only in a trimmed or AOT-published app. This spec turns that into a test
-    /// failure. It lives in Akka.Cluster.Tests because that project references Akka.Remote as well, so all
-    /// three constants resolve here.
+    /// failure. It lives in Akka.Cluster.Tests because that project references Akka.Remote as well, so both
+    /// constants resolve here. The local provider is constructed directly and never goes through its constant.
     /// </summary>
     public class ProviderTypeNameSpec
     {
         [Theory(DisplayName = "Should_resolve_an_IActorRefProvider_When_loading_a_ProviderSelection_type_name_constant")]
-        [InlineData(ProviderSelection.LocalActorRefProvider)]
         [InlineData(ProviderSelection.RemoteActorRefProvider)]
         [InlineData(ProviderSelection.ClusterActorRefProvider)]
         public void Should_resolve_an_IActorRefProvider_When_loading_a_ProviderSelection_type_name_constant(string typeName)

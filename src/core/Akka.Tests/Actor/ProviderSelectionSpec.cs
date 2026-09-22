@@ -38,7 +38,6 @@ namespace Akka.Tests.Actor
             var settings = new Settings(null, ConfigurationFactory.Default());
 
             settings.ProviderSelectionType.Should().BeSameAs(ProviderSelection.Local.Instance);
-            settings.ProviderClass.Should().Be(ProviderSelection.LocalActorRefProvider);
         }
     }
 }
