@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -324,6 +325,11 @@ channel-executor.priority = normal");
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
             var executor = Config.GetString("executor", null);
+
+            // This switch is also the built-in table for executors: the cases are short aliases rather than
+            // type names, so the trimmer and the Native AOT compiler already see every configurator Akka.NET
+            // ships. Only the default arm - an executor named by type in HOCON - needs reflection, which is
+            // why that is the one branch behind the Akka.DynamicTypeLoading switch.
             switch (executor)
             {
                 case null:
@@ -340,16 +346,27 @@ channel-executor.priority = normal");
                 case "channel-executor":
                     return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
-                    Type executorConfiguratorType = Type.GetType(executor);
-                    if (executorConfiguratorType == null)
-                    {
-                        throw new ConfigurationException(
-                            $"Could not resolve executor service configurator type {executor} for path {Config.GetString("id", "unknown")}");
-                    }
+                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                            $"{Config.GetString("id", "unknown")}.executor", executor, "one of the built-in executors"));
 
-                    var args = new object[] { Config, Prerequisites };
-                    return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
+                    return CreateExecutorServiceConfiguratorFromTypeName(executor, Config, Prerequisites);
             }
+        }
+
+        [RequiresUnreferencedCode("Loads a dispatcher [executor] named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static ExecutorServiceConfigurator CreateExecutorServiceConfiguratorFromTypeName(
+            string executor, Config config, IDispatcherPrerequisites prerequisites)
+        {
+            var executorConfiguratorType = Type.GetType(executor);
+            if (executorConfiguratorType == null)
+            {
+                throw new ConfigurationException(
+                    $"Could not resolve executor service configurator type {executor} for path {config.GetString("id", "unknown")}");
+            }
+
+            var args = new object[] { config, prerequisites };
+            return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
         }
     }
 
