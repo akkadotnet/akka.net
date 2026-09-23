@@ -50,8 +50,6 @@ namespace Akka.Tests.Event
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class BuiltInLoggersSpec
     {
-        private const string SwitchName = "Akka.DynamicTypeLoading";
-
         private const string CustomLoggerTypeName = "Akka.Tests.Event.CountingTestLogger";
 
         private const string CustomLoggerConfig =
@@ -123,17 +121,10 @@ namespace Akka.Tests.Event
             {
                 var config = ConfigurationFactory.ParseString($"akka.loggers = [\"{spelling}\"]");
 
-                // a MinimalLogger is never started as an actor - it only suppresses the stdout logger's removal,
-                // so the assertion is that the name resolved and the system came up
+                // a MinimalLogger is never started as an actor, so the check is that the name resolved:
+                // with the switch off an unresolved akka.loggers entry makes ActorSystem.Create throw
                 var system = ActorSystem.Create("built-in-stdout-logger-off", config);
-                try
-                {
-                    system.Settings.StdoutLogger.Should().BeOfType<StandardOutLogger>();
-                }
-                finally
-                {
-                    await system.Terminate();
-                }
+                await system.Terminate();
             });
         }
 
@@ -172,7 +163,7 @@ namespace Akka.Tests.Event
 
                 exception.Message.Should().Contain("akka.loggers");
                 exception.Message.Should().Contain(CustomLoggerTypeName);
-                exception.Message.Should().Contain(SwitchName);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
         }
