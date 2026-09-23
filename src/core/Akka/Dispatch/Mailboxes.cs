@@ -391,7 +391,7 @@ namespace Akka.Dispatch
         private Type GetMailboxRequirement(Config config)
         {
             var mailboxRequirement = config.GetString("mailbox-requirement", null);
-            if (string.IsNullOrEmpty(mailboxRequirement) || mailboxRequirement.Equals(NoMailboxRequirement))
+            if (mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement))
                 return typeof(IMessageQueue);
 
             if (BuiltInMessageQueueSemantics.TryGetValue(

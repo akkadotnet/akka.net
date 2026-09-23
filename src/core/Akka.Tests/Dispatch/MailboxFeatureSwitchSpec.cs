@@ -161,7 +161,7 @@ namespace Akka.Tests.Dispatch
                     _output.WriteLine(exception.Message);
                     exception.Message.Should().Contain("custom-mailbox.mailbox-type");
                     exception.Message.Should().Contain(CustomMailboxTypeName);
-                    exception.Message.Should().Contain(DynamicTypeLoadingCollection.Name);
+                    exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 }
                 finally
                 {
@@ -187,7 +187,7 @@ namespace Akka.Tests.Dispatch
                 _output.WriteLine(exception.Message);
                 exception.Message.Should().Contain("akka.actor.mailbox.requirements");
                 exception.Message.Should().Contain("Some.Unknown.Interface");
-                exception.Message.Should().Contain(DynamicTypeLoadingCollection.Name);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
         }
