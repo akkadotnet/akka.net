@@ -62,7 +62,7 @@ Only the names in the built-in tables resolve. Nearly anything else throws a `Co
 naming the HOCON setting, the value it could not resolve, and the switch, so a misconfiguration fails
 loudly at startup instead of producing a half-built actor system. Two settings behave differently:
 `akka.io.dns.inet-address.provider-object` logs a warning and carries on with the built-in provider,
-and an unserializable message type throws `SerializationException` when you send it rather than at
+and a message type with no serializer throws `SerializationException` when you send it rather than at
 startup.
 
 Serialization is the case worth planning for. With the switch off core does not register the
