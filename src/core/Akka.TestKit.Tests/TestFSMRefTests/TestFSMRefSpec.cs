@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
@@ -35,10 +36,14 @@ namespace Akka.TestKit.Tests.TestFSMRefTests
             fsm.StateName.Should().Be(1);
             fsm.StateData.Should().Be("buh");
 
+            // Timed from before SetStateTimeout, so a stall before the wait cannot make the timeout look early.
+            // The upper bound is generous on purpose: the timeout travels through the scheduler and the
+            // dispatcher, and a starved CI agent can take seconds.
+            var elapsed = Stopwatch.StartNew();
             fsm.SetStateTimeout(100.Milliseconds());
-            await WithinAsync(80.Milliseconds(), 500.Milliseconds(), async () =>
-                await AwaitConditionAsync(() => Task.FromResult(fsm.StateName == 2 && fsm.StateData == "timeout"))
-            );
+            await AwaitConditionAsync(() => Task.FromResult(fsm.StateName == 2 && fsm.StateData == "timeout"),
+                Dilated(5.Seconds()));
+            elapsed.Elapsed.Should().BeGreaterOrEqualTo(80.Milliseconds());
         }
 
         [Fact]

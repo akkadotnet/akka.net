@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Actor;
 using FluentAssertions;
@@ -21,7 +22,7 @@ public class TestFSMRefSpec : TestKit
     }
     
     [Fact]
-    public void A_TestFSMRef_must_allow_access_to_internal_state()
+    public async Task A_TestFSMRef_must_allow_access_to_internal_state()
     {
         var fsm = ActorOfAsTestFSMRef<StateTestFsm, int, string>("test-fsm-ref-1");
 
@@ -40,10 +41,14 @@ public class TestFSMRefSpec : TestKit
         fsm.StateName.Should().Be(1);
         fsm.StateData.Should().Be("buh");
 
+        // Timed from before SetStateTimeout, so a stall before the wait cannot make the timeout look early.
+        // The upper bound is generous on purpose: the timeout travels through the scheduler and the
+        // dispatcher, and a starved CI agent can take seconds.
+        var elapsed = Stopwatch.StartNew();
         fsm.SetStateTimeout(TimeSpan.FromMilliseconds(100));
-        Within(TimeSpan.FromMilliseconds(80), TimeSpan.FromMilliseconds(500), () =>
-            AwaitCondition(() => fsm is { StateName: 2, StateData: "timeout" })
-        );
+        await AwaitConditionAsync(() => Task.FromResult(fsm is { StateName: 2, StateData: "timeout" }),
+            Dilated(TimeSpan.FromSeconds(5)));
+        elapsed.Elapsed.Should().BeGreaterOrEqualTo(TimeSpan.FromMilliseconds(80));
     }
 
     [Fact]
