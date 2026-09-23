@@ -55,14 +55,9 @@ namespace Akka.Tests.Util
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class DynamicTypeLoadingConfigSpec
     {
-        private const string SwitchName = DynamicTypeLoadingCollection.Name;
-
         private const string CustomRouterTypeName = "Akka.Tests.Util.DelegatingTestRouter";
 
         private const string CustomSupervisorStrategyTypeName = "Akka.Tests.Actor.TestStrategy";
-
-        private static Task WithDynamicTypeLoading(bool enabled, Func<Task> body)
-            => AkkaFeaturesSpec.WithDynamicTypeLoading(enabled, body);
 
         /// <summary>
         /// Every alias in the shipped <c>akka.actor.router.type-mapping</c> whose mapped type lives inside
@@ -133,7 +128,7 @@ namespace Akka.Tests.Util
                 akka.actor.deployment {{{deployments}
                 }}");
 
-            await WithDynamicTypeLoading(false, async () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
             {
                 // the Deployer parses every deployment while the system boots, so a router that is missing
                 // from the built-in table fails this line rather than the assertions below
@@ -159,7 +154,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = "Deployer should reject a router type-mapping that is not built in when dynamic type loading is off")]
         public async Task Should_throw_ConfigurationException_When_the_router_is_not_built_in_and_dynamic_type_loading_is_disabled()
         {
-            await WithDynamicTypeLoading(false, () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
             {
                 var config = CustomRouterConfig();
 
@@ -168,7 +163,7 @@ namespace Akka.Tests.Util
 
                 exception.Message.Should().Contain("akka.actor.router.type-mapping.my-router");
                 exception.Message.Should().Contain(CustomRouterTypeName);
-                exception.Message.Should().Contain(SwitchName);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
         }
@@ -196,7 +191,7 @@ namespace Akka.Tests.Util
                   }}
                 }}");
 
-            await WithDynamicTypeLoading(true, async () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(true, async () =>
             {
                 var system = ActorSystem.Create("remapped-router-on", config);
                 try
@@ -238,7 +233,7 @@ namespace Akka.Tests.Util
         public async Task Should_resolve_the_built_in_supervisor_strategy_configurators_When_dynamic_type_loading_is_disabled(
             string typeName, Type expected)
         {
-            await WithDynamicTypeLoading(false, () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
             {
                 SupervisorStrategyConfigurator.CreateConfigurator(typeName).Should().BeOfType(expected);
                 return Task.CompletedTask;
@@ -248,7 +243,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = "SupervisorStrategyConfigurator should resolve a configurator that is not built in when dynamic type loading is on")]
         public async Task Should_resolve_a_custom_supervisor_strategy_configurator_When_dynamic_type_loading_is_enabled()
         {
-            await WithDynamicTypeLoading(true, () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(true, () =>
             {
                 SupervisorStrategyConfigurator
                     .CreateConfigurator($"{CustomSupervisorStrategyTypeName}, Akka.Tests")
@@ -260,7 +255,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = "SupervisorStrategyConfigurator should reject a configurator that is not built in when dynamic type loading is off")]
         public async Task Should_throw_ConfigurationException_When_the_supervisor_strategy_configurator_is_not_built_in_and_dynamic_type_loading_is_disabled()
         {
-            await WithDynamicTypeLoading(false, () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
             {
                 // the public overload cannot tell which setting the name came from, so it names both
                 var both = Assert.Throws<ConfigurationException>(
@@ -268,7 +263,7 @@ namespace Akka.Tests.Util
 
                 both.Message.Should().Contain("akka.actor.guardian-supervisor-strategy / supervisor-strategy");
                 both.Message.Should().Contain(CustomSupervisorStrategyTypeName);
-                both.Message.Should().Contain(SwitchName);
+                both.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
 
                 // a caller that knows its setting gets that setting named instead
                 var named = Assert.Throws<ConfigurationException>(
@@ -285,7 +280,7 @@ namespace Akka.Tests.Util
         {
             // guards the null arm surviving the switch-to-dictionary conversion: a dictionary lookup on null
             // throws ArgumentNullException, so the explicit null check has to come first
-            await WithDynamicTypeLoading(false, () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
             {
                 var exception = Assert.Throws<ConfigurationException>(
                     () => SupervisorStrategyConfigurator.CreateConfigurator(null));

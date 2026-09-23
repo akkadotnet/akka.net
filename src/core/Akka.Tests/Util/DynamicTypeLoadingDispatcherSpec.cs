@@ -87,8 +87,6 @@ namespace Akka.Tests.Util
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class DynamicTypeLoadingDispatcherSpec
     {
-        private const string SwitchName = DynamicTypeLoadingCollection.Name;
-
         private const string CustomDispatcherTypeName = "Akka.Tests.Util.DelegatingTestDispatcherConfigurator";
 
         private const string CustomExecutorTypeName = "Akka.Tests.Util.DelegatingTestExecutorConfigurator";
@@ -96,9 +94,6 @@ namespace Akka.Tests.Util
         private const string CustomDispatcherId = "custom-type-dispatcher";
 
         private const string CustomExecutorDispatcherId = "custom-executor-dispatcher";
-
-        private static Task WithDynamicTypeLoading(bool enabled, Func<Task> body)
-            => AkkaFeaturesSpec.WithDynamicTypeLoading(enabled, body);
 
         /// <summary>
         /// One dispatcher named by <c>type</c> and one that keeps the built-in <c>Dispatcher</c> type but
@@ -128,7 +123,7 @@ namespace Akka.Tests.Util
                 fork-join-executor-dispatcher { type = Dispatcher, executor = fork-join-executor }
                 task-executor-dispatcher { type = Dispatcher, executor = task-executor }");
 
-            await WithDynamicTypeLoading(false, async () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
             {
                 var system = ActorSystem.Create("built-in-dispatchers-off", config);
                 try
@@ -153,7 +148,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = "Dispatchers should resolve a dispatcher type and an executor that are not built in when dynamic type loading is on")]
         public async Task Should_resolve_a_custom_dispatcher_type_and_executor_When_dynamic_type_loading_is_enabled()
         {
-            await WithDynamicTypeLoading(true, async () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(true, async () =>
             {
                 var executorsBefore = DelegatingTestExecutorConfigurator.Constructed;
                 var system = ActorSystem.Create("custom-dispatch-on", CustomDispatcherConfig());
@@ -175,7 +170,7 @@ namespace Akka.Tests.Util
         [Fact(DisplayName = "Dispatchers should reject a dispatcher type and an executor that are not built in when dynamic type loading is off")]
         public async Task Should_throw_ConfigurationException_When_the_dispatcher_type_or_executor_is_not_built_in_and_dynamic_type_loading_is_disabled()
         {
-            await WithDynamicTypeLoading(false, async () =>
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
             {
                 var system = ActorSystem.Create("custom-dispatch-off", CustomDispatcherConfig());
                 try
@@ -185,14 +180,14 @@ namespace Akka.Tests.Util
 
                     byType.Message.Should().Contain($"[{CustomDispatcherId}.type]");
                     byType.Message.Should().Contain(CustomDispatcherTypeName);
-                    byType.Message.Should().Contain(SwitchName);
+                    byType.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
 
                     var byExecutor = Assert.Throws<ConfigurationException>(
                         () => system.Dispatchers.Lookup(CustomExecutorDispatcherId));
 
                     byExecutor.Message.Should().Contain($"[{CustomExecutorDispatcherId}.executor]");
                     byExecutor.Message.Should().Contain(CustomExecutorTypeName);
-                    byExecutor.Message.Should().Contain(SwitchName);
+                    byExecutor.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 }
                 finally
                 {
