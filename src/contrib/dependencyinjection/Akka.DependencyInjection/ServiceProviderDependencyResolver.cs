@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,19 +41,19 @@ namespace Akka.DependencyInjection
             return ServiceProvider.GetService(type);
         }
         
-        public Props Props(Type type, params object[] args)
+        public Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type, params object[] args)
         {
             if(typeof(ActorBase).IsAssignableFrom(type))
                 return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, args));
             throw new ArgumentException(nameof(type), $"[{type}] does not implement Akka.Actor.ActorBase.");
         }
         
-        public Props Props(Type type)
+        public Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type)
         {
             return Props(type, Array.Empty<object>());
         }
 
-        public Props Props<T>(params object[] args) where T : ActorBase
+        public Props Props<[DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] T>(params object[] args) where T : ActorBase
         {
             return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(ServiceProvider, args));
         }

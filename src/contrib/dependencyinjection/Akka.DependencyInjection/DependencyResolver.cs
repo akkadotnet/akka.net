@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -57,7 +58,7 @@ namespace Akka.DependencyInjection
         /// <typeparam name="T">The type of actor to instantiate.</typeparam>
         /// <param name="args">Optional. Any constructor arguments that will be passed into the actor's constructor directly without being resolved by DI first.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        public Props Props<T>(params object[] args) where T : ActorBase
+        public Props Props<[DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] T>(params object[] args) where T : ActorBase
         {
             return Resolver.Props<T>(args);
         }
@@ -71,7 +72,7 @@ namespace Akka.DependencyInjection
         /// </remarks>
         /// <typeparam name="T">The type of actor to instantiate.</typeparam>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        public Props Props<T>() where T : ActorBase
+        public Props Props<[DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] T>() where T : ActorBase
         {
             return Resolver.Props<T>();
         }
@@ -85,7 +86,7 @@ namespace Akka.DependencyInjection
         /// </remarks>
         /// <param name="type">The type of actor to instantiate.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        public Props Props(Type type)
+        public Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type)
         {
             return Resolver.Props(type);
         }
@@ -100,7 +101,7 @@ namespace Akka.DependencyInjection
         /// <param name="type">The type of actor to instantiate.</param>
         /// <param name="args">Optional. Any constructor arguments that will be passed into the actor's constructor directly without being resolved by DI first.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        public Props Props(Type type, params object[] args)
+        public Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type, params object[] args)
         {
             return Resolver.Props(type, args);
         }
