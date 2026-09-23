@@ -45,11 +45,15 @@ namespace Akka.Hosting.TestKit.Tests.TestEventListenerTests
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            // ReSharper disable once DoNotCallOverridableMethodsInConstructor
-            SendRawLogEventMessage(initLoggerMessage);
             try
             {
-                await ExpectMsgAsync("OK", TimeSpan.FromSeconds(10));
+                // The logger subscribes once its startup handshake completes, which can be after
+                // akka.logger-startup-timeout; a message published before that is lost, so retry.
+                await AwaitAssertAsync(async () =>
+                {
+                    SendRawLogEventMessage(initLoggerMessage);
+                    await ExpectMsgAsync("OK", TimeSpan.FromSeconds(1));
+                }, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200));
             }
             catch (Exception e)
             {
