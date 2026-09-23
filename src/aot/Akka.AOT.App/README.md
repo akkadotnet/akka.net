@@ -10,6 +10,11 @@ The app references only `src/core/Akka` and sets the `Akka.DynamicTypeLoading` f
 removes it. Anything core still needs to look up by name therefore fails at runtime, in the open,
 instead of silently working because the JIT happened to have the type around.
 
+The switch is declared here explicitly because this project consumes core as a `ProjectReference`.
+An application that consumes the **`Akka` NuGet package** does not have to: the package ships
+`buildTransitive/Akka.targets`, which turns the switch off for it whenever `PublishAot` or
+`PublishTrimmed` is set. An app that declares the option itself still wins, in either direction.
+
 `IlcTreatWarningsAsErrors` is off here on purpose: the repo turns warnings into errors everywhere,
 and this project's job is to *print* the `IL2xxx`/`IL3xxx` list rather than fail the publish on it.
 The app's own C# still builds with warnings as errors.
