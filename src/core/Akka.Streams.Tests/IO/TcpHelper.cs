@@ -310,7 +310,14 @@ namespace Akka.Streams.Tests.IO
 
             public void Read(int count) => _connectionActor.Tell(new ClientRead(count, _connectionProbe.Ref));
 
-            public async Task<ReadOnlySequence<byte>> WaitReadAsync() => (await _connectionProbe.ExpectMsgAsync<ReadResult>()).Bytes;
+            /// <summary>
+            /// Waits for the bytes requested by <see cref="Read"/>. The default is 10 s, not the 3 s single-expect
+            /// default: getting the bytes here takes several thread-pool hops (the client's write pump, the
+            /// server's socket read pump and pipe reader, and two mailboxes), and a starved CI agent has been seen
+            /// to need more than 3 s before the first of them ran.
+            /// </summary>
+            public async Task<ReadOnlySequence<byte>> WaitReadAsync(TimeSpan? max = null)
+                => (await _connectionProbe.ExpectMsgAsync<ReadResult>(max ?? TimeSpan.FromSeconds(10))).Bytes;
 
             public void ConfirmedClose() => _connectionActor.Tell(new ClientClose(Tcp.ConfirmedClose.Instance));
 
