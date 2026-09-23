@@ -35,8 +35,6 @@ namespace Akka.Tests.Serialization
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class BuiltInSerializerDefaultsSpec
     {
-        private const string SwitchName = "Akka.DynamicTypeLoading";
-
         /// <summary>
         /// A plain type with no serialization binding of its own, so it can only be serialized by whatever
         /// <c>System.Object</c> is bound to.
@@ -138,7 +136,7 @@ namespace Akka.Tests.Serialization
 
                 // and the message has to say WHY, or it reads like a binding the user forgot to write
                 exception.Message.Should().Contain("System.Object");
-                exception.Message.Should().Contain(SwitchName);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 exception.Message.Should().Contain("SerializationSetup");
 
                 return Task.CompletedTask;
@@ -254,7 +252,7 @@ namespace Akka.Tests.Serialization
 
                 exception.Message.Should().Contain("akka.actor.serializers.custom");
                 exception.Message.Should().Contain(serializerTypeName);
-                exception.Message.Should().Contain(SwitchName);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
         }
@@ -273,7 +271,7 @@ namespace Akka.Tests.Serialization
 
                 exception.Message.Should().Contain("akka.actor.serialization-bindings");
                 exception.Message.Should().Contain(boundTypeName);
-                exception.Message.Should().Contain(SwitchName);
+                exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
         }

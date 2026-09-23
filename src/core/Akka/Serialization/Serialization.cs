@@ -373,12 +373,8 @@ namespace Akka.Serialization
 
             foreach (var kvp in serializerBindingConfig)
             {
-                // HOCON trims values but NOT keys, and a serialization binding's type name is the key. Trimming
-                // it is a deliberate widening: Type.GetType rejected a padded bare name, so a padded key was
-                // warn-and-skip before. Two keys that now land on the same Type are harmless -
-                // AddSerializationMap is last-write-wins, exactly as it already was for the several spellings
-                // that resolved to the same Type on their own.
-                var typename = kvp.Key.Trim();
+                // HOCON trims values but not keys; the key is used as written, as it was before the built-in tables.
+                var typename = kvp.Key;
                 var serializerName = kvp.Value.GetString();
 
                 Type messageType;

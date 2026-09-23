@@ -224,7 +224,7 @@ namespace Akka.Serialization
         /// <para>
         /// The keys under <c>akka.actor.serialization-identifiers</c> are matched against the name of the
         /// <paramref name="type"/> that is already in hand, rather than resolved back into a <see cref="Type"/>.
-        /// Each key is trimmed, run through
+        /// Each key is run through
         /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity(string)"/> and then split at the comma that
         /// separates the type name from the assembly name: the type name is compared case-sensitively, the
         /// assembly name case-insensitively, which is how <see cref="Type.GetType(string)"/> compared them.
@@ -261,7 +261,7 @@ namespace Akka.Serialization
             // Pass 1: assembly-qualified keys, over the whole block, so one of them always beats a bare key.
             foreach (var pair in config.AsEnumerable())
             {
-                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key.Trim());
+                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key);
                 var keySeparator = IndexOfAssemblySeparator(key);
                 if (keySeparator < 0)
                     continue;
@@ -276,7 +276,7 @@ namespace Akka.Serialization
             // Pass 2: bare keys.
             foreach (var pair in config.AsEnumerable())
             {
-                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key.Trim());
+                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key);
                 if (IndexOfAssemblySeparator(key) < 0 && string.Equals(key, fullName, StringComparison.Ordinal))
                     return pair.Value.GetInt();
             }
