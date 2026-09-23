@@ -1,0 +1,67 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+
+    <!--
+      Directory.Build.props turns warnings into errors repo-wide, and printing ILC's IL2xxx/IL3xxx
+      list is this app's whole job - as errors they would fail the publish before we could read
+      them. This opts ILC's warnings out specifically and leaves warnings-as-errors in force for
+      the app's own C#. ILlinkTreatWarningsAsErrors does NOT cover ILC; IlcTreatWarningsAsErrors
+      is the knob that works.
+    -->
+    <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    PublishAot is gated on a RuntimeIdentifier, which the publish command supplies (-r linux-x64)
+    and an ordinary build does not. Two reasons it is not just <PublishAot>true</PublishAot>:
+
+      1. This project is in Akka.slnx, so a plain CI 'dotnet build' of the solution would otherwise
+         restore the RID-specific ILCompiler and emit a self-contained output on every build.
+      2. Passing -p:PublishAot=true on the command line instead would make it a GLOBAL property,
+         which MSBuild hands to every project in the graph - including Akka.csproj. That switches
+         on EnableTrimAnalyzer/EnableAotAnalyzer for core, whose IL2xxx warnings then become errors
+         under the repo-wide TreatWarningsAsErrors. Keeping the property here, conditioned, keeps it
+         local to this project.
+
+    PublishAot implies SelfContained, so that does not need setting either.
+  -->
+  <PropertyGroup Label="AotSettings" Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <PropertyGroup Label="AotSettings">
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj"/>
+  </ItemGroup>
+
+  <!--
+    Turns the Akka.DynamicTypeLoading feature switch OFF for this app. ILLink substitutes
+    AkkaFeatures.IsDynamicTypeLoadingSupported with 'false' and trims every reflection
+    fallback behind it - which is the whole point of the canary: a local ActorSystem has to
+    boot with dynamic type loading disabled.
+  -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+  </ItemGroup>
+
+  <!--
+    Opt-in: roots the entire Akka assembly so ILC analyzes every code path, not just the
+    handful the two toy actors in this app happen to reach. Publish with -p:RootAkka=true
+    to get a realistic warning count for the library as a whole.
+  -->
+  <ItemGroup Condition="'$(RootAkka)' == 'true'">
+    <TrimmerRootAssembly Include="Akka" />
+  </ItemGroup>
+
+</Project>

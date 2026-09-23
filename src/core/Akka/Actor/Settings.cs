@@ -7,12 +7,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -25,6 +27,42 @@ namespace Akka.Actor
     /// </summary>
     public class Settings
     {
+        // The akka.stdout-logger-class values that ship inside Akka.dll, constructed directly so the trimmer
+        // and the Native AOT compiler can see the type without looking through Type.GetType.
+        //
+        // akka.conf leaves this setting empty, so the table is only ever reached from user config. Two
+        // spellings, both deliberate: the bare name and the "Ns.T, Akka" form, which is what HOCON in the
+        // wild carries. The lookup runs the configured value through TypeExtensions.StripAssemblyIdentity
+        // first, so a full AssemblyQualifiedName - which Akka.Hosting writes into HOCON - matches the second
+        // key whatever version, culture or public key token it names. A value that still misses the table
+        // falls through to the reflection path, which is unavailable (and therefore throws) once dynamic type
+        // loading is switched off. Do not remove a spelling, and do not add a versioned third key.
+        private static readonly Dictionary<string, Func<MinimalLogger>> BuiltInStdoutLoggers =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.Event.StandardOutLogger"] = static () => new StandardOutLogger(),
+                ["Akka.Event.StandardOutLogger, Akka"] = static () => new StandardOutLogger()
+            };
+
+        // The akka.logger-formatter values that ship inside Akka.dll, constructed directly so the trimmer and
+        // the Native AOT compiler can see the type without looking through Type.GetType.
+        //
+        // Two spellings, both deliberate: akka.conf ships the "Ns.T, Akka" form and HOCON in the wild also
+        // carries the bare name. The lookup runs the configured value through
+        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
+        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
+        // A value that still misses the table falls through to the reflection path, which is unavailable (and
+        // therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do not
+        // add a versioned third key.
+        private static readonly Dictionary<string, Func<ILogMessageFormatter>> BuiltInLogMessageFormatters =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.Event.DefaultLogMessageFormatter"] = static () => DefaultLogMessageFormatter.Instance,
+                ["Akka.Event.DefaultLogMessageFormatter, Akka"] = static () => DefaultLogMessageFormatter.Instance,
+                ["Akka.Event.SemanticLogMessageFormatter"] = static () => SemanticLogMessageFormatter.Instance,
+                ["Akka.Event.SemanticLogMessageFormatter, Akka"] = static () => SemanticLogMessageFormatter.Instance
+            };
+
         private readonly Config _userConfig;
         //internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
         private Config _fallbackConfig;
@@ -142,25 +180,21 @@ namespace Akka.Actor
             {
                 StdoutLogger = new StandardOutLogger();
             }
+            else if (BuiltInStdoutLoggers.TryGetValue(
+                         TypeExtensions.StripAssemblyIdentity(stdoutClassName), out var stdoutLoggerFactory))
+            {
+                StdoutLogger = stdoutLoggerFactory();
+            }
+            else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+            {
+                StdoutLogger = CreateStdoutLogger(stdoutClassName);
+            }
             else
             {
-                var stdoutLoggerType = Type.GetType(stdoutClassName);
-                if (stdoutLoggerType == null)
-                    throw new ArgumentException($"Could not load type of {stdoutClassName} for standard out logger.");
-                if(!typeof(MinimalLogger).IsAssignableFrom(stdoutLoggerType))
-                    throw new ArgumentException("Standard out logger type must inherit from the MinimalLogger abstract class.");
-
-                try
-                {
-                    StdoutLogger = (MinimalLogger)Activator.CreateInstance(stdoutLoggerType);
-                }
-                catch (MissingMethodException)
-                {
-                    throw new MissingMethodException(
-                        "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
-                }
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    "akka.stdout-logger-class", stdoutClassName, "one of the built-in standard out loggers"));
             }
-            
+
             // set the filter
             StdoutLogger!.Filter = LogFilter;
             
@@ -174,36 +208,19 @@ namespace Akka.Actor
             {
                 LogFormatter = DefaultLogMessageFormatter.Instance;
             }
+            else if (BuiltInLogMessageFormatters.TryGetValue(
+                         TypeExtensions.StripAssemblyIdentity(loggerFormatterName), out var logFormatterFactory))
+            {
+                LogFormatter = logFormatterFactory();
+            }
+            else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+            {
+                LogFormatter = CreateLogMessageFormatter(loggerFormatterName);
+            }
             else
             {
-                var logFormatType = Type.GetType(loggerFormatterName);
-                if (logFormatType == null)
-                    throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
-                if(!typeof(ILogMessageFormatter).IsAssignableFrom(logFormatType))
-                    throw new ArgumentException("Log formatter type must inherit from the ILogMessageFormatter interface.");
-                
-                // SPECIAL CASE - check for the default log message formatter, which does not have an empty constructor (it's private)
-                if (logFormatType == typeof(DefaultLogMessageFormatter))
-                {
-                    LogFormatter = DefaultLogMessageFormatter.Instance;
-                }
-                // SPECIAL CASE - check for the semantic log message formatter, which does not have an empty constructor (it's private)
-                else if (logFormatType == typeof(SemanticLogMessageFormatter))
-                {
-                    LogFormatter = SemanticLogMessageFormatter.Instance;
-                }
-                else
-                {
-                    try
-                    {
-                        LogFormatter = (ILogMessageFormatter)Activator.CreateInstance(logFormatType);
-                    }
-                    catch (MissingMethodException)
-                    {
-                        throw new MissingMethodException(
-                            "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
-                    }
-                }
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    "akka.logger-formatter", loggerFormatterName, "one of the built-in log message formatters"));
             }
 
             //handled
@@ -500,6 +517,54 @@ namespace Akka.Actor
         public override string ToString()
         {
             return Config.Root.ToString();
+        }
+
+        [RequiresUnreferencedCode("Loads the [akka.stdout-logger-class] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static MinimalLogger CreateStdoutLogger(string stdoutClassName)
+        {
+            var stdoutLoggerType = Type.GetType(stdoutClassName);
+            if (stdoutLoggerType == null)
+                throw new ArgumentException($"Could not load type of {stdoutClassName} for standard out logger.");
+            if (!typeof(MinimalLogger).IsAssignableFrom(stdoutLoggerType))
+                throw new ArgumentException("Standard out logger type must inherit from the MinimalLogger abstract class.");
+
+            try
+            {
+                return (MinimalLogger)Activator.CreateInstance(stdoutLoggerType);
+            }
+            catch (MissingMethodException)
+            {
+                throw new MissingMethodException(
+                    "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
+            }
+        }
+
+        [RequiresUnreferencedCode("Loads the [akka.logger-formatter] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static ILogMessageFormatter CreateLogMessageFormatter(string loggerFormatterName)
+        {
+            var logFormatType = Type.GetType(loggerFormatterName);
+            if (logFormatType == null)
+                throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
+            if (!typeof(ILogMessageFormatter).IsAssignableFrom(logFormatType))
+                throw new ArgumentException("Log formatter type must inherit from the ILogMessageFormatter interface.");
+
+            // SPECIAL CASE - check for the default log message formatter, which does not have an empty constructor (it's private)
+            if (logFormatType == typeof(DefaultLogMessageFormatter))
+                return DefaultLogMessageFormatter.Instance;
+
+            // SPECIAL CASE - check for the semantic log message formatter, which does not have an empty constructor (it's private)
+            if (logFormatType == typeof(SemanticLogMessageFormatter))
+                return SemanticLogMessageFormatter.Instance;
+
+            try
+            {
+                return (ILogMessageFormatter)Activator.CreateInstance(logFormatType);
+            }
+            catch (MissingMethodException)
+            {
+                throw new MissingMethodException(
+                    "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
+            }
         }
     }
 }
