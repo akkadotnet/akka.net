@@ -93,7 +93,12 @@ namespace Akka.Remote.Tests.Artery
                     targets.Add(identity.Subject!);
                 }
 
-                Sys.EventStream.Subscribe(TestActor, typeof(QuarantinedEvent));
+                // Use a dedicated probe for QuarantinedEvent: it is published from the Artery
+                // stream's context with no ordering guarantee relative to the Watcher's
+                // "watching" reply, so sharing TestActor for both risks the quarantine event
+                // being received before (and consumed in place of) "watching".
+                var quarantineProbe = CreateTestProbe();
+                Sys.EventStream.Subscribe(quarantineProbe.Ref, typeof(QuarantinedEvent));
 
                 // Sever the link (both directions at this node), exactly as the TestConductor would.
                 var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
@@ -106,7 +111,7 @@ namespace Akka.Remote.Tests.Artery
                 watcher.Tell(targets);
                 await ExpectMsgAsync("watching", TimeSpan.FromSeconds(5));
 
-                var quarantined = await ExpectMsgAsync<QuarantinedEvent>(TimeSpan.FromSeconds(15));
+                var quarantined = await quarantineProbe.ExpectMsgAsync<QuarantinedEvent>(TimeSpan.FromSeconds(15));
                 quarantined.Address.Should().Be(remoteAddress);
             }
             finally
