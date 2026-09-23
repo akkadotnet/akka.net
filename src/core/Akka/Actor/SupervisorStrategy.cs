@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -989,6 +990,14 @@ namespace Akka.Actor
     /// </summary>
     public abstract class SupervisorStrategyConfigurator
     {
+        /// <summary>
+        /// The configurators that ship inside Akka.dll - the two that <c>akka.conf</c> and Akka.Persistence's
+        /// <c>persistence.conf</c> name - constructed directly so that neither the trimmer nor the Native AOT
+        /// compiler has to see through a <see cref="Type.GetType(string)"/> call.
+        /// </summary>
+        private static readonly Dictionary<string, Func<SupervisorStrategyConfigurator>> BuiltInConfigurators =
+            BuildBuiltInConfigurators();
+
         public abstract SupervisorStrategy Create();
 
         /// <summary>
@@ -999,24 +1008,84 @@ namespace Akka.Actor
         /// This exception is thrown if the given <paramref name="typeName"/> is undefined or references an unknown type.
         /// </exception>
         /// <returns>TBD</returns>
+        /// <remarks>
+        /// Callers inside Akka.NET name their own setting through the overload below. This one cannot tell
+        /// which of the two settings the name came from, so a failure reports both.
+        /// </remarks>
         public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
+            => CreateConfigurator(typeName, "akka.actor.guardian-supervisor-strategy / supervisor-strategy");
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Same as <see cref="CreateConfigurator(string)"/>, but the caller names the HOCON setting that
+        /// carried <paramref name="typeName"/> so that a failure points at the setting the user has to fix.
+        /// </summary>
+        /// <param name="typeName">The configurator type name read out of HOCON.</param>
+        /// <param name="settingPath">The HOCON path <paramref name="typeName"/> came from.</param>
+        internal static SupervisorStrategyConfigurator CreateConfigurator(string typeName, string settingPath)
         {
-            switch (typeName)
+            if (typeName == null)
+                throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
+
+            if (BuiltInConfigurators.TryGetValue(
+                    Akka.Util.TypeExtensions.StripAssemblyIdentity(typeName), out var factory))
+                return factory();
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    settingPath,
+                    typeName,
+                    "one of the built-in supervisor strategy configurators"));
+
+            return CreateConfiguratorFromTypeName(typeName);
+        }
+
+        /// <summary>
+        /// Builds <see cref="BuiltInConfigurators"/>.
+        ///
+        /// Two spellings per configurator, both deliberate: <c>akka.conf</c> and
+        /// <c>persistence.conf</c> ship the bare name and HOCON in the wild also carries the
+        /// <c>Ns.T, Akka</c> form. The lookup runs the configured value through
+        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> first, so a full
+        /// <see cref="Type.AssemblyQualifiedName"/> - which Akka.Hosting writes into HOCON - matches the
+        /// second key whatever version, culture or public key token it names. A value that still misses the
+        /// table falls through to the reflection path, which is unavailable (and therefore throws) once
+        /// dynamic type loading is switched off. Do not remove a spelling, and do not add a versioned third
+        /// key.
+        /// </summary>
+        private static Dictionary<string, Func<SupervisorStrategyConfigurator>> BuildBuiltInConfigurators()
+        {
+            var builtIn = new Dictionary<string, Func<SupervisorStrategyConfigurator>>(StringComparer.Ordinal);
+
+            Add<DefaultSupervisorStrategy>(static () => new DefaultSupervisorStrategy());
+            Add<StoppingSupervisorStrategy>(static () => new StoppingSupervisorStrategy());
+
+            return builtIn;
+
+            // typeof(TConfigurator) is what keeps this trimmer-safe: the trimmer sees the type, keeps it, and
+            // hands us its own names, so no spelling can drift out of step with the type it maps to.
+            void Add<TConfigurator>(Func<SupervisorStrategyConfigurator> factory)
+                where TConfigurator : SupervisorStrategyConfigurator
             {
-                case "Akka.Actor.DefaultSupervisorStrategy":
-                    return new DefaultSupervisorStrategy();
-                case "Akka.Actor.StoppingSupervisorStrategy":
-                    return new StoppingSupervisorStrategy();
-                case null:
-                    throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
-                default:
-                    Type configuratorType = Type.GetType(typeName);
+                var configuratorType = typeof(TConfigurator);
 
-                    if (configuratorType == null)
-                        throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
-
-                    return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
+                // "Akka.Actor.DefaultSupervisorStrategy"
+                builtIn[configuratorType.FullName] = factory;
+                // "Akka.Actor.DefaultSupervisorStrategy, Akka"
+                builtIn[$"{configuratorType.FullName}, {configuratorType.Assembly.GetName().Name}"] = factory;
             }
+        }
+
+        [RequiresUnreferencedCode("Loads a SupervisorStrategyConfigurator named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static SupervisorStrategyConfigurator CreateConfiguratorFromTypeName(string typeName)
+        {
+            var configuratorType = Type.GetType(typeName);
+
+            if (configuratorType == null)
+                throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
+
+            return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
         }
     }
 

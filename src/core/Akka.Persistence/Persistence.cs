@@ -344,7 +344,8 @@ namespace Akka.Persistence
             //todo wrap in backoffsupervisor ?
             
             //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
-            var configurator = SupervisorStrategyConfigurator.CreateConfigurator(pluginConfig.GetString("supervisor-strategy"));
+            var configurator = SupervisorStrategyConfigurator.CreateConfigurator(
+                pluginConfig.GetString("supervisor-strategy"), $"{configPath}.supervisor-strategy");
             
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
             
