@@ -101,13 +101,31 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         /// timeout further down (see #8589 for the transport-level loss that can cause it).
         /// </summary>
         /// <remarks>
-        /// At least one, deliberately not exactly one: the new oldest arms HandOverRetryTimer at
-        /// hand-over-retry-interval (1s) on entering BecomingOldest, so if the first confirmation has not been
-        /// processed by the time that timer fires it re-sends HandOverToMe, and the previous oldest answers
-        /// every repeat with another HandOverInProgress while it is still in HandingOver
-        /// (ClusterSingletonManager.cs, the "// retry" case). Two log lines is correct behavior under
-        /// scheduling jitter, not a bug, so an exact EventFilter count fails on a loaded agent whenever the
-        /// round trip exceeds 1s. Fishing returns on the first match and ignores any repeats.
+        /// <para>
+        /// At least one, deliberately not exactly one. TWO independent paths repeat the line, both
+        /// designed behavior, so do not tighten this back to an exact count after "fixing" the retry timer.
+        /// </para>
+        /// <para>
+        /// 1. Timer-less cross-fire - this is the one CI actually hit (build 131691: zero
+        /// "Retry [n], sending HandOverToMe" lines, and both "Hand-over in progress at" lines on the same
+        /// thread at the same millisecond). The new oldest sends its first HandOverToMe on OldestChanged
+        /// (ClusterSingletonManager.cs:916). Independently, the previous oldest sends TakeOverFromMe
+        /// (:801, and re-sent once a second from WasOldest at :1237-1244). The new oldest, still in BecomingOldest,
+        /// answers that TakeOverFromMe with a SECOND HandOverToMe (:1061) - and the previous oldest, now in
+        /// HandingOver, answers every HandOverToMe it sees with HandOverInProgress (:1304-1308). So the
+        /// new oldest logs the line once per HandOverToMe it sent, with no timer involved, whenever the
+        /// remote TakeOverFromMe round trip beats the local PoisonPill/Terminated one.
+        /// </para>
+        /// <para>
+        /// 2. HandOverRetryTimer - the new oldest arms it at hand-over-retry-interval (1s) on entering
+        /// BecomingOldest (:1420) and re-sends HandOverToMe when it fires (:1080-1083), which draws another
+        /// HandOverInProgress from the same :1308 case. The first confirmation cancels the timer (:983), which
+        /// is why this path leaves no trace in a log that already contains the line.
+        /// </para>
+        /// <para>
+        /// Both paths produce N >= 1 lines, so "at least one" is the only correct expectation: an exact
+        /// EventFilter count fails on a loaded agent. Fishing returns on the first match and ignores repeats.
+        /// </para>
         /// </remarks>
         private async Task AwaitHandOverConfirmationAsync(ActorSystem newOldest, TimeSpan max, Func<Task> handOver)
         {
