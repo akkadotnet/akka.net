@@ -6,6 +6,8 @@
   href: aspnet-core.md
 - name: Headless Service
   href: headless-service.md
+- name: Native AOT and Trimming
+  href: native-aot.md
 - name: Azure Cloud Service (Deprecated)
   href: azure-cloud-service.md
 - name: Troubleshooting Akka.Cluster
