@@ -67,12 +67,61 @@ inner-exception chain, which names the first site core still cannot resolve with
 
 ## What to expect today
 
-**The AOT publish only goes green once the whole milestone-1 stack is applied.** With just the
-feature switch and the log-formatter/stdout-logger/scheduler tables in place it dies inside
-`ActorSystem.Create`, at `Mailboxes.LookupConfigurator` (`UnboundedMailbox` has no parameterless
-constructor). The serializer and mailbox warnings above are collected on the way there, but the
-exception is thrown before the first watchdog check runs, so it is the exception you see. That is
-the expected result at this stage, not a regression.
+The AOT publish and run are **green** on this branch - exit code `0` and `[canary] OK` - but only
+with the whole milestone-1 stack applied. This app leans on every built-in table in that stack: with
+only the feature switch and the first few tables it dies inside `ActorSystem.Create`, at
+`Mailboxes.LookupConfigurator`, because `UnboundedMailbox` has no parameterless constructor for
+`Activator` to call. The canary and its CI job therefore must not be merged ahead of the rest of the
+stack.
+
+The unrooted publish emits four `IL2xxx` warnings from `src/core/Akka/`; the rooted one
+(`-p:RootAkka=true`) emits twelve. Both are recorded in `aot-warnings.baseline.txt` next to this
+file, each with a note saying what it is.
+
+## In CI
+
+The `AOT canary (Linux)` job in `build-system/pr-validation.yaml` runs on every PR and publishes
+this app **twice**, because the two publishes prove different things:
+
+1. **Unrooted publish, then run.** ILC keeps only what the entry point reaches, so this is the
+   real-application proof: the binary has to boot and print `[canary] OK`. It is the only step that
+   can catch a type that got trimmed away but is needed at runtime. Rooting the assembly would keep
+   that type alive and hide exactly that bug.
+2. **Rooted publish** (`-p:RootAkka=true`). ILC analyses every path in the library, which is the
+   honest warning count for core, and this is the log the baseline check reads. Gating on the
+   unrooted list alone would leave the sites milestone 2 works on unwatched, because a local boot
+   never reaches them.
+
+A warning that is **not** in the baseline fails the job and prints the full message. A baseline entry
+that is no longer emitted does not: the job passes and prints the exact lines to delete, because
+failing a build for a warning somebody just fixed is the wrong incentive. A run that finds no
+in-scope warnings at all while the baseline is non-empty also fails - that means the check measured
+nothing rather than that core got clean.
+
+A final step feeds the checker a committed three-line log (`testdata/one-new-warning.publish-log.txt`)
+holding one warning that is deliberately not in the baseline, and fails the job unless the checker
+rejects it. Cheap proof, on every run, that the red path still works.
+
+Reproduce the check locally:
+
+```bash
+rm -rf src/aot/Akka.AOT.App/bin src/aot/Akka.AOT.App/obj
+dotnet publish src/aot/Akka.AOT.App -r linux-x64 -c Release \
+    -p:TrimmerSingleWarn=false -p:RootAkka=true \
+    -o /tmp/aot-rooted 2>&1 | tee /tmp/aot-publish-rooted.log
+dotnet run scripts/CheckAotWarnings.cs -- \
+    --log /tmp/aot-publish-rooted.log \
+    --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
+    --repo-root .
+```
+
+Deleting `bin/` and `obj/` first is not optional: a warm intermediate directory makes MSBuild skip
+native compilation, so the publish emits no IL warnings at all.
+
+The checker keys each warning on code + file + owning member + message, deliberately *not* on the
+line number, so editing code above a warning site does not churn the baseline. There is no rewrite
+mode - when entries go stale it prints the exact lines to delete, which keeps the baseline's
+per-entry comments intact.
 
 Running the same program on the JIT (`dotnet run --project src/aot/Akka.AOT.App -c Release`) does
 reach `[canary] OK`. That is worth doing whenever the canary changes: it proves the pass condition
