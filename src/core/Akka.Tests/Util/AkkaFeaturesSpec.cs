@@ -31,7 +31,7 @@ namespace Akka.Tests.Util
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class AkkaFeaturesSpec
     {
-        private const string SwitchName = "Akka.DynamicTypeLoading";
+        internal const string SwitchName = "Akka.DynamicTypeLoading";
 
         /// <summary>
         /// These three types live in Akka.Tests, so none of them is in a <c>BuiltIn*</c> table and the only
@@ -93,16 +93,15 @@ namespace Akka.Tests.Util
         }
 
         [Theory(DisplayName = "TypeExtensions.StripAssemblyIdentity should reduce an assembly-qualified name to Ns.T, Asm")]
-        [InlineData("Akka.Event.SemanticLogMessageFormatter")]
-        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka")]
-        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=1.5.60.0, Culture=neutral, PublicKeyToken=null")]
-        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null")]
-        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null, ProcessorArchitecture=MSIL, Retargetable=Yes")]
-        public void Should_strip_assembly_identity_From_a_qualified_type_name(string typeName)
+        [InlineData("Akka.Event.SemanticLogMessageFormatter", "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka", "Akka.Event.SemanticLogMessageFormatter, Akka")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=1.5.60.0, Culture=neutral, PublicKeyToken=null", "Akka.Event.SemanticLogMessageFormatter, Akka")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null", "Akka.Event.SemanticLogMessageFormatter, Akka")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null, ProcessorArchitecture=MSIL, Retargetable=Yes", "Akka.Event.SemanticLogMessageFormatter, Akka")]
+        public void Should_strip_assembly_identity_From_a_qualified_type_name(string typeName, string expected)
         {
             // this is what lets a BuiltIn* table carry two keys and still match what Akka.Hosting writes
-            Akka.Util.TypeExtensions.StripAssemblyIdentity(typeName).Should()
-                .BeOneOf("Akka.Event.SemanticLogMessageFormatter", "Akka.Event.SemanticLogMessageFormatter, Akka");
+            Akka.Util.TypeExtensions.StripAssemblyIdentity(typeName).Should().Be(expected);
         }
 
         /// <summary>
