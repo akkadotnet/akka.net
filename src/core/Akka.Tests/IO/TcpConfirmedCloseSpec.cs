@@ -382,10 +382,8 @@ namespace Akka.Tests.IO
             "Should_CompleteWithClosed_When_Close_Follows_ConfirmedClose_And_Peer_Never_FINs")]
         public async Task Should_complete_with_Closed_when_Close_follows_ConfirmedClose_and_peer_never_FINs()
         {
-            // Regression test for #8634: once ClosingBehaviour entered a ConfirmedClose, a
-            // later Tcp.Close was silently dropped, so the connection waited forever for a
-            // peer FIN that may never come (what Artery's half-closed inbound connections hit
-            // on shutdown). Here the peer stays fully open and never sends one.
+            // Regression test for #8634: a Close arriving during ConfirmedClose used to be
+            // dropped. Here the peer stays fully open and never sends a FIN.
             var (listener, endpoint) = CreateListener();
             using var _ = listener;
 
@@ -402,9 +400,8 @@ namespace Akka.Tests.IO
 
             var payload = Encoding.UTF8.GetBytes("bytes written before the ConfirmedClose, must all arrive");
 
-            // Wait until our own FIN is actually sent (_outputShutdown) before asking for a
-            // full Close -- this exercises the "already drained" branch of the fix, where
-            // Close must finish the connection right away.
+            // Wait until our FIN is actually sent (_outputShutdown) -- exercises the
+            // "already drained" branch, where Close must finish right away.
             await EventFilter.Debug(contains: "FIN sent, waiting for peer FIN").ExpectOneAsync(() =>
             {
                 handler.Send(connection, Tcp.Write.Create(payload.AsMemory()));
@@ -441,9 +438,8 @@ namespace Akka.Tests.IO
             "Should_WaitForOutputDrain_Before_Closed_When_Close_Follows_ConfirmedClose_WhileDraining")]
         public async Task Should_wait_for_output_drain_before_Closed_when_Close_follows_ConfirmedClose_while_draining()
         {
-            // Regression test for #8634, the other half: Close arrives WHILE the write side is
-            // still draining (peer isn't reading yet) -- it must not finish early, only once
-            // our own output has actually drained, peer FIN or not.
+            // Regression test for #8634, the other half: Close arrives while output is still
+            // draining -- must not finish early, only once our output has actually drained.
             var (listener, endpoint) = CreateListener(receiveBufferSize: 16384);
             using var _ = listener;
 
@@ -496,6 +492,86 @@ namespace Akka.Tests.IO
             var eofBuffer = new byte[1];
             var eofRead = await peer.ReceiveAsync(eofBuffer.AsMemory(), SocketFlags.None, cts.Token);
             eofRead.Should().Be(0);
+        }
+
+        [Fact(DisplayName =
+            "Should_ResetPromptly_When_Handler_Dies_While_An_Upgraded_Close_Is_Still_Draining")]
+        public async Task Should_reset_promptly_when_handler_dies_while_an_upgraded_close_is_still_draining()
+        {
+            // PostStop must not take the graceful CloseAsync path just because a Close
+            // upgraded the ConfirmedClose -- only when it actually finished as Closed. If the
+            // handler dies before the upgrade ever drains, CloseAsync would await a write pump
+            // nothing else unblocks, leaking the socket instead of aborting it.
+            var (listener, endpoint) = CreateListener(receiveBufferSize: 16384);
+            using var _ = listener;
+
+            var connectCommander = CreateTestProbe();
+            connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint,
+                options: new Inet.SocketOption[] { new Inet.SO.SendBufferSize(16384) }));
+
+            using var peer = await listener.AcceptAsync();
+
+            await connectCommander.ExpectMsgAsync<Tcp.Connected>();
+            var connection = connectCommander.LastSender;
+
+            var handler = CreateTestProbe();
+            connectCommander.Send(connection, new Tcp.Register(handler.Ref));
+
+            const int totalBytes = 4 * 1024 * 1024;
+            var payload = new byte[totalBytes];
+            new Random(86291982).NextBytes(payload);
+
+            const int chunk = 64 * 1024;
+            for (var offset = 0; offset < totalBytes; offset += chunk)
+            {
+                var len = Math.Min(chunk, totalBytes - offset);
+                handler.Send(connection, Tcp.Write.Create(payload.AsMemory(offset, len)));
+            }
+
+            handler.Send(connection, Tcp.ConfirmedClose.Instance);
+            handler.Send(connection, Tcp.Close.Instance);
+
+            // The peer never reads, so both are still draining when the handler dies. Wait for
+            // PostStop to actually finish (its final, unconditional log line) before touching the
+            // socket -- otherwise our own reads could race ahead of it and drain real backpressure
+            // that was never actually stuck yet.
+            await EventFilter.Debug(contains: "sending close event").ExpectOneAsync(() =>
+            {
+                Sys.Stop(handler.Ref);
+                return Task.CompletedTask;
+            });
+
+            // Drain only up to a small multiple of the shrunk window: that's roughly what could
+            // legitimately already be buffered. If the socket is genuinely stuck open (the bug),
+            // the write pump keeps happily feeding fresh payload well past this cap instead of
+            // ever resetting/closing, so exceeding it without a terminal signal is a failure too.
+            const int cap = 8 * 16384;
+            var buffer = new byte[16384];
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var sawEof = false;
+            Exception? reset = null;
+            var total = 0;
+            try
+            {
+                while (!sawEof && total < cap)
+                {
+                    var n = await peer.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, cts.Token);
+                    total += n;
+                    if (n == 0)
+                        sawEof = true;
+                }
+            }
+            catch (SocketException ex)
+            {
+                reset = ex;
+            }
+            catch (OperationCanceledException)
+            {
+                // Neither flag set below - the assertion reports this as a hang.
+            }
+
+            (sawEof || reset is not null).Should().BeTrue(
+                "the connection should have reset or closed instead of staying open indefinitely");
         }
     }
 }
