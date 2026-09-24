@@ -728,10 +728,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         private async Task WaitForStreamsToStopAsync(CancellationToken cancellationToken)
         {
-            // IsShutdown guards a SECOND Shutdown() call (e.g. the automatic one CoordinatedShutdown
-            // runs after a test already called Shutdown() explicitly): the first call's own
-            // Materializer.Shutdown() already killed this supervisor, so asking it again would just
-            // burn the whole deadline waiting for a reply that will never come.
+            // A second Shutdown() would otherwise ask the supervisor the first one already stopped.
             if (_materializer is not { IsShutdown: false, Supervisor: { } supervisor })
                 return;
 
@@ -740,16 +737,18 @@ namespace Akka.Remote.Artery
             {
                 try
                 {
-                    // A fixed per-ask timeout, not cancellationToken: even if the shared deadline
-                    // already expired (e.g. Unbind() used up the whole bound), this still gets one
-                    // honest count instead of logging "unknown" below for free.
+                    // Own timeout, not the deadline, so an expired deadline still gets one real count.
                     var children = await supervisor.Ask<StreamSupervisor.Children>(
-                        StreamSupervisor.GetChildren.Instance, timeout: StreamStopPollInterval);
+                        StreamSupervisor.GetChildren.Instance, timeout: StreamStopAskTimeout);
                     lastKnownCount = children.Refs.Count;
+                }
+                catch (AskTimeoutException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    continue; // a slow reply on a busy machine; ask again
                 }
                 catch (AskTimeoutException)
                 {
-                    break; // supervisor is gone or unresponsive
+                    break;
                 }
 
                 if (lastKnownCount == 0)
@@ -2672,6 +2671,7 @@ namespace Akka.Remote.Artery
 
         /// <summary>Poll interval for <see cref="WaitForStreamsToStopAsync"/>.</summary>
         private static readonly TimeSpan StreamStopPollInterval = TimeSpan.FromMilliseconds(30);
+        private static readonly TimeSpan StreamStopAskTimeout = TimeSpan.FromMilliseconds(500);
 
         /// <summary>
         /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
