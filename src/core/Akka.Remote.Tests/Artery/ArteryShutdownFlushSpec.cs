@@ -11,7 +11,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -23,7 +22,6 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Akka.Remote.Tests.Artery
 {
@@ -108,42 +106,6 @@ namespace Akka.Remote.Tests.Artery
             message is ActorSelectionMessage selection ? selection.Message : message;
 
         /// <summary>
-        /// Renders the "flushed-N" indices missing from <paramref name="missing"/> as compact
-        /// comma-separated ranges (e.g. <c>"12,40-57,499"</c>) rather than the full marker strings
-        /// -- a failure report a human can actually scan when dozens of markers in a row went
-        /// missing, instead of a wall of "flushed-40", "flushed-41", ....
-        /// </summary>
-        private static string DescribeMissingRanges(IReadOnlyCollection<string> missing)
-        {
-            if (missing.Count == 0)
-                return "(none)";
-
-            var indices = missing
-                .Select(marker => int.Parse(marker.Substring("flushed-".Length), CultureInfo.InvariantCulture))
-                .OrderBy(i => i)
-                .ToArray();
-
-            var ranges = new List<string>();
-            var rangeStart = indices[0];
-            var rangeEnd = indices[0];
-            foreach (var index in indices.Skip(1))
-            {
-                if (index == rangeEnd + 1)
-                {
-                    rangeEnd = index;
-                    continue;
-                }
-
-                ranges.Add(rangeStart == rangeEnd ? $"{rangeStart}" : $"{rangeStart}-{rangeEnd}");
-                rangeStart = index;
-                rangeEnd = index;
-            }
-            ranges.Add(rangeStart == rangeEnd ? $"{rangeStart}" : $"{rangeStart}-{rangeEnd}");
-
-            return string.Join(",", ranges);
-        }
-
-        /// <summary>
         /// Sends one-way markers until one lands at this spec's test actor, establishing the
         /// association (connection plus handshake) before the burst under test. One-way on purpose:
         /// the sender is a different <see cref="ActorSystem"/>, so handing it a probe from THIS
@@ -199,53 +161,17 @@ namespace Akka.Remote.Tests.Artery
                     .Should().BeTrue("the shutdown flush is bounded, so Shutdown must return");
 
                 // Property 1: every accepted message reached the peer, all within ONE overall
-                // bound -- not a fresh 30s allowance PER MESSAGE, which would let 500
-                // individually-slow arrivals stretch a genuine failure out to over four hours
-                // before this test ever reported it. A warmup marker from an earlier attempt can
-                // still be in flight, so collect by marker rather than by count.
+                // bound -- not a fresh 30s allowance PER MESSAGE. A warmup marker from an earlier
+                // attempt can still be in flight, so collect by marker rather than by count.
                 var received = new HashSet<string>();
                 var receiveBudget = TimeSpan.FromSeconds(30);
                 var receiveStopwatch = Stopwatch.StartNew();
                 while (received.Count < messageCount)
                 {
                     var remaining = receiveBudget - receiveStopwatch.Elapsed;
-                    if (remaining <= TimeSpan.Zero)
-                        break;
-
-                    string message;
-                    try
-                    {
-                        message = await ExpectMsgAsync<string>(remaining);
-                    }
-                    catch (XunitException)
-                    {
-                        // ExpectMsgAsync's own failure type: either the remaining budget ran out,
-                        // or the test actor received something that was not a string at all --
-                        // either way stop collecting and let the assertion below report exactly
-                        // what is missing rather than throwing here with no context. Anything OTHER
-                        // than this is a genuine bug and should still fail the test loudly.
-                        break;
-                    }
-
+                    var message = await ExpectMsgAsync<string>(remaining);
                     if (message.StartsWith("flushed-", StringComparison.Ordinal))
                         received.Add(message);
-                }
-
-                // Snapshot every Dropped the flush's own drain published BEFORE asserting on
-                // receipt: if a marker IS missing below, this is what tells apart "the drain
-                // accounted it" (a within-contract loss on a bound that expired -- would show up
-                // here with its own reason) from "it vanished without a trace anywhere" (absent
-                // here too -- the exact shutdown-flush bug this spec exists to catch).
-                var droppedSnapshot = dropped.ToArray();
-                foreach (var d in droppedSnapshot)
-                    Output?.WriteLine($"Dropped: {PayloadOf(d.Message)} -- {d.Reason}");
-
-                if (received.Count < messageCount)
-                {
-                    var missing = markers.Where(m => !received.Contains(m)).ToArray();
-                    Output?.WriteLine(
-                        $"Received {received.Count} of {messageCount} markers; missing indices: " +
-                        DescribeMissingRanges(missing));
                 }
 
                 received.Should().BeEquivalentTo(markers);
@@ -253,7 +179,7 @@ namespace Akka.Remote.Tests.Artery
                 // Property 2: and none of them was written off as Dropped along the way. This is
                 // what separates a real flush from a lucky race -- the drain runs on every shutdown,
                 // so a message that was NOT flushed leaves a Dropped behind.
-                droppedSnapshot.Select(d => PayloadOf(d.Message)).Should().NotIntersectWith(markers);
+                dropped.Select(d => PayloadOf(d.Message)).Should().NotIntersectWith(markers);
             }
             finally
             {
@@ -264,14 +190,10 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_ReturnWellUnderTheBound_When_ThePeerIsIdle")]
         public async Task Should_ReturnWellUnderTheBound_When_ThePeerIsIdle()
         {
-            // Sys gets a live, healthy association (both an OUTBOUND connection to peerSys and an
-            // INBOUND one accepting its handshake/control traffic), then goes idle, then shuts down.
-            //
-            // This is the one test in the spec that measures elapsed time, proving a NEGATIVE: an
-            // idle inbound connection must not hold up WaitForStreamsToStopAsync's wait on the
-            // shared supervisor. It closes promptly because of #8636 (Close now finishes a draining
-            // ConfirmedClose) -- without it this would run close to the full 5s bound instead of
-            // returning almost immediately.
+            // Sys gets a live, healthy association (an OUTBOUND connection to peerSys and an
+            // INBOUND one accepting its handshake/control traffic), then goes idle, then shuts
+            // down. Both close promptly: Unbind() stops the listener, which stops its
+            // connection-actor children, and each inbound stage watches its own connection actor.
             var peerSys = ActorSystem.Create("artery-flush-idle-peer", ArteryConfig);
             try
             {
@@ -281,18 +203,19 @@ namespace Akka.Remote.Tests.Artery
 
                 await AwaitAssociationAsync(selection);
 
-                var stopwatch = Stopwatch.StartNew();
-                (await TransportOf(Sys).Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(30)))
-                    .Should().BeTrue("the shutdown flush is bounded, so Shutdown must return");
-                stopwatch.Stop();
-
-                // flush-wait-on-shutdown is 5s (ArteryConfig). A healthy, idle association's
-                // outbound streams settle in milliseconds, so returning in well under half that
-                // bound is the proof this system's own idle INBOUND connection was never on the
-                // critical path.
-                stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
-                    "an idle peer with a live inbound connection must not hold up the flush -- " +
-                    "only this system's own outbound streams do");
+                // The real assertion: the "still running ... force-stopping" INFO line only fires
+                // when WaitForStreamsToStopAsync actually hits its bound, so its absence is the
+                // regression guard. The elapsed-time check backs it up -- timed INSIDE the filter's
+                // action so ExpectAsync's own confirm-absence wait doesn't count against it.
+                var elapsed = TimeSpan.Zero;
+                await EventFilter.Info(start: "Artery streams were still running").ExpectAsync(0, async () =>
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    (await TransportOf(Sys).Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(30)))
+                        .Should().BeTrue("the shutdown flush is bounded, so Shutdown must return");
+                    elapsed = stopwatch.Elapsed;
+                });
+                elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2));
             }
             finally
             {

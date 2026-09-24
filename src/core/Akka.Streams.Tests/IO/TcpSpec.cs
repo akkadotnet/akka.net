@@ -194,34 +194,10 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                // Regression test for TcpConnectionStage.TcpStreamLogic.CloseConnectionUpstreamFinished's
-                // null-guard: with halfClose off, upstream finishing takes the "just Close now"
-                // branch unconditionally -- and if that happens before the outbound connect has
-                // completed, `_connection` is still null there. Before the guard, that branch did
-                // `_connection.Tell(...)` and threw a NullReferenceException.
-                //
-                // The ordering here is deterministic, not a race: Source.Empty completes its
-                // upstream IMMEDIATELY on materialization (zero elements satisfies Reactive
-                // Streams completion with no demand needed), so the GraphInterpreter processes
-                // that completion in the SAME synchronous batch as this stage's own PreStart --
-                // which, for an OUTBOUND role, only SENDS the Tcp.Connect and returns; it never
-                // blocks waiting for a reply. Tcp.Connected can only arrive later, via an actual
-                // actor mailbox round-trip through the TCP manager, which cannot land inside that
-                // same synchronous batch. So CloseConnectionUpstreamFinished always runs with
-                // _connection still null here, on every run.
-                //
-                // 192.0.2.1 (TEST-NET-1, RFC 5737) is guaranteed unroutable, so the connect itself
-                // never succeeds either way -- irrelevant to the guard, but it keeps this test from
-                // depending on a real peer, mirroring Outgoing_TCP_stream_must_fail_the_materialized_task_when_the_connection_fails
-                // above.
-                //
-                // What actually distinguishes "threw" from "guarded": PostStop's own
-                // `LocalAddressPromise.TrySetException(new StreamTcpException("Connection failed"))`
-                // runs either way (a caught, logged interpreter exception still fails the stage,
-                // which still runs PostStop) -- so the materialized task's exception is identical
-                // in both cases and cannot tell them apart. The GraphInterpreter's own
-                // ReportStageError, which logs any exception a stage callback throws at Error
-                // BEFORE failing the stage, is what differs -- present pre-fix, silent post-fix.
+                // Regression test for CloseConnectionUpstreamFinished's null-guard: with halfClose
+                // off, Source.Empty completes upstream before the outbound connect finishes, so
+                // _connection is still null when that branch runs -- this used to throw instead of
+                // completing gracefully (the interpreter still logs the exception at Error first).
                 await EventFilter.Error().ExpectAsync(0, async () =>
                 {
                     var task = Source.Empty<ReadOnlySequence<byte>>()

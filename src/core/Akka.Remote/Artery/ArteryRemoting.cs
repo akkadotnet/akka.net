@@ -132,10 +132,9 @@ namespace Akka.Remote.Artery
         // `hasBeenShutdown` AtomicBoolean + the shared "transportKillSwitch"). _isShutdown is set
         // FIRST in Shutdown() so no NEW outbound stream is materialized once teardown begins (see the
         // guard at the top of MaterializeOutboundStream). _killSwitch is woven into EVERY inbound and
-        // outbound stream graph, so a single Shutdown() on it tears them all down at once. Like Pekko,
-        // we deliberately do NOT call _materializer.Shutdown() -- the kill switch stops the streams and
-        // the ActorSystem lifecycle reclaims the materializer; force-shutting the materializer down was
-        // exactly what raced a late materialization into an IllegalStateException.
+        // outbound stream graph, so a single Shutdown() on it tears them all down at once. Shutdown()
+        // DOES call _materializer.Shutdown(), but only after waiting for its streams to stop on their
+        // own (see WaitForStreamsToStopAsync) -- see Shutdown's own remarks for why that wait matters.
         private volatile bool _isShutdown;
         private readonly SharedKillSwitch _killSwitch = KillSwitches.Shared("arteryTransportKillSwitch");
         private UniqueAddress _localUniqueAddress;
@@ -616,7 +615,8 @@ namespace Akka.Remote.Artery
             // transportKillSwitch abort.
             _killSwitch.Shutdown();
 
-            // Unbind so the listener stream finishes too, before checking for zero children below.
+            // Unbind: stops the TcpListener, which stops its still-open accepted-connection
+            // children, which each inbound stage's Watch(_connection) turns into a prompt failure.
             await (_binding?.Unbind() ?? Task.CompletedTask);
 
             // Let every remaining stream finish closing, within what is left of the same deadline.
@@ -722,40 +722,44 @@ namespace Akka.Remote.Artery
         /// Waits, until <paramref name="cancellationToken"/> fires, for the materializer's supervisor
         /// to have no children. An interpreter stops only once every stage in it has, and the TCP
         /// stage completes only on <c>Closed</c> or on failure, so no children means every stream --
-        /// inbound and outbound -- drained and closed, or died. <c>halfClose: false</c> on outbound
-        /// (and #8636 on inbound) is what makes that close happen instead of stalling.
+        /// inbound and outbound -- drained and closed, or died. Inbound stops because
+        /// <see cref="Shutdown"/>'s <c>Unbind()</c> stops the listener and its connection-actor
+        /// children, and each inbound stage watches its own connection actor.
         /// </summary>
         private async Task WaitForStreamsToStopAsync(CancellationToken cancellationToken)
         {
-            if (_materializer is not { Supervisor: { } supervisor })
+            // IsShutdown guards a SECOND Shutdown() call (e.g. the automatic one CoordinatedShutdown
+            // runs after a test already called Shutdown() explicitly): the first call's own
+            // Materializer.Shutdown() already killed this supervisor, so asking it again would just
+            // burn the whole deadline waiting for a reply that will never come.
+            if (_materializer is not { IsShutdown: false, Supervisor: { } supervisor })
                 return;
 
             var lastKnownCount = -1;
             while (true)
             {
-                StreamSupervisor.Children children;
                 try
                 {
-                    children = await supervisor.Ask<StreamSupervisor.Children>(
-                        StreamSupervisor.GetChildren.Instance, cancellationToken: cancellationToken);
+                    // A fixed per-ask timeout, not cancellationToken: even if the shared deadline
+                    // already expired (e.g. Unbind() used up the whole bound), this still gets one
+                    // honest count instead of logging "unknown" below for free.
+                    var children = await supervisor.Ask<StreamSupervisor.Children>(
+                        StreamSupervisor.GetChildren.Instance, timeout: StreamStopPollInterval);
+                    lastKnownCount = children.Refs.Count;
                 }
-                catch (OperationCanceledException)
+                catch (AskTimeoutException)
                 {
-                    break; // ran out of the shared flush-wait-on-shutdown bound
-                }
-                catch (Exception)
-                {
-                    // the supervisor is already gone: nothing left to wait for
-                    _log.Debug("Artery stream supervisor is already gone; nothing left to force-stop.");
-                    return;
+                    break; // supervisor is gone or unresponsive
                 }
 
-                lastKnownCount = children.Refs.Count;
                 if (lastKnownCount == 0)
                 {
                     _log.Debug("Every Artery stream stopped before shutdown tore the transport down.");
                     return;
                 }
+
+                if (cancellationToken.IsCancellationRequested)
+                    break;
 
                 try
                 {
