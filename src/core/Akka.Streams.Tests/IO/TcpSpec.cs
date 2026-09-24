@@ -918,7 +918,7 @@ namespace Akka.Streams.Tests.IO
                         if (reset is null && !overallCts.IsCancellationRequested)
                         {
                             try { await Task.Delay(100, overallCts.Token); }
-                            catch (OperationCanceledException) { }
+                            catch (OperationCanceledException) { break; }
                         }
                     }
 

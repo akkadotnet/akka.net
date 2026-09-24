@@ -551,6 +551,7 @@ namespace Akka.Tests.IO
             var sawEof = false;
             Exception? reset = null;
             var total = 0;
+            var timedOut = false;
             try
             {
                 while (!sawEof && total < cap)
@@ -567,11 +568,11 @@ namespace Akka.Tests.IO
             }
             catch (OperationCanceledException)
             {
-                // Neither flag set below - the assertion reports this as a hang.
+                timedOut = true;
             }
 
             (sawEof || reset is not null).Should().BeTrue(
-                "the connection should have reset or closed instead of staying open indefinitely");
+                $"the connection should have reset or closed instead of staying open indefinitely (timed out: {timedOut}, read {total} bytes)");
         }
     }
 }
