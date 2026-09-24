@@ -303,14 +303,28 @@ namespace Akka.IO
                     // same "reports success, data still lost" failure mode this fix targets,
                     // just one step later. Both pump tasks are already done at this point (write
                     // pump: output drained; read pump: peer FIN observed), so CloseAsync's own
-                    // awaits resolve immediately; fire-and-forget (with the fault observed below)
-                    // keeps PostStop non-blocking.
-                    _transport.CloseAsync().ContinueWith(t =>
+                    // awaits resolve immediately; fire-and-forget (with the fault always
+                    // observed below, to avoid an UnobservedTaskException) keeps PostStop
+                    // non-blocking. Capture _transport in a local: `this` is a stopped actor by
+                    // the time this continuation runs, but the field read itself is safe either
+                    // way - the local just keeps the fallback Abort() call unambiguous.
+                    var transport = _transport;
+                    transport.CloseAsync().ContinueWith(t =>
                     {
-                        if (t.IsFaulted && _traceLogging)
-                            Log.Debug(t.Exception,
-                                "Best-effort graceful CloseAsync after ConfirmedClosed observed a fault");
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                        if (!t.IsFaulted)
+                            return;
+
+                        // Always read the exception, even if not logging it, so the task's
+                        // fault is observed and never surfaces as an UnobservedTaskException.
+                        var ex = t.Exception;
+                        if (_traceLogging)
+                            Log.Debug(ex, "Best-effort graceful CloseAsync after ConfirmedClosed observed a fault");
+
+                        // CloseAsync failed partway through, so the socket may still be open.
+                        // Fall back to Abort() so it's not leaked.
+                        try { transport.Abort(); }
+                        catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+                    }, TaskScheduler.Default);
                 }
                 else
                 {
@@ -573,6 +587,21 @@ namespace Akka.IO
             Receive<ReadPumpFailed>(msg =>
             {
                 HandleReadPumpFailed(msg);
+
+                if (closeEvent is ConfirmedClosed)
+                {
+                    // The read side failed outright (e.g. connection reset) instead of
+                    // reaching a clean peer FIN, so _peerClosed will never become true -
+                    // TryFinishClose's ConfirmedClosed branch would otherwise wait forever.
+                    // Concretely: reading suspended (pull mode, or an explicit
+                    // SuspendReading) means no PipeReadCompleted/StreamEof is ever in
+                    // flight to surface this any other way, so this handler is the only
+                    // place that ever learns about it. Report the real outcome instead of
+                    // hanging.
+                    DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
+                    return;
+                }
+
                 TryFinishClose(closeSender, closeEvent);
             });
             Receive<ReadPumpCompleted>(_ =>
@@ -1245,15 +1274,14 @@ namespace Akka.IO
             if (_traceLogging)
                 Log.Debug("HandleStreamEof: peer closed");
 
-            if (_outputShutdown)
-            {
-                // Both sides closed - connection is fully closed
-                DoCloseConnection(_handler ?? _commander!, ConfirmedClosed.Instance);
-            }
-            else
-            {
-                HandleClose(_handler ?? _commander!, PeerClosed.Instance);
-            }
+            // _outputShutdown can never be true here: it is only ever set inside
+            // ClosingBehaviour's TransportOperationCompleted handler, and reaching
+            // ClosingBehaviour requires HandleClose to already have run (via HandleGracefulClose
+            // or HandleConfirmedClose) - at which point StreamEof is handled by
+            // ClosingBehaviour's own handler (which calls TryFinishClose), not this method.
+            // This method only ever runs from OpenBehaviour/PeerSentEofBehaviour, i.e. before
+            // any Close/ConfirmedClose has been requested.
+            HandleClose(_handler ?? _commander!, PeerClosed.Instance);
         }
 
         /// <summary>
