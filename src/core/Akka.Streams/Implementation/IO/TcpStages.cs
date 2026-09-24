@@ -750,8 +750,17 @@ namespace Akka.Streams.Implementation.IO
                 {
                     if (_writeInProgress)
                         _connectionClosePending = true; // continues once WriteAck drains the write buffer
-                    else
+                    else if (_connection != null)
                         _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                    else
+                        // Upstream can finish before the OUTBOUND connect ever completes (e.g. an
+                        // already-completed/empty upstream source), in which case this stage is
+                        // still in its Connecting state and has no connection actor to Tell yet --
+                        // _connection would otherwise be null here, throwing a
+                        // NullReferenceException. Nothing was ever written, so there is nothing to
+                        // flush; just finish. Mirrors the null-safe fallback the half-close branch
+                        // below already has.
+                        CompleteStage();
                 }
                 // We still read, so we only close the write side
                 else if (_connection != null)
