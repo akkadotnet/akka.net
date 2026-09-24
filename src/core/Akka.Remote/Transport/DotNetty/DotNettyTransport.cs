@@ -7,7 +7,6 @@
 
 #nullable enable
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -24,6 +23,7 @@ using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using ByteOrder = DotNetty.Buffers.ByteOrder;
+using DotNetty.Common.Concurrency;
 using DotNetty.Common.Utilities;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
@@ -130,10 +130,9 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
         private readonly TimeSpan _flushWait;
-        private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
 
-        private static readonly FieldInfo SocketField =
-            typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        internal static readonly FieldInfo? SocketField =
+            typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic);
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -157,6 +156,8 @@ namespace Akka.Remote.Transport.DotNetty
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
             _flushWait = system.Settings.Config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", TimeSpan.FromSeconds(2));
+            if (SocketField == null)
+                Log.Warning("DotNetty's AbstractSocketChannel.Socket field was not found; disassociate falls back to a full close, which can reset the connection.");
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
         }
@@ -262,15 +263,31 @@ namespace Akka.Remote.Transport.DotNetty
         // inbound data sends an RST, and a Windows peer then drops our last frames (#8589).
         internal void BeginGracefulClose(TcpSocketChannel channel, Task lastWrite)
         {
-            _draining[channel] = channel.CloseCompletion;
-            channel.CloseCompletion.ContinueWith(_ => _draining.TryRemove(channel, out Task? _), TaskContinuationOptions.ExecuteSynchronously);
+            try
+            {
+                // not the ActorSystem scheduler: it may already be shutting down
+                channel.EventLoop.Schedule(() => channel.CloseAsync(), _flushWait);
+            }
+            catch (RejectedExecutionException)
+            {
+                channel.CloseAsync();
+                return;
+            }
 
-            // not the ActorSystem scheduler: it may already be shutting down
-            channel.EventLoop.Schedule(() => channel.CloseAsync(), _flushWait);
-            lastWrite.ContinueWith(_ => channel.EventLoop.Execute(() => HalfClose(channel)), TaskContinuationOptions.ExecuteSynchronously);
+            lastWrite.ContinueWith(_ =>
+            {
+                try
+                {
+                    channel.EventLoop.Execute(() => HalfClose(channel));
+                }
+                catch (RejectedExecutionException)
+                {
+                    channel.CloseAsync(); // event loop already shut down
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        private static void HalfClose(TcpSocketChannel channel)
+        private void HalfClose(TcpSocketChannel channel)
         {
             if (!channel.Active)
                 return;
@@ -281,13 +298,21 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 // Not channel.ShutdownOutputAsync(): Socket.Shutdown clears Socket.Connected, which DotNetty reads as
                 // EOF, so it would close over unread data. Shut down through a second Socket on the same handle.
-                var socket = (Socket)SocketField.GetValue(channel)!;
+                if (SocketField?.GetValue(channel) is not Socket socket)
+                {
+                    channel.CloseAsync();
+                    return;
+                }
+
                 using var alias = new Socket(new SafeSocketHandle(socket.Handle, ownsHandle: false));
-                alias.Blocking = false; // on Windows the alias assumes blocking, and Shutdown would apply that to the handle
+                // Shutdown re-applies the alias's blocking mode to the shared handle, and on Windows the
+                // handle constructor assumes blocking; DotNetty's socket must stay non-blocking.
+                alias.Blocking = false;
                 alias.Shutdown(SocketShutdown.Send);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.Warning(ex, "Half-close failed on channel [{0}->{1}]; closing it outright", channel.LocalAddress, channel.RemoteAddress);
                 channel.CloseAsync();
             }
         }
@@ -296,9 +321,11 @@ namespace Akka.Remote.Transport.DotNetty
         {
             try
             {
-                // give graceful closes up to flush-wait to finish before the force-close below
-                if (!_draining.IsEmpty)
-                    await Task.WhenAny(Task.WhenAll(_draining.Values), Task.Delay(_flushWait)).ConfigureAwait(false);
+                // Give graceful closes up to flush-wait before the force-close below. Wait on every association
+                // channel: a disassociate may still be on its way through the protocol actor.
+                var open = ConnectionGroup.Where(c => !ReferenceEquals(c, ServerChannel)).Select(c => c.CloseCompletion).ToList();
+                if (open.Count > 0)
+                    await Task.WhenAny(Task.WhenAll(open), Task.Delay(_flushWait)).ConfigureAwait(false);
 
                 var tasks = new List<Task>();
                 foreach (var channel in ConnectionGroup)
