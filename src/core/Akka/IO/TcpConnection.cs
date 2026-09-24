@@ -254,6 +254,10 @@ namespace Akka.IO
         // this as Tcp.ErrorClosed instead of treating it as a clean EOF.
         private bool _readPumpHasError;
         private Exception? _readPumpError;
+
+        // Non-null once a later Tcp.Close upgraded an in-flight ConfirmedClose to a full
+        // close: its sender, notified alongside closeSender once the connection finishes.
+        private IActorRef? _fullCloseCommander;
         #endregion
 
         private static readonly IOException DroppingWriteBecauseClosingException =
@@ -288,40 +292,25 @@ namespace Akka.IO
 
             if (_transport != null)
             {
-                if (_closeInformation?.ClosedEvent is ConfirmedClosed)
+                // Graceful close only when the close actually completed: ConfirmedClosed, or Closed
+                // after an upgrade. Anything else aborts below; CloseAsync could wait on a stuck write.
+                if (_closeInformation?.ClosedEvent is ConfirmedClosed ||
+                    (_fullCloseCommander is not null && _closeInformation?.ClosedEvent is Closed))
                 {
-                    // Reaching here with a ConfirmedClosed event means TryFinishClose saw BOTH
-                    // _outputShutdown (our writes drained, our FIN sent) AND _peerClosed (the
-                    // peer's FIN already arrived) - a fully graceful half-close on both sides.
-                    // Unlike Tcp.Close's HandleGracefulClose, ShutdownAsync deliberately leaves
-                    // the socket open (it only shuts down the send side) so reads keep flowing
-                    // until the peer's FIN, so nothing has actually closed the socket yet.
-                    // Finish closing it the same graceful way CloseAsync already does elsewhere,
-                    // NOT via Abort's linger-0 RST: an RST here can make the peer's OS discard
-                    // whatever is still sitting unread in ITS OWN kernel receive buffer, even
-                    // though every byte we sent was already safely handed to our kernel - the
-                    // same "reports success, data still lost" failure mode this fix targets,
-                    // just one step later. Both pump tasks are already done at this point (write
-                    // pump: output drained; read pump: peer FIN observed), so CloseAsync's own
-                    // awaits resolve immediately; fire-and-forget (with the fault always
-                    // observed below, to avoid an UnobservedTaskException) keeps PostStop
-                    // non-blocking. Capture _transport in a local: `this` is a stopped actor by
-                    // the time this continuation runs, but the field read itself is safe either
-                    // way - the local just keeps the fallback Abort() call unambiguous.
+                    // Only ShutdownAsync ran, so the socket is still open: close it without Abort's
+                    // linger-0 RST. Fire-and-forget keeps PostStop non-blocking; the fault is observed below.
                     var transport = _transport;
                     transport.CloseAsync().ContinueWith(t =>
                     {
                         if (!t.IsFaulted)
                             return;
 
-                        // Always read the exception, even if not logging it, so the task's
-                        // fault is observed and never surfaces as an UnobservedTaskException.
+                        // read the exception so it is observed
                         var ex = t.Exception;
                         if (_traceLogging)
                             Log.Debug(ex, "Best-effort graceful CloseAsync after ConfirmedClosed observed a fault");
 
-                        // CloseAsync failed partway through, so the socket may still be open.
-                        // Fall back to Abort() so it's not leaked.
+                        // CloseAsync failed partway; abort so the socket isn't leaked
                         try { transport.Abort(); }
                         catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
                     }, TaskScheduler.Default);
@@ -584,6 +573,18 @@ namespace Akka.IO
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
+            Receive<Close>(_ =>
+            {
+                // Only meaningful once, while still waiting on the ConfirmedClose's peer FIN.
+                if (closeEvent is not ConfirmedClosed || _fullCloseCommander is not null)
+                    return;
+
+                if (_traceLogging)
+                    Log.Debug("Got Close while ConfirmedClose was draining - upgrading to a full close instead of waiting for the peer's FIN.");
+
+                _fullCloseCommander = Sender;
+                TryFinishClose(closeSender, closeEvent);
+            });
             Receive<ReadPumpFailed>(msg =>
             {
                 HandleReadPumpFailed(msg);
@@ -693,12 +694,24 @@ namespace Akka.IO
         /// both flags from both call sites means whichever condition completes last is the one
         /// that finishes the close, and neither a premature "success" nor a permanent hang can
         /// occur.
+        /// Unless a later Tcp.Close upgraded this ConfirmedClose (<see cref="_fullCloseCommander"/>
+        /// non-null): then the peer's FIN no longer matters, and we finish once
+        /// <see cref="_outputShutdown"/> alone is true, reporting <see cref="Closed"/> instead of
+        /// <see cref="ConfirmedClosed"/> - same caveat as a plain Close: unread inbound data can
+        /// still turn this into a reset.
         /// For regular Close, we close once the read pump has completed and transport is done.
         /// </summary>
         private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
             if (closeEvent is ConfirmedClosed)
             {
+                if (_fullCloseCommander is not null)
+                {
+                    if (_outputShutdown)
+                        DoCloseConnection(closeSender, Closed.Instance);
+                    return;
+                }
+
                 if (_outputShutdown && _peerClosed)
                     DoCloseConnection(closeSender, ConfirmedClosed.Instance);
                 return;
@@ -1341,7 +1354,11 @@ namespace Akka.IO
                     break;
             }
 
-            StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), closedEvent));
+            // Also notify the Close that upgraded an in-flight ConfirmedClose, if any.
+            var notificationsTo = ImmutableHashSet<IActorRef>.Empty.Add(closeSender);
+            if (_fullCloseCommander is not null)
+                notificationsTo = notificationsTo.Add(_fullCloseCommander);
+            StopWith(new CloseInformation(notificationsTo, closedEvent));
         }
 
         protected sealed record CloseInformation(ImmutableHashSet<IActorRef> NotificationsTo, Tcp.Event ClosedEvent)
