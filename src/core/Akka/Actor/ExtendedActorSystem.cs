@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Akka.Actor
 {
@@ -63,7 +64,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of actor to create</typeparam>
         /// <param name="name">The name of the actor to create. The default value is <see langword="null"/>.</param>
         /// <returns>A reference to the newly created actor</returns>
-        public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
+        public abstract IActorRef SystemActorOf<[DynamicallyAccessedMembers(Props.ActorTypeMembers)] TActor>(string name = null) where TActor : ActorBase, new();
 
         /// <summary>
         /// Aggressively terminates an <see cref="ActorSystem"/> without waiting for the normal shutdown process to run as-is.

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using Akka.Configuration;
@@ -34,6 +35,13 @@ namespace Akka.Actor
     /// </summary>
     public class Props : IEquatable<Props>, ISurrogated
     {
+        /// <summary>
+        /// What the trimmer has to keep on an actor type reached through <see cref="Props"/>: the public
+        /// constructors <see cref="Activator"/> needs, and the interface list the mailbox requirement check walks.
+        /// </summary>
+        internal const DynamicallyAccessedMemberTypes ActorTypeMembers =
+            DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.Interfaces;
+
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
         private static readonly Deploy DefaultDeploy = new();
@@ -46,7 +54,10 @@ namespace Akka.Actor
         ///     </note>
         /// </summary>
         public static readonly Props None = null;
+        [DynamicallyAccessedMembers(ActorTypeMembers)]
         private Type _inputType;
+
+        [DynamicallyAccessedMembers(ActorTypeMembers)]
         private Type _outputType;
         private readonly IIndirectActorProducer _producer;
 
@@ -79,7 +90,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentNullException">
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
-        public Props(Type type, object[] args)
+        public Props([DynamicallyAccessedMembers(ActorTypeMembers)] Type type, object[] args)
             : this(DefaultDeploy, type, args)
         {
             if (type == null)
@@ -96,7 +107,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentNullException">
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
-        public Props(Type type)
+        public Props([DynamicallyAccessedMembers(ActorTypeMembers)] Type type)
             : this(DefaultDeploy, type, NoArgs)
         {
             if (type == null)
@@ -112,7 +123,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentNullException">
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
-        public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
+        public Props([DynamicallyAccessedMembers(ActorTypeMembers)] Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
             : this(DefaultDeploy, type, args.ToArray())
         {
             if (type == null)
@@ -130,7 +141,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentNullException">
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
-        public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
+        public Props([DynamicallyAccessedMembers(ActorTypeMembers)] Type type, SupervisorStrategy supervisorStrategy, params object[] args)
             : this(DefaultDeploy, type, args)
         {
             if (type == null)
@@ -148,7 +159,7 @@ namespace Akka.Actor
         /// <exception cref="ArgumentNullException">
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
-        public Props(Deploy deploy, Type type, IEnumerable<object> args)
+        public Props(Deploy deploy, [DynamicallyAccessedMembers(ActorTypeMembers)] Type type, IEnumerable<object> args)
             : this(deploy, type, args.ToArray())
         {
             if (type == null)
@@ -162,7 +173,7 @@ namespace Akka.Actor
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
-        public Props(Deploy deploy, Type type, params object[] args)
+        public Props(Deploy deploy, [DynamicallyAccessedMembers(ActorTypeMembers)] Type type, params object[] args)
 #pragma warning disable CS0618 // Type or member is obsolete
             : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -191,6 +202,7 @@ namespace Akka.Actor
         ///     The type of the actor that is created.
         /// </summary>
         [JsonIgnore]
+        [DynamicallyAccessedMembers(ActorTypeMembers)]
         public Type Type
         {
             get
@@ -349,8 +361,13 @@ namespace Akka.Actor
         /// <param name="factory">The lambda expression used to create the actor.</param>
         /// <param name="supervisorStrategy">Optional: The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        /// <remarks>
+        ///     <typeparamref name="TActor" /> is annotated so trimming keeps the public constructors
+        ///     <see cref="Activator" /> needs and the <see cref="IRequiresMessageQueue{T}" /> interfaces the
+        ///     mailbox requirement check reads off the actor type.
+        /// </remarks>
         /// <exception cref="ArgumentException">The create function must be a 'new T (args)' expression</exception>
-        public static Props Create<TActor>(Expression<Func<TActor>> factory,
+        public static Props Create<[DynamicallyAccessedMembers(ActorTypeMembers)] TActor>(Expression<Func<TActor>> factory,
             SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase
         {
             if (factory.Body is UnaryExpression)
@@ -371,7 +388,12 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(params object[] args) where TActor : ActorBase
+        /// <remarks>
+        ///     <typeparamref name="TActor" /> is annotated so trimming keeps the public constructors
+        ///     <see cref="Activator" /> needs and the <see cref="IRequiresMessageQueue{T}" /> interfaces the
+        ///     mailbox requirement check reads off the actor type.
+        /// </remarks>
+        public static Props Create<[DynamicallyAccessedMembers(ActorTypeMembers)] TActor>(params object[] args) where TActor : ActorBase
         {
             return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args);
         }
@@ -383,7 +405,7 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         [Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] args) instead")]
-        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
+        public static Props CreateBy<[DynamicallyAccessedMembers(ActorTypeMembers)] TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
         {
             return new Props(typeof(TProducer), args);
         }
@@ -405,7 +427,12 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
+        /// <remarks>
+        ///     <typeparamref name="TActor" /> is annotated so trimming keeps the public constructors
+        ///     <see cref="Activator" /> needs and the <see cref="IRequiresMessageQueue{T}" /> interfaces the
+        ///     mailbox requirement check reads off the actor type.
+        /// </remarks>
+        public static Props Create<[DynamicallyAccessedMembers(ActorTypeMembers)] TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
             return new Props(new ActivatorProducer(typeof(TActor), NoArgs), DefaultDeploy, NoArgs){ SupervisorStrategy = supervisorStrategy };
         }
@@ -417,7 +444,7 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
-        public static Props Create(Type type, params object[] args)
+        public static Props Create([DynamicallyAccessedMembers(ActorTypeMembers)] Type type, params object[] args)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
@@ -580,7 +607,7 @@ namespace Akka.Actor
         }
 
         [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference instead.")]
-        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
+        private static IIndirectActorProducer CreateProducer([DynamicallyAccessedMembers(ActorTypeMembers)] Type type, object[] args)
         {
             if (type == null) return DefaultProducer.Instance;
 
@@ -667,6 +694,7 @@ namespace Akka.Actor
                 throw new InvalidOperationException("No actor producer specified!");
             }
 
+            [DynamicallyAccessedMembers(ActorTypeMembers)]
             public Type ActorType => typeof(ActorBase);
 
 
@@ -680,7 +708,7 @@ namespace Akka.Actor
         {
             private readonly object[] _args;
 
-            public ActivatorProducer(Type actorType, object[] args)
+            public ActivatorProducer([DynamicallyAccessedMembers(ActorTypeMembers)] Type actorType, object[] args)
             {
                 ActorType = actorType;
                 _args = args;
@@ -691,6 +719,7 @@ namespace Akka.Actor
                 return Activator.CreateInstance(ActorType, _args).AsInstanceOf<ActorBase>();
             }
 
+            [DynamicallyAccessedMembers(ActorTypeMembers)]
             public Type ActorType { get; }
 
 
@@ -700,7 +729,7 @@ namespace Akka.Actor
             }
         }
 
-        private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
+        private class FactoryConsumer<[DynamicallyAccessedMembers(ActorTypeMembers)] TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             private readonly Func<TActor> _factory;
 
@@ -714,6 +743,7 @@ namespace Akka.Actor
                 return _factory.Invoke();
             }
 
+            [DynamicallyAccessedMembers(ActorTypeMembers)]
             public Type ActorType => typeof(TActor);
 
 
@@ -750,7 +780,7 @@ namespace Akka.Actor
     ///     </note>
     /// </summary>
     /// <typeparam name="TActor">The type of the actor to create.</typeparam>
-    internal class DynamicProps<TActor> : Props where TActor : ActorBase
+    internal class DynamicProps<[DynamicallyAccessedMembers(Props.ActorTypeMembers)] TActor> : Props where TActor : ActorBase
     {
         private readonly Func<TActor> invoker;
 
@@ -808,6 +838,13 @@ namespace Akka.Actor
         ///     The returned type is not used to produce the actor.
         /// </summary>
         /// <returns>The type of the actor created.</returns>
+        /// <remarks>
+        ///     The property is annotated so trimming keeps the public constructors <see cref="Activator" /> needs
+        ///     and the <see cref="IRequiresMessageQueue{T}" /> interfaces the mailbox requirement check reads off
+        ///     the actor type; an implementation returning a <see cref="Type" /> from elsewhere has to carry the
+        ///     same annotation on whatever it reads that type from.
+        /// </remarks>
+        [DynamicallyAccessedMembers(Props.ActorTypeMembers)]
         Type ActorType { get; }
 
         /// <summary>
