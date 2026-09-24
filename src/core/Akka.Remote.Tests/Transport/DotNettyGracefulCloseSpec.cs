@@ -8,8 +8,10 @@
 #nullable enable
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,6 +45,17 @@ namespace Akka.Remote.Tests.Transport
         private static readonly Config ShortFlushWait =
             ConfigurationFactory.ParseString("akka.remote.flush-wait-on-shutdown = 300ms").WithFallback(Config);
 
+        private static readonly Config TlsOverrides = ConfigurationFactory.ParseString(@"
+            enable-ssl = true
+            ssl {
+                suppress-validation = true
+                require-mutual-authentication = false
+                certificate {
+                    path = ""Resources/akka-validcert.pfx""
+                    password = ""password""
+                }
+            }");
+
         private static readonly ByteString Payload = ByteString.CopyFrom(Enumerable.Repeat((byte)7, 512).ToArray());
 
         public DotNettyGracefulCloseSpec(ITestOutputHelper output) : base(Config, output)
@@ -61,7 +74,7 @@ namespace Akka.Remote.Tests.Transport
                 c.Handle.Write(Payload).Should().BeTrue();
                 c.Handle.Disassociate("test", Log);
 
-                (await ReadToEnd(c.Peer)).Should().Be(4 + Payload.Length);
+                (await ReadToEnd(new NetworkStream(c.Peer))).Should().Be(4 + Payload.Length);
                 await Task.Delay(200);
                 SocketError(c.Peer).Should().Be(0, "a reset makes a Windows peer drop the frames it has not read yet");
 
@@ -74,6 +87,99 @@ namespace Akka.Remote.Tests.Transport
                 c.Peer.Dispose();
                 await c.Transport.Shutdown();
             }
+        }
+
+        [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_transport_shutdown_starts_before_the_disassociate")]
+        public async Task Should_deliver_last_frame_without_reset_When_transport_shutdown_starts_before_the_disassociate()
+        {
+            var c = await ConnectRawPeer(Sys);
+            try
+            {
+                c.Peer.Send(new byte[1024]);
+                c.Handle.Write(Payload).Should().BeTrue();
+
+                // remoting can start the transport shutdown while the protocol actor's disassociate is still queued
+                var shutdown = c.Transport.Shutdown();
+                await Task.Delay(100);
+                c.Handle.Disassociate("test", Log);
+
+                (await ReadToEnd(new NetworkStream(c.Peer))).Should().Be(4 + Payload.Length);
+                await Task.Delay(200);
+                SocketError(c.Peer).Should().Be(0);
+
+                c.Peer.Close();
+                await shutdown.WaitAsync(TimeSpan.FromSeconds(3));
+            }
+            finally
+            {
+                c.Peer.Dispose();
+                await c.Transport.Shutdown();
+            }
+        }
+
+        [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_TLS_is_enabled")]
+        public async Task Should_deliver_last_frame_without_reset_When_TLS_is_enabled()
+        {
+            var c = await ConnectRawPeer(Sys, TlsOverrides.WithFallback(Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp")));
+            try
+            {
+                // the server side needs reads on to finish the handshake
+                c.Handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(CreateTestProbe()));
+                await using var tls = new SslStream(new NetworkStream(c.Peer), false, (_, _, _, _) => true);
+                await tls.AuthenticateAsClientAsync("localhost").WaitAsync(TimeSpan.FromSeconds(5));
+
+                c.Handle.Write(Payload).Should().BeTrue();
+                c.Handle.Disassociate("test", Log);
+
+                // traffic that races our FIN must be drained through TlsHandler, not answered with a reset
+                await tls.WriteAsync(new byte[1024]);
+
+                // no close_notify precedes our FIN; SslStream reports the plain EOF as end of stream
+                (await ReadToEnd(tls)).Should().Be(4 + Payload.Length);
+                await Task.Delay(200);
+                SocketError(c.Peer).Should().Be(0);
+
+                c.Peer.Close();
+                await c.Channel.CloseCompletion.WaitAsync(TimeSpan.FromSeconds(1));
+            }
+            finally
+            {
+                c.Peer.Dispose();
+                await c.Transport.Shutdown();
+            }
+        }
+
+        [Fact(DisplayName = "Should_terminate_well_under_flush_wait_When_an_association_is_open")]
+        public async Task Should_terminate_well_under_flush_wait_When_an_association_is_open()
+        {
+            var config = ConfigurationFactory.ParseString("akka.remote.flush-wait-on-shutdown = 5s").WithFallback(Config);
+            var a = ActorSystem.Create("GracefulA", config);
+            var b = ActorSystem.Create("GracefulB", config);
+            try
+            {
+                var probe = CreateTestProbe(a);
+                var bAddress = ((ExtendedActorSystem)b).Provider.DefaultAddress;
+                a.ActorSelection(new RootActorPath(bAddress) / "user" / "missing").Tell(new Identify(1), probe.Ref);
+                await probe.ExpectMsgAsync<ActorIdentity>();
+
+                // the peer answers our FIN at once, so no graceful close should sit out the 5 s flush-wait
+                var sw = Stopwatch.StartNew();
+                await a.Terminate().WaitAsync(TimeSpan.FromSeconds(15));
+                sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+            }
+            finally
+            {
+                await ShutdownAsync(a);
+                await ShutdownAsync(b);
+            }
+        }
+
+        [Fact(DisplayName = "Should_find_the_DotNetty_socket_field_the_half_close_depends_on")]
+        public void Should_find_the_DotNetty_socket_field_the_half_close_depends_on()
+        {
+            // a DotNetty upgrade that renames this field silently turns the graceful close back into a reset
+            DotNettyTransport.SocketField.Should().NotBeNull();
+            DotNettyTransport.SocketField!.FieldType.Should().Be(typeof(Socket));
         }
 
         [Fact(DisplayName = "Should_force_close_after_flush_wait_When_peer_never_closes")]
@@ -194,9 +300,9 @@ namespace Akka.Remote.Tests.Transport
         private sealed record Connection(TcpTransport Transport, AssociationHandle Handle, IChannel Channel, Socket Peer);
 
         // A raw socket connects in. No ReadHandlerSource is set, so our side never turns AutoRead on.
-        private async Task<Connection> ConnectRawPeer(ActorSystem system)
+        private async Task<Connection> ConnectRawPeer(ActorSystem system, Config? transportConfig = null)
         {
-            var transport = new TcpTransport(system, system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var transport = new TcpTransport(system, transportConfig ?? system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
             var probe = CreateTestProbe(system);
             var (address, listener) = await transport.Listen();
             listener.SetResult(new ActorAssociationEventListener(probe));
@@ -209,13 +315,13 @@ namespace Akka.Remote.Tests.Transport
             return new Connection(transport, handle, channel, peer);
         }
 
-        private static async Task<int> ReadToEnd(Socket peer)
+        private static async Task<int> ReadToEnd(Stream peer)
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             var buffer = new byte[4096];
             var total = 0;
             int n;
-            while ((n = await peer.ReceiveAsync(buffer, SocketFlags.None, cts.Token)) > 0)
+            while ((n = await peer.ReadAsync(buffer, cts.Token)) > 0)
                 total += n;
             return total;
         }
