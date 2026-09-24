@@ -92,6 +92,10 @@ namespace Akka.DistributedData.Tests.MultiNode
                 });
             });
 
+            // Each replicator above only proves it knows the others. A WriteAll sent before the
+            // other nodes know this one is dropped as coming from an unknown node, and never resent.
+            EnterBarrier("replicas-ready");
+
             // we need the UniqueAddress
             var memberProbe = CreateTestProbe();
             _cluster.Subscribe(memberProbe.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
