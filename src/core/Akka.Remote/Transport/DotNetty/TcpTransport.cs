@@ -17,6 +17,7 @@ using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Sockets;
 using Google.Protobuf;
 
 namespace Akka.Remote.Transport.DotNetty
@@ -35,9 +36,17 @@ namespace Akka.Remote.Transport.DotNetty
         public override string ToString() => Message;
     }
 
+    // Fired on a channel that is closing gracefully: discard whatever the peer still sends.
+    internal sealed class DrainInbound
+    {
+        public static readonly DrainInbound Instance = new();
+        private DrainInbound() { }
+    }
+
     internal abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener _listener;
+        private bool _draining; // only touched on the event loop
         
         protected void NotifyListener(IHandleEvent msg)
         {
@@ -67,7 +76,7 @@ namespace Akka.Remote.Transport.DotNetty
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
             var buf = ((IByteBuffer)message);
-            if (buf.ReadableBytes > 0)
+            if (!_draining && buf.ReadableBytes > 0)
             {
                 // no need to copy the byte buffer contents; ByteString does that automatically
                 var bytes = ByteString.CopyFrom(buf.Array, buf.ArrayOffset + buf.ReaderIndex, buf.ReadableBytes);
@@ -80,6 +89,12 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override void UserEventTriggered(IChannelHandlerContext context, object evt)
         {
+            if (evt is DrainInbound)
+            {
+                _draining = true;
+                return;
+            }
+
             if (evt is TlsHandshakeCompletionEvent { IsSuccessful: false } tlsEvent)
             {
                 var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
@@ -244,22 +259,29 @@ namespace Akka.Remote.Transport.DotNetty
     internal sealed class TcpAssociationHandle : AssociationHandle
     {
         private readonly IChannel _channel;
+        private readonly DotNettyTransport _transport;
+        private readonly object _gate = new();
+        private Task _lastWrite = Task.CompletedTask;
+        private bool _closing;
 
         public TcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
             : base(localAddress, remoteAddress)
         {
             _channel = channel;
+            _transport = transport;
         }
 
         public override bool Write(ByteString payload)
         {
-            if (_channel.Open)
+            lock (_gate)
             {
-                var data = ToByteBuffer(_channel, payload);
-                _channel.WriteAndFlushAsync(data);
+                // a write after the output shutdown fails in DoWrite and hard-closes the socket
+                if (_closing || !_channel.Open)
+                    return false;
+
+                _lastWrite = _channel.WriteAndFlushAsync(ToByteBuffer(_channel, payload));
                 return true;
             }
-            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -272,7 +294,19 @@ namespace Akka.Remote.Transport.DotNetty
         public override void Disassociate()
 #pragma warning restore CS0672
         {
-            _channel.CloseAsync();
+            Task lastWrite;
+            lock (_gate)
+            {
+                if (_closing)
+                    return;
+                _closing = true;
+                lastWrite = _lastWrite;
+            }
+
+            if (_channel is TcpSocketChannel { Active: true } tcp)
+                _transport.BeginGracefulClose(tcp, lastWrite);
+            else
+                _channel.CloseAsync();
         }
     }
 

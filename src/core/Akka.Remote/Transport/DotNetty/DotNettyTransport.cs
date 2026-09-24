@@ -7,11 +7,13 @@
 
 #nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -127,6 +129,11 @@ namespace Akka.Remote.Transport.DotNetty
 
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
+        private readonly TimeSpan _flushWait;
+        private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
+
+        private static readonly FieldInfo SocketField =
+            typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -149,6 +156,7 @@ namespace Akka.Remote.Transport.DotNetty
             _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            _flushWait = system.Settings.Config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", TimeSpan.FromSeconds(2));
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
         }
@@ -250,10 +258,48 @@ namespace Akka.Remote.Transport.DotNetty
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
 
+        // Half-close once lastWrite is in the kernel, then read until the peer's FIN. Closing with unread
+        // inbound data sends an RST, and a Windows peer then drops our last frames (#8589).
+        internal void BeginGracefulClose(TcpSocketChannel channel, Task lastWrite)
+        {
+            _draining[channel] = channel.CloseCompletion;
+            channel.CloseCompletion.ContinueWith(_ => _draining.TryRemove(channel, out Task? _), TaskContinuationOptions.ExecuteSynchronously);
+
+            // not the ActorSystem scheduler: it may already be shutting down
+            channel.EventLoop.Schedule(() => channel.CloseAsync(), _flushWait);
+            lastWrite.ContinueWith(_ => channel.EventLoop.Execute(() => HalfClose(channel)), TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        private static void HalfClose(TcpSocketChannel channel)
+        {
+            if (!channel.Active)
+                return;
+
+            channel.Pipeline.FireUserEventTriggered(DrainInbound.Instance);
+            channel.Configuration.AutoRead = true;
+            try
+            {
+                // Not channel.ShutdownOutputAsync(): Socket.Shutdown clears Socket.Connected, which DotNetty reads as
+                // EOF, so it would close over unread data. Shut down through a second Socket on the same handle.
+                var socket = (Socket)SocketField.GetValue(channel)!;
+                using var alias = new Socket(new SafeSocketHandle(socket.Handle, ownsHandle: false));
+                alias.Blocking = false; // on Windows the alias assumes blocking, and Shutdown would apply that to the handle
+                alias.Shutdown(SocketShutdown.Send);
+            }
+            catch (Exception)
+            {
+                channel.CloseAsync();
+            }
+        }
+
         public override async Task<bool> Shutdown()
         {
             try
             {
+                // give graceful closes up to flush-wait to finish before the force-close below
+                if (!_draining.IsEmpty)
+                    await Task.WhenAny(Task.WhenAll(_draining.Values), Task.Delay(_flushWait)).ConfigureAwait(false);
+
                 var tasks = new List<Task>();
                 foreach (var channel in ConnectionGroup)
                 {
