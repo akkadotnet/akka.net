@@ -377,5 +377,125 @@ namespace Akka.Tests.IO
             // ConfirmedClosed branch waits on a _peerClosed that will never be set.
             await handler.ExpectMsgAsync<Tcp.ErrorClosed>(TimeSpan.FromSeconds(10));
         }
+
+        [Fact(DisplayName =
+            "Should_CompleteWithClosed_When_Close_Follows_ConfirmedClose_And_Peer_Never_FINs")]
+        public async Task Should_complete_with_Closed_when_Close_follows_ConfirmedClose_and_peer_never_FINs()
+        {
+            // Regression test for #8634: once ClosingBehaviour entered a ConfirmedClose, a
+            // later Tcp.Close was silently dropped, so the connection waited forever for a
+            // peer FIN that may never come (what Artery's half-closed inbound connections hit
+            // on shutdown). Here the peer stays fully open and never sends one.
+            var (listener, endpoint) = CreateListener();
+            using var _ = listener;
+
+            var connectCommander = CreateTestProbe();
+            connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
+
+            using var peer = await listener.AcceptAsync();
+
+            await connectCommander.ExpectMsgAsync<Tcp.Connected>();
+            var connection = connectCommander.LastSender;
+
+            var handler = CreateTestProbe();
+            connectCommander.Send(connection, new Tcp.Register(handler.Ref));
+
+            var payload = Encoding.UTF8.GetBytes("bytes written before the ConfirmedClose, must all arrive");
+
+            // Wait until our own FIN is actually sent (_outputShutdown) before asking for a
+            // full Close -- this exercises the "already drained" branch of the fix, where
+            // Close must finish the connection right away.
+            await EventFilter.Debug(contains: "FIN sent, waiting for peer FIN").ExpectOneAsync(() =>
+            {
+                handler.Send(connection, Tcp.Write.Create(payload.AsMemory()));
+                handler.Send(connection, Tcp.ConfirmedClose.Instance);
+                return Task.CompletedTask;
+            });
+
+            handler.Send(connection, Tcp.Close.Instance);
+
+            await handler.ExpectMsgAsync<Tcp.Closed>(TimeSpan.FromSeconds(2));
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var received = new byte[payload.Length];
+            var readTotal = 0;
+            while (readTotal < payload.Length)
+            {
+                var n = await peer.ReceiveAsync(received.AsMemory(readTotal, payload.Length - readTotal),
+                    SocketFlags.None, cts.Token);
+                if (n == 0)
+                    break;
+                readTotal += n;
+            }
+
+            readTotal.Should().Be(payload.Length);
+            received.Should().Equal(payload);
+
+            // A gracefully-closed socket ends in a FIN, not a reset.
+            var eofBuffer = new byte[1];
+            var eofRead = await peer.ReceiveAsync(eofBuffer.AsMemory(), SocketFlags.None, cts.Token);
+            eofRead.Should().Be(0);
+        }
+
+        [Fact(DisplayName =
+            "Should_WaitForOutputDrain_Before_Closed_When_Close_Follows_ConfirmedClose_WhileDraining")]
+        public async Task Should_wait_for_output_drain_before_Closed_when_Close_follows_ConfirmedClose_while_draining()
+        {
+            // Regression test for #8634, the other half: Close arrives WHILE the write side is
+            // still draining (peer isn't reading yet) -- it must not finish early, only once
+            // our own output has actually drained, peer FIN or not.
+            var (listener, endpoint) = CreateListener(receiveBufferSize: 16384);
+            using var _ = listener;
+
+            var connectCommander = CreateTestProbe();
+            connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint,
+                options: new Inet.SocketOption[] { new Inet.SO.SendBufferSize(16384) }));
+
+            using var peer = await listener.AcceptAsync();
+
+            await connectCommander.ExpectMsgAsync<Tcp.Connected>();
+            var connection = connectCommander.LastSender;
+
+            var handler = CreateTestProbe();
+            connectCommander.Send(connection, new Tcp.Register(handler.Ref));
+
+            const int totalBytes = 4 * 1024 * 1024;
+            var payload = new byte[totalBytes];
+            new Random(86291979).NextBytes(payload);
+
+            const int chunk = 64 * 1024;
+            for (var offset = 0; offset < totalBytes; offset += chunk)
+            {
+                var len = Math.Min(chunk, totalBytes - offset);
+                handler.Send(connection, Tcp.Write.Create(payload.AsMemory(offset, len)));
+            }
+
+            handler.Send(connection, Tcp.ConfirmedClose.Instance);
+            handler.Send(connection, Tcp.Close.Instance);
+
+            // Must NOT complete yet -- our output is still draining and the peer isn't reading.
+            await handler.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(750));
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var received = new byte[totalBytes];
+            var readTotal = 0;
+            while (readTotal < totalBytes)
+            {
+                var n = await peer.ReceiveAsync(received.AsMemory(readTotal, totalBytes - readTotal),
+                    SocketFlags.None, cts.Token);
+                if (n == 0)
+                    break;
+                readTotal += n;
+            }
+
+            readTotal.Should().Be(totalBytes);
+            received.Should().Equal(payload);
+
+            await handler.ExpectMsgAsync<Tcp.Closed>(TimeSpan.FromSeconds(10));
+
+            var eofBuffer = new byte[1];
+            var eofRead = await peer.ReceiveAsync(eofBuffer.AsMemory(), SocketFlags.None, cts.Token);
+            eofRead.Should().Be(0);
+        }
     }
 }

@@ -254,6 +254,17 @@ namespace Akka.IO
         // this as Tcp.ErrorClosed instead of treating it as a clean EOF.
         private bool _readPumpHasError;
         private Exception? _readPumpError;
+
+        // A later Tcp.Close upgraded an in-flight ConfirmedClose to a full close: stop
+        // waiting for the peer's FIN and finish as soon as _outputShutdown is true. Also
+        // tells PostStop to close the socket gracefully (CloseAsync) instead of Abort/RST,
+        // since only ShutdownAsync (half-close) ever ran on the transport.
+        private bool _upgradedToFullClose;
+
+        // Extra senders to notify with the eventual close event, beyond the closeSender
+        // ClosingBehaviour was entered with. Populated when a Close upgrades an in-flight
+        // ConfirmedClose, so the original ConfirmedClose commander still gets notified.
+        private ImmutableHashSet<IActorRef> _extraCloseNotifications = ImmutableHashSet<IActorRef>.Empty;
         #endregion
 
         private static readonly IOException DroppingWriteBecauseClosingException =
@@ -288,11 +299,14 @@ namespace Akka.IO
 
             if (_transport != null)
             {
-                if (_closeInformation?.ClosedEvent is ConfirmedClosed)
+                if (_closeInformation?.ClosedEvent is ConfirmedClosed || _upgradedToFullClose)
                 {
                     // Reaching here with a ConfirmedClosed event means TryFinishClose saw BOTH
                     // _outputShutdown (our writes drained, our FIN sent) AND _peerClosed (the
                     // peer's FIN already arrived) - a fully graceful half-close on both sides.
+                    // _upgradedToFullClose means a later Tcp.Close asked us to stop waiting for
+                    // that peer FIN instead, once _outputShutdown alone was true - either way,
+                    // only ShutdownAsync ever ran on the transport, never CloseAsync.
                     // Unlike Tcp.Close's HandleGracefulClose, ShutdownAsync deliberately leaves
                     // the socket open (it only shuts down the send side) so reads keep flowing
                     // until the peer's FIN, so nothing has actually closed the socket yet.
@@ -584,6 +598,22 @@ namespace Akka.IO
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
+            Receive<Close>(_ =>
+            {
+                // Only meaningful the first time, and only while still waiting on a
+                // ConfirmedClose's peer FIN - otherwise (already a full Close, already
+                // upgraded, or heading toward Abort/Error) this is a no-op, same as a
+                // repeat ConfirmedClose here already is (no handler registered for it).
+                if (closeEvent is not ConfirmedClosed || _upgradedToFullClose)
+                    return;
+
+                if (_traceLogging)
+                    Log.Debug("Got Close while ConfirmedClose was draining - upgrading to a full close instead of waiting for the peer's FIN.");
+
+                _upgradedToFullClose = true;
+                _extraCloseNotifications = _extraCloseNotifications.Add(Sender);
+                TryFinishClose(closeSender, closeEvent);
+            });
             Receive<ReadPumpFailed>(msg =>
             {
                 HandleReadPumpFailed(msg);
@@ -693,12 +723,22 @@ namespace Akka.IO
         /// both flags from both call sites means whichever condition completes last is the one
         /// that finishes the close, and neither a premature "success" nor a permanent hang can
         /// occur.
+        /// Unless a later Tcp.Close upgraded this ConfirmedClose (<see cref="_upgradedToFullClose"/>)
+        /// - then the peer's FIN no longer matters, and we finish on <see cref="_outputShutdown"/>
+        /// alone, reporting <see cref="Closed"/> instead of <see cref="ConfirmedClosed"/>.
         /// For regular Close, we close once the read pump has completed and transport is done.
         /// </summary>
         private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
             if (closeEvent is ConfirmedClosed)
             {
+                if (_upgradedToFullClose)
+                {
+                    if (_outputShutdown)
+                        DoCloseConnection(closeSender, Closed.Instance);
+                    return;
+                }
+
                 if (_outputShutdown && _peerClosed)
                     DoCloseConnection(closeSender, ConfirmedClosed.Instance);
                 return;
@@ -1341,7 +1381,10 @@ namespace Akka.IO
                     break;
             }
 
-            StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), closedEvent));
+            // Union in any extra close commanders (e.g. the Close that upgraded an
+            // in-flight ConfirmedClose) - empty for every other path, so this is a no-op there.
+            var notificationsTo = ImmutableHashSet<IActorRef>.Empty.Add(closeSender).Union(_extraCloseNotifications);
+            StopWith(new CloseInformation(notificationsTo, closedEvent));
         }
 
         protected sealed record CloseInformation(ImmutableHashSet<IActorRef> NotificationsTo, Tcp.Event ClosedEvent)
