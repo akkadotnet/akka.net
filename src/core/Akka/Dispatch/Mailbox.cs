@@ -7,6 +7,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -590,7 +591,13 @@ namespace Akka.Dispatch
     /// dummy queue to the real mailbox.
     ///
     /// Implemented as an abstract class in order to enforce constructor requirements.
+    ///
+    /// Annotated with <see cref="DynamicallyAccessedMemberTypes.Interfaces"/> because
+    /// <c>Mailboxes.ProducesMessageQueue</c> and <c>Mailboxes.GetProducedMessageQueueType</c> read the interface
+    /// list off whichever <see cref="MailboxType"/> they are handed, so trimming has to keep
+    /// <see cref="IProducesMessageQueue{TQueue}"/> on every subclass.
     /// </remarks>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
     public abstract class MailboxType
     {
         /// <summary>
