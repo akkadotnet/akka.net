@@ -19,8 +19,6 @@ namespace Akka.Tests.Loggers
 {
     public class LoggerStartupSpec : TestKit.Xunit.TestKit
     {
-        private const int LoggerResponseDelayMs = 1_000;
-
         public LoggerStartupSpec(ITestOutputHelper helper) : base(nameof(LoggerStartupSpec), helper)
         {
             XUnitOutLogger.Helper = helper;
@@ -43,6 +41,10 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
             var config = ConfigurationFactory.ParseString($"akka.logger-async-start = {(useAsync ? "true" : "false")}")
                 .WithFallback(slowLoggerConfig);
 
+            // The slow logger answers InitializeLogger only once this gate opens, and the gate stays shut
+            // for all of ActorSystem.Create - so the logger always misses the 100 ms startup window, and
+            // the LoggingBus announces it as started only after the test is already subscribed.
+            SlowLoggerActor.Release = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
             ActorSystem sys = null;
             try
             {
@@ -53,22 +55,20 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
                 var logProbe = CreateTestProbe(sys);
                 sys.EventStream.Subscribe(logProbe, typeof(LogEvent));
 
+                SlowLoggerActor.Release.SetResult(Done.Instance);
+
                 // Logger actor should eventually initialize
-                await AwaitAssertAsync(() =>
-                {
-                    var dbg = logProbe.ExpectMsg<Debug>();
-                    dbg.Message.ToString().Should().Contain(nameof(SlowLoggerActor)).And.Contain("started");
-                });
-                
+                await logProbe.FishForMessageAsync<Debug>(
+                    dbg => dbg.Message.ToString().Contains(nameof(SlowLoggerActor)) && dbg.Message.ToString().Contains("started"),
+                    TimeSpan.FromSeconds(5));
+
                 var logger = Logging.GetLogger(sys, this);
                 logger.Error("TEST");
-                await AwaitAssertAsync(() =>
-                {
-                    probe.ExpectMsg<string>().Should().Be("TEST");
-                });
+                await probe.FishForMessageAsync<string>(msg => msg == "TEST", TimeSpan.FromSeconds(5));
             }
             finally
             {
+                SlowLoggerActor.Release.TrySetResult(Done.Instance);
                 if(sys != null)
                     Shutdown(sys);
             }
@@ -168,6 +168,8 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
         private class SlowLoggerActor : ActorBase, IWithUnboundedStash, IRequiresMessageQueue<ILoggerMessageQueueSemantics> 
         {
             public static TestProbe Probe;
+
+            public static TaskCompletionSource<Done> Release;
             
             public SlowLoggerActor()
             {
@@ -179,8 +181,7 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
                 switch (message)
                 {
                     case InitializeLogger _:
-                        var sender = Sender;
-                        Task.Delay(LoggerResponseDelayMs).PipeTo(Self, sender, success: () => Done.Instance);
+                        Release.Task.PipeTo(Self, Sender);
                         Become(Initializing);
                         return true;
                     default:
