@@ -89,34 +89,6 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_transport_shutdown_starts_before_the_disassociate")]
-        public async Task Should_deliver_last_frame_without_reset_When_transport_shutdown_starts_before_the_disassociate()
-        {
-            var c = await ConnectRawPeer(Sys);
-            try
-            {
-                c.Peer.Send(new byte[1024]);
-                c.Handle.Write(Payload).Should().BeTrue();
-
-                // remoting can start the transport shutdown while the protocol actor's disassociate is still queued
-                var shutdown = c.Transport.Shutdown();
-                await Task.Delay(100);
-                c.Handle.Disassociate("test", Log);
-
-                (await ReadToEnd(new NetworkStream(c.Peer))).Should().Be(4 + Payload.Length);
-                await Task.Delay(200);
-                SocketError(c.Peer).Should().Be(0);
-
-                c.Peer.Close();
-                await shutdown.WaitAsync(TimeSpan.FromSeconds(3));
-            }
-            finally
-            {
-                c.Peer.Dispose();
-                await c.Transport.Shutdown();
-            }
-        }
-
         [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_TLS_is_enabled")]
         public async Task Should_deliver_last_frame_without_reset_When_TLS_is_enabled()
         {

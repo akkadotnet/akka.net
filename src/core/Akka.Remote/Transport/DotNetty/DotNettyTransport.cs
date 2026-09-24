@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -130,6 +131,7 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
         private readonly TimeSpan _flushWait;
+        private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
 
         internal static readonly FieldInfo? SocketField =
             typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -263,6 +265,10 @@ namespace Akka.Remote.Transport.DotNetty
         // inbound data sends an RST, and a Windows peer then drops our last frames (#8589).
         internal void BeginGracefulClose(TcpSocketChannel channel, Task lastWrite)
         {
+            // register before any async hop, so a Shutdown that follows the disassociate waits for this close
+            _draining[channel] = channel.CloseCompletion;
+            channel.CloseCompletion.ContinueWith(_ => _draining.TryRemove(channel, out Task? _), TaskContinuationOptions.ExecuteSynchronously);
+
             try
             {
                 // not the ActorSystem scheduler: it may already be shutting down
@@ -321,11 +327,9 @@ namespace Akka.Remote.Transport.DotNetty
         {
             try
             {
-                // Give graceful closes up to flush-wait before the force-close below. Wait on every association
-                // channel: a disassociate may still be on its way through the protocol actor.
-                var open = ConnectionGroup.Where(c => !ReferenceEquals(c, ServerChannel)).Select(c => c.CloseCompletion).ToList();
-                if (open.Count > 0)
-                    await Task.WhenAny(Task.WhenAll(open), Task.Delay(_flushWait)).ConfigureAwait(false);
+                // give graceful closes up to flush-wait to finish before the force-close below
+                if (!_draining.IsEmpty)
+                    await Task.WhenAny(Task.WhenAll(_draining.Values), Task.Delay(_flushWait)).ConfigureAwait(false);
 
                 var tasks = new List<Task>();
                 foreach (var channel in ConnectionGroup)
