@@ -288,11 +288,38 @@ namespace Akka.IO
 
             if (_transport != null)
             {
-                // Abort cancels the CTS, sets linger=0, closes the socket.
-                // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
-                // The pump tasks will exit with OperationCanceledException or IOException.
-                try { _transport.Abort(); }
-                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+                if (_closeInformation?.ClosedEvent is ConfirmedClosed)
+                {
+                    // Reaching here with a ConfirmedClosed event means TryFinishClose saw BOTH
+                    // _outputShutdown (our writes drained, our FIN sent) AND _peerClosed (the
+                    // peer's FIN already arrived) - a fully graceful half-close on both sides.
+                    // Unlike Tcp.Close's HandleGracefulClose, ShutdownAsync deliberately leaves
+                    // the socket open (it only shuts down the send side) so reads keep flowing
+                    // until the peer's FIN, so nothing has actually closed the socket yet.
+                    // Finish closing it the same graceful way CloseAsync already does elsewhere,
+                    // NOT via Abort's linger-0 RST: an RST here can make the peer's OS discard
+                    // whatever is still sitting unread in ITS OWN kernel receive buffer, even
+                    // though every byte we sent was already safely handed to our kernel - the
+                    // same "reports success, data still lost" failure mode this fix targets,
+                    // just one step later. Both pump tasks are already done at this point (write
+                    // pump: output drained; read pump: peer FIN observed), so CloseAsync's own
+                    // awaits resolve immediately; fire-and-forget (with the fault observed below)
+                    // keeps PostStop non-blocking.
+                    _transport.CloseAsync().ContinueWith(t =>
+                    {
+                        if (t.IsFaulted && _traceLogging)
+                            Log.Debug(t.Exception,
+                                "Best-effort graceful CloseAsync after ConfirmedClosed observed a fault");
+                    }, TaskContinuationOptions.ExecuteSynchronously);
+                }
+                else
+                {
+                    // Abort cancels the CTS, sets linger=0, closes the socket.
+                    // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
+                    // The pump tasks will exit with OperationCanceledException or IOException.
+                    try { _transport.Abort(); }
+                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+                }
             }
             else
             {
@@ -557,17 +584,18 @@ namespace Akka.IO
             {
                 _peerClosed = true;
 
-                if (closeEvent is ConfirmedClosed)
+                if (_traceLogging)
                 {
-                    if (_traceLogging)
-                        Log.Debug("Peer FIN received during ConfirmedClose - connection fully closed");
-                    DoCloseConnection(closeSender, ConfirmedClosed.Instance);
-                    return;
+                    Log.Debug(closeEvent is ConfirmedClosed
+                        ? "Peer FIN received during ConfirmedClose - checking whether our own output has drained"
+                        : "EOF received during close - waiting for transport to finish");
                 }
 
-                if (_traceLogging)
-                    Log.Debug("EOF received during close - waiting for transport to finish");
-
+                // Don't close here directly - TryFinishClose is the single place that decides
+                // whether every condition for this closeEvent has been met. For ConfirmedClose
+                // that means BOTH our own output has drained (_outputShutdown) AND the peer's
+                // FIN has arrived (_peerClosed, just set above) - the peer's FIN landing first
+                // must not race ahead of our own still-draining writes.
                 TryFinishClose(closeSender, closeEvent);
             });
             Receive<PipeReadCompleted>(HandlePipeRead);
@@ -577,39 +605,41 @@ namespace Akka.IO
                 if (_traceLogging)
                     Log.Debug("Transport operation completed during close");
 
-                if (closeEvent is ConfirmedClosed)
-                {
-                    // For ConfirmedClose (half-close), transport has flushed writes and sent FIN.
-                    // Now keep reading until peer sends their FIN (StreamEof).
-                    _outputShutdown = true;
+                // For ConfirmedClose (half-close), transport has flushed writes and sent FIN.
+                // For a regular Close, transport is fully closed. Either way, set the flag and
+                // let TryFinishClose decide whether every condition for this closeEvent has
+                // been met - for ConfirmedClose that also means the peer's FIN (_peerClosed)
+                // may already have arrived (e.g. via keepOpenOnPeerClosed, before this
+                // ConfirmedClose was even requested), in which case this is the message that
+                // finishes the close.
+                _outputShutdown = true;
 
-                    if (_traceLogging)
-                        Log.Debug("ConfirmedClose: FIN sent, waiting for peer FIN");
-                }
-                else
-                {
-                    // For regular Close, transport is fully closed
-                    _outputShutdown = true;
-                    TryFinishClose(closeSender, closeEvent);
-                }
+                if (_traceLogging && closeEvent is ConfirmedClosed)
+                    Log.Debug("ConfirmedClose: FIN sent, waiting for peer FIN (if not already received)");
+
+                TryFinishClose(closeSender, closeEvent);
             });
             Receive<TransportOperationFailed>(msg =>
             {
                 if (_traceLogging)
                     Log.Debug("Transport operation failed during close: {0}", msg.Cause.Message);
-                DoCloseConnection(closeSender, closeEvent);
+                // The drain (flush pending writes / send FIN) failed, so whatever the caller
+                // requested (Closed / ConfirmedClosed) did NOT actually happen - reporting that
+                // event here would tell the caller writes were delivered when they may not have
+                // been. Report the real outcome instead.
+                DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
             });
             Receive<IoTaskFailed>(msg =>
             {
                 if (_traceLogging)
                     Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
-                DoCloseConnection(closeSender, closeEvent);
+                DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
             });
             Receive<WritePumpFailed>(msg =>
             {
                 if (_traceLogging)
                     Log.Debug("Write pump failed during close: {0}", msg.Cause.Message);
-                DoCloseConnection(closeSender, closeEvent);
+                DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
             });
             SuspendResumeHandlers();
             Receive<HandlerDied>(_ =>
@@ -624,15 +654,24 @@ namespace Akka.IO
 
         /// <summary>
         /// Checks whether all conditions are met to finalize the connection close.
-        /// For ConfirmedClose, the StreamEof handler manages closing directly (waiting for peer FIN).
+        /// For ConfirmedClose, we close once BOTH our own output has drained
+        /// (<see cref="_outputShutdown"/> - pending writes flushed, FIN sent) AND the peer's FIN
+        /// has arrived (<see cref="_peerClosed"/>). Either condition can be the one still
+        /// outstanding when this is called - the peer's FIN can land before our drain finishes
+        /// (<c>StreamEof</c> calls this), or the drain can finish before/without ever seeing
+        /// another <c>StreamEof</c> because the peer's FIN already arrived earlier, e.g. via
+        /// <c>keepOpenOnPeerClosed</c> (<c>TransportOperationCompleted</c> calls this). Checking
+        /// both flags from both call sites means whichever condition completes last is the one
+        /// that finishes the close, and neither a premature "success" nor a permanent hang can
+        /// occur.
         /// For regular Close, we close once the read pump has completed and transport is done.
         /// </summary>
         private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
             if (closeEvent is ConfirmedClosed)
             {
-                // For ConfirmedClose, we need to wait for peer FIN (StreamEof).
-                // The StreamEof handler calls DoCloseConnection directly.
+                if (_outputShutdown && _peerClosed)
+                    DoCloseConnection(closeSender, ConfirmedClosed.Instance);
                 return;
             }
 
