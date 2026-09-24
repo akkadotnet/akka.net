@@ -292,38 +292,25 @@ namespace Akka.IO
 
             if (_transport != null)
             {
-                // A ConfirmedClosed event means TryFinishClose saw both _outputShutdown and
-                // _peerClosed. An upgraded close only qualifies if it actually finished as
-                // Closed - if it ended some other way (Aborted, ErrorClosed, HandlerDied
-                // stopping us before it ever drained), that path's own handling already
-                // dealt with the transport, and CloseAsync must not be entered a second time
-                // atop it (it can await a write pump nothing else will ever unblock).
+                // Graceful close only when the close actually completed: ConfirmedClosed, or Closed
+                // after an upgrade. Anything else aborts below; CloseAsync could wait on a stuck write.
                 if (_closeInformation?.ClosedEvent is ConfirmedClosed ||
                     (_fullCloseCommander is not null && _closeInformation?.ClosedEvent is Closed))
                 {
-                    // Only ShutdownAsync (half-close) ran on the transport, never CloseAsync,
-                    // so the socket is still open. Close it gracefully instead of via Abort's
-                    // linger-0 RST, which can make the peer's OS discard whatever is still
-                    // unread in its own kernel buffer even though we already sent everything
-                    // cleanly - though unread inbound data can still turn this into a reset on
-                    // the wire regardless. Fire-and-forget (fault observed below, to avoid an
-                    // UnobservedTaskException) keeps PostStop non-blocking; `transport` is
-                    // captured in a local since `this` is a stopped actor by the time the
-                    // continuation runs.
+                    // Only ShutdownAsync ran, so the socket is still open: close it without Abort's
+                    // linger-0 RST. Fire-and-forget keeps PostStop non-blocking; the fault is observed below.
                     var transport = _transport;
                     transport.CloseAsync().ContinueWith(t =>
                     {
                         if (!t.IsFaulted)
                             return;
 
-                        // Always read the exception, even if not logging it, so the task's
-                        // fault is observed and never surfaces as an UnobservedTaskException.
+                        // read the exception so it is observed
                         var ex = t.Exception;
                         if (_traceLogging)
                             Log.Debug(ex, "Best-effort graceful CloseAsync after ConfirmedClosed observed a fault");
 
-                        // CloseAsync failed partway through, so the socket may still be open.
-                        // Fall back to Abort() so it's not leaked.
+                        // CloseAsync failed partway; abort so the socket isn't leaked
                         try { transport.Abort(); }
                         catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
                     }, TaskScheduler.Default);
