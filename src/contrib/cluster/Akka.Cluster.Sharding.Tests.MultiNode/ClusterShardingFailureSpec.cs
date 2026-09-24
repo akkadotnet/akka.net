@@ -148,15 +148,29 @@ public abstract class ClusterShardingFailureSpec : MultiNodeClusterShardingSpec<
         _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
     }
 
-    private Task JoinAsync(RoleName from, RoleName to)
+    private async Task JoinAsync(RoleName from, RoleName to)
     {
-        return JoinAsync(from, to, () =>
+        // Start sharding on `from` *before* it joins the cluster, instead of via
+        // `onJoinedRunOnFrom` (which only runs once `from` is observed as Up). With the DData
+        // state store and only 2 nodes (majority-min-cap = 5, so no secondaries), the coordinator
+        // on `first` issues a WriteMajorityPlus of the EntityCoordinatorState to `from` as soon as
+        // `first`'s own gossip view marks `from` Up - which can race ahead of `from`'s sharding
+        // replicator actually existing. WriteAggregator only resends deltas, and LWWRegister always
+        // sends a full Write, so a Write that beats the replicator into existence is dead-lettered
+        // and never retried until the coordinator's full updating-state-timeout (5s) elapses.
+        // Starting sharding here first closes that gap. This is also fine for the self-join case
+        // (`first` joining itself): the region just waits for the coordinator to come up.
+        await RunOnAsync(() =>
+        {
             StartSharding(
                 Sys,
                 typeName: "Entity",
                 entityProps: Props.Create(() => new Entity()),
-                messageExtractor: new MessageExtractor())
-        );
+                messageExtractor: new MessageExtractor());
+            return Task.CompletedTask;
+        }, from);
+
+        await base.JoinAsync(from, to);
     }
 
     #endregion
