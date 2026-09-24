@@ -36,9 +36,9 @@ namespace Akka.IO
         // inside the message. This is done because it is very dangerous to embed SocketAsyncEventArgs in an actor
         // message.
         //
-        // SocketAsyncEventArgs might held a reference to a buffer who are managed by DirectBufferPool and
-        // an actor message might end up being sent to the DeadLetters mailbox, resulting in memory leak since the
-        // buffer would never get returned properly to the buffer pool.
+        // SocketAsyncEventArgs might hold a reference to a buffer managed by the buffer pool, and an actor
+        // message might end up being sent to the DeadLetters mailbox, resulting in a memory leak since the
+        // buffer would never get returned properly to the pool.
         // 
         // SocketAsyncEventArgs should never leave the ReceiveAsync() method and the OnComplete callback. It should
         // be returned immediately to PreallocatedSocketEventAgrsPool so that the buffer can be safely pooled back.
@@ -386,16 +386,21 @@ namespace Akka.IO
             
         }
 
+        /// <summary>
+        /// UDP-connected always uses the shipped <see cref="DisabledBufferPool"/>; only its buffer size is configurable.
+        /// </summary>
+        private const string DisabledBufferPoolConfigPath = "akka.io.udp-connected.disabled-buffer-pool";
+
         public UdpConnectedExt(ExtendedActorSystem system, UdpSettings settings)
         {
-            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
+            var bufferPoolConfig = system.Settings.Config.GetConfig(DisabledBufferPoolConfigPath);
             if (bufferPoolConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
+                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {DisabledBufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
             SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(
                 Settings.InitialSocketAsyncEventArgs,
-                CreateBufferPool(system, bufferPoolConfig),
+                new DisabledBufferPool(bufferPoolConfig.GetInt("buffer-size", 256)),
                 OnComplete);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new UdpConnectedManager(this)).WithDeploy(Deploy.Local),
@@ -409,29 +414,6 @@ namespace Akka.IO
 
         internal ISocketEventArgsPool SocketEventArgsPool { get; }
         internal UdpSettings Settings { get; }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
-        {
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
-
-            var type = Type.GetType(config.GetString("class", null), true);
-
-            if (!typeof(IBufferPool).IsAssignableFrom(type))
-                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
-
-            try
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system, config);
-            }
-            catch
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
 
         private void OnComplete(object sender, SocketAsyncEventArgs e)
         {

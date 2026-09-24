@@ -38,7 +38,7 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<UdpSettings>();
 
             return new UdpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool", null),
+                bufferPoolConfigPath: null,
                 traceLogging: config.GetBoolean("trace-logging", false),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
                 batchReceiveLimit: config.GetInt("receive-throughput", 0),
@@ -48,7 +48,9 @@ namespace Akka.IO
         
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher)
         {
+#pragma warning disable CS0618 // set here so the ctor can still accept a caller-supplied value
             BufferPoolConfigPath = bufferPoolConfigPath;
+#pragma warning restore CS0618
             TraceLogging = traceLogging;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
             BatchReceiveLimit = batchReceiveLimit;
@@ -58,9 +60,8 @@ namespace Akka.IO
 
         /// <summary>
         /// A config path to the section defining which byte buffer pool to use.
-        /// Buffer pools are used to mitigate GC-pressure made by potentiall allocation
-        /// and deallocation of byte buffers used for writing/receiving data from sockets.
         /// </summary>
+        [Obsolete("Obsolete since v1.6.0; UDP always uses the disabled buffer pool")]
         public string BufferPoolConfigPath { get; }
 
         /// <summary>
