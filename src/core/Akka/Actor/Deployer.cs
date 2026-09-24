@@ -38,14 +38,7 @@ namespace Akka.Actor
         /// Builds <see cref="BuiltInRouterConfigs"/>: the 13 routers <c>akka.actor.router.type-mapping</c>
         /// maps onto types inside Akka.dll and that can actually reach this table.
         ///
-        /// Two spellings per router, both deliberate: <c>akka.conf</c> ships the bare name and HOCON in the
-        /// wild also carries the <c>Ns.T, Akka</c> form. The lookup runs the configured value through
-        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> first, so a full
-        /// <see cref="Type.AssemblyQualifiedName"/> - which Akka.Hosting writes into HOCON - matches the
-        /// second key whatever version, culture or public key token it names. A value that still misses the
-        /// table falls through to the reflection path, which is unavailable (and therefore throws) once
-        /// dynamic type loading is switched off. Do not remove a spelling, and do not add a versioned third
-        /// key.
+        /// Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         /// </summary>
         private static Dictionary<string, Func<Config, RouterConfig>> BuildBuiltInRouterConfigs()
         {
@@ -72,15 +65,11 @@ namespace Akka.Actor
             return builtIn;
 
             // typeof(TRouter) is what keeps this trimmer-safe: the trimmer sees the type, keeps it, and hands
-            // us its own names, so no spelling can drift out of step with the type it maps to.
+            // us its own name, so the key can't drift out of step with the type it maps to.
             void Add<TRouter>(Func<Config, RouterConfig> factory) where TRouter : RouterConfig
             {
-                var routerType = typeof(TRouter);
-
                 // "Akka.Routing.RoundRobinPool"
-                builtIn[routerType.FullName] = factory;
-                // "Akka.Routing.RoundRobinPool, Akka"
-                builtIn[$"{routerType.FullName}, {routerType.Assembly.GetName().Name}"] = factory;
+                builtIn[typeof(TRouter).FullName] = factory;
             }
         }
 
@@ -213,8 +202,8 @@ namespace Akka.Actor
                 throw new ConfigurationException(message);
             }
 
-            if (BuiltInRouterConfigs.TryGetValue(
-                    Akka.Util.TypeExtensions.StripAssemblyIdentity(routerTypeName), out var routerFactory))
+            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(routerTypeName) is { } builtInRouterTypeName &&
+                BuiltInRouterConfigs.TryGetValue(builtInRouterTypeName, out var routerFactory))
                 return routerFactory(deployment);
 
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)

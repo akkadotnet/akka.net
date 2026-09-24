@@ -207,12 +207,11 @@ namespace Akka.IO
     /// </summary>
     public class DnsExt : IOExtension
     {
-        /// <summary>The <c>provider-object</c> spellings that name the built-in <see cref="InetAddressDnsProvider"/>.</summary>
+        /// <summary>The built-in <c>provider-object</c> names, keyed by bare type name (see <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/>).</summary>
         private static readonly Dictionary<string, Func<IDnsProvider>> BuiltInDnsProviders =
             new(StringComparer.Ordinal)
             {
-                ["Akka.IO.InetAddressDnsProvider"] = static () => new InetAddressDnsProvider(),
-                ["Akka.IO.InetAddressDnsProvider, Akka"] = static () => new InetAddressDnsProvider()
+                ["Akka.IO.InetAddressDnsProvider"] = static () => new InetAddressDnsProvider()
             };
 
         /// <summary>
@@ -276,8 +275,8 @@ namespace Akka.IO
         /// <summary>Resolves <paramref name="settings"/>' <c>provider-object</c> into an <see cref="IDnsProvider"/>.</summary>
         private static IDnsProvider ResolveProvider(DnsSettings settings)
         {
-            if (BuiltInDnsProviders.TryGetValue(
-                    Akka.Util.TypeExtensions.StripAssemblyIdentity(settings.ProviderObjectName), out var providerFactory))
+            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(settings.ProviderObjectName) is { } builtInName &&
+                BuiltInDnsProviders.TryGetValue(builtInName, out var providerFactory))
                 return providerFactory();
 
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)

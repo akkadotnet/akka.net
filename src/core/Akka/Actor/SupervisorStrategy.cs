@@ -1028,8 +1028,8 @@ namespace Akka.Actor
             if (typeName == null)
                 throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
 
-            if (BuiltInConfigurators.TryGetValue(
-                    Akka.Util.TypeExtensions.StripAssemblyIdentity(typeName), out var factory))
+            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInConfiguratorName &&
+                BuiltInConfigurators.TryGetValue(builtInConfiguratorName, out var factory))
                 return factory();
 
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
@@ -1044,15 +1044,7 @@ namespace Akka.Actor
         /// <summary>
         /// Builds <see cref="BuiltInConfigurators"/>.
         ///
-        /// Two spellings per configurator, both deliberate: <c>akka.conf</c> and
-        /// <c>persistence.conf</c> ship the bare name and HOCON in the wild also carries the
-        /// <c>Ns.T, Akka</c> form. The lookup runs the configured value through
-        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> first, so a full
-        /// <see cref="Type.AssemblyQualifiedName"/> - which Akka.Hosting writes into HOCON - matches the
-        /// second key whatever version, culture or public key token it names. A value that still misses the
-        /// table falls through to the reflection path, which is unavailable (and therefore throws) once
-        /// dynamic type loading is switched off. Do not remove a spelling, and do not add a versioned third
-        /// key.
+        /// Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         /// </summary>
         private static Dictionary<string, Func<SupervisorStrategyConfigurator>> BuildBuiltInConfigurators()
         {
@@ -1064,16 +1056,12 @@ namespace Akka.Actor
             return builtIn;
 
             // typeof(TConfigurator) is what keeps this trimmer-safe: the trimmer sees the type, keeps it, and
-            // hands us its own names, so no spelling can drift out of step with the type it maps to.
+            // hands us its own name, so the key can't drift out of step with the type it maps to.
             void Add<TConfigurator>(Func<SupervisorStrategyConfigurator> factory)
                 where TConfigurator : SupervisorStrategyConfigurator
             {
-                var configuratorType = typeof(TConfigurator);
-
                 // "Akka.Actor.DefaultSupervisorStrategy"
-                builtIn[configuratorType.FullName] = factory;
-                // "Akka.Actor.DefaultSupervisorStrategy, Akka"
-                builtIn[$"{configuratorType.FullName}, {configuratorType.Assembly.GetName().Name}"] = factory;
+                builtIn[typeof(TConfigurator).FullName] = factory;
             }
         }
 

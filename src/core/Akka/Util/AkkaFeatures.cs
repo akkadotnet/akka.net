@@ -56,13 +56,13 @@ namespace Akka.Util
         /// <see cref="AppContext.SetSwitch(string,bool)"/> at runtime has no effect on it.
         /// </para>
         /// <para>
-        /// Every <c>BuiltIn*</c> table carries exactly two keys per type - the bare <c>Ns.T</c> and the
-        /// <c>Ns.T, Akka</c> form - and the lookup runs the configured value through
-        /// <see cref="TypeExtensions.StripAssemblyIdentity"/> first. That is how a full
-        /// <see cref="Type.AssemblyQualifiedName"/>, which Akka.Hosting writes into HOCON, matches the second
-        /// key regardless of the version, culture or public key token it names. Never add a third key spelled
-        /// <c>typeof(T).AssemblyQualifiedName</c>: it roots nothing the table does not already root, and it
-        /// only ever matches the version of the build that produced it.
+        /// Every <c>BuiltIn*</c> table carries exactly one key per type - the bare <c>Ns.T</c> - and the
+        /// lookup runs the configured value through <see cref="TypeExtensions.ToBuiltInAkkaTypeName"/> first,
+        /// which accepts the bare name and every spelling of <c>Ns.T, Akka</c> that <see cref="Type.GetType(string)"/>
+        /// itself accepted - any assembly identity, optional space after the comma, any casing of the
+        /// assembly name - and returns <c>null</c> for anything naming a different assembly. Never key a
+        /// table on <c>typeof(T).AssemblyQualifiedName</c>: it roots nothing the bare name does not already
+        /// root, and it only ever matches the version of the build that produced it.
         /// </para>
         /// <para>
         /// A call site must not <c>Trim()</c> the value it reads: Akka's HOCON parser already strips leading

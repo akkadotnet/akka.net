@@ -39,39 +39,6 @@ namespace Akka.Event
             public override string ToString() => _name;
         }
 
-        // The akka.loggers values that name one of the three loggers Akka.dll ships. GetBuiltInLoggerType
-        // matches these and hands back the type from a constant typeof, so the trimmer and the Native AOT
-        // compiler can see it without looking through Type.GetType.
-        //
-        // Two spellings per logger, both deliberate: akka.conf ships the bare "Akka.Event.DefaultLogger", and
-        // HOCON in the wild also carries the "Ns.T, Akka" form - which is what TraceLogger's own documentation
-        // tells users to write. The lookup runs the configured value through
-        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
-        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
-        // A value that still misses these tables falls through to the reflection path, which is unavailable
-        // (and therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do
-        // not add a versioned third key.
-        private static readonly string[] BuiltInDefaultLoggerNames =
-            new[]
-            {
-                "Akka.Event.DefaultLogger",
-                "Akka.Event.DefaultLogger, Akka"
-            };
-
-        private static readonly string[] BuiltInStandardOutLoggerNames =
-            new[]
-            {
-                "Akka.Event.StandardOutLogger",
-                "Akka.Event.StandardOutLogger, Akka"
-            };
-
-        private static readonly string[] BuiltInTraceLoggerNames =
-            new[]
-            {
-                "Akka.Event.TraceLogger",
-                "Akka.Event.TraceLogger, Akka"
-            };
-
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
         private static int _loggerId;
@@ -243,23 +210,20 @@ namespace Akka.Event
         // A Dictionary<string, Type> would read better, but it cannot carry DynamicallyAccessedMembers on its
         // values: the type coming back out of TryGetValue arrives unannotated, and the trimmer then drops the
         // constructor Props needs - IL2067 here, MissingMethodException on the first log event at run time.
-        // Array.IndexOf over string[] compares ordinally, which is what these names want.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
         private static Type GetBuiltInLoggerType(string loggerTypeName)
         {
             // Util. qualifies this: System.Reflection.TypeExtensions is in scope here too.
-            var name = Util.TypeExtensions.StripAssemblyIdentity(loggerTypeName);
+            var name = Util.TypeExtensions.ToBuiltInAkkaTypeName(loggerTypeName);
 
-            if (Array.IndexOf(BuiltInDefaultLoggerNames, name) >= 0)
-                return typeof(DefaultLogger);
-
-            if (Array.IndexOf(BuiltInStandardOutLoggerNames, name) >= 0)
-                return typeof(StandardOutLogger);
-
-            if (Array.IndexOf(BuiltInTraceLoggerNames, name) >= 0)
-                return typeof(TraceLogger);
-
-            return null;
+            return name switch
+            {
+                "Akka.Event.DefaultLogger" => typeof(DefaultLogger),
+                "Akka.Event.StandardOutLogger" => typeof(StandardOutLogger),
+                "Akka.Event.TraceLogger" => typeof(TraceLogger),
+                _ => null
+            };
         }
 
         [RequiresUnreferencedCode("Loads the [akka.loggers] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]

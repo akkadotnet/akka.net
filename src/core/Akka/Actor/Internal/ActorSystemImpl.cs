@@ -284,26 +284,19 @@ namespace Akka.Actor.Internal
         // The akka.scheduler.implementation values that ship inside Akka.dll, constructed directly so that
         // neither the trimmer nor the Native AOT compiler has to see through a Type.GetType call.
         //
-        // Two spellings, both deliberate: akka.conf ships the bare name and HOCON in the wild also carries the
-        // "Ns.T, Akka" form. The lookup runs the configured value through
-        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
-        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
-        // A value that still misses the table falls through to the reflection path, which is unavailable (and
-        // therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do not
-        // add a versioned third key.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         private static readonly Dictionary<string, Func<Config, ILoggingAdapter, IScheduler>> BuiltInSchedulers =
             new(StringComparer.Ordinal)
             {
-                ["Akka.Actor.HashedWheelTimerScheduler"] = static (config, log) => new HashedWheelTimerScheduler(config, log),
-                ["Akka.Actor.HashedWheelTimerScheduler, Akka"] = static (config, log) => new HashedWheelTimerScheduler(config, log)
+                ["Akka.Actor.HashedWheelTimerScheduler"] = static (config, log) => new HashedWheelTimerScheduler(config, log)
             };
 
         private void ConfigureScheduler()
         {
             var schedulerClass = _settings.SchedulerClass;
             // fully qualified: this file also imports System.Reflection, which has its own TypeExtensions
-            if (BuiltInSchedulers.TryGetValue(
-                    Util.TypeExtensions.StripAssemblyIdentity(schedulerClass), out var factory))
+            if (Util.TypeExtensions.ToBuiltInAkkaTypeName(schedulerClass) is { } builtInSchedulerName &&
+                BuiltInSchedulers.TryGetValue(builtInSchedulerName, out var factory))
             {
                 _scheduler = factory(_settings.Config, Log);
             }

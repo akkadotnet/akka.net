@@ -104,6 +104,50 @@ namespace Akka.Tests.Util
             Akka.Util.TypeExtensions.StripAssemblyIdentity(typeName).Should().Be(expected);
         }
 
+        [Theory(DisplayName = "TypeExtensions.TrySplitTypeName should split a type name at the top-level comma")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter", "Akka.Event.SemanticLogMessageFormatter", null)]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka", "Akka.Event.SemanticLogMessageFormatter", "Akka")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter,Akka", "Akka.Event.SemanticLogMessageFormatter", "Akka")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, akka", "Akka.Event.SemanticLogMessageFormatter", "akka")]
+        [InlineData(
+            "Akka.Event.SemanticLogMessageFormatter, Akka, Version=1.5.60.0, Culture=neutral, PublicKeyToken=null",
+            "Akka.Event.SemanticLogMessageFormatter", "Akka")]
+        [InlineData(
+            "System.Collections.Generic.Dictionary`2[[System.String, mscorlib],[System.Int32, mscorlib]], mscorlib",
+            "System.Collections.Generic.Dictionary`2[[System.String, mscorlib],[System.Int32, mscorlib]]", "mscorlib")]
+        public void Should_split_a_type_name_at_the_top_level_comma(string typeName, string expectedName, string? expectedAssembly)
+        {
+            Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly).Should().BeTrue();
+            name.Should().Be(expectedName);
+            assembly.Should().Be(expectedAssembly);
+        }
+
+        [Theory(DisplayName = "TypeExtensions.TrySplitTypeName should reject a null, empty or whitespace-only type name")]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Should_reject_an_empty_type_name(string? typeName)
+        {
+            Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out _, out _).Should().BeFalse();
+        }
+
+        [Theory(DisplayName = "TypeExtensions.ToBuiltInAkkaTypeName should accept the bare name and every spelling of the Akka assembly")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter", "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Akka", "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter,Akka", "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, akka", "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData(
+            "Akka.Event.SemanticLogMessageFormatter, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null",
+            "Akka.Event.SemanticLogMessageFormatter")]
+        [InlineData("Akka.Event.SemanticLogMessageFormatter, Contoso", null)]
+        [InlineData(null, null)]
+        [InlineData("", null)]
+        [InlineData("   ", null)]
+        public void Should_normalize_or_reject_a_type_name_When_computing_the_built_in_Akka_type_name(string? typeName, string? expected)
+        {
+            Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName).Should().Be(expected);
+        }
+
         /// <summary>
         /// The explicit switch-ON regression guard: the reflection fallback must still resolve a type that no
         /// <c>BuiltIn*</c> table knows about. Uses the log formatter rather than the scheduler because the

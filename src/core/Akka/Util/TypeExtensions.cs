@@ -76,6 +76,101 @@ namespace Akka.Util
         internal static string StripAssemblyIdentity(string typeName)
             => AssemblyIdentityRegex().Replace(typeName, string.Empty);
 
+#nullable enable
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Splits a type name into the type name and, if present, the assembly name - the same split
+        /// <see cref="Type.GetType(string)"/> makes at the first comma outside a generic argument list.
+        /// Runs <see cref="StripAssemblyIdentity"/> first, so an assembly-qualified name reduces to its
+        /// bare <c>Ns.T, Assembly</c> form before the split.
+        /// </summary>
+        /// <param name="typeName">The type name to split.</param>
+        /// <param name="name">
+        /// The type name. Trimmed when <paramref name="typeName"/> carries an assembly name, since it sits
+        /// before the separating comma; untouched otherwise, since a HOCON value already arrives pre-trimmed
+        /// and a HOCON key does not. Empty when this method returns <c>false</c>.
+        /// </param>
+        /// <param name="assembly">The trimmed assembly name, or <c>null</c> when <paramref name="typeName"/> carries none.</param>
+        /// <returns><c>false</c> when <paramref name="typeName"/> is null, empty or whitespace; <c>true</c> otherwise.</returns>
+        internal static bool TrySplitTypeName(string? typeName, out string name, out string? assembly)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                name = string.Empty;
+                assembly = null;
+                return false;
+            }
+
+            // No separator: the whole (stripped) string is the name, untouched - a HOCON value arrives
+            // pre-trimmed by the parser, and a HOCON key does not, so trimming it here would let two
+            // differently-padded keys collide on the same built-in type once both hit the table.
+            var stripped = StripAssemblyIdentity(typeName);
+            var separator = IndexOfAssemblySeparator(stripped);
+            if (separator < 0)
+            {
+                name = stripped;
+                assembly = null;
+            }
+            else
+            {
+                name = stripped.Substring(0, separator).TrimEnd();
+                assembly = stripped.Substring(separator + 1).Trim();
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Returns the bare type name when <paramref name="typeName"/> names an Akka.NET type - no assembly
+        /// at all, or the <c>Akka</c> assembly in any casing - and <c>null</c> otherwise. This is what every
+        /// <c>BuiltIn*</c> table lookup normalizes a HOCON value to before probing its single key per type.
+        /// </summary>
+        /// <param name="typeName">The type name read out of HOCON.</param>
+        internal static string? ToBuiltInAkkaTypeName(string? typeName)
+        {
+            if (!TrySplitTypeName(typeName, out var name, out var assembly))
+                return null;
+
+            return assembly is null || string.Equals(assembly, "Akka", StringComparison.OrdinalIgnoreCase)
+                ? name
+                : null;
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// The index of the comma that separates a type name from its assembly name - the first comma at
+        /// bracket depth zero, so the commas inside a generic type's argument list do not count.
+        /// </summary>
+        /// <param name="typeName">The (already assembly-identity-stripped) type name to scan.</param>
+        /// <returns>The index, or <c>-1</c> when <paramref name="typeName"/> carries no assembly name.</returns>
+        internal static int IndexOfAssemblySeparator(string typeName)
+        {
+            var depth = 0;
+            for (var i = 0; i < typeName.Length; i++)
+            {
+                switch (typeName[i])
+                {
+                    case '[':
+                        depth++;
+                        break;
+                    case ']':
+                        depth--;
+                        break;
+                    case ',' when depth == 0:
+                        return i;
+                }
+            }
+
+            return -1;
+        }
+
+#nullable restore
+
         /// <summary>
         /// INTERNAL API
         /// Utility to be used by implementers to create a manifest from the type.

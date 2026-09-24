@@ -151,6 +151,36 @@ namespace Akka.Tests.Util
             });
         }
 
+        /// <summary>
+        /// Pins the widened matching rule the single-key table relies on: no space after the comma is a
+        /// spelling <see cref="Type.GetType(string)"/> itself accepted, and the table now accepts it too.
+        /// </summary>
+        [Fact(DisplayName = "Deployer should resolve a router type-mapping spelled without a comma space when dynamic type loading is off")]
+        public async Task Should_resolve_a_loosely_spelled_router_type_mapping_When_dynamic_type_loading_is_disabled()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor.router.type-mapping.loose-round-robin-pool = ""Akka.Routing.RoundRobinPool,Akka""
+                akka.actor.deployment {
+                  /loose {
+                    router = loose-round-robin-pool
+                  }
+                }");
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
+            {
+                var system = ActorSystem.Create("loose-router-off", config);
+                try
+                {
+                    var deploy = ((ActorSystemImpl)system).Provider.Deployer.Lookup(new[] { "loose" });
+                    deploy.RouterConfig.Should().BeOfType<RoundRobinPool>();
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
+            });
+        }
+
         [Fact(DisplayName = "Deployer should reject a router type-mapping that is not built in when dynamic type loading is off")]
         public async Task Should_throw_ConfigurationException_When_the_router_is_not_built_in_and_dynamic_type_loading_is_disabled()
         {

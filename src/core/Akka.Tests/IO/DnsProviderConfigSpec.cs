@@ -75,6 +75,8 @@ namespace Akka.Tests.IO
         [Theory(DisplayName = "DnsExt should resolve every spelling of the built-in provider name when dynamic type loading is off")]
         [InlineData("Akka.IO.InetAddressDnsProvider")]
         [InlineData("Akka.IO.InetAddressDnsProvider, Akka")]
+        [InlineData("Akka.IO.InetAddressDnsProvider,Akka")]
+        [InlineData("Akka.IO.InetAddressDnsProvider, AKKA")]
         [InlineData("Akka.IO.InetAddressDnsProvider, Akka, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null")]
         public async Task Should_resolve_every_spelling_of_the_built_in_provider_When_dynamic_type_loading_is_disabled(string providerObjectName)
         {
