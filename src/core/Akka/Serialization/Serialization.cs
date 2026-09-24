@@ -224,7 +224,7 @@ namespace Akka.Serialization
         /// current feature switches, in which case the alias is skipped rather than registered.
         /// </para>
         /// </remarks>
-        private static readonly Dictionary<string, Func<ExtendedActorSystem, Config, object>> BuiltInSerializers =
+        private static readonly Dictionary<string, Func<ExtendedActorSystem, Config, Serializer>> BuiltInSerializers =
             new(StringComparer.Ordinal)
             {
                 ["Akka.Serialization.ByteArraySerializer"] = CreateByteArraySerializer,
@@ -277,7 +277,7 @@ namespace Akka.Serialization
         /// <c>akka.actor.serialization-settings.bytes</c> block is ignored - the parameter is here to satisfy
         /// the table's factory signature.
         /// </summary>
-        private static object CreateByteArraySerializer(ExtendedActorSystem system, Config _)
+        private static Serializer CreateByteArraySerializer(ExtendedActorSystem system, Config _)
             => new ByteArraySerializer(system);
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace Akka.Serialization
         /// serializer that throws the first time anything is serialized. An AOT application that wants JSON
         /// registers a serializer of its own through a <see cref="SerializationSetup"/>.
         /// </summary>
-        private static object CreateNewtonSoftJsonSerializer(ExtendedActorSystem system, Config config)
+        private static Serializer CreateNewtonSoftJsonSerializer(ExtendedActorSystem system, Config config)
         {
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 return null;
@@ -334,7 +334,7 @@ namespace Akka.Serialization
                 var serializerTypeName = kvp.Value.GetString();
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
-                object serializer;
+                Serializer serializer;
                 if (serializerTypeName is not null &&
                     BuiltInSerializers.TryGetValue(Akka.Util.TypeExtensions.StripAssemblyIdentity(serializerTypeName), out var serializerFactory))
                 {
@@ -423,15 +423,19 @@ namespace Akka.Serialization
         }
 
         [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
-        private static object CreateSerializerFromTypeName(string serializerTypeName, ExtendedActorSystem system, Config serializerConfig)
+        private static SerializerV2 CreateSerializerFromTypeName(string serializerTypeName, ExtendedActorSystem system, Config serializerConfig)
         {
             var serializerType = Type.GetType(serializerTypeName);
             if (serializerType == null)
                 return null;
 
-            return !serializerConfig.IsNullOrEmpty()
+            var serializer = !serializerConfig.IsNullOrEmpty()
                 ? Activator.CreateInstance(serializerType, system, serializerConfig)
                 : Activator.CreateInstance(serializerType, system);
+
+            // the type came from a string, so nothing guarantees it is a serializer at all - AdaptSerializer
+            // rejects anything that is neither a Serializer nor a SerializerV2, and wraps a V1 Serializer
+            return AdaptSerializer(serializer);
         }
 
         [RequiresUnreferencedCode("Loads a message type named under [akka.actor.serialization-bindings] by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
