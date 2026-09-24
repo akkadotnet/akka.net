@@ -63,11 +63,39 @@ namespace Akka.Tests.Serialization
             public override object FromBinary(byte[] bytes, string manifest) => new SomePoco();
         }
 
-        private static ActorSystemSetup PocoSerializerSetup(string alias, Config config) =>
+        /// <summary>
+        /// A second plain type, which no <see cref="SerializationSetup"/> in this spec binds.
+        /// </summary>
+        public sealed class UnboundPoco
+        {
+        }
+
+        private static ActorSystemSetup PocoSerializerSetup(string alias, Config config, params Type[] useFor) =>
             ActorSystemSetup.Create(
                 BootstrapSetup.Create().WithConfig(config.WithFallback(ConfigurationFactory.Default())),
                 SerializationSetup.Create(system => ImmutableHashSet<SerializerDetails>.Empty.Add(
-                    SerializerDetails.Create(alias, new PocoSerializer(system), ImmutableHashSet<Type>.Empty))));
+                    SerializerDetails.Create(alias, new PocoSerializer(system), ImmutableHashSet.Create(useFor)))));
+
+        /// <summary>
+        /// HOCON rows the way a module's reference.conf writes them: a serializer named by a type core does not
+        /// know, and a binding to it. <paramref name="boundTypeName"/> is how the binding row spells the type.
+        /// </summary>
+        private static Config ModuleStyleConfig(string boundTypeName) => ConfigurationFactory.ParseString($@"
+            akka.actor {{
+                serializers {{
+                    poco = ""Akka.Tests.Serialization.SomeModuleSerializer, Akka.Tests""
+                }}
+                serialization-bindings {{
+                    ""{boundTypeName}"" = poco
+                }}
+            }}");
+
+        public static TheoryData<string> SomePocoSpellings() => new()
+        {
+            "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco",
+            "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Akka.Tests",
+            "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Akka.Tests, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null"
+        };
 
         private static async Task WithSystem(string name, Config? config, Func<ActorSystem, Task> body)
         {
@@ -236,6 +264,73 @@ namespace Akka.Tests.Serialization
 
                 return Task.CompletedTask;
             }));
+        }
+
+        /// <remarks>
+        /// The escape hatch the switch-off error messages point at. A module's reference.conf keeps its
+        /// serializer and binding rows even when the application registers that serializer in code, so a
+        /// <see cref="SerializationSetup"/> that covers the alias and the bound type has to be enough - the
+        /// HOCON rows it covers are skipped instead of rejected. The Setup binds <see cref="SomePoco"/> itself
+        /// either way, so what this proves is that <see cref="ActorSystem.Create(string, ActorSystemSetup)"/>
+        /// no longer throws; the serializer assertions only confirm the Setup still wins.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should accept HOCON serializer and binding rows a SerializationSetup covers when dynamic type loading is off")]
+        [MemberData(nameof(SomePocoSpellings))]
+        public async Task Should_accept_rows_a_setup_covers_When_dynamic_type_loading_is_disabled(string boundTypeName)
+        {
+            var setup = PocoSerializerSetup("poco", ModuleStyleConfig(boundTypeName), typeof(SomePoco));
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false,
+                () => WithSystemFromSetup("setup-covers-rows-off", setup, system =>
+                {
+                    var serialization = ((ExtendedActorSystem)system).Serialization;
+
+                    serialization.FindSerializerForType(typeof(SomePoco)).Should().BeOfType<PocoSerializer>();
+                    serialization.FindSerializerFor(new SomePoco()).Should().BeOfType<PocoSerializer>();
+
+                    return Task.CompletedTask;
+                }));
+        }
+
+        /// <remarks>
+        /// The serializer-row skip keys on the alias: a Setup that binds the type under an alias of its own
+        /// does not excuse a HOCON serializer row core cannot build.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should reject a HOCON serializer row whose alias the SerializationSetup does not register when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_the_setup_registers_a_different_alias_and_dynamic_type_loading_is_disabled()
+        {
+            var setup = PocoSerializerSetup("mine", ModuleStyleConfig(
+                "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Akka.Tests"), typeof(SomePoco));
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("setup-other-alias-off", setup));
+
+                exception.Message.Should().Contain("akka.actor.serializers.poco");
+                return Task.CompletedTask;
+            });
+        }
+
+        /// <remarks>
+        /// Covering the alias is not enough on its own: a binding row for a type the Setup does not bind would
+        /// otherwise vanish, and that type would fail on first use instead of at startup.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should reject a binding row for a type the SerializationSetup does not bind when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_a_setup_covers_the_alias_but_not_the_type_and_dynamic_type_loading_is_disabled()
+        {
+            const string boundTypeName = "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+UnboundPoco, Akka.Tests";
+            var setup = PocoSerializerSetup("poco", ModuleStyleConfig(boundTypeName), typeof(SomePoco));
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("setup-misses-type-off", setup));
+
+                exception.Message.Should().Contain("akka.actor.serialization-bindings");
+                exception.Message.Should().Contain(boundTypeName);
+                return Task.CompletedTask;
+            });
         }
 
         [Fact(DisplayName = "Serialization should reject a serializer named in HOCON that is not built in when dynamic type loading is off")]

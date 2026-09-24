@@ -328,6 +328,15 @@ namespace Akka.Serialization
             // still warns, because that one really is a misconfiguration.
             var skippedAliases = new HashSet<string>(StringComparer.Ordinal);
 
+            // With dynamic type loading off, a HOCON row core cannot resolve on its own is still fine if a
+            // SerializationSetup covers it: a module's reference.conf keeps its serializer and binding rows even
+            // when the application registers that serializer in code. The Setup is applied after the HOCON rows
+            // either way, so these only decide whether a row is skipped or rejected - never what wins.
+            var setupAliases = AkkaFeatures.IsDynamicTypeLoadingSupported
+                ? null
+                : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
+            Dictionary<string, Type> setupTypesByName = null;
+
             foreach (var kvp in serializersConfig)
             {
                 // HOCON already trims a value, whatever syntax it was written in, so there is nothing to trim here
@@ -354,6 +363,11 @@ namespace Akka.Serialization
                         system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'", kvp.Key, serializerTypeName);
                         continue;
                     }
+                }
+                else if (setupAliases.Contains(kvp.Key))
+                {
+                    // the SerializationSetup registers this alias below
+                    continue;
                 }
                 else
                 {
@@ -391,6 +405,12 @@ namespace Akka.Serialization
                         continue;
                     }
                 }
+                else if ((setupTypesByName ??= SetupTypesByName(_serializerDetails))
+                         .TryGetValue(Akka.Util.TypeExtensions.StripAssemblyIdentity(typename), out var setupType))
+                {
+                    // one of the types a SerializationSetup binds, so the name resolves without reflection
+                    messageType = setupType;
+                }
                 else
                 {
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
@@ -420,6 +440,26 @@ namespace Akka.Serialization
                     AddSerializationMap(t, details.SerializerV2);
                 }
             }
+        }
+
+        /// <summary>
+        /// Every type a <see cref="SerializationSetup"/> binds, keyed by the two spellings a HOCON binding row can
+        /// reach once <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> has run on it: the bare full
+        /// name, and the full name plus assembly simple name.
+        /// </summary>
+        private static Dictionary<string, Type> SetupTypesByName(IEnumerable<SerializerDetails> details)
+        {
+            var byName = new Dictionary<string, Type>(StringComparer.Ordinal);
+            foreach (var type in details.SelectMany(d => d.UseFor))
+            {
+                if (type.FullName is null)
+                    continue;
+
+                byName[type.FullName] = type;
+                byName[$"{type.FullName}, {type.Assembly.GetName().Name}"] = type;
+            }
+
+            return byName;
         }
 
         [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
