@@ -29,7 +29,23 @@ namespace Akka.Remote.Tests
                 hostname = 127.0.0.1
                 port = 0
             }
+            # A remote-deployed actor's Terminated normally arrives in milliseconds over the graceful
+            # disassociation, but that delivery is best-effort (nothing waits for an ack before the
+            # channel closes). When it's lost, the watch failure detector is what reports the death;
+            # keep it well inside the tests' 10 s windows instead of the 10 s default pause.
+            akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 2s
         ");
+
+        /// <summary>
+        /// Watches a remote-deployed actor and waits until the watch is registered on the wire: the
+        /// TestActor's Watch becomes a WatchRemote for the local RemoteWatcher, so an Identify round trip
+        /// with the RemoteWatcher orders its remote Watch ahead of the Identify sent to the actor.
+        /// </summary>
+        private async Task WatchRemoteDeployedAsync(IActorRef remoteDeployed)
+        {
+            await WatchAsync(remoteDeployed);
+            await Sys.ActorSelection("/system/remote-watcher").Ask<ActorIdentity>(new Identify(null), RemainingOrDefault);
+        }
 
         private ActorSystem _sys2;
         
@@ -85,18 +101,14 @@ namespace Akka.Remote.Tests
             var associated =
                 Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.None.WithScope(new RemoteScope(sys2Address))),
                     "remote");
-            Watch(associated);
+            await WatchRemoteDeployedAsync(associated);
 
             // verify that the association is open (don't terminate until handshake is finished)
             var actorIdentity = await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault);
             actorIdentity.MessageId.ShouldBe("foo");
 
-            // terminate the DEPLOYED system and observe the remote-deployed actor's death.
-            // The `Terminated` for a remote DeathWatch normally arrives in milliseconds via the
-            // graceful disassociation, but if that fast path is delayed under load it falls back to
-            // the phi-accrual failure detector (akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 10s).
-            // Give it the same 10s budget the sibling test uses instead of the 3s
-            // akka.test.single-expect-default, which a loaded CI agent can exceed.
+            // terminate the DEPLOYED system and observe the remote-deployed actor's death, by either the
+            // graceful disassociation or the watch failure detector (see RemoteConfig)
             await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
                 var terminationTask = _sys2.Terminate(); // start termination of the deployed system
@@ -121,7 +133,7 @@ namespace Akka.Remote.Tests
                     // open an association via remote deployment
                     var associated = Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.None.WithScope(new RemoteScope(sys2Address))), "remote");
 
-                    Watch(associated);
+                    await WatchRemoteDeployedAsync(associated);
 
                     // verify that the association is open (don't terminate until handshake is finished)
                     (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
