@@ -1122,8 +1122,14 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected override void PostStop()
         {
-            OriginalHandle.Disassociate("the owning ThrottledAssociation stopped", _log);
-            base.PostStop();
+            try
+            {
+                OriginalHandle.Disassociate("the owning ThrottledAssociation stopped", _log);
+            }
+            finally
+            {
+                base.PostStop();
+            }
         }
 
         private void InitializeFSM()
@@ -1155,7 +1161,7 @@ namespace Akka.Remote.Transport
                     _log.Warning(
                         "Throttler for [{0}] received an InboundPayload before it was initialized - most likely restarted. Disassociating so the association can be re-established.",
                         OriginalHandle.RemoteAddress);
-                    OriginalHandle.Disassociate("throttler received inbound data before it was initialized", _log);
+                    // PostStop disassociates the wrapped handle; no need to do it here too
                     return Stop();
                 }
 
