@@ -20,7 +20,7 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory must be a plain
     /// <c>new X(system, config)</c> for a non-empty settings block and <c>new X(system)</c> otherwise - the constructor
-    /// reflection would pick - and must not return null.
+    /// reflection would pick. Return a serializer; null skips the alias (a safety net, not a feature).
     /// </summary>
     internal sealed record ModuleSerializer(Type Type, Func<ExtendedActorSystem, Config, Serializer> Create);
 
@@ -40,33 +40,35 @@ namespace Akka.Serialization
     /// </summary>
     internal sealed class LoadedModule
     {
-        private readonly Dictionary<string, (ModuleSerializer Entry, string? Assembly)> _serializers = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, (Type Type, string? Assembly)> _boundTypes = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (ModuleSerializer Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
         internal LoadedModule(ModuleSerializers module)
         {
             foreach (var entry in module.Serializers)
-                _serializers[KeyOf(entry.Type)] = (entry, entry.Type.Assembly.GetName().Name);
+                _serializers[KeyOf(entry.Type)] = (entry, entry.Type.Assembly.GetName().Name, IsAkka(entry.Type));
             foreach (var type in module.BoundTypes)
-                _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name);
+                _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
         }
 
         internal ModuleSerializer? FindSerializer(string name, string? assembly)
-            => _serializers.TryGetValue(name, out var s) && Accepts(s.Entry.Type, s.Assembly, assembly) ? s.Entry : null;
+            => _serializers.TryGetValue(name, out var s) && Accepts(s.Assembly, s.IsAkka, assembly) ? s.Entry : null;
 
         internal Type? FindBoundType(string name, string? assembly)
-            => _boundTypes.TryGetValue(name, out var t) && Accepts(t.Type, t.Assembly, assembly) ? t.Type : null;
+            => _boundTypes.TryGetValue(name, out var t) && Accepts(t.Assembly, t.IsAkka, assembly) ? t.Type : null;
 
         private static string KeyOf(Type type) => Akka.Util.TypeExtensions.StripAssemblyIdentity(type.FullName ?? string.Empty);
+
+        private static bool IsAkka(Type type) => type.Assembly == typeof(Serialization).Assembly;
 
         /// <summary>
         /// What <see cref="Type.GetType(string)"/> called from Akka.dll accepts: a bare name finds Akka.dll and framework
         /// types only; a framework type also matches any framework assembly name; anything else needs its own assembly.
         /// </summary>
-        private static bool Accepts(Type type, string? actual, string? assembly)
+        private static bool Accepts(string? actual, bool isAkka, string? assembly)
         {
             if (assembly is null)
-                return type.Assembly == typeof(Serialization).Assembly || Serialization.FrameworkAssemblyNames.Contains(actual!);
+                return isAkka || Serialization.FrameworkAssemblyNames.Contains(actual!);
 
             return Serialization.FrameworkAssemblyNames.Contains(assembly)
                 ? Serialization.FrameworkAssemblyNames.Contains(actual!)

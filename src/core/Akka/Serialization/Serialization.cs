@@ -505,9 +505,16 @@ namespace Akka.Serialization
         private static Type FindModuleBoundType(
             string name, string assembly, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
         {
-            var owner = assembly is null ? null : modules.ForAssembly(assembly);
-            return loadedModules.Prepend(owner).Where(m => m is not null)
-                .Select(m => m.FindBoundType(name, assembly)).FirstOrDefault(t => t is not null);
+            if (assembly is not null && modules.ForAssembly(assembly)?.FindBoundType(name, assembly) is { } owned)
+                return owned;
+
+            foreach (var module in loadedModules)
+            {
+                if (module.FindBoundType(name, assembly) is { } type)
+                    return type;
+            }
+
+            return null;
         }
 
         [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
