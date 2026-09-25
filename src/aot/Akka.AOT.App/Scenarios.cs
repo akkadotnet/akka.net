@@ -99,7 +99,13 @@ internal static class Scenarios
     {
         var target = system.ActorOf(Props.Create(() => new AotReceiveActor()), "watch-target");
         var watcher = system.ActorOf(Props.Create(() => new AotWatcherActor()), "watcher-actor");
-        var terminatedReply = watcher.Ask<string>(target, askTimeout);
+
+        // don't stop the target until the watcher confirms it has watched it - otherwise stopping
+        // could race the watch registration and this would test the already-terminated path instead.
+        var watchingReply = await watcher.Ask<string>(target, askTimeout);
+        Require(label, watchingReply == "watching", $"watcher replied '{watchingReply}' instead of confirming the watch");
+
+        var terminatedReply = watcher.Ask<string>("await-termination", askTimeout);
         system.Stop(target);
         var reply = await terminatedReply;
         Require(label, reply == "terminated:watch-target", $"watcher replied '{reply}'");
@@ -113,17 +119,8 @@ internal static class Scenarios
     }
 
     /// <summary>
-    /// 'default-fork-join-dispatcher' is a non-default dispatcher already in akka.conf (type =
-    /// ForkJoinDispatcher), resolved through the built-in alias switch in
-    /// Dispatchers.ConfiguratorFrom rather than reflection. Looking it up alone proves nothing -
-    /// Lookup() only builds a lazy configurator - so round-trip a real message through an actor
-    /// that uses it, which is what actually spins up the ForkJoinExecutor/DedicatedThreadPool.
-    ///
-    /// 'bounded' is a hard-coded mailbox id in Mailboxes.LookupConfigurator, not the mailbox-type
-    /// built-in table - that table is exercised for real by the stash scenario above, whose
-    /// IWithUnboundedStash resolves 'unbounded-deque-based' through
-    /// BuiltInMessageQueueSemantics/BuiltInMailboxTypes. This just proves an actor built on a
-    /// bounded mailbox actually runs.
+    /// Round-trips real messages through a fork-join-dispatcher actor and a bounded-mailbox actor.
+    /// 'bounded' is a hard-coded id, not the built-in table - the stash scenario above is that proof.
     /// </summary>
     private static async Task RunDispatcherAndMailboxAsync(string label, ActorSystem system, TimeSpan askTimeout)
     {

@@ -10,8 +10,10 @@ using Akka.Actor;
 namespace Akka.AOT.App.Actors;
 
 /// <summary>
-/// Watches the actor it is handed and replies once <see cref="Terminated"/> arrives. The caller is
-/// responsible for stopping the watched actor.
+/// Watches the actor it is handed, replies "watching" once <see cref="Context.Watch"/> has run, then
+/// replies again once <see cref="Terminated"/> arrives. The caller stops the watched actor itself,
+/// only after seeing "watching", so the test always exercises the live-watch path rather than racing
+/// a stop against the watch registration.
 /// </summary>
 public sealed class AotWatcherActor : ReceiveActor
 {
@@ -21,9 +23,10 @@ public sealed class AotWatcherActor : ReceiveActor
     {
         Receive<IActorRef>(target =>
         {
-            _replyTo = Sender;
             Context.Watch(target);
+            Sender.Tell("watching");
         });
+        Receive<string>(_ => _replyTo = Sender);
         Receive<Terminated>(t => _replyTo.Tell($"terminated:{t.ActorRef.Path.Name}"));
     }
 }
