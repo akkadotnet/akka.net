@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -30,14 +31,16 @@ namespace Akka.Remote.Tests.Artery
     /// channels and drained them to <see cref="Dropped"/> in the same breath, so a message accepted
     /// microseconds before shutdown never reached the socket -- the last things a system sends
     /// (acks, graceful notices, handshake replies) were exactly the ones lost. Shutdown now waits,
-    /// within a bound, for the outbound streams to finish writing what they had already accepted,
-    /// and drains only what is left over.
+    /// within a bound, for the outbound streams to finish writing what they had already accepted
+    /// AND for those sockets to actually finish closing, and drains only what is left over.
     ///
     /// <para>
-    /// Three properties, one test each: the flush really writes; the bound really bounds; and
-    /// whatever the bound cuts short is still accounted as <see cref="Dropped"/>. Every assertion
-    /// is on arrival, order, or completion -- no test measures elapsed time. The awaits that carry
-    /// a <see cref="TimeSpan"/> are liveness bounds, so a genuine hang fails the test instead of
+    /// Four properties, one test each: the flush really writes; an idle peer never costs anything
+    /// it does not need to; the bound really bounds; and whatever the bound cuts short is still
+    /// accounted as <see cref="Dropped"/>. Every assertion is on arrival, order, or completion --
+    /// except the idle-peer test, which exists specifically to measure elapsed time (see its own
+    /// remarks for why that is the only way to prove a negative here). The awaits that carry a
+    /// <see cref="TimeSpan"/> are liveness bounds, so a genuine hang fails the test instead of
     /// wedging the suite.
     /// </para>
     /// </summary>
@@ -49,11 +52,12 @@ namespace Akka.Remote.Tests.Artery
 
         /// <summary>
         /// Artery on an ephemeral port with test-mode available (the blackhole tests below need it;
-        /// test-mode off composes an identical pipeline, so sharing one config across all three
+        /// test-mode off composes an identical pipeline, so sharing one config across all four
         /// tests changes nothing for the first). <c>flush-wait-on-shutdown</c> is raised above its
         /// 2s default so a slow CI agent cannot turn the "flush really writes" test into a timeout
-        /// test -- no assertion depends on the value itself, only on which side of it the streams
-        /// land.
+        /// test -- no assertion there depends on the value itself, only on which side of it the
+        /// streams land. The idle-peer test DOES depend on the value (it asserts a fraction of it),
+        /// so it is called out explicitly in that test's own remarks.
         /// </summary>
         private static readonly Config ArteryConfig = ConfigurationFactory.ParseString("""
             akka.actor.provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
@@ -124,6 +128,11 @@ namespace Akka.Remote.Tests.Artery
             // Sys is the RECEIVER here and outlives the transport under test, so it can witness what
             // the flush wrote. The sender is the system whose transport gets shut down.
             var senderSys = ActorSystem.Create("artery-flush-sender", ArteryConfig);
+            // Without this, Shutdown()'s own INFO lines (including the "did not finish writing
+            // within" timeout branch and the final "shut down" line) never reach the test's
+            // output, which is exactly the diagnostic a flake needs -- senderSys is a SEPARATE
+            // system from Sys, so it is not covered by the spec's own base-class logger.
+            InitializeLogger(senderSys, "sender");
             try
             {
                 Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)), "flush-receiver");
@@ -151,12 +160,16 @@ namespace Akka.Remote.Tests.Artery
                 (await TransportOf(senderSys).Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(30)))
                     .Should().BeTrue("the shutdown flush is bounded, so Shutdown must return");
 
-                // Property 1: every accepted message reached the peer. A warmup marker from an
-                // earlier attempt can still be in flight, so collect by marker rather than by count.
+                // Property 1: every accepted message reached the peer, all within ONE overall
+                // bound -- not a fresh 30s allowance PER MESSAGE. A warmup marker from an earlier
+                // attempt can still be in flight, so collect by marker rather than by count.
                 var received = new HashSet<string>();
+                var receiveBudget = TimeSpan.FromSeconds(30);
+                var receiveStopwatch = Stopwatch.StartNew();
                 while (received.Count < messageCount)
                 {
-                    var message = await ExpectMsgAsync<string>(TimeSpan.FromSeconds(30));
+                    var remaining = receiveBudget - receiveStopwatch.Elapsed;
+                    var message = await ExpectMsgAsync<string>(remaining);
                     if (message.StartsWith("flushed-", StringComparison.Ordinal))
                         received.Add(message);
                 }
@@ -171,6 +184,42 @@ namespace Akka.Remote.Tests.Artery
             finally
             {
                 await senderSys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(30));
+            }
+        }
+
+        [Fact(DisplayName = "Should_ReturnWellUnderTheBound_When_ThePeerIsIdle")]
+        public async Task Should_ReturnWellUnderTheBound_When_ThePeerIsIdle()
+        {
+            // Sys gets a live, healthy association (an OUTBOUND connection to peerSys and an
+            // INBOUND one accepting its handshake/control traffic), then goes idle, then shuts
+            // down. Both close promptly: Unbind() stops the listener, which stops its
+            // connection-actor children, and each inbound stage watches its own connection actor.
+            var peerSys = ActorSystem.Create("artery-flush-idle-peer", ArteryConfig);
+            try
+            {
+                peerSys.ActorOf(Props.Create(() => new Forwarder(TestActor)), "idle-peer-receiver");
+                var selection = Sys.ActorSelection(
+                    $"akka://{peerSys.Name}@127.0.0.1:{AddressOf(peerSys).Port}/user/idle-peer-receiver");
+
+                await AwaitAssociationAsync(selection);
+
+                // The real assertion: the "still running ... force-stopping" INFO line only fires
+                // when WaitForStreamsToStopAsync actually hits its bound, so its absence is the
+                // regression guard. The elapsed-time check backs it up -- timed INSIDE the filter's
+                // action so ExpectAsync's own confirm-absence wait doesn't count against it.
+                var elapsed = TimeSpan.Zero;
+                await EventFilter.Info(start: "Artery streams were still running").ExpectAsync(0, async () =>
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    (await TransportOf(Sys).Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(30)))
+                        .Should().BeTrue("the shutdown flush is bounded, so Shutdown must return");
+                    elapsed = stopwatch.Elapsed;
+                });
+                elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2));
+            }
+            finally
+            {
+                await peerSys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(30));
             }
         }
 

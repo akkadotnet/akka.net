@@ -190,6 +190,33 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public async Task Outgoing_TCP_stream_must_not_log_an_error_when_upstream_finishes_while_still_connecting()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                // Regression test for CloseConnectionUpstreamFinished's null-guard: with halfClose
+                // off, Source.Empty completes upstream before the outbound connect finishes, so
+                // _connection is still null when that branch runs -- this used to throw instead of
+                // completing gracefully (the interpreter still logs the exception at Error first).
+                await EventFilter.Error().ExpectAsync(0, async () =>
+                {
+                    var task = Source.Empty<ReadOnlySequence<byte>>()
+                        .ViaMaterialized(
+                            Sys.TcpStream().OutgoingConnection(
+                                new IPEndPoint(IPAddress.Parse("192.0.2.1"), 666),
+                                halfClose: false,
+                                connectionTimeout: TimeSpan.FromSeconds(1)),
+                            Keep.Right)
+                        .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Left)
+                        .Run(Materializer);
+
+                    await Awaiting(() => task.WaitAsync(3.Seconds()))
+                        .Should().ThrowAsync<Exception>().WithMessage("Connection failed*");
+                });
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {
             await this.AssertAllStagesStoppedAsync(async () =>

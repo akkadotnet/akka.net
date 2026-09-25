@@ -132,10 +132,9 @@ namespace Akka.Remote.Artery
         // `hasBeenShutdown` AtomicBoolean + the shared "transportKillSwitch"). _isShutdown is set
         // FIRST in Shutdown() so no NEW outbound stream is materialized once teardown begins (see the
         // guard at the top of MaterializeOutboundStream). _killSwitch is woven into EVERY inbound and
-        // outbound stream graph, so a single Shutdown() on it tears them all down at once. Like Pekko,
-        // we deliberately do NOT call _materializer.Shutdown() -- the kill switch stops the streams and
-        // the ActorSystem lifecycle reclaims the materializer; force-shutting the materializer down was
-        // exactly what raced a late materialization into an IllegalStateException.
+        // outbound stream graph, so a single Shutdown() on it tears them all down at once. Shutdown()
+        // DOES call _materializer.Shutdown(), but only after waiting for its streams to stop on their
+        // own (see WaitForStreamsToStopAsync) -- see Shutdown's own remarks for why that wait matters.
         private volatile bool _isShutdown;
         private readonly SharedKillSwitch _killSwitch = KillSwitches.Shared("arteryTransportKillSwitch");
         private UniqueAddress _localUniqueAddress;
@@ -542,15 +541,11 @@ namespace Akka.Remote.Artery
             // exactly the ones lost. Classic remoting has always flushed this way
             // (akka.remote.flush-wait-on-shutdown); this is Artery's equivalent, same default.
             // The wait is bounded and never unbounded: see FlushOutboundStreamsAsync.
+            // One deadline bounds this wait and the socket-close wait after the kill switch.
             var flushWait = _settings.FlushWaitOnShutdown;
-            if (flushWait > TimeSpan.Zero)
-            {
-                // The token IS the bound -- it fires after flushWait and the flush loses its race,
-                // so shutdown cannot stall past the configured window no matter what the streams
-                // are doing. Disposing it cancels the timer as soon as the flush finishes early.
-                using var flushDeadline = new CancellationTokenSource(flushWait);
+            using var flushDeadline = flushWait > TimeSpan.Zero ? new CancellationTokenSource(flushWait) : null;
+            if (flushDeadline is not null)
                 await FlushOutboundStreamsAsync(associations, flushDeadline.Token);
-            }
 
             // STEP 3 -- account for everything the flush did not get out, publishing a Dropped per
             // element. This runs whether the flush completed or timed out: the streams are torn
@@ -620,6 +615,14 @@ namespace Akka.Remote.Artery
             // transportKillSwitch abort.
             _killSwitch.Shutdown();
 
+            // Unbind: stops the TcpListener, which stops its still-open accepted-connection
+            // children, which each inbound stage's Watch(_connection) turns into a prompt failure.
+            await (_binding?.Unbind() ?? Task.CompletedTask);
+
+            // Let every remaining stream finish closing, within what is left of the same deadline.
+            if (flushDeadline is not null)
+                await WaitForStreamsToStopAsync(flushDeadline.Token);
+
             // ...then REAP the materializer. The kill switch alone is NOT sufficient: a stage parked
             // on an EXTERNAL signal (e.g. the TCP write stage awaiting a WriteAck from a connection
             // actor that died with the ack unsent) never processes the kill switch's completion and
@@ -632,13 +635,8 @@ namespace Akka.Remote.Artery
             // motivated removing it, because _isShutdown was set FIRST (above) and
             // MaterializeOutboundStream both guards on _materializer.IsShutdown and catches the
             // residual race around Run().
-            var unbindTask = _binding?.Unbind() ?? Task.CompletedTask;
-            var materializer = _materializer;
-            await unbindTask.ContinueWith(_ =>
-            {
-                materializer?.Shutdown();
-                _log.Info("Artery TCP remoting shut down");
-            }, TaskContinuationOptions.ExecuteSynchronously);
+            _materializer?.Shutdown();
+            _log.Info("Artery TCP remoting shut down");
         }
 
         /// <summary>
@@ -658,8 +656,8 @@ namespace Akka.Remote.Artery
         /// AND its buffer is empty, and every element read out of it has travelled through the
         /// handshake and encode stages into the TCP connection stage, which forwards each write to
         /// its connection actor as it arrives. So it means precisely "everything this association
-        /// accepted is on its way to the socket". A stream with nothing left to write resolves at
-        /// once, which is why an idle system pays nothing for this wait.
+        /// accepted is on its way to the socket", not that the socket has closed;
+        /// <see cref="WaitForStreamsToStopAsync"/> waits for that, under the same deadline.
         /// </para>
         ///
         /// <para>
@@ -668,7 +666,7 @@ namespace Akka.Remote.Artery
         /// watch never resolves. Losing the race against the deadline is the expected outcome
         /// there, and the caller's drain then accounts every remaining element as
         /// <see cref="Dropped"/>. Nothing is ever lost silently, and shutdown never runs past the
-        /// bound.
+        /// bound. A stalled peer costs the full bound.
         /// </para>
         /// </summary>
         private async Task FlushOutboundStreamsAsync(List<Association> associations, CancellationToken cancellationToken)
@@ -718,6 +716,64 @@ namespace Akka.Remote.Artery
                 // observed instead of surfacing later as an unobserved task exception.
                 _log.Debug(ex, "Artery outbound stream ended with a failure during the shutdown flush.");
             }
+        }
+
+        /// <summary>
+        /// Waits, until <paramref name="cancellationToken"/> fires, for the materializer's supervisor
+        /// to have no children. An interpreter stops only once every stage in it has, and the TCP
+        /// stage completes only on <c>Closed</c> or on failure, so no children means every stream --
+        /// inbound and outbound -- drained and closed, or died. Inbound stops because
+        /// <see cref="Shutdown"/>'s <c>Unbind()</c> stops the listener and its connection-actor
+        /// children, and each inbound stage watches its own connection actor.
+        /// </summary>
+        private async Task WaitForStreamsToStopAsync(CancellationToken cancellationToken)
+        {
+            // A second Shutdown() would otherwise ask the supervisor the first one already stopped.
+            if (_materializer is not { IsShutdown: false, Supervisor: { } supervisor })
+                return;
+
+            var lastKnownCount = -1;
+            while (true)
+            {
+                try
+                {
+                    // Own timeout, not the deadline, so an expired deadline still gets one real count.
+                    var children = await supervisor.Ask<StreamSupervisor.Children>(
+                        StreamSupervisor.GetChildren.Instance, timeout: StreamStopAskTimeout);
+                    lastKnownCount = children.Refs.Count;
+                }
+                catch (AskTimeoutException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    continue; // a slow reply on a busy machine; ask again
+                }
+                catch (AskTimeoutException)
+                {
+                    break;
+                }
+
+                if (lastKnownCount == 0)
+                {
+                    _log.Debug("Every Artery stream stopped before shutdown tore the transport down.");
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+
+                try
+                {
+                    await Task.Delay(StreamStopPollInterval, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+
+            _log.Info(
+                "Artery streams were still running after {0} " +
+                "(akka.remote.artery.advanced.flush-wait-on-shutdown; last count: {1}); force-stopping.",
+                _settings.FlushWaitOnShutdown, lastKnownCount < 0 ? "unknown" : lastKnownCount.ToString());
         }
 
         /// <inheritdoc/>
@@ -1781,8 +1837,8 @@ namespace Akka.Remote.Artery
                 // re-sends the connection header first (Pekko does the same, prepending the header
                 // inside its lazyFlow: ArteryTcpTransport.scala's connectionFlowWithRestart).
                 //
-                // OnFailures (NOT plain WithBackoff): our outbound connections are one-way with
-                // halfClose enabled -- the read side EOFs immediately and harmlessly -- and a
+                // OnFailures (NOT plain WithBackoff): our outbound connections are one-way --
+                // the read side EOFs immediately and harmlessly -- and a
                 // GRACEFUL completion (this system's own Shutdown()/CompleteOutbound draining
                 // through) must complete the tail, not re-dial the peer.
                 var restartSettings = RestartSettings.Create(
@@ -1791,10 +1847,11 @@ namespace Akka.Remote.Artery
                         randomFactor: 0.1)
                     .WithMaxRestarts(OrdinaryConnectionMaxInnerRestarts, _settings.OutboundRestartBackoff);
 
+                // halfClose: false - see WaitForStreamsToStopAsync.
                 var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
                     () => Flow.Create<ReadOnlySequence<byte>>()
                         .Prepend(Source.Single(BuildPreamble(ArteryStreamId.Ordinary)))
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Right)
+                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Right)
                         .MapMaterializedValue(connectionTask =>
                         {
                             // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2229,10 +2286,12 @@ namespace Akka.Remote.Artery
             {
                 if (isControlStream)
                 {
+                    // halfClose: false on every outbound connection: upstream completion then
+                    // sends Tcp.Close, which drains and closes, instead of ConfirmedClose (#8629).
                     Task connectionTask;
                     ((terminationWatch, connectionTask), _) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Both)
+                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
@@ -2277,7 +2336,7 @@ namespace Akka.Remote.Artery
                     var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
                         () => Flow.Create<ReadOnlySequence<byte>>()
                             .Prepend(Source.Single(BuildPreamble(streamId)))
-                            .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Right)
+                            .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Right)
                             .MapMaterializedValue(connectionTask =>
                             {
                                 // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2609,6 +2668,10 @@ namespace Akka.Remote.Artery
         /// Deliberately a constant, not a new HOCON key.
         /// </summary>
         private const int OrdinaryConnectionMaxInnerRestarts = 3;
+
+        /// <summary>Poll interval for <see cref="WaitForStreamsToStopAsync"/>.</summary>
+        private static readonly TimeSpan StreamStopPollInterval = TimeSpan.FromMilliseconds(30);
+        private static readonly TimeSpan StreamStopAskTimeout = TimeSpan.FromMilliseconds(500);
 
         /// <summary>
         /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
