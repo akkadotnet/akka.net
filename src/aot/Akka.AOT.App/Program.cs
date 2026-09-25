@@ -89,10 +89,19 @@ internal static class Program
     /// </summary>
     private static void AssertBuiltInsResolved(string label, ActorSystem system)
     {
-        Require(label, system.Serialization.FindSerializerFor("hello") is not null,
-            "no serializer for a string - akka.actor.serializers/serialization-bindings did not register");
         Require(label, system.Serialization.FindSerializerFor(new byte[] { 1 }) is not null,
             "no serializer for a byte[] - akka.actor.serializers/serialization-bindings did not register");
+
+        // ByteArraySerializer needs no reflection, so 'bytes' and the System.Byte[] binding survive with the
+        // switch off. Newtonsoft.Json does not, so core registers neither the 'json' alias nor the
+        // System.Object binding that points at it, and a type with no binding of its own has no fallback. That
+        // is the designed behavior, not a gap - so assert the throw, and assert the message tells the user what
+        // to do about it.
+        var unbound = RequireThrows(label, () => system.Serialization.FindSerializerFor("hello"));
+        Require(label, unbound.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
+                       && unbound.Message.Contains("SerializationSetup", StringComparison.Ordinal),
+            $"serializing an unbound type threw, but without saying why: [{unbound.Message}]");
+
         Require(label, system.Scheduler is HashedWheelTimerScheduler,
             $"akka.scheduler.implementation resolved to [{system.Scheduler.GetType().FullName}]");
         Require(label, system.Settings.LogFormatter is SemanticLogMessageFormatter,
@@ -102,13 +111,32 @@ internal static class Program
         Require(label, defaultMailbox is UnboundedMailbox,
             $"akka.actor.default-mailbox resolved to [{defaultMailbox.GetType().FullName}]");
 
-        Console.WriteLine($"[canary] {label}: serializers, scheduler, log formatter and default mailbox all resolved");
+        Console.WriteLine($"[canary] {label}: byte[] serializer, scheduler, log formatter and default mailbox all resolved, unbound types throw as designed");
     }
 
     private static void Require(string label, bool condition, string problem)
     {
         if (!condition)
             throw new InvalidOperationException($"{label}: {problem}");
+    }
+
+    /// <summary>
+    /// Asserts that <paramref name="action"/> fails with a <see cref="System.Runtime.Serialization.SerializationException"/> and hands the
+    /// exception back so the caller can assert on its message.
+    /// </summary>
+    private static System.Runtime.Serialization.SerializationException RequireThrows(string label, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (System.Runtime.Serialization.SerializationException ex)
+        {
+            return ex;
+        }
+
+        throw new InvalidOperationException(
+            $"{label}: serializing a type with no serialization-binding was expected to throw with dynamic type loading off, but it succeeded");
     }
 
     private static void PrintFailure(Exception? ex)

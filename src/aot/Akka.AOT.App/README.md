@@ -50,10 +50,14 @@ hurdles:
    `The type name for serializer 'json' did not resolve to an actual Type`,
    `Serialization binding to non existing serializer: 'bytes'` and
    `Mailbox Requirement mapping [...] is not an actual type`.
-2. **Positive assertions.** After boot: `Serialization.FindSerializerFor` returns a serializer for
-   both a `string` and a `byte[]`, `Scheduler` is a `HashedWheelTimerScheduler`,
-   `Settings.LogFormatter` is a `SemanticLogMessageFormatter`, and
-   `Mailboxes.Lookup("akka.actor.default-mailbox")` is an `UnboundedMailbox`.
+2. **Positive assertions.** After boot: `Serialization.FindSerializerFor` returns a serializer for a
+   `byte[]`, `Scheduler` is a `HashedWheelTimerScheduler`, `Settings.LogFormatter` is a
+   `SemanticLogMessageFormatter`, and `Mailboxes.Lookup("akka.actor.default-mailbox")` is an
+   `UnboundedMailbox`. With the switch off a type that has no `serialization-bindings` entry of its
+   own throws by design - core does not register the reflection-driven `json` serializer, nor the
+   `System.Object` binding pointing at it - so the canary asserts that a `string` throws with a
+   message naming the switch and `SerializationSetup`; a real AOT application registers a serializer
+   for its own message types through a `SerializationSetup`.
 
 Shutdown is bounded (`Terminate()` with a 30 s cap) and `AppDomain.UnhandledException` prints the
 same failure block, so a crash on a pool thread cannot exit quietly.
