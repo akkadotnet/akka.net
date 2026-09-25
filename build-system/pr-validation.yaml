@@ -11,7 +11,7 @@ trigger:
 pr:
   autoCancel: true # indicates whether additional pushes to a PR should cancel in-progress runs for the same PR. Defaults to true
   branches:
-    include: [dev, v1.*, master, feature/*, aot/*] # target branch names which will trigger a build; aot/* are the stacked AOT milestone-1 branches
+    include: [dev, v1.*, master, feature/*] # target branch names which will trigger a build
 
 name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
 
@@ -83,11 +83,9 @@ jobs:
   #
   #   2. ROOTED publish (-p:RootAkka=true adds a TrimmerRootAssembly for Akka). ILC analyses every
   #      path in the library instead of the handful the two toy actors reach, so this is the honest
-  #      warning count for core, and this is the log the baseline check reads. On this branch the
-  #      unrooted publish sees 4 sites and the rooted one sees 12; the 8 it adds - Props.TypeName,
-  #      PropsSurrogate.FromSurrogate, DynamicAccess.CreateInstanceFor, IpExtensions.GetInstanceField
-  #      and four in NewtonSoftJsonSerializer - are precisely where milestone 2 works, so gating on
-  #      the unrooted list alone would leave that work unwatched.
+  #      warning count for core, and this is the log the baseline check reads. The rooted publish
+  #      can see sites the unrooted one never reaches, which is where later AOT work happens, so
+  #      gating on the unrooted list alone would leave that work unwatched.
   #
   # Deliberately NOT a template job: the shared templates start with a full `dotnet build -c
   # Release` of the solution and end with test-result publishing, neither of which this lane needs.
