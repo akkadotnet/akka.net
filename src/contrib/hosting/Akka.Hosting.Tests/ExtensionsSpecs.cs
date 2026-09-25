@@ -7,6 +7,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using FluentAssertions;
@@ -102,6 +103,46 @@ public class ExtensionsSpecs
         using var host = await StartHost((builder, _) =>
         {
             builder.WithExtension<FakeExtensionOneProvider>();
+            builder.WithExtension<FakeExtensionTwoProvider>();
+        });
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.TryGetExtension<FakeExtensionOne>(out _).Should().BeTrue();
+        system.TryGetExtension<FakeExtensionTwo>(out _).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "WithExtension should register the extension through ExtensionsSetup")]
+    public async Task WithExtensionShouldUseExtensionsSetup()
+    {
+        using var host = await StartHost((builder, _) => builder.WithExtension<FakeExtensionOneProvider>());
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.TryGetExtension<FakeExtensionOne>(out _).Should().BeTrue();
+        system.Settings.Setup.Get<ExtensionsSetup>().Value.ExtensionIds
+            .Should().ContainSingle().Which.Should().BeOfType<FakeExtensionOneProvider>();
+    }
+
+    [Fact(DisplayName = "WithExtension should not write akka.extensions, and HOCON akka.extensions should pass through unchanged")]
+    public async Task WithExtensionShouldNotWriteHocon()
+    {
+        const string listed = "Akka.Hosting.Tests.ExtensionsSpecs+FakeExtensionOneProvider, Akka.Hosting.Tests";
+        using var host = await StartHost((builder, _) =>
+        {
+            builder.AddHocon($"akka.extensions = [\"{listed}\"]", HoconAddMode.Append);
+            builder.WithExtension<FakeExtensionTwoProvider>();
+        });
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.Settings.Config.GetStringList("akka.extensions").Should().Equal(listed);
+        system.TryGetExtension<FakeExtensionTwo>(out _).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "WithExtension should keep an ExtensionsSetup the user added")]
+    public async Task WithExtensionShouldKeepUserExtensionsSetup()
+    {
+        using var host = await StartHost((builder, _) =>
+        {
+            builder.AddSetup(ExtensionsSetup.Create(new FakeExtensionOneProvider()));
             builder.WithExtension<FakeExtensionTwoProvider>();
         });
 

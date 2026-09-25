@@ -44,8 +44,10 @@ namespace Akka.Hosting
         public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry> starter) { }
         public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver> starter) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithCustomSerializer(string serializerIdentifier, System.Collections.Generic.IEnumerable<System.Type> boundTypes, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Serialization.Serializer> serializerFactory) { }
-        public Akka.Hosting.AkkaConfigurationBuilder WithExtension<T>()
+        public Akka.Hosting.AkkaConfigurationBuilder WithExtension<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]  T>()
             where T : Akka.Actor.IExtensionId { }
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Creates each extension id from a runtime Type, whose constructor the trimmer may " +
+            "remove. Use WithExtension<T>() instead.")]
         public Akka.Hosting.AkkaConfigurationBuilder WithExtensions(params System.Type[] extensions) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(Akka.Hosting.AkkaHealthCheckRegistration registration) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck<T>(string name, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default)

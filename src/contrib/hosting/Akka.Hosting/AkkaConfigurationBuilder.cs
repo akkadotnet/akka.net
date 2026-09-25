@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -90,7 +91,8 @@ namespace Akka.Hosting
         
         // we use a name / registration dictionary to make health check registrations unique by name
         internal readonly Dictionary<string, AkkaHealthCheckRegistration> HealthChecks = new();
-        internal readonly List<Type> Extensions = new();
+        // extension id types in registration order, each with the factory that creates it at ActorSystem build time
+        internal readonly List<(Type Type, Func<IExtensionId> Create)> Extensions = new();
 
         /// <summary>
         /// INTERNAL API.
@@ -306,6 +308,7 @@ namespace Akka.Hosting
         /// <param name="extensions">An array of extension providers that will be automatically started
         /// when the <see cref="ActorSystem"/> starts</param>
         /// <returns>This <see cref="AkkaConfigurationBuilder"/> instance, for fluent building pattern</returns>
+        [RequiresUnreferencedCode("Creates each extension id from a runtime Type, whose constructor the trimmer may remove. Use WithExtension<T>() instead.")]
         public AkkaConfigurationBuilder WithExtensions(params Type[] extensions)
         {
             foreach (var extension in extensions)
@@ -317,26 +320,31 @@ namespace Akka.Hosting
                 if (typeInfo.IsAbstract || !typeInfo.IsClass)
                     throw new ConfigurationException("Type class must not be abstract or static");
                 
-                if (Extensions.Contains(extension))
-                    continue;
-                Extensions.Add(extension);
+                AddExtension(extension, () => (IExtensionId)Activator.CreateInstance(extension)!);
             }
             return this;
         }
 
-        public AkkaConfigurationBuilder WithExtension<T>() where T : IExtensionId
+        /// <summary>
+        /// Adds an Akka.NET extension that will be started automatically when the <see cref="ActorSystem"/> starts up.
+        /// It is passed to the <see cref="ActorSystem"/> through an <see cref="ExtensionsSetup"/>, not <c>akka.extensions</c>.
+        /// </summary>
+        /// <typeparam name="T">The extension id (provider) type.</typeparam>
+        /// <returns>This <see cref="AkkaConfigurationBuilder"/> instance, for fluent building pattern</returns>
+        public AkkaConfigurationBuilder WithExtension<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>() where T : IExtensionId
         {
-            var type = typeof(T);
-            if (Extensions.Contains(type)) 
-                return this;
-            
-            var typeInfo = type.GetTypeInfo();
+            var typeInfo = typeof(T).GetTypeInfo();
             if (typeInfo.IsAbstract || !typeInfo.IsClass)
                 throw new ConfigurationException("Type class must not be abstract or static");
 
-            Extensions.Add(type);
-
+            AddExtension(typeof(T), static () => Activator.CreateInstance<T>());
             return this;
+        }
+
+        private void AddExtension(Type type, Func<IExtensionId> factory)
+        {
+            if (Extensions.All(e => e.Type != type))
+                Extensions.Add((type, factory));
         }
 
         /// <summary>
@@ -407,37 +415,6 @@ namespace Akka.Hosting
                 });
         }
 
-        /// <summary>
-        /// Configure extensions
-        /// </summary>
-        private void AddExtensions()
-        {
-            if (Extensions.Count == 0)
-                return;
-            
-            // check to see if there are any existing extensions set up inside the current HOCON configuration
-            if (Configuration.HasValue)
-            {
-                var listedExtensions = Configuration.Value.GetStringList("akka.extensions");
-                foreach (var listedExtension in listedExtensions)
-                {
-                    var trimmed = listedExtension.Trim();
-                    
-                    // sanity check, we should not get any empty entries
-                    if (string.IsNullOrWhiteSpace(trimmed))
-                        continue;
-                    
-                    var type = Type.GetType(trimmed);
-                    if (type != null)
-                        Extensions.Add(type);
-                }
-            }
-            
-            AddHoconConfiguration(
-                $"akka.extensions = [{string.Join(", ", Extensions.Select(s => $"\"{s.AssemblyQualifiedName}\""))}]", 
-                HoconAddMode.Prepend);
-        }
-        
         private static Func<IServiceProvider, ActorSystem> ActorSystemFactory()
         {
             return sp =>
@@ -447,9 +424,6 @@ namespace Akka.Hosting
                 /*
                  * Build setups
                  */
-                
-                // Add auto-started akka extensions, if any.
-                config.AddExtensions();
                 
                 // check to see if we need a LoggerSetup
                 var hasLoggerSetup = config.Setups.Any(c => c is LoggerFactorySetup);
@@ -489,6 +463,14 @@ namespace Akka.Hosting
                             .ToImmutableHashSet());
 
                     actorSystemSetup = actorSystemSetup.And(serializationSetup);
+                }
+
+                // auto-started extensions go in as ids, not type names in akka.extensions; keep any ExtensionsSetup the user added
+                if (config.Extensions.Count > 0)
+                {
+                    var userIds = actorSystemSetup.Get<ExtensionsSetup>().Select(s => s.ExtensionIds).GetOrElse(Array.Empty<IExtensionId>());
+                    actorSystemSetup = actorSystemSetup.And(
+                        ExtensionsSetup.Create(config.Extensions.Select(e => e.Create()).Concat(userIds)));
                 }
 
                 /*
