@@ -41,7 +41,8 @@
 # --- Reached by the canary's UNROOTED publish, i.e. on a real local ActorSystem boot -------------
 
 # Extension loading: `akka.extensions` is a list of assembly-qualified type names resolved at
-# startup. No built-in table yet - an AOT app has to root its extensions itself.
+# startup. Akka's own extensions resolve from a first-party table and ExtensionsSetup needs no names,
+# but any other entry still falls through to Type.GetType; this stays until that path is guarded.
 IL2057|src/core/Akka/Actor/Internal/ActorSystemImpl.cs|Akka.Actor.Internal.ActorSystemImpl.LoadExtensions()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
 
 # Custom IActorRefProvider: the built-in three (local/remote/cluster) resolve from a table, but a

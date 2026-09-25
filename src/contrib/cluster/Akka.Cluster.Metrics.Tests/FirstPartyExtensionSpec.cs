@@ -20,8 +20,8 @@ namespace Akka.Cluster.Metrics.Tests
         {
             const string name = "Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics";
 
-            ActorSystemImpl.TryCreateFirstPartyExtension(name)!.GetType()
-                .Should().Be(Type.GetType(name, throwOnError: true));
+            ActorSystemImpl.TryCreateFirstPartyExtension(name)
+                .Should().BeOfType(Type.GetType(name, throwOnError: true));
         }
     }
 }

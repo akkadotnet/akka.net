@@ -13,15 +13,21 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Actor.Setup
 {
-    public class ExtensionsSetupSpec
+    // each test starts its own ActorSystem from an ExtensionsSetup; Sys is only the TestKit's
+    public class ExtensionsSetupSpec : AkkaSpec
     {
-        private const string CountingFqn = "Akka.Tests.Actor.Setup.ExtensionsSetupSpec+CountingExtension, Akka.Tests";
+        private const string HoconCountingFqn = "Akka.Tests.Actor.Setup.ExtensionsSetupSpec+HoconCountingExtension, Akka.Tests";
         private const string FailingFqn = "Akka.Tests.Actor.Setup.ExtensionsSetupSpec+FailingExtension, Akka.Tests";
+
+        public ExtensionsSetupSpec(ITestOutputHelper output) : base(output)
+        {
+        }
 
         private static ActorSystemSetup SetupWith(string hocon, params IExtensionId[] extensionIds)
             => BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon))
@@ -38,7 +44,7 @@ namespace Akka.Tests.Actor.Setup
             }
             finally
             {
-                await system.Terminate();
+                await ShutdownAsync(system);
             }
         }
 
@@ -53,25 +59,34 @@ namespace Akka.Tests.Actor.Setup
             viaSetup.Should().Throw<FailingExtension.TestException>();
         }
 
-        [Fact(DisplayName = "An extension named in both akka.extensions and ExtensionsSetup is registered once")]
-        public async Task Should_register_once_When_named_in_HOCON_and_Setup()
+        [Fact(DisplayName = "An extension named in both akka.extensions and ExtensionsSetup is registered once, from the Setup's id")]
+        public async Task Should_register_once_from_Setup_When_named_in_HOCON_and_Setup()
         {
-            CountingExtension.Created = 0;
+            SetupCountingExtension.Created = 0;
+            HoconCountingExtension.Created = 0;
             var system = ActorSystem.Create("hocon-and-setup",
-                SetupWith($"akka.extensions = [\"{CountingFqn}\"]", new CountingExtension()));
+                SetupWith($"akka.extensions = [\"{HoconCountingFqn}\"]", new SetupCountingExtension()));
             try
             {
                 system.HasExtension<CountingExtensionImpl>().Should().BeTrue();
-                CountingExtension.Created.Should().Be(1);
+                SetupCountingExtension.Created.Should().Be(1);
+                HoconCountingExtension.Created.Should().Be(0);
             }
             finally
             {
-                await system.Terminate();
+                await ShutdownAsync(system);
             }
         }
 
+        [Fact(DisplayName = "ExtensionsSetup rejects a null extension id")]
+        public void Should_throw_When_Setup_has_null_id()
+        {
+            var create = () => ExtensionsSetup.Create(new OtherTestExtension(), null!);
+            create.Should().Throw<ArgumentException>();
+        }
+
         [Theory(DisplayName = "The first-party extension table ignores names that are not Akka's own extensions")]
-        [InlineData(CountingFqn)]
+        [InlineData(HoconCountingFqn)]
         [InlineData("Akka.DistributedData.DistributedDataProvider")] // no assembly: Type.GetType from Akka.dll would not find it either
         [InlineData("Akka.DistributedData.DistributedDataProvider, Akka.Cluster.Tools")]
         [InlineData("Akka.DistributedData.DistributedDataProviderX, Akka.DistributedData")]
@@ -88,7 +103,18 @@ namespace Akka.Tests.Actor.Setup
                 .Should().BeNull();
         }
 
-        public sealed class CountingExtension : ExtensionIdProvider<CountingExtensionImpl>
+        public sealed class SetupCountingExtension : ExtensionIdProvider<CountingExtensionImpl>
+        {
+            public static int Created;
+
+            public override CountingExtensionImpl CreateExtension(ExtendedActorSystem system)
+            {
+                Interlocked.Increment(ref Created);
+                return new CountingExtensionImpl();
+            }
+        }
+
+        public sealed class HoconCountingExtension : ExtensionIdProvider<CountingExtensionImpl>
         {
             public static int Created;
 
