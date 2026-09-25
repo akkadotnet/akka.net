@@ -255,11 +255,11 @@ namespace Akka.Serialization
             };
 
         /// <summary>
-        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> accepts alongside "no
+        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> and <see cref="LoadedModule"/> accept alongside "no
         /// assembly at all" - every name the .NET runtimes Akka.NET targets have shipped <see cref="object"/>
         /// and <see cref="byte"/>[] under.
         /// </summary>
-        private static readonly HashSet<string> FrameworkAssemblyNames =
+        internal static readonly HashSet<string> FrameworkAssemblyNames =
             new(StringComparer.OrdinalIgnoreCase)
             {
                 "mscorlib",
@@ -343,7 +343,7 @@ namespace Akka.Serialization
 
             // modules whose serializer rows this config contains; their BoundTypes also answer binding rows that
             // name a CoreLib, Akka.dll or third-party type, such as Remote's "System.String" = primitive
-            var loadedModules = new List<ModuleSerializers>();
+            var loadedModules = new List<LoadedModule>();
 
             foreach (var kvp in serializersConfig)
             {
@@ -357,7 +357,7 @@ namespace Akka.Serialization
                     serializer = serializerFactory(system, serializerConfig);
                     if (serializer == null)
                     {
-                        // built into Akka.dll, but unavailable under the current feature switches
+                        // a built-in serializer that cannot work under the current feature switches
                         skippedAliases.Add(kvp.Key);
                         continue;
                     }
@@ -482,7 +482,7 @@ namespace Akka.Serialization
         /// Core's built-in factory for <paramref name="typeName"/>, else the factory of the module its assembly half names.
         /// </summary>
         private static Func<ExtendedActorSystem, Config, Serializer> FindSerializerFactory(
-            string typeName, ModuleSerializerTable modules, List<ModuleSerializers> loadedModules)
+            string typeName, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
         {
             if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInName &&
                 BuiltInSerializers.TryGetValue(builtInName, out var builtInFactory))
@@ -492,7 +492,7 @@ namespace Akka.Serialization
                 assembly is null || modules.ForAssembly(assembly) is not { } module)
                 return null;
 
-            var entry = module.Serializers.FirstOrDefault(e => IsNamedBy(e.Type, name, assembly));
+            var entry = module.FindSerializer(name, assembly);
             if (entry is not null && !loadedModules.Contains(module))
                 loadedModules.Add(module);
             return entry?.Create;
@@ -503,26 +503,11 @@ namespace Akka.Serialization
         /// this config's serializer rows loaded. Two modules listing one name list the same <see cref="Type"/>.
         /// </summary>
         private static Type FindModuleBoundType(
-            string name, string assembly, ModuleSerializerTable modules, List<ModuleSerializers> loadedModules)
+            string name, string assembly, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
         {
             var owner = assembly is null ? null : modules.ForAssembly(assembly);
-            return loadedModules.Prepend(owner).Where(m => m is not null).SelectMany(m => m.BoundTypes)
-                .FirstOrDefault(t => IsNamedBy(t, name, assembly));
-        }
-
-        /// <summary>
-        /// Strict match on full name and assembly simple name. A framework type also matches a row with no
-        /// assembly or any of <see cref="FrameworkAssemblyNames"/>; no other type matches a bare name.
-        /// </summary>
-        private static bool IsNamedBy(Type type, string name, string assembly)
-        {
-            if (type.FullName is null || Akka.Util.TypeExtensions.StripAssemblyIdentity(type.FullName) != name)
-                return false;
-
-            var actual = type.Assembly.GetName().Name;
-            return assembly is null || FrameworkAssemblyNames.Contains(assembly)
-                ? FrameworkAssemblyNames.Contains(actual)
-                : string.Equals(assembly, actual, StringComparison.OrdinalIgnoreCase);
+            return loadedModules.Prepend(owner).Where(m => m is not null)
+                .Select(m => m.FindBoundType(name, assembly)).FirstOrDefault(t => t is not null);
         }
 
         [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]

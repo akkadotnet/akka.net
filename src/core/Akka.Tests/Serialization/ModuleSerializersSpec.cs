@@ -73,13 +73,24 @@ namespace Akka.Tests.Serialization
                     (system, config) => config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config))
             };
 
-            public override IReadOnlyList<Type> BoundTypes { get; } = new[] { typeof(ModuleMessage), typeof(string), typeof(Identify) };
+            public override IReadOnlyList<Type> BoundTypes { get; } =
+                new[] { typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill) };
         }
 
         /// <summary>Stands in for a module built against a different Akka: its table's constructor hits a missing member.</summary>
         internal sealed class SkewedModule : ModuleSerializers
         {
             public SkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
+
+            public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
+
+            public override IReadOnlyList<Type> BoundTypes => throw new NotSupportedException();
+        }
+
+        /// <summary>The same skew hit in a static initializer, which arrives wrapped in TypeInitializationException.</summary>
+        internal sealed class StaticSkewedModule : ModuleSerializers
+        {
+            static StaticSkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
             public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
 
@@ -206,6 +217,20 @@ namespace Akka.Tests.Serialization
             });
         }
 
+        /// <remarks>Type.GetType runs from inside Akka.dll, so reflection accepts a bare Akka.dll name; the table must too.</remarks>
+        [Fact(DisplayName = "Serialization should accept a bare Akka.dll type name in a module binding, as reflection does")]
+        public async Task Should_accept_a_bare_Akka_type_name_When_a_loaded_module_binds_it()
+        {
+            var config = ConfigurationFactory.ParseString(@"akka.actor.serialization-bindings { ""Akka.Actor.PoisonPill"" = fake-module }");
+            await WithSystem("module-bare-akka", config, async system =>
+            {
+                ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(PoisonPill)).Should().BeOfType<FakeSerializer>();
+
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(PoisonPill)).Should().BeOfType<FakeSerializer>();
+            });
+        }
+
         [Theory(DisplayName = "Serialization should build the same serializers from a module table as from reflection when dynamic type loading is on")]
         [InlineData(null)]
         [InlineData("akka.actor.serialization-settings.fake-module.some-setting = 1")]
@@ -231,6 +256,7 @@ namespace Akka.Tests.Serialization
 
         [Theory(DisplayName = "Serialization should treat a module whose table fails to load as absent")]
         [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+SkewedModule, Akka.Tests")]
+        [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+StaticSkewedModule, Akka.Tests")]
         [InlineData("No.Such.Module, No.Such.Assembly")]
         public async Task Should_treat_the_module_as_absent_When_its_table_fails_to_load(string tableTypeName)
         {
@@ -245,6 +271,24 @@ namespace Akka.Tests.Serialization
                 var exception = await Assert.ThrowsAsync<ConfigurationException>(() => Build(system, table, dynamicTypeLoading: false));
                 exception.Message.Should().Contain("akka.actor.serializers.fake-module");
             });
+        }
+
+        /// <remarks>Only modules this config's serializer rows loaded answer a framework-type row.</remarks>
+        [Fact(DisplayName = "Serialization should still reject a System.String binding when no module serializer row is present and dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_a_framework_type_row_has_no_module()
+        {
+            var system = ActorSystem.Create("module-none", @"akka.actor.serialization-bindings { ""System.String"" = bytes }");
+            try
+            {
+                var exception = await Assert.ThrowsAsync<ConfigurationException>(
+                    () => Build(system, FakeTable(), dynamicTypeLoading: false));
+                exception.Message.Should().Contain("[System.String]");
+                _probes.Should().Be(0);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
         }
 
         [Theory(DisplayName = "Serialization should never probe a module when every row hits the built-in tables")]

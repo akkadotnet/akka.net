@@ -18,8 +18,9 @@ using Akka.Configuration;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. A serializer type a module's reference.conf names, and a factory that calls the constructor
-    /// reflection would pick: <c>(system, config)</c> for a non-empty settings block, <c>(system)</c> otherwise.
+    /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory must be a plain
+    /// <c>new X(system, config)</c> for a non-empty settings block and <c>new X(system)</c> otherwise - the constructor
+    /// reflection would pick - and must not return null.
     /// </summary>
     internal sealed record ModuleSerializer(Type Type, Func<ExtendedActorSystem, Config, Serializer> Create);
 
@@ -35,8 +36,46 @@ namespace Akka.Serialization
     }
 
     /// <summary>
-    /// INTERNAL API. Finds a module's <see cref="ModuleSerializers"/> by assembly simple name, loading it lazily and
-    /// at most once per table.
+    /// INTERNAL API. A loaded <see cref="ModuleSerializers"/>, indexed by stripped full name for strict matching.
+    /// </summary>
+    internal sealed class LoadedModule
+    {
+        private readonly Dictionary<string, (ModuleSerializer Entry, string? Assembly)> _serializers = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (Type Type, string? Assembly)> _boundTypes = new(StringComparer.Ordinal);
+
+        internal LoadedModule(ModuleSerializers module)
+        {
+            foreach (var entry in module.Serializers)
+                _serializers[KeyOf(entry.Type)] = (entry, entry.Type.Assembly.GetName().Name);
+            foreach (var type in module.BoundTypes)
+                _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name);
+        }
+
+        internal ModuleSerializer? FindSerializer(string name, string? assembly)
+            => _serializers.TryGetValue(name, out var s) && Accepts(s.Entry.Type, s.Assembly, assembly) ? s.Entry : null;
+
+        internal Type? FindBoundType(string name, string? assembly)
+            => _boundTypes.TryGetValue(name, out var t) && Accepts(t.Type, t.Assembly, assembly) ? t.Type : null;
+
+        private static string KeyOf(Type type) => Akka.Util.TypeExtensions.StripAssemblyIdentity(type.FullName ?? string.Empty);
+
+        /// <summary>
+        /// What <see cref="Type.GetType(string)"/> called from Akka.dll accepts: a bare name finds Akka.dll and framework
+        /// types only; a framework type also matches any framework assembly name; anything else needs its own assembly.
+        /// </summary>
+        private static bool Accepts(Type type, string? actual, string? assembly)
+        {
+            if (assembly is null)
+                return type.Assembly == typeof(Serialization).Assembly || Serialization.FrameworkAssemblyNames.Contains(actual!);
+
+            return Serialization.FrameworkAssemblyNames.Contains(assembly)
+                ? Serialization.FrameworkAssemblyNames.Contains(actual!)
+                : string.Equals(assembly, actual, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API. Finds a module's table by assembly simple name, loading it lazily and at most once per table.
     /// </summary>
     internal sealed class ModuleSerializerTable
     {
@@ -48,13 +87,13 @@ namespace Akka.Serialization
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
-        private readonly ConcurrentDictionary<string, ModuleSerializers?> _loaded = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, LoadedModule?> _loaded = new(StringComparer.OrdinalIgnoreCase);
 
         internal ModuleSerializerTable(IDictionary<string, Func<ModuleSerializers?>> modules)
             => _modules = new Dictionary<string, Func<ModuleSerializers?>>(modules, StringComparer.OrdinalIgnoreCase);
 
         /// <summary>The module shipped as <paramref name="assembly"/>; null when it is not a known module or fails to load.</summary>
-        internal ModuleSerializers? ForAssembly(string assembly)
+        internal LoadedModule? ForAssembly(string assembly)
         {
             if (!_modules.TryGetValue(assembly, out var load))
                 return null;
@@ -63,18 +102,25 @@ namespace Akka.Serialization
             return _loaded.GetOrAdd(assembly, _ => TryLoad(load));
         }
 
-        private static ModuleSerializers? TryLoad(Func<ModuleSerializers?> load)
+        private static LoadedModule? TryLoad(Func<ModuleSerializers?> load)
         {
             try
             {
-                return load();
+                // reads both lists here, so a member missing from either also lands in the catch
+                return load() is { } module ? new LoadedModule(module) : null;
             }
-            catch (Exception e) when ((e is TargetInvocationException or TypeInitializationException ? e.InnerException : e)
-                is TypeLoadException or MissingMemberException or FileNotFoundException or FileLoadException)
+            catch (Exception e) when (IsVersionSkew(e))
             {
-                // version skew: the module's table, or something it references, is missing, so the module counts as absent
+                // the module's table, or something it references, is missing from this build: the module counts as absent
                 return null;
             }
+        }
+
+        private static bool IsVersionSkew(Exception e)
+        {
+            while (e is TargetInvocationException or TypeInitializationException && e.InnerException is { } inner)
+                e = inner;
+            return e is TypeLoadException or MissingMemberException or FileNotFoundException or FileLoadException;
         }
 
         /// <summary>Loads a module's table. Pass a literal: the annotation lets the trimmer keep that type and its constructor.</summary>
