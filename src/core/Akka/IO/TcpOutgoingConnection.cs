@@ -82,7 +82,7 @@ namespace Akka.IO
                 resumeWriterThreshold: pipeBufferSize,
                 useSynchronizationContext: false);
 
-            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
+            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(_connect.Options));
         }
 
         private void ReleaseConnectionSocketArgs()
