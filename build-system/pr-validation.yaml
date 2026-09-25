@@ -84,8 +84,8 @@ jobs:
   #   2. ROOTED publish (-p:RootAkka=true adds a TrimmerRootAssembly for Akka). ILC analyses every
   #      path in the library instead of the handful the two toy actors reach, so this is the honest
   #      warning count for core, and this is the log the baseline check reads. The rooted publish
-  #      sees more sites than the unrooted one, and those extra sites are where later AOT work
-  #      happens, so gating on the unrooted list alone would leave that work unwatched.
+  #      can see sites the unrooted one never reaches, which is where later AOT work happens, so
+  #      gating on the unrooted list alone would leave that work unwatched.
   #
   # Deliberately NOT a template job: the shared templates start with a full `dotnet build -c
   # Release` of the solution and end with test-result publishing, neither of which this lane needs.
