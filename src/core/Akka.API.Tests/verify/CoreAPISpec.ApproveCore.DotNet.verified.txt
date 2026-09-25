@@ -4357,6 +4357,7 @@ namespace Akka.IO
     {
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public int BatchReceiveLimit { get; }
+        [System.Obsolete("Obsolete since v1.6.0; UDP always uses the disabled buffer pool")]
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
         public int InitialSocketAsyncEventArgs { get; }

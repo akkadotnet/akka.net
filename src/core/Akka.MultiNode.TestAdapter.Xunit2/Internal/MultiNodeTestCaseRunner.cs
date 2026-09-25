@@ -15,7 +15,6 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.IO;
 using Akka.MultiNode.TestAdapter.Internal.Persistence;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
@@ -141,13 +140,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
             }
             
             // Run the actual spec
-            var config = ConfigurationFactory.ParseString($@"
-akka.io.tcp {{
-    buffer-pool = ""akka.io.tcp.disabled-buffer-pool""
-    disabled-buffer-pool.buffer-size = {TcpBufferSize}
-}}
-");
-            TestRunSystem = ActorSystem.Create("TestRunnerLogging", config);
+            TestRunSystem = ActorSystem.Create("TestRunnerLogging");
 
             var sinks = new List<MessageSink>
             {

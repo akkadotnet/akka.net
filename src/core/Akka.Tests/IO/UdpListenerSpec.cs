@@ -26,9 +26,7 @@ namespace Akka.Tests.IO
                     akka.actor.serialize-creators = on
                     akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
-                    akka.io.udp.nr-of-selectors = 1
-                    akka.io.udp.direct-buffer-pool-limit = 100
-                    akka.io.udp.direct-buffer-size = 1024", output)
+                    akka.io.udp.nr-of-selectors = 1", output)
         { }
 
         [Fact]

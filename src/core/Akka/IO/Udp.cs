@@ -498,20 +498,25 @@ namespace Akka.IO
             
         }
 
+        /// <summary>
+        /// UDP always uses the shipped <see cref="DisabledBufferPool"/>; only its buffer size is configurable.
+        /// </summary>
+        private const string DisabledBufferPoolConfigPath = "akka.io.udp.disabled-buffer-pool";
+
         public UdpExt(ExtendedActorSystem system, UdpSettings settings)
         {
-            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
+            var bufferPoolConfig = system.Settings.Config.GetConfig(DisabledBufferPoolConfigPath);
             if (bufferPoolConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
+                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {DisabledBufferPoolConfigPath} configuration node not found");
 
             Setting = settings;
             Manager = system.SystemActorOf(
-                props: Props.Create(() => new UdpManager(this)).WithDeploy(Deploy.Local), 
+                props: Props.Create(() => new UdpManager(this)).WithDeploy(Deploy.Local),
                 name: "IO-UDP-FF");
 
             SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(
                 settings.InitialSocketAsyncEventArgs,
-                CreateBufferPool(system, bufferPoolConfig),
+                new DisabledBufferPool(bufferPoolConfig.GetInt("buffer-size", 256)),
                 OnComplete);
         }
 
@@ -526,28 +531,6 @@ namespace Akka.IO
         internal UdpSettings Setting { get; }
 
         internal PreallocatedSocketEventAgrsPool SocketEventArgsPool { get; }
-
-        private static IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
-        {
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
-
-            var type = Type.GetType(config.GetString("class", null), true);
-
-            if (!typeof(IBufferPool).IsAssignableFrom(type))
-                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
-
-            try
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system, config);
-            }
-            catch
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
 
         private void OnComplete(object sender, SocketAsyncEventArgs e)
         {

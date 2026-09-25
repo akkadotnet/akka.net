@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -15,6 +16,7 @@ using System.Runtime.ExceptionServices;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -205,6 +207,14 @@ namespace Akka.IO
     /// </summary>
     public class DnsExt : IOExtension
     {
+        /// <summary>The <c>provider-object</c> spellings that name the built-in <see cref="InetAddressDnsProvider"/>.</summary>
+        private static readonly Dictionary<string, Func<IDnsProvider>> BuiltInDnsProviders =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.IO.InetAddressDnsProvider"] = static () => new InetAddressDnsProvider(),
+                ["Akka.IO.InetAddressDnsProvider, Akka"] = static () => new InetAddressDnsProvider()
+            };
+
         /// <summary>
         /// Configuration settings for the DNS extension.
         /// </summary>
@@ -259,12 +269,33 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<DnsSettings>("akka.io.dns");
 
             Settings = new DnsSettings(config);
-            var dnsProviderType = Type.GetType(Settings.ProviderObjectName);
+            Provider = ResolveProvider(Settings);
+            Cache = Provider.Cache;
+        }
+
+        /// <summary>Resolves <paramref name="settings"/>' <c>provider-object</c> into an <see cref="IDnsProvider"/>.</summary>
+        private static IDnsProvider ResolveProvider(DnsSettings settings)
+        {
+            if (BuiltInDnsProviders.TryGetValue(
+                    Akka.Util.TypeExtensions.StripAssemblyIdentity(settings.ProviderObjectName), out var providerFactory))
+                return providerFactory();
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    $"akka.io.dns.{settings.Resolver}.provider-object", settings.ProviderObjectName,
+                    "the built-in InetAddressDnsProvider"));
+
+            return CreateProviderFromTypeName(settings.ProviderObjectName);
+        }
+
+        [RequiresUnreferencedCode("Loads the [akka.io.dns.<resolver>.provider-object] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IDnsProvider CreateProviderFromTypeName(string providerObjectName)
+        {
+            var dnsProviderType = Type.GetType(providerObjectName);
             if (dnsProviderType is null)
                 throw new ConfigurationException(
-                    $"Could not resolve DNS provider type [{Settings.ProviderObjectName}]. Ensure the type name is fully qualified.");
-            Provider = (IDnsProvider) Activator.CreateInstance(dnsProviderType);
-            Cache = Provider.Cache;
+                    $"Could not resolve DNS provider type [{providerObjectName}]. Ensure the type name is fully qualified.");
+            return (IDnsProvider)Activator.CreateInstance(dnsProviderType);
         }
 
         /// <inheritdoc/>
@@ -272,11 +303,26 @@ namespace Akka.IO
         {
             get
             {
-                return _manager = _manager ?? _system.SystemActorOf(Props.Create(Provider.ManagerClass, this)
-                                                                         .WithDeploy(Deploy.Local)
-                                                                         .WithDispatcher(Settings.Dispatcher));
+                if (_manager is not null)
+                    return _manager;
+
+                // Switch check first: with the switch off it is a constant, so the trimmer can drop the
+                // reflection branch. A custom provider can only exist with the switch on.
+                _manager = !AkkaFeatures.IsDynamicTypeLoadingSupported || Provider.GetType() == typeof(InetAddressDnsProvider)
+                    ? _system.SystemActorOf(Props.Create(() => new SimpleDnsManager(this))
+                        .WithDeploy(Deploy.Local)
+                        .WithDispatcher(Settings.Dispatcher))
+                    : CreateCustomManager();
+
+                return _manager;
             }
         }
+
+        [RequiresUnreferencedCode("Instantiates the custom IDnsProvider.ManagerClass named by [akka.io.dns.<resolver>.provider-object]. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private IActorRef CreateCustomManager()
+            => _system.SystemActorOf(Props.Create(Provider.ManagerClass, this)
+                .WithDeploy(Deploy.Local)
+                .WithDispatcher(Settings.Dispatcher));
 
         /// <summary>
         /// Returns the DNS manager actor reference.
