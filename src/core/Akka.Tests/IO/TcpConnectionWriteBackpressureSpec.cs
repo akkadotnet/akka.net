@@ -7,6 +7,7 @@
 
 using System;
 using System.Buffers;
+using System.IO;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
@@ -56,15 +57,31 @@ namespace Akka.Tests.IO
 
         private static Tcp.Write Write(int size, int id) => Tcp.Write.Create(new byte[size], new WriteAck(id));
 
-        private async Task<IActorRef> ConnectAsync(ConnectedSocketPair pair, BlockingWriteStream stream, TestProbe handler)
+        private Task<IActorRef> ConnectAsync(ConnectedSocketPair pair, BlockingWriteStream stream, TestProbe handler,
+            bool keepOpenOnPeerClosed = false, Action<IActorRef>? beforeRegister = null)
+        {
+            var settings = TcpSettings.Create(Sys);
+            return RegisterAsync(bindHandler => Props.Create(() => new TcpIncomingConnection(
+                settings, pair.Server, bindHandler, Array.Empty<Inet.SocketOption>(), false, stream)),
+                new Tcp.Register(handler.Ref, keepOpenOnPeerClosed), beforeRegister);
+        }
+
+        private Task<IActorRef> ConnectAsync(ConnectedSocketPair pair, FakeTransport transport, TestProbe handler)
+        {
+            var settings = TcpSettings.Create(Sys);
+            return RegisterAsync(bindHandler => Props.Create(() => new FakeTransportConnection(
+                settings, pair.Server, bindHandler, transport)), new Tcp.Register(handler.Ref), null);
+        }
+
+        private async Task<IActorRef> RegisterAsync(Func<IActorRef, Props> props, Tcp.Register register,
+            Action<IActorRef>? beforeRegister)
         {
             var bindHandler = CreateTestProbe();
-            var settings = TcpSettings.Create(Sys);
-            var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
-                settings, pair.Server, bindHandler.Ref, Array.Empty<Inet.SocketOption>(), false, stream)));
+            var connection = Sys.ActorOf(props(bindHandler.Ref));
 
             await bindHandler.ExpectMsgAsync<Tcp.Connected>();
-            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
+            beforeRegister?.Invoke(connection);
+            bindHandler.Send(connection, register);
             await WatchAsync(connection);
             return connection;
         }
@@ -151,20 +168,114 @@ namespace Akka.Tests.IO
         public async Task Should_fail_write_without_ack_When_flush_reports_the_output_completed()
         {
             using var pair = await ConnectedSocketPair.CreateAsync();
-            var bindHandler = CreateTestProbe();
             var handler = CreateTestProbe();
-            var settings = TcpSettings.Create(Sys);
-            var connection = Sys.ActorOf(Props.Create(() =>
-                new CompletedOutputConnection(settings, pair.Server, bindHandler.Ref)));
-            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
-            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
-            await WatchAsync(connection);
+            var transport = new FakeTransport(_ => new ValueTask<FlushResult>(new FlushResult(false, isCompleted: true)));
+            var connection = await ConnectAsync(pair, transport, handler);
 
             handler.Send(connection, Write(16, 1));
 
             await ExpectFailedWritesAsync(handler, 1, 1);
             await handler.ExpectMsgAsync<Tcp.ErrorClosed>();
             await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_send_ErrorClosed_to_Close_sender_When_a_queued_write_fails_while_closing")]
+        public async Task Should_send_ErrorClosed_to_Close_sender_When_a_queued_write_fails_while_closing()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            var handler = CreateTestProbe();
+            var closer = CreateTestProbe();
+            var firstFlush = new TaskCompletionSource<FlushResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            // Write 1's flush stays pending; the write pump "dies" before write 2 reaches the pipe.
+            var transport = new FakeTransport(n => n == 1
+                ? new ValueTask<FlushResult>(firstFlush.Task)
+                : throw new IOException("write pump failed"));
+            var connection = await ConnectAsync(pair, transport, handler);
+
+            handler.Send(connection, Write(16, 1));
+            handler.Send(connection, Write(16, 2));
+            closer.Send(connection, Tcp.Close.Instance);
+            await handler.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+
+            firstFlush.SetResult(new FlushResult(false, false));
+            await ExpectAcksAsync(handler, 1, 1);
+            await ExpectFailedWritesAsync(handler, 2, 2);
+            await closer.ExpectMsgAsync<Tcp.ErrorClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_fail_pending_and_queued_writes_When_write_pump_fails_while_open")]
+        public async Task Should_fail_pending_and_queued_writes_When_write_pump_fails_while_open()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var handler = CreateTestProbe();
+            var connection = await ConnectAsync(pair, stream, handler);
+
+            StallWithQueuedWrites(connection, handler);
+            await handler.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            stream.FailFirstWrite(new IOException("connection reset"));
+
+            await ExpectFailedWritesAsync(handler, 1, 3);
+            await handler.ExpectMsgAsync<Tcp.ErrorClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_send_ErrorClosed_to_Close_sender_When_write_pump_fails_while_closing")]
+        public async Task Should_send_ErrorClosed_to_Close_sender_When_write_pump_fails_while_closing()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var handler = CreateTestProbe();
+            var closer = CreateTestProbe();
+            var connection = await ConnectAsync(pair, stream, handler);
+
+            StallWithQueuedWrites(connection, handler);
+            closer.Send(connection, Tcp.Close.Instance);
+            await closer.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            stream.FailFirstWrite(new IOException("connection reset"));
+
+            await ExpectFailedWritesAsync(handler, 1, 3);
+            await closer.ExpectMsgAsync<Tcp.ErrorClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_ack_every_write_before_ConfirmedClosed_When_peer_closed_first_with_keepOpenOnPeerClosed")]
+        public async Task Should_ack_every_write_before_ConfirmedClosed_When_peer_closed_first_with_keepOpenOnPeerClosed()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var handler = CreateTestProbe();
+            var connection = await ConnectAsync(pair, stream, handler, keepOpenOnPeerClosed: true);
+
+            StallWithQueuedWrites(connection, handler);
+            stream.CompleteReads(); // peer FIN
+            await handler.ExpectMsgAsync<Tcp.PeerClosed>();
+            handler.Send(connection, Tcp.ConfirmedClose.Instance);
+            await handler.ExpectNoMsgAsync(NoMsgWindow);
+
+            stream.ReleaseFirstWrite();
+            await ExpectAcksAsync(handler, 1, 3);
+            await handler.ExpectMsgAsync<Tcp.ConfirmedClosed>();
+            await ExpectTerminatedAsync(connection);
+            stream.BytesWritten.Should().Be(PauseThreshold + QueuedBytes);
+        }
+
+        [Fact(DisplayName = "Should_withhold_WriteAck_When_writes_buffered_before_Register_pass_the_pause_threshold")]
+        public async Task Should_withhold_WriteAck_When_writes_buffered_before_Register_pass_the_pause_threshold()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var handler = CreateTestProbe();
+            var connection = await ConnectAsync(pair, stream, handler,
+                beforeRegister: c => StallWithQueuedWrites(c, handler));
+
+            await handler.ExpectNoMsgAsync(NoMsgWindow);
+
+            stream.ReleaseFirstWrite();
+            await ExpectAcksAsync(handler, 1, 3);
+            await AbortAsync(connection, handler);
+            stream.BytesWritten.Should().Be(PauseThreshold + QueuedBytes);
         }
 
         [Fact(DisplayName = "Should_ack_every_write_before_Closed_When_Close_arrives_with_writes_pending")]
@@ -350,32 +461,32 @@ namespace Akka.Tests.IO
             queued.DisposeCount.Should().Be(1);
         }
 
-        /// <summary>
-        /// A connection whose transport reports the output as completed on every flush, as the pipe
-        /// does once its write pump has exited.
-        /// </summary>
-        private sealed class CompletedOutputConnection : TcpConnection
+        private sealed class FakeTransportConnection : TcpConnection
         {
             private readonly IActorRef _bindHandler;
+            private readonly FakeTransport _transport;
 
-            public CompletedOutputConnection(TcpSettings settings, Socket socket, IActorRef bindHandler)
+            public FakeTransportConnection(TcpSettings settings, Socket socket, IActorRef bindHandler, FakeTransport transport)
                 : base(settings, socket, false)
             {
                 _bindHandler = bindHandler;
+                _transport = transport;
             }
 
             protected override void PreStart() => CompleteConnect(_bindHandler, Array.Empty<Inet.SocketOption>());
 
-            protected override ITransportConnection CreateTransport() => new CompletedOutputTransport();
+            protected override ITransportConnection CreateTransport() => _transport;
         }
 
-        private sealed class CompletedOutputTransport : ITransportConnection
+        /// <summary>A transport whose Nth write returns (or throws) whatever the test decides.</summary>
+        private sealed class FakeTransport : ITransportConnection
         {
-            private static readonly ValueTask<FlushResult> Completed =
-                new(new FlushResult(isCanceled: false, isCompleted: true));
-
+            private readonly Func<int, ValueTask<FlushResult>> _onWrite;
             private readonly Pipe _input = new();
             private readonly TaskCompletionSource<bool> _never = new();
+            private int _writes;
+
+            public FakeTransport(Func<int, ValueTask<FlushResult>> onWrite) => _onWrite = onWrite;
 
             public PipeReader Input => _input.Reader;
             public Task ReadCompleted => _never.Task;
@@ -383,9 +494,9 @@ namespace Akka.Tests.IO
             public bool HasReadError => false;
             public Exception? ReadError => null;
 
-            public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default) => Completed;
-            public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default) => Completed;
-            public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default) => Completed;
+            public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default) => _onWrite(++_writes);
+            public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default) => _onWrite(++_writes);
+            public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default) => default;
             public Task ShutdownAsync() => Task.CompletedTask;
             public Task CloseAsync() => Task.CompletedTask;
             public void Abort() { }

@@ -66,6 +66,12 @@ namespace Akka.Tests.IO
             _releaseFirstWrite.TrySetResult(true);
         }
 
+        /// <summary>Makes the stalled first write throw, which kills the write pump.</summary>
+        public void FailFirstWrite(Exception cause)
+        {
+            _releaseFirstWrite.TrySetException(cause);
+        }
+
         /// <summary>Makes every pending and future read return 0 (peer EOF).</summary>
         public void CompleteReads()
         {
