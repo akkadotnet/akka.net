@@ -7,7 +7,9 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,6 +104,91 @@ public class ExtensionsSpecs
         using var host = await StartHost((builder, _) =>
         {
             builder.WithExtension<FakeExtensionOneProvider>();
+            builder.WithExtension<FakeExtensionTwoProvider>();
+        });
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.TryGetExtension<FakeExtensionOne>(out _).Should().BeTrue();
+        system.TryGetExtension<FakeExtensionTwo>(out _).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "WithExtension should register the extension through ExtensionsSetup")]
+    public async Task WithExtensionShouldUseExtensionsSetup()
+    {
+        using var host = await StartHost((builder, _) => builder.WithExtension<FakeExtensionOneProvider>());
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.TryGetExtension<FakeExtensionOne>(out _).Should().BeTrue();
+        system.Settings.Setup.Get<ExtensionsSetup>().Value.ExtensionIds
+            .Should().ContainSingle().Which.Should().BeOfType<FakeExtensionOneProvider>();
+    }
+
+    [Fact(DisplayName = "WithExtension should not write akka.extensions, and HOCON akka.extensions should pass through unchanged")]
+    public async Task WithExtensionShouldNotWriteHocon()
+    {
+        const string listed = "Akka.Hosting.Tests.ExtensionsSpecs+FakeExtensionOneProvider, Akka.Hosting.Tests";
+        using var host = await StartHost((builder, _) =>
+        {
+            builder.AddHocon($"akka.extensions = [\"{listed}\"]", HoconAddMode.Append);
+            builder.WithExtension<FakeExtensionTwoProvider>();
+        });
+
+        var system = host.Services.GetRequiredService<ActorSystem>();
+        system.Settings.Config.GetStringList("akka.extensions").Should().Equal(listed);
+        system.TryGetExtension<FakeExtensionOne>(out _).Should().BeTrue();
+        system.TryGetExtension<FakeExtensionTwo>(out _).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "WithExtension should fail startup with a ConfigurationException naming an extension whose constructor throws")]
+    public async Task WithExtensionShouldFailStartupWhenCtorThrows()
+    {
+        var ex = await Awaiting(() => StartHost((builder, _) => builder.WithExtension<ThrowingCtorExtensionProvider>()))
+            .Should().ThrowAsync<ConfigurationException>();
+        ex.Which.Message.Should().Contain(typeof(ThrowingCtorExtensionProvider).FullName);
+        ex.Which.InnerException.Should().NotBeNull();
+    }
+
+    [Fact(DisplayName = "An unresolvable akka.extensions entry alongside WithExtension should reach core, which logs an error")]
+    public async Task UnresolvableHoconExtensionShouldBeLoggedByCore()
+    {
+        const string missing = "Akka.Hosting.Tests.DoesNotExistProvider, Akka.Hosting.Tests";
+        ErrorRecorder.Errors = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var host = await StartHost((builder, _) =>
+        {
+            builder.ConfigureLoggers(l => l.AddLogger<ErrorRecorder>());
+            builder.AddHocon($"akka.extensions = [\"{missing}\"]", HoconAddMode.Append);
+            builder.WithExtension<FakeExtensionOneProvider>();
+        });
+
+        (await ErrorRecorder.Errors.Task.WaitAsync(TimeSpan.FromSeconds(5))).Should().Contain(missing);
+    }
+
+    // a logger, so it is already running when core loads extensions; records the first error it sees
+    public sealed class ErrorRecorder : ReceiveActor, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+    {
+        public static TaskCompletionSource<string> Errors = new();
+
+        public ErrorRecorder()
+        {
+            Receive<InitializeLogger>(_ => Sender.Tell(new LoggerInitialized()));
+            Receive<Error>(e => Errors.TrySetResult(e.Message.ToString() ?? string.Empty));
+            ReceiveAny(_ => { });
+        }
+    }
+
+    public class ThrowingCtorExtensionProvider : ExtensionIdProvider<FakeExtensionOne>
+    {
+        public ThrowingCtorExtensionProvider() => throw new InvalidOperationException("ctor failed");
+
+        public override FakeExtensionOne CreateExtension(ExtendedActorSystem system) => new();
+    }
+
+    [Fact(DisplayName = "WithExtension should keep an ExtensionsSetup the user added")]
+    public async Task WithExtensionShouldKeepUserExtensionsSetup()
+    {
+        using var host = await StartHost((builder, _) =>
+        {
+            builder.AddSetup(ExtensionsSetup.Create(new FakeExtensionOneProvider()));
             builder.WithExtension<FakeExtensionTwoProvider>();
         });
 
