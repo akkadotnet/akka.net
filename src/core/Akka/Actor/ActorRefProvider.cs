@@ -219,7 +219,8 @@ namespace Akka.Actor
             _tempNode = _rootPath / "temp";
 
             _systemGuardianStrategy = SupervisorStrategy.DefaultStrategy;
-            _userGuardianStrategyConfigurator = SupervisorStrategyConfigurator.CreateConfigurator(Settings.SupervisorStrategyClass);
+            _userGuardianStrategyConfigurator = SupervisorStrategyConfigurator.CreateConfigurator(
+                Settings.SupervisorStrategyClass, "akka.actor.guardian-supervisor-strategy");
         }
 
         /// <summary>

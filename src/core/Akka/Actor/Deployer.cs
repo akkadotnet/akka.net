@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Akka.Configuration;
 using Akka.Routing;
@@ -21,6 +22,68 @@ namespace Akka.Actor
     /// </summary>
     public class Deployer
     {
+        /// <summary>
+        /// The routers that Akka.NET's own <c>akka.conf</c> maps under
+        /// <c>akka.actor.router.type-mapping</c>, constructed directly so that neither the trimmer nor the
+        /// Native AOT compiler has to see through a <see cref="Type.GetType(string)"/> call.
+        ///
+        /// The keys are the mapped type names, never the aliases: any alias can be pointed at a different
+        /// type in user HOCON - <c>round-robin-pool = "MyApp.MyRouter, MyApp"</c> is legal - and that
+        /// remapping has to keep working, so the alias itself says nothing about which router to build.
+        /// </summary>
+        private static readonly Dictionary<string, Func<Config, RouterConfig>> BuiltInRouterConfigs =
+            BuildBuiltInRouterConfigs();
+
+        /// <summary>
+        /// Builds <see cref="BuiltInRouterConfigs"/>: the 13 routers <c>akka.actor.router.type-mapping</c>
+        /// maps onto types inside Akka.dll and that can actually reach this table.
+        ///
+        /// Two spellings per router, both deliberate: <c>akka.conf</c> ships the bare name and HOCON in the
+        /// wild also carries the <c>Ns.T, Akka</c> form. The lookup runs the configured value through
+        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> first, so a full
+        /// <see cref="Type.AssemblyQualifiedName"/> - which Akka.Hosting writes into HOCON - matches the
+        /// second key whatever version, culture or public key token it names. A value that still misses the
+        /// table falls through to the reflection path, which is unavailable (and therefore throws) once
+        /// dynamic type loading is switched off. Do not remove a spelling, and do not add a versioned third
+        /// key.
+        /// </summary>
+        private static Dictionary<string, Func<Config, RouterConfig>> BuildBuiltInRouterConfigs()
+        {
+            var builtIn = new Dictionary<string, Func<Config, RouterConfig>>(StringComparer.Ordinal);
+
+            // NoRouter is deliberately absent: the only alias akka.conf maps onto it is "from-code", which
+            // CreateRouterConfig short-circuits before it ever reaches this table, and NoRouter has no public
+            // Config constructor - so an entry here would only change what happens when a user points some
+            // other alias at it.
+            Add<RoundRobinPool>(static deployment => new RoundRobinPool(deployment));
+            Add<RoundRobinGroup>(static deployment => new RoundRobinGroup(deployment));
+            Add<RandomPool>(static deployment => new RandomPool(deployment));
+            Add<RandomGroup>(static deployment => new RandomGroup(deployment));
+            Add<SmallestMailboxPool>(static deployment => new SmallestMailboxPool(deployment));
+            Add<BroadcastPool>(static deployment => new BroadcastPool(deployment));
+            Add<BroadcastGroup>(static deployment => new BroadcastGroup(deployment));
+            Add<ScatterGatherFirstCompletedPool>(static deployment => new ScatterGatherFirstCompletedPool(deployment));
+            Add<ScatterGatherFirstCompletedGroup>(static deployment => new ScatterGatherFirstCompletedGroup(deployment));
+            Add<ConsistentHashingPool>(static deployment => new ConsistentHashingPool(deployment));
+            Add<ConsistentHashingGroup>(static deployment => new ConsistentHashingGroup(deployment));
+            Add<TailChoppingPool>(static deployment => new TailChoppingPool(deployment));
+            Add<TailChoppingGroup>(static deployment => new TailChoppingGroup(deployment));
+
+            return builtIn;
+
+            // typeof(TRouter) is what keeps this trimmer-safe: the trimmer sees the type, keeps it, and hands
+            // us its own names, so no spelling can drift out of step with the type it maps to.
+            void Add<TRouter>(Func<Config, RouterConfig> factory) where TRouter : RouterConfig
+            {
+                var routerType = typeof(TRouter);
+
+                // "Akka.Routing.RoundRobinPool"
+                builtIn[routerType.FullName] = factory;
+                // "Akka.Routing.RoundRobinPool, Akka"
+                builtIn[$"{routerType.FullName}, {routerType.Assembly.GetName().Name}"] = factory;
+            }
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -150,6 +213,20 @@ namespace Akka.Actor
                 throw new ConfigurationException(message);
             }
 
+            if (BuiltInRouterConfigs.TryGetValue(
+                    Akka.Util.TypeExtensions.StripAssemblyIdentity(routerTypeName), out var routerFactory))
+                return routerFactory(deployment);
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    $"akka.actor.router.type-mapping.{routerTypeAlias}", routerTypeName, "one of the built-in routers"));
+
+            return CreateRouterConfigFromTypeName(routerTypeName, routerTypeAlias, deployment);
+        }
+
+        [RequiresUnreferencedCode("Loads the router type mapped under [akka.actor.router.type-mapping] by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static RouterConfig CreateRouterConfigFromTypeName(string routerTypeName, string routerTypeAlias, Config deployment)
+        {
             Type routerType;
             try
             {
@@ -167,9 +244,7 @@ namespace Akka.Actor
             }
 
             Debug.Assert(routerType != null, "routerType != null");
-            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
-
-            return routerConfig;
+            return (RouterConfig)Activator.CreateInstance(routerType, deployment);
         }
     }
 }

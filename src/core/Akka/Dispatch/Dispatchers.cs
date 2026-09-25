@@ -8,12 +8,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 using Helios.Concurrency;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
@@ -584,6 +586,10 @@ namespace Akka.Dispatch
              * Fallbacks are added here in order to preserve backwards compatibility with versions of AKka.NET prior to 1.1,
              * before the ExecutorService system was implemented
              */
+            // This switch is also the built-in table for dispatchers: the cases are short aliases rather than
+            // type names, so the trimmer and the Native AOT compiler already see every configurator Akka.NET
+            // ships. Only the default arm - a dispatcher named by type in HOCON - needs reflection, which is
+            // why that is the one branch behind the Akka.DynamicTypeLoading switch.
             switch (type)
             {
                 case "Dispatcher":
@@ -604,18 +610,26 @@ namespace Akka.Dispatch
                 case null:
                     throw new ConfigurationException($"Could not resolve dispatcher for path {id}. type is null");
                 default:
-                    Type dispatcherType = Type.GetType(type);
-                    if (dispatcherType == null)
-                    {
-                        throw new ConfigurationException($"Could not resolve dispatcher type {type} for path {id}");
-                    }
+                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                            $"{id}.type", type, "one of the built-in dispatcher types"));
 
-                    dispatcher =
-                        (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, Prerequisites);
+                    dispatcher = CreateDispatcherConfiguratorFromTypeName(type, id, cfg, Prerequisites);
                     break;
             }
 
             return dispatcher;
+        }
+
+        [RequiresUnreferencedCode("Loads a dispatcher [type] named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static MessageDispatcherConfigurator CreateDispatcherConfiguratorFromTypeName(
+            string type, string id, Config cfg, IDispatcherPrerequisites prerequisites)
+        {
+            var dispatcherType = Type.GetType(type);
+            if (dispatcherType == null)
+                throw new ConfigurationException($"Could not resolve dispatcher type {type} for path {id}");
+
+            return (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, prerequisites);
         }
     }
 
