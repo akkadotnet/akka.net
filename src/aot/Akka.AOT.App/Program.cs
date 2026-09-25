@@ -90,7 +90,7 @@ internal static class Program
     /// </summary>
     private static void AssertBuiltInsResolved(string label, ActorSystem system)
     {
-        Canary.Require(label, system.Serialization.FindSerializerFor(new byte[] { 1 }) is not null,
+        Require(label, system.Serialization.FindSerializerFor(new byte[] { 1 }) is not null,
             "no serializer for a byte[] - akka.actor.serializers/serialization-bindings did not register");
 
         // ByteArraySerializer needs no reflection, so 'bytes' and the System.Byte[] binding survive with the
@@ -99,17 +99,17 @@ internal static class Program
         // is the designed behavior, not a gap - so assert the throw, and assert the message tells the user what
         // to do about it.
         var unbound = RequireThrows(label, () => system.Serialization.FindSerializerFor("hello"));
-        Canary.Require(label, unbound.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
+        Require(label, unbound.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
                        && unbound.Message.Contains("SerializationSetup", StringComparison.Ordinal),
             $"serializing an unbound type threw, but without saying why: [{unbound.Message}]");
 
-        Canary.Require(label, system.Scheduler is HashedWheelTimerScheduler,
+        Require(label, system.Scheduler is HashedWheelTimerScheduler,
             $"akka.scheduler.implementation resolved to [{system.Scheduler.GetType().FullName}]");
-        Canary.Require(label, system.Settings.LogFormatter is SemanticLogMessageFormatter,
+        Require(label, system.Settings.LogFormatter is SemanticLogMessageFormatter,
             $"akka.logger-formatter resolved to [{system.Settings.LogFormatter.GetType().FullName}]");
 
         var defaultMailbox = system.Mailboxes.Lookup("akka.actor.default-mailbox");
-        Canary.Require(label, defaultMailbox is UnboundedMailbox,
+        Require(label, defaultMailbox is UnboundedMailbox,
             $"akka.actor.default-mailbox resolved to [{defaultMailbox.GetType().FullName}]");
 
         Console.WriteLine($"[canary] {label}: byte[] serializer, scheduler, log formatter and default mailbox all resolved, unbound types throw as designed");
@@ -132,6 +132,15 @@ internal static class Program
 
         throw new InvalidOperationException(
             $"{label}: serializing a type with no serialization-binding was expected to throw with dynamic type loading off, but it succeeded");
+    }
+
+    /// <summary>
+    /// The one assertion helper shared by this file and <see cref="Scenarios"/>.
+    /// </summary>
+    internal static void Require(string label, bool condition, string problem)
+    {
+        if (!condition)
+            throw new InvalidOperationException($"{label}: {problem}");
     }
 
     private static void PrintFailure(Exception? ex)

@@ -10,12 +10,13 @@ using Akka.Actor;
 namespace Akka.AOT.App.Actors;
 
 /// <summary>
-/// Pipes the result of a completed <see cref="Task"/> back to the asker.
+/// Pipes the result of a Task that completes on a real async continuation back to the asker -
+/// Task.FromResult would complete synchronously and never exercise PipeTo's continuation path.
 /// </summary>
 public sealed class AotPipeToActor : ReceiveActor
 {
     public AotPipeToActor()
     {
-        Receive<string>(msg => Task.FromResult($"piped:{msg}").PipeTo(Sender));
+        Receive<string>(msg => Task.Delay(10).ContinueWith(_ => $"piped:{msg}").PipeTo(Sender));
     }
 }

@@ -7,9 +7,12 @@ HOCON actually got built, then terminates.
 
 Each run (`Scenarios.RunAsync`, `src/aot/Akka.AOT.App/Scenarios.cs`) also exercises: a pool router
 and a group router built in code, a router resolved by name from HOCON through the Deployer's
-built-in table (#8605); `Stash`/`Become`; `IWithTimers`; a small `FSM<TState,TData>`; `Watch` +
-`Terminated`; `PipeTo`; and a non-default dispatcher (`ForkJoinDispatcher`) and mailbox (`bounded`)
-that ship in `akka.conf` itself.
+built-in table (#8605); `Stash`/`Become` (which is also the real proof that the mailbox-type built-in
+table works, since `IWithUnboundedStash` resolves `unbounded-deque-based` through
+`BuiltInMessageQueueSemantics`/`BuiltInMailboxTypes`); `IWithTimers`; a small `FSM<TState,TData>`;
+`Watch` + `Terminated`; `PipeTo`; and a round-trip through a non-default dispatcher
+(`akka.actor.default-fork-join-dispatcher`, already in `akka.conf`) and the `bounded` mailbox
+shortcut.
 
 The app references only `src/core/Akka` and sets the `Akka.DynamicTypeLoading` feature switch to
 `false` with `Trim="true"`, so ILLink replaces every reflection fallback in core with dead code and

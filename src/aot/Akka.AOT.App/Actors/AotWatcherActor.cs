@@ -10,7 +10,8 @@ using Akka.Actor;
 namespace Akka.AOT.App.Actors;
 
 /// <summary>
-/// Watches the actor it is handed, stops it, and replies once <see cref="Terminated"/> arrives.
+/// Watches the actor it is handed and replies once <see cref="Terminated"/> arrives. The caller is
+/// responsible for stopping the watched actor.
 /// </summary>
 public sealed class AotWatcherActor : ReceiveActor
 {
@@ -22,7 +23,6 @@ public sealed class AotWatcherActor : ReceiveActor
         {
             _replyTo = Sender;
             Context.Watch(target);
-            Context.Stop(target);
         });
         Receive<Terminated>(t => _replyTo.Tell($"terminated:{t.ActorRef.Path.Name}"));
     }
