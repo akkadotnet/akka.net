@@ -71,6 +71,7 @@ internal static class Program
             Console.WriteLine($"[canary] {label}: receive replied '{receiveReply}'");
 
             AssertBuiltInsResolved(label, system);
+            await Scenarios.RunAsync(label, system, AskTimeout);
 
             system.Log.Info("[canary] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
@@ -89,7 +90,7 @@ internal static class Program
     /// </summary>
     private static void AssertBuiltInsResolved(string label, ActorSystem system)
     {
-        Require(label, system.Serialization.FindSerializerFor(new byte[] { 1 }) is not null,
+        Canary.Require(label, system.Serialization.FindSerializerFor(new byte[] { 1 }) is not null,
             "no serializer for a byte[] - akka.actor.serializers/serialization-bindings did not register");
 
         // ByteArraySerializer needs no reflection, so 'bytes' and the System.Byte[] binding survive with the
@@ -98,26 +99,20 @@ internal static class Program
         // is the designed behavior, not a gap - so assert the throw, and assert the message tells the user what
         // to do about it.
         var unbound = RequireThrows(label, () => system.Serialization.FindSerializerFor("hello"));
-        Require(label, unbound.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
+        Canary.Require(label, unbound.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
                        && unbound.Message.Contains("SerializationSetup", StringComparison.Ordinal),
             $"serializing an unbound type threw, but without saying why: [{unbound.Message}]");
 
-        Require(label, system.Scheduler is HashedWheelTimerScheduler,
+        Canary.Require(label, system.Scheduler is HashedWheelTimerScheduler,
             $"akka.scheduler.implementation resolved to [{system.Scheduler.GetType().FullName}]");
-        Require(label, system.Settings.LogFormatter is SemanticLogMessageFormatter,
+        Canary.Require(label, system.Settings.LogFormatter is SemanticLogMessageFormatter,
             $"akka.logger-formatter resolved to [{system.Settings.LogFormatter.GetType().FullName}]");
 
         var defaultMailbox = system.Mailboxes.Lookup("akka.actor.default-mailbox");
-        Require(label, defaultMailbox is UnboundedMailbox,
+        Canary.Require(label, defaultMailbox is UnboundedMailbox,
             $"akka.actor.default-mailbox resolved to [{defaultMailbox.GetType().FullName}]");
 
         Console.WriteLine($"[canary] {label}: byte[] serializer, scheduler, log formatter and default mailbox all resolved, unbound types throw as designed");
-    }
-
-    private static void Require(string label, bool condition, string problem)
-    {
-        if (!condition)
-            throw new InvalidOperationException($"{label}: {problem}");
     }
 
     /// <summary>
