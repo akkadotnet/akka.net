@@ -17,7 +17,8 @@ namespace Akka.AOT.App.Actors;
 /// </summary>
 public sealed class AotWatcherActor : ReceiveActor
 {
-    private IActorRef _replyTo = ActorRefs.Nobody;
+    private IActorRef? _replyTo;
+    private string? _terminated;
 
     public AotWatcherActor()
     {
@@ -26,7 +27,23 @@ public sealed class AotWatcherActor : ReceiveActor
             Context.Watch(target);
             Sender.Tell("watching");
         });
-        Receive<string>(_ => _replyTo = Sender);
-        Receive<Terminated>(t => _replyTo.Tell($"terminated:{t.ActorRef.Path.Name}"));
+
+        // Terminated is a system message and can overtake the queued request, so either order must work.
+        Receive<string>(_ =>
+        {
+            _replyTo = Sender;
+            TryReply();
+        });
+        Receive<Terminated>(t =>
+        {
+            _terminated = $"terminated:{t.ActorRef.Path.Name}";
+            TryReply();
+        });
+    }
+
+    private void TryReply()
+    {
+        if (_replyTo is not null && _terminated is not null)
+            _replyTo.Tell(_terminated);
     }
 }
