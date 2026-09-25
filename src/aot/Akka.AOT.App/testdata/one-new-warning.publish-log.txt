@@ -1,0 +1,3 @@
+  Generating native code
+src/core/Akka/Util/Fixture/NotARealFile.cs(1): Trim analysis warning IL2057: Akka.Util.Fixture.NotARealFile.NotARealMember(): Unrecognized value passed to the parameter 'typeName' of method 'System.Type.GetType(String)'. It's not possible to guarantee the availability of the target type. [/fixture/Akka.AOT.App.csproj]
+  Akka.AOT.App -> bin/Release/linux-x64/publish/

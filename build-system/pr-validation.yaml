@@ -71,6 +71,153 @@ jobs:
         displayName: 'Restore .NET Tools'
       - script: dotnet slopwatch analyze -d . --fail-on error --stats
         displayName: 'Run Slopwatch Analysis'
+  # Native AOT canary. Two publishes of src/aot/Akka.AOT.App, because they prove different things
+  # and neither is sufficient alone. See #7246 and src/aot/Akka.AOT.App/README.md.
+  #
+  #   1. UNROOTED publish + RUN. This is the real-application proof: ILC sees only what the app's
+  #      entry point actually reaches, trims everything else, and then the binary has to boot two
+  #      local ActorSystems and print '[canary] OK'. It is the only step that can catch a type that
+  #      got trimmed away and is needed at runtime - rooting the assembly would keep that type alive
+  #      and mask exactly the bug this job exists to find. Its warning list is NOT compared against
+  #      the baseline; it is a subset of the rooted one and would just be a second, weaker gate.
+  #
+  #   2. ROOTED publish (-p:RootAkka=true adds a TrimmerRootAssembly for Akka). ILC analyses every
+  #      path in the library instead of the handful the two toy actors reach, so this is the honest
+  #      warning count for core, and this is the log the baseline check reads. On this branch the
+  #      unrooted publish sees 4 sites and the rooted one sees 12; the 8 it adds - Props.TypeName,
+  #      PropsSurrogate.FromSurrogate, DynamicAccess.CreateInstanceFor, IpExtensions.GetInstanceField
+  #      and four in NewtonSoftJsonSerializer - are precisely where milestone 2 works, so gating on
+  #      the unrooted list alone would leave that work unwatched.
+  #
+  # Deliberately NOT a template job: the shared templates start with a full `dotnet build -c
+  # Release` of the solution and end with test-result publishing, neither of which this lane needs.
+  # `dotnet publish` of the canary builds the one project it references (src/core/Akka) and nothing
+  # else, which is the whole point - a broken AOT surface should be reported in a couple of minutes,
+  # not behind a solution build.
+  #
+  # No incrementalist scoping either: almost any change in core can move the AOT warning surface, so
+  # the cheap and honest thing is to run it every time.
+  #
+  # Linux only, on purpose. ILC's analysis warnings come from IL, not from the host, so a second OS
+  # would re-report the same list for twice the agent minutes. Windows/macOS lanes can be added if a
+  # platform-specific AOT problem ever actually shows up.
+  #
+  # Blocking from day one (no continueOnError, unlike the new MNTR lanes): this job has no timing,
+  # ports or cluster formation in it. It publishes, runs one process, and compares two sorted lists
+  # of strings. If it goes red, something really did change.
+  - job: AotCanary
+    displayName: "AOT canary (Linux)"
+    timeoutInMinutes: 45
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        clean: false
+        submodules: recursive
+
+      - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
+
+      # Both publishes start from a cold intermediate directory. A warm obj/ lets MSBuild skip
+      # native compilation entirely, which emits no IL warnings at all - the checker now fails on
+      # that rather than reporting a clean run, but it is cheaper to not create the situation.
+      - bash: |
+          rm -rf src/aot/Akka.AOT.App/bin src/aot/Akka.AOT.App/obj
+        displayName: 'Clean the canary intermediate output'
+
+      # -o keeps the published binary at a path this file can name without hardcoding a target
+      # framework or a RID directory - the AOT lane in the abandoned #7903 pinned net8.0 into the
+      # path and rotted the moment the repo moved on.
+      #
+      # PublishAot is switched on by the -r flag, which the canary's csproj keys off; passing
+      # -p:PublishAot=true instead would make it a global property and hand it to Akka.csproj too,
+      # turning core's trim analysis warnings into errors under the repo-wide TreatWarningsAsErrors.
+      # The csproj also sets IlcTreatWarningsAsErrors=false itself, so the warnings we are here to
+      # read do not fail the publish.
+      - bash: |
+          set -o pipefail
+          dotnet publish src/aot/Akka.AOT.App -r linux-x64 -c Release \
+            -p:TrimmerSingleWarn=false \
+            -o "$(Agent.TempDirectory)/aot-publish" 2>&1 | tee "$(Agent.TempDirectory)/aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The unrooted publish of the AOT canary failed with exit code $rc."
+            exit 1
+          fi
+        displayName: 'Publish the AOT canary (unrooted)'
+
+      # A silent exit 0 is not a pass. Core logs-and-continues when a configured type name fails to
+      # resolve, so the canary's own log watchdog and its positive assertions are what make the run
+      # meaningful - and they announce themselves with '[canary] OK'. Grepping for that string is
+      # how this job refuses to be fooled by an ActorSystem that came up with no serializers.
+      - bash: |
+          set -o pipefail
+          "$(Agent.TempDirectory)/aot-publish/Akka.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/aot-run.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The AOT canary exited with code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary] OK' "$(Agent.TempDirectory)/aot-run.log"; then
+            echo "##vso[task.logissue type=error]The AOT canary exited 0 but never printed '[canary] OK'."
+            exit 1
+          fi
+          echo "AOT canary: exit code 0 and '[canary] OK' on stdout."
+        displayName: 'Run the AOT canary'
+
+      # Separate -o and log, so the rooted output never overwrites the binary the run step proved.
+      - bash: |
+          set -o pipefail
+          dotnet publish src/aot/Akka.AOT.App -r linux-x64 -c Release \
+            -p:TrimmerSingleWarn=false -p:RootAkka=true \
+            -o "$(Agent.TempDirectory)/aot-publish-rooted" 2>&1 | tee "$(Agent.TempDirectory)/aot-publish-rooted.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The rooted publish of the AOT canary failed with exit code $rc."
+            exit 1
+          fi
+        displayName: 'Publish the AOT canary (rooted, for the warning baseline)'
+
+      # Fails on any IL2xxx/IL3xxx warning from src/core/Akka/ that is not in the baseline, prints a
+      # notice (without failing) for baseline entries that are no longer emitted, and fails if it
+      # found nothing in scope at all while the baseline is non-empty. A .NET 10 file-based app, so
+      # it needs no project of its own and runs on the SDK installed above.
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/aot-publish-rooted.log" \
+            --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare AOT warnings against the baseline'
+
+      # Proves the red path still works, on every run, for the price of one process start: a
+      # committed three-line log holding one warning that is deliberately not in the baseline must
+      # make the checker exit non-zero. Without this, a checker that silently stopped matching
+      # anything would look identical to a clean build.
+      - bash: |
+          if dotnet run scripts/CheckAotWarnings.cs -- \
+               --log src/aot/Akka.AOT.App/testdata/one-new-warning.publish-log.txt \
+               --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
+               --repo-root "$(Build.SourcesDirectory)" > "$(Agent.TempDirectory)/aot-selftest.log" 2>&1; then
+            echo "##vso[task.logissue type=error]Self-test FAILED: the checker accepted a log containing a warning that is not in the baseline."
+            cat "$(Agent.TempDirectory)/aot-selftest.log"
+            exit 1
+          fi
+          echo "Self-test passed: the checker rejects an unbaselined warning."
+        displayName: 'Self-test the warning checker rejects a new warning'
+
+      # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
+      # re-running the job. always() because the interesting case is the one where a step above
+      # failed.
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish the AOT logs'
+        condition: always()
+        inputs:
+          pathtoPublish: '$(Agent.TempDirectory)'
+          contents: '*.log'
+          artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:

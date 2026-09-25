@@ -1,0 +1,77 @@
+# Trim/AOT warning baseline for the Native AOT canary (src/aot/Akka.AOT.App).
+#
+# One line per distinct IL2xxx/IL3xxx warning that the canary's ROOTED publish
+# (-p:RootAkka=true, which adds a TrimmerRootAssembly for Akka so ILC analyses every path in the
+# library rather than only the ones two toy actors reach) still emits from a file under
+# src/core/Akka/. Pipe-separated, four components:
+#
+#   <IL code>|<repo-relative file>|<member that owns the site>|<message, whitespace and digits removed>
+#
+# The member is empty for the Roslyn analyzer's form of a warning, which carries no member prefix;
+# scripts/CheckAotWarnings.cs folds that form into the ILC/ILLink form of the same warning so it is
+# never baselined twice. The message is squashed rather than pretty because ILC and ILLink disagree
+# about whitespace for the same warning (`GetType(String,Boolean)` vs `GetType(String, Boolean)`),
+# and because a digit in the prose must not churn the key.
+#
+# There is no line number, on purpose: moving a warning site down a few lines is not a change in the
+# AOT surface. Both the member AND the message are in the key because neither alone is enough - see
+# the two IL2067s on NewtonSoftJsonSerializer.CreateConverter below, same code, same file, same
+# member, different callee.
+#
+# scripts/CheckAotWarnings.cs builds the same keys from the publish log and compares:
+#
+#   * a warning emitted that is NOT listed here -> the job FAILS and prints the full message. Fix
+#     the site, or - if the warning is understood and accepted - add its key here in the same PR
+#     with a comment saying why.
+#   * a key listed here that is no longer emitted -> the job PASSES and prints the lines to delete.
+#     Delete them by hand; there is no rewrite mode, because that would eat the comments below.
+#   * nothing in scope at all while this file is non-empty -> the job FAILS, because that means the
+#     check measured nothing (skipped ILC, wrong repo root, no PDBs) rather than that core got clean.
+#
+# What is NOT here, and why. Only files under src/core/Akka/ are compared. Warnings from
+# dependencies - Newtonsoft.Json's own code, the BCL - do not reach this file by being filtered on
+# their path: ILC has no PDB for them, so it reports them with no source location at all, and the
+# checker counts those separately and can never key them. Note the difference from
+# src/core/Akka/Serialization/NewtonSoftJsonSerializer.cs, which is core's own source and is very
+# much in scope.
+#
+# The goal is for this file to hold nothing but the header. Every entry below is a place where core
+# still reaches for a type by name that the trimmer cannot see. See #7246.
+
+# --- Reached by the canary's UNROOTED publish, i.e. on a real local ActorSystem boot -------------
+
+# Extension loading: `akka.extensions` is a list of assembly-qualified type names resolved at
+# startup. No built-in table yet - an AOT app has to root its extensions itself.
+IL2057|src/core/Akka/Actor/Internal/ActorSystemImpl.cs|Akka.Actor.Internal.ActorSystemImpl.LoadExtensions()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+
+# Custom IActorRefProvider: the built-in three (local/remote/cluster) resolve from a table, but a
+# user-supplied `akka.actor.provider` still goes through Type.GetType.
+IL2072|src/core/Akka/Actor/Internal/ActorSystemImpl.cs|Akka.Actor.Internal.ActorSystemImpl.ConfigureProvider()|'typeName'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'Akka.Actor.Internal.ActorSystemImpl.CreateProvider(String,String,String,Settings,EventStream)'.Thereturnvalueofmethod'Akka.Actor.Settings.ProviderClass.get'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+IL2057|src/core/Akka/Actor/Settings.cs|Akka.Actor.Settings.Settings(ActorSystem,Config,ActorSystemSetup)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+
+# The generic name->Type cache behind every remaining HOCON type lookup in core. This one only goes
+# away when nothing calls it on a startup path.
+IL2057|src/core/Akka/Util/Reflection/TypeCache.cs|Akka.Util.Reflection.TypeCache.GetTypeInternal(String)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String,Boolean)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+
+# --- Only visible in the ROOTED publish ----------------------------------------------------------
+# These are not on the local-boot path the canary exercises, so the unrooted publish never analyses
+# them. They are where milestone 2 works.
+
+# Props carries an actor type name across serialization: the setter resolves it, and the surrogate
+# hands an unannotated Type to a Props constructor that wants PublicConstructors + Interfaces.
+IL2057|src/core/Akka/Actor/Props.cs|Akka.Actor.Props.TypeName.set|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2072|src/core/Akka/Actor/Props.cs|Akka.Actor.Props.PropsSurrogate.FromSurrogate(ActorSystem)|'type'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors','DynamicallyAccessedMemberTypes.Interfaces'incallto'Akka.Actor.Props.Props(Deploy,Type,Object[])'.Thereturnvalueofmethod'Akka.Actor.Props.PropsSurrogate.Type.get'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+
+# The generic "build me one of these from a type name" helper the contrib packages use.
+IL2057|src/core/Akka/Util/DynamicAccess.cs|Akka.Util.DynamicAccess.CreateInstanceFor<TResult>(String,Object[])|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+
+# Reads a private field off a SocketAddress by name to get at the scope id.
+IL2070|src/core/Akka/IO/IPExtensions.cs|Akka.IO.IpExtensions.GetInstanceField(Type,Object,String)|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicFields','DynamicallyAccessedMemberTypes.NonPublicFields'incallto'System.Type.GetField(String,BindingFlags)'.Theparameter'type'ofmethod'Akka.IO.IpExtensions.GetInstanceField(Type,Object,String)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+
+# core's own JSON serializer: `akka.serializers.json.converters` is a list of type names, and each
+# one is then constructed reflectively. Unreachable once the switch is off (core does not register
+# the json serializer at all), but the rooted publish analyses it regardless.
+IL2057|src/core/Akka/Serialization/NewtonSoftJsonSerializer.cs|Akka.Serialization.NewtonSoftJsonSerializerSettings.<GetConverterTypes>d__2.MoveNext()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String,Boolean)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2070|src/core/Akka/Serialization/NewtonSoftJsonSerializer.cs|Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'System.Type.GetConstructors()'.Theparameter'converterType'ofmethod'Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+IL2067|src/core/Akka/Serialization/NewtonSoftJsonSerializer.cs|Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)|'type'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'System.Activator.CreateInstance(Type,Object[])'.Theparameter'converterType'ofmethod'Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+IL2067|src/core/Akka/Serialization/NewtonSoftJsonSerializer.cs|Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)|'type'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicParameterlessConstructor'incallto'System.Activator.CreateInstance(Type)'.Theparameter'converterType'ofmethod'Akka.Serialization.NewtonSoftJsonSerializer.CreateConverter(Type,ExtendedActorSystem)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
