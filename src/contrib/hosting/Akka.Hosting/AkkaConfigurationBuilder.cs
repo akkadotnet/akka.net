@@ -347,6 +347,19 @@ namespace Akka.Hosting
                 Extensions.Add((type, factory));
         }
 
+        private static IExtensionId CreateExtensionId((Type Type, Func<IExtensionId> Create) extension)
+        {
+            try
+            {
+                return extension.Create();
+            }
+            catch (Exception ex)
+            {
+                // name the extension; a bare TargetInvocationException from DI does not
+                throw new ConfigurationException($"Failed to create extension [{extension.Type.FullName}]", ex);
+            }
+        }
+
         /// <summary>
         /// Registers an <see cref="AkkaHealthCheckRegistration"/> with the <see cref="AkkaConfigurationBuilder"/>.
         /// </summary>
@@ -470,7 +483,7 @@ namespace Akka.Hosting
                 {
                     var userIds = actorSystemSetup.Get<ExtensionsSetup>().Select(s => s.ExtensionIds).GetOrElse(Array.Empty<IExtensionId>());
                     actorSystemSetup = actorSystemSetup.And(
-                        ExtensionsSetup.Create(config.Extensions.Select(e => e.Create()).Concat(userIds)));
+                        ExtensionsSetup.Create(config.Extensions.Select(CreateExtensionId).Concat(userIds)));
                 }
 
                 /*
