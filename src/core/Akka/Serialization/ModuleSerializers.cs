@@ -84,8 +84,9 @@ namespace Akka.Serialization
         /// <summary>The process-wide table behind the public <see cref="Serialization"/> constructor.</summary>
         internal static readonly ModuleSerializerTable Default = new(new Dictionary<string, Func<ModuleSerializers?>>
         {
-            // one entry per module, each passing its own literal to Load so the trimmer can see the type, e.g.
-            // ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote")
+            // one entry per module, each passing its own literal to Load so the trimmer can see the type
+            ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote"),
+            ["Akka.Streams"] = () => Load("Akka.Streams.Serialization.StreamsSerializers, Akka.Streams"),
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
