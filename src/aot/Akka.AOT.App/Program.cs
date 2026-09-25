@@ -71,6 +71,7 @@ internal static class Program
             Console.WriteLine($"[canary] {label}: receive replied '{receiveReply}'");
 
             AssertBuiltInsResolved(label, system);
+            await Scenarios.RunAsync(label, system, AskTimeout);
 
             system.Log.Info("[canary] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
@@ -114,12 +115,6 @@ internal static class Program
         Console.WriteLine($"[canary] {label}: byte[] serializer, scheduler, log formatter and default mailbox all resolved, unbound types throw as designed");
     }
 
-    private static void Require(string label, bool condition, string problem)
-    {
-        if (!condition)
-            throw new InvalidOperationException($"{label}: {problem}");
-    }
-
     /// <summary>
     /// Asserts that <paramref name="action"/> fails with a <see cref="System.Runtime.Serialization.SerializationException"/> and hands the
     /// exception back so the caller can assert on its message.
@@ -137,6 +132,15 @@ internal static class Program
 
         throw new InvalidOperationException(
             $"{label}: serializing a type with no serialization-binding was expected to throw with dynamic type loading off, but it succeeded");
+    }
+
+    /// <summary>
+    /// The one assertion helper shared by this file and <see cref="Scenarios"/>.
+    /// </summary>
+    internal static void Require(string label, bool condition, string problem)
+    {
+        if (!condition)
+            throw new InvalidOperationException($"{label}: {problem}");
     }
 
     private static void PrintFailure(Exception? ex)
