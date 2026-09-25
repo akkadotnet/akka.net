@@ -30,37 +30,22 @@ namespace Akka.Actor
         // The akka.stdout-logger-class values that ship inside Akka.dll, constructed directly so the trimmer
         // and the Native AOT compiler can see the type without looking through Type.GetType.
         //
-        // akka.conf leaves this setting empty, so the table is only ever reached from user config. Two
-        // spellings, both deliberate: the bare name and the "Ns.T, Akka" form, which is what HOCON in the
-        // wild carries. The lookup runs the configured value through TypeExtensions.StripAssemblyIdentity
-        // first, so a full AssemblyQualifiedName - which Akka.Hosting writes into HOCON - matches the second
-        // key whatever version, culture or public key token it names. A value that still misses the table
-        // falls through to the reflection path, which is unavailable (and therefore throws) once dynamic type
-        // loading is switched off. Do not remove a spelling, and do not add a versioned third key.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         private static readonly Dictionary<string, Func<MinimalLogger>> BuiltInStdoutLoggers =
             new(StringComparer.Ordinal)
             {
-                ["Akka.Event.StandardOutLogger"] = static () => new StandardOutLogger(),
-                ["Akka.Event.StandardOutLogger, Akka"] = static () => new StandardOutLogger()
+                ["Akka.Event.StandardOutLogger"] = static () => new StandardOutLogger()
             };
 
         // The akka.logger-formatter values that ship inside Akka.dll, constructed directly so the trimmer and
         // the Native AOT compiler can see the type without looking through Type.GetType.
         //
-        // Two spellings, both deliberate: akka.conf ships the "Ns.T, Akka" form and HOCON in the wild also
-        // carries the bare name. The lookup runs the configured value through
-        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
-        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
-        // A value that still misses the table falls through to the reflection path, which is unavailable (and
-        // therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do not
-        // add a versioned third key.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         private static readonly Dictionary<string, Func<ILogMessageFormatter>> BuiltInLogMessageFormatters =
             new(StringComparer.Ordinal)
             {
                 ["Akka.Event.DefaultLogMessageFormatter"] = static () => DefaultLogMessageFormatter.Instance,
-                ["Akka.Event.DefaultLogMessageFormatter, Akka"] = static () => DefaultLogMessageFormatter.Instance,
-                ["Akka.Event.SemanticLogMessageFormatter"] = static () => SemanticLogMessageFormatter.Instance,
-                ["Akka.Event.SemanticLogMessageFormatter, Akka"] = static () => SemanticLogMessageFormatter.Instance
+                ["Akka.Event.SemanticLogMessageFormatter"] = static () => SemanticLogMessageFormatter.Instance
             };
 
         private readonly Config _userConfig;
@@ -180,8 +165,8 @@ namespace Akka.Actor
             {
                 StdoutLogger = new StandardOutLogger();
             }
-            else if (BuiltInStdoutLoggers.TryGetValue(
-                         TypeExtensions.StripAssemblyIdentity(stdoutClassName), out var stdoutLoggerFactory))
+            else if (TypeExtensions.ToBuiltInAkkaTypeName(stdoutClassName) is { } builtInStdoutLoggerName &&
+                     BuiltInStdoutLoggers.TryGetValue(builtInStdoutLoggerName, out var stdoutLoggerFactory))
             {
                 StdoutLogger = stdoutLoggerFactory();
             }
@@ -208,8 +193,8 @@ namespace Akka.Actor
             {
                 LogFormatter = DefaultLogMessageFormatter.Instance;
             }
-            else if (BuiltInLogMessageFormatters.TryGetValue(
-                         TypeExtensions.StripAssemblyIdentity(loggerFormatterName), out var logFormatterFactory))
+            else if (TypeExtensions.ToBuiltInAkkaTypeName(loggerFormatterName) is { } builtInLogFormatterName &&
+                     BuiltInLogMessageFormatters.TryGetValue(builtInLogFormatterName, out var logFormatterFactory))
             {
                 LogFormatter = logFormatterFactory();
             }

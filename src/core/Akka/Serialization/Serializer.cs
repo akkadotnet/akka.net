@@ -224,15 +224,16 @@ namespace Akka.Serialization
         /// <para>
         /// The keys under <c>akka.actor.serialization-identifiers</c> are matched against the name of the
         /// <paramref name="type"/> that is already in hand, rather than resolved back into a <see cref="Type"/>.
-        /// Each key is run through
-        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity(string)"/> and then split at the comma that
-        /// separates the type name from the assembly name: the type name is compared case-sensitively, the
-        /// assembly name case-insensitively, which is how <see cref="Type.GetType(string)"/> compared them.
+        /// Each key is split with <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/>: the type name is
+        /// compared case-sensitively, the assembly name case-insensitively, which is how
+        /// <see cref="Type.GetType(string)"/> compared them.
         /// </para>
         /// <para>
         /// Assembly-qualified keys are matched across the whole block first, and only then bare
         /// <see cref="Type.FullName"/> keys, so a bare key cannot shadow an exact assembly-qualified key
-        /// further down the block. A bare key matches a type of that name in <em>any</em> assembly.
+        /// further down the block. A bare key matches a type of that name in <em>any</em> assembly. Unlike the
+        /// <c>BuiltIn*</c> tables elsewhere, a match here is not limited to the <c>Akka</c> assembly: the
+        /// type's own assembly, whatever it is, has to match an assembly-qualified key.
         /// </para>
         /// <para>
         /// Matching by name also fixes a latent bug. The lookup used to call
@@ -251,23 +252,19 @@ namespace Akka.Serialization
             */
 
             // TypeQualifiedName() is the cached "Namespace.Type, Assembly" spelling with the assembly identity
-            // already stripped, including inside a generic type's arguments. Split it the same way the keys are
-            // split so the two halves are guaranteed to line up. Nested types spell with '+' on both sides.
-            var qualifiedName = type.TypeQualifiedName();
-            var separator = IndexOfAssemblySeparator(qualifiedName);
-            var fullName = separator < 0 ? qualifiedName : qualifiedName.Substring(0, separator).TrimEnd();
-            var assemblyName = separator < 0 ? string.Empty : qualifiedName.Substring(separator + 1).Trim();
+            // already stripped, including inside a generic type's arguments. Nested types spell with '+' on
+            // both sides.
+            Akka.Util.TypeExtensions.TrySplitTypeName(type.TypeQualifiedName(), out var fullName, out var assemblyName);
 
             // Pass 1: assembly-qualified keys, over the whole block, so one of them always beats a bare key.
             foreach (var pair in config.AsEnumerable())
             {
-                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key);
-                var keySeparator = IndexOfAssemblySeparator(key);
-                if (keySeparator < 0)
+                if (!Akka.Util.TypeExtensions.TrySplitTypeName(pair.Key, out var keyName, out var keyAssembly) ||
+                    keyAssembly is null)
                     continue;
 
-                if (string.Equals(key.Substring(0, keySeparator).TrimEnd(), fullName, StringComparison.Ordinal) &&
-                    string.Equals(key.Substring(keySeparator + 1).Trim(), assemblyName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(keyName, fullName, StringComparison.Ordinal) &&
+                    string.Equals(keyAssembly, assemblyName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                 {
                     return pair.Value.GetInt();
                 }
@@ -276,38 +273,13 @@ namespace Akka.Serialization
             // Pass 2: bare keys.
             foreach (var pair in config.AsEnumerable())
             {
-                var key = Akka.Util.TypeExtensions.StripAssemblyIdentity(pair.Key);
-                if (IndexOfAssemblySeparator(key) < 0 && string.Equals(key, fullName, StringComparison.Ordinal))
+                if (Akka.Util.TypeExtensions.TrySplitTypeName(pair.Key, out var keyName, out var keyAssembly) &&
+                    keyAssembly is null &&
+                    string.Equals(keyName, fullName, StringComparison.Ordinal))
                     return pair.Value.GetInt();
             }
 
             throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
-        }
-
-        /// <summary>
-        /// The index of the comma that separates the type name from the assembly name, which is the first comma
-        /// at bracket depth zero - the commas inside a generic type's argument list do not count.
-        /// </summary>
-        /// <returns>The index, or <c>-1</c> when <paramref name="typeName"/> carries no assembly name.</returns>
-        private static int IndexOfAssemblySeparator(string typeName)
-        {
-            var depth = 0;
-            for (var i = 0; i < typeName.Length; i++)
-            {
-                switch (typeName[i])
-                {
-                    case '[':
-                        depth++;
-                        break;
-                    case ']':
-                        depth--;
-                        break;
-                    case ',' when depth == 0:
-                        return i;
-                }
-            }
-
-            return -1;
         }
     }
 }

@@ -94,6 +94,7 @@ namespace Akka.Tests.Serialization
         {
             "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco",
             "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Akka.Tests",
+            "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco ,akka.tests",
             "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Akka.Tests, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null"
         };
 
@@ -290,6 +291,22 @@ namespace Akka.Tests.Serialization
 
                     return Task.CompletedTask;
                 }));
+        }
+
+        [Fact(DisplayName = "Serialization should reject a binding row that names a SerializationSetup type under the wrong assembly when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_a_binding_row_names_the_wrong_assembly_and_dynamic_type_loading_is_disabled()
+        {
+            const string boundTypeName = "Akka.Tests.Serialization.BuiltInSerializerDefaultsSpec+SomePoco, Some.Other.Assembly";
+            var setup = PocoSerializerSetup("poco", ModuleStyleConfig(boundTypeName), typeof(SomePoco));
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("setup-wrong-assembly-off", setup));
+
+                exception.Message.Should().Contain(boundTypeName);
+                return Task.CompletedTask;
+            });
         }
 
         /// <remarks>

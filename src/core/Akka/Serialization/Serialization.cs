@@ -208,16 +208,10 @@ namespace Akka.Serialization
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Both spellings of each name are deliberate, because both turn up in real HOCON: the bare
-        /// namespace-qualified name and the assembly-qualified name that core's own <c>akka.conf</c> ships. The
-        /// full versioned <see cref="Type.AssemblyQualifiedName"/> that Akka.Hosting writes needs no key of its
-        /// own, because the lookup runs the configured value through
-        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity(string)"/> first. That is deliberate in
-        /// preference to a third key built from <c>typeof(T).AssemblyQualifiedName</c>: not for AOT size, which
-        /// was measured at 16 bytes on the canary with no new trim warnings either way, but because stripping
-        /// matches <em>every</em> version of the name instead of only the version this build happens to carry. A
-        /// name that is missing here falls through to the reflection path, which is unavailable (and therefore
-        /// throws) once dynamic type loading is switched off. Do not collapse the spellings into one entry.
+        /// Keyed by bare type name; <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/> normalizes
+        /// what HOCON carries, including the full versioned <see cref="Type.AssemblyQualifiedName"/> that
+        /// Akka.Hosting writes. A name that is missing here falls through to the reflection path, which is
+        /// unavailable (and therefore throws) once dynamic type loading is switched off.
         /// </para>
         /// <para>
         /// A factory returns <c>null</c> when the serializer ships inside Akka.dll but cannot work under the
@@ -228,9 +222,7 @@ namespace Akka.Serialization
             new(StringComparer.Ordinal)
             {
                 ["Akka.Serialization.ByteArraySerializer"] = CreateByteArraySerializer,
-                ["Akka.Serialization.ByteArraySerializer, Akka"] = CreateByteArraySerializer,
-                ["Akka.Serialization.NewtonSoftJsonSerializer"] = CreateNewtonSoftJsonSerializer,
-                ["Akka.Serialization.NewtonSoftJsonSerializer, Akka"] = CreateNewtonSoftJsonSerializer
+                ["Akka.Serialization.NewtonSoftJsonSerializer"] = CreateNewtonSoftJsonSerializer
             };
 
         /// <summary>
@@ -240,16 +232,14 @@ namespace Akka.Serialization
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Every spelling here is deliberate, because every one of them is a name <see cref="Type.GetType(string)"/>
-        /// used to resolve: the bare namespace-qualified name that core's own <c>akka.conf</c> ships, and four
-        /// assembly-qualified spellings. These two are framework types rather than Akka types, so there is no
-        /// single qualified spelling to cover - <c>mscorlib</c>, <c>System.Private.CoreLib</c>,
-        /// <c>System.Runtime</c> and <c>netstandard</c> all resolve, and any of them can show up in HOCON that
-        /// was written against an older target framework. The versioned spellings need no keys of their own,
-        /// because the lookup runs the configured name through
-        /// <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity(string)"/> first. A key that is missing here
-        /// falls through to the reflection path, which is unavailable (and therefore throws) once dynamic type
-        /// loading is switched off. Do not collapse the spellings into one entry.
+        /// Keyed by bare type name. These two are framework types rather than Akka types, so
+        /// <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/> does not apply here: the lookup instead
+        /// runs the configured name through <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/> and accepts
+        /// it when the assembly half is absent or is one of <see cref="FrameworkAssemblyNames"/> -
+        /// <c>mscorlib</c>, <c>System.Private.CoreLib</c>, <c>System.Runtime</c> or <c>netstandard</c>, matched
+        /// case-insensitively - which covers every runtime these two names can be written against. A key that
+        /// is missing here falls through to the reflection path, which is unavailable (and therefore throws)
+        /// once dynamic type loading is switched off.
         /// </para>
         /// <para>
         /// Unlike <see cref="BuiltInSerializers"/> this table is unconditional. Whether a binding survives is
@@ -261,15 +251,21 @@ namespace Akka.Serialization
             new(StringComparer.Ordinal)
             {
                 ["System.Byte[]"] = typeof(byte[]),
-                ["System.Byte[], mscorlib"] = typeof(byte[]),
-                ["System.Byte[], System.Private.CoreLib"] = typeof(byte[]),
-                ["System.Byte[], System.Runtime"] = typeof(byte[]),
-                ["System.Byte[], netstandard"] = typeof(byte[]),
-                ["System.Object"] = typeof(object),
-                ["System.Object, mscorlib"] = typeof(object),
-                ["System.Object, System.Private.CoreLib"] = typeof(object),
-                ["System.Object, System.Runtime"] = typeof(object),
-                ["System.Object, netstandard"] = typeof(object)
+                ["System.Object"] = typeof(object)
+            };
+
+        /// <summary>
+        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> accepts alongside "no
+        /// assembly at all" - every name the .NET runtimes Akka.NET targets have shipped <see cref="object"/>
+        /// and <see cref="byte"/>[] under.
+        /// </summary>
+        private static readonly HashSet<string> FrameworkAssemblyNames =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "mscorlib",
+                "System.Private.CoreLib",
+                "System.Runtime",
+                "netstandard"
             };
 
         /// <summary>
@@ -345,7 +341,8 @@ namespace Akka.Serialization
 
                 Serializer serializer;
                 if (serializerTypeName is not null &&
-                    BuiltInSerializers.TryGetValue(Akka.Util.TypeExtensions.StripAssemblyIdentity(serializerTypeName), out var serializerFactory))
+                    Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(serializerTypeName) is { } builtInSerializerName &&
+                    BuiltInSerializers.TryGetValue(builtInSerializerName, out var serializerFactory))
                 {
                     serializer = serializerFactory(system, serializerConfig);
                     if (serializer == null)
@@ -392,7 +389,9 @@ namespace Akka.Serialization
                 var serializerName = kvp.Value.GetString();
 
                 Type messageType;
-                if (BuiltInSerializationBindings.TryGetValue(Akka.Util.TypeExtensions.StripAssemblyIdentity(typename), out var builtInType))
+                if (Akka.Util.TypeExtensions.TrySplitTypeName(typename, out var bindingName, out var bindingAssembly) &&
+                    (bindingAssembly is null || FrameworkAssemblyNames.Contains(bindingAssembly)) &&
+                    BuiltInSerializationBindings.TryGetValue(bindingName, out var builtInType))
                 {
                     messageType = builtInType;
                 }
@@ -406,7 +405,9 @@ namespace Akka.Serialization
                     }
                 }
                 else if ((setupTypesByName ??= SetupTypesByName(_serializerDetails))
-                         .TryGetValue(Akka.Util.TypeExtensions.StripAssemblyIdentity(typename), out var setupType))
+                         .TryGetValue(bindingName, out var setupType) &&
+                         (bindingAssembly is null ||
+                          string.Equals(bindingAssembly, setupType.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase)))
                 {
                     // one of the types a SerializationSetup binds, so the name resolves without reflection
                     messageType = setupType;
@@ -443,9 +444,9 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Every type a <see cref="SerializationSetup"/> binds, keyed by the two spellings a HOCON binding row can
-        /// reach once <see cref="Akka.Util.TypeExtensions.StripAssemblyIdentity"/> has run on it: the bare full
-        /// name, and the full name plus assembly simple name.
+        /// Every type a <see cref="SerializationSetup"/> binds, keyed by bare full name. A binding row is split
+        /// with <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/> like every other lookup here, and its
+        /// assembly half, when present, has to match the type's assembly simple name.
         /// </summary>
         private static Dictionary<string, Type> SetupTypesByName(IEnumerable<SerializerDetails> details)
         {
@@ -455,8 +456,9 @@ namespace Akka.Serialization
                 if (type.FullName is null)
                     continue;
 
-                byName[type.FullName] = type;
-                byName[$"{type.FullName}, {type.Assembly.GetName().Name}"] = type;
+                // a closed generic's FullName carries full identities for its type arguments, which the
+                // binding row's name has already had stripped
+                byName[Akka.Util.TypeExtensions.StripAssemblyIdentity(type.FullName)] = type;
             }
 
             return byName;

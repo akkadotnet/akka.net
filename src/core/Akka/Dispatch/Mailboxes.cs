@@ -49,56 +49,32 @@ namespace Akka.Dispatch
         // The mailbox-type values that ship inside Akka.dll, constructed directly so the trimmer and the
         // Native AOT compiler can see the type without looking through Type.GetType.
         //
-        // Two spellings per type, both deliberate: akka.conf ships the bare name and HOCON in the wild also
-        // carries the "Ns.T, Akka" form. The lookup runs the configured value through
-        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
-        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
-        // A value that still misses the table falls through to the reflection path, which is unavailable (and
-        // therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do not
-        // add a versioned third key.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         private static readonly Dictionary<string, Func<Settings, Config, MailboxType>> BuiltInMailboxTypes =
             new(StringComparer.Ordinal)
             {
                 ["Akka.Dispatch.UnboundedMailbox"] = static (s, c) => new UnboundedMailbox(s, c),
-                ["Akka.Dispatch.UnboundedMailbox, Akka"] = static (s, c) => new UnboundedMailbox(s, c),
                 ["Akka.Dispatch.BoundedMailbox"] = static (s, c) => new BoundedMailbox(s, c),
-                ["Akka.Dispatch.BoundedMailbox, Akka"] = static (s, c) => new BoundedMailbox(s, c),
                 ["Akka.Dispatch.UnboundedDequeBasedMailbox"] = static (s, c) => new UnboundedDequeBasedMailbox(s, c),
-                ["Akka.Dispatch.UnboundedDequeBasedMailbox, Akka"] = static (s, c) => new UnboundedDequeBasedMailbox(s, c),
                 ["Akka.Dispatch.BoundedDequeBasedMailbox"] = static (s, c) => new BoundedDequeBasedMailbox(s, c),
-                ["Akka.Dispatch.BoundedDequeBasedMailbox, Akka"] = static (s, c) => new BoundedDequeBasedMailbox(s, c),
-                ["Akka.Event.LoggerMailboxType"] = static (s, c) => new LoggerMailboxType(s, c),
-                ["Akka.Event.LoggerMailboxType, Akka"] = static (s, c) => new LoggerMailboxType(s, c)
+                ["Akka.Event.LoggerMailboxType"] = static (s, c) => new LoggerMailboxType(s, c)
             };
 
         // The message queue semantics interfaces that ship inside Akka.dll: the keys akka.conf lists under
         // akka.actor.mailbox.requirements, which are also the values a dispatcher's mailbox-requirement can
         // take. Mapping them here means neither site has to look through Type.GetType.
         //
-        // Two spellings per interface, both deliberate: akka.conf ships the bare name and HOCON in the wild
-        // also carries the "Ns.T, Akka" form. Both lookups run their value through
-        // TypeExtensions.StripAssemblyIdentity first, so a full AssemblyQualifiedName - which Akka.Hosting
-        // writes into HOCON - matches the second key whatever version, culture or public key token it names.
-        // A value that still misses the table falls through to the reflection path, which is unavailable (and
-        // therefore throws) once dynamic type loading is switched off. Do not remove a spelling, and do not
-        // add a versioned third key.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
         private static readonly Dictionary<string, Type> BuiltInMessageQueueSemantics =
             new(StringComparer.Ordinal)
             {
                 ["Akka.Dispatch.IUnboundedMessageQueueSemantics"] = typeof(IUnboundedMessageQueueSemantics),
-                ["Akka.Dispatch.IUnboundedMessageQueueSemantics, Akka"] = typeof(IUnboundedMessageQueueSemantics),
                 ["Akka.Dispatch.IBoundedMessageQueueSemantics"] = typeof(IBoundedMessageQueueSemantics),
-                ["Akka.Dispatch.IBoundedMessageQueueSemantics, Akka"] = typeof(IBoundedMessageQueueSemantics),
                 ["Akka.Dispatch.IDequeBasedMessageQueueSemantics"] = typeof(IDequeBasedMessageQueueSemantics),
-                ["Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka"] = typeof(IDequeBasedMessageQueueSemantics),
                 ["Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics"] = typeof(IUnboundedDequeBasedMessageQueueSemantics),
-                ["Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics, Akka"] = typeof(IUnboundedDequeBasedMessageQueueSemantics),
                 ["Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics"] = typeof(IBoundedDequeBasedMessageQueueSemantics),
-                ["Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics, Akka"] = typeof(IBoundedDequeBasedMessageQueueSemantics),
                 ["Akka.Dispatch.IMultipleConsumerSemantics"] = typeof(IMultipleConsumerSemantics),
-                ["Akka.Dispatch.IMultipleConsumerSemantics, Akka"] = typeof(IMultipleConsumerSemantics),
-                ["Akka.Event.ILoggerMessageQueueSemantics"] = typeof(ILoggerMessageQueueSemantics),
-                ["Akka.Event.ILoggerMessageQueueSemantics, Akka"] = typeof(ILoggerMessageQueueSemantics)
+                ["Akka.Event.ILoggerMessageQueueSemantics"] = typeof(ILoggerMessageQueueSemantics)
             };
 
         private Settings Settings => _system.Settings;
@@ -125,8 +101,8 @@ namespace Akka.Dispatch
                 var requirementName = kvp.Key;
 
                 Type type;
-                if (BuiltInMessageQueueSemantics.TryGetValue(
-                        Util.TypeExtensions.StripAssemblyIdentity(requirementName), out var builtIn))
+                if (Util.TypeExtensions.ToBuiltInAkkaTypeName(requirementName) is { } builtInRequirementName &&
+                    BuiltInMessageQueueSemantics.TryGetValue(builtInRequirementName, out var builtIn))
                 {
                     type = builtIn;
                 }
@@ -258,8 +234,8 @@ namespace Akka.Dispatch
                     if (string.IsNullOrEmpty(mailboxTypeName))
                         throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
 
-                    if (BuiltInMailboxTypes.TryGetValue(
-                            Util.TypeExtensions.StripAssemblyIdentity(mailboxTypeName), out var builtIn))
+                    if (Util.TypeExtensions.ToBuiltInAkkaTypeName(mailboxTypeName) is { } builtInMailboxTypeName &&
+                        BuiltInMailboxTypes.TryGetValue(builtInMailboxTypeName, out var builtIn))
                     {
                         try
                         {
@@ -394,8 +370,8 @@ namespace Akka.Dispatch
             if (mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement))
                 return typeof(IMessageQueue);
 
-            if (BuiltInMessageQueueSemantics.TryGetValue(
-                    Util.TypeExtensions.StripAssemblyIdentity(mailboxRequirement), out var requirementType))
+            if (Util.TypeExtensions.ToBuiltInAkkaTypeName(mailboxRequirement) is { } builtInMailboxRequirementName &&
+                BuiltInMessageQueueSemantics.TryGetValue(builtInMailboxRequirementName, out var requirementType))
                 return requirementType;
 
             if (AkkaFeatures.IsDynamicTypeLoadingSupported)

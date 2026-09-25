@@ -123,6 +123,33 @@ namespace Akka.Tests.Dispatch
         }
 
         /// <summary>
+        /// Pins the widened matching rule the single-key table relies on: no space after the comma and a
+        /// lower-cased assembly name are both spellings <see cref="Type.GetType(string)"/> itself accepted,
+        /// and now <c>TypeExtensions.ToBuiltInAkkaTypeName</c> accepts them too.
+        /// </summary>
+        [Fact(DisplayName = "Mailboxes should resolve a built-in mailbox-type spelled without a comma space and with a lower-cased assembly name when dynamic type loading is off")]
+        public async Task Should_resolve_a_loosely_spelled_mailbox_type_When_dynamic_type_loading_is_disabled()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                loose-mailbox {
+                    mailbox-type = ""Akka.Dispatch.BoundedDequeBasedMailbox,akka""
+                }");
+
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
+            {
+                var system = ActorSystem.Create("loose-mailbox-off", config);
+                try
+                {
+                    system.Mailboxes.Lookup("loose-mailbox").Should().BeOfType<BoundedDequeBasedMailbox>();
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
+            });
+        }
+
+        /// <summary>
         /// The explicit switch-ON regression guard for <c>mailbox-type</c>: the reflection fallback must still
         /// resolve a <see cref="MailboxType"/> that <c>BuiltInMailboxTypes</c> knows nothing about.
         /// </summary>
