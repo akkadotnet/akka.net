@@ -324,9 +324,10 @@ namespace Akka.Actor.Internal
             sched?.Dispose();
         }
 
+#nullable enable
         // Akka's own extensions that akka.extensions commonly names: bare type name -> the assembly it must name, and a
         // factory passing its own literal so the trimmer keeps that type. Nothing is probed unless a row matches.
-        private static readonly Dictionary<string, (string Assembly, Func<IExtensionId> Create)> FirstPartyExtensions =
+        private static readonly Dictionary<string, (string Assembly, Func<IExtensionId?> Create)> FirstPartyExtensions =
             new(StringComparer.Ordinal)
             {
                 ["Akka.DistributedData.DistributedDataProvider"] = ("Akka.DistributedData",
@@ -343,7 +344,7 @@ namespace Akka.Actor.Internal
         /// The first-party extension <paramref name="extensionFqn"/> names, or <c>null</c> when it names none or its
         /// assembly is absent. Type name and assembly must both match; the assembly identity is ignored.
         /// </summary>
-        internal static IExtensionId TryCreateFirstPartyExtension(string extensionFqn)
+        internal static IExtensionId? TryCreateFirstPartyExtension(string extensionFqn)
             => Util.TypeExtensions.TrySplitTypeName(extensionFqn, out var name, out var assembly) &&
                FirstPartyExtensions.TryGetValue(name, out var row) &&
                string.Equals(assembly, row.Assembly, StringComparison.OrdinalIgnoreCase)
@@ -351,10 +352,10 @@ namespace Akka.Actor.Internal
                 : null;
 
         /// <summary>Pass a literal: the annotation lets the trimmer keep that type and its constructor.</summary>
-        private static IExtensionId CreateFirstPartyExtension(
+        private static IExtensionId? CreateFirstPartyExtension(
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] string typeName)
         {
-            Type type;
+            Type? type;
             try
             {
                 type = Type.GetType(typeName);
@@ -364,12 +365,13 @@ namespace Akka.Actor.Internal
                 return null; // an assembly that will not load counts as absent
             }
 
-            return type is null ? null : (IExtensionId)Activator.CreateInstance(type);
+            return type is null ? null : (IExtensionId?)Activator.CreateInstance(type);
         }
+#nullable restore
 
         private void LoadExtensions()
         {
-            // Setup ids go first, as Hosting's did; one also named in HOCON registers once, since RegisterExtension keys by type
+            // Setup ids go first; one also named in HOCON registers once, since RegisterExtension keys by type
             var extensions = new List<IExtensionId>(_settings.Setup.Get<ExtensionsSetup>()
                 .Select(s => s.ExtensionIds).GetOrElse(Array.Empty<IExtensionId>()));
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))

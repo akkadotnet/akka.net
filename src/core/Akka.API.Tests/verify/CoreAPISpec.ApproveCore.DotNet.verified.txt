@@ -14,7 +14,6 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DependencyInjection")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DependencyInjection.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
