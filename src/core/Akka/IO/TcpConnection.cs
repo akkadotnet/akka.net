@@ -240,7 +240,7 @@ namespace Akka.IO
 
         // Writes waiting for Register, or for the output pipe's pending flush. FIFO.
         private readonly Queue<WriteCommand> _pendingWrites = new();
-        private long _pendingWriteBytes;
+        private long _preRegisterBytes; // checked against write-commands-queue-max-size before Register
 
         // At most one output-pipe flush is awaited at a time; _flushWaiter's ack waits on it.
         private bool _flushPending;
@@ -576,11 +576,7 @@ namespace Akka.IO
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
             Receive<FlushCompleted>(_ => OnFlushCompleted());
-            Receive<FlushFailed>(msg =>
-            {
-                FailFlushWaiter(msg.Cause);
-                HandleIoError(msg.Cause);
-            });
+            Receive<FlushFailed>(HandleFlushFailed);
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -606,11 +602,7 @@ namespace Akka.IO
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
             Receive<FlushCompleted>(_ => OnFlushCompleted());
-            Receive<FlushFailed>(msg =>
-            {
-                FailFlushWaiter(msg.Cause);
-                HandleIoError(msg.Cause);
-            });
+            Receive<FlushFailed>(HandleFlushFailed);
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -1088,7 +1080,7 @@ namespace Akka.IO
         {
             var byteCount = (int)write.Bytes;
 
-            if (_maxQueuedBytes >= 0 && _pendingWriteBytes + byteCount > _maxQueuedBytes)
+            if (_maxQueuedBytes >= 0 && _preRegisterBytes + byteCount > _maxQueuedBytes)
             {
                 // Disposal path: queue-full rejection (pre-registration). The write never reaches
                 // the pipe, so dispose any owner(s) it carries before signaling failure.
@@ -1110,6 +1102,7 @@ namespace Akka.IO
             Log.Warning("Received Write command before Register command. It will be buffered until Register will be received (buffered write size is {0} bytes)",
                 write.Bytes);
 
+            _preRegisterBytes += byteCount;
             QueueWrite(write, sender);
         }
 
@@ -1127,7 +1120,6 @@ namespace Akka.IO
                 : Write.Create(new ReadOnlySequence<byte>(write.Data.ToArray()), write.Ack);
 
             _pendingWrites.Enqueue(new WriteCommand(queuedWrite, sender));
-            _pendingWriteBytes += write.Bytes;
         }
 
         private void DrainPendingWrites()
@@ -1135,7 +1127,6 @@ namespace Akka.IO
             while (!_flushPending && _pendingWrites.Count > 0)
             {
                 var write = _pendingWrites.Dequeue();
-                _pendingWriteBytes -= write.Cmd.Bytes;
                 WriteToPipe(write.Cmd, write.Sender);
             }
         }
@@ -1239,6 +1230,12 @@ namespace Akka.IO
             sender.Tell(write.FailureMessage.WithCause(cause));
             _flushPending = true;
             Self.Tell(new FlushFailed(cause));
+        }
+
+        private void HandleFlushFailed(FlushFailed msg)
+        {
+            FailFlushWaiter(msg.Cause);
+            HandleIoError(msg.Cause);
         }
 
         private void FailFlushWaiter(Exception cause)
@@ -1353,12 +1350,7 @@ namespace Akka.IO
             if (_traceLogging)
                 Log.Debug("HandleStreamEof: peer closed");
 
-            // _outputShutdown can never be true here: it is only ever set inside
-            // ClosingBehaviour's TransportOperationCompleted handler, and reaching
-            // ClosingBehaviour requires HandleClose to already have run - at which point StreamEof is handled by
-            // ClosingBehaviour's own handler (which calls TryFinishClose), not this method.
-            // This method only ever runs from OpenBehaviour/PeerSentEofBehaviour, i.e. before
-            // any Close/ConfirmedClose has been requested.
+            // Only Open/PeerSentEof get here; ClosingBehaviour handles its own StreamEof.
             HandleClose(_handler ?? _commander!, PeerClosed.Instance);
         }
 

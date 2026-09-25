@@ -274,8 +274,9 @@ namespace Akka.Tests.IO
 
             stream.ReleaseFirstWrite();
             await ExpectAcksAsync(handler, 1, 3);
+            // Check before Abort, which can stop the pump before it writes the queued bytes.
+            await AwaitAssertAsync(() => stream.BytesWritten.Should().Be(PauseThreshold + QueuedBytes));
             await AbortAsync(connection, handler);
-            stream.BytesWritten.Should().Be(PauseThreshold + QueuedBytes);
         }
 
         [Fact(DisplayName = "Should_ack_every_write_before_Closed_When_Close_arrives_with_writes_pending")]
