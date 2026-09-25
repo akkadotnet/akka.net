@@ -120,6 +120,40 @@ public static class ConsumerController
     internal interface ISequencedMessage
     {
         Type PayloadType { get; }
+
+        /// <summary>
+        /// INTERNAL API - non-generic access to <see cref="SequencedMessage{T}"/> members so
+        /// serializers can read the message without reflection over the generic payload type.
+        /// </summary>
+        string ProducerId { get; }
+
+        /// <inheritdoc cref="ProducerId"/>
+        long SeqNr { get; }
+
+        /// <inheritdoc cref="ProducerId"/>
+        bool First { get; }
+
+        /// <inheritdoc cref="ProducerId"/>
+        bool Ack { get; }
+
+        /// <inheritdoc cref="ProducerId"/>
+        IActorRef ProducerControllerRef { get; }
+
+        /// <summary>
+        /// INTERNAL API - <see langword="true"/> when this message carries a user payload,
+        /// <see langword="false"/> when it carries a <see cref="ChunkedMessage"/> segment.
+        /// </summary>
+        bool HasPayload { get; }
+
+        /// <summary>
+        /// INTERNAL API - the boxed user payload when <see cref="HasPayload"/> is <see langword="true"/>.
+        /// </summary>
+        object? Payload { get; }
+
+        /// <summary>
+        /// INTERNAL API - the chunk when <see cref="HasPayload"/> is <see langword="false"/>.
+        /// </summary>
+        ChunkedMessage? Chunk { get; }
     }
 
     /// <summary>
@@ -144,6 +178,14 @@ public static class ConsumerController
         /// INTERNAL API
         /// </summary>
         Type ISequencedMessage.PayloadType => typeof(T);
+
+        IActorRef ISequencedMessage.ProducerControllerRef => ProducerController;
+
+        bool ISequencedMessage.HasPayload => Message.IsMessage;
+
+        object? ISequencedMessage.Payload => Message.IsMessage ? Message.Message : null;
+
+        ChunkedMessage? ISequencedMessage.Chunk => Message.Chunk;
 
         /// <summary>
         /// TESTING ONLY

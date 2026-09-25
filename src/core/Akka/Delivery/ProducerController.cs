@@ -273,6 +273,12 @@ public static class ProducerController
     internal interface IRegisterConsumer
     {
         public Type ConsumerType { get; }
+
+        /// <summary>
+        /// INTERNAL API - non-generic access to <see cref="RegisterConsumer{T}.ConsumerController"/>
+        /// so serializers can read the message without reflection over the generic payload type.
+        /// </summary>
+        public IActorRef ConsumerController { get; }
     }
 
     /// <summary>
