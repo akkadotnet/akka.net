@@ -54,6 +54,9 @@ namespace Akka.Remote.Tests.Transport
 
             public bool Disassociated { get; private set; }
 
+            // counts calls so tests can tell a single disassociate from a double one
+            public int DisassociateCallCount { get; private set; }
+
             public override bool Write(ByteString payload) => true;
 
 #pragma warning disable CS0672 // the base member is obsolete, but it is the abstract one we have to implement
@@ -61,6 +64,7 @@ namespace Akka.Remote.Tests.Transport
 #pragma warning restore CS0672
             {
                 Disassociated = true;
+                DisassociateCallCount++;
             }
         }
 
@@ -187,6 +191,40 @@ namespace Akka.Remote.Tests.Transport
                 });
 
             originalHandle.Disassociated.Should().BeTrue("the association has to be torn down so remoting can re-establish it");
+        }
+
+        [Fact(DisplayName = "ThrottlerHandle.Disassociate should close the wrapped handle promptly (#8637)")]
+        public async Task Should_disassociate_wrapped_handle_on_explicit_disassociate()
+        {
+            var manager = StartManager();
+            var throttlerHandle = await AssociateAsync(manager);
+            var throttler = throttlerHandle.ThrottlerActor;
+            await WatchAsync(throttler);
+
+#pragma warning disable CS0618 // this is the exact API the issue is about
+            throttlerHandle.Disassociate();
+#pragma warning restore CS0618
+            await ExpectTerminatedAsync(throttler);
+
+            var originalHandle = (StubHandle)throttlerHandle.WrappedHandle;
+            originalHandle.Disassociated.Should().BeTrue("disassociating the throttled handle must tear down the wrapped connection too");
+        }
+
+        [Fact(DisplayName = "ThrottledAssociation should not double-disassociate when the wrapped handle disassociates first")]
+        public async Task Should_not_double_disassociate_on_inbound_disassociation()
+        {
+            var manager = StartManager();
+            var throttlerHandle = await AssociateAsync(manager);
+            var throttler = throttlerHandle.ThrottlerActor;
+            var originalHandle = (StubHandle)throttlerHandle.WrappedHandle;
+            await WatchAsync(throttler);
+
+            // simulates the wrapped handle notifying us that the peer already tore the connection down
+            throttler.Tell(new Disassociated(DisassociateInfo.Unknown));
+            await ExpectTerminatedAsync(throttler);
+
+            originalHandle.DisassociateCallCount.Should().Be(1,
+                "the wrapped handle already disassociated itself; PostStop must not call it again");
         }
     }
 }
