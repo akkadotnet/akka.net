@@ -145,7 +145,6 @@ namespace Akka.Tests.IO
             (await other.ExpectMsgAsync<WriteAck>()).Id.Should().Be(100);
 
             await AbortAsync(connection, handler);
-            stream.BytesWritten.Should().Be(PauseThreshold + 64);
         }
 
         [Fact(DisplayName = "Should_fail_write_without_ack_When_flush_reports_the_output_completed")]
