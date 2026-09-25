@@ -18,7 +18,7 @@ namespace Akka.Streams.Serialization
     /// </summary>
     internal sealed class StreamsSerializers : ModuleSerializers
     {
-        // StreamRefSerializer has one constructor, so it is the one reflection picks
+        // the constructor reflection picks for reference.conf; StreamRefSerializer has one, so it always gets that one
         public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
         {
             new ModuleSerializer(typeof(StreamRefSerializer), (system, _) => new StreamRefSerializer(system)),

@@ -23,7 +23,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
-        // each class has one constructor, so it is the one reflection picks; Remote.conf gives primitive its settings
+        // the constructor reflection picks for Remote.conf; each class has one constructor, so it always gets that one
         public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
         {
             new ModuleSerializer(typeof(MessageContainerSerializer), (system, _) => new MessageContainerSerializer(system)),

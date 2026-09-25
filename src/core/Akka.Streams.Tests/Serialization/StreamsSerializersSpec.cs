@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Serialization;
 using Akka.Streams.Implementation.StreamRef;
 using Akka.Streams.Serialization;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using AkkaSerialization = Akka.Serialization.Serialization;
@@ -35,7 +36,7 @@ namespace Akka.Streams.Tests.Serialization
     /// switch on; each test builds another <see cref="AkkaSerialization"/> through the table or by reflection alone.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
-    public class StreamsSerializersSpec
+    public class StreamsSerializersSpec : AkkaSpec
     {
         private const string SwitchName = "Akka.DynamicTypeLoading";
 
@@ -50,6 +51,10 @@ namespace Akka.Streams.Tests.Serialization
             StreamsRows.GetConfig("akka.actor.serialization-bindings").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetString()));
 
         private static readonly Type[] BoundSamples = { typeof(SinkRefImpl<int>), typeof(SourceRefImpl<int>), typeof(CumulativeDemand) };
+
+        public StreamsSerializersSpec(ITestOutputHelper output) : base(StreamsRows, output)
+        {
+        }
 
         private static AkkaSerialization Build(ActorSystem system, ModuleSerializerTable table, bool dynamicTypeLoading)
         {
@@ -165,6 +170,21 @@ namespace Akka.Streams.Tests.Serialization
                 serialization.FindSerializerForType(typeof(SinkRefImpl<int>)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(SourceRefImpl<int>)).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
             });
+        }
+
+        [Fact(DisplayName = "Serialization should build StreamRefSerializer under id 30, without a warning, when dynamic type loading is off")]
+        public async Task Should_keep_the_stream_ref_serializer_id_When_dynamic_type_loading_is_disabled()
+        {
+            AkkaSerialization? serialization = null;
+            await EventFilter.Warning().ExpectAsync(0, () =>
+            {
+                serialization = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: false);
+                return Task.CompletedTask;
+            });
+
+            serialization!.GetSerializerById(30).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
+            foreach (var type in BoundSamples)
+                serialization.FindSerializerForType(type).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
         }
     }
 }

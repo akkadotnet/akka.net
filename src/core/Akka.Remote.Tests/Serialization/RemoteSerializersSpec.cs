@@ -222,16 +222,34 @@ namespace Akka.Remote.Tests.Serialization
                 }
             });
 
-            await WithSystem("remote-absent", Config.Empty, system =>
+            // types Remote.conf also binds, named by Akka.dll and CoreLib: neither assembly half leads to Remote's table
+            var local = ConfigurationFactory.ParseString(@"
+                akka.actor.serialization-bindings {
+                    ""Akka.Actor.Identify, Akka"" = bytes
+                    ""System.String"" = bytes
+                }");
+
+            await WithSystem("remote-absent", local, system =>
             {
                 var serialization = Build(system, table, dynamicTypeLoading: true);
 
                 probes.Should().Be(0);
-                foreach (var type in new[] { typeof(string), typeof(Identify), typeof(IActorRef) })
-                {
-                    serialization.FindSerializerForType(type).Should().BeOfType<NewtonSoftJsonSerializer>();
-                    system.Serialization.FindSerializerForType(type).Should().BeOfType<NewtonSoftJsonSerializer>();
-                }
+                serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(IActorRef)).Should().BeOfType<NewtonSoftJsonSerializer>();
+            });
+        }
+
+        /// <remarks>Reflection hands a non-empty block to a (system, config) constructor this class lacks; the table does not.</remarks>
+        [Fact(DisplayName = "Serialization should build akka-misc despite a settings block when dynamic type loading is on")]
+        public async Task Should_build_a_one_constructor_serializer_When_it_has_a_settings_block()
+        {
+            var settings = ConfigurationFactory.ParseString("akka.actor.serialization-settings.akka-misc { x = 1 }");
+
+            await WithSystem("remote-misc-settings", settings.WithFallback(RemoteRows), system =>
+            {
+                Build(system, ModuleSerializerTable.Default, dynamicTypeLoading: true)
+                    .GetSerializerById(16).Should().BeOfType<MiscMessageSerializer>();
             });
         }
     }
