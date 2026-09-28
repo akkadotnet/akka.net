@@ -48,7 +48,7 @@ namespace Akka.Hosting
             where T : Akka.Actor.IExtensionId { }
         public Akka.Hosting.AkkaConfigurationBuilder WithExtensions(params System.Type[] extensions) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(Akka.Hosting.AkkaHealthCheckRegistration registration) { }
-        public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck<T>(string name, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default)
+        public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  T>(string name, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default)
             where T :  class, Akka.Hosting.IAkkaHealthCheck { }
     }
     public sealed class AkkaHealthCheckContext
@@ -85,7 +85,7 @@ namespace Akka.Hosting
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder> builder) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder)
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder)
             where T : Akka.Hosting.AkkaHostedService { }
         public static Akka.Hosting.AkkaConfigurationBuilder AddHocon(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Configuration.Config hocon, Akka.Hosting.HoconAddMode addMode) { }
         public static Akka.Hosting.AkkaConfigurationBuilder AddHocon(this Akka.Hosting.AkkaConfigurationBuilder builder, Microsoft.Extensions.Configuration.IConfiguration configuration, Akka.Hosting.HoconAddMode addMode, bool normalizeKeys = true) { }
@@ -192,6 +192,7 @@ namespace Akka.Hosting
         public bool? LogConfigOnStart { get; set; }
         public Akka.Event.LogFilterBuilder? LogFilterBuilder { get; set; }
         public Akka.Event.LogLevel? LogLevel { get; set; }
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]
         [System.Obsolete("Use the WithDefaultLogMessageFormatter<T> method instead")]
         public System.Type LogMessageFormatter { get; set; }
         public Akka.Hosting.LoggerConfigBuilder AddLogger<T>()
@@ -199,7 +200,7 @@ namespace Akka.Hosting
         public Akka.Hosting.LoggerConfigBuilder ClearLoggers() { }
         [System.Obsolete("SemanticLogMessageFormatter is now the default. Only use this method if you have " +
             "a custom ILogMessageFormatter implementation.")]
-        public Akka.Hosting.LoggerConfigBuilder WithDefaultLogMessageFormatter<T>()
+        public Akka.Hosting.LoggerConfigBuilder WithDefaultLogMessageFormatter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  T>()
             where T : Akka.Event.ILogMessageFormatter { }
         public Akka.Hosting.LoggerConfigBuilder WithLogFilter(System.Action<Akka.Event.LogFilterBuilder> filterBuilder) { }
     }
