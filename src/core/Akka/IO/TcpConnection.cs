@@ -1148,12 +1148,11 @@ namespace Akka.IO
                 }
                 catch (Exception ex)
                 {
-                    // The pipe's writer already failed. Nothing will read these bytes now, so
-                    // disposing is safe; this write and everything still owed fail together below.
+                    // Write only throws once the writer is completed, so nothing will send these bytes:
+                    // fail this write and everything owed, and close now rather than risk a later flush acking them.
                     write.Data.DisposeOwnedSegments();
                     _pendingAcks.Enqueue(new WriteCommand(write, sender));
-                    _flushPending = true;
-                    Self.Tell(new FlushFailed(ex));
+                    HandleFlushFailed(new FlushFailed(ex));
                     return;
                 }
             }
@@ -1178,7 +1177,18 @@ namespace Akka.IO
         private void StartFlush()
         {
             _flushCovers = _pendingAcks.Count;
-            var flush = _transport!.FlushAsync(_cts!.Token);
+            ValueTask<FlushResult> flush;
+            try
+            {
+                flush = _transport!.FlushAsync(_cts!.Token);
+            }
+            catch (Exception ex)
+            {
+                // once the write pump has failed, FlushAsync throws its error synchronously
+                _flushPending = true;
+                Self.Tell(new FlushFailed(ex));
+                return;
+            }
 
             if (flush.IsCompletedSuccessfully)
             {

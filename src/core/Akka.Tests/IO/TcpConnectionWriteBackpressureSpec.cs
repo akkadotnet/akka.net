@@ -226,7 +226,7 @@ namespace Akka.Tests.IO
             // that second flush is the one the write pump "dies" on.
             var transport = new FakeTransport(n => n == 1
                 ? new ValueTask<FlushResult>(firstFlush.Task)
-                : new ValueTask<FlushResult>(Task.FromException<FlushResult>(new IOException("write pump failed"))));
+                : throw new IOException("write pump failed")); // a Pipe throws the pump's error synchronously
             var connection = await ConnectAsync(pair, transport, handler);
 
             handler.Send(connection, Write(16, 1));
@@ -238,6 +238,21 @@ namespace Akka.Tests.IO
             await ExpectAcksAsync(handler, 1, 1);
             await ExpectFailedWritesAsync(handler, 2, 2);
             await closer.ExpectMsgAsync<Tcp.ErrorClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_fail_the_write_and_send_ErrorClosed_When_the_flush_throws_while_idle")]
+        public async Task Should_fail_the_write_and_send_ErrorClosed_When_the_flush_throws_while_idle()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            var handler = CreateTestProbe();
+            var transport = new FakeTransport(_ => throw new IOException("write pump failed"));
+            var connection = await ConnectAsync(pair, transport, handler);
+
+            handler.Send(connection, Write(16, 1));
+
+            await ExpectFailedWritesAsync(handler, 1, 1);
+            await handler.ExpectMsgAsync<Tcp.ErrorClosed>();
             await ExpectTerminatedAsync(connection);
         }
 
