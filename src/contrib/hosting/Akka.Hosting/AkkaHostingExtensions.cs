@@ -62,8 +62,7 @@ namespace Akka.Hosting
             return AddAkka<AkkaHostedService>(services, actorSystemName, builder);
         }
         
-        // T ends up on services.AddHostedService<T>() below, which requires PublicConstructors so
-        // MS.DI can activate it under trimming/Native AOT - propagate that requirement here.
+        // flows into AddHostedService<T>, which needs PublicConstructors
         public static IServiceCollection AddAkka<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
             this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
         {

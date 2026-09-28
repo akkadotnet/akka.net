@@ -18,6 +18,7 @@ namespace Akka.Hosting
     public sealed class LoggerConfigBuilder
     {
         private readonly List<Type> _loggers = [];
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         private Type? _logMessageFormatter;
         internal AkkaConfigurationBuilder Builder { get; }
 
@@ -49,8 +50,7 @@ namespace Akka.Hosting
         
         public LogFilterBuilder? LogFilterBuilder { get; set; }
 
-        // The setter calls value.GetConstructor([]), which requires PublicConstructors on the Type
-        // it is invoked on for the reflection to survive trimming/Native AOT.
+        // the setter calls value.GetConstructor, which needs PublicConstructors
         [Obsolete("Use the WithDefaultLogMessageFormatter<T> method instead")]
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         public Type LogMessageFormatter
