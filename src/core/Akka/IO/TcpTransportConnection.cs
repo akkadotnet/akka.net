@@ -97,6 +97,15 @@ namespace Akka.IO
             return writer.FlushAsync(ct);
         }
 
+        public void Write(ReadOnlySequence<byte> data)
+        {
+            var writer = _outputPipe.Writer;
+            foreach (var segment in data)
+            {
+                writer.Write(segment.Span);
+            }
+        }
+
         public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default)
         {
             return _outputPipe.Writer.FlushAsync(ct);

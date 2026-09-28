@@ -9,6 +9,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -140,6 +141,40 @@ namespace Akka.Tests.IO
             await AbortAsync(connection, handler);
         }
 
+        [Fact(DisplayName = "Should_batch_bytes_into_one_flush_When_writes_arrive_behind_a_pending_flush")]
+        public async Task Should_batch_bytes_into_one_flush_When_writes_arrive_behind_a_pending_flush()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var handler = CreateTestProbe();
+            var connection = await ConnectAsync(pair, stream, handler);
+
+            // Write 1 alone hits the pause threshold, so its flush stays pending while the pump
+            // is stalled; writes 2-4 are copied into the pipe (but not individually flushed)
+            // while it's in flight.
+            handler.Send(connection, Write(PauseThreshold, 1));
+            handler.Send(connection, Write(16, 2));
+            handler.Send(connection, Write(16, 3));
+            handler.Send(connection, Write(16, 4));
+
+            await handler.ExpectNoMsgAsync(NoMsgWindow);
+
+            stream.ReleaseFirstWrite();
+            await ExpectAcksAsync(handler, 1, 4);
+
+            // Write 1's 64 KB reaches the stream as however many chunks the pipe's own buffer
+            // segments it into; writes 2-4 never got a flush of their own, so they arrive after it
+            // as a single trailing 48-byte write, not three separate 16-byte ones.
+            await AwaitAssertAsync(() =>
+            {
+                stream.WriteSizes.Last().Should().Be(48);
+                stream.WriteSizes.Sum().Should().Be(PauseThreshold + 48);
+                return Task.CompletedTask;
+            }, TimeSpan.FromSeconds(3));
+
+            await AbortAsync(connection, handler);
+        }
+
         [Fact(DisplayName = "Should_ack_in_order_across_senders_and_CompoundWrite_parts_When_writes_queue")]
         public async Task Should_ack_in_order_across_senders_and_CompoundWrite_parts_When_writes_queue()
         {
@@ -186,10 +221,12 @@ namespace Akka.Tests.IO
             var handler = CreateTestProbe();
             var closer = CreateTestProbe();
             var firstFlush = new TaskCompletionSource<FlushResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            // Write 1's flush stays pending; the write pump "dies" before write 2 reaches the pipe.
+            // Write 1's flush stays pending; write 2 arrives (and is copied into the pipe) while it's
+            // in flight, so it isn't covered and needs a flush of its own once write 1's completes --
+            // that second flush is the one the write pump "dies" on.
             var transport = new FakeTransport(n => n == 1
                 ? new ValueTask<FlushResult>(firstFlush.Task)
-                : throw new IOException("write pump failed"));
+                : new ValueTask<FlushResult>(Task.FromException<FlushResult>(new IOException("write pump failed"))));
             var connection = await ConnectAsync(pair, transport, handler);
 
             handler.Send(connection, Write(16, 1));
@@ -424,21 +461,22 @@ namespace Akka.Tests.IO
             var handler = CreateTestProbe();
             var connection = await ConnectAsync(pair, stream, handler);
 
-            var pending = new CountingOwner(PauseThreshold);
-            var queued = new CountingOwner(16);
-            handler.Send(connection, Tcp.Write.Create(OwnedSequenceSegment.Create(pending, PauseThreshold), new WriteAck(1)));
-            handler.Send(connection, Tcp.Write.Create(OwnedSequenceSegment.Create(queued, 16), new WriteAck(2)));
+            var first = new CountingOwner(PauseThreshold);
+            var second = new CountingOwner(16);
+            handler.Send(connection, Tcp.Write.Create(OwnedSequenceSegment.Create(first, PauseThreshold), new WriteAck(1)));
+            handler.Send(connection, Tcp.Write.Create(OwnedSequenceSegment.Create(second, 16), new WriteAck(2)));
 
-            // The pending write was copied into the pipe, so it is freed although its ack waits;
-            // the queued write keeps its buffer until it reaches the pipe.
-            await AwaitAssertAsync(() => pending.DisposeCount.Should().Be(1));
+            // Both writes are copied into the pipe (and freed) as soon as they arrive; only their
+            // acks wait. The second write's ack waits behind the first flush too, since that flush
+            // was already in flight when it arrived.
+            await AwaitAssertAsync(() => first.DisposeCount.Should().Be(1));
+            await AwaitAssertAsync(() => second.DisposeCount.Should().Be(1));
             await handler.ExpectNoMsgAsync(NoMsgWindow);
-            queued.DisposeCount.Should().Be(0);
 
             stream.ReleaseFirstWrite();
             await ExpectAcksAsync(handler, 1, 2);
-            queued.DisposeCount.Should().Be(1);
-            pending.DisposeCount.Should().Be(1);
+            second.DisposeCount.Should().Be(1);
+            first.DisposeCount.Should().Be(1);
 
             await AbortAsync(connection, handler);
         }
@@ -479,15 +517,15 @@ namespace Akka.Tests.IO
             protected override ITransportConnection CreateTransport() => _transport;
         }
 
-        /// <summary>A transport whose Nth write returns (or throws) whatever the test decides.</summary>
+        /// <summary>A transport whose Nth flush returns (or throws) whatever the test decides.</summary>
         private sealed class FakeTransport : ITransportConnection
         {
-            private readonly Func<int, ValueTask<FlushResult>> _onWrite;
+            private readonly Func<int, ValueTask<FlushResult>> _onFlush;
             private readonly Pipe _input = new();
             private readonly TaskCompletionSource<bool> _never = new();
-            private int _writes;
+            private int _flushes;
 
-            public FakeTransport(Func<int, ValueTask<FlushResult>> onWrite) => _onWrite = onWrite;
+            public FakeTransport(Func<int, ValueTask<FlushResult>> onFlush) => _onFlush = onFlush;
 
             public PipeReader Input => _input.Reader;
             public Task ReadCompleted => _never.Task;
@@ -495,9 +533,10 @@ namespace Akka.Tests.IO
             public bool HasReadError => false;
             public Exception? ReadError => null;
 
-            public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default) => _onWrite(++_writes);
-            public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default) => _onWrite(++_writes);
-            public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default) => default;
+            public void Write(ReadOnlySequence<byte> data) { }
+            public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default) => default;
+            public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default) => default;
+            public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default) => _onFlush(++_flushes);
             public Task ShutdownAsync() => Task.CompletedTask;
             public Task CloseAsync() => Task.CompletedTask;
             public void Abort() { }

@@ -58,8 +58,10 @@ namespace Akka.IO
     /// Two actor-driven coordination paths:
     /// - ReadFromPipe: reads from <see cref="ITransportConnection.Input"/>, copies to pooled buffers,
     ///   emits <see cref="Tcp.Received"/>
-    /// - Write: copies into the transport's output pipe via <see cref="ITransportConnection.WriteAsync(ReadOnlySequence{byte}, CancellationToken)"/>,
-    ///   acking once the pipe's flush completes; later writes queue while a flush is pending
+    /// - Write: copies into the transport's output pipe via <see cref="ITransportConnection.Write(ReadOnlySequence{byte})"/>
+    ///   without flushing, then flushes via <see cref="ITransportConnection.FlushAsync"/>; acks wait for
+    ///   that flush. Writes that arrive while a flush is already in flight are copied in immediately too
+    ///   and ridden by the next flush, batching whatever arrived meanwhile
     ///
     /// All shutdown and error handling flows through the actor mailbox for thread safety.
     /// </summary>
@@ -238,13 +240,17 @@ namespace Akka.IO
         private IActorRef? _handler;
         private CloseInformation? _closeInformation;
 
-        // Writes waiting for Register, or for the output pipe's pending flush. FIFO.
-        private readonly Queue<WriteCommand> _pendingWrites = new();
+        // Writes buffered before Register -- there's no transport yet. FIFO; replayed on Register.
+        private readonly Queue<WriteCommand> _preRegisterWrites = new();
         private long _preRegisterBytes; // checked against write-commands-queue-max-size before Register
 
-        // At most one output-pipe flush is awaited at a time; _flushWaiter's ack waits on it.
+        // Writes whose bytes are already in the pipe; ack/failure is owed once the flush covering
+        // them lands. At most one flush is ever in flight; _flushCovers is how many of these
+        // entries (oldest first) it covers -- the rest arrived while it was already running and
+        // ride the next flush.
+        private readonly Queue<WriteCommand> _pendingAcks = new();
         private bool _flushPending;
-        private WriteCommand? _flushWaiter;
+        private int _flushCovers;
         private IActorRef? _resumeWritingSender;
 
         #region Connection state flags
@@ -359,14 +365,14 @@ namespace Akka.IO
                 catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
             }
 
-            // Its bytes are already in the pipe (segments freed after the copy), but the flush never completed.
-            if (_flushWaiter is { } waiter)
-                waiter.Sender.Tell(waiter.Cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
+            // Every owed write's bytes are already in the pipe (freed after the copy) -- only the
+            // flush that would have acked them never completed.
+            FailAllOwed(DroppingWriteBecauseClosingException);
 
-            while (_pendingWrites.Count > 0)
+            while (_preRegisterWrites.Count > 0)
             {
-                var write = _pendingWrites.Dequeue();
-                // Disposal path: PostStop/drain. The connection is tearing down and this queued
+                var write = _preRegisterWrites.Dequeue();
+                // Disposal path: PostStop/drain. The connection is tearing down and this buffered
                 // write will never reach the pipe — dispose any owner it carries
                 // before notifying the sender of failure, same as every other rejection path.
                 write.Cmd.Data.DisposeOwnedSegments();
@@ -547,7 +553,12 @@ namespace Akka.IO
                     AllowReading();
                 }
 
-                DrainPendingWrites();
+                // Replay writes buffered before Register through the normal write path, in order.
+                while (_preRegisterWrites.Count > 0)
+                {
+                    var (cmd, sender) = _preRegisterWrites.Dequeue();
+                    EnqueueWrite(cmd, sender);
+                }
 
                 Become(OpenBehaviour);
             });
@@ -726,7 +737,7 @@ namespace Akka.IO
             });
             Receive<FlushFailed>(msg =>
             {
-                FailFlushWaiter(msg.Cause);
+                FailAllOwed(msg.Cause);
                 DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
             });
             SuspendResumeHandlers();
@@ -794,7 +805,7 @@ namespace Akka.IO
             });
             Receive<ResumeWriting>(_ =>
             {
-                if (_flushPending || _pendingWrites.Count > 0)
+                if (_flushPending || _pendingAcks.Count > 0)
                     _resumeWritingSender = Sender;
                 else
                     Sender.Tell(WritingResumed.Instance);
@@ -1106,35 +1117,24 @@ namespace Akka.IO
             QueueWrite(write, sender);
         }
 
-        /// <summary>
-        /// Queues a write until Register arrives or the pending output-pipe flush completes.
-        /// </summary>
+        /// <summary>Buffers a write until Register arrives -- there's no transport yet.</summary>
         private void QueueWrite(Write write, IActorRef sender)
         {
             // A queued write outlives this message-handler turn, and TcpConnection never holds a
             // borrowed buffer past the turn (#8323), so copy it. An OWNED buffer was handed over, so
-            // queue it as-is; WriteToPipe or PostStop disposes it. A write that mixes borrowed and
+            // queue it as-is; EnqueueWrite or PostStop disposes it. A write that mixes borrowed and
             // owned segments is not copied (see OwnedSequenceSegment.cs).
             var queuedWrite = write.Data.HasOwnedSegments()
                 ? write
                 : Write.Create(new ReadOnlySequence<byte>(write.Data.ToArray()), write.Ack);
 
-            _pendingWrites.Enqueue(new WriteCommand(queuedWrite, sender));
-        }
-
-        private void DrainPendingWrites()
-        {
-            while (!_flushPending && _pendingWrites.Count > 0)
-            {
-                var write = _pendingWrites.Dequeue();
-                WriteToPipe(write.Cmd, write.Sender);
-            }
+            _preRegisterWrites.Enqueue(new WriteCommand(queuedWrite, sender));
         }
 
         private void EnqueueWrite(Write write, IActorRef sender)
         {
-            // write-commands-queue-max-size caps a single write. Backpressure comes from WriteToPipe
-            // holding back the ack while the output pipe is over its pause threshold.
+            // write-commands-queue-max-size caps a single write. Backpressure comes from StartFlush
+            // holding back acks while the output pipe is over its pause threshold.
             if (_maxQueuedBytes >= 0 && write.Bytes > _maxQueuedBytes)
             {
                 // Disposal path: queue-full rejection (open/registered path). The write never
@@ -1144,46 +1144,45 @@ namespace Akka.IO
                 return;
             }
 
-            // Keep FIFO order: while a flush is pending, every later write (empty ones too) waits.
-            if (_flushPending || _pendingWrites.Count > 0)
+            if (write.Bytes > 0)
             {
-                QueueWrite(write, sender);
-                return;
+                try
+                {
+                    _transport!.Write(write.Data);
+                }
+                catch (Exception ex)
+                {
+                    // The pipe's writer already failed. Nothing will read these bytes now, so
+                    // disposing is safe; this write and everything still owed fail together below.
+                    write.Data.DisposeOwnedSegments();
+                    _pendingAcks.Enqueue(new WriteCommand(write, sender));
+                    _flushPending = true;
+                    Self.Tell(new FlushFailed(ex));
+                    return;
+                }
             }
 
-            WriteToPipe(write, sender);
+            // Disposal path: open/registered path. The bytes are in the pipe now (or there were
+            // none), so free the caller's segments even though the ack still waits on a flush.
+            write.Data.DisposeOwnedSegments();
+
+            // Keep FIFO order: an empty write still waits its turn behind whatever is already owed.
+            _pendingAcks.Enqueue(new WriteCommand(write, sender));
+
+            if (!_flushPending)
+                StartFlush();
         }
 
-        private void WriteToPipe(Write write, IActorRef sender)
+        /// <summary>
+        /// Flushes the output pipe, covering every write enqueued so far. A synchronous completion
+        /// acks (or fails) those entries immediately; otherwise the ack waits for
+        /// <see cref="OnFlushCompleted"/>/<see cref="HandleFlushFailed"/> -- which is also where
+        /// whatever arrived while this flush was in flight rides the next one.
+        /// </summary>
+        private void StartFlush()
         {
-            if (write.Bytes == 0)
-            {
-                // Disposal path: empty write, never reaches WriteAsync. Defensive - see the
-                // matching byteCount == 0 branch in BufferSingleWriteBeforeRegister.
-                write.Data.DisposeOwnedSegments();
-                if (write.WantsAck) sender.Tell(write.Ack);
-                return;
-            }
-
-            // WriteAsync copies write.Data into the output pipe. Its flush stays pending while the pipe
-            // is over its pause threshold, and the ack waits for it.
-            ValueTask<FlushResult> flush;
-            try
-            {
-                flush = _transport!.WriteAsync(write.Data, _cts!.Token);
-            }
-            catch (Exception ex)
-            {
-                // The write pump already failed and the pipe rethrows its error. Nothing will read
-                // these bytes now, so disposing is safe.
-                write.Data.DisposeOwnedSegments();
-                FailWrite(write, sender, ex);
-                return;
-            }
-
-            // Disposal path: open/registered path. The bytes are in the pipe now, so free the
-            // caller's segments even if the ack waits on the flush.
-            write.Data.DisposeOwnedSegments();
+            _flushCovers = _pendingAcks.Count;
+            var flush = _transport!.FlushAsync(_cts!.Token);
 
             if (flush.IsCompletedSuccessfully)
             {
@@ -1191,17 +1190,16 @@ namespace Akka.IO
                 if (result.IsCompleted || result.IsCanceled)
                 {
                     // The write pump has exited, so these bytes will never reach the socket.
-                    FailWrite(write, sender, OutputClosedException);
+                    _flushPending = true;
+                    Self.Tell(new FlushFailed(OutputClosedException));
                     return;
                 }
 
-                if (write.WantsAck) sender.Tell(write.Ack);
+                AckCovered();
                 return;
             }
 
-            // PipeWriter allows only one pending flush, so later writes queue until this one completes.
             _flushPending = true;
-            _flushWaiter = new WriteCommand(write, sender);
             _ = AwaitFlushAsync(flush, Self);
 
             static async Task AwaitFlushAsync(ValueTask<FlushResult> flush, IActorRef self)
@@ -1209,10 +1207,9 @@ namespace Akka.IO
                 try
                 {
                     var result = await flush.ConfigureAwait(false);
-                    if (result.IsCompleted || result.IsCanceled)
-                        self.Tell(new FlushFailed(OutputClosedException));
-                    else
-                        self.Tell(FlushCompleted.Instance);
+                    self.Tell(result.IsCompleted || result.IsCanceled
+                        ? new FlushFailed(OutputClosedException)
+                        : FlushCompleted.Instance);
                 }
                 catch (Exception ex)
                 {
@@ -1221,40 +1218,44 @@ namespace Akka.IO
             }
         }
 
-        /// <summary>
-        /// Fails a write that never reached the socket. The current behaviour's FlushFailed handler
-        /// then closes the connection and notifies the right senders; meanwhile nothing else drains.
-        /// </summary>
-        private void FailWrite(Write write, IActorRef sender, Exception cause)
+        /// <summary>Acks the oldest <see cref="_flushCovers"/> owed writes -- the ones the flush that just completed covered.</summary>
+        private void AckCovered()
         {
-            sender.Tell(write.FailureMessage.WithCause(cause));
-            _flushPending = true;
-            Self.Tell(new FlushFailed(cause));
+            for (var i = 0; i < _flushCovers; i++)
+            {
+                var (cmd, sender) = _pendingAcks.Dequeue();
+                if (cmd.WantsAck) sender.Tell(cmd.Ack);
+            }
+        }
+
+        /// <summary>Fails every owed write, oldest first, with <paramref name="cause"/>.</summary>
+        private void FailAllOwed(Exception cause)
+        {
+            while (_pendingAcks.Count > 0)
+            {
+                var (cmd, sender) = _pendingAcks.Dequeue();
+                sender.Tell(cmd.FailureMessage.WithCause(cause));
+            }
         }
 
         private void HandleFlushFailed(FlushFailed msg)
         {
-            FailFlushWaiter(msg.Cause);
+            FailAllOwed(msg.Cause);
             HandleIoError(msg.Cause);
-        }
-
-        private void FailFlushWaiter(Exception cause)
-        {
-            if (_flushWaiter is { } waiter)
-                waiter.Sender.Tell(waiter.Cmd.FailureMessage.WithCause(cause));
-            _flushWaiter = null;
         }
 
         private void OnFlushCompleted()
         {
             _flushPending = false;
-            if (_flushWaiter is { } waiter && waiter.Cmd.WantsAck)
-                waiter.Sender.Tell(waiter.Cmd.Ack);
-            _flushWaiter = null;
+            AckCovered();
 
-            DrainPendingWrites();
+            // Whatever arrived while that flush was in flight rides the next one.
+            if (_pendingAcks.Count > 0)
+                StartFlush();
 
-            if (_resumeWritingSender != null && !_flushPending && _pendingWrites.Count == 0)
+            // StartFlush may have just settled everything synchronously, so re-check rather than
+            // assume a flush is still pending.
+            if (_resumeWritingSender != null && !_flushPending && _pendingAcks.Count == 0)
             {
                 _resumeWritingSender.Tell(WritingResumed.Instance);
                 _resumeWritingSender = null;
@@ -1303,7 +1304,7 @@ namespace Akka.IO
         /// </summary>
         private void TryStartTransportClose(ConnectionClosed closeEvent)
         {
-            if (_transport == null || _flushPending || _pendingWrites.Count > 0)
+            if (_transport == null || _flushPending || _pendingAcks.Count > 0)
                 return;
 
             var operation = closeEvent is ConfirmedClosed ? _transport.ShutdownAsync() : _transport.CloseAsync();

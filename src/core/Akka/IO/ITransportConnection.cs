@@ -44,6 +44,12 @@ namespace Akka.IO
         ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default);
 
         /// <summary>
+        /// Copies a multi-segment sequence into the internal buffer WITHOUT flushing.
+        /// Never goes async and never refuses bytes -- pair with <see cref="FlushAsync"/>.
+        /// </summary>
+        void Write(ReadOnlySequence<byte> data);
+
+        /// <summary>
         /// Explicitly flushes any buffered data to the write pump.
         /// Useful for low-throughput scenarios where writes don't fill the buffer.
         /// Under high throughput, the buffer auto-flushes at the pause threshold.
