@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,7 +62,10 @@ namespace Akka.Hosting
             return AddAkka<AkkaHostedService>(services, actorSystemName, builder);
         }
         
-        public static IServiceCollection AddAkka<T>(this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
+        // T ends up on services.AddHostedService<T>() below, which requires PublicConstructors so
+        // MS.DI can activate it under trimming/Native AOT - propagate that requirement here.
+        public static IServiceCollection AddAkka<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+            this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
         {
             var b = new AkkaConfigurationBuilder(services, actorSystemName);
             

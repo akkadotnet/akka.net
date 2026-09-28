@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -362,7 +363,10 @@ namespace Akka.Hosting
         /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
         /// <typeparam name="T">The type of the health check that implements <see cref="IAkkaHealthCheck"/>.</typeparam>
         /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
-        public AkkaConfigurationBuilder WithHealthCheck<T>(string name, HealthStatus? failureStatus = null, 
+        // T flows into ActivatorUtilities.GetServiceOrCreateInstance<T>() below, which requires
+        // PublicConstructors to activate the type under trimming/Native AOT - propagate it here.
+        public AkkaConfigurationBuilder WithHealthCheck<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+            string name, HealthStatus? failureStatus = null,
             IEnumerable<string>? tags = null, TimeSpan? timeout = null) where T : class, IAkkaHealthCheck
         {
             // Create a health check instance that will be resolved from DI when needed
