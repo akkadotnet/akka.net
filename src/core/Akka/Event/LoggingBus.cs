@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -116,7 +117,7 @@ namespace Akka.Event
             var taskInfos = new Dictionary<Task, string>();
             foreach (var strLoggerType in loggerTypes)
             {
-                var loggerType = GetBuiltInLoggerType(strLoggerType);
+                var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
                 if (loggerType == null)
                 {
                     if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
@@ -225,6 +226,38 @@ namespace Akka.Event
                 _ => null
             };
         }
+
+#nullable enable
+        // Akka's own loggers outside Akka.dll. Type name and assembly must both match, so nothing else is probed;
+        // each arm passes its own literal so the trimmer keeps that type.
+        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
+        private static Type? GetFirstPartyLoggerType(string loggerTypeName)
+        {
+            if (!Util.TypeExtensions.TrySplitTypeName(loggerTypeName, out var name, out var assembly))
+                return null;
+
+            return name switch
+            {
+                "Akka.Hosting.Logging.LoggerFactoryLogger" when string.Equals(assembly, "Akka.Hosting", StringComparison.OrdinalIgnoreCase)
+                    => LoadFirstPartyLoggerType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
+                _ => null
+            };
+        }
+
+        /// <summary>Pass a literal: the annotation lets the trimmer keep that type and the constructors Props needs.</summary>
+        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
+        private static Type? LoadFirstPartyLoggerType([DynamicallyAccessedMembers(Props.ActorTypeMembers)] string typeName)
+        {
+            try
+            {
+                return Type.GetType(typeName);
+            }
+            catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException or TypeLoadException)
+            {
+                return null; // an assembly that will not load counts as absent
+            }
+        }
+#nullable restore
 
         [RequiresUnreferencedCode("Loads the [akka.loggers] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]

@@ -8,6 +8,8 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -166,6 +168,64 @@ namespace Akka.Tests.Event
                 exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
+        }
+
+        // Akka.Tests does not reference Akka.Hosting, so any attempt to load it raises AssemblyResolve.
+        [Theory(DisplayName = "LoggingBus should never probe a first-party logger assembly when every logger is built in")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_not_probe_first_party_assemblies_When_loggers_are_built_in(bool dynamicTypeLoading)
+        {
+            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading, async () =>
+            {
+                var system = ActorSystem.Create("built-in-loggers-only",
+                    ConfigurationFactory.ParseString("akka.loggers = [\"Akka.Event.DefaultLogger, Akka\", \"Akka.Event.TraceLogger\"]"));
+                await system.Terminate();
+            });
+
+            probes.Should().Be(0);
+        }
+
+        [Theory(DisplayName = "LoggingBus should treat an absent first-party logger assembly as absent")]
+        [InlineData(true, "cannot be found")]
+        [InlineData(false, "is not built in")]
+        public async Task Should_fall_through_When_first_party_logger_assembly_is_absent(bool dynamicTypeLoading, string expected)
+        {
+            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading, () =>
+            {
+                var config = ConfigurationFactory.ParseString(
+                    "akka.loggers = [\"Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting\"]");
+
+                var exception = Assert.Throws<ConfigurationException>(() => ActorSystem.Create("absent-first-party-logger", config));
+                exception.Message.Should().Contain(expected);
+                return Task.CompletedTask;
+            });
+
+            // with the switch off only the table loads by name, so this proves the hook sees its probes
+            probes.Should().BeGreaterThan(0);
+        }
+
+        private static async Task<int> ProbesFor(string assembly, bool dynamicTypeLoading, Func<Task> body)
+        {
+            var probes = 0;
+            ResolveEventHandler onResolve = (_, args) =>
+            {
+                if (string.Equals(new AssemblyName(args.Name).Name, assembly, StringComparison.OrdinalIgnoreCase))
+                    Interlocked.Increment(ref probes);
+                return null;
+            };
+
+            AppDomain.CurrentDomain.AssemblyResolve += onResolve;
+            try
+            {
+                await AkkaFeaturesSpec.WithDynamicTypeLoading(dynamicTypeLoading, body);
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= onResolve;
+            }
+
+            return Volatile.Read(ref probes);
         }
 
         /// <summary>
