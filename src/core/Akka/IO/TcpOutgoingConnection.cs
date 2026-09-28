@@ -80,9 +80,10 @@ namespace Akka.IO
             var inputPipeOptions = new PipeOptions(
                 pauseWriterThreshold: pipeBufferSize * 2,
                 resumeWriterThreshold: pipeBufferSize,
+                minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
-            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(_connect.Options));
+            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(Settings, _connect.Options));
         }
 
         private void ReleaseConnectionSocketArgs()
