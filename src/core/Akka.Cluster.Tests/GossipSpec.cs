@@ -189,6 +189,26 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_gossip_must_not_have_Down_self_as_leader_when_some_members_are_unreachable()
+        {
+            // every member has been downed (e.g. SBR down-all) and other observers have marked self unreachable
+            var aDown = TestMember.Create(a1.Address, MemberStatus.Down);
+            var bDown = TestMember.Create(b1.Address, MemberStatus.Down);
+            var r1 = Reachability.Empty
+                .Unreachable(b1.UniqueAddress, a1.UniqueAddress)
+                .Unreachable(b1.UniqueAddress, c2.UniqueAddress);
+            var g1 = new Gossip(ImmutableSortedSet.Create(aDown, bDown, c2), new GossipOverview(r1));
+
+            // a Down leader would remove itself as an unreachable member and never shut down
+            State(g1, aDown).Leader.Should().BeNull();
+            State(g1, aDown).IsLeader(aDown.UniqueAddress).Should().BeFalse();
+
+            // self that is not Down still counts as a leader candidate, even when others see it as unreachable
+            var g2 = new Gossip(ImmutableSortedSet.Create(a1, b1, c2), new GossipOverview(r1));
+            State(g2, a1).Leader.Should().Be(a1.UniqueAddress);
+        }
+
+        [Fact]
         public void A_gossip_must_merge_seen_table_correctly()
         {
             var vclockNode = VectorClock.Node.Create("something");
