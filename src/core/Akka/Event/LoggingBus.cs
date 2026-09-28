@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -229,7 +228,8 @@ namespace Akka.Event
 
 #nullable enable
         // Akka's own loggers outside Akka.dll. Type name and assembly must both match, so nothing else is probed;
-        // each arm passes its own literal so the trimmer keeps that type.
+        // each arm passes its own literal so the trimmer keeps that type. throwOnError defaults to false, so a
+        // missing Akka.Hosting returns null here; a broken dll still throws and that exception should surface.
         [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
         private static Type? GetFirstPartyLoggerType(string loggerTypeName)
         {
@@ -239,23 +239,9 @@ namespace Akka.Event
             return name switch
             {
                 "Akka.Hosting.Logging.LoggerFactoryLogger" when string.Equals(assembly, "Akka.Hosting", StringComparison.OrdinalIgnoreCase)
-                    => LoadFirstPartyLoggerType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
+                    => Type.GetType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
                 _ => null
             };
-        }
-
-        /// <summary>Pass a literal: the annotation lets the trimmer keep that type and the constructors Props needs.</summary>
-        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
-        private static Type? LoadFirstPartyLoggerType([DynamicallyAccessedMembers(Props.ActorTypeMembers)] string typeName)
-        {
-            try
-            {
-                return Type.GetType(typeName);
-            }
-            catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException or TypeLoadException)
-            {
-                return null; // an assembly that will not load counts as absent
-            }
         }
 #nullable restore
 

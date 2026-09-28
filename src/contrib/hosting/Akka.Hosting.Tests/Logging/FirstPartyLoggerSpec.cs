@@ -26,9 +26,16 @@ public sealed class DynamicTypeLoadingCollection
 }
 
 [Collection(DynamicTypeLoadingCollection.Name)]
-public class FirstPartyLoggerSpec
+public sealed class FirstPartyLoggerSpec
 {
     private const string SwitchName = "Akka.DynamicTypeLoading";
+
+    private readonly ITestOutputHelper _output;
+
+    public FirstPartyLoggerSpec(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     // A whole Hosting app does not start with the switch off yet (Akka.Streams' serializer rows), so this boots
     // a plain ActorSystem on the akka.loggers value AddLoggerFactory() writes: the full AssemblyQualifiedName.
@@ -61,6 +68,27 @@ public class FirstPartyLoggerSpec
         await WithDynamicTypeLoading(false, async () =>
         {
             var system = ActorSystem.Create("first-party-logger-spelling", SetupFor(name));
+            try
+            {
+                (await LoggerTypeOf(system)).Should().Be(typeof(LoggerFactoryLogger));
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        });
+    }
+
+    // Version skew is the real scenario: HOCON written against one Akka.Hosting build still has to resolve
+    // against whatever build is actually loaded. This also proves the first-party table runs even when dynamic
+    // type loading is on, where a version-pinned name would otherwise be handed to the general-purpose resolver.
+    [Fact(DisplayName = "LoggingBus should resolve a version-skewed LoggerFactoryLogger name when dynamic type loading is on")]
+    public async Task Should_start_LoggerFactoryLogger_When_version_skewed_and_dynamic_type_loading_is_enabled()
+    {
+        const string name = "Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null";
+        await WithDynamicTypeLoading(true, async () =>
+        {
+            var system = ActorSystem.Create("first-party-logger-version-skew-on", SetupFor(name));
             try
             {
                 (await LoggerTypeOf(system)).Should().Be(typeof(LoggerFactoryLogger));

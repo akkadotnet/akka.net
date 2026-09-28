@@ -170,17 +170,25 @@ namespace Akka.Tests.Event
             });
         }
 
-        // Akka.Tests does not reference Akka.Hosting, so any attempt to load it raises AssemblyResolve.
-        [Theory(DisplayName = "LoggingBus should never probe a first-party logger assembly when every logger is built in")]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task Should_not_probe_first_party_assemblies_When_loggers_are_built_in(bool dynamicTypeLoading)
+        // A built-in name never reaches GetFirstPartyLoggerType at all (GetBuiltInLoggerType already matched, so
+        // the ?? short-circuits it) - that would make this test pass without exercising anything. CustomLoggerConfig
+        // is not built in, so it does reach GetFirstPartyLoggerType, which must reject it without touching Akka.Hosting.
+        [Fact(DisplayName = "LoggingBus should never probe a first-party logger assembly for a logger that is not first-party")]
+        public async Task Should_not_probe_first_party_assemblies_When_logger_is_not_first_party()
         {
-            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading, async () =>
+            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading: true, async () =>
             {
-                var system = ActorSystem.Create("built-in-loggers-only",
-                    ConfigurationFactory.ParseString("akka.loggers = [\"Akka.Event.DefaultLogger, Akka\", \"Akka.Event.TraceLogger\"]"));
-                await system.Terminate();
+                CountingTestLogger.Initialized = CountingTestLogger.NewCompletionSource();
+
+                var system = ActorSystem.Create("custom-logger-no-probe", ConfigurationFactory.ParseString(CustomLoggerConfig));
+                try
+                {
+                    await CountingTestLogger.Initialized.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
             });
 
             probes.Should().Be(0);
