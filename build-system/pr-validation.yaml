@@ -229,29 +229,28 @@ jobs:
       artifactName: "docfx_test-$(Build.BuildId)"
       run_if: eq(variables['Build.Reason'], 'PullRequest')
       
-  # --blame-hang-timeout is 15m, under Incrementalist's 20m per-project command
-  # timeout (.incrementalist/testsOnly.json), so vstest's Blame collector fires
-  # first: it kills the hung testhost, writes a Sequence_*.xml + a mini dump
-  # into TestResults, and lets `dotnet test` exit before Incrementalist would
-  # otherwise force-kill the run with no diagnostics. Those files are already
-  # picked up by the "Copy Build Output" / PublishBuildArtifacts steps below,
-  # since they copy TestResults/** into the (OS-specific) job artifact.
+  # --blame-hang: if one test runs 15m with no test starting or finishing, vstest
+  # takes a full dump of the testhost, kills it, and records the hung test in
+  # Sequence_*.xml and the .trx. Incrementalist's 20m timeout only stops waiting
+  # on `dotnet test`; it never kills it, so blame still fires after that and
+  # writes into TestResults, which the artifact steps below upload. A hang that
+  # starts late in the last project to run can still end with the job, undumped.
   - template: azure-pipeline.template.yaml
     parameters:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type full"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
-  # See the comment on net_tests_windows above for why --blame-hang-timeout is 15m.
+  # See the --blame-hang comment on net_tests_windows above.
   - template: azure-pipeline.template.yaml
     parameters:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type full"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
