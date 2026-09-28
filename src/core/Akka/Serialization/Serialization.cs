@@ -210,8 +210,8 @@ namespace Akka.Serialization
         /// <para>
         /// Keyed by bare type name; <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/> normalizes
         /// what HOCON carries, including the full versioned <see cref="Type.AssemblyQualifiedName"/> that
-        /// Akka.Hosting writes. A name that is missing here falls through to the reflection path, which is
-        /// unavailable (and therefore throws) once dynamic type loading is switched off.
+        /// Akka.Hosting writes. A name that is missing here falls through to the <see cref="ModuleSerializerTable"/>,
+        /// then to the reflection path, which is unavailable (and therefore throws) once dynamic type loading is switched off.
         /// </para>
         /// <para>
         /// A factory returns <c>null</c> when the serializer ships inside Akka.dll but cannot work under the
@@ -238,8 +238,8 @@ namespace Akka.Serialization
         /// it when the assembly half is absent or is one of <see cref="FrameworkAssemblyNames"/> -
         /// <c>mscorlib</c>, <c>System.Private.CoreLib</c>, <c>System.Runtime</c> or <c>netstandard</c>, matched
         /// case-insensitively - which covers every runtime these two names can be written against. A key that
-        /// is missing here falls through to the reflection path, which is unavailable (and therefore throws)
-        /// once dynamic type loading is switched off.
+        /// is missing here falls through to the <see cref="ModuleSerializerTable"/>, then to the reflection path,
+        /// which is unavailable (and therefore throws) once dynamic type loading is switched off.
         /// </para>
         /// <para>
         /// Unlike <see cref="BuiltInSerializers"/> this table is unconditional. Whether a binding survives is
@@ -255,11 +255,11 @@ namespace Akka.Serialization
             };
 
         /// <summary>
-        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> accepts alongside "no
+        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> and <see cref="LoadedModule"/> accept alongside "no
         /// assembly at all" - every name the .NET runtimes Akka.NET targets have shipped <see cref="object"/>
         /// and <see cref="byte"/>[] under.
         /// </summary>
-        private static readonly HashSet<string> FrameworkAssemblyNames =
+        internal static readonly HashSet<string> FrameworkAssemblyNames =
             new(StringComparer.OrdinalIgnoreCase)
             {
                 "mscorlib",
@@ -297,7 +297,15 @@ namespace Akka.Serialization
         /// locating a Serializer for a particular class as defined in the mapping in the configuration.
         /// </summary>
         /// <param name="system">The ActorSystem to which this serializer belongs.</param>
-        public Serialization(ExtendedActorSystem system)
+        public Serialization(ExtendedActorSystem system) : this(system, ModuleSerializerTable.Default)
+        {
+        }
+
+        /// <summary>
+        /// INTERNAL API. Resolves HOCON rows that miss core's built-in tables through <paramref name="modules"/>
+        /// before falling back to reflection.
+        /// </summary>
+        internal Serialization(ExtendedActorSystem system, ModuleSerializerTable modules)
         {
             // We have to use stdout-logger here because serialization system is set up before 
             // the logging system were set up
@@ -333,6 +341,10 @@ namespace Akka.Serialization
                 : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
             Dictionary<string, Type> setupTypesByName = null;
 
+            // modules whose serializer rows this config contains; see FindModuleBoundType for how the binding rows
+            // below use them
+            var loadedModules = new List<LoadedModule>();
+
             foreach (var kvp in serializersConfig)
             {
                 // HOCON already trims a value, whatever syntax it was written in, so there is nothing to trim here
@@ -340,14 +352,12 @@ namespace Akka.Serialization
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
                 Serializer serializer;
-                if (serializerTypeName is not null &&
-                    Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(serializerTypeName) is { } builtInSerializerName &&
-                    BuiltInSerializers.TryGetValue(builtInSerializerName, out var serializerFactory))
+                if (FindSerializerFactory(serializerTypeName, modules, loadedModules) is { } serializerFactory)
                 {
                     serializer = serializerFactory(system, serializerConfig);
                     if (serializer == null)
                     {
-                        // built into Akka.dll, but unavailable under the current feature switches
+                        // a built-in serializer that cannot work under the current feature switches
                         skippedAliases.Add(kvp.Key);
                         continue;
                     }
@@ -394,6 +404,10 @@ namespace Akka.Serialization
                     BuiltInSerializationBindings.TryGetValue(bindingName, out var builtInType))
                 {
                     messageType = builtInType;
+                }
+                else if (FindModuleBoundType(bindingName, bindingAssembly, modules, loadedModules) is { } moduleType)
+                {
+                    messageType = moduleType;
                 }
                 else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                 {
@@ -462,6 +476,59 @@ namespace Akka.Serialization
             }
 
             return byName;
+        }
+
+        /// <summary>
+        /// Core's built-in factory for <paramref name="typeName"/>, else the factory of the module its assembly half names.
+        /// </summary>
+        private static Func<ExtendedActorSystem, Config, Serializer> FindSerializerFactory(
+            string typeName, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
+        {
+            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInName &&
+                BuiltInSerializers.TryGetValue(builtInName, out var builtInFactory))
+                return builtInFactory;
+
+            if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) ||
+                assembly is null || modules.ForAssembly(assembly) is not { } module)
+                return null;
+
+            var entry = module.FindSerializer(name, assembly);
+            if (entry is not null && !loadedModules.Contains(module))
+                loadedModules.Add(module);
+            return entry?.Create;
+        }
+
+        /// <summary>
+        /// Resolves a binding row's type from the module tables, without reflection. Null when no module lists it.
+        /// </summary>
+        /// <remarks>
+        /// Two lookups, in order:
+        /// <list type="number">
+        /// <item>The module the row's assembly half names. <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c>
+        /// is answered by Akka.Remote's table, loading it if no serializer row has yet.</item>
+        /// <item>Every module whose serializer rows this config resolved (<paramref name="loadedModules"/>). This
+        /// covers bound types that live outside their module: Remote.conf binds <c>"System.String"</c> and
+        /// <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no module owns CoreLib or Akka.dll, so
+        /// lookup 1 can't answer for them.</item>
+        /// </list>
+        /// Lookup 2 only asks modules this config uses. With no Remote serializer rows, a <c>"System.String"</c>
+        /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
+        /// loop runs after the serializer loop, so <paramref name="loadedModules"/> is complete by then. Two modules
+        /// that list the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
+        /// </remarks>
+        private static Type FindModuleBoundType(
+            string name, string assembly, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
+        {
+            if (assembly is not null && modules.ForAssembly(assembly)?.FindBoundType(name, assembly) is { } owned)
+                return owned;
+
+            foreach (var module in loadedModules)
+            {
+                if (module.FindBoundType(name, assembly) is { } type)
+                    return type;
+            }
+
+            return null;
         }
 
         [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
