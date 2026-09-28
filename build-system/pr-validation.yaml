@@ -229,21 +229,29 @@ jobs:
       artifactName: "docfx_test-$(Build.BuildId)"
       run_if: eq(variables['Build.Reason'], 'PullRequest')
       
+  # --blame-hang-timeout is 15m, under Incrementalist's 20m per-project command
+  # timeout (.incrementalist/testsOnly.json), so vstest's Blame collector fires
+  # first: it kills the hung testhost, writes a Sequence_*.xml + a mini dump
+  # into TestResults, and lets `dotnet test` exit before Incrementalist would
+  # otherwise force-kill the run with no diagnostics. Those files are already
+  # picked up by the "Copy Build Output" / PublishBuildArtifacts steps below,
+  # since they copy TestResults/** into the (OS-specific) job artifact.
   - template: azure-pipeline.template.yaml
     parameters:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
+  # See the comment on net_tests_windows above for why --blame-hang-timeout is 15m.
   - template: azure-pipeline.template.yaml
     parameters:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
