@@ -30,22 +30,8 @@ namespace Akka.IO
         PipeReader Input { get; }
 
         /// <summary>
-        /// Writes data to the transport. Bytes are copied into an internal buffer
-        /// and will be flushed to the underlying stream by the write pump.
-        /// Returns when bytes are accepted into the buffer (not when sent on the wire).
-        /// Goes async when backpressure is active (buffer full).
-        /// </summary>
-        ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default);
-
-        /// <summary>
-        /// Writes a multi-segment sequence to the transport. Each segment is copied
-        /// into the internal buffer. This avoids per-segment syscalls.
-        /// </summary>
-        ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default);
-
-        /// <summary>
-        /// Copies a multi-segment sequence into the internal buffer WITHOUT flushing.
-        /// Never goes async and never refuses bytes -- pair with <see cref="FlushAsync"/>.
+        /// Copies <paramref name="data"/> into the output buffer without flushing. Never refuses bytes;
+        /// backpressure comes from <see cref="FlushAsync"/>, and only one flush may be pending at a time.
         /// </summary>
         void Write(ReadOnlySequence<byte> data);
 

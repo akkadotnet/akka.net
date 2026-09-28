@@ -534,8 +534,6 @@ namespace Akka.Tests.IO
             public Exception? ReadError => null;
 
             public void Write(ReadOnlySequence<byte> data) { }
-            public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default) => default;
-            public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default) => default;
             public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default) => _onFlush(++_flushes);
             public Task ShutdownAsync() => Task.CompletedTask;
             public Task CloseAsync() => Task.CompletedTask;

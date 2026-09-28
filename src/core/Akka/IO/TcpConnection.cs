@@ -58,10 +58,8 @@ namespace Akka.IO
     /// Two actor-driven coordination paths:
     /// - ReadFromPipe: reads from <see cref="ITransportConnection.Input"/>, copies to pooled buffers,
     ///   emits <see cref="Tcp.Received"/>
-    /// - Write: copies into the transport's output pipe via <see cref="ITransportConnection.Write(ReadOnlySequence{byte})"/>
-    ///   without flushing, then flushes via <see cref="ITransportConnection.FlushAsync"/>; acks wait for
-    ///   that flush. Writes that arrive while a flush is already in flight are copied in immediately too
-    ///   and ridden by the next flush, batching whatever arrived meanwhile
+    /// - Write: copies into the output pipe at once; the ack waits for the flush that covers it. One flush
+    ///   is pending at a time, and writes that arrive meanwhile go out together on the next one
     ///
     /// All shutdown and error handling flows through the actor mailbox for thread safety.
     /// </summary>
@@ -244,10 +242,8 @@ namespace Akka.IO
         private readonly Queue<WriteCommand> _preRegisterWrites = new();
         private long _preRegisterBytes; // checked against write-commands-queue-max-size before Register
 
-        // Writes whose bytes are already in the pipe; ack/failure is owed once the flush covering
-        // them lands. At most one flush is ever in flight; _flushCovers is how many of these
-        // entries (oldest first) it covers -- the rest arrived while it was already running and
-        // ride the next flush.
+        // Writes whose bytes are in the pipe and whose ack is owed. The pending flush covers the
+        // oldest _flushCovers of them; the rest go out on the next flush.
         private readonly Queue<WriteCommand> _pendingAcks = new();
         private bool _flushPending;
         private int _flushCovers;
@@ -1231,6 +1227,8 @@ namespace Akka.IO
         /// <summary>Fails every owed write, oldest first, with <paramref name="cause"/>.</summary>
         private void FailAllOwed(Exception cause)
         {
+            // a flush still in flight must not ack entries that are gone
+            _flushCovers = 0;
             while (_pendingAcks.Count > 0)
             {
                 var (cmd, sender) = _pendingAcks.Dequeue();
