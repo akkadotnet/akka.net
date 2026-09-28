@@ -341,8 +341,8 @@ namespace Akka.Serialization
                 : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
             Dictionary<string, Type> setupTypesByName = null;
 
-            // modules whose serializer rows this config contains; their BoundTypes also answer binding rows that
-            // name a CoreLib, Akka.dll or third-party type, such as Remote's "System.String" = primitive
+            // modules whose serializer rows this config contains; see FindModuleBoundType for how the binding rows
+            // below use them
             var loadedModules = new List<LoadedModule>();
 
             foreach (var kvp in serializersConfig)
@@ -499,9 +499,23 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// The type a module binds under this name: first the module the assembly half names, then every module
-        /// this config's serializer rows loaded. Two modules listing one name list the same <see cref="Type"/>.
+        /// Resolves a binding row's type from the module tables, without reflection. Null when no module lists it.
         /// </summary>
+        /// <remarks>
+        /// Two lookups, in order:
+        /// <list type="number">
+        /// <item>The module the row's assembly half names. <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c>
+        /// is answered by Akka.Remote's table, loading it if no serializer row has yet.</item>
+        /// <item>Every module whose serializer rows this config resolved (<paramref name="loadedModules"/>). This
+        /// covers bound types that live outside their module: Remote.conf binds <c>"System.String"</c> and
+        /// <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no module owns CoreLib or Akka.dll, so
+        /// lookup 1 can't answer for them.</item>
+        /// </list>
+        /// Lookup 2 only asks modules this config uses. With no Remote serializer rows, a <c>"System.String"</c>
+        /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
+        /// loop runs after the serializer loop, so <paramref name="loadedModules"/> is complete by then. Two modules
+        /// that list the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
+        /// </remarks>
         private static Type FindModuleBoundType(
             string name, string assembly, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
         {
