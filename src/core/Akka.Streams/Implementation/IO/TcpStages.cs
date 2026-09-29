@@ -780,7 +780,7 @@ namespace Akka.Streams.Implementation.IO
                     SetHandler(_bytesOut, _readHandler);
                     _connection = inbound.Connection;
                     GetStageActor(Connected).Watch(_connection);
-                    _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                    _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true), StageActor.Ref);
                     Pull(_bytesIn);
                 }
                 else
@@ -841,7 +841,7 @@ namespace Akka.Streams.Implementation.IO
                         StageActor.Unwatch(outbound.Manager);
                         StageActor.Become(Connected);
                         StageActor.Watch(_connection);
-                        _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                        _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true), StageActor.Ref);
 
                         if (IsAvailable(_bytesOut))
                             _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);

@@ -3764,8 +3764,7 @@ namespace Akka.IO
         System.Threading.Tasks.Task CloseAsync();
         System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.Task ShutdownAsync();
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default);
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default);
+        void Write(System.Buffers.ReadOnlySequence<byte> data);
     }
     public class Inet
     {
@@ -4004,10 +4003,9 @@ namespace Akka.IO
         }
         public class Register : Akka.IO.Tcp.Command
         {
-            public Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true) { }
+            public Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false) { }
             public Akka.Actor.IActorRef Handler { get; }
             public bool KeepOpenOnPeerClosed { get; }
-            public bool UseResumeWriting { get; }
             public override string ToString() { }
         }
         public sealed class ResumeAccepting : Akka.IO.Tcp.Command
@@ -4019,10 +4017,6 @@ namespace Akka.IO
         public sealed class ResumeReading : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.ResumeReading Instance;
-        }
-        public sealed class ResumeWriting : Akka.IO.Tcp.Command
-        {
-            public static readonly Akka.IO.Tcp.ResumeWriting Instance;
         }
         public abstract class SimpleWriteCommand : Akka.IO.Tcp.WriteCommand
         {
@@ -4084,10 +4078,6 @@ namespace Akka.IO
             public static Akka.IO.Tcp.WriteCommand Create(params Akka.IO.Tcp.WriteCommand[] writes) { }
             public static Akka.IO.Tcp.WriteCommand Create(System.Collections.Generic.IEnumerable<Akka.IO.Tcp.WriteCommand> writes) { }
         }
-        public sealed class WritingResumed : Akka.IO.Tcp.Event
-        {
-            public static readonly Akka.IO.Tcp.WritingResumed Instance;
-        }
     }
     public sealed class TcpExt : Akka.IO.IOExtension
     {
@@ -4109,10 +4099,9 @@ namespace Akka.IO
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress) { }
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint? localAddress, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, System.TimeSpan? timeout, bool pullMode) { }
         public static Akka.IO.Tcp.NoAck NoAck(object? token = null) { }
-        public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true) { }
+        public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false) { }
         public static Akka.IO.Tcp.Command ResumeAccepting(int batchSize) { }
         public static Akka.IO.Tcp.Command ResumeReading() { }
-        public static Akka.IO.Tcp.Command ResumeWriting() { }
         public static Akka.IO.Tcp.Command SuspendReading() { }
         public static Akka.IO.Tcp.Command Unbind() { }
         public static Akka.IO.Tcp.Command Write(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event? ack = null) { }
@@ -4160,8 +4149,7 @@ namespace Akka.IO
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.Task ShutdownAsync() { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default) { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default) { }
+        public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {

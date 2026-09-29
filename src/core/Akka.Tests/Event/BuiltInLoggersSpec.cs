@@ -8,6 +8,8 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -166,6 +168,72 @@ namespace Akka.Tests.Event
                 exception.Message.Should().Contain(AkkaFeaturesSpec.SwitchName);
                 return Task.CompletedTask;
             });
+        }
+
+        // A built-in name never reaches GetFirstPartyLoggerType at all (GetBuiltInLoggerType already matched, so
+        // the ?? short-circuits it) - that would make this test pass without exercising anything. CustomLoggerConfig
+        // is not built in, so it does reach GetFirstPartyLoggerType, which must reject it without touching Akka.Hosting.
+        [Fact(DisplayName = "LoggingBus should never probe a first-party logger assembly for a logger that is not first-party")]
+        public async Task Should_not_probe_first_party_assemblies_When_logger_is_not_first_party()
+        {
+            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading: true, async () =>
+            {
+                CountingTestLogger.Initialized = CountingTestLogger.NewCompletionSource();
+
+                var system = ActorSystem.Create("custom-logger-no-probe", ConfigurationFactory.ParseString(CustomLoggerConfig));
+                try
+                {
+                    await CountingTestLogger.Initialized.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
+            });
+
+            probes.Should().Be(0);
+        }
+
+        [Theory(DisplayName = "LoggingBus should treat an absent first-party logger assembly as absent")]
+        [InlineData(true, "cannot be found")]
+        [InlineData(false, "is not built in")]
+        public async Task Should_fall_through_When_first_party_logger_assembly_is_absent(bool dynamicTypeLoading, string expected)
+        {
+            var probes = await ProbesFor("Akka.Hosting", dynamicTypeLoading, () =>
+            {
+                var config = ConfigurationFactory.ParseString(
+                    "akka.loggers = [\"Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting\"]");
+
+                var exception = Assert.Throws<ConfigurationException>(() => ActorSystem.Create("absent-first-party-logger", config));
+                exception.Message.Should().Contain(expected);
+                return Task.CompletedTask;
+            });
+
+            // with the switch off only the table loads by name, so this proves the hook sees its probes
+            probes.Should().BeGreaterThan(0);
+        }
+
+        private static async Task<int> ProbesFor(string assembly, bool dynamicTypeLoading, Func<Task> body)
+        {
+            var probes = 0;
+            ResolveEventHandler onResolve = (_, args) =>
+            {
+                if (string.Equals(new AssemblyName(args.Name).Name, assembly, StringComparison.OrdinalIgnoreCase))
+                    Interlocked.Increment(ref probes);
+                return null;
+            };
+
+            AppDomain.CurrentDomain.AssemblyResolve += onResolve;
+            try
+            {
+                await AkkaFeaturesSpec.WithDynamicTypeLoading(dynamicTypeLoading, body);
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= onResolve;
+            }
+
+            return Volatile.Read(ref probes);
         }
 
         /// <summary>
