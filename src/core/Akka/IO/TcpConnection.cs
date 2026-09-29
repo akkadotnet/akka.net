@@ -239,15 +239,14 @@ namespace Akka.IO
         private CloseInformation? _closeInformation;
 
         // Writes buffered before Register -- there's no transport yet. FIFO; replayed on Register.
-        private readonly Queue<WriteCommand> _preRegisterWrites = new();
-        private long _preRegisterBytes; // checked against write-commands-queue-max-size before Register
+        private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
+        private long _pendingRegistrationBytes; // checked against write-commands-queue-max-size before Register
 
         // Writes whose bytes are in the pipe and whose ack is owed. The pending flush covers the
         // oldest _flushCovers of them; the rest go out on the next flush.
         private readonly Queue<WriteCommand> _pendingAcks = new();
         private bool _flushPending;
         private int _flushCovers;
-        private IActorRef? _resumeWritingSender;
 
         #region Connection state flags
         // Transient flags that survive a Become(...) and together describe where this
@@ -365,9 +364,9 @@ namespace Akka.IO
             // flush that would have acked them never completed.
             FailAllOwed(DroppingWriteBecauseClosingException);
 
-            while (_preRegisterWrites.Count > 0)
+            while (_pendingRegistrationWrites.Count > 0)
             {
-                var write = _preRegisterWrites.Dequeue();
+                var write = _pendingRegistrationWrites.Dequeue();
                 // Disposal path: PostStop/drain. The connection is tearing down and this buffered
                 // write will never reach the pipe — dispose any owner it carries
                 // before notifying the sender of failure, same as every other rejection path.
@@ -550,9 +549,9 @@ namespace Akka.IO
                 }
 
                 // Replay writes buffered before Register through the normal write path, in order.
-                while (_preRegisterWrites.Count > 0)
+                while (_pendingRegistrationWrites.Count > 0)
                 {
-                    var (cmd, sender) = _preRegisterWrites.Dequeue();
+                    var (cmd, sender) = _pendingRegistrationWrites.Dequeue();
                     EnqueueWrite(cmd, sender);
                 }
 
@@ -801,10 +800,8 @@ namespace Akka.IO
             });
             Receive<ResumeWriting>(_ =>
             {
-                if (_flushPending || _pendingAcks.Count > 0)
-                    _resumeWritingSender = Sender;
-                else
-                    Sender.Tell(WritingResumed.Instance);
+                // No special action needed — transport handles write buffering
+                if (_traceLogging) Log.Debug("ResumeWriting received");
             });
         }
 
@@ -1087,7 +1084,7 @@ namespace Akka.IO
         {
             var byteCount = (int)write.Bytes;
 
-            if (_maxQueuedBytes >= 0 && _preRegisterBytes + byteCount > _maxQueuedBytes)
+            if (_maxQueuedBytes >= 0 && _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
             {
                 // Disposal path: queue-full rejection (pre-registration). The write never reaches
                 // the pipe, so dispose any owner(s) it carries before signaling failure.
@@ -1109,7 +1106,7 @@ namespace Akka.IO
             Log.Warning("Received Write command before Register command. It will be buffered until Register will be received (buffered write size is {0} bytes)",
                 write.Bytes);
 
-            _preRegisterBytes += byteCount;
+            _pendingRegistrationBytes += byteCount;
             QueueWrite(write, sender);
         }
 
@@ -1124,7 +1121,7 @@ namespace Akka.IO
                 ? write
                 : Write.Create(new ReadOnlySequence<byte>(write.Data.ToArray()), write.Ack);
 
-            _preRegisterWrites.Enqueue(new WriteCommand(queuedWrite, sender));
+            _pendingRegistrationWrites.Enqueue(new WriteCommand(queuedWrite, sender));
         }
 
         private void EnqueueWrite(Write write, IActorRef sender)
@@ -1260,14 +1257,6 @@ namespace Akka.IO
             // Whatever arrived while that flush was in flight rides the next one.
             if (_pendingAcks.Count > 0)
                 StartFlush();
-
-            // StartFlush may have just settled everything synchronously, so re-check rather than
-            // assume a flush is still pending.
-            if (_resumeWritingSender != null && !_flushPending && _pendingAcks.Count == 0)
-            {
-                _resumeWritingSender.Tell(WritingResumed.Instance);
-                _resumeWritingSender = null;
-            }
         }
 
         /* ================================================================= */

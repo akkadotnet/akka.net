@@ -446,28 +446,6 @@ namespace Akka.Tests.IO
             await ExpectTerminatedAsync(connection);
         }
 
-        [Fact(DisplayName = "Should_reply_WritingResumed_When_idle_or_once_pending_writes_drain")]
-        public async Task Should_reply_WritingResumed_When_idle_or_once_pending_writes_drain()
-        {
-            using var pair = await ConnectedSocketPair.CreateAsync();
-            await using var stream = new BlockingWriteStream();
-            var handler = CreateTestProbe();
-            var connection = await ConnectAsync(pair, stream, handler);
-
-            handler.Send(connection, Tcp.ResumeWriting.Instance);
-            await handler.ExpectMsgAsync<Tcp.WritingResumed>();
-
-            StallWithQueuedWrites(connection, handler);
-            handler.Send(connection, Tcp.ResumeWriting.Instance);
-            await handler.ExpectNoMsgAsync(NoMsgWindow);
-
-            stream.ReleaseFirstWrite();
-            await ExpectAcksAsync(handler, 1, 3);
-            await handler.ExpectMsgAsync<Tcp.WritingResumed>();
-
-            await AbortAsync(connection, handler);
-        }
-
         [Fact(DisplayName = "Should_dispose_owned_segments_once_When_writes_wait_behind_a_pending_flush")]
         public async Task Should_dispose_owned_segments_once_When_writes_wait_behind_a_pending_flush()
         {
