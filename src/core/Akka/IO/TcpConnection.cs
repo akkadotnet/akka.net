@@ -798,11 +798,6 @@ namespace Akka.IO
             {
                 SuspendReadingInternal();
             });
-            Receive<ResumeWriting>(_ =>
-            {
-                // No special action needed — transport handles write buffering
-                if (_traceLogging) Log.Debug("ResumeWriting received");
-            });
         }
 
         /* ================================================================= */

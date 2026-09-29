@@ -251,23 +251,19 @@ namespace Akka.IO
             /// </summary>
             /// <param name="handler">The actor who will be handling the TCP communication.</param>
             /// <param name="keepOpenOnPeerClosed">Keep the connection open if the peer is closed</param>
-            /// <param name="useResumeWriting">Use resume / pause writing semantics once buffer gets full</param>
-            public Register(IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true)
+            public Register(IActorRef handler, bool keepOpenOnPeerClosed = false)
             {
                 Handler = handler;
                 KeepOpenOnPeerClosed = keepOpenOnPeerClosed;
-                UseResumeWriting = useResumeWriting;
             }
 
-    
+
             public IActorRef Handler { get; }
-      
+
             public bool KeepOpenOnPeerClosed { get; }
- 
-            public bool UseResumeWriting { get; }
 
             public override string ToString() =>
-                $"Register(handler: {Handler}, keepOpenOnPeerClosed: {KeepOpenOnPeerClosed}, resumeWriting: {UseResumeWriting})";
+                $"Register(handler: {Handler}, keepOpenOnPeerClosed: {KeepOpenOnPeerClosed})";
         }
 
         /// <summary>
@@ -596,22 +592,6 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// When `useResumeWriting` is in effect as was indicated in the <see cref="Register" /> message
-        /// then this command needs to be sent to the connection actor in order to re-enable
-        /// writing after a <see cref="CommandFailed" /> event. All <see cref="WriteCommand" /> processed by the
-        /// connection actor between the first <see cref="CommandFailed" /> and subsequent reception of
-        /// this message will also be rejected with <see cref="CommandFailed" />.
-        /// </summary>
-        public sealed class ResumeWriting : Command
-        {
-            public static readonly ResumeWriting Instance = new();
-
-            private ResumeWriting()
-            {
-            }
-        }
-
-        /// <summary>
         /// Sending this command to the connection actor will disable reading from the TCP
         /// socket. TCP flow-control will then propagate backpressure to the sender side
         /// as buffers fill up on either end. To re-enable reading send <see cref="ResumeReading" />.
@@ -763,22 +743,6 @@ namespace Akka.IO
             public string CauseString => Cause.HasValue ? $" because of {Cause.Value.Message}" : string.Empty;
 
             public override string ToString() => $"CommandFailed({Cmd}){CauseString}";
-        }
-
-        /// <summary>
-        /// When `useResumeWriting` is in effect as indicated in the <see cref="Register" /> message,
-        /// the <see cref="ResumeWriting" /> command will be acknowledged by this message type, upon
-        /// which it is safe to send at least one write. This means that all writes preceding
-        /// the first <see cref="CommandFailed" /> message have been enqueued to the O/S kernel at this
-        /// point.
-        /// </summary>
-        public sealed class WritingResumed : Event
-        {
-            public static readonly WritingResumed Instance = new();
-
-            private WritingResumed()
-            {
-            }
         }
 
         /// <summary>
@@ -1042,11 +1006,9 @@ namespace Akka.IO
         /// </summary>
         /// <param name="handler">The actor who will be handling the TCP communication.</param>
         /// <param name="keepOpenOnPeerClosed">Keep the connection open if the peer is closed</param>
-        /// <param name="useResumeWriting">Use resume / pause writing semantics once buffer gets full</param>
-        public static Tcp.Command Register(IActorRef handler, bool keepOpenOnPeerClosed = false,
-            bool useResumeWriting = true)
+        public static Tcp.Command Register(IActorRef handler, bool keepOpenOnPeerClosed = false)
         {
-            return new Tcp.Register(handler, keepOpenOnPeerClosed, useResumeWriting);
+            return new Tcp.Register(handler, keepOpenOnPeerClosed);
         }
 
         /// <summary>
@@ -1111,15 +1073,6 @@ namespace Akka.IO
         public static Tcp.Command Write(byte[] data, Tcp.Event? ack = null)
         {
             return ack is null ? Tcp.Write.Create(data) : Tcp.Write.Create(data, ack);
-        }
-
-        /// <summary>
-        /// Creates a <see cref="Tcp.ResumeWriting"/> command to re-enable writing after a <see cref="Tcp.CommandFailed"/> event.
-        /// </summary>
-        /// <returns>A <see cref="Tcp.Command"/> that resumes writing on the connection.</returns>
-        public static Tcp.Command ResumeWriting()
-        {
-            return Tcp.ResumeWriting.Instance;
         }
 
         /// <summary>

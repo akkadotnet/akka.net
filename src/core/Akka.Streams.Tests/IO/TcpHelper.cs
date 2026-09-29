@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.IO
             public TestClient(IActorRef connection)
             {
                 _connection = connection;
-                connection.Tell(new Tcp.Register(Self, keepOpenOnPeerClosed: true, useResumeWriting: false));
+                connection.Tell(new Tcp.Register(Self, keepOpenOnPeerClosed: true));
             }
 
             protected override void OnReceive(object message)
