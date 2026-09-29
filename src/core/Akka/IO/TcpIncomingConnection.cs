@@ -54,16 +54,20 @@ namespace Akka.IO
             var inputPipeOptions = new PipeOptions(
                 pauseWriterThreshold: pipeBufferSize * 2,
                 resumeWriterThreshold: pipeBufferSize,
+                minimumSegmentSize: Settings.MaxFrameSizeBytes,
+                useSynchronizationContext: false);
+            var outputPipeOptions = new PipeOptions(
+                minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
             if (_stream != null)
             {
                 // Use the provided stream (for TLS or testing)
-                return new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions);
+                return new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions, outputPipeOptions: outputPipeOptions);
             }
 
             // Default: plaintext TCP using the socket directly
-            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
+            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions, outputPipeOptions: outputPipeOptions);
         }
 
         protected override void PreStart()

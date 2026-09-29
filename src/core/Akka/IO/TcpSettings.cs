@@ -82,9 +82,9 @@ namespace Akka.IO
             
             // fail if send/receive buffer sizes are smaller than max frame size
             if (SendBufferSize < MaxFrameSizeBytes)
-                throw new ArgumentException($"SendBufferSize ({SendBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+                throw new ArgumentException($"SendBufferSize ({SendBufferSize}) must be at least the size of the maximum frame size ({MaxFrameSizeBytes})");
             if (ReceiveBufferSize < MaxFrameSizeBytes)
-                throw new ArgumentException($"ReceiveBufferSize ({ReceiveBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+                throw new ArgumentException($"ReceiveBufferSize ({ReceiveBufferSize}) must be at least the size of the maximum frame size ({MaxFrameSizeBytes})");
             
             // fail if the max frame size is negative
             if (MaxFrameSizeBytes < 0)
@@ -178,12 +178,12 @@ namespace Akka.IO
         public int MaxFrameSizeBytes { get; init; }
         
         /// <summary>
-        /// Should be at least 2x the size of the maximum frame size.
+        /// Should be at least the size of the maximum frame size.
         /// </summary>
         public int ReceiveBufferSize { get; init; }
         
         /// <summary>
-        /// Should be at least 2x the size of the maximum frame size.
+        /// Should be at least the size of the maximum frame size.
         /// </summary>
         public int SendBufferSize { get; init; }
 
