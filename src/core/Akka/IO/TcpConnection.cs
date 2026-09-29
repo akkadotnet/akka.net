@@ -495,16 +495,14 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// Output pipe options when <paramref name="options"/> sets <see cref="Inet.SO.PipeBufferSize"/>
-        /// (same watermarks as the input pipe); otherwise null, which keeps <see cref="PipeOptions.Default"/>
-        /// (pause at 64 KB, resume at 32 KB).
+        /// Output pipe options: watermarks from <see cref="Inet.SO.PipeBufferSize"/> when set (pause at 2x,
+        /// resume at 1x), else pause at 64 KB and resume at 32 KB; segments sized by <see cref="TcpSettings.MaxFrameSizeBytes"/>.
         /// </summary>
-        internal static PipeOptions? ResolveOutputPipeOptions(IEnumerable<Inet.SocketOption> options)
+        internal static PipeOptions ResolveOutputPipeOptions(TcpSettings settings, IEnumerable<Inet.SocketOption> options)
         {
-            var size = options.OfType<Inet.SO.PipeBufferSize>().LastOrDefault()?.Size;
-            return size is { } s
-                ? new PipeOptions(pauseWriterThreshold: s * 2L, resumeWriterThreshold: s, useSynchronizationContext: false)
-                : null;
+            var s = options.OfType<Inet.SO.PipeBufferSize>().LastOrDefault()?.Size ?? 32 * 1024;
+            return new PipeOptions(pauseWriterThreshold: s * 2L, resumeWriterThreshold: s,
+                minimumSegmentSize: settings.MaxFrameSizeBytes, useSynchronizationContext: false);
         }
 
         /* ================================================================= */
