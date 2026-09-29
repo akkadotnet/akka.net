@@ -18,9 +18,9 @@ using Akka.Configuration;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory must be a plain
-    /// <c>new X(system, config)</c> for a non-empty settings block and <c>new X(system)</c> otherwise - the constructor
-    /// reflection would pick. Return a serializer; null skips the alias (a safety net, not a feature).
+    /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory calls the constructor
+    /// reflection picks for the module's shipped config; a serializer with one constructor always gets that one.
+    /// Return a serializer; null skips the alias (a safety net, not a feature).
     /// </summary>
     internal sealed record ModuleSerializer(Type Type, Func<ExtendedActorSystem, Config, Serializer> Create);
 
@@ -84,8 +84,9 @@ namespace Akka.Serialization
         /// <summary>The process-wide table behind the public <see cref="Serialization"/> constructor.</summary>
         internal static readonly ModuleSerializerTable Default = new(new Dictionary<string, Func<ModuleSerializers?>>
         {
-            // one entry per module, each passing its own literal to Load so the trimmer can see the type, e.g.
-            // ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote")
+            // one entry per module, each passing its own literal to Load so the trimmer can see the type
+            ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote"),
+            ["Akka.Streams"] = () => Load("Akka.Streams.Serialization.StreamsSerializers, Akka.Streams"),
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
