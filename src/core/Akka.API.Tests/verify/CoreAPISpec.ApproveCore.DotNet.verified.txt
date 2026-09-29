@@ -3767,8 +3767,7 @@ namespace Akka.IO
         System.Threading.Tasks.Task CloseAsync();
         System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.Task ShutdownAsync();
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default);
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default);
+        void Write(System.Buffers.ReadOnlySequence<byte> data);
     }
     public class Inet
     {
@@ -4163,8 +4162,7 @@ namespace Akka.IO
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.Task ShutdownAsync() { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default) { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default) { }
+        public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
