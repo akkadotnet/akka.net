@@ -87,6 +87,7 @@ namespace Akka.Serialization
             // one entry per module, each passing its own literal to Load so the trimmer can see the type
             ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote"),
             ["Akka.Streams"] = () => Load("Akka.Streams.Serialization.StreamsSerializers, Akka.Streams"),
+            ["Akka.Cluster"] = () => Load("Akka.Cluster.Serialization.ClusterSerializers, Akka.Cluster"),
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
