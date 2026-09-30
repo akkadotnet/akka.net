@@ -351,6 +351,18 @@ namespace Akka.Actor.Internal
                 ? row.Create()
                 : null;
 
+        /// <summary>
+        /// True when <paramref name="extensionFqn"/> names a row in <see cref="FirstPartyExtensions"/>,
+        /// regardless of whether its assembly actually loads. Lets <see cref="LoadExtensions"/> tell "not a
+        /// name Akka.NET knows" apart from "a name Akka.NET knows, but its module isn't referenced" - #8648
+        /// treats the latter as absent, not not-built-in, and logs and skips it the same way in either
+        /// <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> state.
+        /// </summary>
+        internal static bool IsFirstPartyExtensionName(string extensionFqn)
+            => Util.TypeExtensions.TrySplitTypeName(extensionFqn, out var name, out var assembly) &&
+               FirstPartyExtensions.TryGetValue(name, out var row) &&
+               string.Equals(assembly, row.Assembly, StringComparison.OrdinalIgnoreCase);
+
         /// <summary>Pass a literal: the annotation lets the trimmer keep that type and its constructor.</summary>
         private static IExtensionId? CreateFirstPartyExtension(
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] string typeName)
@@ -387,6 +399,15 @@ namespace Akka.Actor.Internal
                 catch(Exception ex)
                 {
                     _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    continue;
+                }
+
+                if (IsFirstPartyExtensionName(extensionFqn))
+                {
+                    // A first-party name whose assembly is not deployed with this application counts as
+                    // absent (#8648), not "not built in" - log and skip it the same way in either switch
+                    // state, instead of falling into the switch-off throw below.
+                    _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
                 }
 

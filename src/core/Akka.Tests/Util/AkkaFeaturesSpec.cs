@@ -10,6 +10,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
@@ -224,6 +225,78 @@ namespace Akka.Tests.Util
             });
         }
 
+        /// <summary>
+        /// <see cref="ProviderSelection.GetProvider"/> normalizes <c>akka.actor.provider</c> the same way the
+        /// <c>BuiltIn*</c> tables do (#8613): strip the assembly identity, split at the comma, compare the
+        /// assembly case-insensitively. A spelling that skips these two theories' cases used to fall through
+        /// to <see cref="ProviderSelection.Custom"/> - harmless with the switch on (the custom-provider
+        /// fallback resolves it by reflection just the same), but with it off that misclassification meant a
+        /// working provider name threw <c>NotBuiltIn</c>.
+        /// </summary>
+        [Theory(DisplayName = "ProviderSelection.GetProvider should classify a spelling variant of a built-in provider the same as its canonical spelling")]
+        [InlineData("Akka.Cluster.ClusterActorRefProvider,Akka.Cluster")] // no space after the comma
+        [InlineData("Akka.Cluster.ClusterActorRefProvider, Akka.Cluster, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null")] // versioned AQN
+        public void Should_classify_a_provider_spelling_variant_As_the_built_in_Cluster_provider(string spelling)
+        {
+            ProviderSelection.GetProvider(spelling).Should().BeSameAs(ProviderSelection.Cluster.Instance);
+        }
+
+        /// <summary>
+        /// End-to-end version of the theory above: with the switch off, a misclassified spelling variant used
+        /// to throw <c>NotBuiltIn</c> even though the name is one of the three built-ins. Now it reaches
+        /// <see cref="ActorSystemImpl.ConfigureProvider"/>'s built-in branch and fails for the ordinary reason
+        /// - <c>Akka.Cluster</c>/<c>Akka.Remote</c> is not referenced by <c>Akka.Tests</c> - proving the
+        /// classification, not the switch, decided the outcome. Same message either switch state, since
+        /// classification does not depend on the switch.
+        /// </summary>
+        [Theory(DisplayName = "ActorSystem should reject a provider spelling variant for not being referenced, not for being unrecognized, in either switch state")]
+        [InlineData(false, "Akka.Cluster.ClusterActorRefProvider,Akka.Cluster", "Akka.Cluster is not referenced by this application")]
+        [InlineData(true, "Akka.Cluster.ClusterActorRefProvider,Akka.Cluster", "Akka.Cluster is not referenced by this application")]
+        [InlineData(false, "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null", "Akka.Cluster is not referenced by this application")]
+        [InlineData(true, "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null", "Akka.Cluster is not referenced by this application")]
+        [InlineData(false, "Akka.Remote.RemoteActorRefProvider,Akka.Remote", "Akka.Remote is not referenced by this application")]
+        [InlineData(true, "Akka.Remote.RemoteActorRefProvider,Akka.Remote", "Akka.Remote is not referenced by this application")]
+        public async Task Should_reject_a_provider_spelling_variant_With_the_providers_own_message(
+            bool dynamicTypeLoadingEnabled, string providerClass, string expectedMessageFragment)
+        {
+            await WithDynamicTypeLoading(dynamicTypeLoadingEnabled, () =>
+            {
+                var config = ConfigFor("akka.actor.provider", providerClass);
+
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("provider-spelling-variant", config));
+
+                exception.Message.Should().Contain(expectedMessageFragment);
+                exception.Message.Should().NotContain("is not built in");
+                return Task.CompletedTask;
+            });
+        }
+
+        /// <summary>
+        /// The one built-in provider Akka.Tests can actually boot - Local ships in Akka.dll itself - so this
+        /// is the one spelling-variant case that can prove the system comes up cleanly end to end, in either
+        /// switch state, instead of only proving which exception it throws.
+        /// </summary>
+        [Theory(DisplayName = "ActorSystem should boot with a spelling variant of the built-in Local provider in either switch state")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_boot_With_a_local_provider_spelling_variant(bool dynamicTypeLoadingEnabled)
+        {
+            await WithDynamicTypeLoading(dynamicTypeLoadingEnabled, async () =>
+            {
+                var config = ConfigFor("akka.actor.provider", "Akka.Actor.LocalActorRefProvider,Akka");
+                var system = ActorSystem.Create("local-provider-spelling-variant", config);
+                try
+                {
+                    ((ActorSystemImpl)system).Provider.Should().BeOfType<LocalActorRefProvider>();
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
+            });
+        }
+
         [Fact(DisplayName = "ActorSystem should reject an akka.extensions entry that is not built in when dynamic type loading is off")]
         public async Task Should_throw_ConfigurationException_When_the_extension_is_not_built_in_and_dynamic_type_loading_is_disabled()
         {
@@ -256,6 +329,28 @@ namespace Akka.Tests.Util
                 {
                     await system.Terminate();
                 }
+            });
+        }
+
+        /// <summary>
+        /// A first-party name (#8648's table) whose assembly this project does not reference - the same one
+        /// <c>ExtensionsSetupSpec.Should_resolve_nothing_When_first_party_assembly_is_absent</c> checks at the
+        /// table level. #8648 promised this counts as absent, not not-built-in, so it must boot clean in
+        /// either switch state instead of throwing <c>NotBuiltIn</c> with the switch off.
+        /// </summary>
+        [Theory(DisplayName = "ActorSystem should log and skip a first-party extension whose assembly is absent instead of rejecting it as not built in")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_boot_With_a_first_party_extension_Whose_assembly_is_absent(bool dynamicTypeLoadingEnabled)
+        {
+            await WithDynamicTypeLoading(dynamicTypeLoadingEnabled, async () =>
+            {
+                var config = ConfigurationFactory.ParseString(
+                    "akka.extensions = [\"Akka.DistributedData.DistributedDataProvider, Akka.DistributedData\"]");
+
+                // must not throw - a known first-party name whose module is absent is logged and skipped
+                var system = ActorSystem.Create("first-party-extension-absent", config);
+                await system.Terminate();
             });
         }
 
