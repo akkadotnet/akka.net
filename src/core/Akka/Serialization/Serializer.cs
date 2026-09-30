@@ -114,6 +114,17 @@ namespace Akka.Serialization
             if (string.IsNullOrEmpty(manifest))
                 return FromBinary(bytes, (Type)null);
 
+            // Reached by a Serializer subclass that has a manifest (IncludeManifest true) but does not
+            // override this method - core's own built-in serializers do not (ByteArraySerializer overrides
+            // it, NewtonSoftJsonSerializer has no manifest), but Akka.Remote's ProtobufSerializer /
+            // SystemMessageSerializer and Akka.Persistence's snapshot / message serializers do rely on this
+            // fallback today. There is no built-in manifest-to-Type table yet for those, so this throws for
+            // every manifest while the switch is off, not only an unrecognized one - see BREAKING_CHANGES_V1.6.md.
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new SerializationException(AkkaFeatures.NotBuiltIn(
+                    $"manifest for serializer with id [{Identifier}]", manifest,
+                    "a SerializerWithStringManifest that resolves the manifest itself"));
+
             Type type;
             try
             {

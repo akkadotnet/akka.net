@@ -84,6 +84,16 @@ namespace Akka.Serialization
             if (string.IsNullOrEmpty(manifest))
                 return Inner.FromBinary(bytes, (Type)null!);
 
+            // Inner is a legacy Serializer with a manifest but not a SerializerWithStringManifest - the same
+            // fallback Serializer.FromBinary(byte[], string) has, including for Akka.Remote's
+            // ProtobufSerializer / SystemMessageSerializer and Akka.Persistence's snapshot / message
+            // serializers, none of which have a built-in manifest-to-Type table yet - see
+            // BREAKING_CHANGES_V1.6.md.
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new SerializationException(AkkaFeatures.NotBuiltIn(
+                    $"manifest for serializer with id [{Identifier}]", manifest,
+                    "a SerializerWithStringManifest that resolves the manifest itself"));
+
             Type type;
             try
             {

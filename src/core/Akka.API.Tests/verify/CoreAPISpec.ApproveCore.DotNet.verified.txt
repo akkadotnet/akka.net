@@ -5724,6 +5724,9 @@ namespace Akka.Util.Reflection
     }
     public static class TypeCache
     {
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Resolves a type name - typically a wire manifest - to a Type by reflection. The t" +
+            "rimmer cannot tell which type that is, so it may have been trimmed away. Callers" +
+            " should guard this with AkkaFeatures.IsDynamicTypeLoadingSupported.")]
         public static System.Type GetType(string typeName) { }
     }
 }
