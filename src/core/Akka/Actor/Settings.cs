@@ -188,24 +188,36 @@ namespace Akka.Actor
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
             LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
 
-            var loggerFormatterName = Config.GetString("akka.logger-formatter", null);
-            if (string.IsNullOrWhiteSpace(loggerFormatterName))
+            // A LoggerSetup formatter is the AOT-safe escape hatch for a third-party formatter (e.g.
+            // Akka.Logger.Serilog's SerilogLogMessageFormatter) that HOCON can no longer resolve by type
+            // name with dynamic type loading off; it wins over akka.logger-formatter when present.
+            var loggerSetupFormatter = Setup.Get<LoggerSetup>().Select(s => s.Formatter).GetOrElse(null);
+            if (loggerSetupFormatter is not null)
             {
-                LogFormatter = DefaultLogMessageFormatter.Instance;
-            }
-            else if (TypeExtensions.ToBuiltInAkkaTypeName(loggerFormatterName) is { } builtInLogFormatterName &&
-                     BuiltInLogMessageFormatters.TryGetValue(builtInLogFormatterName, out var logFormatterFactory))
-            {
-                LogFormatter = logFormatterFactory();
-            }
-            else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
-            {
-                LogFormatter = CreateLogMessageFormatter(loggerFormatterName);
+                LogFormatter = loggerSetupFormatter;
             }
             else
             {
-                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                    "akka.logger-formatter", loggerFormatterName, "one of the built-in log message formatters"));
+                var loggerFormatterName = Config.GetString("akka.logger-formatter", null);
+                if (string.IsNullOrWhiteSpace(loggerFormatterName))
+                {
+                    LogFormatter = DefaultLogMessageFormatter.Instance;
+                }
+                else if (TypeExtensions.ToBuiltInAkkaTypeName(loggerFormatterName) is { } builtInLogFormatterName &&
+                         BuiltInLogMessageFormatters.TryGetValue(builtInLogFormatterName, out var logFormatterFactory))
+                {
+                    LogFormatter = logFormatterFactory();
+                }
+                else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    LogFormatter = CreateLogMessageFormatter(loggerFormatterName);
+                }
+                else
+                {
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        "akka.logger-formatter", loggerFormatterName,
+                        "one of the built-in log message formatters, or a LoggerSetup formatter"));
+                }
             }
 
             //handled

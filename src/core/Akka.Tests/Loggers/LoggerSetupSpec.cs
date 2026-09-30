@@ -7,6 +7,8 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -50,6 +52,18 @@ public sealed class CapturingLogger<TMarker> : ActorBase, IRequiresMessageQueue<
                 return false;
         }
     }
+}
+
+/// <summary>
+/// A minimal <see cref="ILogMessageFormatter"/> stand-in for a third-party formatter (e.g.
+/// Akka.Logger.Serilog's <c>SerilogLogMessageFormatter</c>) - wraps the formatted text so a spec can
+/// tell it apart from <see cref="DefaultLogMessageFormatter"/>'s output.
+/// </summary>
+public sealed class MarkerLogMessageFormatter : ILogMessageFormatter
+{
+    public string Format(string format, params object[] args) => $"<<{string.Format(format, args)}>>";
+
+    public string Format(string format, IEnumerable<object> args) => Format(format, args.ToArray());
 }
 
 public class AdditiveLoggerSetupSpec : AkkaSpec
@@ -96,16 +110,17 @@ public class DynamicTypeLoadingOffLoggerSetupSpec
 {
     private sealed class OffMarker { }
 
-    [Fact(DisplayName = "Should_StartLoggerSetupLogger_When_DynamicTypeLoadingIsDisabled")]
-    public async Task Should_StartLoggerSetupLogger_When_DynamicTypeLoadingIsDisabled()
+    [Fact(DisplayName = "Should_StartLoggerAndUseItsFormatter_When_DynamicTypeLoadingIsDisabled")]
+    public async Task Should_StartLoggerAndUseItsFormatter_When_DynamicTypeLoadingIsDisabled()
     {
-        var loggerSetup = LoggerSetup.Create(Props.Create<CapturingLogger<OffMarker>>());
+        var formatter = new MarkerLogMessageFormatter();
+        var loggerSetup = LoggerSetup.Create(formatter, Props.Create<CapturingLogger<OffMarker>>());
         ActorSystem? sys = null;
 
         // Only the system start needs to run with the switch off - a type-based LoggerSetup
-        // registration needs no Type.GetType, so it starts fine without dynamic type loading. The
-        // TestKit's own probe plumbing resolves its dispatcher by reflection and isn't part of what
-        // this spec is checking, so the switch is back on before that runs.
+        // registration and its formatter need no Type.GetType, so both start fine without dynamic
+        // type loading. The TestKit's own probe plumbing resolves its dispatcher by reflection and
+        // isn't part of what this spec is checking, so the switch is back on before that runs.
         await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
         {
             sys = ActorSystem.Create("DynamicTypeLoadingOffLoggerSetupSpec", ActorSystemSetup.Create(loggerSetup));
@@ -114,17 +129,45 @@ public class DynamicTypeLoadingOffLoggerSetupSpec
 
         try
         {
-            var probe = new TestProbe(sys!, new XunitAssertions());
+            sys!.Settings.LogFormatter.Should().BeSameAs(formatter);
+
+            var probe = new TestProbe(sys, new XunitAssertions());
             CapturingLogger<OffMarker>.Probe = probe;
 
-            Logging.GetLogger(sys, "OffSource").Warning("NoReflectionNeeded");
+            Logging.GetLogger(sys, "OffSource").Warning("NoReflectionNeeded {0}", "here");
 
-            await probe.ExpectMsgAsync<Warning>(TimeSpan.FromSeconds(5));
+            var warning = await probe.ExpectMsgAsync<Warning>(TimeSpan.FromSeconds(5));
+            warning.Message.ToString().Should().Be("<<NoReflectionNeeded here>>");
         }
         finally
         {
             if (sys != null)
                 await sys.Terminate();
         }
+    }
+}
+
+public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
+{
+    private static readonly MarkerLogMessageFormatter SetupFormatter = new();
+
+    private static ActorSystemSetup CreateSetup()
+    {
+        // A built-in, resolvable value, so a reversed precedence would still fail the assertion below
+        // with a *different* formatter instance rather than an exception.
+        var config = ConfigurationFactory.ParseString(
+            @"akka.logger-formatter = ""Akka.Event.SemanticLogMessageFormatter""");
+        return ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), LoggerSetup.Create(SetupFormatter));
+    }
+
+    public LoggerSetupFormatterPrecedenceSpec(ITestOutputHelper output)
+        : base(CreateSetup(), output: output)
+    {
+    }
+
+    [Fact(DisplayName = "Should_PreferLoggerSetupFormatter_When_AkkaLoggerFormatterIsAlsoSet")]
+    public void Should_PreferLoggerSetupFormatter_When_AkkaLoggerFormatterIsAlsoSet()
+    {
+        Sys.Settings.LogFormatter.Should().BeSameAs(SetupFormatter);
     }
 }

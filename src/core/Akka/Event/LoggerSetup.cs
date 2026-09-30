@@ -31,6 +31,11 @@ namespace Akka.Event;
 /// <c>akka.loggers = []</c>.
 /// </para>
 /// <para>
+/// <see cref="Formatter"/> is the same kind of AOT-safe escape hatch for <c>akka.logger-formatter</c> -
+/// useful for a third-party formatter, such as Akka.Logger.Serilog's <c>SerilogLogMessageFormatter</c>,
+/// that HOCON can no longer resolve by type name with dynamic type loading off.
+/// </para>
+/// <para>
 /// Like any <see cref="Setup"/>, a second <see cref="LoggerSetup"/> passed to
 /// <see cref="ActorSystemSetup.And{T}"/> replaces the first - only one <see cref="LoggerSetup"/> exists
 /// per system.
@@ -44,9 +49,10 @@ namespace Akka.Event;
 /// </example>
 public sealed class LoggerSetup : Setup
 {
-    private LoggerSetup(IList<Props> loggers)
+    private LoggerSetup(IList<Props> loggers, ILogMessageFormatter? formatter = null)
     {
         Loggers = new ReadOnlyCollection<Props>(loggers);
+        Formatter = formatter;
     }
 
     /// <summary>
@@ -55,16 +61,16 @@ public sealed class LoggerSetup : Setup
     public IReadOnlyList<Props> Loggers { get; }
 
     /// <summary>
-    /// Creates a <see cref="LoggerSetup"/> that starts the given loggers.
+    /// The log message formatter to use in place of <c>akka.logger-formatter</c>, or <c>null</c> to keep
+    /// resolving it from HOCON.
     /// </summary>
-    /// <param name="loggers">The logger <see cref="Props"/> to start when the <see cref="ActorSystem"/> starts.</param>
-    /// <exception cref="ArgumentException">An entry is <c>null</c>.</exception>
-    public static LoggerSetup Create(IEnumerable<Props> loggers)
+    public ILogMessageFormatter? Formatter { get; }
+
+    private static LoggerSetup CreateInternal(Props[] loggers, ILogMessageFormatter? formatter)
     {
-        var list = loggers.ToArray();
-        if (list.Any(p => p is null))
+        if (loggers.Any(p => p is null))
             throw new ArgumentException("Logger Props must not be null.", nameof(loggers));
-        return new LoggerSetup(list);
+        return new LoggerSetup(loggers, formatter);
     }
 
     /// <summary>
@@ -72,6 +78,24 @@ public sealed class LoggerSetup : Setup
     /// </summary>
     /// <param name="loggers">The logger <see cref="Props"/> to start when the <see cref="ActorSystem"/> starts.</param>
     /// <exception cref="ArgumentException">An entry is <c>null</c>.</exception>
+    public static LoggerSetup Create(IEnumerable<Props> loggers)
+        => CreateInternal(loggers.ToArray(), null);
+
+    /// <summary>
+    /// Creates a <see cref="LoggerSetup"/> that starts the given loggers.
+    /// </summary>
+    /// <param name="loggers">The logger <see cref="Props"/> to start when the <see cref="ActorSystem"/> starts.</param>
+    /// <exception cref="ArgumentException">An entry is <c>null</c>.</exception>
     public static LoggerSetup Create(params Props[] loggers)
-        => Create((IEnumerable<Props>)loggers);
+        => CreateInternal(loggers, null);
+
+    /// <summary>
+    /// Creates a <see cref="LoggerSetup"/> that starts the given loggers and uses
+    /// <paramref name="formatter"/> in place of <c>akka.logger-formatter</c>.
+    /// </summary>
+    /// <param name="formatter">The log message formatter to use instead of HOCON's <c>akka.logger-formatter</c>.</param>
+    /// <param name="loggers">The logger <see cref="Props"/> to start when the <see cref="ActorSystem"/> starts.</param>
+    /// <exception cref="ArgumentException">An entry is <c>null</c>.</exception>
+    public static LoggerSetup Create(ILogMessageFormatter formatter, params Props[] loggers)
+        => CreateInternal(loggers, formatter);
 }
