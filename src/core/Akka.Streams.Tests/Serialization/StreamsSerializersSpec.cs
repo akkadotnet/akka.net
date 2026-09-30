@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -129,6 +130,31 @@ namespace Akka.Streams.Tests.Serialization
             serialization.GetSerializerById(30).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
             foreach (var type in BoundSamples)
                 serialization.FindSerializerForType(type).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
+        }
+
+        [Fact(DisplayName = "StreamRefSerializer should serialize a SourceRef but fail to deserialize it When dynamic type loading is off")]
+        public void Should_serialize_but_not_deserialize_a_SourceRef_When_dynamic_type_loading_is_disabled()
+        {
+            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
+            AppContext.SetSwitch(SwitchName, false);
+            try
+            {
+                var serializer = new Akka.Streams.Serialization.StreamRefSerializer((ExtendedActorSystem)Sys);
+                var sourceRef = new SourceRefImpl<int>(Sys.DeadLetters);
+
+                // sending a stream ref needs no reflection - only typeof(T), which the trimmer can always see
+                var manifest = serializer.Manifest(sourceRef);
+                var bytes = serializer.ToBinary(sourceRef);
+
+                // receiving one does - SerializationTools.TypeFromString has to turn the wire name back into a Type
+                var exception = Assert.Throws<SerializationException>(() => serializer.FromBinary(bytes, manifest));
+
+                exception.Message.Should().Contain(SwitchName);
+            }
+            finally
+            {
+                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
+            }
         }
     }
 }
