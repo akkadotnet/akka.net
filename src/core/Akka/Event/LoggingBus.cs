@@ -95,15 +95,8 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Starts the loggers registered through a <see cref="LoggerSetup"/>, plus the loggers defined in
-        /// the system configuration. The two are additive: a <see cref="LoggerSetup"/> does not replace
-        /// <c>akka.loggers</c>, since HOCON may still be carrying a first-party logger (for example
-        /// Akka.Hosting's <c>LoggerFactoryLogger</c>) that a <see cref="LoggerSetup"/> consumer never named
-        /// itself. A logger type named by both sources is only started once - the <see cref="LoggerSetup"/>
-        /// wins, since it is checked first, the same order <see cref="ActorSystemImpl.LoadExtensions"/> uses
-        /// for <c>ExtensionsSetup</c> versus <c>akka.extensions</c>. The dedup also applies within
-        /// <c>akka.loggers</c> itself, so a type listed there more than once now starts once, not once per
-        /// occurrence.
+        /// Starts the loggers from a <see cref="LoggerSetup"/> plus those in <c>akka.loggers</c> (additive).
+        /// Each logger type starts once; the <see cref="LoggerSetup"/> entry wins, as with <c>ExtensionsSetup</c>.
         /// </summary>
         /// <param name="system">The system that the loggers need to start monitoring.</param>
         /// <exception cref="ConfigurationException">
@@ -121,8 +114,7 @@ namespace Akka.Event
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
             var taskInfos = new Dictionary<Task, string>();
-            // A logger type named by both a LoggerSetup and akka.loggers starts only once; LoggerSetup is
-            // checked first below, so it is the one that wins and akka.loggers is skipped for that type.
+            // LoggerSetup first, so it wins when both name the same type
             var startedTypes = new HashSet<Type>();
 
             var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
@@ -287,11 +279,7 @@ namespace Akka.Event
             return Type.GetType(loggerTypeName);
         }
 
-        // Every logger - from akka.loggers or a LoggerSetup - runs on the loggers dispatcher, overriding
-        // whatever dispatcher its Props already carried, so a logger never competes with application
-        // actors for dispatcher threads while the system is starting up or shutting down. props.Type is
-        // already trim-annotated, so a Type-sourced Props (built by the caller via Props.Create) needs no
-        // further DynamicallyAccessedMembers plumbing here.
+        // every logger runs on the loggers dispatcher, whatever its Props said
         private (Task task, string name) AddLogger(ActorSystemImpl system, Props props, string loggingBusName)
         {
             props = props.WithDispatcher(system.Settings.LoggersDispatcher);
@@ -350,9 +338,7 @@ namespace Akka.Event
         private string CreateLoggerName(Type actorClass)
         {
             var id = Interlocked.Increment(ref _loggerId);
-            // A generic logger type's Type.Name carries a `N arity marker (e.g. MyLogger`1), and a
-            // backtick is not a legal actor-path character - swap it out rather than reject a logger
-            // an akka.loggers string could never have named in the first place.
+            // a generic type's name has a backtick (MyLogger`1), which isn't legal in an actor path
             var simpleName = SimpleName(actorClass).Replace('`', '_');
             var name = "log" + id + "-" + simpleName;
             return name;
