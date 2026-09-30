@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Streams.Implementation.StreamRef;
 using Akka.Streams.Serialization.Proto.Msg;
@@ -15,7 +17,23 @@ namespace Akka.Streams.Serialization
 {
     internal static class SerializationTools
     {
-        public static Type TypeFromString(string typeName) => Type.GetType(typeName, throwOnError: true);
+        /// <summary>
+        /// Resolves the element type carried on the wire by a stream ref. With
+        /// <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> off, there is no built-in table of stream-ref
+        /// element types to fall back on - stream refs are generic over any type the application chooses - so
+        /// the only option is a clear failure instead of an unreliable runtime type load.
+        /// </summary>
+        public static Type TypeFromString(string typeName)
+        {
+            if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                return ResolveTypeFromString(typeName);
+
+            throw new SerializationException(AkkaFeatures.NotBuiltIn(
+                "a stream-ref element type", typeName, "a build with dynamic type loading enabled"));
+        }
+
+        [RequiresUnreferencedCode("Resolves a stream-ref element type carried on the wire by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Type ResolveTypeFromString(string typeName) => Type.GetType(typeName, throwOnError: true);
 
         public static Type TypeFromProto(EventType eventType) => TypeFromString(eventType.TypeName);
 
