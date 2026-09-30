@@ -92,6 +92,7 @@ namespace Akka.Serialization
             ["Akka.Cluster.Sharding"] = () => Load("Akka.Cluster.Sharding.Serialization.ShardingSerializers, Akka.Cluster.Sharding"),
             ["Akka.DistributedData"] = () => Load("Akka.DistributedData.Serialization.DistributedDataSerializers, Akka.DistributedData"),
             ["Akka.Cluster.Metrics"] = () => Load("Akka.Cluster.Metrics.Serialization.MetricsSerializers, Akka.Cluster.Metrics"),
+            ["Akka.Persistence"] = () => Load("Akka.Persistence.Serialization.PersistenceSerializers, Akka.Persistence"),
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;

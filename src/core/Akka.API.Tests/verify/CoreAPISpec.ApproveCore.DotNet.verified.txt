@@ -3474,6 +3474,14 @@ namespace Akka.Event
     {
         public LoggerMailbox(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
+    public sealed class LoggerSetup : Akka.Actor.Setup.Setup
+    {
+        public Akka.Event.ILogMessageFormatter? Formatter { get; }
+        public System.Collections.Generic.IReadOnlyList<Akka.Actor.Props> Loggers { get; }
+        public static Akka.Event.LoggerSetup Create(params Akka.Actor.Props[] loggers) { }
+        public static Akka.Event.LoggerSetup Create(System.Collections.Generic.IEnumerable<Akka.Actor.Props> loggers) { }
+        public static Akka.Event.LoggerSetup Create(Akka.Event.ILogMessageFormatter formatter, params Akka.Actor.Props[] loggers) { }
+    }
     public static class Logging
     {
         public static System.Type ClassFor(this Akka.Event.LogLevel logLevel) { }
