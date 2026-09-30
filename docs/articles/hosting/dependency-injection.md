@@ -103,6 +103,9 @@ using var host = new HostBuilder()
 
 Adding your actor and your type key into the `ActorRegistry` is sufficient - no additional DI registration is required to access the `IRequiredActor<TActor>` for that type.
 
+> [!NOTE]
+> Use a class, not a struct, as the type key. `IRequiredActor<TKey>` is resolved through an open-generic DI registration, and under Native AOT Microsoft.Extensions.DependencyInjection can't build it for a value-type key, so a struct key fails at runtime there.
+
 ## Resolving `IRequiredActor<TKey>` Within Akka.NET
 
 Akka.NET does not use dependency injection to start actors by default primarily because actor lifetime is unbounded by default - this means reasoning about the scope of injected dependencies isn't trivial. ASP.NET, by contrast, is trivial: all HTTP requests are request-scoped and all web socket connections are connection-scoped - these are objects have *bounded* and typically short lifetimes.
