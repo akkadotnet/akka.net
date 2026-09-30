@@ -118,7 +118,7 @@ namespace Akka.Serialization
         {
             try
             {
-                // reads both lists here, so a member missing from either also lands in the catch
+                // reads the list here, so a missing member also lands in the catch
                 return load() is { } module ? new LoadedModule(module) : null;
             }
             catch (Exception e) when (IsVersionSkew(e))

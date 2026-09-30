@@ -37,19 +37,6 @@ namespace Akka.Serialization
             moduleConfig.GetConfig("akka.actor.serialization-bindings").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetString()));
 
         /// <summary>
-        /// Asserts a module's table names exactly the types its config rows name, in both directions: every row
-        /// resolves to a type the table has, and the table has no type without a row.
-        /// </summary>
-        public static void AssertTableMatchesConfig(Config moduleConfig, IEnumerable<Type> serializerTypes, IEnumerable<Type> boundTypes)
-        {
-            var configuredSerializerTypes = SerializerRows(moduleConfig).Select(r => Type.GetType(r.TypeName, throwOnError: true));
-            var configuredBoundTypes = BindingRows(moduleConfig).Select(r => Type.GetType(r.TypeName, throwOnError: true));
-
-            serializerTypes.Should().BeEquivalentTo(configuredSerializerTypes);
-            boundTypes.Should().BeEquivalentTo(configuredBoundTypes);
-        }
-
-        /// <summary>
         /// Asserts a module's table is a complete, alias-accurate mirror of its config: every registration's alias
         /// names that registration's type in `akka.actor.serializers` (and vice versa - no extra alias), and every
         /// `akka.actor.serialization-bindings` row matches exactly one registration whose <c>Bindings</c> contains
