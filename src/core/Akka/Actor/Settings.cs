@@ -128,11 +128,11 @@ namespace Akka.Actor
             // even though the provider itself is perfectly resolvable.
             if (ProviderSelectionType is ProviderSelection.Custom)
             {
-                var providerType = Type.GetType(ProviderClass);
-                if (providerType == null)
-                    throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
-                if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                    throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
+                if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        "akka.actor.provider", ProviderClass, "one of the built-in providers (local, remote, cluster)"));
+
+                ValidateCustomProvider(ProviderClass);
             }
 
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
@@ -550,6 +550,16 @@ namespace Akka.Actor
                 throw new MissingMethodException(
                     "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
             }
+        }
+
+        [RequiresUnreferencedCode("Validates a custom [akka.actor.provider] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static void ValidateCustomProvider(string providerClass)
+        {
+            var providerType = Type.GetType(providerClass);
+            if (providerType == null)
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{providerClass}'");
+            if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
+                throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{providerClass}'");
         }
     }
 }

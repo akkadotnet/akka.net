@@ -47,6 +47,20 @@ namespace Akka.Tests.Util
         private const string CustomStdoutLoggerTypeName = "Akka.Tests.Util.NoSuchStdoutLogger, Akka.Tests";
 
         /// <summary>
+        /// Names <see cref="ProbeExtension"/> below - a real, resolvable <see cref="IExtensionId"/> that lives
+        /// outside <c>ExtensionsSetup</c>'s first-party table, so it only registers through the
+        /// <c>akka.extensions</c> <see cref="Type.GetType(string)"/> fallback.
+        /// </summary>
+        private const string CustomExtensionTypeName = "Akka.Tests.Util.AkkaFeaturesSpec+ProbeExtension, Akka.Tests";
+
+        /// <summary>
+        /// A custom <c>akka.actor.provider</c> name. Never resolved: the switch-off path throws before it
+        /// would try, and the switch-on regression test below points at a type that resolves but is not an
+        /// <see cref="IActorRefProvider"/>, so it does not need a working provider either.
+        /// </summary>
+        private const string CustomProviderTypeName = "Akka.Tests.Util.NoSuchProvider, Akka.Tests";
+
+        /// <summary>
         /// Runs <paramref name="body"/> with the <c>Akka.DynamicTypeLoading</c> switch forced to
         /// <paramref name="enabled"/> and puts it back afterwards.
         /// </summary>
@@ -185,6 +199,66 @@ namespace Akka.Tests.Util
         public async Task Should_throw_ConfigurationException_When_the_stdout_logger_is_not_built_in_and_dynamic_type_loading_is_disabled()
             => await AssertRejectsAsync("akka.stdout-logger-class", CustomStdoutLoggerTypeName);
 
+        [Fact(DisplayName = "ActorSystem should reject a custom actor ref provider that is not built in when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_the_provider_is_not_built_in_and_dynamic_type_loading_is_disabled()
+            => await AssertRejectsAsync("akka.actor.provider", CustomProviderTypeName);
+
+        /// <summary>
+        /// The switch-on regression guard for the custom-provider path: <see cref="Settings"/> still resolves
+        /// <c>akka.actor.provider</c> by reflection and validates it is an <see cref="IActorRefProvider"/>.
+        /// <see cref="string"/> is a real, resolvable type that is not one, so this proves the reflection path
+        /// ran without needing a working custom provider.
+        /// </summary>
+        [Fact(DisplayName = "Settings should still validate a custom actor ref provider by reflection when dynamic type loading is on")]
+        public async Task Should_reject_an_invalid_custom_provider_When_dynamic_type_loading_is_enabled()
+        {
+            await WithDynamicTypeLoading(true, () =>
+            {
+                var config = ConfigFor("akka.actor.provider", typeof(string).AssemblyQualifiedName!);
+
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("custom-provider-not-a-provider-on", config));
+
+                exception.Message.Should().Contain("is not a valid actor ref provider");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ActorSystem should reject an akka.extensions entry that is not built in when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_the_extension_is_not_built_in_and_dynamic_type_loading_is_disabled()
+        {
+            await WithDynamicTypeLoading(false, () =>
+            {
+                var config = ConfigurationFactory.ParseString($"akka.extensions = [\"{CustomExtensionTypeName}\"]");
+
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ActorSystem.Create("custom-extension-off", config));
+
+                exception.Message.Should().Contain("akka.extensions");
+                exception.Message.Should().Contain(CustomExtensionTypeName);
+                exception.Message.Should().Contain(SwitchName);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ActorSystem should resolve an akka.extensions entry by reflection when dynamic type loading is on")]
+        public async Task Should_resolve_a_custom_extension_When_dynamic_type_loading_is_enabled()
+        {
+            await WithDynamicTypeLoading(true, async () =>
+            {
+                var config = ConfigurationFactory.ParseString($"akka.extensions = [\"{CustomExtensionTypeName}\"]");
+                var system = ActorSystem.Create("custom-extension-on", config);
+                try
+                {
+                    system.HasExtension<ProbeExtensionImpl>().Should().BeTrue();
+                }
+                finally
+                {
+                    await system.Terminate();
+                }
+            });
+        }
+
         [Fact(DisplayName = "ActorSystem should still boot on the built-in scheduler and log formatter when dynamic type loading is off")]
         public async Task Should_resolve_the_built_in_types_When_dynamic_type_loading_is_disabled()
         {
@@ -273,6 +347,18 @@ namespace Akka.Tests.Util
                 exception.Message.Should().Contain(SwitchName);
                 return Task.CompletedTask;
             });
+        }
+
+        /// <summary>An <see cref="IExtensionId"/> outside <c>ExtensionsSetup</c>'s first-party table, named by
+        /// <see cref="CustomExtensionTypeName"/> so the switch-on regression test can prove the
+        /// <c>akka.extensions</c> reflection fallback still resolves it.</summary>
+        public sealed class ProbeExtension : ExtensionIdProvider<ProbeExtensionImpl>
+        {
+            public override ProbeExtensionImpl CreateExtension(ExtendedActorSystem system) => new();
+        }
+
+        public sealed class ProbeExtensionImpl : IExtension
+        {
         }
     }
 }

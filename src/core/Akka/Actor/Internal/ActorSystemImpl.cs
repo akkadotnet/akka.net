@@ -390,7 +390,11 @@ namespace Akka.Actor.Internal
                     continue;
                 }
 
-                var extensionType = Type.GetType(extensionFqn);
+                if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        "akka.extensions", extensionFqn, "an IExtensionId registered through ExtensionsSetup"));
+
+                var extensionType = ResolveExtensionType(extensionFqn);
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
@@ -411,6 +415,9 @@ namespace Akka.Actor.Internal
 
             ConfigureExtensions(extensions);
         }
+
+        [RequiresUnreferencedCode("Loads an [akka.extensions] entry by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Type ResolveExtensionType(string extensionFqn) => Type.GetType(extensionFqn);
 
         private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
         {
@@ -539,23 +546,39 @@ namespace Akka.Actor.Internal
             {
                 // The two built-in out-of-process providers are resolved from compile-time constant type
                 // names so the trimmer / Native AOT compiler can see which type each call site loads and
-                // keep it. Anything else is named only at runtime and stays fully dynamic.
-                _provider = _settings.ProviderSelectionType switch
+                // keep it. A custom provider is named only at runtime and stays fully dynamic; Settings
+                // already rejected it at construction time when dynamic type loading is off, but this site
+                // guards independently too, since the trim analyzer has no way to know that.
+                if (_settings.ProviderSelectionType is ProviderSelection.Local)
                 {
-                    ProviderSelection.Local => new LocalActorRefProvider(_name, _settings, _eventStream),
-                    ProviderSelection.Remote => CreateProvider(
+                    _provider = new LocalActorRefProvider(_name, _settings, _eventStream);
+                }
+                else if (_settings.ProviderSelectionType is ProviderSelection.Remote)
+                {
+                    _provider = CreateProvider(
                         ProviderSelection.RemoteActorRefProvider,
                         "akka.actor.provider = remote, but Akka.Remote is not referenced by this application.",
-                        _name, _settings, _eventStream),
-                    ProviderSelection.Cluster => CreateProvider(
+                        _name, _settings, _eventStream);
+                }
+                else if (_settings.ProviderSelectionType is ProviderSelection.Cluster)
+                {
+                    _provider = CreateProvider(
                         ProviderSelection.ClusterActorRefProvider,
                         "akka.actor.provider = cluster, but Akka.Cluster is not referenced by this application.",
-                        _name, _settings, _eventStream),
-                    _ => CreateProvider(
+                        _name, _settings, _eventStream);
+                }
+                else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    _provider = CreateCustomProvider(
                         _settings.ProviderClass,
                         $"Could not resolve provider type [{_settings.ProviderClass}]. Ensure the type name is fully qualified.",
-                        _name, _settings, _eventStream)
-                };
+                        _name, _settings, _eventStream);
+                }
+                else
+                {
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        "akka.actor.provider", _settings.ProviderClass, "one of the built-in providers (local, remote, cluster)"));
+                }
             }
             catch (Exception)
             {
@@ -587,6 +610,25 @@ namespace Akka.Actor.Internal
             string name,
             Settings settings,
             EventStream eventStream)
+        {
+            var providerType = Type.GetType(typeName);
+            if (providerType is null)
+                throw new ConfigurationException(notResolvedMessage);
+
+            return (IActorRefProvider)Activator.CreateInstance(providerType, name, settings, eventStream);
+        }
+
+        /// <summary>
+        /// Resolves a custom <c>akka.actor.provider</c> from its type name and constructs it. Kept separate
+        /// from <see cref="CreateProvider"/>, whose <c>typeName</c> parameter carries
+        /// <see cref="DynamicallyAccessedMembersAttribute"/>: a custom provider's name comes from
+        /// <see cref="Settings.ProviderClass"/>, which has no such annotation, so passing it through that
+        /// parameter would warn IL2072 regardless of this method being reachable only while dynamic type
+        /// loading is on. Marking this method itself lets the guard at its only call site do its job.
+        /// </summary>
+        [RequiresUnreferencedCode("Loads a custom [akka.actor.provider] by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IActorRefProvider CreateCustomProvider(
+            string typeName, string notResolvedMessage, string name, Settings settings, EventStream eventStream)
         {
             var providerType = Type.GetType(typeName);
             if (providerType is null)
