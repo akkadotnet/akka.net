@@ -5161,6 +5161,7 @@ namespace Akka.Serialization
     public class ByteArraySerializer : Akka.Serialization.SerializerV2
     {
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
@@ -5186,6 +5187,7 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.NewtonSoftJsonSerializerSettings settings) { }
+        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
         public Newtonsoft.Json.JsonSerializerSettings Settings { get; }

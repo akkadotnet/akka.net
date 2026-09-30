@@ -168,6 +168,9 @@ namespace Akka.DistributedData.Serialization
             });
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 12;
+
         public override string Manifest(object o)
         {
             switch (o)

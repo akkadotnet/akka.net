@@ -20,6 +20,12 @@ namespace Akka.Persistence.Serialization
             IncludeManifest = true;
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(PersistenceSnapshotSerializer) ? 8 : base.Identifier;
+
         public override bool IncludeManifest { get; }
 
         public override byte[] ToBinary(object obj)
