@@ -3466,10 +3466,11 @@ namespace Akka.Event
     }
     public sealed class LoggerRegistration
     {
-        public LoggerRegistration(System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props> propsFactory) { }
-        public LoggerRegistration(System.Type loggerType) { }
+        public LoggerRegistration(System.Func<Akka.Actor.ExtendedActorSystem, Akka.Actor.Props> propsFactory) { }
+        public LoggerRegistration([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type loggerType) { }
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
         public System.Type LoggerType { get; }
-        public System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props> PropsFactory { get; }
+        public System.Func<Akka.Actor.ExtendedActorSystem, Akka.Actor.Props> PropsFactory { get; }
     }
     public sealed class LoggerSetup : Akka.Actor.Setup.Setup
     {
@@ -3478,9 +3479,9 @@ namespace Akka.Event
     public sealed class LoggerSetupBuilder
     {
         public LoggerSetupBuilder() { }
-        public Akka.Event.LoggerSetupBuilder AddLogger(System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props> propsFactory) { }
-        public Akka.Event.LoggerSetupBuilder AddLogger(System.Type loggerType) { }
-        public Akka.Event.LoggerSetupBuilder AddLogger<T>()
+        public Akka.Event.LoggerSetupBuilder AddLogger(System.Func<Akka.Actor.ExtendedActorSystem, Akka.Actor.Props> propsFactory) { }
+        public Akka.Event.LoggerSetupBuilder AddLogger([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type loggerType) { }
+        public Akka.Event.LoggerSetupBuilder AddLogger<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  T>()
             where T : Akka.Actor.ActorBase { }
         public Akka.Event.LoggerSetup Build() { }
     }

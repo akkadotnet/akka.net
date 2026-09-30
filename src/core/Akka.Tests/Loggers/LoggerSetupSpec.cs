@@ -7,14 +7,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.Tests.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -114,7 +115,7 @@ public class LoggerSetupSpec
         [Fact(DisplayName = "LoggerSetupBuilder should build a LoggerSetup with a factory registration")]
         public void Should_Build_LoggerSetup_With_Factory_Registration()
         {
-            Func<ActorSystemImpl, Props> factory = system => Props.Create<CapturingLogger>();
+            Func<ExtendedActorSystem, Props> factory = system => Props.Create<CapturingLogger>();
 
             var setup = new LoggerSetupBuilder()
                 .AddLogger(factory)
@@ -145,7 +146,7 @@ public class LoggerSetupSpec
         public void Should_Throw_On_Null_Factory()
         {
             var builder = new LoggerSetupBuilder();
-            builder.Invoking(b => b.AddLogger((Func<ActorSystemImpl, Props>)null!))
+            builder.Invoking(b => b.AddLogger((Func<ExtendedActorSystem, Props>)null!))
                    .Should().Throw<ArgumentNullException>();
         }
 
@@ -332,6 +333,119 @@ public class LoggerSetupSpec
                 if (sys != null)
                     await sys.Terminate();
             }
+        }
+    }
+
+    public class SetupPlusHoconLoggerTests : AkkaSpec
+    {
+        private static readonly string CapturingLoggerTypeName =
+            $"{typeof(CapturingLogger).FullName}, {typeof(CapturingLogger).Assembly.GetName().Name}";
+
+        private static ActorSystemSetup CreateSetup()
+        {
+            CapturingLogger.Clear();
+            SecondCapturingLogger.Clear();
+            var loggerSetup = new LoggerSetupBuilder().AddLogger<SecondCapturingLogger>().Build();
+            var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{CapturingLoggerTypeName}""]");
+            return ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), loggerSetup);
+        }
+
+        public SetupPlusHoconLoggerTests(ITestOutputHelper output)
+            : base(CreateSetup(), output: output)
+        {
+        }
+
+        [Fact(DisplayName = "Should_StartBothHoconAndLoggerSetupLoggers_When_BothAreConfigured")]
+        public async Task Should_StartBothHoconAndLoggerSetupLoggers_When_BothAreConfigured()
+        {
+            // CapturingLogger comes from akka.loggers, SecondCapturingLogger from the LoggerSetup -
+            // a LoggerSetup must not drop the HOCON list, the two are additive.
+            var log = Logging.GetLogger(Sys, "SetupPlusHoconSource");
+            log.Warning("BothStarted");
+
+            await AwaitAssertAsync(() =>
+            {
+                CapturingLogger.Events.Should().Contain(e => e.Message.ToString() == "BothStarted");
+                SecondCapturingLogger.Events.Should().Contain(e => e.Message.ToString() == "BothStarted");
+            });
+        }
+    }
+
+    public class DedupLoggerSetupTests : AkkaSpec
+    {
+        private static readonly string CapturingLoggerTypeName =
+            $"{typeof(CapturingLogger).FullName}, {typeof(CapturingLogger).Assembly.GetName().Name}";
+
+        private static ActorSystemSetup CreateSetup()
+        {
+            CapturingLogger.Clear();
+            var loggerSetup = new LoggerSetupBuilder().AddLogger<CapturingLogger>().Build();
+            var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{CapturingLoggerTypeName}""]");
+            return ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), loggerSetup);
+        }
+
+        public DedupLoggerSetupTests(ITestOutputHelper output)
+            : base(CreateSetup(), output: output)
+        {
+        }
+
+        [Fact(DisplayName = "Should_StartLoggerOnce_When_SameTypeIsInHoconAndLoggerSetup")]
+        public async Task Should_StartLoggerOnce_When_SameTypeIsInHoconAndLoggerSetup()
+        {
+            // CapturingLogger is named by both akka.loggers and the LoggerSetup - only one instance
+            // should start, so exactly one copy of the event should be recorded, not two.
+            var log = Logging.GetLogger(Sys, "DedupSource");
+            log.Warning("OnlyOnce");
+
+            await AwaitAssertAsync(() =>
+            {
+                CapturingLogger.Events.Should().ContainSingle(e => e.Message.ToString() == "OnlyOnce");
+            });
+        }
+    }
+
+    [Collection(DynamicTypeLoadingCollection.Name)]
+    public class DynamicTypeLoadingOffLoggerSetupTests
+    {
+        [Fact(DisplayName = "Should_StartLoggerSetupLoggerAndResolveHoconBuiltIns_When_DynamicTypeLoadingIsDisabled")]
+        public async Task Should_StartLoggerSetupLoggerAndResolveHoconBuiltIns_When_DynamicTypeLoadingIsDisabled()
+        {
+            await AkkaFeaturesSpec.WithDynamicTypeLoading(false, async () =>
+            {
+                CapturingLogger.Clear();
+                var loggerSetup = new LoggerSetupBuilder().AddLogger<CapturingLogger>().Build();
+                // A built-in HOCON logger resolves through the literal-typed lookup table, not
+                // Type.GetType, so it must still work with dynamic type loading switched off.
+                var config = ConfigurationFactory.ParseString(
+                    "akka.loggers = [\"Akka.Event.DefaultLogger\"]");
+                var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), loggerSetup);
+
+                ActorSystem sys = null;
+                try
+                {
+                    // Should not throw: the HOCON entry is built-in and the LoggerSetup registration
+                    // is type-based, so neither needs reflection under the switch-off path.
+                    sys = ActorSystem.Create("DynamicTypeLoadingOffLoggerSetupTest", setup);
+
+                    var log = Logging.GetLogger(sys, "DynamicTypeLoadingOffSource");
+                    log.Warning("StartedWithoutReflection");
+
+                    var deadline = DateTime.UtcNow.AddSeconds(10);
+                    while (DateTime.UtcNow < deadline &&
+                           !CapturingLogger.Events.Any(e => e.Message.ToString() == "StartedWithoutReflection"))
+                    {
+                        await Task.Delay(50);
+                    }
+
+                    CapturingLogger.Events.Should().Contain(e =>
+                        e.Message.ToString() == "StartedWithoutReflection");
+                }
+                finally
+                {
+                    if (sys != null)
+                        await sys.Terminate();
+                }
+            });
         }
     }
 }
