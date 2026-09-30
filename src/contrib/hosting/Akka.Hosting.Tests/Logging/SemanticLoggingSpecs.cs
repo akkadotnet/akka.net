@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SemanticLoggingSpecs.cs" company="Akka.NET Project">
 //      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -241,7 +242,9 @@ public class SemanticLoggingSpecs : IAsyncLifetime
 
     private async Task AwaitAssertAsync(Action assertion, TimeSpan? timeout = null, TimeSpan? interval = null)
     {
-        var maxWait = timeout ?? TimeSpan.FromSeconds(3);
+        // The logger actor runs on the default dispatcher; on a starved CI agent it has been seen to reach
+        // an event ~3 s after it was published, so 3 s left no slack.
+        var maxWait = timeout ?? TimeSpan.FromSeconds(10);
         var checkInterval = interval ?? TimeSpan.FromMilliseconds(100);
         var cts = new CancellationTokenSource(maxWait);
 
@@ -334,8 +337,10 @@ public class SemanticLoggingSpecs : IAsyncLifetime
 public class SemanticTestLogger : ILogger
 {
     private readonly ITestOutputHelper _helper;
-    public readonly List<LogEntry> LogEntries = new();
-    public int ReceivedLogs { get; private set; }
+    // Written on the logger actor's thread, read on the test's; ConcurrentQueue is safe for both.
+    public readonly ConcurrentQueue<LogEntry> LogEntries = new();
+    private int _receivedLogs;
+    public int ReceivedLogs => Volatile.Read(ref _receivedLogs);
 
     public SemanticTestLogger(ITestOutputHelper helper)
     {
@@ -345,15 +350,16 @@ public class SemanticTestLogger : ILogger
     public void Clear()
     {
         LogEntries.Clear();
-        ReceivedLogs = 0;
+        Interlocked.Exchange(ref _receivedLogs, 0);
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
         Exception? exception, Func<TState, Exception?, string> formatter)
     {
         var message = formatter(state, exception);
-        _helper.WriteLine($"[{logLevel}] {message}");
-        ReceivedLogs++;
+        // the wall-clock print time, not the event's own timestamp: shows when the logger actually got to it
+        _helper.WriteLine($"{DateTime.UtcNow:HH:mm:ss.fff} [{logLevel}] {message}");
+        Interlocked.Increment(ref _receivedLogs);
 
         // Capture state as dictionary for semantic logging assertions
         var stateDict = new Dictionary<string, object>();
@@ -365,7 +371,7 @@ public class SemanticTestLogger : ILogger
             }
         }
 
-        LogEntries.Add(new LogEntry
+        LogEntries.Enqueue(new LogEntry
         {
             LogLevel = logLevel,
             Message = message,

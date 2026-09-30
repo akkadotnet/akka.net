@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
@@ -21,8 +22,8 @@ namespace Akka.Event;
 /// Supports two registration modes:
 /// <list type="bullet">
 ///   <item><description>Type-based: the logger type is preserved for AOT and instantiated via <see cref="Props"/>.</description></item>
-///   <item><description>Factory-based: a <see cref="Func{ActorSystemImpl, Props}"/> is used for loggers that require
-///   custom initialization (e.g. access to the <see cref="ActorSystemImpl"/>).</description></item>
+///   <item><description>Factory-based: a <see cref="Func{ExtendedActorSystem, Props}"/> is used for loggers that require
+///   custom initialization (e.g. access to the <see cref="ExtendedActorSystem"/>).</description></item>
 /// </list>
 /// </remarks>
 public sealed class LoggerRegistration
@@ -35,7 +36,7 @@ public sealed class LoggerRegistration
     /// <see cref="MinimalLogger"/>.
     /// </param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="loggerType"/> is null.</exception>
-    public LoggerRegistration(Type loggerType)
+    public LoggerRegistration([DynamicallyAccessedMembers(Props.ActorTypeMembers)] Type loggerType)
     {
         LoggerType = loggerType ?? throw new ArgumentNullException(nameof(loggerType));
         PropsFactory = null;
@@ -45,11 +46,11 @@ public sealed class LoggerRegistration
     /// Creates a factory-based logger registration.
     /// </summary>
     /// <param name="propsFactory">
-    /// A factory that receives the <see cref="ActorSystemImpl"/> and returns the <see cref="Props"/>
+    /// A factory that receives the <see cref="ExtendedActorSystem"/> and returns the <see cref="Props"/>
     /// used to create the logger actor.
     /// </param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="propsFactory"/> is null.</exception>
-    public LoggerRegistration(Func<ActorSystemImpl, Props> propsFactory)
+    public LoggerRegistration(Func<ExtendedActorSystem, Props> propsFactory)
     {
         PropsFactory = propsFactory ?? throw new ArgumentNullException(nameof(propsFactory));
         LoggerType = null;
@@ -58,12 +59,13 @@ public sealed class LoggerRegistration
     /// <summary>
     /// The logger type, if this is a type-based registration. <c>null</c> for factory-based registrations.
     /// </summary>
+    [DynamicallyAccessedMembers(Props.ActorTypeMembers)]
     public Type? LoggerType { get; }
 
     /// <summary>
     /// The props factory, if this is a factory-based registration. <c>null</c> for type-based registrations.
     /// </summary>
-    public Func<ActorSystemImpl, Props>? PropsFactory { get; }
+    public Func<ExtendedActorSystem, Props>? PropsFactory { get; }
 
     /// <summary>
     /// INTERNAL API. Resolves the <see cref="Props"/> for this registration.
@@ -74,19 +76,6 @@ public sealed class LoggerRegistration
             return PropsFactory(system);
 
         return Props.Create(LoggerType!);
-    }
-
-    /// <summary>
-    /// INTERNAL API. Returns the effective logger type for naming and classification purposes.
-    /// For factory-based registrations this walks the <see cref="Props"/> type.
-    /// </summary>
-    internal Type EffectiveType(ActorSystemImpl system)
-    {
-        if (LoggerType != null)
-            return LoggerType;
-
-        // For factory-based, ask the props what type it is
-        return CreateProps(system).Type;
     }
 }
 
@@ -101,8 +90,10 @@ public sealed class LoggerRegistration
 /// programmatically.
 /// </para>
 /// <para>
-/// When a <see cref="LoggerSetup"/> is present in the <see cref="ActorSystemSetup"/>, its
-/// registered loggers are used <em>instead of</em> the <c>akka.loggers</c> HOCON list.
+/// A <see cref="LoggerSetup"/> is additive to the <c>akka.loggers</c> HOCON list, not a replacement for
+/// it: both are started, and a logger type named by both starts once. This keeps <c>akka.loggers</c>
+/// free to carry a first-party logger the <see cref="LoggerSetup"/> consumer never named itself - for
+/// example Akka.Hosting's <c>LoggerFactoryLogger</c>, written into HOCON by <c>AddLoggerFactory()</c>.
 /// </para>
 /// <para>
 /// This class follows the same pattern as <see cref="Akka.Serialization.SerializationSetup"/>
@@ -165,7 +156,7 @@ public sealed class LoggerSetupBuilder
     /// </summary>
     /// <typeparam name="T">The logger actor type. Must derive from <see cref="ActorBase"/>.</typeparam>
     /// <returns>This builder, for fluent chaining.</returns>
-    public LoggerSetupBuilder AddLogger<T>() where T : ActorBase
+    public LoggerSetupBuilder AddLogger<[DynamicallyAccessedMembers(Props.ActorTypeMembers)] T>() where T : ActorBase
     {
         _loggers.Add(new LoggerRegistration(typeof(T)));
         return this;
@@ -178,7 +169,7 @@ public sealed class LoggerSetupBuilder
     /// <returns>This builder, for fluent chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="loggerType"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="loggerType"/> does not derive from <see cref="ActorBase"/>.</exception>
-    public LoggerSetupBuilder AddLogger(Type loggerType)
+    public LoggerSetupBuilder AddLogger([DynamicallyAccessedMembers(Props.ActorTypeMembers)] Type loggerType)
     {
         if (loggerType == null) throw new ArgumentNullException(nameof(loggerType));
         if (!typeof(ActorBase).IsAssignableFrom(loggerType))
@@ -191,14 +182,14 @@ public sealed class LoggerSetupBuilder
     }
 
     /// <summary>
-    /// Adds a logger using a factory that receives the <see cref="ActorSystemImpl"/> and produces
+    /// Adds a logger using a factory that receives the <see cref="ExtendedActorSystem"/> and produces
     /// the <see cref="Props"/> to use when creating the logger actor. Useful when the logger
     /// requires access to system-level resources at construction time.
     /// </summary>
-    /// <param name="propsFactory">Factory function from <see cref="ActorSystemImpl"/> to <see cref="Props"/>.</param>
+    /// <param name="propsFactory">Factory function from <see cref="ExtendedActorSystem"/> to <see cref="Props"/>.</param>
     /// <returns>This builder, for fluent chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="propsFactory"/> is null.</exception>
-    public LoggerSetupBuilder AddLogger(Func<ActorSystemImpl, Props> propsFactory)
+    public LoggerSetupBuilder AddLogger(Func<ExtendedActorSystem, Props> propsFactory)
     {
         if (propsFactory == null) throw new ArgumentNullException(nameof(propsFactory));
         _loggers.Add(new LoggerRegistration(propsFactory));

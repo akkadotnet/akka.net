@@ -18,8 +18,13 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {           
             if(m.Message is ForwardAllEventsTo to)
             {
-                _forwarder = to.Forwarder;
-                _forwarder.Tell("OK");
+                // EventFilterTestBase retries this message until the logger has subscribed, so several can arrive;
+                // reply once per forwarder, or a late extra "OK" is left in the TestActor's queue
+                if (!Equals(_forwarder, to.Forwarder))
+                {
+                    _forwarder = to.Forwarder;
+                    _forwarder.Tell("OK");
+                }
             }
             else if(_forwarder != null)
             {

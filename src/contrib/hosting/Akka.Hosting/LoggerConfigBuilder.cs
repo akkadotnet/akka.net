@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Akka.Configuration;
@@ -17,6 +18,7 @@ namespace Akka.Hosting
     public sealed class LoggerConfigBuilder
     {
         private readonly List<Type> _loggers = [];
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         private Type? _logMessageFormatter;
         internal AkkaConfigurationBuilder Builder { get; }
 
@@ -48,7 +50,9 @@ namespace Akka.Hosting
         
         public LogFilterBuilder? LogFilterBuilder { get; set; }
 
+        // the setter calls value.GetConstructor, which needs PublicConstructors
         [Obsolete("Use the WithDefaultLogMessageFormatter<T> method instead")]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         public Type LogMessageFormatter
         {
             get => _logMessageFormatter ?? typeof(SemanticLogMessageFormatter);
@@ -100,7 +104,7 @@ namespace Akka.Hosting
         /// <see cref="ILogMessageFormatter"/> implementation.
         /// </remarks>
         [Obsolete("SemanticLogMessageFormatter is now the default. Only use this method if you have a custom ILogMessageFormatter implementation.")]
-        public LoggerConfigBuilder WithDefaultLogMessageFormatter<T>() where T: ILogMessageFormatter
+        public LoggerConfigBuilder WithDefaultLogMessageFormatter<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T: ILogMessageFormatter
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             LogMessageFormatter = typeof(T);

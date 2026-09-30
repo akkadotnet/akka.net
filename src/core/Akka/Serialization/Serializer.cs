@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
@@ -221,6 +220,29 @@ namespace Akka.Serialization
         /// This exception is thrown if the system couldn't find the given serializer <paramref name="type"/> id in the configuration.
         /// </exception>
         /// <returns>The serializer identifier for the specified type.</returns>
+        /// <remarks>
+        /// <para>
+        /// The keys under <c>akka.actor.serialization-identifiers</c> are matched against the name of the
+        /// <paramref name="type"/> that is already in hand, rather than resolved back into a <see cref="Type"/>.
+        /// Each key is split with <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/>: the type name is
+        /// compared case-sensitively, the assembly name case-insensitively, which is how
+        /// <see cref="Type.GetType(string)"/> compared them.
+        /// </para>
+        /// <para>
+        /// Assembly-qualified keys are matched across the whole block first, and only then bare
+        /// <see cref="Type.FullName"/> keys, so a bare key cannot shadow an exact assembly-qualified key
+        /// further down the block. A bare key matches a type of that name in <em>any</em> assembly. Unlike the
+        /// <c>BuiltIn*</c> tables elsewhere, a match here is not limited to the <c>Akka</c> assembly: the
+        /// type's own assembly, whatever it is, has to match an assembly-qualified key.
+        /// </para>
+        /// <para>
+        /// Matching by name also fixes a latent bug. The lookup used to call
+        /// <c>Type.GetType(key, throwOnError: true)</c> for <em>every</em> key in the block, so one key naming a
+        /// type this application cannot load - a serializer from a package that is configured but not
+        /// referenced, say - made every identifier lookup throw, including the lookups for serializers whose
+        /// own key was perfectly good.
+        /// </para>
+        /// </remarks>
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);
@@ -228,13 +250,36 @@ namespace Akka.Serialization
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Cannot retrieve serialization identifier informations: {SerializationIdentifiers} configuration node not found");
             */
-            var identifiers = config.AsEnumerable()
-                .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
 
-            if (!identifiers.TryGetValue(type, out int value))
-                throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
+            // TypeQualifiedName() is the cached "Namespace.Type, Assembly" spelling with the assembly identity
+            // already stripped, including inside a generic type's arguments. Nested types spell with '+' on
+            // both sides.
+            Akka.Util.TypeExtensions.TrySplitTypeName(type.TypeQualifiedName(), out var fullName, out var assemblyName);
 
-            return value;
+            // Pass 1: assembly-qualified keys, over the whole block, so one of them always beats a bare key.
+            foreach (var pair in config.AsEnumerable())
+            {
+                if (!Akka.Util.TypeExtensions.TrySplitTypeName(pair.Key, out var keyName, out var keyAssembly) ||
+                    keyAssembly is null)
+                    continue;
+
+                if (string.Equals(keyName, fullName, StringComparison.Ordinal) &&
+                    string.Equals(keyAssembly, assemblyName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                {
+                    return pair.Value.GetInt();
+                }
+            }
+
+            // Pass 2: bare keys.
+            foreach (var pair in config.AsEnumerable())
+            {
+                if (Akka.Util.TypeExtensions.TrySplitTypeName(pair.Key, out var keyName, out var keyAssembly) &&
+                    keyAssembly is null &&
+                    string.Equals(keyName, fullName, StringComparison.Ordinal))
+                    return pair.Value.GetInt();
+            }
+
+            throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
         }
     }
 }

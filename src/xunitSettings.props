@@ -1,7 +1,13 @@
 <Project>
-  <!-- use the xunit JSON settings file -->
+  <!--
+    Use the xunit JSON settings file. This is anchored on MSBuildThisFileDirectory, not SolutionDir:
+    SolutionDir is only defined when the build was started from a solution, so building a test project
+    by its own path (dotnet build/test src/core/Akka.Tests) left the path pointing at nothing, the file
+    never reached bin/, and the runner silently fell back to its defaults - parallel collections ON,
+    no 60s long-running warning.
+  -->
   <ItemGroup>
-    <Content Include="$(SolutionDir)src/xunit.runner.json" Link="xunit.runner.json">
+    <Content Include="$(MSBuildThisFileDirectory)xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

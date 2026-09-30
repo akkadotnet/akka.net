@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,7 +62,9 @@ namespace Akka.Hosting
             return AddAkka<AkkaHostedService>(services, actorSystemName, builder);
         }
         
-        public static IServiceCollection AddAkka<T>(this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
+        // flows into AddHostedService<T>, which needs PublicConstructors
+        public static IServiceCollection AddAkka<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
+            this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
         {
             var b = new AkkaConfigurationBuilder(services, actorSystemName);
             

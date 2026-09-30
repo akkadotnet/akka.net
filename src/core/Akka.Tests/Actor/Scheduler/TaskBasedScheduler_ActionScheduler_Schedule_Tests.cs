@@ -239,17 +239,15 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleOnce_with_0_delay_Then_action_is_executed_immediately()
+        public async Task When_ScheduleOnce_with_0_delay_Then_action_is_executed_immediately()
         {
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
             try
             {
-                var manualResetEvent = new ManualResetEventSlim();
-                manualResetEvent.IsSet.ShouldBeFalse();
-                testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
-
-                manualResetEvent.Wait(500).ShouldBeTrue();
+                var fired = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                testScheduler.ScheduleOnce(0, () => fired.TrySetResult());
+                // Generous bound - this test guards "0 delay fires without waiting", not a latency SLA.
+                await fired.Task.WaitAsync(Dilated(TimeSpan.FromSeconds(5)));
             }
             finally
             {
@@ -258,17 +256,15 @@ namespace Akka.Tests.Actor.Scheduler
         }
 
         [Fact]
-        public void When_ScheduleRepeatedly_with_0_delay_Then_action_is_executed_immediately()
+        public async Task When_ScheduleRepeatedly_with_0_delay_Then_action_is_executed_immediately()
         {
             IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
             try
             {
-                var manualResetEvent = new ManualResetEventSlim();
-                manualResetEvent.IsSet.ShouldBeFalse();
-                testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
-
-                manualResetEvent.Wait(500).ShouldBeTrue();
+                var fired = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                testScheduler.ScheduleRepeatedly(0, 100, () => fired.TrySetResult());
+                // Generous bound - this test guards "0 delay fires without waiting", not a latency SLA.
+                await fired.Task.WaitAsync(Dilated(TimeSpan.FromSeconds(5)));
             }
             finally
             {

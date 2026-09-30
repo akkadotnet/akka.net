@@ -105,7 +105,7 @@ namespace Akka.Cluster
             var reachableMembers = (reachability.IsAllReachable
                     ? mbrs.Where(m => m.Status != MemberStatus.Down)
                     : mbrs
-                        .Where(m => m.Status != MemberStatus.Down && reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == SelfUniqueAddress))
+                        .Where(m => m.Status != MemberStatus.Down && (reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == SelfUniqueAddress)))
                 .ToImmutableSortedSet();
 
             if (!reachableMembers.Any()) return null;

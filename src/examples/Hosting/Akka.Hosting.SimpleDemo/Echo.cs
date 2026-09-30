@@ -1,1 +1,1 @@
-public struct Echo{}
+public sealed class Echo{}

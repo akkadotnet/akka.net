@@ -2,6 +2,8 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.API.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
@@ -10,9 +12,11 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DependencyInjection")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DependencyInjection.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
@@ -297,7 +301,7 @@ namespace Akka.Actor
     }
     public static class ActorRefFactoryExtensions
     {
-        public static Akka.Actor.IActorRef ActorOf<TActor>(this Akka.Actor.IActorRefFactory factory, string name = null)
+        public static Akka.Actor.IActorRef ActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(this Akka.Actor.IActorRefFactory factory, string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public static Akka.Actor.ActorSelection ActorSelection(this Akka.Actor.IActorRefFactory factory, Akka.Actor.IActorRef anchorRef, string actorPath) { }
     }
@@ -422,9 +426,9 @@ namespace Akka.Actor
     {
         public static T WithExtension<T>(this Akka.Actor.ActorSystem system)
             where T :  class, Akka.Actor.IExtension { }
-        public static T WithExtension<T>(this Akka.Actor.ActorSystem system, System.Type extensionId)
+        public static T WithExtension<T>(this Akka.Actor.ActorSystem system, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] System.Type extensionId)
             where T :  class, Akka.Actor.IExtension { }
-        public static T WithExtension<T, TI>(this Akka.Actor.ActorSystem system)
+        public static T WithExtension<T, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]  TI>(this Akka.Actor.ActorSystem system)
             where T :  class, Akka.Actor.IExtension
             where TI : Akka.Actor.IExtensionId { }
     }
@@ -759,7 +763,7 @@ namespace Akka.Actor
         public abstract void Abort();
         public abstract string PrintTree();
         public abstract Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null);
-        public abstract Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
+        public abstract Akka.Actor.IActorRef SystemActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new ();
     }
     public abstract class ExtensionIdProvider<T> : Akka.Actor.IExtensionId, Akka.Actor.IExtensionId<T>
@@ -1124,6 +1128,7 @@ namespace Akka.Actor
     }
     public interface IIndirectActorProducer
     {
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
         System.Type ActorType { get; }
         Akka.Actor.ActorBase Produce();
         void Release(Akka.Actor.ActorBase actor);
@@ -1483,12 +1488,12 @@ namespace Akka.Actor
         public static readonly Akka.Actor.Props None;
         protected Props() { }
         protected Props(Akka.Actor.Props copy) { }
-        public Props(System.Type type) { }
-        public Props(System.Type type, object[] args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(Akka.Actor.Deploy deploy, System.Type type, params object[] args) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
-        public Props(System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, params object[] args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, object[] args) { }
+        public Props(Akka.Actor.Deploy deploy, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, System.Collections.Generic.IEnumerable<object> args) { }
+        public Props(Akka.Actor.Deploy deploy, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, params object[] args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Collections.Generic.IEnumerable<object> args) { }
+        public Props([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, Akka.Actor.SupervisorStrategy supervisorStrategy, params object[] args) { }
         public object[] Arguments { get; }
         public Akka.Actor.Deploy Deploy { get; protected set; }
         [Newtonsoft.Json.JsonIgnore]
@@ -1499,6 +1504,7 @@ namespace Akka.Actor
         public Akka.Routing.RouterConfig RouterConfig { get; }
         public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; protected set; }
         [Newtonsoft.Json.JsonIgnore]
+        [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
         public System.Type Type { get; }
         public string TypeName { get; }
         public static Akka.Actor.Props Empty { get; }
@@ -1514,17 +1520,17 @@ namespace Akka.Actor
         public Akka.Actor.Props WithRouter(Akka.Routing.RouterConfig routerConfig) { }
         public Akka.Actor.Props WithStashCapacity(int stashCapacity) { }
         public Akka.Actor.Props WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
-        public static Akka.Actor.Props Create(System.Type type, params object[] args) { }
-        public static Akka.Actor.Props Create<TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
+        public static Akka.Actor.Props Create([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type type, params object[] args) { }
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
             where TActor : Akka.Actor.ActorBase, new () { }
-        public static Akka.Actor.Props Create<TActor>(params object[] args)
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(params object[] args)
             where TActor : Akka.Actor.ActorBase { }
-        public static Akka.Actor.Props Create<TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
+        public static Akka.Actor.Props Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(System.Linq.Expressions.Expression<System.Func<TActor>> factory, Akka.Actor.SupervisorStrategy supervisorStrategy = null)
             where TActor : Akka.Actor.ActorBase { }
         public static Akka.Actor.Props CreateBy(Akka.Actor.IIndirectActorProducer producer, params object[] args) { }
         [System.Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] arg" +
             "s) instead")]
-        public static Akka.Actor.Props CreateBy<TProducer>(params object[] args)
+        public static Akka.Actor.Props CreateBy<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TProducer>(params object[] args)
             where TProducer :  class, Akka.Actor.IIndirectActorProducer { }
         public class PropsSurrogate : Akka.Util.ISurrogate
         {
@@ -2040,7 +2046,7 @@ namespace Akka.Actor.Internal
         public void Start() { }
         public override void Stop(Akka.Actor.IActorRef actor) { }
         public override Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null) { }
-        public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)
+        public override Akka.Actor.IActorRef SystemActorOf<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(string name = null)
             where TActor : Akka.Actor.ActorBase, new () { }
         public override System.Threading.Tasks.Task Terminate() { }
         public override string ToString() { }
@@ -2217,6 +2223,12 @@ namespace Akka.Actor.Setup
         public Akka.Actor.Setup.ActorSystemSetup WithSetup<T>(T setup)
             where T : Akka.Actor.Setup.Setup { }
         public static Akka.Actor.Setup.ActorSystemSetup Create(params Akka.Actor.Setup.Setup[] setup) { }
+    }
+    public sealed class ExtensionsSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IExtensionId> ExtensionIds { get; }
+        public static Akka.Actor.Setup.ExtensionsSetup Create(params Akka.Actor.IExtensionId[] extensionIds) { }
+        public static Akka.Actor.Setup.ExtensionsSetup Create(System.Collections.Generic.IEnumerable<Akka.Actor.IExtensionId> extensionIds) { }
     }
     public abstract class Setup
     {
@@ -2884,6 +2896,7 @@ namespace Akka.Dispatch
         [System.Diagnostics.Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args) { }
     }
+    [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]
     public abstract class MailboxType
     {
         protected readonly Akka.Configuration.Config Config;
@@ -2898,11 +2911,11 @@ namespace Akka.Dispatch
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
         public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
-        public System.Type GetRequiredType(System.Type actorType) { }
-        public bool HasRequiredType(System.Type actorType) { }
+        public System.Type GetRequiredType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type actorType) { }
+        public bool HasRequiredType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type actorType) { }
         public Akka.Dispatch.MailboxType Lookup(string id) { }
         public Akka.Dispatch.MailboxType LookupByQueueType(System.Type queueType) { }
-        public bool ProducesMessageQueue(System.Type mailboxType) { }
+        public bool ProducesMessageQueue([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] System.Type mailboxType) { }
         [Akka.Annotations.InternalApi]
         public int StashCapacity(string dispatcher, string mailbox) { }
     }
@@ -3784,8 +3797,7 @@ namespace Akka.IO
         System.Threading.Tasks.Task CloseAsync();
         System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.Task ShutdownAsync();
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default);
-        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default);
+        void Write(System.Buffers.ReadOnlySequence<byte> data);
     }
     public class Inet
     {
@@ -4024,10 +4036,9 @@ namespace Akka.IO
         }
         public class Register : Akka.IO.Tcp.Command
         {
-            public Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true) { }
+            public Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false) { }
             public Akka.Actor.IActorRef Handler { get; }
             public bool KeepOpenOnPeerClosed { get; }
-            public bool UseResumeWriting { get; }
             public override string ToString() { }
         }
         public sealed class ResumeAccepting : Akka.IO.Tcp.Command
@@ -4039,10 +4050,6 @@ namespace Akka.IO
         public sealed class ResumeReading : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.ResumeReading Instance;
-        }
-        public sealed class ResumeWriting : Akka.IO.Tcp.Command
-        {
-            public static readonly Akka.IO.Tcp.ResumeWriting Instance;
         }
         public abstract class SimpleWriteCommand : Akka.IO.Tcp.WriteCommand
         {
@@ -4104,10 +4111,6 @@ namespace Akka.IO
             public static Akka.IO.Tcp.WriteCommand Create(params Akka.IO.Tcp.WriteCommand[] writes) { }
             public static Akka.IO.Tcp.WriteCommand Create(System.Collections.Generic.IEnumerable<Akka.IO.Tcp.WriteCommand> writes) { }
         }
-        public sealed class WritingResumed : Akka.IO.Tcp.Event
-        {
-            public static readonly Akka.IO.Tcp.WritingResumed Instance;
-        }
     }
     public sealed class TcpExt : Akka.IO.IOExtension
     {
@@ -4129,10 +4132,9 @@ namespace Akka.IO
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress) { }
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint? localAddress, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, System.TimeSpan? timeout, bool pullMode) { }
         public static Akka.IO.Tcp.NoAck NoAck(object? token = null) { }
-        public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true) { }
+        public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false) { }
         public static Akka.IO.Tcp.Command ResumeAccepting(int batchSize) { }
         public static Akka.IO.Tcp.Command ResumeReading() { }
-        public static Akka.IO.Tcp.Command ResumeWriting() { }
         public static Akka.IO.Tcp.Command SuspendReading() { }
         public static Akka.IO.Tcp.Command Unbind() { }
         public static Akka.IO.Tcp.Command Write(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event? ack = null) { }
@@ -4180,8 +4182,7 @@ namespace Akka.IO
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.Task ShutdownAsync() { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default) { }
-        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default) { }
+        public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
@@ -4374,6 +4375,7 @@ namespace Akka.IO
     {
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public int BatchReceiveLimit { get; }
+        [System.Obsolete("Obsolete since v1.6.0; UDP always uses the disabled buffer pool")]
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
         public int InitialSocketAsyncEventArgs { get; }

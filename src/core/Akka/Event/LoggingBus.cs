@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingBus.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Event
 {
@@ -36,7 +38,7 @@ namespace Akka.Event
             
             public override string ToString() => _name;
         }
-        
+
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
         private static int _loggerId;
@@ -93,7 +95,11 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Starts the loggers defined in the system configuration.
+        /// Starts the loggers defined in the system configuration, plus any additional loggers registered
+        /// programmatically through a <see cref="LoggerSetup"/>. The two are additive: a <see cref="LoggerSetup"/>
+        /// does not replace <c>akka.loggers</c>, since HOCON may still be carrying a first-party logger (for
+        /// example Akka.Hosting's <c>LoggerFactoryLogger</c>) that a <see cref="LoggerSetup"/> consumer never
+        /// named itself. A logger type named by both sources is only started once.
         /// </summary>
         /// <param name="system">The system that the loggers need to start monitoring.</param>
         /// <exception cref="ConfigurationException">
@@ -110,36 +116,45 @@ namespace Akka.Event
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
-            // Check for programmatic LoggerSetup first (AOT-compatible path)
-            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
-
             var taskInfos = new Dictionary<Task, string>();
+            // A logger type named by both akka.loggers and a LoggerSetup registration starts only once.
+            var startedTypes = new HashSet<Type>();
+
+            foreach (var strLoggerType in system.Settings.Loggers)
+            {
+                var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
+                if (loggerType == null)
+                {
+                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                            "akka.loggers", strLoggerType, "one of the built-in loggers"));
+
+                    loggerType = ResolveLoggerType(strLoggerType);
+                    if (loggerType == null)
+                        throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
+                }
+
+                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                {
+                    shouldRemoveStandardOutLogger = false;
+                    continue;
+                }
+
+                if (!startedTypes.Add(loggerType))
+                    continue;
+
+                var (task, name) = AddLogger(system, loggerType, logName);
+                taskInfos[task] = name;
+            }
+
+            // Setup-registered loggers are additive to the HOCON list above, not a replacement for it.
+            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
             if (loggerSetupOpt.HasValue)
             {
-                // Use programmatically registered loggers instead of HOCON
                 foreach (var registration in loggerSetupOpt.Value.Loggers)
                 {
-                    var loggerType = registration.LoggerType;
-                    if (loggerType != null && typeof(MinimalLogger).IsAssignableFrom(loggerType))
-                    {
-                        shouldRemoveStandardOutLogger = false;
-                        continue;
-                    }
-
-                    var (task, name) = AddLogger(system, registration, logName);
-                    taskInfos[task] = name;
-                }
-            }
-            else
-            {
-                // Fall back to HOCON-configured loggers
-                foreach (var strLoggerType in system.Settings.Loggers)
-                {
-                    var loggerType = Type.GetType(strLoggerType);
-                    if (loggerType == null)
-                    {
-                        throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
-                    }
+                    var props = registration.CreateProps(system).WithDispatcher(system.Settings.LoggersDispatcher);
+                    var loggerType = props.Type;
 
                     if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
                     {
@@ -147,7 +162,10 @@ namespace Akka.Event
                         continue;
                     }
 
-                    var (task, name) = AddLogger(system, loggerType, logName);
+                    if (!startedTypes.Add(loggerType))
+                        continue;
+
+                    var (task, name) = AddLogger(system, props, logName);
                     taskInfos[task] = name;
                 }
             }
@@ -220,7 +238,56 @@ namespace Akka.Event
             }
         }
 
-        private (Task task, string name) AddLogger(ActorSystemImpl system, Type loggerType, string loggingBusName)
+        // Matching the name and returning the type happen inside one method with an annotated return on purpose.
+        // A Dictionary<string, Type> would read better, but it cannot carry DynamicallyAccessedMembers on its
+        // values: the type coming back out of TryGetValue arrives unannotated, and the trimmer then drops the
+        // constructor Props needs - IL2067 here, MissingMethodException on the first log event at run time.
+        // Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
+        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
+        private static Type GetBuiltInLoggerType(string loggerTypeName)
+        {
+            // Util. qualifies this: System.Reflection.TypeExtensions is in scope here too.
+            var name = Util.TypeExtensions.ToBuiltInAkkaTypeName(loggerTypeName);
+
+            return name switch
+            {
+                "Akka.Event.DefaultLogger" => typeof(DefaultLogger),
+                "Akka.Event.StandardOutLogger" => typeof(StandardOutLogger),
+                "Akka.Event.TraceLogger" => typeof(TraceLogger),
+                _ => null
+            };
+        }
+
+#nullable enable
+        // Akka's own loggers outside Akka.dll. Type name and assembly must both match, so nothing else is probed;
+        // each arm passes its own literal so the trimmer keeps that type. throwOnError defaults to false, so a
+        // missing Akka.Hosting returns null here; a broken dll still throws and that exception should surface.
+        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
+        private static Type? GetFirstPartyLoggerType(string loggerTypeName)
+        {
+            if (!Util.TypeExtensions.TrySplitTypeName(loggerTypeName, out var name, out var assembly))
+                return null;
+
+            return name switch
+            {
+                "Akka.Hosting.Logging.LoggerFactoryLogger" when string.Equals(assembly, "Akka.Hosting", StringComparison.OrdinalIgnoreCase)
+                    => Type.GetType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
+                _ => null
+            };
+        }
+#nullable restore
+
+        [RequiresUnreferencedCode("Loads the [akka.loggers] type by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        [return: DynamicallyAccessedMembers(Props.ActorTypeMembers)]
+        private static Type ResolveLoggerType(string loggerTypeName)
+        {
+            return Type.GetType(loggerTypeName);
+        }
+
+        private (Task task, string name) AddLogger(
+            ActorSystemImpl system,
+            [DynamicallyAccessedMembers(Props.ActorTypeMembers)] Type loggerType,
+            string loggingBusName)
         {
             var loggerName = CreateLoggerName(loggerType);
             var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
@@ -228,12 +295,14 @@ namespace Akka.Event
             return StartLogger(logger, fullLoggerName, loggingBusName);
         }
 
-        private (Task task, string name) AddLogger(ActorSystemImpl system, LoggerRegistration registration, string loggingBusName)
+        // The type on props is already trim-annotated by Props.Type, so a LoggerSetup registration's
+        // Props (built once by the caller, so a factory registration is invoked only once) needs no
+        // further DynamicallyAccessedMembers plumbing here.
+        private (Task task, string name) AddLogger(ActorSystemImpl system, Props props, string loggingBusName)
         {
-            var effectiveType = registration.EffectiveType(system);
-            var loggerName = CreateLoggerName(effectiveType);
-            var fullLoggerName = $"{loggerName} [{effectiveType.FullName}]";
-            var props = registration.CreateProps(system).WithDispatcher(system.Settings.LoggersDispatcher);
+            var loggerType = props.Type;
+            var loggerName = CreateLoggerName(loggerType);
+            var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
             var logger = system.SystemActorOf(props, loggerName);
             return StartLogger(logger, fullLoggerName, loggingBusName);
         }
