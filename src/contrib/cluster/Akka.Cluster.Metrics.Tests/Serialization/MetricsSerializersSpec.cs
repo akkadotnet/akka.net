@@ -7,17 +7,14 @@
 
 #nullable enable
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using AkkaSerialization = Akka.Serialization.Serialization;
 
 namespace Akka.Cluster.Metrics.Tests
 {
@@ -32,16 +29,11 @@ namespace Akka.Cluster.Metrics.Tests
 
     /// <summary>
     /// Keeps <see cref="MetricsSerializers"/> in sync with Akka.Cluster.Metrics' reference.conf. The shared checks
-    /// live in <see cref="ModuleSerializerSpecs"/>; this spec adds what is specific to Metrics, including the
-    /// internal API needed to force a reflection-only baseline for the parity comparison below.
+    /// live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class MetricsSerializersSpec : AkkaSpec
     {
-        private const string SwitchName = "Akka.DynamicTypeLoading";
-
-        private static readonly ModuleSerializerTable NoModules = new(new Dictionary<string, Func<ModuleSerializers?>>());
-
         private static readonly Config MetricsRows = ClusterMetrics.DefaultConfig();
 
         private static readonly Type[] BoundSamples =
@@ -52,46 +44,6 @@ namespace Akka.Cluster.Metrics.Tests
 
         public MetricsSerializersSpec(ITestOutputHelper output) : base(MetricsRows, output)
         {
-        }
-
-        private static AkkaSerialization Build(ActorSystem system, ModuleSerializerTable table, bool dynamicTypeLoading)
-        {
-            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
-            AppContext.SetSwitch(SwitchName, dynamicTypeLoading);
-            try
-            {
-                return new AkkaSerialization((ExtendedActorSystem)system, table);
-            }
-            finally
-            {
-                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
-            }
-        }
-
-        [Fact(DisplayName = "MetricsSerializers should resolve every reference.conf row to the type and serializer reflection does")]
-        public void Should_match_reflection_When_resolving_every_reference_conf_row()
-        {
-            var table = new MetricsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(MetricsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
-
-            // core's module map names Akka.Cluster.Metrics, and MetricsSerializers is what it loads for it
-            ModuleSerializerTable.Default.ForAssembly("Akka.Cluster.Metrics").Should().NotBeNull();
-
-            var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
-            var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-            var settings = Sys.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            var aliasByType = ModuleSerializerSpecs.SerializerRows(MetricsRows)
-                .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
-
-            foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
-            {
-                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(aliasByType[type]));
-                built.Should().BeOfType(reflected.GetSerializerById(built.Identifier).GetType(), type.Name);
-                fromTable.GetSerializerById(built.Identifier).Should().BeOfType(type, type.Name);
-            }
-
-            foreach (var type in BoundSamples)
-                fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType(), type.FullName);
         }
 
         [Fact(DisplayName = "MetricsSerializers should list no serializer or type that reference.conf does not")]

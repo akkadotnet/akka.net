@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.Client.Serialization;
@@ -35,10 +35,6 @@ namespace Akka.Cluster.Tools.Tests
     /// <summary>
     /// Keeps <see cref="ToolsSerializers"/> in sync with Akka.Cluster.Tools' three reference.conf files
     /// (Client, PublishSubscribe, Singleton). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
-    /// Unlike Remote/Streams/Cluster, this test project has no <c>InternalsVisibleTo</c> grant from Akka core,
-    /// so it cannot see the internal <c>ModuleSerializer</c> record and skips the reflection-only baseline;
-    /// the serializer-type list below is a hand-kept mirror of <see cref="ToolsSerializers"/> instead of a
-    /// live read of its <c>Serializers</c> property.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class ToolsSerializersSpec : AkkaSpec
@@ -46,11 +42,6 @@ namespace Akka.Cluster.Tools.Tests
         private static readonly Config ToolsRows = ClusterClientReceptionist.DefaultConfig()
             .WithFallback(DistributedPubSub.DefaultConfig())
             .WithFallback(ClusterSingleton.DefaultConfig());
-
-        private static readonly Type[] SerializerTypes =
-        {
-            typeof(ClusterClientMessageSerializer), typeof(DistributedPubSubMessageSerializer), typeof(ClusterSingletonMessageSerializer)
-        };
 
         public ToolsSerializersSpec(ITestOutputHelper output) : base(ToolsRows, output)
         {
@@ -60,7 +51,7 @@ namespace Akka.Cluster.Tools.Tests
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new ToolsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ToolsRows, SerializerTypes, table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(ToolsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
         }
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
@@ -82,12 +73,14 @@ namespace Akka.Cluster.Tools.Tests
             });
         }
 
-        [Fact(DisplayName = "Serialization should build every Tools serializer under its usual class, without a warning, when dynamic type loading is off")]
-        public async Task Should_keep_the_Tools_serializer_classes_When_dynamic_type_loading_is_disabled()
+        [Fact(DisplayName = "Serialization should build every Tools serializer under its usual id, without a warning, when dynamic type loading is off")]
+        public async Task Should_keep_the_Tools_serializer_ids_When_dynamic_type_loading_is_disabled()
         {
-            // Serialization.GetSerializerById is internal; this project has no Akka core IVT grant, so bound
-            // types are checked by class instead of by wire id (covered for Cluster/Sharding/Metrics elsewhere).
             var serialization = await ModuleSerializerSpecs.AssertBuildsWithoutWarning(Sys, EventFilter);
+
+            serialization.GetSerializerById(15).Should().BeOfType<ClusterClientMessageSerializer>();
+            serialization.GetSerializerById(9).Should().BeOfType<DistributedPubSubMessageSerializer>();
+            serialization.GetSerializerById(14).Should().BeOfType<ClusterSingletonMessageSerializer>();
 
             serialization.FindSerializerForType(typeof(IClusterClientMessage)).Should().BeOfType<ClusterClientMessageSerializer>();
             serialization.FindSerializerForType(typeof(IClusterClientProtocolMessage)).Should().BeOfType<ClusterClientMessageSerializer>();

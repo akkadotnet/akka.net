@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.DistributedData.Serialization;
@@ -28,21 +28,12 @@ namespace Akka.DistributedData.Tests.Serialization
 
     /// <summary>
     /// Keeps <see cref="DistributedDataSerializers"/> in sync with Akka.DistributedData's reference.conf. The
-    /// shared checks live in <see cref="ModuleSerializerSpecs"/>. Unlike Remote/Streams/Cluster, this test
-    /// project has no <c>InternalsVisibleTo</c> grant from Akka core, so it cannot see the internal
-    /// <c>ModuleSerializer</c> record (and skips the reflection-only baseline) or the internal
-    /// <c>Serialization.GetSerializerById</c>; the serializer-type list below is a hand-kept mirror of
-    /// <see cref="DistributedDataSerializers"/> instead of a live read of its <c>Serializers</c> property.
+    /// shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class DistributedDataSerializersSpec : AkkaSpec
     {
         private static readonly Config DDataRows = DistributedData.DefaultConfig();
-
-        private static readonly Type[] SerializerTypes =
-        {
-            typeof(ReplicatedDataSerializer), typeof(ReplicatorMessageSerializer)
-        };
 
         public DistributedDataSerializersSpec(ITestOutputHelper output) : base(DDataRows, output)
         {
@@ -52,7 +43,7 @@ namespace Akka.DistributedData.Tests.Serialization
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new DistributedDataSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(DDataRows, SerializerTypes, table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(DDataRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
         }
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
@@ -74,10 +65,13 @@ namespace Akka.DistributedData.Tests.Serialization
             });
         }
 
-        [Fact(DisplayName = "Serialization should build every DistributedData serializer under its usual class, without a warning, when dynamic type loading is off")]
-        public async Task Should_keep_the_DistributedData_serializer_classes_When_dynamic_type_loading_is_disabled()
+        [Fact(DisplayName = "Serialization should build every DistributedData serializer under its usual id, without a warning, when dynamic type loading is off")]
+        public async Task Should_keep_the_DistributedData_serializer_ids_When_dynamic_type_loading_is_disabled()
         {
             var serialization = await ModuleSerializerSpecs.AssertBuildsWithoutWarning(Sys, EventFilter);
+
+            serialization.GetSerializerById(11).Should().BeOfType<ReplicatedDataSerializer>();
+            serialization.GetSerializerById(12).Should().BeOfType<ReplicatorMessageSerializer>();
 
             serialization.FindSerializerForType(typeof(GSet<string>)).Should().BeOfType<ReplicatedDataSerializer>();
             serialization.FindSerializerForType(typeof(Subscribe)).Should().BeOfType<ReplicatorMessageSerializer>();
