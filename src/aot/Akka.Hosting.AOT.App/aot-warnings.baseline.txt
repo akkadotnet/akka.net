@@ -12,21 +12,6 @@
 #
 # src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
 #
-# The goal is for this file to hold nothing but the header. Every entry below is a place where
-# Hosting's dependency surface still reaches for a type by name, or builds one reflectively, in a
-# way the trimmer cannot see.
-
-# --- Reached by the canary's UNROOTED publish, i.e. on a real Hosting app boot -------------------
-# Hosting registers Akka.Streams' stream-ref serializer at startup regardless of whether the app
-# ever uses SourceRef/SinkRef, so these three fire on every Hosting boot, not just a rooted
-# analysis. Tracked in #8667.
-
-# SinkRefImpl/SourceRefImpl.Create build a generic type from a runtime Type with MakeGenericType,
-# which AOT cannot pre-generate every instantiation of.
-IL3050|src/core/Akka.Streams/Implementation/StreamRef/SinkRefImpl.cs|Akka.Streams.Implementation.StreamRef.SinkRefImpl.Create(Type,IActorRef)|Usingmember'System.Type.MakeGenericType(Type[])'whichhas'RequiresDynamicCodeAttribute'canbreakfunctionalitywhenAOTcompiling.Thenativecodeforthisinstantiationmightnotbeavailableatruntime.
-IL3050|src/core/Akka.Streams/Implementation/StreamRef/SourceRefImpl.cs|Akka.Streams.Implementation.StreamRef.SourceRefImpl.Create(Type,IActorRef)|Usingmember'System.Type.MakeGenericType(Type[])'whichhas'RequiresDynamicCodeAttribute'canbreakfunctionalitywhenAOTcompiling.Thenativecodeforthisinstantiationmightnotbeavailableatruntime.
-
-# SerializationTools.TypeFromString resolves a wire type name with Type.GetType(string, bool) - the
-# same "type name over the wire" shape the core baseline already tracks for ActorSystemImpl and
-# TypeCache.
-IL2057|src/core/Akka.Streams/Serialization/SerializationTools.cs|Akka.Streams.Serialization.SerializationTools.TypeFromString(String)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String,Boolean)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+# Empty since #8671 put the Akka.Streams stream-ref reflection behind Akka.DynamicTypeLoading. Any
+# new entry is a place where Hosting's dependency surface reaches for a type by name, or builds
+# one reflectively, in a way the trimmer cannot see.
