@@ -17,7 +17,10 @@
 //   dotnet run scripts/CheckAotWarnings.cs -- \
 //       --log <publish log> \
 //       --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
-//       [--repo-root <dir>] [--allow-empty]
+//       [--repo-root <dir>] [--scope <prefix>[,<prefix>...]] [--allow-empty]
+//
+// --scope defaults to src/core/Akka/ (the plain-core canary's surface). The Hosting canary passes
+// its own comma-separated list, e.g. --scope src/contrib/hosting/,src/contrib/dependencyinjection/,src/core/Akka.Streams/
 //
 // Exit codes:
 //   0  every emitted in-scope warning is in the baseline. Extra baseline entries only print a
@@ -35,6 +38,7 @@ using System.Text.RegularExpressions;
 string? logPath = null;
 string? baselinePath = null;
 var repoRoot = Directory.GetCurrentDirectory();
+string? scope = null;
 var allowEmpty = false;
 
 for (var i = 0; i < args.Length; i++)
@@ -45,6 +49,7 @@ for (var i = 0; i < args.Length; i++)
         case "--log":
         case "--baseline":
         case "--repo-root":
+        case "--scope":
             // Read the value here so a flag with nothing after it reports the real problem instead
             // of falling through and claiming the flag itself is unrecognized.
             if (i + 1 >= args.Length)
@@ -52,7 +57,8 @@ for (var i = 0; i < args.Length; i++)
             var value = args[++i];
             if (arg == "--log") logPath = value;
             else if (arg == "--baseline") baselinePath = value;
-            else repoRoot = value;
+            else if (arg == "--repo-root") repoRoot = value;
+            else scope = value;
             break;
         case "--allow-empty":
             allowEmpty = true;
@@ -80,14 +86,19 @@ if (!Directory.Exists(repoRoot))
 
 repoRoot = Path.GetFullPath(repoRoot);
 
-var scan = AotWarningCheck.Scan(File.ReadAllLines(logPath), repoRoot);
+string[] scopePrefixes = scope is null
+    ? [AotWarningCheck.DefaultScope]
+    : scope.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+var scan = AotWarningCheck.Scan(File.ReadAllLines(logPath), repoRoot, scopePrefixes);
 var baseline = AotWarningCheck.ReadBaseline(File.ReadAllLines(baselinePath));
+var scopeDisplay = string.Join(", ", scopePrefixes);
 
 Console.WriteLine("AOT warning check");
 Console.WriteLine($"  log              : {logPath}");
 Console.WriteLine($"  baseline         : {baselinePath}");
 Console.WriteLine($"  repo root        : {repoRoot}");
-Console.WriteLine($"  scope            : {AotWarningCheck.ScopePrefix}");
+Console.WriteLine($"  scope            : {scopeDisplay}");
 Console.WriteLine($"  in scope         : {scan.InScope.Count} distinct warning(s)");
 Console.WriteLine($"  other files      : {scan.OtherFileCount} warning(s) in files outside the scope");
 Console.WriteLine($"  no source location: {scan.NoLocationCount} warning(s) ILC/ILLink reported without a file - dependencies and assembly-level diagnostics land here, and none of them can be baselined");
@@ -102,7 +113,7 @@ var emitted = scan.InScope.Keys.ToList();
 // reports every warning with no file at all. Any of them used to print a cheerful OK.
 if (baseline.Count > 0 && emitted.Count == 0 && !allowEmpty)
 {
-    Console.WriteLine($"FAILED: the log contains no {AotWarningCheck.ScopePrefix} warnings at all, but the baseline lists");
+    Console.WriteLine($"FAILED: the log contains no {scopeDisplay} warnings at all, but the baseline lists");
     Console.WriteLine($"        {baseline.Count}. That normally means this check measured nothing rather than that the");
     Console.WriteLine("        warnings are gone. Check that:");
     Console.WriteLine("          * the publish actually ran ILC/ILLink (delete bin/ and obj/ first - a warm");
@@ -112,7 +123,7 @@ if (baseline.Count > 0 && emitted.Count == 0 && !allowEmpty)
                       + $" {scan.NoLocationCount}).");
     Console.WriteLine("        If the surface really is clean, empty the baseline in the same commit, or pass");
     Console.WriteLine("        --allow-empty.");
-    AotWarningCheck.Annotate("error", $"AOT warning check measured no {AotWarningCheck.ScopePrefix} warnings while the baseline lists {baseline.Count}.");
+    AotWarningCheck.Annotate("error", $"AOT warning check measured no {scopeDisplay} warnings while the baseline lists {baseline.Count}.");
     return 1;
 }
 
@@ -131,7 +142,7 @@ if (gone.Count > 0)
 
 if (added.Count > 0)
 {
-    Console.WriteLine($"FAILED: {added.Count} trim/AOT warning(s) under {AotWarningCheck.ScopePrefix} are not in the baseline.");
+    Console.WriteLine($"FAILED: {added.Count} trim/AOT warning(s) under {scopeDisplay} are not in the baseline.");
     Console.WriteLine();
     foreach (var key in added)
     {
@@ -146,7 +157,7 @@ if (added.Count > 0)
     return 1;
 }
 
-Console.WriteLine($"OK: no new trim/AOT warnings under {AotWarningCheck.ScopePrefix}.");
+Console.WriteLine($"OK: no new trim/AOT warnings under {scopeDisplay}.");
 return 0;
 
 /// <summary>
@@ -155,20 +166,24 @@ return 0;
 internal static class AotWarningCheck
 {
     /// <summary>
-    /// Repo-relative path prefix a warning's file must start with to be compared against the
-    /// baseline. Akka.NET's own code, and deliberately nothing else: dependency and BCL warnings
-    /// are not ours to fix and they move with every package bump.
+    /// The default (and the plain-core canary's) repo-relative path prefix a warning's file must
+    /// start with to be compared against the baseline. Akka.NET's own code, and deliberately
+    /// nothing else: dependency and BCL warnings are not ours to fix and they move with every
+    /// package bump. <c>--scope</c> overrides this for a different baseline/surface, e.g. the
+    /// Hosting canary.
     /// </summary>
-    internal const string ScopePrefix = "src/core/Akka/";
+    internal const string DefaultScope = "src/core/Akka/";
 
     internal const string Usage = """
         usage: dotnet run scripts/CheckAotWarnings.cs -- --log <path> --baseline <path>
-                   [--repo-root <dir>] [--allow-empty]
+                   [--repo-root <dir>] [--scope <prefix>[,<prefix>...]] [--allow-empty]
 
           --log         a `dotnet publish` log, captured with `2>&1 | tee`.
           --baseline    the checked-in baseline file.
           --repo-root   repository root, used to make the compiler's absolute paths relative.
                         Defaults to the current directory.
+          --scope       comma-separated repo-relative path prefix(es) a warning's file must start
+                        with to be compared against the baseline. Defaults to src/core/Akka/.
           --allow-empty do not fail when the log has no in-scope warnings but the baseline is
                         non-empty. Only correct when the surface really did go clean.
         """;
@@ -265,7 +280,7 @@ internal static class AotWarningCheck
     /// Reduces a publish log to the distinct set of in-scope warnings, keyed so that unrelated edits
     /// do not churn the baseline.
     /// </summary>
-    internal static ScanResult Scan(IEnumerable<string> logLines, string repoRoot)
+    internal static ScanResult Scan(IEnumerable<string> logLines, string repoRoot, IReadOnlyList<string> scopePrefixes)
     {
         var found = new List<Warning>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -283,7 +298,7 @@ internal static class AotWarningCheck
             }
 
             var file = ToRepoRelative(match.Groups["file"].Value, repoRoot);
-            if (!file.StartsWith(ScopePrefix, StringComparison.Ordinal))
+            if (!scopePrefixes.Any(prefix => file.StartsWith(prefix, StringComparison.Ordinal)))
             {
                 otherFile++;
                 continue;
