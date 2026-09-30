@@ -18,13 +18,6 @@ using Xunit;
 
 namespace Akka.Persistence.Tests.Serialization
 {
-    /// <summary>AppContext switches are process-wide, so a spec that flips <c>Akka.DynamicTypeLoading</c> never runs beside another.</summary>
-    [CollectionDefinition(Name, DisableParallelization = true)]
-    public sealed class DynamicTypeLoadingCollection
-    {
-        public const string Name = "Akka.DynamicTypeLoading";
-    }
-
     /// <summary>
     /// Round-trips every <see cref="PersistenceMessageSerializer"/>/<see cref="PersistenceSnapshotSerializer"/>
     /// manifest through the real <see cref="Akka.Serialization.Serialization.Deserialize(byte[],int,string)"/>
