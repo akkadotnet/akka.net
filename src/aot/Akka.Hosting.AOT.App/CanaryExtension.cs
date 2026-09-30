@@ -11,11 +11,11 @@ namespace Akka.Hosting.AOT.App;
 
 /// <summary>
 /// A trivial custom Akka.NET extension, registered through
-/// <c>AkkaConfigurationBuilder.WithExtension&lt;CanaryExtensionProvider&gt;()</c>. Exercises the
-/// same load path as a real cluster extension (DistributedPubSub, ClusterBootstrap, ...): the
-/// provider's assembly-qualified name round-trips through the <c>akka.extensions</c> HOCON list
-/// and is resolved back with <c>Type.GetType</c> + <c>Activator.CreateInstance</c> in
-/// <c>ActorSystemImpl.LoadExtensions()</c>.
+/// <c>AkkaConfigurationBuilder.WithExtension&lt;CanaryExtensionProvider&gt;()</c>. Since #8649, that
+/// builds an <see cref="Akka.Actor.Setup.ExtensionsSetup"/> from the already-constructed provider
+/// instance and hands it to <c>ActorSystem.Create</c> - no type name, no <c>akka.extensions</c>
+/// HOCON entry, no <c>Type.GetType</c>. <c>ActorSystemImpl.LoadExtensions()</c> reads that setup
+/// first, before falling back to the string-based <c>akka.extensions</c> list.
 /// </summary>
 internal sealed class CanaryExtension : IExtension
 {
@@ -31,9 +31,10 @@ internal sealed class CanaryExtension : IExtension
 }
 
 /// <summary>
-/// Public parameterless constructor is load-bearing: <c>ActorSystemImpl.LoadExtensions()</c> calls
-/// <c>Activator.CreateInstance(extensionType)</c> on the type it resolves from the HOCON string, with
-/// no <c>DynamicallyAccessedMembers</c> annotation naming what it needs.
+/// Public parameterless constructor is still load-bearing, for a different reason than before #8649:
+/// <c>WithExtension&lt;T&gt;()</c>'s generic parameter carries
+/// <c>[DynamicallyAccessedMembers(PublicParameterlessConstructor)]</c>, and it is that annotation -
+/// not a reflection lookup - that keeps this constructor alive for the trimmer.
 /// </summary>
 internal sealed class CanaryExtensionProvider : ExtensionIdProvider<CanaryExtension>
 {

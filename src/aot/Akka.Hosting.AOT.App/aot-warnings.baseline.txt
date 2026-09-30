@@ -1,22 +1,16 @@
 # Trim/AOT warning baseline for the Hosting Native AOT canary (src/aot/Akka.Hosting.AOT.App).
 #
 # Same format and checker as the plain-core canary's baseline
-# (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the full explanation of the
-# key format, and how added/gone entries are handled. The one difference is scope: this file is
-# compared against warnings from THREE prefixes, not one -
+# (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
+# added/gone entries are handled. Scope differs: --scope passes three prefixes, comma-separated -
 #
-#   src/contrib/hosting/            - Akka.Hosting itself
+#   src/contrib/hosting/             - Akka.Hosting itself
 #   src/contrib/dependencyinjection/ - Akka.DependencyInjection
-#   src/core/Akka.Streams/          - NOT covered by the core canary, which never references
-#                                      Akka.Streams. Akka.Hosting does, and registers the
-#                                      stream-ref serializer unconditionally at startup, so this
-#                                      canary is the only thing watching that surface.
+#   src/core/Akka.Streams/           - not covered by the core canary, which never references
+#                                       Akka.Streams. Hosting does, and registers the stream-ref
+#                                       serializer unconditionally at startup.
 #
-# src/core/Akka/ itself is deliberately OUT of scope here - the plain-core canary's own baseline
-# already covers it, and gating on it twice would just mean two baselines to update for the same
-# warning.
-#
-# scripts/CheckAotWarnings.cs --scope takes the three prefixes above, comma-separated.
+# src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
 #
 # The goal is for this file to hold nothing but the header. Every entry below is a place where
 # Hosting's dependency surface still reaches for a type by name, or builds one reflectively, in a

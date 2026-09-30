@@ -8,26 +8,16 @@
 
     <IsPackable>false</IsPackable>
 
-    <!--
-      Same rationale as src/aot/Akka.AOT.App/Akka.AOT.App.csproj: this app's whole job is to print
-      ILC's IL2xxx/IL3xxx list, so ILC's own warnings must not fail the publish. The app's own C#
-      still builds with warnings as errors (repo-wide TreatWarningsAsErrors).
-    -->
+    <!-- Same rationale as Akka.AOT.App.csproj: this app's job is to print ILC's IL2xxx/IL3xxx
+         list, so ILC's own warnings must not fail the publish. The app's own C# still builds with
+         warnings as errors (repo-wide TreatWarningsAsErrors). -->
     <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!--
-    PublishAot is gated on a RuntimeIdentifier for the same two reasons as Akka.AOT.App:
-
-      1. This project lives in Akka.slnx, so a plain 'dotnet build' of the solution must not
-         restore a RID-specific ILCompiler or produce a self-contained output.
-      2. '-p:PublishAot=true' on the command line is a GLOBAL MSBuild property and would switch on
-         the trim/AOT analyzers for every project in the graph - including Akka.csproj and
-         Akka.Hosting.csproj - turning their IL2xxx warnings into errors under the repo-wide
-         TreatWarningsAsErrors. Keeping the property here, conditioned, keeps it local to this app.
-
-    PublishAot implies SelfContained, so that does not need setting either.
-  -->
+  <!-- PublishAot is gated on a RuntimeIdentifier, same two reasons as Akka.AOT.App: a plain
+       solution build must not restore a RID-specific ILCompiler, and '-p:PublishAot=true' on the
+       command line is a GLOBAL property that would also turn on trim analysis for Akka.csproj and
+       Akka.Hosting.csproj, failing their build under repo-wide TreatWarningsAsErrors. -->
   <PropertyGroup Label="AotSettings" Condition="'$(RuntimeIdentifier)' != ''">
     <PublishAot>true</PublishAot>
   </PropertyGroup>
@@ -38,40 +28,24 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-      Akka.Hosting itself references only Microsoft.Extensions.Hosting.Abstractions - the full
-      Microsoft.Extensions.Hosting package (Host.CreateApplicationBuilder, the generic host runtime)
-      is what an application adds, exactly as a real Hosting app would.
-    -->
+    <!-- Akka.Hosting itself references only Microsoft.Extensions.Hosting.Abstractions - the full
+         package (Host.CreateApplicationBuilder, the generic host runtime) is what an application
+         adds, exactly as a real Hosting app would. -->
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
+    <!-- Akka.Hosting.csproj pulls in Akka.csproj and Akka.DependencyInjection.csproj
+         transitively; both are used directly by this app's code, but do not need their own
+         ProjectReference here. -->
     <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting\Akka.Hosting.csproj" />
-    <ProjectReference Include="..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
   </ItemGroup>
 
-  <!--
-    Akka.Hosting consumers do not normally need to set this: Akka's buildTransitive/Akka.targets
-    turns Akka.DynamicTypeLoading off automatically for any PublishAot/PublishTrimmed publish (see
-    src/core/Akka/buildTransitive/Akka.targets). It is declared here explicitly, exactly like
-    Akka.AOT.App, only because this project consumes core and Hosting as ProjectReferences rather
-    than as the NuGet package that carries that .targets file.
-  -->
+  <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:
+       buildTransitive/Akka.targets only does this automatically for the NuGet package, not for a
+       ProjectReference. -->
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
-  </ItemGroup>
-
-  <!--
-    Opt-in: roots the Akka and Akka.Hosting assemblies so ILC analyzes every code path in both
-    libraries, not just the handful this canary's scenarios happen to reach. Publish with
-    -p:RootAkka=true for a realistic warning count for Hosting as a whole.
-  -->
-  <ItemGroup Condition="'$(RootAkka)' == 'true'">
-    <TrimmerRootAssembly Include="Akka" />
-    <TrimmerRootAssembly Include="Akka.Hosting" />
-    <TrimmerRootAssembly Include="Akka.DependencyInjection" />
   </ItemGroup>
 
 </Project>

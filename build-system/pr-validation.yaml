@@ -218,19 +218,16 @@ jobs:
           artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
   # Native AOT canary for Akka.Hosting, the counterpart to AotCanary above. Publishes
-  # src/aot/Akka.Hosting.AOT.App/ - a Host.CreateApplicationBuilder + AddAkka(...) app exercising
-  # AddHocon, a custom WithExtension<T>, WithActorSystemLivenessCheck, ConfigureLoggers'
-  # AddLoggerFactory, DI-constructed actors, Tell, and DeathWatch. See
-  # src/aot/Akka.Hosting.AOT.App/README.md.
+  # src/aot/Akka.Hosting.AOT.App/ - a Host.CreateApplicationBuilder + AddAkka(...) app exercising a
+  # custom WithExtension<T>, WithActorSystemLivenessCheck, ConfigureLoggers' AddLoggerFactory,
+  # DI-constructed actors, and DeathWatch. See src/aot/Akka.Hosting.AOT.App/README.md.
   #
-  # Only ONE publish here, unlike AotCanary. Its unrooted publish is not a weaker check that skips
-  # what a rooted one would catch: the three Akka.Streams warnings this job baselines (the
-  # stream-ref serializer Hosting registers unconditionally at startup) already show up on this
-  # real, unrooted boot. A rooted publish would add coverage only if some Hosting-only feature turns
-  # out to have a reflection path a normal boot never reaches - add the second publish then.
+  # Only ONE publish here, unlike AotCanary: the three Akka.Streams warnings this job baselines
+  # (Hosting registers the stream-ref serializer unconditionally at startup) already show up on
+  # this real, unrooted boot, so a rooted publish would not currently add coverage. Add one if a
+  # future Hosting-only feature has a reflection path a normal boot never reaches.
   #
-  # Blocking from day one, same reasoning as AotCanary: publish, run one process, compare two sorted
-  # lists of strings - if it goes red, something really did change.
+  # Blocking from day one, same reasoning as AotCanary.
   - job: HostingAotCanary
     displayName: "AOT canary - Hosting (Linux)"
     timeoutInMinutes: 45
@@ -254,12 +251,11 @@ jobs:
         displayName: 'Clean the Hosting canary intermediate output'
 
       # One publish serves both steps below: the run proves the real-application boot, and the same
-      # log is what the warning check reads - there is no second, rooted publish to keep in sync
-      # with it. See the job-level comment above for why.
+      # log is what the warning check reads. TrimmerSingleWarn is set in the csproj, not repeated
+      # here.
       - bash: |
           set -o pipefail
           dotnet publish src/aot/Akka.Hosting.AOT.App -r linux-x64 -c Release \
-            -p:TrimmerSingleWarn=false \
             -o "$(Agent.TempDirectory)/hosting-aot-publish" 2>&1 | tee "$(Agent.TempDirectory)/hosting-aot-publish.log"
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
@@ -268,13 +264,17 @@ jobs:
           fi
         displayName: 'Publish the Hosting AOT canary'
 
-      # Same reasoning as AotCanary's run step: Hosting's config/DI plumbing can log-and-continue
-      # just as core's Serialization/Mailboxes can, so exit 0 alone is not proof. The canary's own
-      # WatchdogLoggerProvider and positive assertions are what make '[canary-hosting] OK' meaningful.
+      # Same reasoning as AotCanary's run step: exit 0 alone is not proof. The canary's own
+      # WatchdogLoggerProvider and positive assertions are what make '[canary-hosting] OK'
+      # meaningful. timeout guards against a hang instead of burning the job's full 45 minutes.
       - bash: |
           set -o pipefail
-          "$(Agent.TempDirectory)/hosting-aot-publish/Akka.Hosting.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/hosting-aot-run.log"
+          timeout 300 "$(Agent.TempDirectory)/hosting-aot-publish/Akka.Hosting.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/hosting-aot-run.log"
           rc=${PIPESTATUS[0]}
+          if [ "$rc" -eq 124 ]; then
+            echo "##vso[task.logissue type=error]The Hosting AOT canary did not exit within 300s."
+            exit 1
+          fi
           if [ "$rc" -ne 0 ]; then
             echo "##vso[task.logissue type=error]The Hosting AOT canary exited with code $rc."
             exit 1
@@ -298,20 +298,8 @@ jobs:
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare Hosting AOT warnings against the baseline'
 
-      # Same red-path proof as AotCanary, scoped to this baseline: a committed log with one warning
-      # under src/contrib/hosting/ that is deliberately not baselined must make the checker fail.
-      - bash: |
-          if dotnet run scripts/CheckAotWarnings.cs -- \
-               --log src/aot/Akka.Hosting.AOT.App/testdata/one-new-warning.publish-log.txt \
-               --baseline src/aot/Akka.Hosting.AOT.App/aot-warnings.baseline.txt \
-               --scope "src/contrib/hosting/,src/contrib/dependencyinjection/,src/core/Akka.Streams/" \
-               --repo-root "$(Build.SourcesDirectory)" > "$(Agent.TempDirectory)/hosting-aot-selftest.log" 2>&1; then
-            echo "##vso[task.logissue type=error]Self-test FAILED: the checker accepted a log containing a warning that is not in the baseline."
-            cat "$(Agent.TempDirectory)/hosting-aot-selftest.log"
-            exit 1
-          fi
-          echo "Self-test passed: the checker rejects an unbaselined warning."
-        displayName: 'Self-test the Hosting warning checker rejects a new warning'
+      # No self-test step here: it would only exercise CheckAotWarnings.cs's "measured nothing"
+      # branch a second time, and AotCanary's self-test above already covers the checker itself.
 
       - task: PublishBuildArtifacts@1
         displayName: 'Publish the Hosting AOT logs'

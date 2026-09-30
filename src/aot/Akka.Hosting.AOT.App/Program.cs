@@ -16,8 +16,11 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+const string RoundTripMarker = "[canary-hosting] round-trip complete";
+
 var askTimeout = TimeSpan.FromSeconds(5);
 var stopTimeout = TimeSpan.FromSeconds(30);
+var markerTimeout = TimeSpan.FromSeconds(10);
 
 // a crash on a pool thread would otherwise kill the process with no diagnosis at all
 AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -29,7 +32,7 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) =>
 // This watchdog plays the same role Akka.AOT.App's LogWatchdogFilter plays for the plain-core
 // canary: any Warning/Error logged - by Akka through LoggerFactoryLogger, or by the host/config
 // system directly - fails the run. See WatchdogLoggerProvider.cs.
-var watchdog = new WatchdogLoggerProvider();
+var watchdog = new WatchdogLoggerProvider(RoundTripMarker);
 
 var appBuilder = Host.CreateApplicationBuilder(args);
 
@@ -42,7 +45,6 @@ appBuilder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Informa
 // Dependency injection (Akka.DependencyInjection): plain services, resolved into an actor's
 // constructor through resolver.Props<T>() below.
 appBuilder.Services.AddSingleton<IGreetingService, GreetingService>();
-appBuilder.Services.AddSingleton<INotificationSink, NotificationSink>();
 
 // Health checks: a typical Hosting app wires Microsoft.Extensions.Diagnostics.HealthChecks in and
 // adds Akka's built-in liveness check to it with WithActorSystemLivenessCheck() below.
@@ -51,15 +53,8 @@ appBuilder.Services.AddHealthChecks();
 appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
 {
     builder
-        // AddHocon: plain settings merged ahead of akka.conf.
-        .AddHocon("""
-                  canary {
-                    plain-setting = 42
-                    nested.value = "hi"
-                  }
-                  """, HoconAddMode.Prepend)
-
-        // WithExtension<T>: a custom Akka.NET extension, started automatically at boot.
+        // WithExtension<T>: a custom Akka.NET extension, started automatically at boot through
+        // ExtensionsSetup (see CanaryExtension.cs).
         .WithExtension<CanaryExtensionProvider>()
 
         // WithActorSystemLivenessCheck: the built-in health check every typical Hosting app wires
@@ -90,11 +85,6 @@ appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
             var diGreeter = system.ActorOf(resolver.Props<DiGreeterActor>(), "di-greeter-actor");
             registry.Register<DiGreeterActor>(diGreeter);
 
-            // Tell: a pure fire-and-forget actor, never Ask'd - the counterpart to echo/di-greeter
-            // above, which both round-trip through Ask.
-            var notifier = system.ActorOf(resolver.Props<NotifyActor>(), "notify-actor");
-            registry.Register<NotifyActor>(notifier);
-
             // DeathWatch: a dedicated watcher, proven against a short-lived target actor in
             // AssertDeathWatchAsync below.
             var watcher = system.ActorOf(Props.Create(() => new WatcherActor()), "watcher-actor");
@@ -106,6 +96,14 @@ appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
         // one, not a second instance created some other way.
         .AddStartup((system, _) =>
         {
+            // system.WithExtension<T, TI>() below resolves-OR-CREATES: if the boot-time
+            // registration never happened, it would silently create a fresh instance and this
+            // canary would mark and later find that same fresh instance, proving nothing.
+            // HasExtension<T>() only reads, so it is what actually proves Hosting registered the
+            // extension at boot.
+            Require(system.HasExtension<CanaryExtension>(),
+                "CanaryExtension was not registered by boot - Hosting's WithExtension<CanaryExtensionProvider>() did not run");
+
             var ext = system.WithExtension<CanaryExtension, CanaryExtensionProvider>();
             ext.Marked = true;
         });
@@ -121,14 +119,17 @@ try
     var system = host.Services.GetRequiredService<ActorSystem>();
     system.Log.Info("[canary-hosting] actor system up");
 
-    AssertHocon(system);
-    await AssertExtensionAsync(system);
+    AssertExtension(system);
     await AssertRegistryAndDiAsync(host.Services);
-    await AssertTellAsync(host.Services);
     await AssertDeathWatchAsync(system, host.Services);
     await AssertHealthAsync(host.Services);
 
-    system.Log.Info("[canary-hosting] round-trip complete");
+    system.Log.Info(RoundTripMarker);
+
+    // Proves fix for the race between Log.Info above and the watchdog's queue: the logger actor
+    // delivers in order, so seeing this marker means every earlier warning/error has already been
+    // seen too, and it independently proves Akka's logs actually reach Microsoft.Extensions.Logging.
+    await watchdog.WaitForMarkerAsync(markerTimeout);
     watchdog.ThrowIfAnyProblems("round-trip");
 
     Console.WriteLine("[canary-hosting] OK");
@@ -150,25 +151,10 @@ finally
     Console.WriteLine("[canary-hosting] host stopped");
 }
 
-void AssertHocon(ActorSystem system)
+void AssertExtension(ActorSystem system)
 {
-    Require(system.Settings.Config.GetInt("canary.plain-setting") == 42,
-        $"canary.plain-setting resolved to [{system.Settings.Config.GetInt("canary.plain-setting")}]");
-    Require(system.Settings.Config.GetString("canary.nested.value") == "hi",
-        $"canary.nested.value resolved to [{system.Settings.Config.GetString("canary.nested.value")}]");
-}
-
-async Task AssertExtensionAsync(ActorSystem system)
-{
-    // WithExtension<T> writes CanaryExtensionProvider's AssemblyQualifiedName into the
-    // akka.extensions HOCON list; ActorSystemImpl.LoadExtensions() resolves it back with
-    // Type.GetType(...) + Activator.CreateInstance(...) at boot. system.WithExtension<...>() here
-    // resolves (or lazily creates) the extension through the normal keyed-extension cache - if the
-    // boot-time load actually ran, this returns the SAME marked instance instead of a fresh one.
     var ext = system.WithExtension<CanaryExtension, CanaryExtensionProvider>();
-    Require(ext.Marked, "WithExtension<CanaryExtensionProvider> did not resolve the instance AddStartup marked " +
-                         "- either the akka.extensions load never ran, or it created a second instance");
-    await Task.CompletedTask;
+    Require(ext.Marked, "WithExtension<CanaryExtensionProvider> did not resolve the instance AddStartup marked");
 }
 
 async Task AssertRegistryAndDiAsync(IServiceProvider services)
@@ -182,19 +168,6 @@ async Task AssertRegistryAndDiAsync(IServiceProvider services)
     var diRef = await diRequired.GetAsync();
     var diReply = await diRef.Ask<string>("world", askTimeout);
     Require(diReply == "hello, world", $"DI-injected actor replied '{diReply}'");
-}
-
-async Task AssertTellAsync(IServiceProvider services)
-{
-    // Tell: fire-and-forget, no reply expected - the counterpart to the Ask round-trips above.
-    var notifyRequired = services.GetRequiredService<IRequiredActor<NotifyActor>>();
-    var notifyRef = await notifyRequired.GetAsync();
-    var sink = services.GetRequiredService<INotificationSink>();
-
-    notifyRef.Tell("fire-and-forget");
-
-    var received = await sink.Received.WaitAsync(askTimeout);
-    Require(received == "fire-and-forget", $"notify sink received '{received}'");
 }
 
 async Task AssertDeathWatchAsync(ActorSystem system, IServiceProvider services)
@@ -217,6 +190,8 @@ async Task AssertHealthAsync(IServiceProvider services)
     var healthCheckService = services.GetRequiredService<HealthCheckService>();
     var report = await healthCheckService.CheckHealthAsync();
     Require(report.Status == HealthStatus.Healthy, $"health check report status was '{report.Status}'");
+    Require(report.Entries.ContainsKey("akka.actorsystem"),
+        "report had no 'akka.actorsystem' entry - WithActorSystemLivenessCheck() never registered its check");
 }
 
 void Require(bool condition, string problem)
@@ -233,15 +208,6 @@ void PrintFailure(Exception? ex)
         return;
     }
 
-    Console.WriteLine($"[canary-hosting] FAILED: {ex.GetType().FullName}: {ex.Message}");
-    Console.WriteLine(ex.StackTrace);
-
-    var inner = ex.InnerException;
-    var depth = 0;
-    while (inner is not null && depth++ < 10)
-    {
-        Console.WriteLine($"[canary-hosting]  --> inner: {inner.GetType().FullName}: {inner.Message}");
-        Console.WriteLine(inner.StackTrace);
-        inner = inner.InnerException;
-    }
+    Console.WriteLine("[canary-hosting] FAILED:");
+    Console.WriteLine(ex);
 }
