@@ -88,6 +88,10 @@ namespace Akka.Serialization
             ["Akka.Remote"] = () => Load("Akka.Remote.Serialization.RemoteSerializers, Akka.Remote"),
             ["Akka.Streams"] = () => Load("Akka.Streams.Serialization.StreamsSerializers, Akka.Streams"),
             ["Akka.Cluster"] = () => Load("Akka.Cluster.Serialization.ClusterSerializers, Akka.Cluster"),
+            ["Akka.Cluster.Tools"] = () => Load("Akka.Cluster.Tools.ToolsSerializers, Akka.Cluster.Tools"),
+            ["Akka.Cluster.Sharding"] = () => Load("Akka.Cluster.Sharding.Serialization.ShardingSerializers, Akka.Cluster.Sharding"),
+            ["Akka.DistributedData"] = () => Load("Akka.DistributedData.Serialization.DistributedDataSerializers, Akka.DistributedData"),
+            ["Akka.Cluster.Metrics"] = () => Load("Akka.Cluster.Metrics.Serialization.MetricsSerializers, Akka.Cluster.Metrics"),
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
