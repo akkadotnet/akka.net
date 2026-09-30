@@ -232,9 +232,15 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Make_sure_async_works()
         {
-            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), () => {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(_ => { LogMessage("whatever"); });
+            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), () =>
+            {
+#pragma warning disable CS4014 // intentionally fire-and-forget to verify filter after action returns
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(10)).ConfigureAwait(false);
+                    LogMessage("whatever");
+                });
+#pragma warning restore CS4014
                 return Task.CompletedTask;
             });
         }
