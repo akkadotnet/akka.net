@@ -38,12 +38,15 @@ namespace Akka.Cluster.Metrics.Serialization
         #endregion
         
         /// <inheritdoc />
-        public ClusterMetricsMessageSerializer(ExtendedActorSystem system) 
+        public ClusterMetricsMessageSerializer(ExtendedActorSystem system)
             : base(system)
         {
             _serialization = new Lazy<Akka.Serialization.Serialization>(() => new Akka.Serialization.Serialization(system));
         }
-        
+
+        /// <inheritdoc />
+        public override int Identifier => 10;
+
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {

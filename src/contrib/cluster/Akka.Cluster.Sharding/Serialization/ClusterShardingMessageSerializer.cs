@@ -148,6 +148,9 @@ namespace Akka.Cluster.Sharding.Serialization
             };
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 13;
+
         private ShardingEnvelope ShardingEnvelopeFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.ShardingEnvelope.Parser.ParseFrom(bytes);

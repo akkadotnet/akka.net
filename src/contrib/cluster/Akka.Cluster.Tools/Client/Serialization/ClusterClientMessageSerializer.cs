@@ -48,6 +48,9 @@ namespace Akka.Cluster.Tools.Client.Serialization
             _payloadSupport = new WrappedPayloadSupport(system);
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 15;
+
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>

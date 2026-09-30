@@ -41,6 +41,9 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             };
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 14;
+
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>

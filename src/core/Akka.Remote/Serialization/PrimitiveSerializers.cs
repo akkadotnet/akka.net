@@ -46,6 +46,9 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
+        public override int Identifier => 17;
+
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
             switch (obj)

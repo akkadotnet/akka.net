@@ -30,6 +30,9 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
+        public override int Identifier => 2;
+
+        /// <inheritdoc />
         public override bool IncludeManifest => true;
 
         /// <inheritdoc />

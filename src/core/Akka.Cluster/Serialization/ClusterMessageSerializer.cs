@@ -69,8 +69,11 @@ namespace Akka.Cluster.Serialization
         public ClusterMessageSerializer(ExtendedActorSystem system) : base(system)
         {
 
-           
+
         }
+
+        /// <inheritdoc />
+        public override int Identifier => 5;
 
         public override byte[] ToBinary(object obj)
         {

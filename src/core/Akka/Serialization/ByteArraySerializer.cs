@@ -26,6 +26,9 @@ namespace Akka.Serialization
         {
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 4;
+
         /// <summary>
         /// Byte arrays preserve their legacy empty manifest for wire compatibility.
         /// </summary>

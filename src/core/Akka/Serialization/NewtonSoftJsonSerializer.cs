@@ -238,7 +238,8 @@ namespace Akka.Serialization
                 _surrogateExcludedSerializer.Converters.Remove(surrogateConverter);
         }
 
-
+        /// <inheritdoc />
+        public override int Identifier => 1;
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
         {

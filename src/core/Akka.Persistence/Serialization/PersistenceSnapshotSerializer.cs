@@ -20,6 +20,9 @@ namespace Akka.Persistence.Serialization
             IncludeManifest = true;
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 8;
+
         public override bool IncludeManifest { get; }
 
         public override byte[] ToBinary(object obj)

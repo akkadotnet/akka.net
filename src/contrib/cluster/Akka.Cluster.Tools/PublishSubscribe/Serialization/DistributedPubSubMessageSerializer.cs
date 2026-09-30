@@ -55,6 +55,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             };
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 9;
+
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>

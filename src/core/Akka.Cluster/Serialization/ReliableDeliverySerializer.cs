@@ -46,6 +46,9 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         _payloadSupport = new WrappedPayloadSupport(system);
     }
 
+    /// <inheritdoc />
+    public override int Identifier => 36;
+
     public override byte[] ToBinary(object obj)
     {
         switch (obj)

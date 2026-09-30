@@ -38,6 +38,9 @@ namespace Akka.Streams.Serialization
             _system = system;
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 30;
+
         public override string Manifest(object o)
         {
             return o switch
