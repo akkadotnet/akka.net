@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
@@ -74,23 +75,45 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// The three built-in providers, keyed by their bare type name. <see cref="GetProvider"/> normalizes
+        /// <c>akka.actor.provider</c> through <see cref="TypeExtensions.TrySplitTypeName"/> before probing this
+        /// table, so every spelling <see cref="Type.GetType(string)"/> itself accepts - no assembly, no space
+        /// after the comma, any assembly identity (version/culture/token) - maps to the same
+        /// <see cref="ProviderSelection"/> instead of being misclassified as <see cref="Custom"/>. Local is
+        /// also accepted with no assembly at all, since it ships bare in <c>akka.conf</c>; Remote and Cluster
+        /// need their assembly to disambiguate a bare name that could belong to any assembly.
+        /// </summary>
+        private static readonly Dictionary<string, (ProviderSelection Selection, string Assembly)> BuiltInProviders =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.Actor.LocalActorRefProvider"] = (Local.Instance, "Akka"),
+                ["Akka.Remote.RemoteActorRefProvider"] = (Remote.Instance, "Akka.Remote"),
+                ["Akka.Cluster.ClusterActorRefProvider"] = (Cluster.Instance, "Akka.Cluster"),
+            };
+
         internal static ProviderSelection GetProvider(string providerClass)
         {
             switch (providerClass)
             {
                 case "local":
-                case "Akka.Actor.LocalActorRefProvider": // additional case for the bare type name used by akka.conf
-                case LocalActorRefProvider: // additional case for older configurations
                     return Local.Instance;
                 case "remote":
-                case RemoteActorRefProvider: // additional case for older configurations
                     return Remote.Instance;
                 case "cluster":
-                case ClusterActorRefProvider: // additional case for older configurations
                     return Cluster.Instance;
-                default:
-                    return new Custom(providerClass);
             }
+
+            if (TypeExtensions.TrySplitTypeName(providerClass, out var name, out var assembly) &&
+                BuiltInProviders.TryGetValue(name, out var row) &&
+                (assembly is null
+                    ? row.Selection is Local
+                    : string.Equals(assembly, row.Assembly, StringComparison.OrdinalIgnoreCase)))
+            {
+                return row.Selection;
+            }
+
+            return new Custom(providerClass);
         }
     }
 

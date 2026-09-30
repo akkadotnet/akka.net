@@ -40,16 +40,6 @@
 
 # --- Reached by the canary's UNROOTED publish, i.e. on a real local ActorSystem boot -------------
 
-# Extension loading: `akka.extensions` is a list of assembly-qualified type names resolved at
-# startup. Akka's own extensions resolve from a first-party table and ExtensionsSetup needs no names,
-# but any other entry still falls through to Type.GetType; this stays until that path is guarded.
-IL2057|src/core/Akka/Actor/Internal/ActorSystemImpl.cs|Akka.Actor.Internal.ActorSystemImpl.LoadExtensions()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
-
-# Custom IActorRefProvider: the built-in three (local/remote/cluster) resolve from a table, but a
-# user-supplied `akka.actor.provider` still goes through Type.GetType.
-IL2072|src/core/Akka/Actor/Internal/ActorSystemImpl.cs|Akka.Actor.Internal.ActorSystemImpl.ConfigureProvider()|'typeName'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'Akka.Actor.Internal.ActorSystemImpl.CreateProvider(String,String,String,Settings,EventStream)'.Thereturnvalueofmethod'Akka.Actor.Settings.ProviderClass.get'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
-IL2057|src/core/Akka/Actor/Settings.cs|Akka.Actor.Settings.Settings(ActorSystem,Config,ActorSystemSetup)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
-
 # The generic name->Type cache behind every remaining HOCON type lookup in core. This one only goes
 # away when nothing calls it on a startup path.
 IL2057|src/core/Akka/Util/Reflection/TypeCache.cs|Akka.Util.Reflection.TypeCache.GetTypeInternal(String)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String,Boolean)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
