@@ -31,7 +31,10 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
-        public override int Identifier => 3;
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(DaemonMsgCreateSerializer) ? 3 : base.Identifier;
 
         /// <inheritdoc />
         public override bool IncludeManifest => false;

@@ -38,14 +38,17 @@ namespace Akka.Cluster.Metrics.Serialization
         #endregion
         
         /// <inheritdoc />
-        public ClusterMetricsMessageSerializer(ExtendedActorSystem system)
+        public ClusterMetricsMessageSerializer(ExtendedActorSystem system) 
             : base(system)
         {
             _serialization = new Lazy<Akka.Serialization.Serialization>(() => new Akka.Serialization.Serialization(system));
         }
-
+        
         /// <inheritdoc />
-        public override int Identifier => 10;
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterMetricsMessageSerializer) ? 10 : base.Identifier;
 
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)

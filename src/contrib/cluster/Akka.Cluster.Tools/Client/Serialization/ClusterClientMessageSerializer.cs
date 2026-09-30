@@ -49,7 +49,10 @@ namespace Akka.Cluster.Tools.Client.Serialization
         }
 
         /// <inheritdoc />
-        public override int Identifier => 15;
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterClientMessageSerializer) ? 15 : base.Identifier;
 
         /// <summary>
         /// Serializes the given object into a byte array
