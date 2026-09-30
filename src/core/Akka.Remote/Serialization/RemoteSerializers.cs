@@ -24,11 +24,11 @@ namespace Akka.Remote.Serialization
     internal sealed class RemoteSerializers : ModuleSerializers
     {
         // the constructor reflection picks for Remote.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
         {
-            new SerializerRegistration("akka-containers", typeof(MessageContainerSerializer), (system, _) => new MessageContainerSerializer(system),
+            new BuiltInSerializer("akka-containers", typeof(MessageContainerSerializer), (system, _) => new MessageContainerSerializer(system),
                 new[] { typeof(ActorSelectionMessage) }),
-            new SerializerRegistration("akka-misc", typeof(MiscMessageSerializer), (system, _) => new MiscMessageSerializer(system),
+            new BuiltInSerializer("akka-misc", typeof(MiscMessageSerializer), (system, _) => new MiscMessageSerializer(system),
                 new[]
                 {
                     typeof(Identify),
@@ -53,15 +53,15 @@ namespace Akka.Remote.Serialization
                     typeof(RemoteWatcher.HeartbeatRsp),
                     typeof(RemoteRouterConfig),
                 }),
-            new SerializerRegistration("primitive", typeof(PrimitiveSerializers), (system, config) => new PrimitiveSerializers(system, config),
+            new BuiltInSerializer("primitive", typeof(PrimitiveSerializers), (system, config) => new PrimitiveSerializers(system, config),
                 new[] { typeof(string), typeof(int), typeof(long) }),
-            new SerializerRegistration("proto", typeof(ProtobufSerializer), (system, _) => new ProtobufSerializer(system),
+            new BuiltInSerializer("proto", typeof(ProtobufSerializer), (system, _) => new ProtobufSerializer(system),
                 new[] { typeof(Google.Protobuf.IMessage) }),
-            new SerializerRegistration("daemon-create", typeof(DaemonMsgCreateSerializer), (system, _) => new DaemonMsgCreateSerializer(system),
+            new BuiltInSerializer("daemon-create", typeof(DaemonMsgCreateSerializer), (system, _) => new DaemonMsgCreateSerializer(system),
                 new[] { typeof(DaemonMsgCreate) }),
-            new SerializerRegistration("akka-system-msg", typeof(SystemMessageSerializer), (system, _) => new SystemMessageSerializer(system),
+            new BuiltInSerializer("akka-system-msg", typeof(SystemMessageSerializer), (system, _) => new SystemMessageSerializer(system),
                 new[] { typeof(SystemMessage) }),
-            new SerializerRegistration("artery-control", typeof(ArteryControlMessageSerializer), (system, _) => new ArteryControlMessageSerializer(system),
+            new BuiltInSerializer("artery-control", typeof(ArteryControlMessageSerializer), (system, _) => new ArteryControlMessageSerializer(system),
                 new[] { typeof(IArteryControlMessage) }),
         };
     }

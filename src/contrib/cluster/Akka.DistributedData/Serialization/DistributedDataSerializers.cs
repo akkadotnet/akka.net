@@ -18,11 +18,11 @@ namespace Akka.DistributedData.Serialization
     internal sealed class DistributedDataSerializers : ModuleSerializers
     {
         // the constructor reflection picks for reference.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
         {
-            new SerializerRegistration("akka-replicated-data", typeof(ReplicatedDataSerializer), (system, _) => new ReplicatedDataSerializer(system),
+            new BuiltInSerializer("akka-replicated-data", typeof(ReplicatedDataSerializer), (system, _) => new ReplicatedDataSerializer(system),
                 new[] { typeof(IReplicatedDataSerialization) }),
-            new SerializerRegistration("akka-data-replication", typeof(ReplicatorMessageSerializer), (system, _) => new ReplicatorMessageSerializer(system),
+            new BuiltInSerializer("akka-data-replication", typeof(ReplicatorMessageSerializer), (system, _) => new ReplicatorMessageSerializer(system),
                 new[] { typeof(IReplicatorMessage) }),
         };
     }

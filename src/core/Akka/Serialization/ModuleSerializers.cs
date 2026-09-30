@@ -24,7 +24,7 @@ namespace Akka.Serialization
     /// the module's shipped config; a serializer with one constructor always gets that one. Return a serializer;
     /// null skips the alias (a safety net, not a feature).
     /// </summary>
-    internal sealed record SerializerRegistration(
+    internal sealed record BuiltInSerializer(
         string Alias, Type Type, Func<ExtendedActorSystem, Config, Serializer> Create, IReadOnlyList<Type> Bindings);
 
     /// <summary>
@@ -33,7 +33,7 @@ namespace Akka.Serialization
     /// </summary>
     internal abstract class ModuleSerializers
     {
-        public abstract IReadOnlyList<SerializerRegistration> Serializers { get; }
+        public abstract IReadOnlyList<BuiltInSerializer> Serializers { get; }
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ namespace Akka.Serialization
     /// </summary>
     internal sealed class LoadedModule
     {
-        private readonly Dictionary<string, (SerializerRegistration Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (BuiltInSerializer Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
         internal LoadedModule(ModuleSerializers module)
@@ -54,7 +54,7 @@ namespace Akka.Serialization
             }
         }
 
-        internal SerializerRegistration? FindSerializer(string name, string? assembly)
+        internal BuiltInSerializer? FindSerializer(string name, string? assembly)
             => _serializers.TryGetValue(name, out var s) && Accepts(s.Assembly, s.IsAkka, assembly) ? s.Entry : null;
 
         internal Type? FindBoundType(string name, string? assembly)

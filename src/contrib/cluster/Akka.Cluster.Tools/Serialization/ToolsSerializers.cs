@@ -26,13 +26,13 @@ namespace Akka.Cluster.Tools
     internal sealed class ToolsSerializers : ModuleSerializers
     {
         // the constructor reflection picks for each feature's reference.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
         {
-            new SerializerRegistration("akka-cluster-client", typeof(ClusterClientMessageSerializer), (system, _) => new ClusterClientMessageSerializer(system),
+            new BuiltInSerializer("akka-cluster-client", typeof(ClusterClientMessageSerializer), (system, _) => new ClusterClientMessageSerializer(system),
                 new[] { typeof(IClusterClientMessage), typeof(IClusterClientProtocolMessage) }),
-            new SerializerRegistration("akka-pubsub", typeof(DistributedPubSubMessageSerializer), (system, _) => new DistributedPubSubMessageSerializer(system),
+            new BuiltInSerializer("akka-pubsub", typeof(DistributedPubSubMessageSerializer), (system, _) => new DistributedPubSubMessageSerializer(system),
                 new[] { typeof(IDistributedPubSubMessage), typeof(SendToOneSubscriber) }),
-            new SerializerRegistration("akka-singleton", typeof(ClusterSingletonMessageSerializer), (system, _) => new ClusterSingletonMessageSerializer(system),
+            new BuiltInSerializer("akka-singleton", typeof(ClusterSingletonMessageSerializer), (system, _) => new ClusterSingletonMessageSerializer(system),
                 new[] { typeof(IClusterSingletonMessage) }),
         };
     }

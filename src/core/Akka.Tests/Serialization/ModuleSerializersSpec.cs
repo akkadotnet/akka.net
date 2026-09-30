@@ -67,9 +67,9 @@ namespace Akka.Tests.Serialization
 
         private sealed class FakeModule : ModuleSerializers
         {
-            public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+            public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
             {
-                new SerializerRegistration("fake-module", typeof(FakeSerializer),
+                new BuiltInSerializer("fake-module", typeof(FakeSerializer),
                     (system, config) => config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config),
                     new[] { typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill) })
             };
@@ -80,7 +80,7 @@ namespace Akka.Tests.Serialization
         {
             public SkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<SerializerRegistration> Serializers => throw new NotSupportedException();
+            public override IReadOnlyList<BuiltInSerializer> Serializers => throw new NotSupportedException();
         }
 
         /// <summary>The same skew hit in a static initializer, which arrives wrapped in TypeInitializationException.</summary>
@@ -88,7 +88,7 @@ namespace Akka.Tests.Serialization
         {
             static StaticSkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<SerializerRegistration> Serializers => throw new NotSupportedException();
+            public override IReadOnlyList<BuiltInSerializer> Serializers => throw new NotSupportedException();
         }
 
         private const string ModuleMessageName = "Akka.Tests.Serialization.ModuleSerializersSpec+ModuleMessage";

@@ -18,9 +18,9 @@ namespace Akka.Cluster.Metrics.Serialization
     internal sealed class MetricsSerializers : ModuleSerializers
     {
         // the constructor reflection picks for reference.conf; ClusterMetricsMessageSerializer has one, so it always gets that one
-        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
         {
-            new SerializerRegistration("akka-cluster-metrics", typeof(ClusterMetricsMessageSerializer), (system, _) => new ClusterMetricsMessageSerializer(system),
+            new BuiltInSerializer("akka-cluster-metrics", typeof(ClusterMetricsMessageSerializer), (system, _) => new ClusterMetricsMessageSerializer(system),
                 new[]
                 {
                     typeof(MetricsGossipEnvelope),

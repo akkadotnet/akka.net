@@ -18,9 +18,9 @@ namespace Akka.Cluster.Sharding.Serialization
     internal sealed class ShardingSerializers : ModuleSerializers
     {
         // the constructor reflection picks for reference.conf; ClusterShardingMessageSerializer has one, so it always gets that one
-        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
+        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
         {
-            new SerializerRegistration("akka-sharding", typeof(ClusterShardingMessageSerializer), (system, _) => new ClusterShardingMessageSerializer(system),
+            new BuiltInSerializer("akka-sharding", typeof(ClusterShardingMessageSerializer), (system, _) => new ClusterShardingMessageSerializer(system),
                 new[] { typeof(IClusterShardingSerializable) }),
         };
     }
