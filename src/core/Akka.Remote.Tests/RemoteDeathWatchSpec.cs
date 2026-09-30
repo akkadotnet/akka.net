@@ -9,6 +9,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Util.Reflection;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Akka.Event;
@@ -161,6 +162,8 @@ namespace Akka.Remote.Tests
             const string switchName = "Akka.DynamicTypeLoading";
             var hadSwitch = AppContext.TryGetSwitch(switchName, out var previous);
             AppContext.SetSwitch(switchName, false);
+            // an earlier test may have cached these types with the switch on, which would hide a missing table
+            TypeCache.Clear();
             try
             {
                 var watched = _other.ActorOf(Props.Create<BlackHoleActor>(), "watched-switch-off");
