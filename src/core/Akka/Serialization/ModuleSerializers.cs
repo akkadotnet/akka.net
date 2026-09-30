@@ -18,21 +18,22 @@ using Akka.Configuration;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory calls the constructor
-    /// reflection picks for the module's shipped config; a serializer with one constructor always gets that one.
-    /// Return a serializer; null skips the alias (a safety net, not a feature).
+    /// INTERNAL API. A serializer row a module's reference.conf names: its alias, its type and factory, and the
+    /// types its <c>serialization-bindings</c> rows bind to that alias (empty when the alias has none, e.g. a
+    /// V2 serializer that is registered for reads only). The factory calls the constructor reflection picks for
+    /// the module's shipped config; a serializer with one constructor always gets that one. Return a serializer;
+    /// null skips the alias (a safety net, not a feature).
     /// </summary>
-    internal sealed record ModuleSerializer(Type Type, Func<ExtendedActorSystem, Config, Serializer> Create);
+    internal sealed record SerializerRegistration(
+        string Alias, Type Type, Func<ExtendedActorSystem, Config, Serializer> Create, IReadOnlyList<Type> Bindings);
 
     /// <summary>
-    /// INTERNAL API. The serializer and bound types a first-party module's reference.conf names, so
-    /// <see cref="Serialization"/> can resolve those rows without <see cref="Type.GetType(string)"/>.
+    /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
+    /// can resolve those rows without <see cref="Type.GetType(string)"/>.
     /// </summary>
     internal abstract class ModuleSerializers
     {
-        public abstract IReadOnlyList<ModuleSerializer> Serializers { get; }
-
-        public abstract IReadOnlyList<Type> BoundTypes { get; }
+        public abstract IReadOnlyList<SerializerRegistration> Serializers { get; }
     }
 
     /// <summary>
@@ -40,18 +41,20 @@ namespace Akka.Serialization
     /// </summary>
     internal sealed class LoadedModule
     {
-        private readonly Dictionary<string, (ModuleSerializer Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (SerializerRegistration Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
         internal LoadedModule(ModuleSerializers module)
         {
             foreach (var entry in module.Serializers)
+            {
                 _serializers[KeyOf(entry.Type)] = (entry, entry.Type.Assembly.GetName().Name, IsAkka(entry.Type));
-            foreach (var type in module.BoundTypes)
-                _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
+                foreach (var type in entry.Bindings)
+                    _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
+            }
         }
 
-        internal ModuleSerializer? FindSerializer(string name, string? assembly)
+        internal SerializerRegistration? FindSerializer(string name, string? assembly)
             => _serializers.TryGetValue(name, out var s) && Accepts(s.Assembly, s.IsAkka, assembly) ? s.Entry : null;
 
         internal Type? FindBoundType(string name, string? assembly)

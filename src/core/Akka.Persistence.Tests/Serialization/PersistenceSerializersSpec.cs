@@ -68,7 +68,7 @@ namespace Akka.Persistence.Tests.Serialization
         public void Should_match_reflection_When_resolving_every_persistence_conf_row()
         {
             var table = new PersistenceSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
 
             // core's module map names Akka.Persistence, and PersistenceSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Persistence").Should().NotBeNull();
@@ -76,12 +76,10 @@ namespace Akka.Persistence.Tests.Serialization
             var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
             var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
             var settings = Sys.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            var aliasByType = ModuleSerializerSpecs.SerializerRows(PersistenceRows)
-                .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
 
-            foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
+            foreach (var (type, create, alias) in table.Serializers.Select(s => (s.Type, s.Create, s.Alias)))
             {
-                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(aliasByType[type]));
+                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(alias));
                 built.Should().BeOfType(reflected.GetSerializerById(built.Identifier).GetType(), type.Name);
                 fromTable.GetSerializerById(built.Identifier).Should().BeOfType(type, type.Name);
             }
@@ -94,7 +92,7 @@ namespace Akka.Persistence.Tests.Serialization
         public void Should_have_a_persistence_conf_row_When_the_table_lists_a_type()
         {
             var table = new PersistenceSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
         }
 
         [Fact(DisplayName = "Serialization should resolve persistence.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]

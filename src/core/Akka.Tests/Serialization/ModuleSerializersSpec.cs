@@ -67,14 +67,12 @@ namespace Akka.Tests.Serialization
 
         private sealed class FakeModule : ModuleSerializers
         {
-            public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+            public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
             {
-                new ModuleSerializer(typeof(FakeSerializer),
-                    (system, config) => config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config))
+                new SerializerRegistration("fake-module", typeof(FakeSerializer),
+                    (system, config) => config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config),
+                    new[] { typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill) })
             };
-
-            public override IReadOnlyList<Type> BoundTypes { get; } =
-                new[] { typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill) };
         }
 
         /// <summary>Stands in for a module built against a different Akka: its table's constructor hits a missing member.</summary>
@@ -82,9 +80,7 @@ namespace Akka.Tests.Serialization
         {
             public SkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
-
-            public override IReadOnlyList<Type> BoundTypes => throw new NotSupportedException();
+            public override IReadOnlyList<SerializerRegistration> Serializers => throw new NotSupportedException();
         }
 
         /// <summary>The same skew hit in a static initializer, which arrives wrapped in TypeInitializationException.</summary>
@@ -92,9 +88,7 @@ namespace Akka.Tests.Serialization
         {
             static StaticSkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
-
-            public override IReadOnlyList<Type> BoundTypes => throw new NotSupportedException();
+            public override IReadOnlyList<SerializerRegistration> Serializers => throw new NotSupportedException();
         }
 
         private const string ModuleMessageName = "Akka.Tests.Serialization.ModuleSerializersSpec+ModuleMessage";

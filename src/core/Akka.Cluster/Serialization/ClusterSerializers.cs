@@ -20,17 +20,12 @@ namespace Akka.Cluster.Serialization
     internal sealed class ClusterSerializers : ModuleSerializers
     {
         // the constructor reflection picks for Cluster.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
         {
-            new ModuleSerializer(typeof(ClusterMessageSerializer), (system, _) => new ClusterMessageSerializer(system)),
-            new ModuleSerializer(typeof(ReliableDeliverySerializer), (system, _) => new ReliableDeliverySerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IClusterMessage),
-            typeof(ClusterRouterPool),
-            typeof(IDeliverySerializable),
+            new SerializerRegistration("akka-cluster", typeof(ClusterMessageSerializer), (system, _) => new ClusterMessageSerializer(system),
+                new[] { typeof(IClusterMessage), typeof(ClusterRouterPool) }),
+            new SerializerRegistration("reliable-delivery", typeof(ReliableDeliverySerializer), (system, _) => new ReliableDeliverySerializer(system),
+                new[] { typeof(IDeliverySerializable) }),
         };
     }
 }

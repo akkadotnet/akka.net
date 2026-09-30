@@ -72,7 +72,7 @@ namespace Akka.Streams.Tests.Serialization
             await ModuleSerializerSpecs.WithSystem("streams-parity", Config.Empty, StreamsRows, system =>
             {
                 var table = new StreamsSerializers();
-                ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+                ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
 
                 // core's module map names Akka.Streams, and StreamsSerializers is what it loads for it
                 ModuleSerializerTable.Default.ForAssembly("Akka.Streams").Should().NotBeNull();
@@ -80,12 +80,10 @@ namespace Akka.Streams.Tests.Serialization
                 var reflected = Build(system, NoModules, dynamicTypeLoading: true);
                 var fromTable = Build(system, ModuleSerializerTable.Default, dynamicTypeLoading: true);
                 var settings = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
-                var aliasByType = ModuleSerializerSpecs.SerializerRows(StreamsRows)
-                    .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
 
-                foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
+                foreach (var (type, create, alias) in table.Serializers.Select(s => (s.Type, s.Create, s.Alias)))
                 {
-                    var built = create((ExtendedActorSystem)system, settings.GetConfig(aliasByType[type]));
+                    var built = create((ExtendedActorSystem)system, settings.GetConfig(alias));
                     built.Identifier.Should().Be(30);
                     built.Should().BeOfType(reflected.GetSerializerById(30).GetType(), type.Name);
                     fromTable.GetSerializerById(30).Should().BeOfType(type, type.Name);
@@ -100,7 +98,7 @@ namespace Akka.Streams.Tests.Serialization
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new StreamsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
         }
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]

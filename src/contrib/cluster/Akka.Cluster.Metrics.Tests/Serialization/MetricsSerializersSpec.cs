@@ -50,7 +50,7 @@ namespace Akka.Cluster.Metrics.Tests
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new MetricsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(MetricsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(MetricsRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
         }
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]

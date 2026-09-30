@@ -19,16 +19,10 @@ namespace Akka.Streams.Serialization
     internal sealed class StreamsSerializers : ModuleSerializers
     {
         // the constructor reflection picks for reference.conf; StreamRefSerializer has one, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
         {
-            new ModuleSerializer(typeof(StreamRefSerializer), (system, _) => new StreamRefSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(SinkRefImpl),
-            typeof(SourceRefImpl),
-            typeof(IStreamRefsProtocol),
+            new SerializerRegistration("akka-stream-ref", typeof(StreamRefSerializer), (system, _) => new StreamRefSerializer(system),
+                new[] { typeof(SinkRefImpl), typeof(SourceRefImpl), typeof(IStreamRefsProtocol) }),
         };
     }
 }

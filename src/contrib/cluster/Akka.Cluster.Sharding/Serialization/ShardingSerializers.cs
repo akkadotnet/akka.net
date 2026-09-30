@@ -18,14 +18,10 @@ namespace Akka.Cluster.Sharding.Serialization
     internal sealed class ShardingSerializers : ModuleSerializers
     {
         // the constructor reflection picks for reference.conf; ClusterShardingMessageSerializer has one, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
         {
-            new ModuleSerializer(typeof(ClusterShardingMessageSerializer), (system, _) => new ClusterShardingMessageSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IClusterShardingSerializable),
+            new SerializerRegistration("akka-sharding", typeof(ClusterShardingMessageSerializer), (system, _) => new ClusterShardingMessageSerializer(system),
+                new[] { typeof(IClusterShardingSerializable) }),
         };
     }
 }

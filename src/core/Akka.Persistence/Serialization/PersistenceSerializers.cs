@@ -18,16 +18,12 @@ namespace Akka.Persistence.Serialization
     internal sealed class PersistenceSerializers : ModuleSerializers
     {
         // the constructor reflection picks for persistence.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+        public override IReadOnlyList<SerializerRegistration> Serializers { get; } = new[]
         {
-            new ModuleSerializer(typeof(PersistenceMessageSerializer), (system, _) => new PersistenceMessageSerializer(system)),
-            new ModuleSerializer(typeof(PersistenceSnapshotSerializer), (system, _) => new PersistenceSnapshotSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IMessage),
-            typeof(Snapshot),
+            new SerializerRegistration("akka-persistence-message", typeof(PersistenceMessageSerializer), (system, _) => new PersistenceMessageSerializer(system),
+                new[] { typeof(IMessage) }),
+            new SerializerRegistration("akka-persistence-snapshot", typeof(PersistenceSnapshotSerializer), (system, _) => new PersistenceSnapshotSerializer(system),
+                new[] { typeof(Snapshot) }),
         };
     }
 }
