@@ -104,8 +104,8 @@ jobs:
   # ports or cluster formation in it. It publishes, runs one process, and compares two sorted lists
   # of strings. If it goes red, something really did change.
   - job: AotCanary
-    displayName: "AOT canary (Linux)"
-    timeoutInMinutes: 45
+    displayName: "AOT canaries (Linux)"
+    timeoutInMinutes: 60
     pool:
       vmImage: ubuntu-latest
     steps:
@@ -206,46 +206,7 @@ jobs:
           echo "Self-test passed: the checker rejects an unbaselined warning."
         displayName: 'Self-test the warning checker rejects a new warning'
 
-      # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
-      # re-running the job. always() because the interesting case is the one where a step above
-      # failed.
-      - task: PublishBuildArtifacts@1
-        displayName: 'Publish the AOT logs'
-        condition: always()
-        inputs:
-          pathtoPublish: '$(Agent.TempDirectory)'
-          contents: '*.log'
-          artifactName: 'aot_canary_logs-$(Build.BuildId)'
-
-  # Native AOT canary for Akka.Hosting, the counterpart to AotCanary above. Publishes
-  # src/aot/Akka.Hosting.AOT.App/ - a Host.CreateApplicationBuilder + AddAkka(...) app exercising a
-  # custom WithExtension<T>, WithActorSystemLivenessCheck, ConfigureLoggers' AddLoggerFactory,
-  # DI-constructed actors, and DeathWatch. See src/aot/Akka.Hosting.AOT.App/README.md.
-  #
-  # Only ONE publish here, unlike AotCanary: the three Akka.Streams warnings this job baselines
-  # (Hosting registers the stream-ref serializer unconditionally at startup) already show up on
-  # this real, unrooted boot, so a rooted publish would not currently add coverage. Add one if a
-  # future Hosting-only feature has a reflection path a normal boot never reaches.
-  #
-  # Blocking from day one, same reasoning as AotCanary.
-  - job: HostingAotCanary
-    displayName: "AOT canary - Hosting (Linux)"
-    timeoutInMinutes: 45
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-      - checkout: self
-        clean: false
-        submodules: recursive
-
-      - task: UseDotNet@2
-        displayName: 'Use .NET'
-        inputs:
-          packageType: 'sdk'
-          useGlobalJson: true
-
-      # A warm obj/ lets MSBuild skip native compilation entirely, which emits no IL warnings at all
-      # - see the identical comment on AotCanary above.
+      # --- Akka.Hosting canary (src/aot/Akka.Hosting.AOT.App): same job, runs after the core canary ---
       - bash: |
           rm -rf src/aot/Akka.Hosting.AOT.App/bin src/aot/Akka.Hosting.AOT.App/obj
         displayName: 'Clean the Hosting canary intermediate output'
@@ -298,16 +259,16 @@ jobs:
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare Hosting AOT warnings against the baseline'
 
-      # No self-test step here: it would only exercise CheckAotWarnings.cs's "measured nothing"
-      # branch a second time, and AotCanary's self-test above already covers the checker itself.
-
+      # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
+      # re-running the job. always() because the interesting case is the one where a step above
+      # failed.
       - task: PublishBuildArtifacts@1
-        displayName: 'Publish the Hosting AOT logs'
+        displayName: 'Publish the AOT logs'
         condition: always()
         inputs:
           pathtoPublish: '$(Agent.TempDirectory)'
           contents: '*.log'
-          artifactName: 'hosting_aot_canary_logs-$(Build.BuildId)'
+          artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:

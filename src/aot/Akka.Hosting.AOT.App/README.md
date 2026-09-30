@@ -28,5 +28,5 @@ with the AOT switch off.
 `aot-warnings.baseline.txt` in this directory tracks known `IL2xxx`/`IL3xxx` warnings under
 `src/contrib/hosting/`, `src/contrib/dependencyinjection/`, and `src/core/Akka.Streams/` (Hosting
 registers the stream-ref serializer at startup; see #8667). `src/core/Akka/` is out of scope - the
-plain-core canary's own baseline already covers it. Checked by the `HostingAotCanary` job in
+plain-core canary's own baseline already covers it. Checked by the Hosting steps of the `AotCanary` job in
 `build-system/pr-validation.yaml`, which also documents how to reproduce the check locally.
