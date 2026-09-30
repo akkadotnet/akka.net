@@ -39,8 +39,7 @@ namespace Akka.API.Tests
         [Fact(DisplayName = "Should_match_HOCON_serialization_identifiers_When_reading_every_builtin_serializer_Identifier")]
         public void Should_match_HOCON_serialization_identifiers_When_reading_every_builtin_serializer_Identifier()
         {
-            var config = ConfigurationFactory.ParseString("akka.actor.provider = cluster")
-                .WithFallback(ConfigurationFactory.FromResource<Remote.RemoteSettings>("Akka.Remote.Configuration.Remote.conf"))
+            var config = ConfigurationFactory.FromResource<Remote.RemoteSettings>("Akka.Remote.Configuration.Remote.conf")
                 .WithFallback(ConfigurationFactory.FromResource<Cluster.ClusterSettings>("Akka.Cluster.Configuration.Cluster.conf"))
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingleton.DefaultConfig())
@@ -51,9 +50,8 @@ namespace Akka.API.Tests
                 .WithFallback(PersistenceExtension.DefaultConfig())
                 .WithFallback(ActorMaterializer.DefaultConfig());
 
-            using var system = ActorSystem.Create(nameof(BuiltInSerializerIdentifierSpec), config);
-
-            var rows = system.Settings.Config.GetConfig("akka.actor.serialization-identifiers");
+            // config only: no ActorSystem needed to read the rows
+            var rows = config.WithFallback(ConfigurationFactory.Default()).GetConfig("akka.actor.serialization-identifiers");
             foreach (var row in rows.AsEnumerable())
             {
                 var type = Type.GetType(row.Key, throwOnError: true);
