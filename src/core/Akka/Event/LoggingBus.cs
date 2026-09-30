@@ -95,7 +95,8 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Starts the loggers defined in the system configuration.
+        /// Starts the loggers from a <see cref="LoggerSetup"/> plus those in <c>akka.loggers</c> (additive).
+        /// Each logger type starts once; the <see cref="LoggerSetup"/> entry wins, as with <c>ExtensionsSetup</c>.
         /// </summary>
         /// <param name="system">The system that the loggers need to start monitoring.</param>
         /// <exception cref="ConfigurationException">
@@ -107,14 +108,37 @@ namespace Akka.Event
         internal void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
-            var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
             var shouldRemoveStandardOutLogger = true;
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
             var taskInfos = new Dictionary<Task, string>();
-            foreach (var strLoggerType in loggerTypes)
+            // LoggerSetup first, so it wins when both name the same type
+            var startedTypes = new HashSet<Type>();
+
+            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
+            if (loggerSetupOpt.HasValue)
+            {
+                foreach (var props in loggerSetupOpt.Value.Loggers)
+                {
+                    var loggerType = props.Type;
+
+                    if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                    {
+                        shouldRemoveStandardOutLogger = false;
+                        continue;
+                    }
+
+                    if (!startedTypes.Add(loggerType))
+                        continue;
+
+                    var (task, name) = AddLogger(system, props, logName);
+                    taskInfos[task] = name;
+                }
+            }
+
+            foreach (var strLoggerType in system.Settings.Loggers)
             {
                 var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
                 if (loggerType == null)
@@ -134,7 +158,10 @@ namespace Akka.Event
                     continue;
                 }
 
-                var (task, name) = AddLogger(system, loggerType, logName);
+                if (!startedTypes.Add(loggerType))
+                    continue;
+
+                var (task, name) = AddLogger(system, Props.Create(loggerType), logName);
                 taskInfos[task] = name;
             }
 
@@ -252,14 +279,19 @@ namespace Akka.Event
             return Type.GetType(loggerTypeName);
         }
 
-        private (Task task, string name) AddLogger(
-            ActorSystemImpl system,
-            [DynamicallyAccessedMembers(Props.ActorTypeMembers)] Type loggerType,
-            string loggingBusName)
+        // every logger runs on the loggers dispatcher, whatever its Props said
+        private (Task task, string name) AddLogger(ActorSystemImpl system, Props props, string loggingBusName)
         {
+            props = props.WithDispatcher(system.Settings.LoggersDispatcher);
+            var loggerType = props.Type;
             var loggerName = CreateLoggerName(loggerType);
             var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
-            var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
+            var logger = system.SystemActorOf(props, loggerName);
+            return StartLogger(logger, fullLoggerName, loggingBusName);
+        }
+
+        private (Task task, string name) StartLogger(IActorRef logger, string fullLoggerName, string loggingBusName)
+        {
             var askTask = logger.Ask(new InitializeLogger(this), Timeout.InfiniteTimeSpan, _shutdownCts.Token);
 
             // Return the continuation task, not the ask task, so callers wait for
@@ -306,7 +338,9 @@ namespace Akka.Event
         private string CreateLoggerName(Type actorClass)
         {
             var id = Interlocked.Increment(ref _loggerId);
-            var name = "log" + id + "-" + SimpleName(actorClass);
+            // a generic type's name has a backtick (MyLogger`1), which isn't legal in an actor path
+            var simpleName = SimpleName(actorClass).Replace('`', '_');
+            var name = "log" + id + "-" + simpleName;
             return name;
         }
 
