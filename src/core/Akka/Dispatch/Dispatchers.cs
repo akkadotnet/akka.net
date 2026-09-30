@@ -187,10 +187,9 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class TaskSchedulerExecutor : ExecutorService
     {
-        /// <summary>
-        ///     The scheduler
-        /// </summary>
-        private TaskScheduler _scheduler;
+        readonly TaskFactory _factory;
+
+        readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         /// <summary>
         /// TBD
@@ -199,7 +198,7 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         public TaskSchedulerExecutor(string id, TaskScheduler scheduler) : base(id)
         {
-            _scheduler = scheduler;
+            _factory = new TaskFactory(_cts.Token, TaskCreationOptions.HideScheduler, TaskContinuationOptions.None, scheduler);
         }
 
         // cache the delegate used for execution to prevent allocations
@@ -211,8 +210,7 @@ namespace Akka.Dispatch
         /// <param name="run">TBD</param>
         public override void Execute(IRunnable run)
         {
-            var t = new Task(Executor, run);
-            t.Start(_scheduler);
+            _factory.StartNew(Executor, run);
         }
 
         /// <summary>
@@ -220,8 +218,8 @@ namespace Akka.Dispatch
         /// </summary>
         public override void Shutdown()
         {
-            // clear the scheduler
-            _scheduler = null;
+            // cancel queued tasks
+            _cts.Cancel();
         }
     }
 
