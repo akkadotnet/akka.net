@@ -13,6 +13,7 @@ using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Akka.Util;
 using Xunit;
 
@@ -146,6 +147,36 @@ namespace Akka.Remote.Tests
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(5));
             Sys.EventStream.Subscribe(probe.Ref, typeof(Warning));
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(rarp.RemoteSettings.RetryGateClosedFor.TotalSeconds * 2));
+        }
+
+        /// <summary>
+        /// The regression an earlier draft of this fix introduced: with the switch off, a Watch sent to the
+        /// remote system and the DeathWatchNotification sent back both go through
+        /// SystemMessageSerializer.FromBinary(byte[], string), so a missing manifest table broke DeathWatch
+        /// end to end, not just an isolated unit.
+        /// </summary>
+        [Fact(DisplayName = "Remote DeathWatch should deliver Terminated for a watched remote actor When dynamic type loading is off")]
+        public async Task Must_receive_Terminated_over_remoting_When_dynamic_type_loading_is_disabled()
+        {
+            const string switchName = "Akka.DynamicTypeLoading";
+            var hadSwitch = AppContext.TryGetSwitch(switchName, out var previous);
+            AppContext.SetSwitch(switchName, false);
+            try
+            {
+                var watched = _other.ActorOf(Props.Create<BlackHoleActor>(), "watched-switch-off");
+                var watchedRef = await Sys.ActorSelection("akka.tcp://other@localhost:2666/user/watched-switch-off")
+                    .ResolveOne(TimeSpan.FromSeconds(10));
+
+                var probe = CreateTestProbe();
+                probe.Watch(watchedRef);
+                _other.Stop(watched);
+
+                await probe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                AppContext.SetSwitch(switchName, !hadSwitch || previous);
+            }
         }
     }
 }

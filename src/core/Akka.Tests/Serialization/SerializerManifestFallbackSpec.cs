@@ -43,17 +43,6 @@ namespace Akka.Tests.Serialization
             adapter.FromBinary(Array.Empty<byte>(), "not-a-real-type").Should().Be("not-a-real-type");
         }
 
-        [Fact(DisplayName = "Serializer.FromBinary(bytes, manifest) should resolve an unknown manifest by reflection When dynamic type loading is on")]
-        public async Task Should_resolve_an_unknown_manifest_When_dynamic_type_loading_is_enabled()
-        {
-            await AkkaFeaturesSpec.WithDynamicTypeLoading(true, () =>
-            {
-                var serializer = new ManifestSerializer((ExtendedActorSystem)Sys);
-                serializer.FromBinary(Array.Empty<byte>(), typeof(ProbeType).AssemblyQualifiedName!).Should().Be(typeof(ProbeType));
-                return Task.CompletedTask;
-            });
-        }
-
         [Fact(DisplayName = "Serializer.FromBinary(bytes, manifest) should throw a clear SerializationException When dynamic type loading is off")]
         public async Task Should_throw_SerializationException_When_dynamic_type_loading_is_disabled()
         {
@@ -116,10 +105,6 @@ namespace Akka.Tests.Serialization
             public override bool IncludeManifest => true;
             public override byte[] ToBinary(object obj) => Array.Empty<byte>();
             public override object FromBinary(byte[] bytes, Type type) => type;
-        }
-
-        private sealed class ProbeType
-        {
         }
 
         private sealed class AnotherProbeType

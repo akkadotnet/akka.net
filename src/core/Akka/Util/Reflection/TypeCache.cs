@@ -22,7 +22,7 @@ namespace Akka.Util.Reflection
         /// <summary>
         /// Gets the <see cref="T:System.Type"/> with the specified name, performing a case-sensitive search and throw an exception if the type is not found.
         /// </summary>
-        ///
+        /// 
         /// <returns>
         /// The type with the specified name. If the type is not found, an exception is thrown.
         /// </returns>

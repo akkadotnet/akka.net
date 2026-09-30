@@ -74,14 +74,7 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
-        /// <remarks>
-        /// Delegates straight to <see cref="Inner"/>'s own <see cref="Serializer.FromBinary(byte[],string)"/>,
-        /// which virtual dispatch resolves to whatever <see cref="Inner"/> actually is - a
-        /// <see cref="SerializerWithStringManifest"/>, a serializer that overrides the string overload itself
-        /// (Remote's <c>SystemMessageSerializer</c>, Persistence's message/snapshot serializers), or the base
-        /// <see cref="Serializer"/>'s own reflection fallback. Duplicating that lookup here used to bypass a
-        /// plain <see cref="Serializer"/> subclass's own override.
-        /// </remarks>
+        /// <remarks>Virtual dispatch on <see cref="Inner"/> resolves this to whatever override it actually has.</remarks>
         public override object FromBinary(byte[] bytes, string manifest)
         {
             return Inner.FromBinary(bytes, manifest);

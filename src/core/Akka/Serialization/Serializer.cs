@@ -111,11 +111,8 @@ namespace Akka.Serialization
         /// Deserializes a byte array into an object using a string manifest.
         /// </summary>
         /// <remarks>
-        /// A serializer with a manifest should resolve its own manifests - Remote's <c>SystemMessageSerializer</c>
-        /// and Persistence's message/snapshot serializers do, with a small static table. This fallback is for
-        /// everyone else, in three steps: a <see cref="TypeCache"/> hit costs nothing and always wins; a miss
-        /// checks <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> - cold, never on the per-message path -
-        /// and only then falls to reflection.
+        /// A <see cref="TypeCache"/> hit wins first; a miss then checks
+        /// <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> (cold, never per-message) before reflecting.
         /// </remarks>
         public virtual object FromBinary(byte[] bytes, string manifest)
         {
