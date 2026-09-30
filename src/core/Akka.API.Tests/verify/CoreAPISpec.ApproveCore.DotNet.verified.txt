@@ -2,6 +2,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.API.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
@@ -2219,6 +2220,12 @@ namespace Akka.Actor.Setup
         public Akka.Actor.Setup.ActorSystemSetup WithSetup<T>(T setup)
             where T : Akka.Actor.Setup.Setup { }
         public static Akka.Actor.Setup.ActorSystemSetup Create(params Akka.Actor.Setup.Setup[] setup) { }
+    }
+    public sealed class ExtensionsSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Generic.IReadOnlyList<Akka.Actor.IExtensionId> ExtensionIds { get; }
+        public static Akka.Actor.Setup.ExtensionsSetup Create(params Akka.Actor.IExtensionId[] extensionIds) { }
+        public static Akka.Actor.Setup.ExtensionsSetup Create(System.Collections.Generic.IEnumerable<Akka.Actor.IExtensionId> extensionIds) { }
     }
     public abstract class Setup
     {

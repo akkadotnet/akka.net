@@ -324,11 +324,72 @@ namespace Akka.Actor.Internal
             sched?.Dispose();
         }
 
+#nullable enable
+        // Akka's own extensions that akka.extensions commonly names: bare type name -> the assembly it must name, and a
+        // factory passing its own literal so the trimmer keeps that type. Nothing is probed unless a row matches.
+        private static readonly Dictionary<string, (string Assembly, Func<IExtensionId?> Create)> FirstPartyExtensions =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.DistributedData.DistributedDataProvider"] = ("Akka.DistributedData",
+                    static () => CreateFirstPartyExtension("Akka.DistributedData.DistributedDataProvider, Akka.DistributedData")),
+                ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider"] = ("Akka.Cluster.Tools",
+                    static () => CreateFirstPartyExtension("Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider, Akka.Cluster.Tools")),
+                ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider"] = ("Akka.Cluster.Tools",
+                    static () => CreateFirstPartyExtension("Akka.Cluster.Tools.Client.ClusterClientReceptionistExtensionProvider, Akka.Cluster.Tools")),
+                ["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider"] = ("Akka.Cluster.Metrics",
+                    static () => CreateFirstPartyExtension("Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics")),
+            };
+
+        /// <summary>
+        /// The first-party extension <paramref name="extensionFqn"/> names, or <c>null</c> when it names none or its
+        /// assembly is absent. Type name and assembly must both match; the assembly identity is ignored.
+        /// </summary>
+        internal static IExtensionId? TryCreateFirstPartyExtension(string extensionFqn)
+            => Util.TypeExtensions.TrySplitTypeName(extensionFqn, out var name, out var assembly) &&
+               FirstPartyExtensions.TryGetValue(name, out var row) &&
+               string.Equals(assembly, row.Assembly, StringComparison.OrdinalIgnoreCase)
+                ? row.Create()
+                : null;
+
+        /// <summary>Pass a literal: the annotation lets the trimmer keep that type and its constructor.</summary>
+        private static IExtensionId? CreateFirstPartyExtension(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] string typeName)
+        {
+            Type? type;
+            try
+            {
+                type = Type.GetType(typeName);
+            }
+            catch (Exception e) when (e is System.IO.FileLoadException or BadImageFormatException or TypeLoadException)
+            {
+                return null; // an assembly that will not load counts as absent
+            }
+
+            return type is null ? null : (IExtensionId?)Activator.CreateInstance(type);
+        }
+#nullable restore
+
         private void LoadExtensions()
         {
-            var extensions = new List<IExtensionId>();
+            // Setup ids go first; one also named in HOCON registers once, since RegisterExtension keys by type
+            var extensions = new List<IExtensionId>(_settings.Setup.Get<ExtensionsSetup>()
+                .Select(s => s.ExtensionIds).GetOrElse(Array.Empty<IExtensionId>()));
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
+                try
+                {
+                    if (TryCreateFirstPartyExtension(extensionFqn) is { } firstParty)
+                    {
+                        extensions.Add(firstParty);
+                        continue;
+                    }
+                }
+                catch(Exception ex)
+                {
+                    _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    continue;
+                }
+
                 var extensionType = Type.GetType(extensionFqn);
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
                 {
