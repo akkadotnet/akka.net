@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
@@ -109,11 +110,33 @@ namespace Akka.Serialization
         /// <summary>
         /// Deserializes a byte array into an object using a string manifest.
         /// </summary>
+        /// <remarks>
+        /// A serializer with a manifest should resolve its own manifests - Remote's <c>SystemMessageSerializer</c>
+        /// and Persistence's message/snapshot serializers do, with a small static table. This fallback is for
+        /// everyone else, in three steps: a <see cref="TypeCache"/> hit costs nothing and always wins; a miss
+        /// checks <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> - cold, never on the per-message path -
+        /// and only then falls to reflection.
+        /// </remarks>
         public virtual object FromBinary(byte[] bytes, string manifest)
         {
             if (string.IsNullOrEmpty(manifest))
                 return FromBinary(bytes, (Type)null);
 
+            if (TypeCache.TryGetCached(manifest, out var cached))
+                return FromBinary(bytes, cached);
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new SerializationException(
+                    $"Cannot resolve manifest [{manifest}] for serializer [{Identifier}] with Akka.DynamicTypeLoading off: " +
+                    "this serializer must resolve its own manifests (e.g. implement SerializerWithStringManifest), " +
+                    "or register the type through a SerializationSetup.");
+
+            return FromBinaryReflecting(bytes, manifest);
+        }
+
+        [RequiresUnreferencedCode("Resolves manifest to a Type by reflection through TypeCache. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private object FromBinaryReflecting(byte[] bytes, string manifest)
+        {
             Type type;
             try
             {

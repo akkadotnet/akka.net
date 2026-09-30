@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
@@ -27,6 +28,12 @@ namespace Akka.Persistence.Serialization
         public override int Identifier => GetType() == typeof(PersistenceSnapshotSerializer) ? 8 : base.Identifier;
 
         public override bool IncludeManifest { get; }
+
+        // Bare type name -> Type; the only manifest FromBinary(byte[], Type) above handles.
+        private static readonly Dictionary<string, Type> ManifestTypes = new(StringComparer.Ordinal)
+        {
+            ["Akka.Persistence.Serialization.Snapshot"] = typeof(Snapshot),
+        };
 
         public override byte[] ToBinary(object obj)
         {
@@ -73,6 +80,18 @@ namespace Akka.Persistence.Serialization
             if (type == typeof(Snapshot)) return GetSnapshot(bytes);
 
             throw new ArgumentException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
+        }
+
+        /// <summary>
+        /// Resolves the manifest from <see cref="ManifestTypes"/> instead of <see cref="Akka.Util.Reflection.TypeCache"/>,
+        /// so this serializer works under Native AOT/trimming without dynamic type loading.
+        /// </summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (PersistenceMessageSerializer.TryPersistenceTypeName(manifest, out var name) && ManifestTypes.TryGetValue(name, out var type))
+                return FromBinary(bytes, type);
+
+            return base.FromBinary(bytes, manifest);
         }
 
         private Snapshot GetSnapshot(byte[] bytes)

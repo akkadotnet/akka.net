@@ -8,10 +8,8 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
@@ -76,25 +74,17 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// Delegates straight to <see cref="Inner"/>'s own <see cref="Serializer.FromBinary(byte[],string)"/>,
+        /// which virtual dispatch resolves to whatever <see cref="Inner"/> actually is - a
+        /// <see cref="SerializerWithStringManifest"/>, a serializer that overrides the string overload itself
+        /// (Remote's <c>SystemMessageSerializer</c>, Persistence's message/snapshot serializers), or the base
+        /// <see cref="Serializer"/>'s own reflection fallback. Duplicating that lookup here used to bypass a
+        /// plain <see cref="Serializer"/> subclass's own override.
+        /// </remarks>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (Inner is SerializerWithStringManifest stringManifest)
-                return stringManifest.FromBinary(bytes, manifest);
-
-            if (string.IsNullOrEmpty(manifest))
-                return Inner.FromBinary(bytes, (Type)null!);
-
-            Type type;
-            try
-            {
-                type = TypeCache.GetType(manifest);
-            }
-            catch (Exception ex)
-            {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{Identifier}].", ex);
-            }
-
-            return Inner.FromBinary(bytes, type);
+            return Inner.FromBinary(bytes, manifest);
         }
 
         /// <inheritdoc />

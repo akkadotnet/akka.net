@@ -30,6 +30,32 @@ namespace Akka.Persistence.Serialization
 
         public override bool IncludeManifest { get; } = true;
 
+        // Bare type name -> Type for every manifest FromBinary(byte[], Type) above handles, except the open
+        // generic PersistentFSM.PersistentFSMSnapshot<>: a closed generic's name can't be a compile-time key,
+        // so it still falls through to base.FromBinary. All live in the Akka.Persistence assembly.
+        private static readonly Dictionary<string, Type> ManifestTypes = new(StringComparer.Ordinal)
+        {
+            ["Akka.Persistence.Persistent"] = typeof(Persistent),
+            ["Akka.Persistence.IPersistentRepresentation"] = typeof(IPersistentRepresentation),
+            ["Akka.Persistence.AtomicWrite"] = typeof(AtomicWrite),
+            ["Akka.Persistence.AtLeastOnceDeliverySnapshot"] = typeof(AtLeastOnceDeliverySnapshot),
+            ["Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent"] = typeof(PersistentFSM.StateChangeEvent),
+        };
+
+        /// <summary>
+        /// Splits and normalizes <paramref name="manifest"/> the way <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/>
+        /// does for the "Akka" assembly, but for "Akka.Persistence" - shared with <see cref="PersistenceSnapshotSerializer"/>.
+        /// </summary>
+        internal static bool TryPersistenceTypeName(string manifest, out string name)
+        {
+            if (Akka.Util.TypeExtensions.TrySplitTypeName(manifest, out name, out var assembly) &&
+                (assembly is null || string.Equals(assembly, "Akka.Persistence", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            name = null;
+            return false;
+        }
+
         public override byte[] ToBinary(object obj)
         {
             if (obj is IPersistentRepresentation repr) return GetPersistentMessage(repr).ToByteArray();
@@ -163,6 +189,20 @@ namespace Akka.Persistence.Serialization
                 && type.GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(type, bytes);
 
             throw new SerializationException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
+        }
+
+        /// <summary>
+        /// Resolves the manifest from <see cref="ManifestTypes"/> instead of <see cref="Akka.Util.Reflection.TypeCache"/>,
+        /// so this serializer works under Native AOT/trimming without dynamic type loading. The open generic
+        /// <see cref="PersistentFSM.PersistentFSMSnapshot{TD}"/> is not in the table, so it - and anything else
+        /// the table does not know - still falls through to <see cref="Serializer.FromBinary(byte[],string)"/>.
+        /// </summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (TryPersistenceTypeName(manifest, out var name) && ManifestTypes.TryGetValue(name, out var type))
+                return FromBinary(bytes, type);
+
+            return base.FromBinary(bytes, manifest);
         }
 
         private IPersistentRepresentation GetPersistentRepresentation(PersistentMessage message)

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -22,6 +23,24 @@ namespace Akka.Remote.Serialization
         private ExceptionSupport _exceptionSupport;
 
         private static readonly byte[] EmptyBytes = {};
+
+        // Bare type name -> Type for every manifest ToBinary/FromBinary(byte[], Type) above handles. All ten
+        // live in the Akka assembly, so ToBuiltInAkkaTypeName's "no assembly, or Akka in any casing" check -
+        // which also strips a versioned AssemblyQualifiedName down to this same bare spelling - is the right
+        // normalization here, same as every other BuiltIn* table.
+        private static readonly Dictionary<string, Type> ManifestTypes = new(StringComparer.Ordinal)
+        {
+            ["Akka.Dispatch.SysMsg.Create"] = typeof(Create),
+            ["Akka.Dispatch.SysMsg.Recreate"] = typeof(Recreate),
+            ["Akka.Dispatch.SysMsg.Suspend"] = typeof(Suspend),
+            ["Akka.Dispatch.SysMsg.Resume"] = typeof(Resume),
+            ["Akka.Dispatch.SysMsg.Terminate"] = typeof(Terminate),
+            ["Akka.Dispatch.SysMsg.Supervise"] = typeof(Supervise),
+            ["Akka.Dispatch.SysMsg.Watch"] = typeof(Watch),
+            ["Akka.Dispatch.SysMsg.Unwatch"] = typeof(Unwatch),
+            ["Akka.Dispatch.SysMsg.Failed"] = typeof(Failed),
+            ["Akka.Dispatch.SysMsg.DeathWatchNotification"] = typeof(DeathWatchNotification),
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.
@@ -72,6 +91,19 @@ namespace Akka.Remote.Serialization
             if (type == typeof(DeathWatchNotification)) return DeathWatchNotificationFromProto(bytes);
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{type.TypeQualifiedName()}] in [${nameof(SystemMessageSerializer)}]");
+        }
+
+        /// <summary>
+        /// Resolves the manifest from <see cref="ManifestTypes"/> instead of <see cref="Akka.Util.Reflection.TypeCache"/>,
+        /// so this serializer works under Native AOT/trimming without dynamic type loading. Falls back to
+        /// <see cref="Serializer.FromBinary(byte[],string)"/> for anything the table does not know.
+        /// </summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (TypeExtensions.ToBuiltInAkkaTypeName(manifest) is { } name && ManifestTypes.TryGetValue(name, out var type))
+                return FromBinary(bytes, type);
+
+            return base.FromBinary(bytes, manifest);
         }
 
         //

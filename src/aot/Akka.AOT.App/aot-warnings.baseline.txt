@@ -37,12 +37,13 @@
 #
 # The goal is for this file to hold nothing but the header. Every entry below is a place where core
 # still reaches for a type by name that the trimmer cannot see. See #7246.
-
-# --- Reached by the canary's UNROOTED publish, i.e. on a real local ActorSystem boot -------------
-
-# The generic name->Type cache behind every remaining HOCON type lookup in core. This one only goes
-# away when nothing calls it on a startup path.
-IL2057|src/core/Akka/Util/Reflection/TypeCache.cs|Akka.Util.Reflection.TypeCache.GetTypeInternal(String)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String,Boolean)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+#
+# Nothing is reached by the canary's UNROOTED publish any more (a real local ActorSystem boot):
+# TypeCache.GetTypeInternal - the generic name->Type cache behind every remaining HOCON type lookup
+# in core, and the last entry this section ever had - is now guarded by
+# Akka.Util.AkkaFeatures.IsDynamicTypeLoadingSupported, and Remote's SystemMessageSerializer plus
+# Persistence's message/snapshot serializers resolve their own manifests instead of falling through
+# to it. See the "AOT: serializers resolve their own manifests" PR.
 
 # --- Only visible in the ROOTED publish ----------------------------------------------------------
 # These are not on the local-boot path the canary exercises, so the unrooted publish never analyses
