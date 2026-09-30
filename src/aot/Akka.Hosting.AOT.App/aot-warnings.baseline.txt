@@ -1,0 +1,17 @@
+# Trim/AOT warning baseline for the Hosting Native AOT canary (src/aot/Akka.Hosting.AOT.App).
+#
+# Same format and checker as the plain-core canary's baseline
+# (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
+# added/gone entries are handled. Scope differs: --scope passes three prefixes, comma-separated -
+#
+#   src/contrib/hosting/             - Akka.Hosting itself
+#   src/contrib/dependencyinjection/ - Akka.DependencyInjection
+#   src/core/Akka.Streams/           - not covered by the core canary, which never references
+#                                       Akka.Streams. Hosting does, and registers the stream-ref
+#                                       serializer unconditionally at startup.
+#
+# src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
+#
+# Empty since #8671 put the Akka.Streams stream-ref reflection behind Akka.DynamicTypeLoading. Any
+# new entry is a place where Hosting's dependency surface reaches for a type by name, or builds
+# one reflectively, in a way the trimmer cannot see.

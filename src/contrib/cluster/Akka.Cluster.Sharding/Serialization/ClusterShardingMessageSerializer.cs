@@ -148,6 +148,12 @@ namespace Akka.Cluster.Sharding.Serialization
             };
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterShardingMessageSerializer) ? 13 : base.Identifier;
+
         private ShardingEnvelope ShardingEnvelopeFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.ShardingEnvelope.Parser.ParseFrom(bytes);

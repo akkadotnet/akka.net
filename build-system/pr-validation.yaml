@@ -104,8 +104,8 @@ jobs:
   # ports or cluster formation in it. It publishes, runs one process, and compares two sorted lists
   # of strings. If it goes red, something really did change.
   - job: AotCanary
-    displayName: "AOT canary (Linux)"
-    timeoutInMinutes: 45
+    displayName: "AOT canaries (Linux)"
+    timeoutInMinutes: 60
     pool:
       vmImage: ubuntu-latest
     steps:
@@ -205,6 +205,59 @@ jobs:
           fi
           echo "Self-test passed: the checker rejects an unbaselined warning."
         displayName: 'Self-test the warning checker rejects a new warning'
+
+      # --- Akka.Hosting canary (src/aot/Akka.Hosting.AOT.App): same job, runs after the core canary ---
+      - bash: |
+          rm -rf src/aot/Akka.Hosting.AOT.App/bin src/aot/Akka.Hosting.AOT.App/obj
+        displayName: 'Clean the Hosting canary intermediate output'
+
+      # One publish serves both steps below: the run proves the real-application boot, and the same
+      # log is what the warning check reads. TrimmerSingleWarn is set in the csproj, not repeated
+      # here.
+      - bash: |
+          set -o pipefail
+          dotnet publish src/aot/Akka.Hosting.AOT.App -r linux-x64 -c Release \
+            -o "$(Agent.TempDirectory)/hosting-aot-publish" 2>&1 | tee "$(Agent.TempDirectory)/hosting-aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The publish of the Hosting AOT canary failed with exit code $rc."
+            exit 1
+          fi
+        displayName: 'Publish the Hosting AOT canary'
+
+      # Same reasoning as AotCanary's run step: exit 0 alone is not proof. The canary's own
+      # WatchdogLoggerProvider and positive assertions are what make '[canary-hosting] OK'
+      # meaningful. timeout guards against a hang instead of burning the job's full 45 minutes.
+      - bash: |
+          set -o pipefail
+          timeout 300 "$(Agent.TempDirectory)/hosting-aot-publish/Akka.Hosting.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/hosting-aot-run.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -eq 124 ]; then
+            echo "##vso[task.logissue type=error]The Hosting AOT canary did not exit within 300s."
+            exit 1
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The Hosting AOT canary exited with code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary-hosting] OK' "$(Agent.TempDirectory)/hosting-aot-run.log"; then
+            echo "##vso[task.logissue type=error]The Hosting AOT canary exited 0 but never printed '[canary-hosting] OK'."
+            exit 1
+          fi
+          echo "Hosting AOT canary: exit code 0 and '[canary-hosting] OK' on stdout."
+        displayName: 'Run the Hosting AOT canary'
+
+      # Fails on any IL2xxx/IL3xxx warning from src/contrib/hosting/, src/contrib/dependencyinjection/
+      # or src/core/Akka.Streams/ that is not in this canary's own baseline. src/core/Akka/ is
+      # deliberately left out of --scope: AotCanary's baseline already watches it, and gating on it
+      # here too would just be two baselines to update for the same warning.
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/hosting-aot-publish.log" \
+            --baseline src/aot/Akka.Hosting.AOT.App/aot-warnings.baseline.txt \
+            --scope "src/contrib/hosting/,src/contrib/dependencyinjection/,src/core/Akka.Streams/" \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare Hosting AOT warnings against the baseline'
 
       # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
       # re-running the job. always() because the interesting case is the one where a step above

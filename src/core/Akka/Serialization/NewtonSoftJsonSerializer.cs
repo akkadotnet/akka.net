@@ -238,7 +238,11 @@ namespace Akka.Serialization
                 _surrogateExcludedSerializer.Converters.Remove(surrogateConverter);
         }
 
-
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(NewtonSoftJsonSerializer) ? 1 : base.Identifier;
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
         {
