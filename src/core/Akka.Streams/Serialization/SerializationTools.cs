@@ -28,12 +28,19 @@ namespace Akka.Streams.Serialization
             if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                 return ResolveTypeFromString(typeName);
 
-            throw new SerializationException(AkkaFeatures.NotBuiltIn(
-                "a stream-ref element type", typeName, "a build with dynamic type loading enabled"));
+            throw new SerializationException(StreamRefTypeNotSupported(typeName));
         }
 
         [RequiresUnreferencedCode("Resolves a stream-ref element type carried on the wire by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         private static Type ResolveTypeFromString(string typeName) => Type.GetType(typeName, throwOnError: true);
+
+        /// <summary>
+        /// The message every stream-ref site throws with <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/>
+        /// off, instead of <see cref="AkkaFeatures.NotBuiltIn"/> - there is no HOCON setting here, and no built-in
+        /// table of stream-ref element types to point at, so that message reads oddly for this failure.
+        /// </summary>
+        internal static string StreamRefTypeNotSupported(string eventTypeName) =>
+            $"Cannot deserialize a stream ref with element type [{eventTypeName}]: stream refs need Akka.DynamicTypeLoading enabled at publish time (see #8667).";
 
         public static Type TypeFromProto(EventType eventType) => TypeFromString(eventType.TypeName);
 

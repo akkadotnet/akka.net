@@ -40,8 +40,7 @@ namespace Akka.Streams.Implementation.StreamRef
             if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                 return CreateGeneric(eventType, initialPartnerRef);
 
-            throw new SerializationException(AkkaFeatures.NotBuiltIn(
-                "a stream-ref element type", eventType.FullName ?? eventType.Name, "a build with dynamic type loading enabled"));
+            throw new SerializationException(SerializationTools.StreamRefTypeNotSupported(eventType.FullName ?? eventType.Name));
         }
 
         [RequiresDynamicCode("Builds a SinkRefImpl<T> for a stream-ref element type discovered at runtime. Native AOT does not guarantee that constructing an arbitrary closed generic type at runtime will work.")]

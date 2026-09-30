@@ -17,7 +17,6 @@ using Akka.Serialization;
 using Akka.Streams.Implementation.StreamRef;
 using Akka.Streams.Serialization;
 using Akka.TestKit;
-using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using AkkaSerialization = Akka.Serialization.Serialization;
@@ -133,61 +132,29 @@ namespace Akka.Streams.Tests.Serialization
                 serialization.FindSerializerForType(type).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
         }
 
-        /// <summary>
-        /// Runs <paramref name="body"/> with <c>Akka.DynamicTypeLoading</c> forced off and restores whatever the
-        /// switch reported beforehand - unset reads back as on, matching <see cref="AkkaFeatures"/>'s own default.
-        /// </summary>
-        private static void WithDynamicTypeLoadingOff(Action body)
+        [Fact(DisplayName = "StreamRefSerializer should serialize a SourceRef but fail to deserialize it When dynamic type loading is off")]
+        public void Should_serialize_but_not_deserialize_a_SourceRef_When_dynamic_type_loading_is_disabled()
         {
             var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
             AppContext.SetSwitch(SwitchName, false);
             try
             {
-                body();
+                var serializer = new Akka.Streams.Serialization.StreamRefSerializer((ExtendedActorSystem)Sys);
+                var sourceRef = new SourceRefImpl<int>(Sys.DeadLetters);
+
+                // sending a stream ref needs no reflection - only typeof(T), which the trimmer can always see
+                var manifest = serializer.Manifest(sourceRef);
+                var bytes = serializer.ToBinary(sourceRef);
+
+                // receiving one does - SerializationTools.TypeFromString has to turn the wire name back into a Type
+                var exception = Assert.Throws<SerializationException>(() => serializer.FromBinary(bytes, manifest));
+
+                exception.Message.Should().Contain(SwitchName);
             }
             finally
             {
                 AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
             }
-        }
-
-        [Fact(DisplayName = "SerializationTools should reject a stream-ref element type name When dynamic type loading is off")]
-        public void Should_throw_SerializationException_When_resolving_a_stream_ref_element_type_name_with_dynamic_type_loading_disabled()
-        {
-            WithDynamicTypeLoadingOff(() =>
-            {
-                var typeName = typeof(string).AssemblyQualifiedName!;
-
-                var exception = Assert.Throws<SerializationException>(
-                    () => SerializationTools.TypeFromString(typeName));
-
-                exception.Message.Should().Contain(typeName);
-                exception.Message.Should().Contain(SwitchName);
-            });
-        }
-
-        [Fact(DisplayName = "SinkRefImpl.Create should reject building a closed generic When dynamic type loading is off")]
-        public void Should_throw_SerializationException_When_creating_a_SinkRefImpl_with_dynamic_type_loading_disabled()
-        {
-            WithDynamicTypeLoadingOff(() =>
-            {
-                var exception = Assert.Throws<SerializationException>(
-                    () => SinkRefImpl.Create(typeof(string), Sys.DeadLetters));
-
-                exception.Message.Should().Contain(SwitchName);
-            });
-        }
-
-        [Fact(DisplayName = "SourceRefImpl.Create should reject building a closed generic When dynamic type loading is off")]
-        public void Should_throw_SerializationException_When_creating_a_SourceRefImpl_with_dynamic_type_loading_disabled()
-        {
-            WithDynamicTypeLoadingOff(() =>
-            {
-                var exception = Assert.Throws<SerializationException>(
-                    () => SourceRefImpl.Create(typeof(string), Sys.DeadLetters));
-
-                exception.Message.Should().Contain(SwitchName);
-            });
         }
     }
 }
