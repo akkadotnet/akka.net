@@ -1,3 +1,3 @@
 namespace Akka.Hosting.LoggingDemo;
 
-public struct Echo{}
+public sealed class Echo{}

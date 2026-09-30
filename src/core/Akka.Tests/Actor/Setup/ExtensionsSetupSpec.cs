@@ -93,14 +93,19 @@ namespace Akka.Tests.Actor.Setup
         public void Should_resolve_nothing_When_name_is_not_first_party(string name)
         {
             ActorSystemImpl.TryCreateFirstPartyExtension(name).Should().BeNull();
+            // and it correctly reports that as "not a first-party name" rather than "row matched, but absent"
+            ActorSystemImpl.IsFirstPartyExtensionName(name).Should().BeFalse();
         }
 
         [Fact(DisplayName = "A first-party extension whose assembly is absent counts as absent")]
         public void Should_resolve_nothing_When_first_party_assembly_is_absent()
         {
             // Akka.Tests does not reference Akka.DistributedData; the contrib test projects cover the present case
-            ActorSystemImpl.TryCreateFirstPartyExtension("Akka.DistributedData.DistributedDataProvider, Akka.DistributedData")
-                .Should().BeNull();
+            const string name = "Akka.DistributedData.DistributedDataProvider, Akka.DistributedData";
+            ActorSystemImpl.TryCreateFirstPartyExtension(name).Should().BeNull();
+            // but the table still recognizes the name - LoadExtensions relies on this to log-and-skip an
+            // absent module instead of rejecting the name as not built in (see AkkaFeaturesSpec)
+            ActorSystemImpl.IsFirstPartyExtensionName(name).Should().BeTrue();
         }
 
         public sealed class SetupCountingExtension : ExtensionIdProvider<CountingExtensionImpl>

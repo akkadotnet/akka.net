@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -30,7 +32,22 @@ namespace Akka.Streams.Implementation.StreamRef
     [InternalApi]
     internal abstract class SourceRefImpl : ISurrogated
     {
+        /// <summary>
+        /// Builds the closed <see cref="SourceRefImpl{T}"/> for a stream-ref element type discovered at
+        /// deserialization time. With <see cref="AkkaFeatures.IsDynamicTypeLoadingSupported"/> off, this fails
+        /// clearly instead of asking Native AOT to construct an arbitrary generic instantiation it never
+        /// compiled ahead of time.
+        /// </summary>
         public static SourceRefImpl Create(Type eventType, IActorRef initialPartnerRef)
+        {
+            if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                return CreateGeneric(eventType, initialPartnerRef);
+
+            throw new SerializationException(SerializationTools.StreamRefTypeNotSupported(eventType.FullName ?? eventType.Name));
+        }
+
+        [RequiresDynamicCode("Builds a SourceRefImpl<T> for a stream-ref element type discovered at runtime. Native AOT does not guarantee that constructing an arbitrary closed generic type at runtime will work.")]
+        private static SourceRefImpl CreateGeneric(Type eventType, IActorRef initialPartnerRef)
         {
             var destType = typeof(SourceRefImpl<>).MakeGenericType(eventType);
             return (SourceRefImpl)Activator.CreateInstance(destType, initialPartnerRef);
