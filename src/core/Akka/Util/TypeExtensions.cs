@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Annotations;
@@ -138,6 +139,35 @@ namespace Akka.Util
             return assembly is null || string.Equals(assembly, "Akka", StringComparison.OrdinalIgnoreCase)
                 ? name
                 : null;
+        }
+
+        /// <summary>
+        /// INTERNAL API. A manifest-string lookup table for <paramref name="types"/>, keyed by both
+        /// <see cref="TypeQualifiedName"/> (what a serializer's manifest writes today) and the bare
+        /// <see cref="Type.FullName"/>, so a hit is a plain dictionary lookup with no regex.
+        /// </summary>
+        internal static Dictionary<string, Type> ManifestTable(params Type[] types)
+        {
+            var map = new Dictionary<string, Type>(types.Length * 2, StringComparer.Ordinal);
+            foreach (var t in types)
+            {
+                map[t.TypeQualifiedName()] = t;
+                map[t.FullName!] = t;
+            }
+            return map;
+        }
+
+        /// <summary>
+        /// INTERNAL API. Resolves <paramref name="manifest"/> against <paramref name="table"/> built by
+        /// <see cref="ManifestTable"/>: a direct hit first, then one retry with assembly identity stripped -
+        /// covers a versioned or legacy manifest spelling without parsing on every call.
+        /// </summary>
+        internal static bool TryResolveManifestType(this Dictionary<string, Type> table, string? manifest, out Type? type)
+        {
+            type = null;
+            // null goes to the caller's base path, which treats it as "no manifest"
+            return manifest is not null
+                   && (table.TryGetValue(manifest, out type) || table.TryGetValue(StripAssemblyIdentity(manifest), out type));
         }
 
         /// <summary>

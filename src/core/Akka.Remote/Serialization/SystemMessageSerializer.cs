@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -22,6 +23,11 @@ namespace Akka.Remote.Serialization
         private ExceptionSupport _exceptionSupport;
 
         private static readonly byte[] EmptyBytes = {};
+
+        // Every manifest FromBinary(byte[], Type) below handles.
+        private static readonly Dictionary<string, Type> ManifestTypes = TypeExtensions.ManifestTable(
+            typeof(Create), typeof(Recreate), typeof(Suspend), typeof(Resume), typeof(Terminate),
+            typeof(Supervise), typeof(Watch), typeof(Unwatch), typeof(Failed), typeof(DeathWatchNotification));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.
@@ -73,6 +79,10 @@ namespace Akka.Remote.Serialization
 
             throw new ArgumentException($"Unimplemented deserialization of message with manifest [{type.TypeQualifiedName()}] in [${nameof(SystemMessageSerializer)}]");
         }
+
+        /// <summary>Resolves the manifest from <see cref="ManifestTypes"/> so this works without dynamic type loading.</summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+            => ManifestTypes.TryResolveManifestType(manifest, out var type) ? FromBinary(bytes, type!) : base.FromBinary(bytes, manifest);
 
         //
         // Create

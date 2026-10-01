@@ -471,6 +471,7 @@ namespace Akka.Remote.Serialization
         public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
         public override byte[] ToBinary(object obj) { }
     }
 }

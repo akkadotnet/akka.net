@@ -30,6 +30,12 @@ namespace Akka.Persistence.Serialization
 
         public override bool IncludeManifest { get; } = true;
 
+        // Every manifest FromBinary(byte[], Type) below handles, except the open generic
+        // PersistentFSM.PersistentFSMSnapshot<>, which stays on base.FromBinary.
+        private static readonly Dictionary<string, Type> ManifestTypes = Akka.Util.TypeExtensions.ManifestTable(
+            typeof(Persistent), typeof(IPersistentRepresentation), typeof(AtomicWrite),
+            typeof(AtLeastOnceDeliverySnapshot), typeof(PersistentFSM.StateChangeEvent));
+
         public override byte[] ToBinary(object obj)
         {
             if (obj is IPersistentRepresentation repr) return GetPersistentMessage(repr).ToByteArray();
@@ -164,6 +170,10 @@ namespace Akka.Persistence.Serialization
 
             throw new SerializationException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
         }
+
+        /// <summary>Resolves the manifest from <see cref="ManifestTypes"/> so this works without dynamic type loading.</summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+            => ManifestTypes.TryResolveManifestType(manifest, out var type) ? FromBinary(bytes, type!) : base.FromBinary(bytes, manifest);
 
         private IPersistentRepresentation GetPersistentRepresentation(PersistentMessage message)
         {
