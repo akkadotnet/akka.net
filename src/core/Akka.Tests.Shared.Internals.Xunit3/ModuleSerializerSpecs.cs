@@ -139,5 +139,25 @@ namespace Akka.Serialization
             });
             return serialization!;
         }
+
+        /// <summary>
+        /// Asserts that <paramref name="create"/> - ordinarily <c>system =&gt; new XSerializers().Create(system)</c> -
+        /// does not throw against a fresh system that never loaded the module's own reference.conf, only core's
+        /// own akka.conf. A module's serializers must build even for a system that has no reason to know the
+        /// module exists yet - building one must never depend on that module's own config being present.
+        /// </summary>
+        public static async Task AssertBuildsWithoutModuleConfig(string systemName, Action<ExtendedActorSystem> create)
+        {
+            var system = ActorSystem.Create(systemName);
+            try
+            {
+                Action act = () => create((ExtendedActorSystem)system);
+                act.Should().NotThrow();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
     }
 }

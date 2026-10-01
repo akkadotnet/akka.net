@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
+using Akka.Remote;
 using Akka.Remote.Artery;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
@@ -126,6 +127,10 @@ namespace Akka.Remote.Tests.Serialization
             ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Create((ExtendedActorSystem)Sys));
         }
 
+        [Fact(DisplayName = "RemoteSerializers should build without throwing on a system that never loaded Remote.conf")]
+        public async Task Should_build_without_throwing_When_Remote_conf_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("remote-no-config", s => new RemoteSerializers().Create(s));
+
         [Fact(DisplayName = "Serialization should resolve Remote.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("remote-aqn", RemoteRows, Sys);
@@ -196,6 +201,44 @@ namespace Akka.Remote.Tests.Serialization
                 serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(IActorRef)).Should().BeOfType<NewtonSoftJsonSerializer>();
+            });
+        }
+
+        /// <remarks>
+        /// Regression: a lone <c>proto</c> row used to build every Remote serializer, including <c>primitive</c>,
+        /// to answer it - and <c>PrimitiveSerializers</c> threw on the null config a system that never loaded
+        /// Remote.conf hands it. <c>RemoteSerializers.Create</c> must not throw just because this config only
+        /// ever asks it for one of its serializers.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should start and resolve a lone proto row with no other Remote.conf rows present")]
+        public async Task Should_resolve_a_lone_proto_row_When_no_other_Remote_config_is_present()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor.serializers.proto = ""Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote""
+                akka.actor.serialization-bindings { ""Google.Protobuf.IMessage, Google.Protobuf"" = proto }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-lone-proto", config, null, system =>
+            {
+                ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(Google.Protobuf.IMessage))
+                    .Should().BeOfType<ProtobufSerializer>();
+            });
+        }
+
+        /// <remarks>
+        /// Regression: a binding-only row used to build Remote's whole module just to answer lookup 1, with the
+        /// same throw as above. A binding row alone is not reason enough to build a module - this one resolves
+        /// through plain reflection instead, exactly as it would if Akka.Remote were not involved at all.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should start with a RemoteWatcher+Heartbeat binding and no Remote serializer row")]
+        public async Task Should_start_With_a_binding_only_RemoteWatcher_Heartbeat_row()
+        {
+            var config = ConfigurationFactory.ParseString(
+                @"akka.actor.serialization-bindings { ""Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"" = bytes }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-binding-only-heartbeat", config, null, system =>
+            {
+                ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(RemoteWatcher.Heartbeat))
+                    .Should().BeOfType<ByteArraySerializer>();
             });
         }
 

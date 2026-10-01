@@ -19,9 +19,10 @@ namespace Akka.Serialization
 {
     /// <summary>
     /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
-    /// can resolve those rows without <see cref="Type.GetType(string)"/>. Same shape as
-    /// <see cref="SerializationSetup.CreateSerializers"/> - a module's table is, in effect, a built-in
-    /// <see cref="SerializationSetup"/>.
+    /// can resolve those rows without <see cref="Type.GetType(string)"/>. <see cref="Create"/> has the same shape as
+    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, HOCON still
+    /// decides which of these entries are actually registered, and a <see cref="SerializationSetup"/> still wins
+    /// over both.
     /// </summary>
     internal abstract class ModuleSerializers
     {
@@ -47,16 +48,22 @@ namespace Akka.Serialization
             }
         }
 
-        /// <summary>Builds <paramref name="module"/>'s serializers against <paramref name="system"/>; null when that fails with a version-skew error.</summary>
-        internal static LoadedModule? TryCreate(ModuleSerializers module, ExtendedActorSystem system)
+        /// <summary>
+        /// Builds <paramref name="module"/>'s serializers against <paramref name="system"/>; null when that fails
+        /// with a version-skew error, in which case <paramref name="skewError"/> is that exception - the caller
+        /// decides whether to surface it.
+        /// </summary>
+        internal static LoadedModule? TryCreate(ModuleSerializers module, ExtendedActorSystem system, out Exception? skewError)
         {
             try
             {
+                skewError = null;
                 return new LoadedModule(module.Create(system));
             }
             catch (Exception e) when (ModuleSerializerTable.IsVersionSkew(e))
             {
                 // the module, or something its serializers reference, is missing from this build: it counts as absent
+                skewError = e;
                 return null;
             }
         }
@@ -87,88 +94,7 @@ namespace Akka.Serialization
     }
 
     /// <summary>
-    /// INTERNAL API. Resolves a <see cref="Serialization"/> instance's rows against a module's serializers, calling
-    /// <see cref="ModuleSerializers.Create"/> at most once per module and caching the result for this instance's
-    /// lifetime. <see cref="ModuleSerializerTable"/> caches the cheap part - the loaded <see cref="ModuleSerializers"/>
-    /// object itself - once per process; building its serializers needs the <see cref="ExtendedActorSystem"/>, which
-    /// only this, a per-instance cache, has.
-    /// </summary>
-    internal sealed class ModuleResolver
-    {
-        private readonly ExtendedActorSystem _system;
-        private readonly ModuleSerializerTable _modules;
-        private readonly Dictionary<string, LoadedModule?> _built = new(StringComparer.OrdinalIgnoreCase);
-
-        // modules whose serializer rows this config contains; see FindBoundType for how a binding row uses them
-        private readonly List<LoadedModule> _loaded = new();
-
-        internal ModuleResolver(ExtendedActorSystem system, ModuleSerializerTable modules)
-        {
-            _system = system;
-            _modules = modules;
-        }
-
-        /// <summary>The module <paramref name="typeName"/>'s assembly half names, if any row of it resolves there.</summary>
-        internal SerializerDetails? FindSerializer(string typeName)
-        {
-            if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) || assembly is null)
-                return null;
-
-            var module = ModuleFor(assembly);
-            if (module is null)
-                return null;
-
-            var details = module.FindSerializer(name, assembly);
-            if (details is not null && !_loaded.Contains(module))
-                _loaded.Add(module);
-            return details;
-        }
-
-        /// <summary>
-        /// Resolves a binding row's type from the module tables, without reflection. Null when no module lists it.
-        /// </summary>
-        /// <remarks>
-        /// Two lookups, in order:
-        /// <list type="number">
-        /// <item>The module the row's assembly half names. <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c>
-        /// is answered by Akka.Remote's table, building it if no serializer row has yet.</item>
-        /// <item>Every module whose serializer rows this config resolved (<see cref="_loaded"/>). This covers
-        /// bound types that live outside their module: Remote.conf binds <c>"System.String"</c> and
-        /// <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no module owns CoreLib or Akka.dll, so
-        /// lookup 1 can't answer for them.</item>
-        /// </list>
-        /// Lookup 2 only asks modules this config uses. With no Remote serializer rows, a <c>"System.String"</c>
-        /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
-        /// loop runs after the serializer loop, so lookup 2's modules are complete by then. Two modules that list
-        /// the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
-        /// </remarks>
-        internal Type? FindBoundType(string name, string? assembly)
-        {
-            if (assembly is not null && ModuleFor(assembly)?.FindBoundType(name, assembly) is { } owned)
-                return owned;
-
-            foreach (var module in _loaded)
-            {
-                if (module.FindBoundType(name, assembly) is { } type)
-                    return type;
-            }
-
-            return null;
-        }
-
-        private LoadedModule? ModuleFor(string assembly)
-        {
-            if (_built.TryGetValue(assembly, out var cached))
-                return cached;
-
-            var built = _modules.ForAssembly(assembly) is { } raw ? LoadedModule.TryCreate(raw, _system) : null;
-            _built[assembly] = built;
-            return built;
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API. Finds a module's table by assembly simple name, loading it lazily and at most once per process.
+    /// INTERNAL API. Finds a module's table by assembly simple name, loading it lazily and at most once per table.
     /// </summary>
     internal sealed class ModuleSerializerTable
     {

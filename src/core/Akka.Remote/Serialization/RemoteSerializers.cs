@@ -48,9 +48,12 @@ namespace Akka.Remote.Serialization
                     typeof(RemoteWatcher.Heartbeat),
                     typeof(RemoteWatcher.HeartbeatRsp),
                     typeof(RemoteRouterConfig))),
-            // the only built-in serializer with its own settings block; it reads that block itself
+            // the only built-in serializer with its own settings block; the table reads it, falling back to an
+            // empty block - same as GetBoolean's own default, legacy behavior off - for a system that never
+            // loaded Remote.conf (PrimitiveSerializers has no (system)-only constructor to fall back to)
             SerializerDetails.Create("primitive",
-                new PrimitiveSerializers(system, system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive")),
+                new PrimitiveSerializers(system,
+                    system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive") ?? Config.Empty),
                 ImmutableHashSet.Create(typeof(string), typeof(int), typeof(long))),
             SerializerDetails.Create("proto", new ProtobufSerializer(system),
                 ImmutableHashSet.Create(typeof(Google.Protobuf.IMessage))),

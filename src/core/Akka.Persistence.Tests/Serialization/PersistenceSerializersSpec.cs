@@ -93,6 +93,10 @@ namespace Akka.Persistence.Tests.Serialization
             ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Create((ExtendedActorSystem)Sys));
         }
 
+        [Fact(DisplayName = "PersistenceSerializers should build without throwing on a system that never loaded persistence.conf")]
+        public async Task Should_build_without_throwing_When_persistence_conf_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("persistence-no-config", s => new PersistenceSerializers().Create(s));
+
         [Fact(DisplayName = "Serialization should resolve persistence.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("persistence-aqn", PersistenceRows, Sys, BoundSamples);

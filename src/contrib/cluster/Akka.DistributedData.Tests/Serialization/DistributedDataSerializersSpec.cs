@@ -46,6 +46,10 @@ namespace Akka.DistributedData.Tests.Serialization
             ModuleSerializerSpecs.AssertTableMatchesConfig(DDataRows, table.Create((ExtendedActorSystem)Sys));
         }
 
+        [Fact(DisplayName = "DistributedDataSerializers should build without throwing on a system that never loaded its reference.conf")]
+        public async Task Should_build_without_throwing_When_its_config_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("ddata-no-config", s => new DistributedDataSerializers().Create(s));
+
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("ddata-aqn", DDataRows, Sys);

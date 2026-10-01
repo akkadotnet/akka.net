@@ -158,6 +158,8 @@ namespace Akka.DistributedData.Serialization
         {
            _ser = new SerializationSupport(system);
             var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
+            if (cacheTtl <= TimeSpan.Zero)
+                cacheTtl = TimeSpan.FromSeconds(10); // reference.conf's own default, for a system that never loaded it
             _readCache = new SmallCache<Read, byte[]>(4, cacheTtl, m => ReadToProto(m).ToByteArray());
             _writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, m => WriteToProto(m).ToByteArray());
 
