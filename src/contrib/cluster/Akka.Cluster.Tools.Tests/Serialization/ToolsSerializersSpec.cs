@@ -102,6 +102,7 @@ namespace Akka.Cluster.Tools.Tests
         public async Task Should_resolve_Tools_serializers_On_a_plain_system_with_no_extension_started()
         {
             var system = ActorSystem.Create("tools-no-extension");
+            InitializeLogger(system);
             try
             {
                 var serialization = ((ExtendedActorSystem)system).Serialization;

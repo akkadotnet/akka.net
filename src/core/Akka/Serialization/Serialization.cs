@@ -195,11 +195,16 @@ namespace Akka.Serialization
         private readonly Dictionary<int, SerializerV2> _serializersById = new();
         private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
-        // ids/aliases/types currently holding a module default, not a HOCON or Setup registration. Overriding
-        // one of these never logs the "serializer override" warning - a module default exists to be overridden.
-        private readonly HashSet<int> _defaultSerializerIds = new();
-        private readonly HashSet<string> _defaultSerializerAliases = new(StringComparer.Ordinal);
-        private readonly HashSet<Type> _defaultBoundTypes = new();
+        // Aliases/types currently holding a module default, not a HOCON or Setup registration, plus (for an
+        // id) which alias registered it as a default - overriding one of these never logs the "serializer
+        // override" warning, and replacing a default alias moves its own bound types to the new serializer.
+        // Construction-only: every field here is nulled out once the constructor is done with it, so nothing
+        // outside the constructor - including the AddSerializationMap call on the Deserialize miss path - ever
+        // consults stale default bookkeeping.
+        private HashSet<string> _defaultSerializerAliases = new(StringComparer.Ordinal);
+        private HashSet<Type> _defaultBoundTypes = new();
+        private Dictionary<int, string> _defaultSerializerIdAlias = new();
+        private Dictionary<string, (SerializerV2 Serializer, ImmutableHashSet<Type> UseFor)> _moduleDefaultsByAlias = new(StringComparer.Ordinal);
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
@@ -343,6 +348,10 @@ namespace Akka.Serialization
                     AddSerializer(details.Alias, details.SerializerV2, isDefault: true);
                     foreach (var type in details.UseFor)
                         AddSerializationMap(type, details.SerializerV2, isDefault: true);
+
+                    // the detail a later non-default AddSerializer needs to move this alias's own
+                    // bound types to whatever replaces it
+                    _moduleDefaultsByAlias[details.Alias] = (details.SerializerV2, details.UseFor);
                 }
             }
 
@@ -488,6 +497,13 @@ namespace Akka.Serialization
                     AddSerializationMap(t, details.SerializerV2);
                 }
             }
+
+            // default bookkeeping is construction-only - drop it now so nothing that runs after the
+            // constructor (e.g. the Deserialize-miss caching path in FindSerializerV2ForType) can read it
+            _defaultSerializerAliases = null;
+            _defaultBoundTypes = null;
+            _defaultSerializerIdAlias = null;
+            _moduleDefaultsByAlias = null;
         }
 
         /// <summary>
@@ -755,10 +771,18 @@ namespace Akka.Serialization
         /// module default rather than a HOCON or Setup one - overriding a default never logs the warning below,
         /// and overriding this registration later clears its default marker.
         /// </summary>
+        /// <remarks>
+        /// A default is only "replaced" when <paramref name="name"/> is the same alias that registered it - an
+        /// unrelated alias that happens to reuse a default's id is not replacing that default, and still warns.
+        /// Replacing a default alias with something else also moves that default's own bound types (the ones
+        /// still pointing at the instance being replaced) to <paramref name="serializer"/>, the same way a
+        /// binding row does when one is present.
+        /// </remarks>
         private void AddSerializer(string name, SerializerV2 serializer, bool isDefault)
         {
             var id = serializer.Identifier;
-            if(_logSerializerOverrideOnStart && !_defaultSerializerIds.Contains(id) &&
+            var overridingDefaultId = _defaultSerializerIdAlias?.TryGetValue(id, out var idOwner) == true && idOwner == name;
+            if(_logSerializerOverrideOnStart && !overridingDefaultId &&
                _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
             {
                 LogWarning(
@@ -767,22 +791,40 @@ namespace Akka.Serialization
                     "Did you mean to do this?");
             }
 
-            if(_logSerializerOverrideOnStart && !_defaultSerializerAliases.Contains(name) &&
+            var overridingDefaultName = _defaultSerializerAliases?.Contains(name) == true;
+            if(_logSerializerOverrideOnStart && !overridingDefaultName &&
                _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer with name [{serializer.Identifier}] are being overriden  " +
                     $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
 
+            if (!isDefault && overridingDefaultName && _moduleDefaultsByAlias.TryGetValue(name, out var replaced) &&
+                !ReferenceEquals(replaced.Serializer, serializer))
+            {
+                foreach (var type in replaced.UseFor)
+                {
+                    if (_defaultBoundTypes.Contains(type) && _serializerMap.TryGetValue(type, out var current) &&
+                        ReferenceEquals(current, replaced.Serializer))
+                        AddSerializationMap(type, serializer, isDefault: false);
+                }
+            }
+
             _serializersById[id] = serializer;
             _serializersByName[name] = serializer;
 
-            SetDefault(_defaultSerializerIds, id, isDefault);
             SetDefault(_defaultSerializerAliases, name, isDefault);
+            if (isDefault && _defaultSerializerIdAlias is { } idAliases)
+                idAliases[id] = name;
+            else if (overridingDefaultId)
+                _defaultSerializerIdAlias?.Remove(id);
         }
 
         private static void SetDefault<T>(HashSet<T> defaults, T key, bool isDefault)
         {
+            if (defaults is null)
+                return;
+
             if (isDefault)
                 defaults.Add(key);
             else
@@ -818,7 +860,7 @@ namespace Akka.Serialization
         /// </summary>
         private void AddSerializationMap(Type type, SerializerV2 serializer, bool isDefault)
         {
-            if(_logSerializerOverrideOnStart && !_defaultBoundTypes.Contains(type) &&
+            if(_logSerializerOverrideOnStart && _defaultBoundTypes?.Contains(type) != true &&
                _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer for type [{type}] are being overriden  " +

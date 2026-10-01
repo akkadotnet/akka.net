@@ -67,6 +67,28 @@ namespace Akka.Tests.Serialization
             public override int Identifier => 9312;
         }
 
+        /// <summary>
+        /// A native <see cref="SerializerV2"/> (not wrapped by <see cref="SerializerV1Adapter"/>, unlike
+        /// <see cref="FakeSerializer"/>) that reuses FakeSerializer's id (9311) under an alias of its own, to
+        /// stand in for an unrelated alias that happens to reuse a module default's id. Needs its own
+        /// <see cref="SerializerV2"/> type - two V1 serializers both compare equal as "SerializerV1Adapter"
+        /// once adapted, which would hide the type mismatch the override warning looks for.
+        /// </summary>
+        public sealed class SameIdSerializer : SerializerV2
+        {
+            public SameIdSerializer(ExtendedActorSystem system) : base(system)
+            {
+            }
+
+            public override int Identifier => 9311;
+
+            public override string Manifest(object obj) => "M";
+
+            public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) => 0;
+
+            public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) => new ModuleMessage();
+        }
+
         private sealed class FakeModule : ModuleSerializers
         {
             public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system)
@@ -477,6 +499,51 @@ namespace Akka.Tests.Serialization
                 fromRow.Should().BeSameAs(fromDefault);
 
                 _probes.Should().Be(1);
+            });
+        }
+
+        [Fact(DisplayName = "Serialization should move a module default's bound types when HOCON overrides its alias")]
+        public async Task Should_move_a_module_defaults_bound_types_When_HOCON_overrides_its_alias()
+        {
+            // no ModuleConfig fallback - the module's own rows never reach this config, only the override does
+            var overrides = ConfigurationFactory.ParseString(
+                @"akka.actor.serializers.fake-module = ""Akka.Serialization.ByteArraySerializer, Akka""");
+
+            var system = ActorSystem.Create("module-alias-override-moves-types", overrides);
+            try
+            {
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: false);
+
+                // the override replaced the "fake-module" alias itself; every type the default bound to it
+                // (not just the ones a binding row happens to name) has to follow, the same way it would if a
+                // binding row for each type were present and reprocessed the (now overridden) alias
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(PoisonPill)).Should().BeOfType<ByteArraySerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "Serialization should still warn when a different alias reuses a module default's id")]
+        public async Task Should_warn_When_a_different_alias_reuses_a_module_defaults_id()
+        {
+            // no HOCON row for "fake-module" at all, so its default alias/id is never touched directly -
+            // only "other-alias", which happens to reuse the same id (9311) FakeSerializer has
+            var loggerConfig = ConfigurationFactory.ParseString($@"akka.stdout-logger-class = ""{RecordingLoggerName}""");
+            var setup = ActorSystemSetup.Create(
+                BootstrapSetup.Create().WithConfig(loggerConfig.WithFallback(ConfigurationFactory.Default())),
+                SerializationSetup.Create(system => ImmutableHashSet<SerializerDetails>.Empty.Add(
+                    SerializerDetails.Create("other-alias", new SameIdSerializer(system), ImmutableHashSet.Create(typeof(UnboundMessage))))));
+
+            await WithSystem("module-id-reuse-warns", setup, async system =>
+            {
+                await Build(system, FakeTable(), dynamicTypeLoading: false);
+                var logger = (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
+                logger.HasOverrideWarning.Should().BeTrue();
             });
         }
     }

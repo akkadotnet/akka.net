@@ -87,6 +87,7 @@ namespace Akka.Cluster.Sharding.Tests
         public async Task Should_resolve_the_sharding_serializer_On_a_plain_system_with_no_extension_started()
         {
             var system = ActorSystem.Create("sharding-no-extension");
+            InitializeLogger(system);
             try
             {
                 var serialization = ((ExtendedActorSystem)system).Serialization;

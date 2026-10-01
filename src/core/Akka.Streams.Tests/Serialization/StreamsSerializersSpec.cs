@@ -141,6 +141,7 @@ namespace Akka.Streams.Tests.Serialization
         public async Task Should_resolve_the_stream_ref_serializer_On_a_plain_system_with_no_materializer()
         {
             var system = ActorSystem.Create("streams-no-materializer");
+            InitializeLogger(system);
             try
             {
                 var serialization = ((ExtendedActorSystem)system).Serialization;
