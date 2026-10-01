@@ -341,9 +341,10 @@ namespace Akka.Serialization
                 : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
             Dictionary<string, Type> setupTypesByName = null;
 
-            // modules whose serializer rows this config contains; see FindModuleBoundType for how the binding rows
-            // below use them
-            var loadedModules = new List<LoadedModule>();
+            // modules this config has built, by assembly name. The first serializer row whose assembly names a
+            // module builds all of that module's serializers; a binding row never builds one. When the build
+            // itself fails, the exception is kept so a later NotBuiltIn error can show it.
+            var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var kvp in serializersConfig)
             {
@@ -351,25 +352,33 @@ namespace Akka.Serialization
                 var serializerTypeName = kvp.Value.GetString();
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
-                Serializer serializer;
-                if (FindSerializerFactory(serializerTypeName, modules, loadedModules) is { } serializerFactory)
+                if (FindCoreSerializerFactory(serializerTypeName) is { } builtInFactory)
                 {
-                    serializer = serializerFactory(system, serializerConfig);
+                    var serializer = builtInFactory(system, serializerConfig);
                     if (serializer == null)
                     {
                         // a built-in serializer that cannot work under the current feature switches
                         skippedAliases.Add(kvp.Key);
                         continue;
                     }
+                    AddSerializer(kvp.Key, AdaptSerializer(serializer));
+                    continue;
+                }
+
+                var (moduleDetails, moduleSkew) = FindModuleSerializer(serializerTypeName, system, modules, builtModules);
+                if (moduleDetails is not null)
+                {
+                    AddSerializer(kvp.Key, moduleDetails.SerializerV2);
                 }
                 else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                 {
-                    serializer = CreateSerializerFromTypeName(serializerTypeName, system, serializerConfig);
+                    var serializer = CreateSerializerFromTypeName(serializerTypeName, system, serializerConfig);
                     if (serializer == null)
                     {
                         system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'", kvp.Key, serializerTypeName);
                         continue;
                     }
+                    AddSerializer(kvp.Key, serializer);
                 }
                 else if (setupAliases.Contains(kvp.Key))
                 {
@@ -378,11 +387,12 @@ namespace Akka.Serialization
                 }
                 else
                 {
-                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                        $"akka.actor.serializers.{kvp.Key}", serializerTypeName, "a SerializationSetup to register the serializer"));
+                    var message = AkkaFeatures.NotBuiltIn(
+                        $"akka.actor.serializers.{kvp.Key}", serializerTypeName, "a SerializationSetup to register the serializer");
+                    // moduleSkew, when present, is the real reason the module's own serializer didn't build - e.g. a
+                    // missing Google.Protobuf.dll - and "enable the switch" alone would hide that from whoever reads this
+                    throw moduleSkew is null ? new ConfigurationException(message) : new ConfigurationException(message, moduleSkew);
                 }
-
-                AddSerializer(kvp.Key, AdaptSerializer(serializer));
             }
 
             // Add any serializers that are registered via the SerializationSetup
@@ -405,7 +415,7 @@ namespace Akka.Serialization
                 {
                     messageType = builtInType;
                 }
-                else if (FindModuleBoundType(bindingName, bindingAssembly, modules, loadedModules) is { } moduleType)
+                else if (FindModuleBoundType(bindingName, bindingAssembly, builtModules) is { } moduleType)
                 {
                     messageType = moduleType;
                 }
@@ -478,53 +488,74 @@ namespace Akka.Serialization
             return byName;
         }
 
+        /// <summary>Core's own factory for <paramref name="typeName"/> - the two serializers that ship inside Akka.dll itself.</summary>
+        private static Func<ExtendedActorSystem, Config, Serializer> FindCoreSerializerFactory(string typeName)
+            => Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInName &&
+               BuiltInSerializers.TryGetValue(builtInName, out var builtInFactory)
+                ? builtInFactory
+                : null;
+
         /// <summary>
-        /// Core's built-in factory for <paramref name="typeName"/>, else the factory of the module its assembly half names.
+        /// The module <paramref name="typeName"/>'s assembly half names, building it - calling its
+        /// <see cref="ModuleSerializers.Create"/> - the first time this method is asked about that assembly, and
+        /// reusing the result (or the lack of one) for every later row from the same assembly. Returns the
+        /// serializer this row names, and separately, the exception the build itself threw, if it threw a
+        /// version-skew one - the caller can surface that instead of a plain "not built in" when it has nothing
+        /// else to resolve the row with.
         /// </summary>
-        private static Func<ExtendedActorSystem, Config, Serializer> FindSerializerFactory(
-            string typeName, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
+        private static (SerializerDetails Details, Exception SkewError) FindModuleSerializer(
+            string typeName, ExtendedActorSystem system, ModuleSerializerTable modules,
+            Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
         {
-            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInName &&
-                BuiltInSerializers.TryGetValue(builtInName, out var builtInFactory))
-                return builtInFactory;
+            if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) || assembly is null)
+                return (null, null);
 
-            if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) ||
-                assembly is null || modules.ForAssembly(assembly) is not { } module)
-                return null;
+            if (!builtModules.TryGetValue(assembly, out var built))
+            {
+                LoadedModule module = null;
+                Exception skewError = null;
+                if (modules.ForAssembly(assembly) is { } raw)
+                    module = LoadedModule.TryCreate(raw, system, out skewError);
 
-            var entry = module.FindSerializer(name, assembly);
-            if (entry is not null && !loadedModules.Contains(module))
-                loadedModules.Add(module);
-            return entry?.Create;
+                built = (module, skewError);
+                builtModules[assembly] = built;
+            }
+
+            return (built.Module?.FindSerializer(name, assembly), built.SkewError);
         }
 
         /// <summary>
-        /// Resolves a binding row's type from the module tables, without reflection. Null when no module lists it.
+        /// Resolves a binding row's type from the modules this config's serializer rows already built
+        /// (<paramref name="builtModules"/>). Null when no built module lists it. Never builds a module itself -
+        /// a binding row alone is not reason enough to construct every serializer a module has, so a module with
+        /// no serializer row of its own in this config is invisible here and falls back to reflection, or throws,
+        /// like any other unresolved row.
         /// </summary>
         /// <remarks>
         /// Two lookups, in order:
         /// <list type="number">
-        /// <item>The module the row's assembly half names. <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c>
-        /// is answered by Akka.Remote's table, loading it if no serializer row has yet.</item>
-        /// <item>Every module whose serializer rows this config resolved (<paramref name="loadedModules"/>). This
-        /// covers bound types that live outside their module: Remote.conf binds <c>"System.String"</c> and
-        /// <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no module owns CoreLib or Akka.dll, so
-        /// lookup 1 can't answer for them.</item>
+        /// <item>The module the row's assembly half names, if this config already built it.
+        /// <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c> is answered by Akka.Remote's module, once some
+        /// Remote.conf serializer row has built it.</item>
+        /// <item>Every other module this config built. This covers bound types that live outside their module:
+        /// Remote.conf binds <c>"System.String"</c> and <c>"Akka.Actor.Identify, Akka"</c> to its own serializers,
+        /// and no module owns CoreLib or Akka.dll, so lookup 1 can't answer for them.</item>
         /// </list>
-        /// Lookup 2 only asks modules this config uses. With no Remote serializer rows, a <c>"System.String"</c>
+        /// Lookup 2 only asks modules this config built. With no Remote serializer rows, a <c>"System.String"</c>
         /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
-        /// loop runs after the serializer loop, so <paramref name="loadedModules"/> is complete by then. Two modules
+        /// loop runs after the serializer loop, so <paramref name="builtModules"/> is complete by then. Two modules
         /// that list the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
         /// </remarks>
         private static Type FindModuleBoundType(
-            string name, string assembly, ModuleSerializerTable modules, List<LoadedModule> loadedModules)
+            string name, string assembly, Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
         {
-            if (assembly is not null && modules.ForAssembly(assembly)?.FindBoundType(name, assembly) is { } owned)
-                return owned;
+            if (assembly is not null && builtModules.TryGetValue(assembly, out var owned) &&
+                owned.Module?.FindBoundType(name, assembly) is { } ownedType)
+                return ownedType;
 
-            foreach (var module in loadedModules)
+            foreach (var built in builtModules.Values)
             {
-                if (module.FindBoundType(name, assembly) is { } type)
+                if (built.Module?.FindBoundType(name, assembly) is { } type)
                     return type;
             }
 

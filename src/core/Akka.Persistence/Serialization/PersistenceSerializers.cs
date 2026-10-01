@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Serialization;
 
 namespace Akka.Persistence.Serialization
@@ -17,17 +17,11 @@ namespace Akka.Persistence.Serialization
     /// </summary>
     internal sealed class PersistenceSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for persistence.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(PersistenceMessageSerializer), (system, _) => new PersistenceMessageSerializer(system)),
-            new ModuleSerializer(typeof(PersistenceSnapshotSerializer), (system, _) => new PersistenceSnapshotSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IMessage),
-            typeof(Snapshot),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-persistence-message", new PersistenceMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IMessage))),
+            SerializerDetails.Create("akka-persistence-snapshot", new PersistenceSnapshotSerializer(system),
+                ImmutableHashSet.Create(typeof(Snapshot)))
+        );
     }
 }

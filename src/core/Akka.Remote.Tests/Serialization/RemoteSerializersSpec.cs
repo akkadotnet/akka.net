@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
+using Akka.Remote;
 using Akka.Remote.Artery;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
@@ -90,26 +91,23 @@ namespace Akka.Remote.Tests.Serialization
         public void Should_match_reflection_When_resolving_every_Remote_conf_row()
         {
             var table = new RemoteSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            var details = table.Create((ExtendedActorSystem)Sys);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, details);
 
             // core's module map names Akka.Remote, and RemoteSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Remote").Should().NotBeNull();
 
             var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
             var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-            var settings = Sys.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            var aliasByType = ModuleSerializerSpecs.SerializerRows(RemoteRows)
-                .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
 
-            foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
+            foreach (var entry in details)
             {
-                // the factory builds what reflection builds, under the same id
-                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(aliasByType[type]));
-                built.Should().BeOfType(reflected.GetSerializerById(built.Identifier).GetType(), type.Name);
-                fromTable.GetSerializerById(built.Identifier).Should().BeOfType(type, type.Name);
+                // the table builds what reflection builds, under the same id
+                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
+                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
             }
 
-            foreach (var type in table.BoundTypes)
+            foreach (var type in details.SelectMany(d => d.UseFor))
             {
                 var expected = reflected.FindSerializerForType(type);
                 var actual = fromTable.FindSerializerForType(type);
@@ -117,7 +115,7 @@ namespace Akka.Remote.Tests.Serialization
                 actual.Identifier.Should().Be(expected.Identifier, type.Name);
             }
 
-            // primitive's settings block reached the factory
+            // primitive's settings block reached the table
             fromTable.FindSerializerForType(typeof(string)).Manifest("s")
                 .Should().Be(reflected.FindSerializerForType(typeof(string)).Manifest("s"));
         }
@@ -126,8 +124,12 @@ namespace Akka.Remote.Tests.Serialization
         public void Should_have_a_Remote_conf_row_When_the_table_lists_a_type()
         {
             var table = new RemoteSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Create((ExtendedActorSystem)Sys));
         }
+
+        [Fact(DisplayName = "RemoteSerializers should build without throwing on a system that never loaded Remote.conf")]
+        public async Task Should_build_without_throwing_When_Remote_conf_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("remote-no-config", s => new RemoteSerializers().Create(s));
 
         [Fact(DisplayName = "Serialization should resolve Remote.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
@@ -199,6 +201,58 @@ namespace Akka.Remote.Tests.Serialization
                 serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(IActorRef)).Should().BeOfType<NewtonSoftJsonSerializer>();
+            });
+        }
+
+        /// <remarks>
+        /// Regression: a lone <c>proto</c> row used to build every Remote serializer, including <c>primitive</c>,
+        /// to answer it - and <c>PrimitiveSerializers</c> threw on the null config a system that never loaded
+        /// Remote.conf hands it. <c>RemoteSerializers.Create</c> must not throw just because this config only
+        /// ever asks it for one of its serializers.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should start and resolve a lone proto row with no other Remote.conf rows present")]
+        public async Task Should_resolve_a_lone_proto_row_When_no_other_Remote_config_is_present()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor.serializers.proto = ""Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote""
+                akka.actor.serialization-bindings { ""Google.Protobuf.IMessage, Google.Protobuf"" = proto }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-lone-proto", config, null, system =>
+            {
+                ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(Google.Protobuf.IMessage))
+                    .Should().BeOfType<ProtobufSerializer>();
+            });
+        }
+
+        /// <remarks>
+        /// Regression: a binding-only row used to build Remote's whole module just to answer lookup 1, with the
+        /// same throw as above. With the switch on it resolves through plain reflection instead.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should start with a RemoteWatcher+Heartbeat binding and no Remote serializer row")]
+        public async Task Should_start_With_a_binding_only_RemoteWatcher_Heartbeat_row()
+        {
+            var config = ConfigurationFactory.ParseString(
+                @"akka.actor.serialization-bindings { ""Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"" = bytes }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-binding-only-heartbeat", config, null, system =>
+            {
+                ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(RemoteWatcher.Heartbeat))
+                    .Should().BeOfType<ByteArraySerializer>();
+            });
+        }
+
+        /// <remarks>A binding row alone doesn't build a module, so with the switch off nothing resolves this one.</remarks>
+        [Fact(DisplayName = "Serialization should reject a RemoteWatcher+Heartbeat binding with no Remote serializer row When dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_a_binding_only_row_names_an_unbuilt_module()
+        {
+            var config = ConfigurationFactory.ParseString(
+                @"akka.actor.serialization-bindings { ""Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"" = bytes }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-binding-only-heartbeat-off", config, null, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false));
+                exception.Message.Should().Contain("RemoteWatcher+Heartbeat");
             });
         }
 

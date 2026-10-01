@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Cluster.Tools.PublishSubscribe;
@@ -25,21 +25,13 @@ namespace Akka.Cluster.Tools
     /// </summary>
     internal sealed class ToolsSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for each feature's reference.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(ClusterClientMessageSerializer), (system, _) => new ClusterClientMessageSerializer(system)),
-            new ModuleSerializer(typeof(DistributedPubSubMessageSerializer), (system, _) => new DistributedPubSubMessageSerializer(system)),
-            new ModuleSerializer(typeof(ClusterSingletonMessageSerializer), (system, _) => new ClusterSingletonMessageSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IClusterClientMessage),
-            typeof(IClusterClientProtocolMessage),
-            typeof(IDistributedPubSubMessage),
-            typeof(SendToOneSubscriber),
-            typeof(IClusterSingletonMessage),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-cluster-client", new ClusterClientMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IClusterClientMessage), typeof(IClusterClientProtocolMessage))),
+            SerializerDetails.Create("akka-pubsub", new DistributedPubSubMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IDistributedPubSubMessage), typeof(SendToOneSubscriber))),
+            SerializerDetails.Create("akka-singleton", new ClusterSingletonMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IClusterSingletonMessage)))
+        );
     }
 }

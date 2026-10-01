@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Serialization;
 
 namespace Akka.Cluster.Sharding.Serialization
@@ -17,15 +17,9 @@ namespace Akka.Cluster.Sharding.Serialization
     /// </summary>
     internal sealed class ShardingSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for reference.conf; ClusterShardingMessageSerializer has one, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(ClusterShardingMessageSerializer), (system, _) => new ClusterShardingMessageSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IClusterShardingSerializable),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-sharding", new ClusterShardingMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IClusterShardingSerializable)))
+        );
     }
 }

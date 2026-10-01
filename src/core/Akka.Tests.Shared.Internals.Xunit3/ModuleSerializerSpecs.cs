@@ -37,16 +37,33 @@ namespace Akka.Serialization
             moduleConfig.GetConfig("akka.actor.serialization-bindings").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetString()));
 
         /// <summary>
-        /// Asserts a module's table names exactly the types its config rows name, in both directions: every row
-        /// resolves to a type the table has, and the table has no type without a row.
+        /// Asserts a module's table is a complete, alias-accurate mirror of its config: every registration's alias
+        /// names that registration's serializer type in `akka.actor.serializers` (and vice versa - no extra alias),
+        /// and every `akka.actor.serialization-bindings` row matches exactly one registration whose <c>UseFor</c>
+        /// contains that row's type under that row's alias (and vice versa - no extra binding in the table).
         /// </summary>
-        public static void AssertTableMatchesConfig(Config moduleConfig, IEnumerable<Type> serializerTypes, IEnumerable<Type> boundTypes)
+        /// <param name="moduleConfig">The module's own reference.conf (or the combined config of its files).</param>
+        /// <param name="details">The module's built serializers, as its <c>ModuleSerializers.Create</c> returns them.</param>
+        public static void AssertTableMatchesConfig(Config moduleConfig, IEnumerable<SerializerDetails> details)
         {
-            var configuredSerializerTypes = SerializerRows(moduleConfig).Select(r => Type.GetType(r.TypeName, throwOnError: true));
-            var configuredBoundTypes = BindingRows(moduleConfig).Select(r => Type.GetType(r.TypeName, throwOnError: true));
+            var table = details.ToList();
 
-            serializerTypes.Should().BeEquivalentTo(configuredSerializerTypes);
-            boundTypes.Should().BeEquivalentTo(configuredBoundTypes);
+            var configuredTypeByAlias = SerializerRows(moduleConfig)
+                .ToDictionary(r => r.Alias, r => Type.GetType(r.TypeName, throwOnError: true)!);
+
+            // aliases match in both directions: every table alias is a config row for the same type, and every
+            // config row has a table entry
+            table.Select(r => (r.Alias, Type: r.Serializer.GetType())).Should().BeEquivalentTo(
+                configuredTypeByAlias.Select(kv => (Alias: kv.Key, Type: kv.Value)));
+
+            var configuredBindings = BindingRows(moduleConfig)
+                .Select(r => (Type: Type.GetType(r.TypeName, throwOnError: true)!, r.Alias));
+
+            var tableBindings = table.SelectMany(r => r.UseFor.Select(t => (Type: t, r.Alias)));
+
+            // bindings match in both directions: every table binding is a config row under the same alias, and
+            // every config row is bound by exactly one registration under that alias
+            tableBindings.Should().BeEquivalentTo(configuredBindings);
         }
 
         /// <summary>Builds a <see cref="Serialization"/> over the default module table, holding the switch at <paramref name="dynamicTypeLoading"/> for the call.</summary>
@@ -121,6 +138,26 @@ namespace Akka.Serialization
                 return Task.CompletedTask;
             });
             return serialization!;
+        }
+
+        /// <summary>
+        /// Asserts that <paramref name="create"/> - ordinarily <c>system =&gt; new XSerializers().Create(system)</c> -
+        /// does not throw against a fresh system that never loaded the module's own reference.conf, only core's
+        /// own akka.conf. A module's serializers must build even for a system that has no reason to know the
+        /// module exists yet - building one must never depend on that module's own config being present.
+        /// </summary>
+        public static async Task AssertBuildsWithoutModuleConfig(string systemName, Action<ExtendedActorSystem> create)
+        {
+            var system = ActorSystem.Create(systemName);
+            try
+            {
+                Action act = () => create((ExtendedActorSystem)system);
+                act.Should().NotThrow();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
         }
     }
 }

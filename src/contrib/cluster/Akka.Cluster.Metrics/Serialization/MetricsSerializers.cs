@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Serialization;
 
 namespace Akka.Cluster.Metrics.Serialization
@@ -17,19 +17,14 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     internal sealed class MetricsSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for reference.conf; ClusterMetricsMessageSerializer has one, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(ClusterMetricsMessageSerializer), (system, _) => new ClusterMetricsMessageSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(MetricsGossipEnvelope),
-            typeof(AdaptiveLoadBalancingPool),
-            typeof(MixMetricsSelector),
-            typeof(CpuMetricsSelector),
-            typeof(MemoryMetricsSelector),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-cluster-metrics", new ClusterMetricsMessageSerializer(system),
+                ImmutableHashSet.Create(
+                    typeof(MetricsGossipEnvelope),
+                    typeof(AdaptiveLoadBalancingPool),
+                    typeof(MixMetricsSelector),
+                    typeof(CpuMetricsSelector),
+                    typeof(MemoryMetricsSelector)))
+        );
     }
 }

@@ -8,7 +8,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -72,23 +71,20 @@ namespace Akka.Streams.Tests.Serialization
             await ModuleSerializerSpecs.WithSystem("streams-parity", Config.Empty, StreamsRows, system =>
             {
                 var table = new StreamsSerializers();
-                ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+                var details = table.Create((ExtendedActorSystem)system);
+                ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, details);
 
                 // core's module map names Akka.Streams, and StreamsSerializers is what it loads for it
                 ModuleSerializerTable.Default.ForAssembly("Akka.Streams").Should().NotBeNull();
 
                 var reflected = Build(system, NoModules, dynamicTypeLoading: true);
                 var fromTable = Build(system, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-                var settings = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
-                var aliasByType = ModuleSerializerSpecs.SerializerRows(StreamsRows)
-                    .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
 
-                foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
+                foreach (var entry in details)
                 {
-                    var built = create((ExtendedActorSystem)system, settings.GetConfig(aliasByType[type]));
-                    built.Identifier.Should().Be(30);
-                    built.Should().BeOfType(reflected.GetSerializerById(30).GetType(), type.Name);
-                    fromTable.GetSerializerById(30).Should().BeOfType(type, type.Name);
+                    entry.Serializer.Identifier.Should().Be(30);
+                    entry.Serializer.Should().BeOfType(reflected.GetSerializerById(30).GetType(), entry.Alias);
+                    fromTable.GetSerializerById(30).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
                 }
 
                 foreach (var type in BoundSamples)
@@ -100,8 +96,12 @@ namespace Akka.Streams.Tests.Serialization
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new StreamsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(StreamsRows, table.Create((ExtendedActorSystem)Sys));
         }
+
+        [Fact(DisplayName = "StreamsSerializers should build without throwing on a system that never loaded its reference.conf")]
+        public async Task Should_build_without_throwing_When_its_config_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("streams-no-config", s => new StreamsSerializers().Create(s));
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()

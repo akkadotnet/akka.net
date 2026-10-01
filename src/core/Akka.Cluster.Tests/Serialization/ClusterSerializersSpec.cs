@@ -8,7 +8,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Configuration;
@@ -76,22 +75,19 @@ namespace Akka.Cluster.Tests.Serialization
         public void Should_match_reflection_When_resolving_every_Cluster_conf_row()
         {
             var table = new ClusterSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            var details = table.Create((ExtendedActorSystem)Sys);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, details);
 
             // core's module map names Akka.Cluster, and ClusterSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Cluster").Should().NotBeNull();
 
             var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
             var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-            var settings = Sys.Settings.Config.GetConfig("akka.actor.serialization-settings");
-            var aliasByType = ModuleSerializerSpecs.SerializerRows(ClusterRows)
-                .ToDictionary(r => Type.GetType(r.TypeName, throwOnError: true)!, r => r.Alias);
 
-            foreach (var (type, create) in table.Serializers.Select(s => (s.Type, s.Create)))
+            foreach (var entry in details)
             {
-                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(aliasByType[type]));
-                built.Should().BeOfType(reflected.GetSerializerById(built.Identifier).GetType(), type.Name);
-                fromTable.GetSerializerById(built.Identifier).Should().BeOfType(type, type.Name);
+                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
+                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
             }
 
             foreach (var type in BoundSamples)
@@ -102,8 +98,12 @@ namespace Akka.Cluster.Tests.Serialization
         public void Should_have_a_Cluster_conf_row_When_the_table_lists_a_type()
         {
             var table = new ClusterSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, table.Serializers.Select(s => s.Type), table.BoundTypes);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, table.Create((ExtendedActorSystem)Sys));
         }
+
+        [Fact(DisplayName = "ClusterSerializers should build without throwing on a system that never loaded Cluster.conf")]
+        public async Task Should_build_without_throwing_When_Cluster_conf_is_absent()
+            => await ModuleSerializerSpecs.AssertBuildsWithoutModuleConfig("cluster-no-config", s => new ClusterSerializers().Create(s));
 
         [Fact(DisplayName = "Serialization should resolve Cluster.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()

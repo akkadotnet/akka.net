@@ -67,14 +67,15 @@ namespace Akka.Tests.Serialization
 
         private sealed class FakeModule : ModuleSerializers
         {
-            public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
+            public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system)
             {
-                new ModuleSerializer(typeof(FakeSerializer),
-                    (system, config) => config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config))
-            };
+                // a module can read its own settings block, the same way the real PrimitiveSerializers does
+                var config = system.Settings.Config.GetConfig("akka.actor.serialization-settings.fake-module");
+                var serializer = config.IsNullOrEmpty() ? new FakeSerializer(system) : new FakeSerializer(system, config);
 
-            public override IReadOnlyList<Type> BoundTypes { get; } =
-                new[] { typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill) };
+                return ImmutableHashSet.Create(SerializerDetails.Create("fake-module", serializer,
+                    ImmutableHashSet.Create(typeof(ModuleMessage), typeof(string), typeof(Identify), typeof(PoisonPill))));
+            }
         }
 
         /// <summary>Stands in for a module built against a different Akka: its table's constructor hits a missing member.</summary>
@@ -82,9 +83,7 @@ namespace Akka.Tests.Serialization
         {
             public SkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
-
-            public override IReadOnlyList<Type> BoundTypes => throw new NotSupportedException();
+            public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => throw new NotSupportedException();
         }
 
         /// <summary>The same skew hit in a static initializer, which arrives wrapped in TypeInitializationException.</summary>
@@ -92,9 +91,14 @@ namespace Akka.Tests.Serialization
         {
             static StaticSkewedModule() => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
 
-            public override IReadOnlyList<ModuleSerializer> Serializers => throw new NotSupportedException();
+            public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => throw new NotSupportedException();
+        }
 
-            public override IReadOnlyList<Type> BoundTypes => throw new NotSupportedException();
+        /// <summary>The same skew, but hit building the serializers instead of loading the table.</summary>
+        internal sealed class CreateSkewedModule : ModuleSerializers
+        {
+            public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system)
+                => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
         }
 
         private const string ModuleMessageName = "Akka.Tests.Serialization.ModuleSerializersSpec+ModuleMessage";
@@ -254,9 +258,10 @@ namespace Akka.Tests.Serialization
             });
         }
 
-        [Theory(DisplayName = "Serialization should treat a module whose table fails to load as absent")]
+        [Theory(DisplayName = "Serialization should treat a module as absent when loading or building it fails")]
         [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+SkewedModule, Akka.Tests")]
         [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+StaticSkewedModule, Akka.Tests")]
+        [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+CreateSkewedModule, Akka.Tests")]
         [InlineData("No.Such.Module, No.Such.Assembly")]
         public async Task Should_treat_the_module_as_absent_When_its_table_fails_to_load(string tableTypeName)
         {
@@ -270,6 +275,10 @@ namespace Akka.Tests.Serialization
                 // switch off: the ordinary not-built-in error, not a load failure
                 var exception = await Assert.ThrowsAsync<ConfigurationException>(() => Build(system, table, dynamicTypeLoading: false));
                 exception.Message.Should().Contain("akka.actor.serializers.fake-module");
+
+                // a skew hit while building the serializers stays visible
+                if (tableTypeName.Contains(nameof(CreateSkewedModule)))
+                    exception.InnerException.Should().BeOfType<MissingMethodException>();
             });
         }
 

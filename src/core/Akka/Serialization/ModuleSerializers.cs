@@ -9,50 +9,67 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using Akka.Actor;
-using Akka.Configuration;
 
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. A serializer type a module's reference.conf names, and its factory. The factory calls the constructor
-    /// reflection picks for the module's shipped config; a serializer with one constructor always gets that one.
-    /// Return a serializer; null skips the alias (a safety net, not a feature).
-    /// </summary>
-    internal sealed record ModuleSerializer(Type Type, Func<ExtendedActorSystem, Config, Serializer> Create);
-
-    /// <summary>
-    /// INTERNAL API. The serializer and bound types a first-party module's reference.conf names, so
-    /// <see cref="Serialization"/> can resolve those rows without <see cref="Type.GetType(string)"/>.
+    /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
+    /// can resolve those rows without <see cref="Type.GetType(string)"/>. <see cref="Create"/> has the same shape as
+    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, HOCON still
+    /// decides which of these entries are actually registered, and a <see cref="SerializationSetup"/> still wins
+    /// over both.
     /// </summary>
     internal abstract class ModuleSerializers
     {
-        public abstract IReadOnlyList<ModuleSerializer> Serializers { get; }
-
-        public abstract IReadOnlyList<Type> BoundTypes { get; }
+        public abstract ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system);
     }
 
     /// <summary>
-    /// INTERNAL API. A loaded <see cref="ModuleSerializers"/>, indexed by stripped full name for strict matching.
+    /// INTERNAL API. A module's serializers, built and indexed by stripped full name for strict matching.
     /// </summary>
     internal sealed class LoadedModule
     {
-        private readonly Dictionary<string, (ModuleSerializer Entry, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (SerializerDetails Details, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
-        internal LoadedModule(ModuleSerializers module)
+        private LoadedModule(ImmutableHashSet<SerializerDetails> details)
         {
-            foreach (var entry in module.Serializers)
-                _serializers[KeyOf(entry.Type)] = (entry, entry.Type.Assembly.GetName().Name, IsAkka(entry.Type));
-            foreach (var type in module.BoundTypes)
-                _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
+            foreach (var entry in details)
+            {
+                var serializerType = entry.Serializer.GetType();
+                _serializers[KeyOf(serializerType)] = (entry, serializerType.Assembly.GetName().Name, IsAkka(serializerType));
+                foreach (var type in entry.UseFor)
+                    _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
+            }
         }
 
-        internal ModuleSerializer? FindSerializer(string name, string? assembly)
-            => _serializers.TryGetValue(name, out var s) && Accepts(s.Assembly, s.IsAkka, assembly) ? s.Entry : null;
+        /// <summary>
+        /// Builds <paramref name="module"/>'s serializers against <paramref name="system"/>; null when that fails
+        /// with a version-skew error, in which case <paramref name="skewError"/> is that exception - the caller
+        /// decides whether to surface it.
+        /// </summary>
+        internal static LoadedModule? TryCreate(ModuleSerializers module, ExtendedActorSystem system, out Exception? skewError)
+        {
+            try
+            {
+                skewError = null;
+                return new LoadedModule(module.Create(system));
+            }
+            catch (Exception e) when (ModuleSerializerTable.IsVersionSkew(e))
+            {
+                // the module, or something its serializers reference, is missing from this build: it counts as absent
+                skewError = e;
+                return null;
+            }
+        }
+
+        internal SerializerDetails? FindSerializer(string name, string? assembly)
+            => _serializers.TryGetValue(name, out var s) && Accepts(s.Assembly, s.IsAkka, assembly) ? s.Details : null;
 
         internal Type? FindBoundType(string name, string? assembly)
             => _boundTypes.TryGetValue(name, out var t) && Accepts(t.Assembly, t.IsAkka, assembly) ? t.Type : null;
@@ -96,13 +113,13 @@ namespace Akka.Serialization
         });
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
-        private readonly ConcurrentDictionary<string, LoadedModule?> _loaded = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, ModuleSerializers?> _loaded = new(StringComparer.OrdinalIgnoreCase);
 
         internal ModuleSerializerTable(IDictionary<string, Func<ModuleSerializers?>> modules)
             => _modules = new Dictionary<string, Func<ModuleSerializers?>>(modules, StringComparer.OrdinalIgnoreCase);
 
         /// <summary>The module shipped as <paramref name="assembly"/>; null when it is not a known module or fails to load.</summary>
-        internal LoadedModule? ForAssembly(string assembly)
+        internal ModuleSerializers? ForAssembly(string assembly)
         {
             if (!_modules.TryGetValue(assembly, out var load))
                 return null;
@@ -111,21 +128,20 @@ namespace Akka.Serialization
             return _loaded.GetOrAdd(assembly, _ => TryLoad(load));
         }
 
-        private static LoadedModule? TryLoad(Func<ModuleSerializers?> load)
+        private static ModuleSerializers? TryLoad(Func<ModuleSerializers?> load)
         {
             try
             {
-                // reads both lists here, so a member missing from either also lands in the catch
-                return load() is { } module ? new LoadedModule(module) : null;
+                return load();
             }
             catch (Exception e) when (IsVersionSkew(e))
             {
-                // the module's table, or something it references, is missing from this build: the module counts as absent
+                // the module's table is missing from this build: the module counts as absent
                 return null;
             }
         }
 
-        private static bool IsVersionSkew(Exception e)
+        internal static bool IsVersionSkew(Exception e)
         {
             while (e is TargetInvocationException or TypeInitializationException && e.InnerException is { } inner)
                 e = inner;

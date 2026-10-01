@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Serialization;
 
 namespace Akka.DistributedData.Serialization
@@ -17,17 +17,11 @@ namespace Akka.DistributedData.Serialization
     /// </summary>
     internal sealed class DistributedDataSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for reference.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(ReplicatedDataSerializer), (system, _) => new ReplicatedDataSerializer(system)),
-            new ModuleSerializer(typeof(ReplicatorMessageSerializer), (system, _) => new ReplicatorMessageSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(IReplicatedDataSerialization),
-            typeof(IReplicatorMessage),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-replicated-data", new ReplicatedDataSerializer(system),
+                ImmutableHashSet.Create(typeof(IReplicatedDataSerialization))),
+            SerializerDetails.Create("akka-data-replication", new ReplicatorMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IReplicatorMessage)))
+        );
     }
 }

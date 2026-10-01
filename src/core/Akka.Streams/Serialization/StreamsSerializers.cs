@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Serialization;
 using Akka.Streams.Implementation.StreamRef;
 
@@ -18,17 +18,9 @@ namespace Akka.Streams.Serialization
     /// </summary>
     internal sealed class StreamsSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for reference.conf; StreamRefSerializer has one, so it always gets that one
-        public override IReadOnlyList<ModuleSerializer> Serializers { get; } = new[]
-        {
-            new ModuleSerializer(typeof(StreamRefSerializer), (system, _) => new StreamRefSerializer(system)),
-        };
-
-        public override IReadOnlyList<Type> BoundTypes { get; } = new[]
-        {
-            typeof(SinkRefImpl),
-            typeof(SourceRefImpl),
-            typeof(IStreamRefsProtocol),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-stream-ref", new StreamRefSerializer(system),
+                ImmutableHashSet.Create(typeof(SinkRefImpl), typeof(SourceRefImpl), typeof(IStreamRefsProtocol)))
+        );
     }
 }
