@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
+using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.Persistence.Serialization
@@ -27,6 +29,9 @@ namespace Akka.Persistence.Serialization
         public override int Identifier => GetType() == typeof(PersistenceSnapshotSerializer) ? 8 : base.Identifier;
 
         public override bool IncludeManifest { get; }
+
+        // The only manifest FromBinary(byte[], Type) below handles.
+        private static readonly Dictionary<string, Type> ManifestTypes = TypeExtensions.ManifestTable(typeof(Snapshot));
 
         public override byte[] ToBinary(object obj)
         {
@@ -74,6 +79,10 @@ namespace Akka.Persistence.Serialization
 
             throw new ArgumentException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
         }
+
+        /// <summary>Resolves the manifest from <see cref="ManifestTypes"/> so this works without dynamic type loading.</summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+            => ManifestTypes.TryResolveManifestType(manifest, out var type) ? FromBinary(bytes, type!) : base.FromBinary(bytes, manifest);
 
         private Snapshot GetSnapshot(byte[] bytes)
         {

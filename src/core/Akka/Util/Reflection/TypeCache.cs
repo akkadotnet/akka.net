@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Akka.Util.Reflection
 {
@@ -30,11 +31,26 @@ namespace Akka.Util.Reflection
         /// If the type is in Akka.dll or in Mscorlib.dll, it is sufficient to supply the type name qualified by its namespace.
         /// </param>
         /// <returns>TBD</returns>
+        [RequiresUnreferencedCode("Resolves typeName by reflection when it is not already cached. The trimmer cannot tell which type that is, so it may have been trimmed away. Guard with TryGetCached plus AkkaFeatures.IsDynamicTypeLoadingSupported instead of calling this directly on a cache miss.")]
         public static Type GetType(string typeName)
         {
             return TypeMap.GetOrAdd(typeName, GetTypeInternal);
         }
 
+        /// <summary>
+        /// Looks up <paramref name="typeName"/> without falling back to reflection, so a caller can check for
+        /// an already-cached type before deciding whether reflection is even allowed.
+        /// </summary>
+        internal static bool TryGetCached(string typeName, out Type type) => TypeMap.TryGetValue(typeName, out type);
+
+        /// <summary>INTERNAL API, for tests: forget every resolved type, so a test can't pass on a cache another test warmed.</summary>
+        internal static void Clear()
+        {
+            TypeMap.Clear();
+            TypeMap["null"] = null;
+        }
+
+        [RequiresUnreferencedCode("Calls Type.GetType(string, bool). The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         private static Type GetTypeInternal(string typeName)
         {
             return Type.GetType(typeName, true);

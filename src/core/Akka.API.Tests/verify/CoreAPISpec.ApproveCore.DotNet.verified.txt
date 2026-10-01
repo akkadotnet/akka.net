@@ -5737,6 +5737,7 @@ namespace Akka.Util.Reflection
     }
     public static class TypeCache
     {
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(@"Resolves typeName by reflection when it is not already cached. The trimmer cannot tell which type that is, so it may have been trimmed away. Guard with TryGetCached plus AkkaFeatures.IsDynamicTypeLoadingSupported instead of calling this directly on a cache miss.")]
         public static System.Type GetType(string typeName) { }
     }
 }
