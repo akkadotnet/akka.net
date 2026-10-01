@@ -429,20 +429,28 @@ namespace Akka.Persistence
         /// <param name="shouldHandle">TBD</param>
         protected void Recover<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
+            // A predicate-less, always-handling registration for object must be the last handler added -
+            // exactly what RecoverAny already requires - so route it there instead of a typed registration.
+            if (typeof(T) == typeof(object) && shouldHandle == null)
+            {
+                RecoverAny(message => handler((T)message));
+                return;
+            }
+
             AddGenericReceiveHandler(shouldHandle, msg =>
             {
                 handler(msg);
                 return true;
             }, isRecover: true);
         }
-        
+
         private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover)
         {
             if(isRecover)
                 EnsureMayConfigureRecoverHandlers();
             else
                 EnsureMayConfigureCommandHandlers();
-            
+
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
             handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler);
@@ -450,7 +458,13 @@ namespace Akka.Persistence
 
         private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover)
         {
-            EnsureMayConfigureRecoverHandlers();
+            // isRecover branches here (this used to always call EnsureMayConfigureRecoverHandlers(), which
+            // broke Command(Type, ...) inside Become - Become only pushes a frame onto _matchCommandBuilders).
+            if (isRecover)
+                EnsureMayConfigureRecoverHandlers();
+            else
+                EnsureMayConfigureCommandHandlers();
+
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
             handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler);
@@ -475,6 +489,13 @@ namespace Akka.Persistence
         /// <param name="shouldHandle">TBD</param>
         protected void Recover(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
+            // Same rationale as the generic Recover<T>(Action<T>, ...) overload above.
+            if (messageType == typeof(object) && shouldHandle == null)
+            {
+                RecoverAny(handler);
+                return;
+            }
+
             AddTypedReceiveHandler(messageType, shouldHandle, msg =>
             {
                 handler(msg);
@@ -500,7 +521,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover<T>(Func<T, bool> handler)
         {
-            AddGenericReceiveHandler(null, handler, isRecover:true);
+            AddGenericReceiveHandler(null, handler, isRecover: true);
         }
 
         /// <summary>
@@ -510,7 +531,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover(Type messageType, Func<object, bool> handler)
         {
-            AddTypedReceiveHandler(messageType, null, handler, isRecover:true);
+            AddTypedReceiveHandler(messageType, null, handler, isRecover: true);
         }
 
         /// <summary>
@@ -625,7 +646,15 @@ namespace Akka.Persistence
         protected void Command<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            
+
+            // A predicate-less, always-handling registration for object must be the last handler added -
+            // exactly what CommandAny already requires - so route it there instead of a typed registration.
+            if (typeof(T) == typeof(object) && shouldHandle == null)
+            {
+                CommandAny(message => handler((T)message));
+                return;
+            }
+
             AddGenericReceiveHandler(shouldHandle, msg =>
             {
                 handler(msg);
@@ -653,7 +682,14 @@ namespace Akka.Persistence
         protected void Command(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            
+
+            // Same rationale as the generic Command<T>(Action<T>, ...) overload above.
+            if (messageType == typeof(object) && shouldHandle == null)
+            {
+                CommandAny(handler);
+                return;
+            }
+
             AddTypedReceiveHandler(messageType, shouldHandle, msg =>
             {
                 handler(msg);
@@ -680,7 +716,7 @@ namespace Akka.Persistence
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            
+
             AddGenericReceiveHandler(null, handler, isRecover: false);
         }
 

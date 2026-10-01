@@ -132,11 +132,7 @@ namespace Akka.Actor
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         protected void ReceiveAsync<T>(Func<T,Task> handler, Predicate<T>? shouldHandle = null)
         {
-            AddGenericReceiveHandler<T>(shouldHandle, message =>
-            {
-                WrapAsyncHandler(handler)(message);
-                return true;
-            });
+            Receive(WrapAsyncHandler(handler), shouldHandle);
         }
 
         /// <summary>
@@ -152,11 +148,7 @@ namespace Akka.Actor
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         protected void ReceiveAsync<T>(Predicate<T> shouldHandle, Func<T, Task> handler)
         {
-            AddGenericReceiveHandler<T>(shouldHandle, message =>
-            {
-                WrapAsyncHandler(handler)(message);
-                return true;
-            });
+            Receive(WrapAsyncHandler(handler), shouldHandle);
         }
 
         /// <summary>
@@ -172,11 +164,7 @@ namespace Akka.Actor
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         protected void ReceiveAsync(Type messageType, Func<object, Task> handler, Predicate<object>? shouldHandle = null)
         {
-            AddTypedReceiveHandler(messageType, shouldHandle, message =>
-            {
-                WrapAsyncHandler(handler)(message);
-                return true;
-            });
+            Receive(messageType, WrapAsyncHandler(handler), shouldHandle);
         }
 
         /// <summary>
@@ -192,11 +180,7 @@ namespace Akka.Actor
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         protected void ReceiveAsync(Type messageType, Predicate<object> shouldHandle, Func<object, Task> handler)
         {
-            AddTypedReceiveHandler(messageType, shouldHandle, message =>
-            {
-                WrapAsyncHandler(handler)(message);
-                return true;
-            });
+            Receive(messageType, WrapAsyncHandler(handler), shouldHandle);
         }
 
         /// <summary>
@@ -225,6 +209,14 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
+            // A predicate-less, always-handling registration for object must be the last handler added -
+            // exactly what ReceiveAny already requires - so route it there instead of a typed registration.
+            if (typeof(T) == typeof(object) && shouldHandle == null)
+            {
+                ReceiveAny(message => handler((T)message));
+                return;
+            }
+
             AddGenericReceiveHandler<T>(shouldHandle, message =>
             {
                 handler(message);
@@ -245,11 +237,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            AddGenericReceiveHandler<T>(shouldHandle, message =>
-            {
-                handler(message);
-                return true;
-            });
+            Receive(handler, shouldHandle);
         }
 
         /// <summary>
@@ -265,6 +253,13 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
+            // Same rationale as the generic Receive<T>(Action<T>, ...) overload above.
+            if (messageType == typeof(object) && shouldHandle == null)
+            {
+                ReceiveAny(handler);
+                return;
+            }
+
             AddTypedReceiveHandler(messageType, shouldHandle, message =>
             {
                 handler(message);
@@ -285,11 +280,7 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
-            AddTypedReceiveHandler(messageType, shouldHandle, message =>
-            {
-                handler(message);
-                return true;
-            });
+            Receive(messageType, handler, shouldHandle);
         }
 
         /// <summary>
