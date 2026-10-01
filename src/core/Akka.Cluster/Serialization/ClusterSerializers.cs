@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
+using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Delivery.Internal;
 using Akka.Serialization;
@@ -19,13 +19,11 @@ namespace Akka.Cluster.Serialization
     /// </summary>
     internal sealed class ClusterSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for Cluster.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
-        {
-            new BuiltInSerializer("akka-cluster", typeof(ClusterMessageSerializer), (system, _) => new ClusterMessageSerializer(system),
-                new[] { typeof(IClusterMessage), typeof(ClusterRouterPool) }),
-            new BuiltInSerializer("reliable-delivery", typeof(ReliableDeliverySerializer), (system, _) => new ReliableDeliverySerializer(system),
-                new[] { typeof(IDeliverySerializable) }),
-        };
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-cluster", new ClusterMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IClusterMessage), typeof(ClusterRouterPool))),
+            SerializerDetails.Create("reliable-delivery", new ReliableDeliverySerializer(system),
+                ImmutableHashSet.Create(typeof(IDeliverySerializable)))
+        );
     }
 }

@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Cluster.Tools.PublishSubscribe;
@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tools.Tests
         public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
         {
             var table = new ToolsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ToolsRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
+            ModuleSerializerSpecs.AssertTableMatchesConfig(ToolsRows, table.Create((ExtendedActorSystem)Sys));
         }
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]

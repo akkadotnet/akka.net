@@ -38,29 +38,28 @@ namespace Akka.Serialization
 
         /// <summary>
         /// Asserts a module's table is a complete, alias-accurate mirror of its config: every registration's alias
-        /// names that registration's type in `akka.actor.serializers` (and vice versa - no extra alias), and every
-        /// `akka.actor.serialization-bindings` row matches exactly one registration whose <c>Bindings</c> contains
-        /// that row's type under that row's alias (and vice versa - no extra binding in the table).
+        /// names that registration's serializer type in `akka.actor.serializers` (and vice versa - no extra alias),
+        /// and every `akka.actor.serialization-bindings` row matches exactly one registration whose <c>UseFor</c>
+        /// contains that row's type under that row's alias (and vice versa - no extra binding in the table).
         /// </summary>
         /// <param name="moduleConfig">The module's own reference.conf (or the combined config of its files).</param>
-        /// <param name="registrations">Each registration's alias, serializer type, and the types it binds.</param>
-        public static void AssertTableMatchesConfig(
-            Config moduleConfig, IEnumerable<(string Alias, Type Type, IReadOnlyList<Type> Bindings)> registrations)
+        /// <param name="details">The module's built serializers, as its <c>ModuleSerializers.Create</c> returns them.</param>
+        public static void AssertTableMatchesConfig(Config moduleConfig, IEnumerable<SerializerDetails> details)
         {
-            var table = registrations.ToList();
+            var table = details.ToList();
 
             var configuredTypeByAlias = SerializerRows(moduleConfig)
                 .ToDictionary(r => r.Alias, r => Type.GetType(r.TypeName, throwOnError: true)!);
 
             // aliases match in both directions: every table alias is a config row for the same type, and every
             // config row has a table entry
-            table.Select(r => (r.Alias, r.Type)).Should().BeEquivalentTo(
+            table.Select(r => (r.Alias, Type: r.Serializer.GetType())).Should().BeEquivalentTo(
                 configuredTypeByAlias.Select(kv => (Alias: kv.Key, Type: kv.Value)));
 
             var configuredBindings = BindingRows(moduleConfig)
                 .Select(r => (Type: Type.GetType(r.TypeName, throwOnError: true)!, r.Alias));
 
-            var tableBindings = table.SelectMany(r => r.Bindings.Select(t => (Type: t, r.Alias)));
+            var tableBindings = table.SelectMany(r => r.UseFor.Select(t => (Type: t, r.Alias)));
 
             // bindings match in both directions: every table binding is a config row under the same alias, and
             // every config row is bound by exactly one registration under that alias

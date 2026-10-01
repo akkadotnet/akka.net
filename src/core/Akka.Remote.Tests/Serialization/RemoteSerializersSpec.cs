@@ -90,24 +90,23 @@ namespace Akka.Remote.Tests.Serialization
         public void Should_match_reflection_When_resolving_every_Remote_conf_row()
         {
             var table = new RemoteSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
+            var details = table.Create((ExtendedActorSystem)Sys);
+            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, details);
 
             // core's module map names Akka.Remote, and RemoteSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Remote").Should().NotBeNull();
 
             var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
             var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-            var settings = Sys.Settings.Config.GetConfig("akka.actor.serialization-settings");
 
-            foreach (var (type, create, alias) in table.Serializers.Select(s => (s.Type, s.Create, s.Alias)))
+            foreach (var entry in details)
             {
-                // the factory builds what reflection builds, under the same id
-                var built = create((ExtendedActorSystem)Sys, settings.GetConfig(alias));
-                built.Should().BeOfType(reflected.GetSerializerById(built.Identifier).GetType(), type.Name);
-                fromTable.GetSerializerById(built.Identifier).Should().BeOfType(type, type.Name);
+                // the table builds what reflection builds, under the same id
+                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
+                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
             }
 
-            foreach (var type in table.Serializers.SelectMany(s => s.Bindings))
+            foreach (var type in details.SelectMany(d => d.UseFor))
             {
                 var expected = reflected.FindSerializerForType(type);
                 var actual = fromTable.FindSerializerForType(type);
@@ -115,7 +114,7 @@ namespace Akka.Remote.Tests.Serialization
                 actual.Identifier.Should().Be(expected.Identifier, type.Name);
             }
 
-            // primitive's settings block reached the factory
+            // primitive's settings block reached the table
             fromTable.FindSerializerForType(typeof(string)).Manifest("s")
                 .Should().Be(reflected.FindSerializerForType(typeof(string)).Manifest("s"));
         }
@@ -124,7 +123,7 @@ namespace Akka.Remote.Tests.Serialization
         public void Should_have_a_Remote_conf_row_When_the_table_lists_a_type()
         {
             var table = new RemoteSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Serializers.Select(s => (s.Alias, s.Type, s.Bindings)));
+            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Create((ExtendedActorSystem)Sys));
         }
 
         [Fact(DisplayName = "Serialization should resolve Remote.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]

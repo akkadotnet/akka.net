@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
@@ -23,14 +22,11 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
-        // the constructor reflection picks for Remote.conf; each class has one constructor, so it always gets that one
-        public override IReadOnlyList<BuiltInSerializer> Serializers { get; } = new[]
-        {
-            new BuiltInSerializer("akka-containers", typeof(MessageContainerSerializer), (system, _) => new MessageContainerSerializer(system),
-                new[] { typeof(ActorSelectionMessage) }),
-            new BuiltInSerializer("akka-misc", typeof(MiscMessageSerializer), (system, _) => new MiscMessageSerializer(system),
-                new[]
-                {
+        public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
+            SerializerDetails.Create("akka-containers", new MessageContainerSerializer(system),
+                ImmutableHashSet.Create(typeof(ActorSelectionMessage))),
+            SerializerDetails.Create("akka-misc", new MiscMessageSerializer(system),
+                ImmutableHashSet.Create(
                     typeof(Identify),
                     typeof(ActorIdentity),
                     typeof(IActorRef),
@@ -51,18 +47,19 @@ namespace Akka.Remote.Serialization
                     typeof(Config),
                     typeof(RemoteWatcher.Heartbeat),
                     typeof(RemoteWatcher.HeartbeatRsp),
-                    typeof(RemoteRouterConfig),
-                }),
-            new BuiltInSerializer("primitive", typeof(PrimitiveSerializers), (system, config) => new PrimitiveSerializers(system, config),
-                new[] { typeof(string), typeof(int), typeof(long) }),
-            new BuiltInSerializer("proto", typeof(ProtobufSerializer), (system, _) => new ProtobufSerializer(system),
-                new[] { typeof(Google.Protobuf.IMessage) }),
-            new BuiltInSerializer("daemon-create", typeof(DaemonMsgCreateSerializer), (system, _) => new DaemonMsgCreateSerializer(system),
-                new[] { typeof(DaemonMsgCreate) }),
-            new BuiltInSerializer("akka-system-msg", typeof(SystemMessageSerializer), (system, _) => new SystemMessageSerializer(system),
-                new[] { typeof(SystemMessage) }),
-            new BuiltInSerializer("artery-control", typeof(ArteryControlMessageSerializer), (system, _) => new ArteryControlMessageSerializer(system),
-                new[] { typeof(IArteryControlMessage) }),
-        };
+                    typeof(RemoteRouterConfig))),
+            // the only built-in serializer with its own settings block; it reads that block itself
+            SerializerDetails.Create("primitive",
+                new PrimitiveSerializers(system, system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive")),
+                ImmutableHashSet.Create(typeof(string), typeof(int), typeof(long))),
+            SerializerDetails.Create("proto", new ProtobufSerializer(system),
+                ImmutableHashSet.Create(typeof(Google.Protobuf.IMessage))),
+            SerializerDetails.Create("daemon-create", new DaemonMsgCreateSerializer(system),
+                ImmutableHashSet.Create(typeof(DaemonMsgCreate))),
+            SerializerDetails.Create("akka-system-msg", new SystemMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(SystemMessage))),
+            SerializerDetails.Create("artery-control", new ArteryControlMessageSerializer(system),
+                ImmutableHashSet.Create(typeof(IArteryControlMessage)))
+        );
     }
 }
