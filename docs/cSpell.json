@@ -55,6 +55,7 @@
         "Microservices",
         "MNTR",
         "mutex",
+        "netstandard",
         "Newtonsoft",
         "Ninject",
         "overridable",
