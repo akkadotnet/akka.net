@@ -92,5 +92,28 @@ namespace Akka.Cluster.Tools.Tests
             serialization.FindSerializerForType(typeof(SendToOneSubscriber)).Should().BeOfType<DistributedPubSubMessageSerializer>();
             serialization.FindSerializerForType(typeof(IClusterSingletonMessage)).Should().BeOfType<ClusterSingletonMessageSerializer>();
         }
+
+        /// <remarks>
+        /// Akka.Cluster.Tools is deployed with this test project, so its module default registers on startup - a
+        /// plain system resolves Client/PubSub/Singleton by id without ever starting any of those extensions or
+        /// loading their reference.conf rows.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve Client/PubSub/Singleton serializers by id on a plain system with none of their extensions started")]
+        public async Task Should_resolve_Tools_serializers_When_a_plain_system_has_no_extension_started()
+        {
+            var system = ActorSystem.Create("tools-no-extension");
+            InitializeLogger(system);
+            try
+            {
+                var serialization = ((ExtendedActorSystem)system).Serialization;
+                serialization.GetSerializerById(9).Should().BeOfType<DistributedPubSubMessageSerializer>();
+                serialization.GetSerializerById(14).Should().BeOfType<ClusterSingletonMessageSerializer>();
+                serialization.GetSerializerById(15).Should().BeOfType<ClusterClientMessageSerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
     }
 }
