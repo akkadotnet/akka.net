@@ -155,8 +155,16 @@ namespace Akka.Remote.Tests.Transport
             throttler.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(throttler);
 
-            // the death watch notification is a system message enqueued before anything we send from
-            // here, so the manager has already processed it by the time it handles `SetThrottle`
+            // The manager purges its handle table on the `Terminated` it sends itself after the death watch
+            // notification, a user message that could land behind anything we send now. Two Identify round
+            // trips make sure it's queued first: the first can be dequeued before the manager drains the
+            // notification, but the drain after it runs before the second is handled.
+            for (var i = 0; i < 2; i++)
+            {
+                manager.Tell(new Identify(i), TestActor);
+                await ExpectMsgAsync<ActorIdentity>(id => Equals(id.MessageId, i));
+            }
+
             var deadLetters = CreateTestProbe("dead-letters");
             Sys.EventStream.Subscribe(deadLetters.Ref, typeof(DeadLetter));
 
@@ -165,7 +173,8 @@ namespace Akka.Remote.Tests.Transport
 
             await ExpectMsgAsync<SetThrottleAck>();
 
-            // a stale handle table entry shows up as the throttle mode dead-lettering to the dead child
+            // a stale handle table entry shows up as the throttle mode dead-lettering to the dead child; that
+            // happens before the ack is sent, so this window is only slack
             await deadLetters.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
         }
 
