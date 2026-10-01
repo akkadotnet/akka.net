@@ -541,9 +541,68 @@ namespace Akka.Tests.Serialization
 
             await WithSystem("module-id-reuse-warns", setup, async system =>
             {
-                await Build(system, FakeTable(), dynamicTypeLoading: false);
                 var logger = (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
+                // the outer system's own startup already built a (real-module) Serialization against this
+                // same logger; clear it so the assertion below is about our Build call alone
+                logger.Messages.Clear();
+
+                await Build(system, FakeTable(), dynamicTypeLoading: false);
                 logger.HasOverrideWarning.Should().BeTrue();
+            });
+        }
+
+        [Fact(DisplayName = "Serialization should not warn when a HOCON binding row moves one of a default's types after its alias was overridden")]
+        public async Task Should_not_warn_When_a_binding_row_moves_a_type_After_its_default_alias_was_overridden()
+        {
+            // the alias override alone moves every bound type to the override (previous test); a binding row
+            // that then moves ONE of those types again must not warn either - it is still replacing a default,
+            // just by name instead of via the alias
+            var overrides = ConfigurationFactory.ParseString($@"
+                akka.stdout-logger-class = ""{RecordingLoggerName}""
+                akka.actor.serializers.fake-module = ""Akka.Serialization.ByteArraySerializer, Akka""
+                akka.actor.serialization-bindings {{ ""{ModuleMessageName}, Akka.Tests"" = json }}");
+
+            var system = ActorSystem.Create("module-alias-then-binding-override", overrides);
+            try
+            {
+                var logger = (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
+                logger.Messages.Clear();
+
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: true);
+
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<NewtonSoftJsonSerializer>();
+                // the other three types still followed the alias override, same as before
+                serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
+                logger.HasOverrideWarning.Should().BeFalse();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "Serialization should resolve a module default's bound types against the last alias override, not the first")]
+        public async Task Should_resolve_a_module_defaults_bound_types_Against_the_last_of_two_alias_overrides()
+        {
+            // HOCON overrides "fake-module" to ByteArraySerializer first; a SerializationSetup overrides the
+            // same alias again to SetupSerializer, whose own UseFor does not include the module's types - they
+            // still have to end up on SetupSerializer, not stuck on the first (HOCON) override
+            var config = ConfigurationFactory.ParseString($@"
+                akka.stdout-logger-class = ""{RecordingLoggerName}""
+                akka.actor.serializers.fake-module = ""Akka.Serialization.ByteArraySerializer, Akka""");
+            var setup = ActorSystemSetup.Create(
+                BootstrapSetup.Create().WithConfig(config.WithFallback(ConfigurationFactory.Default())),
+                SerializationSetup.Create(system => ImmutableHashSet<SerializerDetails>.Empty.Add(
+                    SerializerDetails.Create("fake-module", new SetupSerializer(system), ImmutableHashSet.Create(typeof(UnboundMessage))))));
+
+            await WithSystem("module-alias-overridden-twice", setup, async system =>
+            {
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: false);
+
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<SetupSerializer>();
+                serialization.FindSerializerForType(typeof(string)).Should().BeOfType<SetupSerializer>();
+                serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<SetupSerializer>();
+                serialization.FindSerializerForType(typeof(PoisonPill)).Should().BeOfType<SetupSerializer>();
             });
         }
     }

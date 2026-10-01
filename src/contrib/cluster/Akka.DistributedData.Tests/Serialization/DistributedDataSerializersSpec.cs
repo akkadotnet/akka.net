@@ -87,7 +87,7 @@ namespace Akka.DistributedData.Tests.Serialization
         /// DistributedData's own reference.conf rows.
         /// </remarks>
         [Fact(DisplayName = "Serialization should resolve DistributedData serializers by id on a plain system with no Replicator started")]
-        public async Task Should_resolve_DistributedData_serializers_On_a_plain_system_with_no_extension_started()
+        public async Task Should_resolve_DistributedData_serializers_When_a_plain_system_has_no_extension_started()
         {
             var system = ActorSystem.Create("ddata-no-extension");
             InitializeLogger(system);

@@ -434,6 +434,24 @@ namespace Akka.Serialization
                 AddSerializer(details.Alias, details.SerializerV2);
             }
 
+            // A default alias may have been overridden above (by HOCON, then possibly again by Setup) without
+            // anything re-pointing its own bound types - there's no binding row to reprocess them on a system
+            // that never loaded this module's config. One pass, now that every alias override for this
+            // Serialization is done, moves each default's still-unclaimed bound types to whatever its alias
+            // currently resolves to. isDefault: true keeps them marked as defaults, so an explicit HOCON or
+            // Setup binding for one of these types further down still overrides it silently, same as any other
+            // default. This runs instead of moving types inline as each alias is overridden, so a second
+            // override (HOCON, then Setup) ends up with the final alias's types, not whichever happened first.
+            foreach (var kv in _moduleDefaultsByAlias)
+            {
+                if (!_serializersByName.TryGetValue(kv.Key, out var now) || ReferenceEquals(now, kv.Value.Serializer))
+                    continue;
+
+                foreach (var type in kv.Value.UseFor)
+                    if (_serializerMap.TryGetValue(type, out var current) && ReferenceEquals(current, kv.Value.Serializer))
+                        AddSerializationMap(type, now, isDefault: true);
+            }
+
             foreach (var kvp in serializerBindingConfig)
             {
                 // HOCON trims values but not keys; the key is used as written, as it was before the built-in tables.
@@ -774,9 +792,9 @@ namespace Akka.Serialization
         /// <remarks>
         /// A default is only "replaced" when <paramref name="name"/> is the same alias that registered it - an
         /// unrelated alias that happens to reuse a default's id is not replacing that default, and still warns.
-        /// Replacing a default alias with something else also moves that default's own bound types (the ones
-        /// still pointing at the instance being replaced) to <paramref name="serializer"/>, the same way a
-        /// binding row does when one is present.
+        /// This does not move a replaced default alias's own bound types - see the pass over
+        /// <see cref="_moduleDefaultsByAlias"/> in the constructor, which runs once every alias override for this
+        /// <see cref="Serialization"/> is done, rather than moving types here as each override happens.
         /// </remarks>
         private void AddSerializer(string name, SerializerV2 serializer, bool isDefault)
         {
@@ -799,25 +817,21 @@ namespace Akka.Serialization
                     $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
 
-            if (!isDefault && overridingDefaultName && _moduleDefaultsByAlias.TryGetValue(name, out var replaced) &&
-                !ReferenceEquals(replaced.Serializer, serializer))
-            {
-                foreach (var type in replaced.UseFor)
-                {
-                    if (_defaultBoundTypes.Contains(type) && _serializerMap.TryGetValue(type, out var current) &&
-                        ReferenceEquals(current, replaced.Serializer))
-                        AddSerializationMap(type, serializer, isDefault: false);
-                }
-            }
-
             _serializersById[id] = serializer;
             _serializersByName[name] = serializer;
 
             SetDefault(_defaultSerializerAliases, name, isDefault);
-            if (isDefault && _defaultSerializerIdAlias is { } idAliases)
-                idAliases[id] = name;
-            else if (overridingDefaultId)
+            if (isDefault)
+            {
+                if (_defaultSerializerIdAlias is { } idAliases)
+                    idAliases[id] = name;
+            }
+            else
+            {
+                // this id no longer belongs to a default, whether or not it was this alias's own default id -
+                // a later registration that reuses it (under any alias) must still warn
                 _defaultSerializerIdAlias?.Remove(id);
+            }
         }
 
         private static void SetDefault<T>(HashSet<T> defaults, T key, bool isDefault)

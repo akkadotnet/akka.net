@@ -84,7 +84,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// a plain system resolves the id without ever starting sharding or loading its reference.conf rows.
         /// </remarks>
         [Fact(DisplayName = "Serialization should resolve the sharding serializer by id on a plain system with sharding not started")]
-        public async Task Should_resolve_the_sharding_serializer_On_a_plain_system_with_no_extension_started()
+        public async Task Should_resolve_the_sharding_serializer_When_a_plain_system_has_no_extension_started()
         {
             var system = ActorSystem.Create("sharding-no-extension");
             InitializeLogger(system);

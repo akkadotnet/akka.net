@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Serialization
         /// Streams' own reference.conf rows.
         /// </remarks>
         [Fact(DisplayName = "Serialization should resolve the stream-ref serializer by id on a plain system that never created a materializer")]
-        public async Task Should_resolve_the_stream_ref_serializer_On_a_plain_system_with_no_materializer()
+        public async Task Should_resolve_the_stream_ref_serializer_When_a_plain_system_has_no_materializer()
         {
             var system = ActorSystem.Create("streams-no-materializer");
             InitializeLogger(system);

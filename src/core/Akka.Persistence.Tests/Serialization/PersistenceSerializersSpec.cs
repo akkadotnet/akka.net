@@ -133,7 +133,7 @@ namespace Akka.Persistence.Tests.Serialization
         /// plain system resolves both ids without ever starting a journal or snapshot store plugin.
         /// </remarks>
         [Fact(DisplayName = "Serialization should resolve Persistence serializers by id on a plain system with no persistence plugin started")]
-        public async Task Should_resolve_Persistence_serializers_On_a_plain_system_with_no_extension_started()
+        public async Task Should_resolve_Persistence_serializers_When_a_plain_system_has_no_extension_started()
         {
             var system = ActorSystem.Create("persistence-no-extension");
             InitializeLogger(system);

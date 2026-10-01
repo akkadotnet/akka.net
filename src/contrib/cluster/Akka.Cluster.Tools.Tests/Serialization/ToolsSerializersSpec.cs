@@ -99,7 +99,7 @@ namespace Akka.Cluster.Tools.Tests
         /// loading their reference.conf rows.
         /// </remarks>
         [Fact(DisplayName = "Serialization should resolve Client/PubSub/Singleton serializers by id on a plain system with none of their extensions started")]
-        public async Task Should_resolve_Tools_serializers_On_a_plain_system_with_no_extension_started()
+        public async Task Should_resolve_Tools_serializers_When_a_plain_system_has_no_extension_started()
         {
             var system = ActorSystem.Create("tools-no-extension");
             InitializeLogger(system);
