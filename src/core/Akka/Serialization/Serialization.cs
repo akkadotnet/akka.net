@@ -341,9 +341,9 @@ namespace Akka.Serialization
                 : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
             Dictionary<string, Type> setupTypesByName = null;
 
-            // modules this config has built, keyed by assembly simple name; a module is built here only - never
-            // from a binding row - the first time one of its own serializer rows names it. The caught exception,
-            // when building the module itself is what failed, rides along so a later NotBuiltIn throw can show it.
+            // modules this config has built, by assembly name. The first serializer row whose assembly names a
+            // module builds all of that module's serializers; a binding row never builds one. When the build
+            // itself fails, the exception is kept so a later NotBuiltIn error can show it.
             var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var kvp in serializersConfig)

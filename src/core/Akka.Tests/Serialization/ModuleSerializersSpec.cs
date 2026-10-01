@@ -275,6 +275,10 @@ namespace Akka.Tests.Serialization
                 // switch off: the ordinary not-built-in error, not a load failure
                 var exception = await Assert.ThrowsAsync<ConfigurationException>(() => Build(system, table, dynamicTypeLoading: false));
                 exception.Message.Should().Contain("akka.actor.serializers.fake-module");
+
+                // a skew hit while building the serializers stays visible
+                if (tableTypeName.Contains(nameof(CreateSkewedModule)))
+                    exception.InnerException.Should().BeOfType<MissingMethodException>();
             });
         }
 

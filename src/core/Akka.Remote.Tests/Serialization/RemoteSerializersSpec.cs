@@ -226,8 +226,7 @@ namespace Akka.Remote.Tests.Serialization
 
         /// <remarks>
         /// Regression: a binding-only row used to build Remote's whole module just to answer lookup 1, with the
-        /// same throw as above. A binding row alone is not reason enough to build a module - this one resolves
-        /// through plain reflection instead, exactly as it would if Akka.Remote were not involved at all.
+        /// same throw as above. With the switch on it resolves through plain reflection instead.
         /// </remarks>
         [Fact(DisplayName = "Serialization should start with a RemoteWatcher+Heartbeat binding and no Remote serializer row")]
         public async Task Should_start_With_a_binding_only_RemoteWatcher_Heartbeat_row()
@@ -239,6 +238,21 @@ namespace Akka.Remote.Tests.Serialization
             {
                 ((ExtendedActorSystem)system).Serialization.FindSerializerForType(typeof(RemoteWatcher.Heartbeat))
                     .Should().BeOfType<ByteArraySerializer>();
+            });
+        }
+
+        /// <remarks>A binding row alone doesn't build a module, so with the switch off nothing resolves this one.</remarks>
+        [Fact(DisplayName = "Serialization should reject a RemoteWatcher+Heartbeat binding with no Remote serializer row When dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_a_binding_only_row_names_an_unbuilt_module()
+        {
+            var config = ConfigurationFactory.ParseString(
+                @"akka.actor.serialization-bindings { ""Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"" = bytes }");
+
+            await ModuleSerializerSpecs.WithSystem("remote-binding-only-heartbeat-off", config, null, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(
+                    () => ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false));
+                exception.Message.Should().Contain("RemoteWatcher+Heartbeat");
             });
         }
 

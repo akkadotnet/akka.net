@@ -22,6 +22,8 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
+        private static readonly Config PrimitiveDefaults = ConfigurationFactory.ParseString("use-legacy-behavior = on");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-containers", new MessageContainerSerializer(system),
                 ImmutableHashSet.Create(typeof(ActorSelectionMessage))),
@@ -48,12 +50,10 @@ namespace Akka.Remote.Serialization
                     typeof(RemoteWatcher.Heartbeat),
                     typeof(RemoteWatcher.HeartbeatRsp),
                     typeof(RemoteRouterConfig))),
-            // the only built-in serializer with its own settings block; the table reads it, falling back to an
-            // empty block - same as GetBoolean's own default, legacy behavior off - for a system that never
-            // loaded Remote.conf (PrimitiveSerializers has no (system)-only constructor to fall back to)
+            // the only built-in serializer with its own settings block; without Remote.conf, use Remote.conf's default
             SerializerDetails.Create("primitive",
                 new PrimitiveSerializers(system,
-                    system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive") ?? Config.Empty),
+                    system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive") ?? PrimitiveDefaults),
                 ImmutableHashSet.Create(typeof(string), typeof(int), typeof(long))),
             SerializerDetails.Create("proto", new ProtobufSerializer(system),
                 ImmutableHashSet.Create(typeof(Google.Protobuf.IMessage))),
