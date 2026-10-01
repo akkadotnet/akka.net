@@ -78,5 +78,25 @@ namespace Akka.Cluster.Sharding.Tests
             serialization.GetSerializerById(13).Should().BeOfType<ClusterShardingMessageSerializer>();
             serialization.FindSerializerForType(typeof(ShardRegion.StartEntity)).Should().BeOfType<ClusterShardingMessageSerializer>();
         }
+
+        /// <remarks>
+        /// Akka.Cluster.Sharding is deployed with this test project, so its module default registers on startup -
+        /// a plain system resolves the id without ever starting sharding or loading its reference.conf rows.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve the sharding serializer by id on a plain system with sharding not started")]
+        public async Task Should_resolve_the_sharding_serializer_When_a_plain_system_has_no_extension_started()
+        {
+            var system = ActorSystem.Create("sharding-no-extension");
+            InitializeLogger(system);
+            try
+            {
+                var serialization = ((ExtendedActorSystem)system).Serialization;
+                serialization.GetSerializerById(13).Should().BeOfType<ClusterShardingMessageSerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
     }
 }

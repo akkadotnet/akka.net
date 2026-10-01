@@ -20,9 +20,9 @@ namespace Akka.Serialization
     /// <summary>
     /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
     /// can resolve those rows without <see cref="Type.GetType(string)"/>. <see cref="Create"/> has the same shape as
-    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, HOCON still
-    /// decides which of these entries are actually registered, and a <see cref="SerializationSetup"/> still wins
-    /// over both.
+    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, every entry here
+    /// is registered as a default as soon as the module loads - HOCON can still override an alias or a binding, and
+    /// a <see cref="SerializationSetup"/> wins over both.
     /// </summary>
     internal abstract class ModuleSerializers
     {
@@ -37,8 +37,12 @@ namespace Akka.Serialization
         private readonly Dictionary<string, (SerializerDetails Details, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
+        /// <summary>Every row <see cref="ModuleSerializers.Create"/> returned, for registering the module's defaults.</summary>
+        internal ImmutableHashSet<SerializerDetails> Details { get; }
+
         private LoadedModule(ImmutableHashSet<SerializerDetails> details)
         {
+            Details = details;
             foreach (var entry in details)
             {
                 var serializerType = entry.Serializer.GetType();
@@ -117,6 +121,9 @@ namespace Akka.Serialization
 
         internal ModuleSerializerTable(IDictionary<string, Func<ModuleSerializers?>> modules)
             => _modules = new Dictionary<string, Func<ModuleSerializers?>>(modules, StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The assembly names of every module this table knows about, loaded or not.</summary>
+        internal IEnumerable<string> AssemblyNames => _modules.Keys;
 
         /// <summary>The module shipped as <paramref name="assembly"/>; null when it is not a known module or fails to load.</summary>
         internal ModuleSerializers? ForAssembly(string assembly)

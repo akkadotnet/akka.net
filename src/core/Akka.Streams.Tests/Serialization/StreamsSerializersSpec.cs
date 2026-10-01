@@ -132,6 +132,27 @@ namespace Akka.Streams.Tests.Serialization
                 serialization.FindSerializerForType(type).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
         }
 
+        /// <remarks>
+        /// Akka.Streams is deployed with this test project, so its module default registers on startup - a plain
+        /// system resolves the stream-ref serializer by id without ever creating a materializer or loading
+        /// Streams' own reference.conf rows.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve the stream-ref serializer by id on a plain system that never created a materializer")]
+        public async Task Should_resolve_the_stream_ref_serializer_When_a_plain_system_has_no_materializer()
+        {
+            var system = ActorSystem.Create("streams-no-materializer");
+            InitializeLogger(system);
+            try
+            {
+                var serialization = ((ExtendedActorSystem)system).Serialization;
+                serialization.GetSerializerById(30).Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
         [Fact(DisplayName = "StreamRefSerializer should serialize a SourceRef but fail to deserialize it When dynamic type loading is off")]
         public void Should_serialize_but_not_deserialize_a_SourceRef_When_dynamic_type_loading_is_disabled()
         {
