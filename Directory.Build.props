@@ -60,9 +60,9 @@
   <PropertyGroup>
     <PackageReleaseNotes>Akka.NET 1.6.0-beta1 is the first public beta of the 1.6 line. Every package now targets .NET 10 only. This beta adds an experimental Artery TCP remoting transport, a buffer-based `SerializerV2` API with a source generator for your own messages, a rewritten Akka.IO TCP layer, Native AOT support for local and Akka.Hosting apps, and code-based serializer registration for Akka's built-in modules. Akka.Hosting now ships from this repository. This release has breaking changes.
 
-Start here: [Akka.NET v1.6 getting started guide](GUIDE_URL)
+Start here: [Akka.NET v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/792fd2d7b7e66a63bae800274ff0b8279b122f86/GETTING_STARTED_V1.6.md)
 
-Upgrading from 1.5? Read the [breaking changes](BREAKING_CHANGES_URL).
+Upgrading from 1.5? Read the [breaking changes](https://github.com/akkadotnet/akka.net/blob/792fd2d7b7e66a63bae800274ff0b8279b122f86/BREAKING_CHANGES_V1.6.md).
 
 **Breaking changes**
 
@@ -84,7 +84,7 @@ Also breaking - see the ledger: `long` system UIDs ([#8317](https://github.com/a
 * Two new `Setup` types, `LoggerSetup` (custom loggers and the log formatter, [#8218](https://github.com/akkadotnet/akka.net/pull/8218)) and `ExtensionsSetup` (extensions, [#8648](https://github.com/akkadotnet/akka.net/pull/8648)), join the existing `SerializationSetup` (serializers and bindings), so you can register your own types without HOCON type names. Combine them with `ActorSystemSetup` and pass the result to `ActorSystem.Create`. Akka.Hosting's `WithExtension&lt;T&gt;()` uses `ExtensionsSetup` ([#8649](https://github.com/akkadotnet/akka.net/pull/8649)).
 * With the switch off, core doesn't register the reflection-based `json` serializer or its `System.Object` binding, so register a serializer for your own messages through `SerializationSetup`; the source-generated serializer in `Akka.Serialization.V2` is built for this. Stream refs need the switch left on.
 * Not supported under Native AOT yet: classic DotNetty remoting (fails at startup, because it loads its transport by type name); Akka.Cluster (including Sharding and DData), Akka.Persistence and the cluster tools (ClusterClient, PubSub, Singleton); remote deployment; custom mailboxes and dispatchers. Artery is the target transport for Akka.Remote under AOT, but no CI check covers Artery under AOT yet.
-* Full details: [Native AOT and Trimming](AOT_DOC_URL). Progress is tracked in [#7246](https://github.com/akkadotnet/akka.net/issues/7246).
+* Full details: [Native AOT and Trimming](https://github.com/akkadotnet/akka.net/blob/792fd2d7b7e66a63bae800274ff0b8279b122f86/docs/articles/deployment/native-aot.md). Progress is tracked in [#7246](https://github.com/akkadotnet/akka.net/issues/7246).
 
 **Serialization registration**
 
