@@ -433,14 +433,14 @@ namespace Akka.Persistence
             {
                 handler(msg);
                 return true;
-            }, isRecover: true);
+            }, isRecover: true, alwaysHandles: true);
         }
         
         // alwaysHandles indicates whether handler is guaranteed to always return true (e.g. it wraps an
         // Action<T>-based Command/Recover overload) as opposed to a genuine Func<T,bool> that may decline
         // a message. This only affects whether a T=object/messageType=object registration with no predicate
         // blocks later registrations - see ReceiveActorHandlers for the rationale.
-        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover, bool alwaysHandles = true)
+        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover, bool alwaysHandles)
         {
             if(isRecover)
                 EnsureMayConfigureRecoverHandlers();
@@ -452,9 +452,19 @@ namespace Akka.Persistence
             handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler, alwaysHandles);
         }
 
-        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover, bool alwaysHandles = true)
+        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover, bool alwaysHandles)
         {
-            EnsureMayConfigureRecoverHandlers();
+            // Bug fix: this used to unconditionally call EnsureMayConfigureRecoverHandlers(), even for
+            // isRecover: false (i.e. Command(Type, ...)). Become/BecomeStacked only push a new frame onto
+            // _matchCommandBuilders (recovery can't be reconfigured after construction), so
+            // _matchRecoverBuilders is empty while inside Become - meaning Command(Type, ...) called from
+            // inside Become incorrectly threw "You may only call Recover-methods...". Mirrors
+            // AddGenericReceiveHandler above, and matches v1.5.71 (MatchBuilder had no such coupling).
+            if (isRecover)
+                EnsureMayConfigureRecoverHandlers();
+            else
+                EnsureMayConfigureCommandHandlers();
+
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
             handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler, alwaysHandles);
@@ -483,7 +493,7 @@ namespace Akka.Persistence
             {
                 handler(msg);
                 return true;
-            }, isRecover: true);
+            }, isRecover: true, alwaysHandles: true);
         }
 
         /// <summary>
@@ -638,7 +648,7 @@ namespace Akka.Persistence
             {
                 handler(msg);
                 return true;
-            }, isRecover: false);
+            }, isRecover: false, alwaysHandles: true);
         }
 
         /// <summary>
@@ -666,7 +676,7 @@ namespace Akka.Persistence
             {
                 handler(msg);
                 return true;
-            }, isRecover: false);
+            }, isRecover: false, alwaysHandles: true);
         }
 
         /// <summary>

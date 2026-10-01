@@ -136,7 +136,7 @@ namespace Akka.Actor
             {
                 WrapAsyncHandler(handler)(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace Akka.Actor
             {
                 WrapAsyncHandler(handler)(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Akka.Actor
             {
                 WrapAsyncHandler(handler)(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace Akka.Actor
             {
                 WrapAsyncHandler(handler)(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -229,7 +229,7 @@ namespace Akka.Actor
             {
                 handler(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -249,7 +249,7 @@ namespace Akka.Actor
             {
                 handler(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace Akka.Actor
             {
                 handler(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -289,7 +289,7 @@ namespace Akka.Actor
             {
                 handler(message);
                 return true;
-            });
+            }, alwaysHandles: true);
         }
 
         /// <summary>
@@ -355,7 +355,7 @@ namespace Akka.Actor
         // Action<T>-based Receive/ReceiveAsync overload) as opposed to a genuine Func<T,bool> that may
         // decline a message. This only affects whether a T=object/messageType=object registration with no
         // predicate blocks later registrations - see ReceiveActorHandlers for the rationale.
-        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool alwaysHandles = true)
+        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool alwaysHandles)
         {
             EnsureMayConfigureMessageHandlers();
             var handlerSet = _handlersStack.Peek();
@@ -363,7 +363,7 @@ namespace Akka.Actor
             handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler, alwaysHandles);
         }
 
-        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool alwaysHandles = true)
+        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool alwaysHandles)
         {
             EnsureMayConfigureMessageHandlers();
             var handlerSet = _handlersStack.Peek();

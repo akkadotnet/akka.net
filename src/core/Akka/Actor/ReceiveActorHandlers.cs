@@ -27,14 +27,17 @@ internal sealed class ReceiveActorHandlers
 
     private void CanAddMoreHandlers()
     {
+        // Message text matches v1.5.71's MatchBuilder.EnsureCanAdd() exactly - both an always-handling
+        // object/no-predicate registration and a ReceiveAny handler put the builder into the same
+        // "MatchAnyAdded" state there, with the same message.
         if (_hadObjectHandlerWithNoPredicate)
         {
-            throw new InvalidOperationException("A handler for object with no predicate has already been added. No more handlers can be added as they would be ignored.");
+            throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
         }
 
         if (HandleAny != null)
         {
-            throw new InvalidOperationException("A handler that catches all messages has been added. No more handlers can be added as they would be ignored.");
+            throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
         }
     }
     
@@ -67,7 +70,7 @@ internal sealed class ReceiveActorHandlers
     /// later handlers remain reachable. This only matters when <typeparamref name="T"/> is <see cref="object"/>
     /// and no predicate was supplied - see <see cref="AddTypedReceiveHandler"/> for the rationale.
     /// </param>
-    public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler, bool alwaysHandles = true)
+    public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler, bool alwaysHandles)
     {
         CanAddMoreHandlers();
 
@@ -95,7 +98,7 @@ internal sealed class ReceiveActorHandlers
     /// <see cref="Action{T}"/>-based <c>Receive</c> overload); <c>false</c> when <paramref name="handler"/> is a
     /// genuine <c>Func&lt;object, bool&gt;</c> that may decline (return <c>false</c>) for a given message.
     /// </param>
-    public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler, bool alwaysHandles = true)
+    public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler, bool alwaysHandles)
     {
         CanAddMoreHandlers();
 
