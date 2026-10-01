@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Tests;
+using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -21,17 +22,34 @@ namespace Akka.Cluster.Metrics.Tests
 {
     public class ClusterMetricsMessageSerializerSpec : AkkaSpec
     {
+        /// <summary>
+        /// A selector Akka.Cluster.Metrics never binds in its own reference.conf, so it always falls back to the
+        /// default (json) serializer - unaffected by <see cref="ClusterMetricsMessageSerializer"/>'s own manifest
+        /// handling, included here purely to confirm that path still round-trips.
+        /// </summary>
+        private sealed class CustomMetricsSelector : IMetricsSelector
+        {
+            public static readonly CustomMetricsSelector Instance = new CustomMetricsSelector();
+
+            public IImmutableDictionary<Address, int> Weights(IImmutableSet<NodeMetrics> nodeMetrics)
+                => ImmutableDictionary<Address, int>.Empty;
+        }
+
         private readonly ClusterMetricsMessageSerializer _serializer;
-        
+
         private readonly Member _a1 = TestMember.Create(new Address("akka", "sys", "a", 2552), MemberStatus.Joining, ImmutableHashSet<string>.Empty);
         private readonly Member _b1 = TestMember.Create(new Address("akka", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty.Add("r1"));
         private Member _c1 = TestMember.Create(new Address("akka", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet<string>.Empty.Add("r2"));
         private Member _d1 = TestMember.Create(new Address("akka", "sys", "d", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("r1").Add("r2"));
         private Member _e1 = TestMember.Create(new Address("akka", "sys", "e", 2552), MemberStatus.Down, ImmutableHashSet<string>.Empty.Add("r3"));
         private Member _f1 = TestMember.Create(new Address("akka", "sys", "f", 2552), MemberStatus.Removed, ImmutableHashSet<string>.Empty.Add("r2").Add("r3"));
-        
+
         public ClusterMetricsMessageSerializerSpec()
-            : base("akka.actor.provider = cluster")
+            // Loads the real Cluster.Metrics reference.conf rows on top of the base config - the same thing any
+            // real deployment gets once the ClusterMetrics extension is active - so CpuMetricsSelector,
+            // MemoryMetricsSelector and MixMetricsSelector resolve back to ClusterMetricsMessageSerializer itself,
+            // the way they do in production, instead of falling back to json.
+            : base(ConfigurationFactory.ParseString("akka.actor.provider = cluster").WithFallback(ClusterMetrics.DefaultConfig()))
         {
             _serializer = new ClusterMetricsMessageSerializer(Sys as ExtendedActorSystem);
         }
@@ -63,18 +81,33 @@ namespace Akka.Cluster.Metrics.Tests
         {
             var simplePool = new AdaptiveLoadBalancingPool();
             CheckSerialization(simplePool);
-            
+
+            // A non-default MixMetricsSelector: with the Cluster.Metrics rows loaded (see the ctor), this nested
+            // selector resolves to ClusterMetricsMessageSerializer itself, so its manifest must be that same
+            // serializer's own short code, not a type-qualified name.
             var complicatedPool = new AdaptiveLoadBalancingPool(
                 metricsSelector: new MixMetricsSelector(new CapacityMetricsSelector[]
                 {
-                    CpuMetricsSelector.Instance, 
-                    MemoryMetricsSelector.Instance, 
+                    CpuMetricsSelector.Instance,
+                    MemoryMetricsSelector.Instance,
                 }.ToImmutableArray()),
                 nrOfInstances: 7,
                 routerDispatcher:"my-dispatcher",
                 usePoolDispatcher: true
             );
             CheckSerialization(complicatedPool);
+
+            // Same bug, simpler shape: a nested CpuMetricsSelector/MemoryMetricsSelector (also bound directly to
+            // ClusterMetricsMessageSerializer in reference.conf) hits the exact same manifest mismatch.
+            var cpuPool = new AdaptiveLoadBalancingPool(metricsSelector: CpuMetricsSelector.Instance, nrOfInstances: 3);
+            CheckSerialization(cpuPool);
+
+            var memoryPool = new AdaptiveLoadBalancingPool(metricsSelector: MemoryMetricsSelector.Instance, nrOfInstances: 3);
+            CheckSerialization(memoryPool);
+
+            // A selector Cluster.Metrics doesn't bind falls back to json instead, unaffected by the bug above.
+            var customSelectorPool = new AdaptiveLoadBalancingPool(metricsSelector: CustomMetricsSelector.Instance, nrOfInstances: 3);
+            CheckSerialization(customSelectorPool);
         }
 
         private void CheckSerialization(object obj)
