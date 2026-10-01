@@ -13,8 +13,6 @@ namespace Akka.Actor;
 #nullable enable
 internal sealed class ReceiveActorHandlers
 {
-    private bool _hadObjectHandlerWithNoPredicate;
-
     public ReceiveActorHandlers()
     {
         TypedHandlers = new List<ITypeHandler>();
@@ -25,16 +23,10 @@ internal sealed class ReceiveActorHandlers
 
     private Action<object>? HandleAny { get; set; }
 
+    // Message text matches v1.5.71's MatchBuilder.EnsureCanAdd() exactly. An always-handling object
+    // catch-all is routed into HandleAny by ReceiveActor/PersistentActor, so this one check covers it too.
     private void CanAddMoreHandlers()
     {
-        // Message text matches v1.5.71's MatchBuilder.EnsureCanAdd() exactly - both an always-handling
-        // object/no-predicate registration and a ReceiveAny handler put the builder into the same
-        // "MatchAnyAdded" state there, with the same message.
-        if (_hadObjectHandlerWithNoPredicate)
-        {
-            throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
-        }
-
         if (HandleAny != null)
         {
             throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
@@ -63,59 +55,31 @@ internal sealed class ReceiveActorHandlers
     
     /// <param name="shouldHandlePredicate">An optional predicate. When <c>null</c>, the message is unconditionally passed to <paramref name="handler"/>.</param>
     /// <param name="handler">The handler to invoke. Its <c>bool</c> result indicates whether it handled the message.</param>
-    /// <param name="alwaysHandles">
-    /// <c>true</c> when <paramref name="handler"/> is guaranteed to always return <c>true</c> (e.g. it wraps an
-    /// <see cref="Action{T}"/>-based <c>Receive</c> overload); <c>false</c> when <paramref name="handler"/> is a
-    /// genuine <c>Func&lt;T, bool&gt;</c> that may decline (return <c>false</c>) for a given message, in which case
-    /// later handlers remain reachable. This only matters when <typeparamref name="T"/> is <see cref="object"/>
-    /// and no predicate was supplied - see <see cref="AddTypedReceiveHandler"/> for the rationale.
-    /// </param>
-    public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler, bool alwaysHandles)
+    /// <remarks>
+    /// A typed/generic handler never blocks later registrations, even for <see cref="object"/> with no
+    /// predicate - an always-handling catch-all for <see cref="object"/> must go through
+    /// <see cref="AddReceiveAnyHandler"/> instead, which <see cref="CanAddMoreHandlers"/> does guard.
+    /// </remarks>
+    public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler)
     {
         CanAddMoreHandlers();
 
         TypedHandlers.Add(CreateTypeHandler(shouldHandlePredicate, handler));
-
-        // Mirrors AddTypedReceiveHandler below: only an "always handles" (e.g. Action<T>-based) registration
-        // for T=object with no predicate should prevent later handlers from being registered. A genuine
-        // Func<T,bool> handler may decline (return false), so later handlers remain reachable - this matches
-        // the pre-#7557 MatchBuilder-based implementation (v1.5.71 and earlier), where only MatchAny-style
-        // (always-handling) registrations entered the "no more handlers" state.
-        if (alwaysHandles &&
-            typeof(T) == typeof(object) &&
-            shouldHandlePredicate == null)
-        {
-            _hadObjectHandlerWithNoPredicate = true;
-        }
     }
-
 
     /// <param name="messageType">The message type the handler is registered for.</param>
     /// <param name="shouldHandlePredicate">An optional predicate. When <c>null</c>, the message is unconditionally passed to <paramref name="handler"/>.</param>
     /// <param name="handler">The handler to invoke. Its <c>bool</c> result indicates whether it handled the message.</param>
-    /// <param name="alwaysHandles">
-    /// <c>true</c> when <paramref name="handler"/> is guaranteed to always return <c>true</c> (e.g. it wraps an
-    /// <see cref="Action{T}"/>-based <c>Receive</c> overload); <c>false</c> when <paramref name="handler"/> is a
-    /// genuine <c>Func&lt;object, bool&gt;</c> that may decline (return <c>false</c>) for a given message.
-    /// </param>
-    public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler, bool alwaysHandles)
+    /// <remarks>
+    /// A typed/generic handler never blocks later registrations, even for <see cref="object"/> with no
+    /// predicate - an always-handling catch-all for <see cref="object"/> must go through
+    /// <see cref="AddReceiveAnyHandler"/> instead, which <see cref="CanAddMoreHandlers"/> does guard.
+    /// </remarks>
+    public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler)
     {
         CanAddMoreHandlers();
 
         TypedHandlers.Add(CreateTypeHandler(messageType, shouldHandlePredicate, handler));
-
-        // If the message type is object with no predicate, only an "always handles" registration (i.e. one
-        // that wraps an Action<object>-based Receive overload, which always returns true) should block later
-        // registrations. A Func<object,bool> handler may decline (return false) for a given message, leaving
-        // it to fall through to later handlers - this matches the behavior of the pre-#7557 MatchBuilder-based
-        // implementation (v1.5.71 and earlier): Match(Type, Action<TItem>, ...) entered the "no more handlers"
-        // state for object/no-predicate, but Match(Type, Func<TItem,bool>) never did.
-        if (alwaysHandles &&
-            messageType == typeof(object) &&
-            shouldHandlePredicate == null)
-        {
-            _hadObjectHandlerWithNoPredicate = true;
-        }
     }
 
     public void AddReceiveAnyHandler(Action<object> handler)
