@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection;
@@ -201,11 +202,110 @@ namespace Akka.Serialization
         private readonly bool _allowUnregisteredTypes;
 
         /// <summary>
+        /// The serializers named under <c>akka.actor.serializers</c> by Akka.NET's own <c>akka.conf</c>,
+        /// constructed directly so the trimmer and the Native AOT compiler can see the types without looking
+        /// through <see cref="Type.GetType(string)"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Keyed by bare type name; <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/> normalizes
+        /// what HOCON carries, including the full versioned <see cref="Type.AssemblyQualifiedName"/> that
+        /// Akka.Hosting writes. A name that is missing here falls through to the <see cref="ModuleSerializerTable"/>,
+        /// then to the reflection path, which is unavailable (and therefore throws) once dynamic type loading is switched off.
+        /// </para>
+        /// <para>
+        /// A factory returns <c>null</c> when the serializer ships inside Akka.dll but cannot work under the
+        /// current feature switches, in which case the alias is skipped rather than registered.
+        /// </para>
+        /// </remarks>
+        private static readonly Dictionary<string, Func<ExtendedActorSystem, Config, Serializer>> BuiltInSerializers =
+            new(StringComparer.Ordinal)
+            {
+                ["Akka.Serialization.ByteArraySerializer"] = CreateByteArraySerializer,
+                ["Akka.Serialization.NewtonSoftJsonSerializer"] = CreateNewtonSoftJsonSerializer
+            };
+
+        /// <summary>
+        /// The message types bound under <c>akka.actor.serialization-bindings</c> by Akka.NET's own
+        /// <c>akka.conf</c>, as <c>typeof</c> expressions so the trimmer and the Native AOT compiler can see
+        /// them without looking through <see cref="Type.GetType(string)"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Keyed by bare type name. These two are framework types rather than Akka types, so
+        /// <see cref="Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName"/> does not apply here: the lookup instead
+        /// runs the configured name through <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/> and accepts
+        /// it when the assembly half is absent or is one of <see cref="FrameworkAssemblyNames"/> -
+        /// <c>mscorlib</c>, <c>System.Private.CoreLib</c>, <c>System.Runtime</c> or <c>netstandard</c>, matched
+        /// case-insensitively - which covers every runtime these two names can be written against. A key that
+        /// is missing here falls through to the <see cref="ModuleSerializerTable"/>, then to the reflection path,
+        /// which is unavailable (and therefore throws) once dynamic type loading is switched off.
+        /// </para>
+        /// <para>
+        /// Unlike <see cref="BuiltInSerializers"/> this table is unconditional. Whether a binding survives is
+        /// decided by whether the alias it points at got registered, not by the feature switch - see the
+        /// bindings loop in the constructor.
+        /// </para>
+        /// </remarks>
+        private static readonly Dictionary<string, Type> BuiltInSerializationBindings =
+            new(StringComparer.Ordinal)
+            {
+                ["System.Byte[]"] = typeof(byte[]),
+                ["System.Object"] = typeof(object)
+            };
+
+        /// <summary>
+        /// The framework assembly names <see cref="BuiltInSerializationBindings"/> and <see cref="LoadedModule"/> accept alongside "no
+        /// assembly at all" - every name the .NET runtimes Akka.NET targets have shipped <see cref="object"/>
+        /// and <see cref="byte"/>[] under.
+        /// </summary>
+        internal static readonly HashSet<string> FrameworkAssemblyNames =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "mscorlib",
+                "System.Private.CoreLib",
+                "System.Runtime",
+                "netstandard"
+            };
+
+        /// <summary>
+        /// <see cref="ByteArraySerializer"/> has only a <c>(ExtendedActorSystem)</c> constructor, so any
+        /// <c>akka.actor.serialization-settings.bytes</c> block is ignored - the parameter is here to satisfy
+        /// the table's factory signature.
+        /// </summary>
+        private static Serializer CreateByteArraySerializer(ExtendedActorSystem system, Config _)
+            => new ByteArraySerializer(system);
+
+        /// <summary>
+        /// Newtonsoft.Json is reflection-driven from top to bottom, so core does not register it at all when
+        /// dynamic type loading is off. Leaving the <c>json</c> alias out is better than registering a
+        /// serializer that throws the first time anything is serialized. An AOT application that wants JSON
+        /// registers a serializer of its own through a <see cref="SerializationSetup"/>.
+        /// </summary>
+        private static Serializer CreateNewtonSoftJsonSerializer(ExtendedActorSystem system, Config config)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                return null;
+
+            return config.IsNullOrEmpty()
+                ? new NewtonSoftJsonSerializer(system)
+                : new NewtonSoftJsonSerializer(system, config);
+        }
+
+        /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
         /// locating a Serializer for a particular class as defined in the mapping in the configuration.
         /// </summary>
         /// <param name="system">The ActorSystem to which this serializer belongs.</param>
-        public Serialization(ExtendedActorSystem system)
+        public Serialization(ExtendedActorSystem system) : this(system, ModuleSerializerTable.Default)
+        {
+        }
+
+        /// <summary>
+        /// INTERNAL API. Resolves HOCON rows that miss core's built-in tables through <paramref name="modules"/>
+        /// before falling back to reflection.
+        /// </summary>
+        internal Serialization(ExtendedActorSystem system, ModuleSerializerTable modules)
         {
             // We have to use stdout-logger here because serialization system is set up before 
             // the logging system were set up
@@ -226,23 +326,73 @@ namespace Akka.Serialization
             _serializerDetails = system.Settings.Setup.Get<SerializationSetup>()
                 .Select(x => x.CreateSerializers(system)).GetOrElse(ImmutableHashSet<SerializerDetails>.Empty);
 
+            // Aliases naming a serializer that ships inside Akka.dll but cannot be registered under the current
+            // feature switches - `json` with dynamic type loading off. A binding pointing at one of these is
+            // dropped without a warning further down; a binding pointing at an alias nobody ever registered
+            // still warns, because that one really is a misconfiguration.
+            var skippedAliases = new HashSet<string>(StringComparer.Ordinal);
+
+            // With dynamic type loading off, a HOCON row core cannot resolve on its own is still fine if a
+            // SerializationSetup covers it: a module's reference.conf keeps its serializer and binding rows even
+            // when the application registers that serializer in code. The Setup is applied after the HOCON rows
+            // either way, so these only decide whether a row is skipped or rejected - never what wins.
+            var setupAliases = AkkaFeatures.IsDynamicTypeLoadingSupported
+                ? null
+                : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
+            Dictionary<string, Type> setupTypesByName = null;
+
+            // modules this config has built, by assembly name. The first serializer row whose assembly names a
+            // module builds all of that module's serializers; a binding row never builds one. When the build
+            // itself fails, the exception is kept so a later NotBuiltIn error can show it.
+            var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var kvp in serializersConfig)
             {
+                // HOCON already trims a value, whatever syntax it was written in, so there is nothing to trim here
                 var serializerTypeName = kvp.Value.GetString();
-                var serializerType = Type.GetType(serializerTypeName);
-                if (serializerType == null)
+                var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
+
+                if (FindCoreSerializerFactory(serializerTypeName) is { } builtInFactory)
                 {
-                    system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'", kvp.Key, serializerTypeName);
+                    var serializer = builtInFactory(system, serializerConfig);
+                    if (serializer == null)
+                    {
+                        // a built-in serializer that cannot work under the current feature switches
+                        skippedAliases.Add(kvp.Key);
+                        continue;
+                    }
+                    AddSerializer(kvp.Key, AdaptSerializer(serializer));
                     continue;
                 }
 
-                var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
-
-                var serializer = !serializerConfig.IsNullOrEmpty()
-                    ? Activator.CreateInstance(serializerType, system, serializerConfig)
-                    : Activator.CreateInstance(serializerType, system);
-
-                AddSerializer(kvp.Key, AdaptSerializer(serializer));
+                var (moduleDetails, moduleSkew) = FindModuleSerializer(serializerTypeName, system, modules, builtModules);
+                if (moduleDetails is not null)
+                {
+                    AddSerializer(kvp.Key, moduleDetails.SerializerV2);
+                }
+                else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    var serializer = CreateSerializerFromTypeName(serializerTypeName, system, serializerConfig);
+                    if (serializer == null)
+                    {
+                        system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'", kvp.Key, serializerTypeName);
+                        continue;
+                    }
+                    AddSerializer(kvp.Key, serializer);
+                }
+                else if (setupAliases.Contains(kvp.Key))
+                {
+                    // the SerializationSetup registers this alias below
+                    continue;
+                }
+                else
+                {
+                    var message = AkkaFeatures.NotBuiltIn(
+                        $"akka.actor.serializers.{kvp.Key}", serializerTypeName, "a SerializationSetup to register the serializer");
+                    // moduleSkew, when present, is the real reason the module's own serializer didn't build - e.g. a
+                    // missing Google.Protobuf.dll - and "enable the switch" alone would hide that from whoever reads this
+                    throw moduleSkew is null ? new ConfigurationException(message) : new ConfigurationException(message, moduleSkew);
+                }
             }
 
             // Add any serializers that are registered via the SerializationSetup
@@ -254,20 +404,52 @@ namespace Akka.Serialization
 
             foreach (var kvp in serializerBindingConfig)
             {
+                // HOCON trims values but not keys; the key is used as written, as it was before the built-in tables.
                 var typename = kvp.Key;
                 var serializerName = kvp.Value.GetString();
-                var messageType = Type.GetType(typename);
 
-                if (messageType == null)
+                Type messageType;
+                if (Akka.Util.TypeExtensions.TrySplitTypeName(typename, out var bindingName, out var bindingAssembly) &&
+                    (bindingAssembly is null || FrameworkAssemblyNames.Contains(bindingAssembly)) &&
+                    BuiltInSerializationBindings.TryGetValue(bindingName, out var builtInType))
                 {
-
-                    system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'", serializerName, typename);
-                    continue;
+                    messageType = builtInType;
+                }
+                else if (FindModuleBoundType(bindingName, bindingAssembly, builtModules) is { } moduleType)
+                {
+                    messageType = moduleType;
+                }
+                else if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    messageType = ResolveBindingType(typename);
+                    if (messageType == null)
+                    {
+                        system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'", serializerName, typename);
+                        continue;
+                    }
+                }
+                else if ((setupTypesByName ??= SetupTypesByName(_serializerDetails))
+                         .TryGetValue(bindingName, out var setupType) &&
+                         (bindingAssembly is null ||
+                          string.Equals(bindingAssembly, setupType.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // one of the types a SerializationSetup binds, so the name resolves without reflection
+                    messageType = setupType;
+                }
+                else
+                {
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        "akka.actor.serialization-bindings", typename, "a SerializationSetup to bind the type"));
                 }
 
                 if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
-                    system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
+                    // Whether a built-in binding survives is decided by the alias, not by the feature switch:
+                    // core's own "System.Object" = json row lands here when json was skipped, which is expected,
+                    // but the very same row pointed at a SerializationSetup alias must still be honored.
+                    if (!skippedAliases.Contains(serializerName))
+                        system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
+
                     continue;
                 }
                 AddSerializationMap(messageType, serializer);
@@ -284,6 +466,121 @@ namespace Akka.Serialization
                 }
             }
         }
+
+        /// <summary>
+        /// Every type a <see cref="SerializationSetup"/> binds, keyed by bare full name. A binding row is split
+        /// with <see cref="Akka.Util.TypeExtensions.TrySplitTypeName"/> like every other lookup here, and its
+        /// assembly half, when present, has to match the type's assembly simple name.
+        /// </summary>
+        private static Dictionary<string, Type> SetupTypesByName(IEnumerable<SerializerDetails> details)
+        {
+            var byName = new Dictionary<string, Type>(StringComparer.Ordinal);
+            foreach (var type in details.SelectMany(d => d.UseFor))
+            {
+                if (type.FullName is null)
+                    continue;
+
+                // a closed generic's FullName carries full identities for its type arguments, which the
+                // binding row's name has already had stripped
+                byName[Akka.Util.TypeExtensions.StripAssemblyIdentity(type.FullName)] = type;
+            }
+
+            return byName;
+        }
+
+        /// <summary>Core's own factory for <paramref name="typeName"/> - the two serializers that ship inside Akka.dll itself.</summary>
+        private static Func<ExtendedActorSystem, Config, Serializer> FindCoreSerializerFactory(string typeName)
+            => Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInName &&
+               BuiltInSerializers.TryGetValue(builtInName, out var builtInFactory)
+                ? builtInFactory
+                : null;
+
+        /// <summary>
+        /// The module <paramref name="typeName"/>'s assembly half names, building it - calling its
+        /// <see cref="ModuleSerializers.Create"/> - the first time this method is asked about that assembly, and
+        /// reusing the result (or the lack of one) for every later row from the same assembly. Returns the
+        /// serializer this row names, and separately, the exception the build itself threw, if it threw a
+        /// version-skew one - the caller can surface that instead of a plain "not built in" when it has nothing
+        /// else to resolve the row with.
+        /// </summary>
+        private static (SerializerDetails Details, Exception SkewError) FindModuleSerializer(
+            string typeName, ExtendedActorSystem system, ModuleSerializerTable modules,
+            Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
+        {
+            if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) || assembly is null)
+                return (null, null);
+
+            if (!builtModules.TryGetValue(assembly, out var built))
+            {
+                LoadedModule module = null;
+                Exception skewError = null;
+                if (modules.ForAssembly(assembly) is { } raw)
+                    module = LoadedModule.TryCreate(raw, system, out skewError);
+
+                built = (module, skewError);
+                builtModules[assembly] = built;
+            }
+
+            return (built.Module?.FindSerializer(name, assembly), built.SkewError);
+        }
+
+        /// <summary>
+        /// Resolves a binding row's type from the modules this config's serializer rows already built
+        /// (<paramref name="builtModules"/>). Null when no built module lists it. Never builds a module itself -
+        /// a binding row alone is not reason enough to construct every serializer a module has, so a module with
+        /// no serializer row of its own in this config is invisible here and falls back to reflection, or throws,
+        /// like any other unresolved row.
+        /// </summary>
+        /// <remarks>
+        /// Two lookups, in order:
+        /// <list type="number">
+        /// <item>The module the row's assembly half names, if this config already built it.
+        /// <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c> is answered by Akka.Remote's module, once some
+        /// Remote.conf serializer row has built it.</item>
+        /// <item>Every other module this config built. This covers bound types that live outside their module:
+        /// Remote.conf binds <c>"System.String"</c> and <c>"Akka.Actor.Identify, Akka"</c> to its own serializers,
+        /// and no module owns CoreLib or Akka.dll, so lookup 1 can't answer for them.</item>
+        /// </list>
+        /// Lookup 2 only asks modules this config built. With no Remote serializer rows, a <c>"System.String"</c>
+        /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
+        /// loop runs after the serializer loop, so <paramref name="builtModules"/> is complete by then. Two modules
+        /// that list the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
+        /// </remarks>
+        private static Type FindModuleBoundType(
+            string name, string assembly, Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
+        {
+            if (assembly is not null && builtModules.TryGetValue(assembly, out var owned) &&
+                owned.Module?.FindBoundType(name, assembly) is { } ownedType)
+                return ownedType;
+
+            foreach (var built in builtModules.Values)
+            {
+                if (built.Module?.FindBoundType(name, assembly) is { } type)
+                    return type;
+            }
+
+            return null;
+        }
+
+        [RequiresUnreferencedCode("Loads a serializer named under [akka.actor.serializers] by name and activates it. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static SerializerV2 CreateSerializerFromTypeName(string serializerTypeName, ExtendedActorSystem system, Config serializerConfig)
+        {
+            var serializerType = Type.GetType(serializerTypeName);
+            if (serializerType == null)
+                return null;
+
+            var serializer = !serializerConfig.IsNullOrEmpty()
+                ? Activator.CreateInstance(serializerType, system, serializerConfig)
+                : Activator.CreateInstance(serializerType, system);
+
+            // the type came from a string, so nothing guarantees it is a serializer at all - AdaptSerializer
+            // rejects anything that is neither a Serializer nor a SerializerV2, and wraps a V1 Serializer
+            return AdaptSerializer(serializer);
+        }
+
+        [RequiresUnreferencedCode("Loads a message type named under [akka.actor.serialization-bindings] by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Type ResolveBindingType(string typeName)
+            => Type.GetType(typeName);
 
         private Information SerializationInfo => System.Provider.SerializationInformation;
 
@@ -719,6 +1016,15 @@ namespace Akka.Serialization
                     : $"No serializer binding found for type {objectType.Name}. " +
                       "Configure a binding in 'akka.actor.serialization-bindings' or set " +
                       "'akka.actor.serialization-settings.allow-unregistered-types = true' to use the default fallback.";
+
+                // On a default config the only reason there is no 'object' fallback is that json - and with it
+                // the 'System.Object' binding - was never registered. Say so, otherwise the message reads like a
+                // missing binding the user forgot to write.
+                if (!AkkaFeatures.IsDynamicTypeLoadingSupported && !_serializerMap.ContainsKey(_objectType))
+                    message += " The default 'System.Object' -> json binding is not registered because the " +
+                               "[Akka.DynamicTypeLoading] feature switch is disabled; register a serializer for " +
+                               "this type through a SerializationSetup.";
+
                 throw new SerializationException(message);
             }
 

@@ -8,10 +8,8 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
@@ -76,25 +74,10 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
+        /// <remarks>Virtual dispatch on <see cref="Inner"/> resolves this to whatever override it actually has.</remarks>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (Inner is SerializerWithStringManifest stringManifest)
-                return stringManifest.FromBinary(bytes, manifest);
-
-            if (string.IsNullOrEmpty(manifest))
-                return Inner.FromBinary(bytes, (Type)null!);
-
-            Type type;
-            try
-            {
-                type = TypeCache.GetType(manifest);
-            }
-            catch (Exception ex)
-            {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{Identifier}].", ex);
-            }
-
-            return Inner.FromBinary(bytes, type);
+            return Inner.FromBinary(bytes, manifest);
         }
 
         /// <inheritdoc />

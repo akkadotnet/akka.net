@@ -113,10 +113,16 @@ namespace Akka.Util.Reflection
                     try
                     {
                         {
-                            _jobArgs[i] = Expression.Lambda(
+                            // The non-generic Expression.Lambda overload is [RequiresDynamicCode] - it may
+                            // have to create a delegate type at runtime - so use the generic one, which needs
+                            // no new delegate type. The value is identical because the body is already
+                            // converted to object; the only difference is that the caller now sees the
+                            // argument's own exception instead of the TargetInvocationException DynamicInvoke
+                            // wrapped it in.
+                            _jobArgs[i] = Expression.Lambda<Func<object>>(
                                     Expression.Convert(theArg, _objectType)
                                 )
-                                .Compile().DynamicInvoke();
+                                .Compile()();
                         }
 
                     }

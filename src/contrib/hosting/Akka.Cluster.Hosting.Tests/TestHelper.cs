@@ -58,16 +58,45 @@ public static class TestHelper
                 });
             }).Build();
 
-        // Use a generous startup timeout — must not be so tight that it triggers
-        // host.StopAsync (and CoordinatedShutdown) while startup is still in progress.
-        using var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        await host.StartAsync(startupCts.Token);
+        try
+        {
+            // Use a generous startup timeout — must not be so tight that it triggers
+            // host.StopAsync (and CoordinatedShutdown) while startup is still in progress.
+            using var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await host.StartAsync(startupCts.Token);
 
-        // Separate timeout for cluster formation (happens after host startup completes).
-        using var clusterCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        await tcs.Task.WaitAsync(clusterCts.Token);
+            // Separate timeout for cluster formation (happens after host startup completes). A second
+            // node joining a seed has been seen to need ~30 s on a starved 2-vCPU CI agent.
+            using var clusterCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await tcs.Task.WaitAsync(clusterCts.Token);
 
-        return host;
+            return host;
+        }
+        catch
+        {
+            // the caller never gets the host, so stop it here or its ActorSystem keeps gossiping and
+            // heartbeating through every later test in the assembly
+            await StopAndDisposeAsync(host, output);
+            throw;
+        }
+    }
+
+    private static async Task StopAndDisposeAsync(IHost host, ITestOutputHelper output)
+    {
+        try
+        {
+            using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await host.StopAsync(stopCts.Token);
+        }
+        catch (Exception ex)
+        {
+            // best effort: the failure that brought us here is the one worth reporting
+            output.WriteLine($"Stopping a host that failed to start threw: {ex}");
+        }
+        finally
+        {
+            host.Dispose();
+        }
     }
     
     public static TimeSpan Seconds(this double value)

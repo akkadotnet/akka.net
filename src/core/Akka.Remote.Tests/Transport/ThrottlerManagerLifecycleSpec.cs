@@ -54,6 +54,9 @@ namespace Akka.Remote.Tests.Transport
 
             public bool Disassociated { get; private set; }
 
+            // counts calls so tests can tell a single disassociate from a double one
+            public int DisassociateCallCount { get; private set; }
+
             public override bool Write(ByteString payload) => true;
 
 #pragma warning disable CS0672 // the base member is obsolete, but it is the abstract one we have to implement
@@ -61,6 +64,7 @@ namespace Akka.Remote.Tests.Transport
 #pragma warning restore CS0672
             {
                 Disassociated = true;
+                DisassociateCallCount++;
             }
         }
 
@@ -151,8 +155,16 @@ namespace Akka.Remote.Tests.Transport
             throttler.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(throttler);
 
-            // the death watch notification is a system message enqueued before anything we send from
-            // here, so the manager has already processed it by the time it handles `SetThrottle`
+            // The manager purges its handle table on the `Terminated` it sends itself after the death watch
+            // notification, a user message that could land behind anything we send now. Two Identify round
+            // trips make sure it's queued first: the first can be dequeued before the manager drains the
+            // notification, but the drain after it runs before the second is handled.
+            for (var i = 0; i < 2; i++)
+            {
+                manager.Tell(new Identify(i), TestActor);
+                await ExpectMsgAsync<ActorIdentity>(id => Equals(id.MessageId, i));
+            }
+
             var deadLetters = CreateTestProbe("dead-letters");
             Sys.EventStream.Subscribe(deadLetters.Ref, typeof(DeadLetter));
 
@@ -161,7 +173,8 @@ namespace Akka.Remote.Tests.Transport
 
             await ExpectMsgAsync<SetThrottleAck>();
 
-            // a stale handle table entry shows up as the throttle mode dead-lettering to the dead child
+            // a stale handle table entry shows up as the throttle mode dead-lettering to the dead child; that
+            // happens before the ack is sent, so this window is only slack
             await deadLetters.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
         }
 
@@ -187,6 +200,43 @@ namespace Akka.Remote.Tests.Transport
                 });
 
             originalHandle.Disassociated.Should().BeTrue("the association has to be torn down so remoting can re-establish it");
+            // this state used to disassociate directly as well as through PostStop; guards against that regressing
+            originalHandle.DisassociateCallCount.Should().Be(1, "PostStop alone must be the one that tears the handle down");
+        }
+
+        [Fact(DisplayName = "ThrottlerHandle.Disassociate should close the wrapped handle promptly (#8637)")]
+        public async Task Should_disassociate_wrapped_handle_on_explicit_disassociate()
+        {
+            var manager = StartManager();
+            var throttlerHandle = await AssociateAsync(manager);
+            var throttler = throttlerHandle.ThrottlerActor;
+            await WatchAsync(throttler);
+
+#pragma warning disable CS0618 // this is the exact API the issue is about
+            throttlerHandle.Disassociate();
+#pragma warning restore CS0618
+            await ExpectTerminatedAsync(throttler);
+
+            var originalHandle = (StubHandle)throttlerHandle.WrappedHandle;
+            originalHandle.Disassociated.Should().BeTrue("disassociating the throttled handle must tear down the wrapped connection too");
+        }
+
+        [Fact(DisplayName = "ThrottledAssociation should disassociate the wrapped handle exactly once, via PostStop, on inbound disassociation")]
+        public async Task Should_disassociate_wrapped_handle_once_on_inbound_disassociation()
+        {
+            var manager = StartManager();
+            var throttlerHandle = await AssociateAsync(manager);
+            var throttler = throttlerHandle.ThrottlerActor;
+            var originalHandle = (StubHandle)throttlerHandle.WrappedHandle;
+            await WatchAsync(throttler);
+
+            // simulates the wrapped handle notifying us that the peer tore the connection down;
+            // nothing on this path calls Disassociate directly, so PostStop must be the sole caller
+            throttler.Tell(new Disassociated(DisassociateInfo.Unknown));
+            await ExpectTerminatedAsync(throttler);
+
+            originalHandle.DisassociateCallCount.Should().Be(1,
+                "PostStop must disassociate the wrapped handle exactly once, even though the peer disassociated first");
         }
     }
 }

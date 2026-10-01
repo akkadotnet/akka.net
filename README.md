@@ -9,6 +9,8 @@
 
 **[Akka.NET](https://getakka.net/)** is a .NET port of the popular [Akka project](https://akka.io/) from the Scala / Java community. We are an idiomatic [.NET implementation of the actor model](https://petabridge.com/blog/akkadotnet-what-is-an-actor/) built on top of the .NET Common Language Runtime.
 
+**Using the v1.6 betas? [Start here](GETTING_STARTED_V1.6.md).**
+
 * **Website**: [https://getakka.net/](https://getakka.net/)
 * **Twitter** 🐦: [AkkaDotNet](https://twitter.com/AkkaDotNet)
 * **Discussions** 📣: [Akka.NET GitHub Discussions](https://github.com/akkadotnet/akka.net/discussions)

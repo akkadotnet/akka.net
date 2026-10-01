@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
   </ItemGroup>
 
 </Project>

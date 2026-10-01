@@ -29,7 +29,7 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
-        public void Hubs_must_demonstrate_creating_a_dynamic_merge()
+        public async Task Hubs_must_demonstrate_creating_a_dynamic_merge()
         {
             void WriteLine(string s) => TestActor.Tell(s);
 
@@ -53,7 +53,10 @@ namespace DocsExamples.Streams
             Source.Single("Hub!").RunWith(toConsumer, Materializer);
             #endregion
 
-            ExpectMsgAllOf(new []{ "Hello!", "Hub!"});
+            // MergeHub queues producers that start before the hub stage does, so both
+            // elements always arrive; only the timing varies. The 3s default was too
+            // tight for three materializations on a stalled 2-vCPU CI agent.
+            await ExpectMsgAllOfAsync(TimeSpan.FromSeconds(10), new[] { "Hello!", "Hub!" }).ToListAsync();
         }
 
         [Fact]

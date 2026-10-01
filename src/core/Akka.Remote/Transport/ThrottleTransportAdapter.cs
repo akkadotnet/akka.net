@@ -1114,6 +1114,24 @@ namespace Akka.Remote.Transport
             InitializeFSM();
         }
 
+        /// <summary>
+        /// Disassociates the wrapped handle whenever this actor stops, for any reason (explicit
+        /// disassociate, Blackhole, crash, or transport shutdown). Mirrors canonical Akka's
+        /// <c>ThrottledAssociation.postStop</c>. The wrapped handle's Disassociate() is required to be
+        /// idempotent, so this is safe even if the peer already tore the connection down first.
+        /// </summary>
+        protected override void PostStop()
+        {
+            try
+            {
+                OriginalHandle.Disassociate("the owning ThrottledAssociation stopped", _log);
+            }
+            finally
+            {
+                base.PostStop();
+            }
+        }
+
         private void InitializeFSM()
         {
             When(ThrottlerState.WaitExposedHandle, @event =>
@@ -1143,7 +1161,7 @@ namespace Akka.Remote.Transport
                     _log.Warning(
                         "Throttler for [{0}] received an InboundPayload before it was initialized - most likely restarted. Disassociating so the association can be re-established.",
                         OriginalHandle.RemoteAddress);
-                    OriginalHandle.Disassociate("throttler received inbound data before it was initialized", _log);
+                    // PostStop disassociates the wrapped handle; no need to do it here too
                     return Stop();
                 }
 

@@ -1,0 +1,145 @@
+# Akka.AOT.App
+
+A Native AOT canary for Akka.NET core. It boots a local `ActorSystem` twice - once from the bare
+default config, once through an empty `BootstrapSetup` - creates one `UntypedActor` and one
+`ReceiveActor`, round-trips a message through each with `Ask`, checks that what core resolves from
+HOCON actually got built, then terminates.
+
+Each run (`Scenarios.RunAsync`, `src/aot/Akka.AOT.App/Scenarios.cs`) also exercises: a pool router
+and a group router built in code, a router resolved by name from HOCON through the Deployer's
+built-in table (#8605); `Stash`/`Become` (which is also the real proof that the mailbox-type built-in
+table works, since `IWithUnboundedStash` resolves `unbounded-deque-based` through
+`BuiltInMessageQueueSemantics`/`BuiltInMailboxTypes`); `IWithTimers`; a small `FSM<TState,TData>`;
+`Watch` + `Terminated`; `PipeTo`; and a round-trip through a non-default dispatcher
+(`akka.actor.default-fork-join-dispatcher`, already in `akka.conf`) and the `bounded` mailbox
+shortcut.
+
+The app references only `src/core/Akka` and sets the `Akka.DynamicTypeLoading` feature switch to
+`false` with `Trim="true"`, so ILLink replaces every reflection fallback in core with dead code and
+removes it. Anything core still needs to look up by name therefore fails at runtime, in the open,
+instead of silently working because the JIT happened to have the type around.
+
+The switch is declared here explicitly because this project consumes core as a `ProjectReference`.
+An application that consumes the **`Akka` NuGet package** does not have to: the package ships
+`buildTransitive/Akka.targets`, which turns the switch off for it whenever `PublishAot` or
+`PublishTrimmed` is set. An app that declares the option itself still wins, in either direction.
+
+`IlcTreatWarningsAsErrors` is off here on purpose: the repo turns warnings into errors everywhere,
+and this project's job is to *print* the `IL2xxx`/`IL3xxx` list rather than fail the publish on it.
+The app's own C# still builds with warnings as errors.
+
+`PublishAot` is gated on a `RuntimeIdentifier` rather than set unconditionally: the project is
+registered in `Akka.slnx`, and leaving AOT on would make every `dotnet build` of the solution
+restore the RID-specific ILCompiler and emit a self-contained output. Supplying `-r` on the publish
+command turns it on. Do **not** pass `-p:PublishAot=true` on the command line instead - a
+command-line property is global, so MSBuild would hand it to `Akka.csproj` too, switching on the
+trim/AOT Roslyn analyzers for core and turning their warnings into errors under the repo-wide
+`TreatWarningsAsErrors`.
+
+## Publish and run
+
+```bash
+rm -rf src/aot/Akka.AOT.App/bin src/aot/Akka.AOT.App/obj
+dotnet publish src/aot/Akka.AOT.App -r linux-x64 -c Release -p:TrimmerSingleWarn=false
+./src/aot/Akka.AOT.App/bin/Release/net10.0/linux-x64/publish/Akka.AOT.App
+```
+
+On a box with gcc but no clang, add `-p:CppCompilerAndLinker=gcc -p:LinkerFlavor=bfd`. On Windows
+use `-r win-x64` and the matching `publish\Akka.AOT.App.exe`.
+
+Add `-p:RootAkka=true` to root the whole `Akka` assembly. That makes ILC analyze every path in the
+library instead of only the ones these two toy actors reach, which is the honest warning count for
+core - at the cost of a much longer publish.
+
+## Pass condition
+
+Exit code `0` and `[canary] OK` on stdout. A silent boot is not enough, because core's
+`Serialization` and `Mailboxes` log-and-continue when a configured type name does not resolve - an
+`ActorSystem` will happily come up with no serializers registered. So the run also has to clear two
+hurdles:
+
+1. **No warnings.** Each run installs a `LogFilterSetup` whose filter records every `WARNING` and
+   `ERROR` the stdout logger is asked to print. Anything collected during startup or the round-trip
+   fails the run and the messages are printed. This is what catches
+   `The type name for serializer 'json' did not resolve to an actual Type`,
+   `Serialization binding to non existing serializer: 'bytes'` and
+   `Mailbox Requirement mapping [...] is not an actual type`.
+2. **Positive assertions.** After boot: `Serialization.FindSerializerFor` returns a serializer for a
+   `byte[]`, `Scheduler` is a `HashedWheelTimerScheduler`, `Settings.LogFormatter` is a
+   `SemanticLogMessageFormatter`, and `Mailboxes.Lookup("akka.actor.default-mailbox")` is an
+   `UnboundedMailbox`. With the switch off a type that has no `serialization-bindings` entry of its
+   own throws by design - core does not register the reflection-driven `json` serializer, nor the
+   `System.Object` binding pointing at it - so the canary asserts that a `string` throws with a
+   message naming the switch and `SerializationSetup`; a real AOT application registers a serializer
+   for its own message types through a `SerializationSetup`.
+
+Shutdown is bounded (`Terminate()` with a 30 s cap) and `AppDomain.UnhandledException` prints the
+same failure block, so a crash on a pool thread cannot exit quietly.
+
+Any other outcome prints `[canary] FAILED: <type>: <message>` plus the stack and the
+inner-exception chain, which names the first site core still cannot resolve without reflection.
+
+## What to expect today
+
+The AOT publish and run are **green** on this branch - exit code `0` and `[canary] OK` - but only
+with the whole milestone-1 stack applied. This app leans on every built-in table in that stack: with
+only the feature switch and the first few tables it dies inside `ActorSystem.Create`, at
+`Mailboxes.LookupConfigurator`, because `UnboundedMailbox` has no parameterless constructor for
+`Activator` to call. The canary and its CI job therefore must not be merged ahead of the rest of the
+stack.
+
+The unrooted publish emits four `IL2xxx` warnings from `src/core/Akka/`; the rooted one
+(`-p:RootAkka=true`) emits twelve. Both are recorded in `aot-warnings.baseline.txt` next to this
+file, each with a note saying what it is.
+
+## In CI
+
+The `AOT canary (Linux)` job in `build-system/pr-validation.yaml` runs on every PR and publishes
+this app **twice**, because the two publishes prove different things:
+
+1. **Unrooted publish, then run.** ILC keeps only what the entry point reaches, so this is the
+   real-application proof: the binary has to boot and print `[canary] OK`. It is the only step that
+   can catch a type that got trimmed away but is needed at runtime. Rooting the assembly would keep
+   that type alive and hide exactly that bug.
+2. **Rooted publish** (`-p:RootAkka=true`). ILC analyses every path in the library, which is the
+   honest warning count for core, and this is the log the baseline check reads. Gating on the
+   unrooted list alone would leave the sites milestone 2 works on unwatched, because a local boot
+   never reaches them.
+
+A warning that is **not** in the baseline fails the job and prints the full message. A baseline entry
+that is no longer emitted does not: the job passes and prints the exact lines to delete, because
+failing a build for a warning somebody just fixed is the wrong incentive. A run that finds no
+in-scope warnings at all while the baseline is non-empty also fails - that means the check measured
+nothing rather than that core got clean.
+
+A final step feeds the checker a committed three-line log (`testdata/one-new-warning.publish-log.txt`)
+holding one warning that is deliberately not in the baseline, and fails the job unless the checker
+rejects it. Cheap proof, on every run, that the red path still works.
+
+Reproduce the check locally:
+
+```bash
+rm -rf src/aot/Akka.AOT.App/bin src/aot/Akka.AOT.App/obj
+dotnet publish src/aot/Akka.AOT.App -r linux-x64 -c Release \
+    -p:TrimmerSingleWarn=false -p:RootAkka=true \
+    -o /tmp/aot-rooted 2>&1 | tee /tmp/aot-publish-rooted.log
+dotnet run scripts/CheckAotWarnings.cs -- \
+    --log /tmp/aot-publish-rooted.log \
+    --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
+    --repo-root .
+```
+
+Deleting `bin/` and `obj/` first is not optional: a warm intermediate directory makes MSBuild skip
+native compilation, so the publish emits no IL warnings at all.
+
+The checker keys each warning on code + file + owning member + message, deliberately *not* on the
+line number, so editing code above a warning site does not churn the baseline. There is no rewrite
+mode - when entries go stale it prints the exact lines to delete, which keeps the baseline's
+per-entry comments intact.
+
+Running the same program on the JIT (`dotnet run --project src/aot/Akka.AOT.App -c Release`) does
+reach `[canary] OK`. That is worth doing whenever the canary changes: it proves the pass condition
+is actually satisfiable - the watchdog does not fire on a healthy boot and all the positive
+assertions hold. The switch is off there too (the `RuntimeHostConfigurationOption` lands in
+`runtimeconfig.json`), so a green JIT run also confirms the three converted sites resolve from their
+built-in tables rather than by reflection.

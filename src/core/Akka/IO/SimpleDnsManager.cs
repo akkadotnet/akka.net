@@ -5,9 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -29,9 +31,11 @@ namespace Akka.IO
         public SimpleDnsManager(DnsExt ext)
         {
             _ext = ext;
-            _resolver = Context.ActorOf(Props.Create(ext.Provider.ActorClass, ext.Cache, ext.Settings.ResolverConfig)
-                                             .WithDeploy(Deploy.Local)
-                                             .WithDispatcher(ext.Settings.Dispatcher));
+
+            // Switch check first so the trimmer can drop the reflection branch; see DnsExt.Manager.
+            _resolver = !AkkaFeatures.IsDynamicTypeLoadingSupported || ext.Provider.GetType() == typeof(InetAddressDnsProvider)
+                ? CreateBuiltInResolver(ext)
+                : CreateCustomResolver(ext);
 
             _cacheCleanup = _ext.Cache as IPeriodicCacheCleanup;
 
@@ -64,6 +68,23 @@ namespace Akka.IO
             }
             return false;
         }
+
+        // Locals, not nested member access: Props.Create reads captured locals cheaply but compiles a
+        // lambda for `ext.Settings.ResolverConfig`.
+        private static IActorRef CreateBuiltInResolver(DnsExt ext)
+        {
+            var cache = (SimpleDnsCache)ext.Cache;
+            var resolverConfig = ext.Settings.ResolverConfig;
+            return Context.ActorOf(Props.Create(() => new InetAddressDnsResolver(cache, resolverConfig))
+                                        .WithDeploy(Deploy.Local)
+                                        .WithDispatcher(ext.Settings.Dispatcher));
+        }
+
+        [RequiresUnreferencedCode("Instantiates the custom IDnsProvider.ActorClass named by [akka.io.dns.<resolver>.provider-object]. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IActorRef CreateCustomResolver(DnsExt ext)
+            => Context.ActorOf(Props.Create(ext.Provider.ActorClass, ext.Cache, ext.Settings.ResolverConfig)
+                                    .WithDeploy(Deploy.Local)
+                                    .WithDispatcher(ext.Settings.Dispatcher));
 
         /// <summary>
         /// Cancels the cleanup timer when the actor is stopped.

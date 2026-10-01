@@ -41,6 +41,12 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
             };
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterSingletonMessageSerializer) ? 14 : base.Identifier;
+
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>

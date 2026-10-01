@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Stage;
@@ -177,8 +178,9 @@ namespace Akka.Streams.Dsl
             private readonly AtomicCounterLong _producerCount;
             private readonly Dictionary<long, InputState> _demands = new();
             private Action _wakeupCallback;
-            private bool _needWakeup;
-            private bool _shuttingDown;
+            // volatile also publishes _wakeupCallback to producers that see _needWakeup == true
+            private volatile bool _needWakeup;
+            private volatile bool _shuttingDown;
 
             public HubLogic(MergeHub<T> stage, AtomicCounterLong producerCount) : base(stage.Shape)
             {
@@ -198,6 +200,8 @@ namespace Akka.Streams.Dsl
             {
                 // First announce that we are shutting down. This will notify late-comers to not even put anything in the queue
                 _shuttingDown = true;
+                // Full fence: see the comment in TryProcessNext. Producers check the flag after they enqueue.
+                Interlocked.MemoryBarrier();
 
                 // Anybody that missed the announcement needs to be notified.
                 while (_queue.TryDequeue(out var e))
@@ -258,6 +262,9 @@ namespace Akka.Streams.Dsl
                         _needWakeup = true;
                         if (firstAttempt)
                         {
+                            // Full fence so the store above can't be reordered after the re-poll. C# volatile
+                            // doesn't prevent that (JVM @volatile does); the proof in Enqueue relies on it.
+                            Interlocked.MemoryBarrier();
                             firstAttempt = false;
                             continue;
                         }
@@ -298,6 +305,9 @@ namespace Akka.Streams.Dsl
                 //      wakeup (otherwise needWakeup = true). Now, if the consumer is still running (2) is violated,
                 //      if not running then needWakeup = false is violated (which comes from (6)). No matter what,
                 //      contradiction. QED.
+                //
+                // The proof assumes sequentially consistent accesses (JVM @volatile). In .NET that takes the full fence
+                // in TryProcessNext; on this side the CAS inside _queue.Enqueue already acts as one.
 
                 if (_needWakeup)
                 {

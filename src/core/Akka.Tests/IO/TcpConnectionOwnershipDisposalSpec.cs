@@ -448,7 +448,9 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task OwnedWrite_ClosingBehaviour_rejection_disposes_owner_before_CommandFailed()
         {
-            using var socketPair = await ConnectedSocketPair.CreateAsync();
+            // small socket buffers, so unread output backs up into the connection instead of the kernel
+            using var socketPair = await ConnectedSocketPair.CreateAsync(clientReceiveBufferSize: 16384);
+            socketPair.Server.SendBufferSize = 16384;
             var bindHandler = CreateTestProbe();
             var handler = CreateTestProbe();
             var settings = TcpSettings.Create(Sys);
@@ -457,24 +459,35 @@ namespace Akka.Tests.IO
             var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
                 settings, socketPair.Server, bindHandler.Ref, Array.Empty<Inet.SocketOption>(), false)));
 
-            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
+            await bindHandler.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(5));
             bindHandler.Send(connection, new Tcp.Register(handler.Ref));
             await WatchAsync(connection);
 
-            // Same sender (handler) for both messages -> FIFO guarantees Close is fully processed
-            // (Become(ClosingBehaviour) applied) before the Write below is dequeued.
+            // Output the client doesn't read yet keeps the close from finishing, so the Write below
+            // always lands in ClosingBehaviour. An idle close can finish before it arrives.
+            var blocker = RandomPayload(98, 4 * 1024 * 1024);
+            handler.Send(connection, Tcp.Write.Create(blocker));
             handler.Send(connection, Tcp.Close.Instance);
 
             var payload = RandomPayload(99, 64);
             var (owner, data, _) = CreateOwned(pool, payload);
             handler.Send(connection, Tcp.Write.Create(data, new WriteAck(1)));
 
-            var failed = await handler.ExpectMsgAsync<Tcp.CommandFailed>();
+            var failed = await handler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(5));
             failed.Cause.Value.Should().BeOfType<IOException>();
 
             owner.DisposeCount.Should().Be(1, "a write rejected while closing never reaches the pipe, so the owner must be disposed before CommandFailed is signaled");
 
+            // drain the blocker so the close can finish; the rejected write must never reach the wire
+            var received = await ReceiveExactAsync(socketPair.Client, blocker.Length, TimeSpan.FromSeconds(10));
+            received.Should().Equal(blocker);
+
+            await handler.ExpectMsgAsync<Tcp.Closed>(TimeSpan.FromSeconds(10));
             await ExpectTerminatedAsync(connection, TimeSpan.FromSeconds(5));
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var eof = await socketPair.Client.ReceiveAsync(new byte[1].AsMemory(), SocketFlags.None, cts.Token);
+            eof.Should().Be(0, "nothing may follow the blocker: the rejected owned write never reached the pipe");
         }
 
         [Fact]
@@ -540,7 +553,8 @@ namespace Akka.Tests.IO
             public Socket Client { get; }
             public Socket Server { get; }
 
-            public static async Task<ConnectedSocketPair> CreateAsync()
+            /// <param name="clientReceiveBufferSize">Client SO_RCVBUF, set before connect because the window scale is fixed at the handshake.</param>
+            public static async Task<ConnectedSocketPair> CreateAsync(int? clientReceiveBufferSize = null)
             {
                 using var listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 listener.Bind(new IPEndPoint(IPAddress.Loopback, 0));
@@ -548,6 +562,8 @@ namespace Akka.Tests.IO
 
                 var endpoint = (IPEndPoint)listener.LocalEndPoint!;
                 var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                if (clientReceiveBufferSize is { } size)
+                    client.ReceiveBufferSize = size;
 
                 try
                 {

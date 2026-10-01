@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="WithContextSpecs.cs" company="Akka.NET Project">
 //      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
@@ -173,7 +173,9 @@ public class WithContextSpecs : IAsyncLifetime
 
     private async Task AwaitAssertAsync(Action assertion, TimeSpan? timeout = null, TimeSpan? interval = null)
     {
-        var maxWait = timeout ?? TimeSpan.FromSeconds(3);
+        // The logger actor runs on the default dispatcher; on a starved CI agent it has been seen to reach
+        // an event ~3 s after it was published, so 3 s left no slack.
+        var maxWait = timeout ?? TimeSpan.FromSeconds(10);
         var checkInterval = interval ?? TimeSpan.FromMilliseconds(100);
         var cts = new CancellationTokenSource(maxWait);
 
