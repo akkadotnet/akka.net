@@ -90,6 +90,76 @@ public class ReceiveActorHandlersTests
             handlers.AddReceiveAnyHandler(_ => { }));
     }
 
+    // The following tests establish parity with v1.5.71's MatchBuilder-based implementation for the
+    // "object handler with no predicate blocks later handlers" rule. In 1.5.71, only an always-handling
+    // registration (what Action<T>-based Receive/ReceiveAsync overloads produce) for T/messageType=object
+    // with no predicate entered the "no more handlers" state - a Func<T,bool>/Func<object,bool> handler
+    // (which may legitimately decline/return false) never did, for either the generic or the typed path.
+    // See https://github.com/akkadotnet/akka.net/issues/7557 for the regression this restores.
+
+    [Fact]
+    public void Should_Allow_MoreHandlers_When_TypedObjectHandlerWithNoPredicate_DoesNotAlwaysHandle()
+    {
+        var handlers = new ReceiveActorHandlers();
+
+        // Mirrors Receive(typeof(object), Func<object,bool>) - the handler may decline (return false),
+        // so it must not block later registrations.
+        handlers.AddTypedReceiveHandler(typeof(object), null, _ => true, alwaysHandles: false);
+
+        handlers.AddTypedReceiveHandler(typeof(string), null, _ => true, alwaysHandles: false);
+        handlers.AddGenericReceiveHandler<int>(null, _ => true);
+        handlers.AddReceiveAnyHandler(_ => { });
+    }
+
+    [Fact]
+    public void Should_Block_MoreHandlers_When_TypedObjectHandlerWithNoPredicate_AlwaysHandles()
+    {
+        var handlers = new ReceiveActorHandlers();
+
+        // Mirrors Receive(typeof(object), Action<object>) - the handler always returns true,
+        // so later registrations must be rejected, same as a ReceiveAny handler would be.
+        handlers.AddTypedReceiveHandler(typeof(object), null, _ => true, alwaysHandles: true);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddTypedReceiveHandler(typeof(string), null, _ => true, alwaysHandles: false));
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddGenericReceiveHandler<int>(null, _ => true));
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddReceiveAnyHandler(_ => { }));
+    }
+
+    [Fact]
+    public void Should_Allow_MoreHandlers_When_GenericObjectHandlerWithNoPredicate_DoesNotAlwaysHandle()
+    {
+        var handlers = new ReceiveActorHandlers();
+
+        // Mirrors Receive<object>(Func<object,bool>) - the handler may decline (return false),
+        // so it must not block later registrations.
+        handlers.AddGenericReceiveHandler<object>(null, _ => true, alwaysHandles: false);
+
+        handlers.AddTypedReceiveHandler(typeof(string), null, _ => true, alwaysHandles: false);
+        handlers.AddGenericReceiveHandler<int>(null, _ => true);
+        handlers.AddReceiveAnyHandler(_ => { });
+    }
+
+    [Fact]
+    public void Should_Block_MoreHandlers_When_GenericObjectHandlerWithNoPredicate_AlwaysHandles()
+    {
+        var handlers = new ReceiveActorHandlers();
+
+        // Mirrors Receive<object>(Action<object>) - the handler always returns true, so later
+        // registrations must be rejected. (Prior to this fix, the generic path never set this flag
+        // at all, regardless of T or alwaysHandles - a second regression relative to v1.5.71.)
+        handlers.AddGenericReceiveHandler<object>(null, _ => true, alwaysHandles: true);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddTypedReceiveHandler(typeof(string), null, _ => true, alwaysHandles: false));
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddGenericReceiveHandler<int>(null, _ => true));
+        Assert.Throws<InvalidOperationException>(() =>
+            handlers.AddReceiveAnyHandler(_ => { }));
+    }
+
     [Fact]
     public void Given_GenericReceiveHandlerWithPredicate_When_Adding_SameGenericReceiveHandlerWithPredicate_Then_Should_Succeed()
     {

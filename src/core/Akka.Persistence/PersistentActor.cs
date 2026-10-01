@@ -436,24 +436,28 @@ namespace Akka.Persistence
             }, isRecover: true);
         }
         
-        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover)
+        // alwaysHandles indicates whether handler is guaranteed to always return true (e.g. it wraps an
+        // Action<T>-based Command/Recover overload) as opposed to a genuine Func<T,bool> that may decline
+        // a message. This only affects whether a T=object/messageType=object registration with no predicate
+        // blocks later registrations - see ReceiveActorHandlers for the rationale.
+        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover, bool alwaysHandles = true)
         {
             if(isRecover)
                 EnsureMayConfigureRecoverHandlers();
             else
                 EnsureMayConfigureCommandHandlers();
-            
+
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
-            handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler);
+            handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler, alwaysHandles);
         }
 
-        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover)
+        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover, bool alwaysHandles = true)
         {
             EnsureMayConfigureRecoverHandlers();
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
-            handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler);
+            handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler, alwaysHandles);
         }
 
         /// <summary>
@@ -500,7 +504,9 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover<T>(Func<T, bool> handler)
         {
-            AddGenericReceiveHandler(null, handler, isRecover:true);
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<T> based Recover does.
+            AddGenericReceiveHandler(null, handler, isRecover: true, alwaysHandles: false);
         }
 
         /// <summary>
@@ -510,7 +516,9 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover(Type messageType, Func<object, bool> handler)
         {
-            AddTypedReceiveHandler(messageType, null, handler, isRecover:true);
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<object> based Recover does.
+            AddTypedReceiveHandler(messageType, null, handler, isRecover: true, alwaysHandles: false);
         }
 
         /// <summary>
@@ -680,8 +688,10 @@ namespace Akka.Persistence
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            
-            AddGenericReceiveHandler(null, handler, isRecover: false);
+
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<T> based Command does.
+            AddGenericReceiveHandler(null, handler, isRecover: false, alwaysHandles: false);
         }
 
         /// <summary>
@@ -692,7 +702,9 @@ namespace Akka.Persistence
         protected void Command(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            AddTypedReceiveHandler(messageType, null, handler, isRecover: false);
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<object> based Command does.
+            AddTypedReceiveHandler(messageType, null, handler, isRecover: false, alwaysHandles: false);
         }
 
         /// <summary>

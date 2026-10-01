@@ -307,7 +307,9 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive<T>(Func<T, bool> handler)
         {
-            AddGenericReceiveHandler<T>(null, handler);
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<T> based Receive does.
+            AddGenericReceiveHandler<T>(null, handler, alwaysHandles: false);
         }
 
         /// <summary>
@@ -325,7 +327,9 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
         protected void Receive(Type messageType, Func<object, bool> handler)
         {
-            AddTypedReceiveHandler(messageType, null, handler);
+            // handler may decline (return false) for a given message, so it must not block later
+            // registrations the way an always-handling Action<object> based Receive does.
+            AddTypedReceiveHandler(messageType, null, handler, alwaysHandles: false);
         }
 
         /// <summary>
@@ -346,20 +350,25 @@ namespace Akka.Actor
         
         // Separated the handling of the generic and typed handlers because the generics it can be handled
         // one way but using types needed to assume object types.
-        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler)
+        //
+        // alwaysHandles indicates whether handler is guaranteed to always return true (e.g. it wraps an
+        // Action<T>-based Receive/ReceiveAsync overload) as opposed to a genuine Func<T,bool> that may
+        // decline a message. This only affects whether a T=object/messageType=object registration with no
+        // predicate blocks later registrations - see ReceiveActorHandlers for the rationale.
+        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool alwaysHandles = true)
         {
             EnsureMayConfigureMessageHandlers();
             var handlerSet = _handlersStack.Peek();
 
-            handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler);
+            handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler, alwaysHandles);
         }
 
-        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler)
+        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool alwaysHandles = true)
         {
             EnsureMayConfigureMessageHandlers();
             var handlerSet = _handlersStack.Peek();
 
-            handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler);
+            handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler, alwaysHandles);
         }
     }
 }

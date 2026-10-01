@@ -168,6 +168,50 @@ namespace Akka.Tests.Actor
             await ExpectMsgAsync("Handled");
         }
 
+        [Fact]
+        public async Task Should_FallThroughToLaterHandler_When_ObjectFuncHandlerWithNoPredicate_Declines()
+        {
+            // Regression test for the #7557 rewrite: a Receive(typeof(object), Func<object,bool>) handler
+            // with no predicate may decline (return false) for a given message. In that case later
+            // handlers must still get a chance to run - matching v1.5.71's MatchBuilder-based behavior -
+            // instead of the registration itself being rejected or the message being left unhandled.
+            var actor = Sys.ActorOf<ObjectFuncHandlerDeclinesActor>("object-func-handler-declines");
+
+            actor.Tell(42, TestActor);
+            actor.Tell("hello", TestActor);
+
+            await ExpectMsgAsync("int:42");
+            await ExpectMsgAsync("string:hello");
+        }
+
+        [Fact]
+        public async Task Should_Throw_When_RegisteringHandler_After_ObjectActionHandlerWithNoPredicate()
+        {
+            // Sanity-check companion to the test above: an always-handling object handler (what the
+            // Action<object>-based Receive overload produces) with no predicate must still block later
+            // registrations, exactly as in v1.5.71 and as a ReceiveAny handler does.
+            var actor = Sys.ActorOf<ObjectActionHandlerThenAnotherHandlerActor>("object-action-handler-then-another");
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var terminated = await actor.WatchAsync(cts.Token);
+
+            Assert.True(terminated);
+        }
+
+        [Fact]
+        public async Task Should_Throw_When_RegisteringHandler_After_GenericObjectActionHandlerWithNoPredicate()
+        {
+            // Companion test for the generic Receive<object>(Action<object>) overload, which must also
+            // block later registrations when no predicate is supplied - matching v1.5.71. (Prior to this
+            // fix, the generic path never blocked later registrations regardless of T.)
+            var actor = Sys.ActorOf<GenericObjectActionHandlerThenAnotherHandlerActor>("generic-object-action-handler-then-another");
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var terminated = await actor.WatchAsync(cts.Token);
+
+            Assert.True(terminated);
+        }
+
         private class NoReceiveActor : ReceiveActor
         {
         }
@@ -286,6 +330,42 @@ namespace Akka.Tests.Actor
             public ReceiveCanHandleBaseTypesActor()
             {
                 Receive<IReceiveCanHandleBaseMessage>(i => Sender.Tell("Handled", Self));
+            }
+        }
+
+        private class ObjectFuncHandlerDeclinesActor : ReceiveActor
+        {
+            public ObjectFuncHandlerDeclinesActor()
+            {
+                Receive(typeof(object), o =>
+                {
+                    if (o is int i)
+                    {
+                        Sender.Tell("int:" + i, Self);
+                        return true;
+                    }
+
+                    return false; // decline - later handlers should still get a chance to run
+                });
+                Receive<string>(s => Sender.Tell("string:" + s, Self));
+            }
+        }
+
+        private class ObjectActionHandlerThenAnotherHandlerActor : ReceiveActor
+        {
+            public ObjectActionHandlerThenAnotherHandlerActor()
+            {
+                Receive(typeof(object), _ => { });
+                Receive<string>(_ => { }); // should throw - no more handlers can be added
+            }
+        }
+
+        private class GenericObjectActionHandlerThenAnotherHandlerActor : ReceiveActor
+        {
+            public GenericObjectActionHandlerThenAnotherHandlerActor()
+            {
+                Receive<object>(_ => { });
+                Receive<string>(_ => { }); // should throw - no more handlers can be added
             }
         }
 
