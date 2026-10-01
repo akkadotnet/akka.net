@@ -80,5 +80,26 @@ namespace Akka.DistributedData.Tests.Serialization
             serialization.FindSerializerForType(typeof(GSet<string>)).Should().BeOfType<ReplicatedDataSerializer>();
             serialization.FindSerializerForType(typeof(Subscribe)).Should().BeOfType<ReplicatorMessageSerializer>();
         }
+
+        /// <remarks>
+        /// Akka.DistributedData is deployed with this test project, so its module default registers on startup -
+        /// a plain system resolves both ids without ever starting the Replicator extension or loading
+        /// DistributedData's own reference.conf rows.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve DistributedData serializers by id on a plain system with no Replicator started")]
+        public async Task Should_resolve_DistributedData_serializers_On_a_plain_system_with_no_extension_started()
+        {
+            var system = ActorSystem.Create("ddata-no-extension");
+            try
+            {
+                var serialization = ((ExtendedActorSystem)system).Serialization;
+                serialization.GetSerializerById(11).Should().BeOfType<ReplicatedDataSerializer>();
+                serialization.GetSerializerById(12).Should().BeOfType<ReplicatorMessageSerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
     }
 }

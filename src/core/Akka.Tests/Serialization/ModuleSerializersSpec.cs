@@ -9,10 +9,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Serialization;
 using Akka.Tests.Util;
 using FluentAssertions;
@@ -101,6 +103,23 @@ namespace Akka.Tests.Serialization
                 => throw new MissingMethodException("Akka.Serialization.Missing", "Member");
         }
 
+        /// <summary>
+        /// A stdout logger that records instead of printing, so a test can see whether
+        /// <c>Serialization</c> logged a serializer-override warning. Loaded by name via
+        /// <c>akka.stdout-logger-class</c>, the same way a real custom logger is configured.
+        /// </summary>
+        internal sealed class RecordingLogger : MinimalLogger
+        {
+            public readonly List<object> Messages = new();
+
+            protected override void Log(object message) => Messages.Add(message);
+
+            public bool HasOverrideWarning =>
+                Messages.OfType<LogEvent>().Any(e => e.Message?.ToString()?.Contains("being overriden") == true);
+        }
+
+        private const string RecordingLoggerName = "Akka.Tests.Serialization.ModuleSerializersSpec+RecordingLogger, Akka.Tests";
+
         private const string ModuleMessageName = "Akka.Tests.Serialization.ModuleSerializersSpec+ModuleMessage";
 
         /// <summary>The rows the fake module's reference.conf would carry.</summary>
@@ -152,6 +171,16 @@ namespace Akka.Tests.Serialization
         private static Task WithSystem(string name, Config? config, Func<ActorSystem, Task> body) =>
             WithSystem(name, ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(
                 (config ?? Config.Empty).WithFallback(ModuleConfig).WithFallback(ConfigurationFactory.Default()))), body);
+
+        /// <summary>Runs <paramref name="body"/> against a system whose stdout logger is a <see cref="RecordingLogger"/>.</summary>
+        private static async Task WithRecordingLogger(string name, Config config, Func<ActorSystem, RecordingLogger, Task> body)
+        {
+            var withLogger = ConfigurationFactory.ParseString($@"akka.stdout-logger-class = ""{RecordingLoggerName}""")
+                .WithFallback(config);
+
+            await WithSystem(name, withLogger, system =>
+                body(system, (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger));
+        }
 
         [Fact(DisplayName = "Serialization should resolve a module's serializer and binding rows when dynamic type loading is off")]
         public async Task Should_resolve_module_rows_When_dynamic_type_loading_is_disabled()
@@ -282,17 +311,18 @@ namespace Akka.Tests.Serialization
             });
         }
 
-        /// <remarks>Only modules this config's serializer rows loaded answer a framework-type row.</remarks>
-        [Fact(DisplayName = "Serialization should still reject a System.String binding when no module serializer row is present and dynamic type loading is off")]
-        public async Task Should_throw_ConfigurationException_When_a_framework_type_row_has_no_module()
+        /// <remarks>Every module the table knows about is built up front, so its own types resolve even without a row for them.</remarks>
+        [Fact(DisplayName = "Serialization should resolve a module-owned framework type binding when no module serializer row is present and dynamic type loading is off")]
+        public async Task Should_resolve_a_framework_type_row_From_the_module_default_When_no_serializer_row_is_present()
         {
             var system = ActorSystem.Create("module-none", @"akka.actor.serialization-bindings { ""System.String"" = bytes }");
             try
             {
-                var exception = await Assert.ThrowsAsync<ConfigurationException>(
-                    () => Build(system, FakeTable(), dynamicTypeLoading: false));
-                exception.Message.Should().Contain("[System.String]");
-                _probes.Should().Be(0);
+                // the module's own default binding for ModuleMessage still applies; "System.String" is overridden to bytes
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<FakeSerializer>();
+                _probes.Should().Be(1);
             }
             finally
             {
@@ -300,21 +330,154 @@ namespace Akka.Tests.Serialization
             }
         }
 
-        [Theory(DisplayName = "Serialization should never probe a module when every row hits the built-in tables")]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task Should_not_probe_When_every_row_is_built_in(bool dynamicTypeLoading)
+        /// <remarks>A type no loaded module lists still throws like before.</remarks>
+        [Fact(DisplayName = "Serialization should still reject a binding row for a type no module lists when dynamic type loading is off")]
+        public async Task Should_throw_ConfigurationException_When_no_module_lists_the_bound_type()
         {
-            var system = ActorSystem.Create("module-local");
+            var system = ActorSystem.Create("module-unbound",
+                @"akka.actor.serialization-bindings { ""System.Int32"" = bytes }");
             try
             {
-                await Build(system, FakeTable(), dynamicTypeLoading);
-                _probes.Should().Be(0);
+                var exception = await Assert.ThrowsAsync<ConfigurationException>(
+                    () => Build(system, FakeTable(), dynamicTypeLoading: false));
+                exception.Message.Should().Contain("[System.Int32]");
             }
             finally
             {
                 await system.Terminate();
             }
+        }
+
+        [Theory(DisplayName = "Serialization should probe every known module up front, even when every row hits the built-in tables")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_probe_every_module_up_front(bool dynamicTypeLoading)
+        {
+            var system = ActorSystem.Create("module-local");
+            try
+            {
+                await Build(system, FakeTable(), dynamicTypeLoading);
+                _probes.Should().Be(1);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Theory(DisplayName = "Serialization should register a module's rows as defaults with no HOCON rows for it")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_register_module_defaults_When_no_HOCON_rows_are_present(bool dynamicTypeLoading)
+        {
+            // no ModuleConfig fallback at all - the module has no HOCON rows of its own in this system
+            var system = ActorSystem.Create("module-defaults-only");
+            try
+            {
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading);
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<FakeSerializer>();
+                serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<FakeSerializer>();
+                _probes.Should().Be(1);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "Serialization should apply default, then HOCON, then Setup precedence for a module-bound type")]
+        public async Task Should_apply_default_then_HOCON_then_Setup_precedence()
+        {
+            // level 1: nothing but the module default binds ModuleMessage - no HOCON rows for it anywhere
+            var defaultOnly = ActorSystem.Create("module-precedence-default");
+            try
+            {
+                var serialization = await Build(defaultOnly, FakeTable(), dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<FakeSerializer>();
+            }
+            finally
+            {
+                await defaultOnly.Terminate();
+            }
+
+            // level 2: a plain HOCON binding row rebinds ModuleMessage to "bytes" - HOCON beats the default
+            var hoconConfig = ConfigurationFactory.ParseString($@"
+                akka.actor.serialization-bindings {{ ""{ModuleMessageName}, Akka.Tests"" = bytes }}");
+            var hoconOnly = ActorSystem.Create("module-precedence-hocon", hoconConfig);
+            try
+            {
+                var serialization = await Build(hoconOnly, FakeTable(), dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<ByteArraySerializer>();
+            }
+            finally
+            {
+                await hoconOnly.Terminate();
+            }
+
+            // level 3: a SerializationSetup rebinds it again - Setup beats the HOCON row
+            var setup = ActorSystemSetup.Create(
+                BootstrapSetup.Create().WithConfig(hoconConfig.WithFallback(ConfigurationFactory.Default())),
+                SerializationSetup.Create(system => ImmutableHashSet<SerializerDetails>.Empty.Add(
+                    SerializerDetails.Create("setup-wins", new SetupSerializer(system), ImmutableHashSet.Create(typeof(ModuleMessage))))));
+            var withSetup = ActorSystem.Create("module-precedence-setup", setup);
+            try
+            {
+                var serialization = await Build(withSetup, FakeTable(), dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(ModuleMessage)).Should().BeOfType<SetupSerializer>();
+            }
+            finally
+            {
+                await withSetup.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "Serialization should not log an override warning when HOCON replaces a module default")]
+        public async Task Should_not_warn_When_HOCON_replaces_a_module_default()
+        {
+            var overrides = ConfigurationFactory.ParseString(
+                @"akka.actor.serializers.fake-module = ""Akka.Serialization.ByteArraySerializer, Akka""");
+
+            await WithRecordingLogger("module-default-no-warn", overrides, async (system, logger) =>
+            {
+                await Build(system, FakeTable(), dynamicTypeLoading: false);
+                logger.HasOverrideWarning.Should().BeFalse();
+            });
+        }
+
+        [Fact(DisplayName = "Serialization should still log an override warning when a SerializationSetup replaces a HOCON alias")]
+        public async Task Should_warn_When_Setup_replaces_a_HOCON_alias()
+        {
+            var config = ConfigurationFactory.ParseString($@"
+                akka.stdout-logger-class = ""{RecordingLoggerName}""
+                akka.actor.serializers.fake-module = ""Akka.Serialization.ByteArraySerializer, Akka""");
+            var setup = ActorSystemSetup.Create(
+                BootstrapSetup.Create().WithConfig(config.WithFallback(ModuleConfig).WithFallback(ConfigurationFactory.Default())),
+                SerializationSetup.Create(system => ImmutableHashSet<SerializerDetails>.Empty.Add(
+                    SerializerDetails.Create("fake-module", new SetupSerializer(system), ImmutableHashSet.Create(typeof(ModuleMessage))))));
+
+            await WithSystem("module-setup-warns", setup, async system =>
+            {
+                await Build(system, FakeTable(), dynamicTypeLoading: false);
+                var logger = (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
+                logger.HasOverrideWarning.Should().BeTrue();
+            });
+        }
+
+        [Fact(DisplayName = "Serialization should reuse the already-built module instance when a HOCON row names a built-in type")]
+        public async Task Should_reuse_the_built_module_instance_When_a_HOCON_row_names_a_built_in_type()
+        {
+            await WithSystem("module-reuse", (Config?)null, async system =>
+            {
+                // ModuleConfig's own "serializers.fake-module" row names the exact same type the module table
+                // already built as a default - it must be reused (same instance), not rebuilt
+                var serialization = await Build(system, FakeTable(), dynamicTypeLoading: false);
+
+                var fromDefault = serialization.FindSerializerForType(typeof(ModuleMessage));
+                var fromRow = serialization.GetSerializerById(9311); // FakeSerializer.Identifier
+                fromRow.Should().BeSameAs(fromDefault);
+
+                _probes.Should().Be(1);
+            });
         }
     }
 }

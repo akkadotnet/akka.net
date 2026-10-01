@@ -195,6 +195,12 @@ namespace Akka.Serialization
         private readonly Dictionary<int, SerializerV2> _serializersById = new();
         private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
+        // ids/aliases/types currently holding a module default, not a HOCON or Setup registration. Overriding
+        // one of these never logs the "serializer override" warning - a module default exists to be overridden.
+        private readonly HashSet<int> _defaultSerializerIds = new();
+        private readonly HashSet<string> _defaultSerializerAliases = new(StringComparer.Ordinal);
+        private readonly HashSet<Type> _defaultBoundTypes = new();
+
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
 
@@ -315,8 +321,30 @@ namespace Akka.Serialization
             _nullSerializer = AdaptSerializer(new NullSerializer(system));
             AddSerializer("null", _nullSerializer);
 
-
             _logSerializerOverrideOnStart = system.Settings.LogSerializerOverrideOnStart;
+
+            // modules this system ships with, by assembly name. Every module the table knows about is built here,
+            // up front - the first-party modules deployed with the app get their serializers registered as
+            // defaults before any HOCON row is read. A module whose assembly isn't loaded, or whose table hits a
+            // version-skew error, counts as absent and contributes no defaults.
+            var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var assembly in modules.AssemblyNames)
+            {
+                if (modules.ForAssembly(assembly) is not { } raw)
+                    continue;
+
+                var built = LoadedModule.TryCreate(raw, system, out var skewError);
+                builtModules[assembly] = (built, skewError);
+                if (built is null)
+                    continue;
+
+                foreach (var details in built.Details)
+                {
+                    AddSerializer(details.Alias, details.SerializerV2, isDefault: true);
+                    foreach (var type in details.UseFor)
+                        AddSerializationMap(type, details.SerializerV2, isDefault: true);
+                }
+            }
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -341,11 +369,6 @@ namespace Akka.Serialization
                 : new HashSet<string>(_serializerDetails.Select(d => d.Alias), StringComparer.Ordinal);
             Dictionary<string, Type> setupTypesByName = null;
 
-            // modules this config has built, by assembly name. The first serializer row whose assembly names a
-            // module builds all of that module's serializers; a binding row never builds one. When the build
-            // itself fails, the exception is kept so a later NotBuiltIn error can show it.
-            var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var kvp in serializersConfig)
             {
                 // HOCON already trims a value, whatever syntax it was written in, so there is nothing to trim here
@@ -365,7 +388,7 @@ namespace Akka.Serialization
                     continue;
                 }
 
-                var (moduleDetails, moduleSkew) = FindModuleSerializer(serializerTypeName, system, modules, builtModules);
+                var (moduleDetails, moduleSkew) = FindModuleSerializer(serializerTypeName, builtModules);
                 if (moduleDetails is not null)
                 {
                     AddSerializer(kvp.Key, moduleDetails.SerializerV2);
@@ -496,55 +519,37 @@ namespace Akka.Serialization
                 : null;
 
         /// <summary>
-        /// The module <paramref name="typeName"/>'s assembly half names, building it - calling its
-        /// <see cref="ModuleSerializers.Create"/> - the first time this method is asked about that assembly, and
-        /// reusing the result (or the lack of one) for every later row from the same assembly. Returns the
-        /// serializer this row names, and separately, the exception the build itself threw, if it threw a
-        /// version-skew one - the caller can surface that instead of a plain "not built in" when it has nothing
-        /// else to resolve the row with.
+        /// Looks up <paramref name="typeName"/>'s assembly half in <paramref name="builtModules"/> - every module
+        /// this system ships with is already built there, before any row is read. Returns the serializer this row
+        /// names, and separately, the exception the module's build threw, if it threw a version-skew one - the
+        /// caller can surface that instead of a plain "not built in" when it has nothing else to resolve the row with.
         /// </summary>
         private static (SerializerDetails Details, Exception SkewError) FindModuleSerializer(
-            string typeName, ExtendedActorSystem system, ModuleSerializerTable modules,
-            Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
+            string typeName, Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
         {
             if (!Akka.Util.TypeExtensions.TrySplitTypeName(typeName, out var name, out var assembly) || assembly is null)
                 return (null, null);
 
-            if (!builtModules.TryGetValue(assembly, out var built))
-            {
-                LoadedModule module = null;
-                Exception skewError = null;
-                if (modules.ForAssembly(assembly) is { } raw)
-                    module = LoadedModule.TryCreate(raw, system, out skewError);
-
-                built = (module, skewError);
-                builtModules[assembly] = built;
-            }
-
-            return (built.Module?.FindSerializer(name, assembly), built.SkewError);
+            return builtModules.TryGetValue(assembly, out var built)
+                ? (built.Module?.FindSerializer(name, assembly), built.SkewError)
+                : (null, null);
         }
 
         /// <summary>
-        /// Resolves a binding row's type from the modules this config's serializer rows already built
-        /// (<paramref name="builtModules"/>). Null when no built module lists it. Never builds a module itself -
-        /// a binding row alone is not reason enough to construct every serializer a module has, so a module with
-        /// no serializer row of its own in this config is invisible here and falls back to reflection, or throws,
-        /// like any other unresolved row.
+        /// Resolves a binding row's type from the modules this system ships with (<paramref name="builtModules"/>,
+        /// already built before any row is read). Null when no module lists it.
         /// </summary>
         /// <remarks>
         /// Two lookups, in order:
         /// <list type="number">
-        /// <item>The module the row's assembly half names, if this config already built it.
-        /// <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c> is answered by Akka.Remote's module, once some
-        /// Remote.conf serializer row has built it.</item>
-        /// <item>Every other module this config built. This covers bound types that live outside their module:
-        /// Remote.conf binds <c>"System.String"</c> and <c>"Akka.Actor.Identify, Akka"</c> to its own serializers,
-        /// and no module owns CoreLib or Akka.dll, so lookup 1 can't answer for them.</item>
+        /// <item>The module the row's assembly half names.
+        /// <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c> is answered by Akka.Remote's module.</item>
+        /// <item>Every other built module. This covers bound types that live outside their module: Remote.conf
+        /// binds <c>"System.String"</c> and <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no
+        /// module owns CoreLib or Akka.dll, so lookup 1 can't answer for them.</item>
         /// </list>
-        /// Lookup 2 only asks modules this config built. With no Remote serializer rows, a <c>"System.String"</c>
-        /// binding gets no answer here and still throws with dynamic type loading off, as it did before. The binding
-        /// loop runs after the serializer loop, so <paramref name="builtModules"/> is complete by then. Two modules
-        /// that list the same name list the same <see cref="Type"/>, so the order they are asked in doesn't matter.
+        /// Two modules that list the same name list the same <see cref="Type"/>, so the order they are asked in
+        /// doesn't matter.
         /// </remarks>
         private static Type FindModuleBoundType(
             string name, string assembly, Dictionary<string, (LoadedModule Module, Exception SkewError)> builtModules)
@@ -743,25 +748,45 @@ namespace Akka.Serialization
         /// </remarks>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
-        public void AddSerializer(string name, SerializerV2 serializer)
+        public void AddSerializer(string name, SerializerV2 serializer) => AddSerializer(name, serializer, isDefault: false);
+
+        /// <summary>
+        /// INTERNAL API. Same as the public overload, but <paramref name="isDefault"/> marks the registration as a
+        /// module default rather than a HOCON or Setup one - overriding a default never logs the warning below,
+        /// and overriding this registration later clears its default marker.
+        /// </summary>
+        private void AddSerializer(string name, SerializerV2 serializer, bool isDefault)
         {
             var id = serializer.Identifier;
-            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && !_defaultSerializerIds.Contains(id) &&
+               _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
             {
                 LogWarning(
                     $"Serializer with identifier [{id}] are being overriden  " +
                     $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
             }
-            
-            if(_logSerializerOverrideOnStart && _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
+
+            if(_logSerializerOverrideOnStart && !_defaultSerializerAliases.Contains(name) &&
+               _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer with name [{serializer.Identifier}] are being overriden  " +
                     $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
-            
+
             _serializersById[id] = serializer;
             _serializersByName[name] = serializer;
+
+            SetDefault(_defaultSerializerIds, id, isDefault);
+            SetDefault(_defaultSerializerAliases, name, isDefault);
+        }
+
+        private static void SetDefault<T>(HashSet<T> defaults, T key, bool isDefault)
+        {
+            if (isDefault)
+                defaults.Add(key);
+            else
+                defaults.Remove(key);
         }
 
         /// <summary>
@@ -784,15 +809,25 @@ namespace Akka.Serialization
         /// <param name="serializer">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddSerializationMap(Type type, SerializerV2 serializer)
+        public void AddSerializationMap(Type type, SerializerV2 serializer) => AddSerializationMap(type, serializer, isDefault: false);
+
+        /// <summary>
+        /// INTERNAL API. Same as the public overload, but <paramref name="isDefault"/> marks the mapping as a
+        /// module default rather than a HOCON or Setup one - overriding a default never logs the warning below,
+        /// and overriding this mapping later clears its default marker.
+        /// </summary>
+        private void AddSerializationMap(Type type, SerializerV2 serializer, bool isDefault)
         {
-            if(_logSerializerOverrideOnStart && _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
+            if(_logSerializerOverrideOnStart && !_defaultBoundTypes.Contains(type) &&
+               _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer for type [{type}] are being overriden  " +
                     $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
-            
+
             _serializerMap[type] = serializer;
+
+            SetDefault(_defaultBoundTypes, type, isDefault);
         }
 
         /// <summary>

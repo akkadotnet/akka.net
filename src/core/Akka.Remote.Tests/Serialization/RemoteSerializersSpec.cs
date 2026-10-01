@@ -173,8 +173,8 @@ namespace Akka.Remote.Tests.Serialization
             });
         }
 
-        [Fact(DisplayName = "Serialization should neither probe nor register Remote's serializers when the config has no Remote rows")]
-        public async Task Should_not_probe_Remote_When_a_local_config_has_no_Remote_rows()
+        [Fact(DisplayName = "Serialization should probe and register Remote's serializers as defaults even when the config has no Remote rows")]
+        public async Task Should_probe_Remote_When_a_local_config_has_no_Remote_rows()
         {
             var probes = 0;
             var table = new ModuleSerializerTable(new Dictionary<string, Func<ModuleSerializers?>>
@@ -197,10 +197,14 @@ namespace Akka.Remote.Tests.Serialization
             {
                 var serialization = Build(system, table, dynamicTypeLoading: true);
 
-                probes.Should().Be(0);
+                // the module is deployed with the app, so it is built and registered as a default up front,
+                // whether or not this config carries a single Remote.conf row
+                probes.Should().Be(1);
+                // these two rows are explicit overrides, so they still win over Remote's own default binding
                 serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(string)).Should().BeOfType<ByteArraySerializer>();
-                serialization.FindSerializerForType(typeof(IActorRef)).Should().BeOfType<NewtonSoftJsonSerializer>();
+                // no row overrides this one, so Remote's module default answers it instead of falling back to json
+                serialization.FindSerializerForType(typeof(IActorRef)).Should().BeOfType<MiscMessageSerializer>();
             });
         }
 
@@ -241,18 +245,20 @@ namespace Akka.Remote.Tests.Serialization
             });
         }
 
-        /// <remarks>A binding row alone doesn't build a module, so with the switch off nothing resolves this one.</remarks>
-        [Fact(DisplayName = "Serialization should reject a RemoteWatcher+Heartbeat binding with no Remote serializer row When dynamic type loading is off")]
-        public async Task Should_throw_ConfigurationException_When_a_binding_only_row_names_an_unbuilt_module()
+        /// <remarks>
+        /// Remote's module is built as a default up front, with or without a row for it, so a binding-only row
+        /// resolves even with the switch off - no Remote.conf serializer row is needed to answer it.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve a RemoteWatcher+Heartbeat binding with no Remote serializer row when dynamic type loading is off")]
+        public async Task Should_resolve_a_binding_only_row_From_the_Remote_module_default()
         {
             var config = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"" = bytes }");
 
             await ModuleSerializerSpecs.WithSystem("remote-binding-only-heartbeat-off", config, null, system =>
             {
-                var exception = Assert.Throws<ConfigurationException>(
-                    () => ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false));
-                exception.Message.Should().Contain("RemoteWatcher+Heartbeat");
+                var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
+                serialization.FindSerializerForType(typeof(RemoteWatcher.Heartbeat)).Should().BeOfType<ByteArraySerializer>();
             });
         }
 

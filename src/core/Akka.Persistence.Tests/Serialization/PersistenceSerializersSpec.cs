@@ -127,5 +127,25 @@ namespace Akka.Persistence.Tests.Serialization
             serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<PersistenceMessageSerializer>();
             serialization.FindSerializerForType(typeof(Akka.Persistence.Serialization.Snapshot)).Should().BeOfType<PersistenceSnapshotSerializer>();
         }
+
+        /// <remarks>
+        /// Akka.Persistence is deployed with this test project, so its module default registers on startup - a
+        /// plain system resolves both ids without ever starting a journal or snapshot store plugin.
+        /// </remarks>
+        [Fact(DisplayName = "Serialization should resolve Persistence serializers by id on a plain system with no persistence plugin started")]
+        public async Task Should_resolve_Persistence_serializers_On_a_plain_system_with_no_extension_started()
+        {
+            var system = ActorSystem.Create("persistence-no-extension");
+            try
+            {
+                var serialization = ((ExtendedActorSystem)system).Serialization;
+                serialization.GetSerializerById(7).Should().BeOfType<PersistenceMessageSerializer>();
+                serialization.GetSerializerById(8).Should().BeOfType<PersistenceSnapshotSerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
     }
 }
