@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
@@ -15,6 +16,7 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util;
 
 namespace Akka.Persistence.Journal
 {
@@ -299,15 +301,26 @@ namespace Akka.Persistence.Journal
         /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
+            => Create(system, config, "event-adapters");
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Same as <see cref="Create(ExtendedActorSystem, Config)"/>, but the caller names the plugin section
+        /// that <paramref name="config"/> came from so that a failure points at the setting the user has to fix.
+        /// </summary>
+        internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath)
         {
             var adapters = ConfigToMap(config, "event-adapters");
             var adapterBindings = ConfigToListMap(config, "event-adapter-bindings");
 
-            return Create(system, adapters, adapterBindings);
+            return Create(system, adapters, adapterBindings, pluginPath);
         }
 
-        private static EventAdapters Create(ExtendedActorSystem system, IDictionary<string, string> adapters, IDictionary<string, string[]> adapterBindings)
+        private static EventAdapters Create(ExtendedActorSystem system, IDictionary<string, string> adapters, IDictionary<string, string[]> adapterBindings, string pluginPath)
         {
+            var registry = PersistencePluginRegistry.From(system.Settings.Setup);
+
             var adapterNames = new HashSet<string>(adapters.Keys);
             foreach (var kv in adapterBindings)
             {
@@ -321,15 +334,24 @@ namespace Akka.Persistence.Journal
 
             // A Map of handler from alias to implementation (i.e. class implementing Akka.Serialization.ISerializer)
             // For example this defines a handler named 'country': `"country" -> com.example.comain.CountryTagsAdapter`
-            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Value, system));
+            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Key, kv.Value, system, registry, pluginPath));
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
             var bindings = Sort(adapterBindings.Select(kv =>
             {
-                var type = Type.GetType(kv.Key)
-                    ?? throw new ConfigurationException(
-                        $"Could not resolve event adapter binding type [{kv.Key}]. Ensure the type name is fully qualified.");
+                // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, guard, reflection
+                Type type;
+                if (registry.TryGetEventAdapterBindingType(kv.Key, out var registeredType))
+                    type = registeredType;
+                else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{pluginPath}.event-adapter-bindings",
+                        kv.Key,
+                        "an event type registered through PersistencePluginSetup.WithEventAdapterBinding"));
+                else
+                    type = ResolveBindingTypeByReflection(kv.Key);
+
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
                     : CombineAdapters(kv.Value.Select(h => handlers[h]));
@@ -421,18 +443,42 @@ namespace Akka.Persistence.Journal
             return adapter;
         }
 
-        private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
+        private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system,
+            PersistencePluginRegistry registry, string pluginPath)
+        {
+            // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, built-in (none), guard, reflection
+            if (registry.TryCreateEventAdapter(qualifiedName, system, out var registered))
+                return registered;
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    $"{pluginPath}.event-adapters.{adapterName}",
+                    qualifiedName,
+                    "an event adapter registered through PersistencePluginSetup"));
+
+            return InstantiateAdapterByReflection(qualifiedName, system);
+        }
+
+        [RequiresUnreferencedCode("Loads an event adapter binding type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Type ResolveBindingTypeByReflection(string typeName)
+            => Type.GetType(typeName)
+               ?? throw new ConfigurationException(
+                   $"Could not resolve event adapter binding type [{typeName}]. Ensure the type name is fully qualified.");
+
+        [RequiresUnreferencedCode("Loads an event adapter type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IEventAdapter InstantiateAdapterByReflection(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName, true);
             if (typeof(IEventAdapter).IsAssignableFrom(type))
                 return Instantiate<IEventAdapter>(qualifiedName, system);
-            if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
+            if (typeof(IWriteEventAdapter).IsAssignableFrom(type))
                 return new NoopReadEventAdapter(Instantiate<IWriteEventAdapter>(qualifiedName, system));
-            if (typeof (IReadEventAdapter).IsAssignableFrom(type))
+            if (typeof(IReadEventAdapter).IsAssignableFrom(type))
                 return new NoopWriteEventAdapter(Instantiate<IReadEventAdapter>(qualifiedName, system));
             throw new ArgumentException("Configured " + qualifiedName + " does not implement any EventAdapter interface!");
         }
 
+        [RequiresUnreferencedCode("Loads an event adapter type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName)

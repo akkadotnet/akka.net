@@ -105,6 +105,14 @@ namespace Akka.Persistence.Query
         public PersistenceQueryProvider() { }
         public override Akka.Persistence.Query.PersistenceQuery CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    public sealed class PersistenceQuerySetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Generic.IReadOnlyCollection<System.Type> RegisteredTypes { get; }
+        public static Akka.Persistence.Query.PersistenceQuerySetup Empty { get; }
+        public Akka.Persistence.Query.PersistenceQuerySetup Merge(Akka.Persistence.Query.PersistenceQuerySetup other) { }
+        public Akka.Persistence.Query.PersistenceQuerySetup WithReadJournal<TProvider>(System.Func<Akka.Actor.ExtendedActorSystem, Akka.Configuration.Config, TProvider> factory)
+            where TProvider :  class, Akka.Persistence.Query.IReadJournalProvider { }
+    }
     public sealed class Sequence : Akka.Persistence.Query.Offset, System.IComparable<Akka.Persistence.Query.Sequence>
     {
         public Sequence(long value) { }
