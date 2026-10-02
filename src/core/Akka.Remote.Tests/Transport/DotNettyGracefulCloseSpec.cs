@@ -97,7 +97,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 // the server side needs reads on to finish the handshake
                 c.Handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(CreateTestProbe()));
-                await using var tls = new SslStream(new NetworkStream(c.Peer), false, (_, _, _, _) => true);
+                using var tls = new SslStream(new NetworkStream(c.Peer), false, (_, _, _, _) => true);
                 await tls.AuthenticateAsClientAsync("localhost").WaitAsync(TimeSpan.FromSeconds(5));
 
                 c.Handle.Write(Payload).Should().BeTrue();
