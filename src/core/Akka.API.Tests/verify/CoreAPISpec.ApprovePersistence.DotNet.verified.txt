@@ -434,6 +434,22 @@ namespace Akka.Persistence
         Degraded = 1,
         Unhealthy = 2,
     }
+    public sealed class PersistencePluginSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Generic.IReadOnlyCollection<System.Type> RegisteredTypes { get; }
+        public static Akka.Persistence.PersistencePluginSetup Empty { get; }
+        public Akka.Persistence.PersistencePluginSetup Merge(Akka.Persistence.PersistencePluginSetup other) { }
+        public Akka.Persistence.PersistencePluginSetup WithEventAdapter<TAdapter>(System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory)
+            where TAdapter :  class { }
+        public Akka.Persistence.PersistencePluginSetup WithEventAdapterBinding(System.Type eventType) { }
+        public Akka.Persistence.PersistencePluginSetup WithEventAdapterBinding<TEvent>() { }
+        public Akka.Persistence.PersistencePluginSetup WithJournal<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal>(System.Func<Akka.Configuration.Config, TJournal> factory)
+            where TJournal : Akka.Actor.ActorBase { }
+        public Akka.Persistence.PersistencePluginSetup WithSnapshotStore<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TSnapshotStore>(System.Func<Akka.Configuration.Config, TSnapshotStore> factory)
+            where TSnapshotStore : Akka.Actor.ActorBase { }
+        public Akka.Persistence.PersistencePluginSetup WithStashOverflowStrategy<TConfigurator>(System.Func<TConfigurator> factory)
+            where TConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator { }
+    }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
         public PersistenceSettings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }

@@ -126,6 +126,27 @@ namespace Akka.Util
         /// <summary>
         /// INTERNAL API
         ///
+        /// Whether a type name read out of HOCON names <paramref name="type"/>: the name part equals
+        /// <see cref="Type.FullName"/> (ordinal) and, when the HOCON value carries an assembly name, that
+        /// equals the simple name of the type's assembly (ignoring case). Version, culture and public key
+        /// are stripped before the comparison, so every spelling <see cref="Type.GetType(string)"/> accepts
+        /// for the type matches, without loading anything.
+        /// </summary>
+        /// <param name="typeName">The type name read out of HOCON.</param>
+        /// <param name="type">The type to compare against.</param>
+        internal static bool MatchesTypeName(string? typeName, Type type)
+        {
+            if (!TrySplitTypeName(typeName, out var name, out var assembly))
+                return false;
+
+            return string.Equals(name, type.FullName, StringComparison.Ordinal)
+                   && (assembly is null
+                       || string.Equals(assembly, type.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
         /// Returns the bare type name when <paramref name="typeName"/> names an Akka.NET type - no assembly
         /// at all, or the <c>Akka</c> assembly in any casing - and <c>null</c> otherwise. This is what every
         /// <c>BuiltIn*</c> table lookup normalizes a HOCON value to before probing its single key per type.

@@ -20,6 +20,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Query")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]

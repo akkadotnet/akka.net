@@ -1,0 +1,21 @@
+<linker>
+  <!--
+    Akka.Streams builds the generic types that sit on the boundary between two stream islands with
+    MakeGenericType + Activator.CreateInstance (Construct.Instantiate, ActorMaterializerImpl,
+    ActorGraphInterpreter, ActorSubscription), which the trimmer cannot see. The in-memory read
+    journal is built on Source.ActorPublisher, so every query it runs crosses such a boundary.
+    Until Akka.Streams marks these constructors for the trimmer, this app roots them itself.
+    Reference-type elements only (EventEnvelope, string) - they share one compiled instantiation.
+  -->
+  <assembly fullname="Akka.Streams">
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/BoundarySubscriber`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/BoundaryPublisher`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/ActorOutputBoundary`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.ActorSubscription`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.ErrorPublisher`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.CancellingSubscriber`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedPublisherImpl`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedSubscriberImpl`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedVirtualPublisherImpl`1" preserve="all" />
+  </assembly>
+</linker>

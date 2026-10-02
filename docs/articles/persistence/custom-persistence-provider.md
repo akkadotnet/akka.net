@@ -462,6 +462,43 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 [!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
 
+## Registering your plugin for Native AOT
+
+Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
+sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. Register
+the types in code with `PersistencePluginSetup`, and a read journal provider with
+`PersistenceQuerySetup`, and Akka.Persistence builds them without reflection:
+
+```csharp
+public static class MyPersistenceSetupExtensions
+{
+    public static PersistencePluginSetup WithMyPersistence(this PersistencePluginSetup setup)
+        => setup
+            .WithJournal<MyJournal>(static config => new MyJournal(config))
+            .WithSnapshotStore<MySnapshotStore>(static config => new MySnapshotStore(config));
+
+    public static PersistenceQuerySetup WithMyReadJournal(this PersistenceQuerySetup setup)
+        => setup.WithReadJournal<MyReadJournalProvider>(static (system, config) => new MyReadJournalProvider(system, config));
+}
+```
+
+Your app passes both to the actor system next to its `BootstrapSetup`:
+
+```csharp
+var setup = BootstrapSetup.Create().WithConfig(config)
+    .And(PersistencePluginSetup.Empty.WithMyPersistence())
+    .And(PersistenceQuerySetup.Empty.WithMyReadJournal());
+```
+
+The factory gets the plugin's HOCON section, with the fallback sections applied. The `class` setting
+still has to name the type. Akka.Persistence matches it against the registered type by full name and,
+if the setting has one, assembly name. Registration is optional on the JIT. It is required when the
+`Akka.DynamicTypeLoading` feature switch is off, which is the default for a Native AOT publish. See
+[Native AOT and Trimming](xref:native-aot) for the whole picture, including event adapters.
+
+Keep reflection out of the plugin itself too: create child actors with `Props.CreateBy` and an
+`IIndirectActorProducer`, and read your own types without `Type.GetType`.
+
 ## Unit Testing Journal and SnapshotStore
 
 Akka.Persistence came with a standardized Technology Compatibility Kit (TCK) test kit that can be readily incorporated into your unit testing suite to test that a custom provider adheres to a basic compatibility requirement.
