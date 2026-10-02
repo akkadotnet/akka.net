@@ -5284,6 +5284,11 @@ namespace Akka.Serialization
         public System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Serialization.SerializerDetails>> CreateSerializers { get; }
         public static Akka.Serialization.SerializationSetup Create(System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Serialization.SerializerDetails>> createSerializers) { }
     }
+    public sealed class SerializationV2Setup : Akka.Actor.Setup.Setup
+    {
+        public bool Enabled { get; }
+        public static Akka.Serialization.SerializationV2Setup Create(bool enabled) { }
+    }
     public abstract class Serializer
     {
         protected readonly Akka.Actor.ExtendedActorSystem system;

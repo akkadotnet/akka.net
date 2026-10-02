@@ -10,6 +10,7 @@ using Akka.Configuration;
 using Akka.DependencyInjection;
 using Akka.Hosting.Configuration;
 using Akka.Hosting.HealthChecks;
+using Akka.Serialization;
 using Akka.Streams;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -217,6 +218,25 @@ namespace Akka.Hosting
         public static AkkaConfigurationBuilder WithStrictSerialization(this AkkaConfigurationBuilder builder, bool enabled = true)
         {
             return AddHocon(builder, $"akka.actor.serialization-settings.allow-unregistered-types = {(enabled ? "off" : "on")}", HoconAddMode.Prepend);
+        }
+
+        /// <summary>
+        /// Turns the Serialization V2 switch on or off by adding a <see cref="SerializationV2Setup"/>, which wins over
+        /// <c>akka.actor.serialization-v2</c> in HOCON. When on, each built-in serializer that has a V2 version takes
+        /// over the bindings of the legacy serializer it replaces; the legacy serializers stay registered for reads.
+        /// <para>
+        /// Turn it on only once every node runs a version of Akka.NET that can read the V2 formats. A binding you
+        /// register yourself (HOCON or <see cref="AkkaConfigurationBuilder.WithCustomSerializer"/>) still wins.
+        /// </para>
+        /// </summary>
+        /// <param name="builder">The builder instance being configured.</param>
+        /// <param name="enabled">Whether to turn the switch on. Defaults to <c>true</c>.</param>
+        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
+        public static AkkaConfigurationBuilder WithSerializationV2(this AkkaConfigurationBuilder builder, bool enabled = true)
+        {
+            // one switch per system: a later call replaces an earlier one instead of racing it in the set
+            builder.Setups.RemoveWhere(s => s is SerializationV2Setup);
+            return builder.AddSetup(SerializationV2Setup.Create(enabled));
         }
         
         /// <summary>
