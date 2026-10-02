@@ -56,6 +56,21 @@ public static class DurableProducerQueue
     internal interface IState
     {
         Type MessageType { get; }
+
+        /// <summary>
+        /// INTERNAL API - non-generic access to <see cref="State{T}"/> members so serializers
+        /// can read the state without reflection over the generic payload type.
+        /// </summary>
+        long CurrentSeqNr { get; }
+
+        /// <inheritdoc cref="CurrentSeqNr"/>
+        long HighestConfirmedSeqNr { get; }
+
+        /// <inheritdoc cref="CurrentSeqNr"/>
+        ImmutableDictionary<string, (long, long)> ConfirmedSeqNr { get; }
+
+        /// <inheritdoc cref="CurrentSeqNr"/>
+        IReadOnlyList<IMessageSent> UnconfirmedMessages { get; }
     }
 
     /// <summary>
@@ -147,6 +162,8 @@ public static class DurableProducerQueue
         }
 
         Type IState.MessageType => typeof(T);
+
+        IReadOnlyList<IMessageSent> IState.UnconfirmedMessages => Unconfirmed;
     }
 
     /// <summary>
@@ -163,6 +180,37 @@ public static class DurableProducerQueue
     internal interface IMessageSent
     {
         Type MessageType { get; }
+
+        /// <summary>
+        /// INTERNAL API - non-generic access to <see cref="MessageSent{T}"/> members so serializers
+        /// can read the message without reflection over the generic payload type.
+        /// </summary>
+        long SeqNr { get; }
+
+        /// <inheritdoc cref="SeqNr"/>
+        bool Ack { get; }
+
+        /// <inheritdoc cref="SeqNr"/>
+        string ConfirmationQualifier { get; }
+
+        /// <inheritdoc cref="SeqNr"/>
+        long Timestamp { get; }
+
+        /// <summary>
+        /// INTERNAL API - <see langword="true"/> when this message carries a user payload,
+        /// <see langword="false"/> when it carries a <see cref="ChunkedMessage"/> segment.
+        /// </summary>
+        bool HasPayload { get; }
+
+        /// <summary>
+        /// INTERNAL API - the boxed user payload when <see cref="HasPayload"/> is <see langword="true"/>.
+        /// </summary>
+        object? Payload { get; }
+
+        /// <summary>
+        /// INTERNAL API - the chunk when <see cref="HasPayload"/> is <see langword="false"/>.
+        /// </summary>
+        ChunkedMessage? Chunk { get; }
     }
 
     /// <summary>
@@ -223,6 +271,12 @@ public static class DurableProducerQueue
         }
 
         Type IMessageSent.MessageType => typeof(T);
+
+        bool IMessageSent.HasPayload => Message.IsMessage;
+
+        object? IMessageSent.Payload => Message.IsMessage ? Message.Message : null;
+
+        ChunkedMessage? IMessageSent.Chunk => Message.Chunk;
     }
 
     /// <summary>

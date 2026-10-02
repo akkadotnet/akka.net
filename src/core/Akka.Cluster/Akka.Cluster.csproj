@@ -11,6 +11,11 @@
         <EmbeddedResource Include="Configuration\Cluster.conf"/>
         <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj"/>
         <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj"/>
+        <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj"/>
+        <!-- Analyzer-only reference: generates the ReliableDelivery MessagePack codec partial
+             class (Akka.Cluster.Serialization.ReliableDeliveryMessagePackCodec) from
+             [AkkaSerializable] / [AkkaField] annotations. Mirrors Akka.Remote.csproj. -->
+        <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all"/>
         <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
