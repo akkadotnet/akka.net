@@ -50,6 +50,8 @@ internal static class Program
 
     /// <summary>
     /// Boots with the switch off and everything registered in code, then persists, recovers, snapshots and queries.
+    /// The default journal, snapshot store and stash overflow configurator are registered, non-built-in types, the
+    /// way a third-party plugin would be. The built-in <c>inmem</c> plugins run beside them.
     /// </summary>
     private static async Task RunPersistenceAsync()
     {
@@ -57,15 +59,23 @@ internal static class Program
         Console.WriteLine($"[canary-persistence] creating ActorSystem '{label}' ...");
 
         var config = ConfigurationFactory.ParseString($$"""
-                akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
-                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
-                akka.persistence.journal.inmem {
+                akka.persistence.journal.plugin = "akka.persistence.journal.canary"
+                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.canary"
+                akka.persistence.internal-stash-overflow-strategy = "{{TypeName(typeof(CanaryStashConfigurator))}}"
+                akka.persistence.journal.canary {
+                    class = "{{TypeName(typeof(CanaryJournal))}}"
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
+                    marker = from-hocon
                     event-adapters {
-                        canary-tagger = "{{typeof(CanaryTagger).FullName}}, {{typeof(CanaryTagger).Assembly.GetName().Name}}"
+                        canary-tagger = "{{TypeName(typeof(CanaryTagger))}}"
                     }
                     event-adapter-bindings {
-                        "{{typeof(CanaryEvent).FullName}}, {{typeof(CanaryEvent).Assembly.GetName().Name}}" = canary-tagger
+                        "{{TypeName(typeof(CanaryEvent))}}" = canary-tagger
                     }
+                }
+                akka.persistence.snapshot-store.canary {
+                    class = "{{TypeName(typeof(CanarySnapshotStore))}}"
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
                 }
                 """)
             // PersistenceQuery injects this by reflection when the switch is on. With it off the app supplies it.
@@ -73,6 +83,9 @@ internal static class Program
 
         var setup = BootstrapSetup.Create().WithConfig(config)
             .And(PersistencePluginSetup.Empty
+                .WithJournal(static journalConfig => new CanaryJournal(journalConfig))
+                .WithSnapshotStore(static _ => new CanarySnapshotStore())
+                .WithStashOverflowStrategy(static () => new CanaryStashConfigurator())
                 .WithEventAdapter(static _ => new CanaryTagger())
                 .WithEventAdapterBinding<CanaryEvent>())
             .And(PersistenceQuerySetup.Empty
@@ -92,7 +105,7 @@ internal static class Program
 
             AssertSerializer(system);
 
-            // persist three events in one burst (the actor stashes while each write is in flight), snapshot at 2
+            // send a and b together, so the actor stashes b while a's write is in flight; snapshot at 2; then send c
             var first = system.ActorOf(Props.Create(() => new CanaryPersistentActor(PersistenceId)), "canary-1");
             var counts = await Task.WhenAll(
                 first.Ask<int>("a", AskTimeout),
@@ -115,6 +128,8 @@ internal static class Program
             Console.WriteLine($"[canary-persistence] {label}: recovered [{string.Join(',', state.Values)}] from the snapshot at {state.SnapshotSequenceNr}");
 
             await AssertQueriesAsync(label, system);
+            AssertRegisteredPluginsAreUsed(system);
+            await AssertBuiltInPluginsAsync(label, system);
 
             system.Log.Info("[canary-persistence] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
@@ -126,6 +141,39 @@ internal static class Program
 
         Console.WriteLine($"[canary-persistence] {label}: terminated");
     }
+
+    /// <summary>
+    /// The default journal, snapshot store and stash overflow strategy are the registered ones, built by the
+    /// factories, once each, with the journal's HOCON section. The persist, recovery and queries above only work when they ran.
+    /// </summary>
+    private static void AssertRegisteredPluginsAreUsed(ActorSystem system)
+    {
+        const string label = "persistence";
+        var persistence = Persistence.Instance.Apply(system);
+
+        Require(label, ReferenceEquals(persistence.DefaultInternalStashOverflowStrategy, CanaryStashConfigurator.Strategy),
+            "the registered stash overflow configurator was not used");
+
+        Require(label, CanaryJournal.Instances == 1, $"the registered journal was built {CanaryJournal.Instances} times, not 1");
+        Require(label, CanaryJournal.Marker == "from-hocon", $"the registered journal got marker [{CanaryJournal.Marker}] from its plugin section");
+        Require(label, CanarySnapshotStore.Instances == 1, $"the registered snapshot store was built {CanarySnapshotStore.Instances} times, not 1");
+        Console.WriteLine($"[canary-persistence] {label}: registered journal, snapshot store and stash configurator are in use");
+    }
+
+    /// <summary>
+    /// The built-in plugins still start by name with the switch off, next to the registered ones.
+    /// </summary>
+    private static async Task AssertBuiltInPluginsAsync(string label, ActorSystem system)
+    {
+        var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor(
+            "canary-builtin", "akka.persistence.journal.inmem", "akka.persistence.snapshot-store.inmem")), "canary-builtin");
+
+        Require(label, await actor.Ask<int>("a", AskTimeout) == 1, "the built-in inmem journal did not persist");
+        Require(label, await actor.Ask<long>(new SaveNow(), AskTimeout) == 1, "the built-in inmem snapshot store did not save");
+        Console.WriteLine($"[canary-persistence] {label}: the built-in inmem journal and snapshot store work too");
+    }
+
+    private static string TypeName(Type type) => $"{type.FullName}, {type.Assembly.GetName().Name}";
 
     private static void AssertSerializer(ActorSystem system)
     {

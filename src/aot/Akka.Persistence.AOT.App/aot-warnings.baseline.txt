@@ -16,7 +16,8 @@
 # and they are not just noise: the unannotated constructors get trimmed, so a query dies at
 # runtime with MissingMethodException unless the app roots them. This app does, in StreamsRoots.xml.
 # Fixing it in Akka.Streams (annotate or replace the reflection) belongs in its own change; when
-# that lands, delete StreamsRoots.xml and add src/core/Akka.Streams/ to the scope.
+# that lands, delete StreamsRoots.xml and add src/core/Akka.Streams/ to the scope. Streams joins the
+# gate once #8732 merges.
 #
 # Everything below is reached from this app and is not caused by plugin registration.
 

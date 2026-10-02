@@ -97,10 +97,10 @@ namespace Akka.Persistence.Query.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceQuerySetup should keep the reflection path When the switch is on")]
-        public async Task Should_keep_reflection_path_When_switch_is_on()
+        [Fact(DisplayName = "PersistenceQuerySetup should inject the default configuration by reflection When the switch is on")]
+        public async Task Should_inject_default_configuration_by_reflection_When_switch_is_on()
         {
-            // nothing registered; the plugin section only exists because the provider's DefaultConfiguration is injected
+            // nothing registered; the plugin section only exists because the journal type's DefaultConfiguration is injected
             DefaultConfigurationCalls = 0;
 
             await RunAsync(true, "", null, system =>
@@ -112,25 +112,39 @@ namespace Akka.Persistence.Query.Tests
                 system.Settings.Config.HasPath(InjectedPath).Should().BeTrue();
                 return Task.CompletedTask;
             });
+        }
 
-            // a registration still wins over reflection, and the default config is still injected
+        [Fact(DisplayName = "PersistenceQuerySetup should prefer a registered provider to reflection and still inject the default configuration When the switch is on")]
+        public async Task Should_prefer_registered_provider_and_still_inject_default_configuration_When_switch_is_on()
+        {
+            // the registered provider hands out ProviderWithDefaultConfigJournal, whose DefaultConfiguration names
+            // that same type as the plugin's class, so the registration is what matches it
+            DefaultConfigurationCalls = 0;
             var calls = 0;
-            var setup = PersistenceQuerySetup.Empty.WithReadJournal((_, _) =>
+            var setup = PersistenceQuerySetup.Empty.WithReadJournal<ProviderWithDefaultConfigJournal>((_, _) =>
             {
-                calls++;
-                return new RegisteredProvider();
+                Interlocked.Increment(ref calls);
+                return new ProviderWithDefaultConfigJournal();
             });
 
-            await RunAsync(true, ProviderHocon(typeof(RegisteredProvider)), setup, system =>
+            await RunAsync(true, "", setup, system =>
             {
-                PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId).Should().BeOfType<DummyReadJournal>();
-                calls.Should().Be(1);
+                PersistenceQuery.Get(system).ReadJournalFor<ProviderWithDefaultConfigJournal>(InjectedPath)
+                    .Should().BeOfType<ProviderWithDefaultConfigJournal>();
+
+                calls.Should().Be(1, "the registered factory built the provider");
+                DefaultConfigurationCalls.Should().Be(1);
+                system.Settings.Config.HasPath(InjectedPath).Should().BeTrue();
                 return Task.CompletedTask;
             });
+        }
 
-            // later registration wins on merge
+        [Fact(DisplayName = "PersistenceQuerySetup should hold one registration per type and reject null When merging and registering")]
+        public void Should_hold_one_registration_per_type_and_reject_null_When_merging_and_registering()
+        {
             var first = PersistenceQuerySetup.Empty.WithReadJournal((_, _) => new RegisteredProvider());
             var second = PersistenceQuerySetup.Empty.WithReadJournal((_, _) => new RegisteredProvider());
+
             first.Merge(second).RegisteredTypes.Should().HaveCount(1);
             PersistenceQuerySetup.Empty.RegisteredTypes.Should().BeEmpty();
             Assert.Throws<ArgumentNullException>(() => PersistenceQuerySetup.Empty.WithReadJournal<RegisteredProvider>(null!));

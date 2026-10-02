@@ -462,7 +462,7 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 [!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
 
-## Registering your plugin for Native AOT
+## Registering Your Plugin for Native AOT
 
 Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
 sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. Register

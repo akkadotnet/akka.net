@@ -36,7 +36,7 @@ fallback entirely.
   `BootstrapSetup` if you need one) with `ActorSystemSetup` and pass the result to
   `ActorSystem.Create`.
 * Akka.Persistence with the in-memory journal and snapshot store, event adapters and the in-memory
-  read journal - see [Persistence plugins](#persistence-plugins).
+  read journal - see [Persistence Plugins](#persistence-plugins).
 * Serializer names for Akka.Remote, Akka.Cluster, Akka.Cluster.Tools, Akka.Cluster.Sharding,
   Akka.Cluster.Metrics, Akka.DistributedData, Akka.Persistence and Akka.Streams: each resolves its
   own `reference.conf` serializer rows from a built-in table instead of `Type.GetType`, the same as
@@ -111,7 +111,7 @@ With the switch off, the base `Serializer.FromBinary(byte[], string)` throws a `
 for a manifest it has not already cached (#8697). Persistence's `PersistentFSM.PersistentFSMSnapshot<>`
 stays on that base fallback today, because it is generic.
 
-## Persistence plugins
+## Persistence Plugins
 
 Akka.Persistence reads the type of every journal and snapshot store from the `class` setting of its
 HOCON section, and it reads event adapters, event adapter bindings and the stash overflow strategy the
@@ -121,7 +121,7 @@ same way. With the switch off only the types Akka.Persistence ships resolve on t
 `DiscardConfigurator` stash overflow strategies. Anything else has to be registered in code.
 
 `PersistencePluginSetup` registers journals, snapshot stores, event adapters, event adapter bindings
-and stash overflow configurators. `PersistenceQuerySetup` registers read journal providers. HOCON
+and stash overflow strategies. `PersistenceQuerySetup` registers read journal providers. HOCON
 stays the source of truth: a registration applies when the type it names is the type a HOCON setting
 names, matched by full name and, if the setting gives one, assembly name.
 
@@ -146,8 +146,13 @@ With the switch on nothing changes for an app that registers nothing.
 
 Two more things to plan for. Event adapter bindings need a registration too: register each event type
 that a binding names with `WithEventAdapterBinding`. And when the switch is off, `PersistenceQuery`
-does not call a read journal's static `DefaultConfiguration()` method for you, so add that
-configuration to your own config with `WithFallback`.
+does not call a read journal's static `DefaultConfiguration()` method for you, so the plugin section
+is missing unless your app adds it. Put the read journal's default HOCON in your config yourself:
+
+```csharp
+var config = ConfigurationFactory.ParseString(myHocon)
+    .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+```
 
 ## Not Supported Yet
 

@@ -7,7 +7,9 @@
 
 using System.Text;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Persistence.Journal;
+using Akka.Persistence.Snapshot;
 using Akka.Serialization;
 
 namespace Akka.Persistence.AOT.App;
@@ -36,6 +38,54 @@ public sealed class CanaryTagger : IWriteEventAdapter
     public string Manifest(object evt) => string.Empty;
 
     public object ToJournal(object evt) => evt is CanaryEvent ? new Tagged(evt, Tags) : evt;
+}
+
+/// <summary>
+/// A journal that is not built in. Only <see cref="PersistencePluginSetup.WithJournal{TJournal}"/> lets core
+/// build it with <c>Akka.DynamicTypeLoading</c> off, which is the path a third-party journal takes.
+/// </summary>
+public sealed class CanaryJournal : MemoryJournal
+{
+    private static int _instances;
+
+    /// <summary>How many times core has built this journal.</summary>
+    public static int Instances => Volatile.Read(ref _instances);
+
+    /// <summary>The <c>marker</c> setting of the plugin section the factory received.</summary>
+    public static string? Marker { get; private set; }
+
+    public CanaryJournal(Config config)
+    {
+        Marker = config.GetString("marker", null);
+        Interlocked.Increment(ref _instances);
+    }
+}
+
+/// <summary>
+/// A snapshot store that is not built in; see <see cref="CanaryJournal"/>.
+/// </summary>
+public sealed class CanarySnapshotStore : MemorySnapshotStore
+{
+    private static int _instances;
+
+    /// <summary>How many times core has built this snapshot store.</summary>
+    public static int Instances => Volatile.Read(ref _instances);
+
+    public CanarySnapshotStore()
+    {
+        Interlocked.Increment(ref _instances);
+    }
+}
+
+/// <summary>
+/// A stash overflow configurator that is not built in. It hands out one known strategy, so the canary
+/// can tell that core used the registration.
+/// </summary>
+public sealed class CanaryStashConfigurator : IStashOverflowStrategyConfigurator
+{
+    public static readonly IStashOverflowStrategy Strategy = new ReplyToStrategy("canary-overflow");
+
+    public IStashOverflowStrategy Create(Config config) => Strategy;
 }
 
 /// <summary>
@@ -85,8 +135,8 @@ public sealed class CanarySerializer : SerializerWithStringManifest
 }
 
 /// <summary>
-/// Persists <see cref="CanaryEvent"/>s one at a time, so a burst of commands makes it stash, and saves
-/// a snapshot on request.
+/// Persists <see cref="CanaryEvent"/>s one at a time, so a command that arrives while a write is in
+/// flight is stashed, and saves a snapshot on request.
 /// </summary>
 public sealed class CanaryPersistentActor : UntypedPersistentActor
 {
@@ -94,9 +144,16 @@ public sealed class CanaryPersistentActor : UntypedPersistentActor
     private long _snapshotSequenceNr;
     private IActorRef _snapshotRequester = ActorRefs.Nobody;
 
+    // uses the default journal and snapshot store from akka.persistence.journal.plugin / snapshot-store.plugin
     public CanaryPersistentActor(string persistenceId)
     {
         PersistenceId = persistenceId;
+    }
+
+    public CanaryPersistentActor(string persistenceId, string journalPluginId, string snapshotPluginId) : this(persistenceId)
+    {
+        JournalPluginId = journalPluginId;
+        SnapshotPluginId = snapshotPluginId;
     }
 
     public override string PersistenceId { get; }
