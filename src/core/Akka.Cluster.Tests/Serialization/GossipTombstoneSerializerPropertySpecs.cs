@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#if NET8_0_OR_GREATER
 #nullable enable
 
 using System.Collections.Immutable;
@@ -42,9 +43,9 @@ namespace Akka.Cluster.Tests.Serialization
         public void P12_Gossip_round_trips_with_tombstones()
         {
             var probe = new GossipEnvelope(Node(0), Node(1), Gossip.Empty);
-            var serializer = Sys.Serialization.FindSerializerFor(probe);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(probe);
             serializer.Should().BeOfType<Akka.Cluster.Serialization.ClusterMessageSerializer>();
-            var manifest = ((SerializerWithStringManifest)serializer).Manifest(probe);
+            var manifest = serializer.Manifest(probe);
 
             // how often the shared host-and-port pair actually landed on opposite sides of the member
             // and tombstone tables
@@ -93,8 +94,8 @@ namespace Akka.Cluster.Tests.Serialization
                 "AKKA_CLUSTER_ASSERT=on rejects the member-and-tombstone gossip this property is about");
 
             var probe = new GossipEnvelope(Node(0), Node(1), Gossip.Empty);
-            var serializer = Sys.Serialization.FindSerializerFor(probe);
-            var manifest = ((SerializerWithStringManifest)serializer).Manifest(probe);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(probe);
+            var manifest = serializer.Manifest(probe);
 
             // how often a tombstone key was already in the address table the member loop built
             var tombstoneWasAlreadyMapped = 0;
@@ -132,8 +133,8 @@ namespace Akka.Cluster.Tests.Serialization
         public void P12_Welcome_round_trips_with_tombstones()
         {
             var probe = new InternalClusterAction.Welcome(Node(0), Gossip.Empty);
-            var serializer = Sys.Serialization.FindSerializerFor(probe);
-            var manifest = ((SerializerWithStringManifest)serializer).Manifest(probe);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(probe);
+            var manifest = serializer.Manifest(probe);
 
             Sides(1).Sample(g =>
             {
@@ -146,3 +147,4 @@ namespace Akka.Cluster.Tests.Serialization
         }
     }
 }
+#endif

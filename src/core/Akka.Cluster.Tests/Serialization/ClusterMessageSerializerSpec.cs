@@ -156,7 +156,7 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
                 ImmutableDictionary<UniqueAddress, long>.Empty.Add(removed, 99L));
 
             var envelope = new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, gossip);
-            var serializer = Sys.Serialization.FindSerializerFor(envelope);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(envelope);
             var manifest = serializer.Manifest(envelope);
 
             var envelopeProto = Proto.Msg.GossipEnvelope.Parser.ParseFrom(serializer.ToBinary(envelope));

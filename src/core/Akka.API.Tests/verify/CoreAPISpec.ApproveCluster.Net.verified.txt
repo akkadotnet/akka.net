@@ -213,8 +213,8 @@ namespace Akka.Cluster
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }
         public System.TimeSpan PeriodicTasksInitialDelay { get; }
-        public System.Nullable<System.TimeSpan> PublishStatsInterval { get; }
         public System.TimeSpan PruneGossipTombstonesAfter { get; }
+        public System.Nullable<System.TimeSpan> PublishStatsInterval { get; }
         public int ReduceGossipDifferentViewProbability { get; }
         public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }

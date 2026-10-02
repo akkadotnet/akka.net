@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#if NET8_0_OR_GREATER
 #nullable enable
 
 using System;
@@ -382,3 +383,4 @@ namespace Akka.Cluster.Tests
             g.Tombstones.Keys.Select(VclockNodeOf).ToImmutableHashSet();
     }
 }
+#endif
