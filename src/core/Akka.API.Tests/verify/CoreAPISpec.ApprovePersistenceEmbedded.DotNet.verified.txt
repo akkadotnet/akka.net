@@ -1,0 +1,75 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Embedded.Tests")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.Persistence.Embedded.Journal
+{
+    public sealed class SqliteWriteJournal : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        public SqliteWriteJournal(Akka.Configuration.Config journalConfig) { }
+        public Akka.Actor.IStash Stash { get; set; }
+        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
+        protected override bool ReceivePluginInternal(object message) { }
+        public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
+        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
+namespace Akka.Persistence.Embedded.Query
+{
+    public sealed class SqliteReadJournal : Akka.Persistence.Query.IAllEventsQuery, Akka.Persistence.Query.ICurrentAllEventsQuery, Akka.Persistence.Query.ICurrentEventsByPersistenceIdQuery, Akka.Persistence.Query.ICurrentEventsByTagQuery, Akka.Persistence.Query.ICurrentPersistenceIdsQuery, Akka.Persistence.Query.IEventsByPersistenceIdQuery, Akka.Persistence.Query.IEventsByTagQuery, Akka.Persistence.Query.IPersistenceIdsQuery, Akka.Persistence.Query.IReadJournal
+    {
+        public const string Identifier = "akka.persistence.query.journal.embedded";
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> AllEvents(Akka.Persistence.Query.Offset offset) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentAllEvents(Akka.Persistence.Query.Offset offset) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByTag(string tag, Akka.Persistence.Query.Offset offset) { }
+        public Akka.Streams.Dsl.Source<string, Akka.NotUsed> CurrentPersistenceIds() { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByTag(string tag, Akka.Persistence.Query.Offset offset) { }
+        public Akka.Streams.Dsl.Source<string, Akka.NotUsed> PersistenceIds() { }
+        public static Akka.Configuration.Config DefaultConfiguration() { }
+    }
+    public sealed class SqliteReadJournalProvider : Akka.Persistence.Query.IReadJournalProvider
+    {
+        public SqliteReadJournalProvider(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public Akka.Persistence.Query.IReadJournal GetReadJournal() { }
+    }
+}
+namespace Akka.Persistence.Embedded.Snapshot
+{
+    public sealed class SqliteSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        public SqliteSnapshotStore(Akka.Configuration.Config snapshotConfig) { }
+        public Akka.Actor.IStash Stash { get; set; }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        protected override bool ReceivePluginInternal(object message) { }
+        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
+namespace Akka.Persistence.Embedded
+{
+    public static class SqlitePersistence
+    {
+        public const string JournalPluginId = "akka.persistence.journal.embedded";
+        public const string QueryPluginId = "akka.persistence.query.journal.embedded";
+        public const string SnapshotStorePluginId = "akka.persistence.snapshot-store.embedded";
+        public static Akka.Configuration.Config DefaultConfiguration { get; }
+        public static Akka.Configuration.Config DefaultJournalConfiguration { get; }
+        public static Akka.Configuration.Config DefaultQueryConfiguration { get; }
+        public static Akka.Configuration.Config DefaultSnapshotConfiguration { get; }
+    }
+    public enum TagWriteMode
+    {
+        Csv = 0,
+        TagTable = 1,
+        Both = 2,
+    }
+}
