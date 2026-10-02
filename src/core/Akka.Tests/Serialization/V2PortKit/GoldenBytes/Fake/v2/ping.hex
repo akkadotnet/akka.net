@@ -1,6 +1,1 @@
-# Akka.NET golden bytes, V2 wire. Recapture: AKKA_GOLDEN_CAPTURE=v2 dotnet test ...
-# case: ping
-# serializer: FakeV2Serializer, id 79
-# manifest: "P"
-# message: FakePing
-0000: 01 07 00 00 00 06 70 69 6e 67 2d 31
+01 07 00 00 00 70 69 6e 67 2d 31

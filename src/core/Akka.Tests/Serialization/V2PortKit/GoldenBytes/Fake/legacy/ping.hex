@@ -1,6 +1,1 @@
-# Akka.NET golden bytes, Legacy wire. Recapture: AKKA_GOLDEN_CAPTURE=legacy dotnet test ...
-# case: ping
-# serializer: FakeLegacySerializer, id 39
-# manifest: "P"
-# message: FakePing
-0000: 50 7c 70 69 6e 67 2d 31 7c 37
+50 7c 70 69 6e 67 2d 31 7c 37

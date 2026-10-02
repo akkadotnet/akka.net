@@ -64,4 +64,3 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.DependencyInjection")]
 [assembly: InternalsVisibleTo("Akka.DependencyInjection.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Metrics.Tests")]
-[assembly: InternalsVisibleTo("Akka.Tests.Shared.Internals.Xunit3")]

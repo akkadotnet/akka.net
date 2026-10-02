@@ -7,8 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
-    <!-- WireFormatJournal (V2 port test kit) derives from AsyncWriteJournal -->
-    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
