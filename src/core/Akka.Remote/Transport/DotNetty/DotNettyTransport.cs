@@ -302,6 +302,7 @@ namespace Akka.Remote.Transport.DotNetty
             channel.Configuration.AutoRead = true;
             try
             {
+#if NET6_0_OR_GREATER
                 // Not channel.ShutdownOutputAsync(): Socket.Shutdown clears Socket.Connected, which DotNetty reads as
                 // EOF, so it would close over unread data. Shut down through a second Socket on the same handle.
                 if (SocketField?.GetValue(channel) is not Socket socket)
@@ -315,6 +316,11 @@ namespace Akka.Remote.Transport.DotNetty
                 // handle constructor assumes blocking; DotNetty's socket must stay non-blocking.
                 alias.Blocking = false;
                 alias.Shutdown(SocketShutdown.Send);
+#else
+                // Socket(SafeSocketHandle) is unavailable on netstandard2.0. Preserve the legacy full-close
+                // behavior for that target while net6.0 uses the graceful half-close above.
+                channel.CloseAsync();
+#endif
             }
             catch (Exception ex)
             {

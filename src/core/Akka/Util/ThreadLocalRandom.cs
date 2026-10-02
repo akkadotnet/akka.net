@@ -35,7 +35,20 @@ namespace Akka.Util
         /// Kept as a separate method so the entropy source can be covered without depending on
         /// thread scheduling or comparing two already-distinct per-thread increments.
         /// </summary>
-        internal static int CreateSeed() => RandomNumberGenerator.GetInt32(int.MinValue, int.MaxValue);
+        internal static int CreateSeed()
+        {
+#if NET6_0_OR_GREATER
+            return RandomNumberGenerator.GetInt32(int.MinValue, int.MaxValue);
+#else
+            var bytes = new byte[sizeof(int)];
+            using (var randomNumberGenerator = RandomNumberGenerator.Create())
+            {
+                randomNumberGenerator.GetBytes(bytes);
+            }
+
+            return BitConverter.ToInt32(bytes, 0);
+#endif
+        }
 
         /// <summary>
         /// The current random number seed available to this thread
