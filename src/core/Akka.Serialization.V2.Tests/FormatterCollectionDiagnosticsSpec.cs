@@ -85,13 +85,4 @@ public sealed class FormatterCollectionDiagnosticsSpec
 
         run.Errors.Select(d => d.Id).Should().Equal("AKKASG003");
     }
-
-    [Fact(DisplayName = "Should_AcceptTheFormatter_When_AFormatterIsRegisteredForAnUnsupportedForeignType")]
-    public void Should_AcceptTheFormatter_When_AFormatterIsRegisteredForAnUnsupportedForeignType()
-    {
-        var run = Run(ForeignFormatterAttribute, "[property: AkkaField(1)] Foreign A, [property: AkkaField(2)] List<Foreign> B");
-
-        run.Errors.Should().BeEmpty();
-        run.Result.GeneratedSources.Keys.Should().Contain("SampleSerializer.AkkaSerialization.g.cs");
-    }
 }

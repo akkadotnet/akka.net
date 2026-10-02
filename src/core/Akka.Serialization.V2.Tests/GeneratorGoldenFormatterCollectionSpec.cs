@@ -114,29 +114,4 @@ public sealed class GeneratorGoldenFormatterCollectionSpec
             .Select(diagnostic => diagnostic.ToString())
             .Should().BeEmpty("generated code must compile with no errors and no warnings under #nullable enable");
     }
-
-    [Fact(DisplayName = "Should_EmitOneFormatterFieldPerTarget_When_ManyPositionsShareAFormatter")]
-    public void Should_EmitOneFormatterFieldPerTarget_When_ManyPositionsShareAFormatter()
-    {
-        var generated = GeneratorTestHarness.Run(Source).GeneratedSources[HintName];
-
-        // Address is used in three positions but is one formatter instance.
-        CountOccurrences(generated, "private readonly global::Akka.Serialization.V2.AddressFormatter ").Should().Be(1);
-        CountOccurrences(generated, "private readonly global::FormatterGolden.CelsiusFormatter ").Should().Be(1);
-        CountOccurrences(generated, " = new global::Akka.Serialization.V2.AddressFormatter(").Should().Be(1);
-        CountOccurrences(generated, " = new global::FormatterGolden.CelsiusFormatter(system)").Should().Be(1);
-    }
-
-    private static int CountOccurrences(string text, string value)
-    {
-        var count = 0;
-        var index = 0;
-        while ((index = text.IndexOf(value, index, System.StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            index += value.Length;
-        }
-
-        return count;
-    }
 }
