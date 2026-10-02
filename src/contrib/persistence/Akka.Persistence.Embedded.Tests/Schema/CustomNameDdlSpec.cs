@@ -14,8 +14,8 @@ using Xunit;
 namespace Akka.Persistence.Embedded.Tests.Schema
 {
     /// <summary>
-    /// The expected text is what linq2db 5.4.1.9 (the CreateTable that Akka.Persistence.Sql 1.5.70 uses) printed for tables
-    /// with the same shapes and these custom names, so padding for names of other lengths follows the same rule.
+    /// The expected text was captured by hand from linq2db 5.4.1.9 (the CreateTable that Akka.Persistence.Sql 1.5.70 uses) run on tables
+    /// of the same shapes with these custom names. The test does not run linq2db: the PR 3 fixture generator will regenerate it.
     /// </summary>
     public class CustomNameDdlSpec
     {

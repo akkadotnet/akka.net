@@ -171,6 +171,23 @@ namespace Akka.Persistence.Embedded.Tests.RowFormat
             Db.Query("SELECT name FROM sqlite_master WHERE name = 'tags'").Should().BeEmpty("Csv mode creates no tag table");
         }
 
+        [Fact(DisplayName = "Should_keep_tombstone_and_tags_column_When_deleting_messages_in_Csv_mode")]
+        public async Task Should_keep_tombstone_and_tags_column_When_deleting_messages_in_Csv_mode()
+        {
+            await WriteAsync(Write(
+                Evt("csv-del", 1, new Tagged(new TestEvent("a"), new[] { "t1" })),
+                Evt("csv-del", 2, new Tagged(new TestEvent("b"), new[] { "t2" })),
+                Evt("csv-del", 3, new Tagged(new TestEvent("c"), new[] { "t3" }))));
+
+            await DeleteToAsync("csv-del", 2);
+
+            Db.Query("SELECT sequence_number, deleted, tags FROM journal WHERE persistence_id = 'csv-del' ORDER BY sequence_number")
+                .Select(r => (r[0], r[1], r[2])).Should().Equal((2L, 1L, ";t2;"), (3L, 0L, ";t3;"));
+            var replay = await ReplayAsync("csv-del");
+            replay.Replayed.Select(p => p.SequenceNr).Should().Equal(3L);
+            replay.HighestSequenceNr.Should().Be(3L);
+        }
+
         [Fact(DisplayName = "Should_write_empty_string_tags_When_event_is_untagged_in_Csv_mode")]
         public async Task Should_write_empty_string_tags_When_event_is_untagged_in_Csv_mode()
         {
@@ -200,6 +217,22 @@ namespace Akka.Persistence.Embedded.Tests.RowFormat
 
             Db.Query("SELECT tags FROM journal WHERE persistence_id = 'both'")[0][0].Should().Be(";red;");
             Db.Query("SELECT tag, sequence_nr FROM tags WHERE persistence_id = 'both'").Should().HaveCount(1);
+        }
+
+        [Fact(DisplayName = "Should_delete_tag_rows_below_the_tombstone_When_deleting_messages_in_Both_mode")]
+        public async Task Should_delete_tag_rows_below_the_tombstone_When_deleting_messages_in_Both_mode()
+        {
+            await WriteAsync(Write(
+                Evt("both-del", 1, new Tagged(new TestEvent("a"), new[] { "t1" })),
+                Evt("both-del", 2, new Tagged(new TestEvent("b"), new[] { "t2" })),
+                Evt("both-del", 3, new Tagged(new TestEvent("c"), new[] { "t3" }))));
+
+            await DeleteToAsync("both-del", 2);
+
+            Db.Query("SELECT sequence_number, deleted, tags FROM journal WHERE persistence_id = 'both-del' ORDER BY sequence_number")
+                .Select(r => (r[0], r[1], r[2])).Should().Equal((2L, 1L, ";t2;"), (3L, 0L, ";t3;"));
+            Db.Query("SELECT tag FROM tags WHERE persistence_id = 'both-del' ORDER BY tag").Select(r => r[0]).Should().Equal("t2", "t3");
+            (await ReplayAsync("both-del")).Replayed.Select(p => p.SequenceNr).Should().Equal(3L);
         }
     }
 

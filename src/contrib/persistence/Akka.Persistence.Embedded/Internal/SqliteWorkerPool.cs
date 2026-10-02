@@ -20,6 +20,12 @@ namespace Akka.Persistence.Embedded.Internal
     /// One long-lived <see cref="SqliteConnection"/> that a worker thread owns. Opens on first use and
     /// reopens after an error that may have left the connection unusable.
     /// </summary>
+    /// <remarks>
+    /// The connection string is rewritten with <c>Pooling=False</c>. A thread keeps its connection for its whole life,
+    /// so pooling buys nothing, and with it Microsoft.Data.Sqlite can hand a reset thread the very handle that just
+    /// failed. Without the pool, <see cref="Reset"/> really closes the handle (which also releases the database file at
+    /// shutdown) and the next <see cref="Get"/> opens a new one.
+    /// </remarks>
     internal sealed class ConnectionHolder : IDisposable
     {
         private const int SqliteBusy = 5;
@@ -28,11 +34,18 @@ namespace Akka.Persistence.Embedded.Internal
 
         private readonly string _connectionString;
         private SqliteConnection? _connection;
+        private int _resetCount;
 
         public ConnectionHolder(string connectionString)
         {
-            _connectionString = connectionString;
+            _connectionString = new SqliteConnectionStringBuilder(connectionString) { Pooling = false }.ConnectionString;
         }
+
+        /// <summary>The connection string the holder opens, with pooling off.</summary>
+        public string ConnectionString => _connectionString;
+
+        /// <summary>How many times the connection was dropped after an error. For tests.</summary>
+        public int ResetCount => Volatile.Read(ref _resetCount);
 
         public bool IsOpen => _connection is not null;
 
@@ -64,6 +77,8 @@ namespace Akka.Persistence.Embedded.Internal
             if (connection is null)
                 return;
 
+            Interlocked.Increment(ref _resetCount);
+
             try
             {
                 connection.Dispose();
@@ -82,20 +97,6 @@ namespace Akka.Persistence.Embedded.Internal
             => exception is SqliteException { SqliteErrorCode: not (SqliteBusy or SqliteLocked or SqliteConstraint) };
 
         public void Dispose() => Reset();
-
-        /// <summary>Closes the pooled handles for a connection string so the database file is released.</summary>
-        public static void ReleasePool(string connectionString)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(connectionString);
-                SqliteConnection.ClearPool(connection);
-            }
-            catch (Exception)
-            {
-                // best effort: tests and shutdown only
-            }
-        }
     }
 
     /// <summary>
@@ -206,7 +207,6 @@ namespace Akka.Persistence.Embedded.Internal
             while (_queue.TryTake(out var left))
                 left.Fail(new OperationCanceledException("The SQLite worker pool stopped before this item ran."));
 
-            ConnectionHolder.ReleasePool(_connectionString);
         }
 
         private abstract class WorkItem

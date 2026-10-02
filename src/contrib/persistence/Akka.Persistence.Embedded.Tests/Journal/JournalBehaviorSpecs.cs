@@ -93,6 +93,8 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             _ = _writer ?? throw new InvalidOperationException("journal writer was not created");
         }
 
+        internal JournalWriter Writer => _writer!;
+
         /// <summary>Holds the writer at the next item it takes.</summary>
         internal WriterGate ArmGate() => new(_writer!);
 
@@ -364,6 +366,27 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             (await ReplayAsync("cancel-2")).Replayed.Should().BeEmpty();
         }
 
+        [Fact(DisplayName = "Should_open_a_fresh_connection_When_the_writer_resets_after_a_sqlite_error")]
+        public async Task Should_open_a_fresh_connection_When_the_writer_resets_after_a_sqlite_error()
+        {
+            await CaptureWriterAsync();
+            (await WriteAsync(Write(Evt("reset", 1, new TestEvent("a"))))).Succeeded.Should().BeTrue();
+            Writer.HolderConnectionStringForTests.Should().Contain("Pooling=False", "a reset must really close the handle");
+            Writer.ConnectionResetsForTests.Should().Be(0);
+
+            // "no such table" is SQLITE_ERROR, which is not busy, locked or a constraint violation: the writer drops the connection
+            Db.Execute("ALTER TABLE journal RENAME TO journal_moved");
+            var failed = await WriteAsync(Write(Evt("reset", 2, new TestEvent("b"))));
+            failed.Succeeded.Should().BeFalse();
+            failed.Failure.Should().BeOfType<SqliteException>();
+            Writer.ConnectionResetsForTests.Should().Be(1);
+
+            Db.Execute("ALTER TABLE journal_moved RENAME TO journal");
+            (await WriteAsync(Write(Evt("reset", 2, new TestEvent("b"))))).Succeeded.Should().BeTrue("the next write opens a new connection");
+            Writer.ConnectionResetsForTests.Should().Be(1);
+            (await ReplayAsync("reset")).Replayed.Select(p => p.SequenceNr).Should().Equal(1L, 2L);
+        }
+
         [Fact(DisplayName = "Should_wait_for_lock_When_another_connection_holds_write_transaction")]
         public async Task Should_wait_for_lock_When_another_connection_holds_write_transaction()
         {
@@ -423,6 +446,11 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             var replay = await ReplayAsync("meta");
             replay.Replayed.Should().BeEmpty();
             replay.HighestSequenceNr.Should().Be(5L);
+
+            // storage classes of the metadata row, as Akka.Persistence.Sql writes them
+            var row = Db.Query("SELECT typeof(persistence_id), typeof(sequence_number) FROM journal_metadata")[0];
+            row[0].Should().Be("text");
+            row[1].Should().Be("integer");
         }
 
         [Fact(DisplayName = "Should_read_highest_sequence_number_above_from_When_delete_compatibility_mode")]

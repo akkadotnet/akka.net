@@ -373,4 +373,86 @@ namespace Akka.Persistence.Embedded.Tests.Query
             probe.Cancel();
         }
     }
+
+    public class CsvSeparatorQuerySpec : QueryBehaviorSpecBase
+    {
+        public CsvSeparatorQuerySpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        {
+        }
+
+        private CsvSeparatorQuerySpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(
+                db,
+                SqliteSpecConfig.Create(db, SqliteTestMode.CSV, "akka.persistence.journal.embedded.tag-separator = \"|\""),
+                nameof(CsvSeparatorQuerySpec),
+                output)
+        {
+        }
+
+        [Fact(DisplayName = "Should_round_trip_tags_When_tag_separator_is_not_the_default")]
+        public async Task Should_round_trip_tags_When_tag_separator_is_not_the_default()
+        {
+            await WriteOneAsync("sep", 1, new TestEvent("a"), "red", "blue");
+            await WriteOneAsync("sep", 2, new TestEvent("b"), "green");
+
+            var column = (string)Db.Query("SELECT tags FROM journal WHERE persistence_id = 'sep' AND sequence_number = 1")[0][0]!;
+            column.Should().StartWith("|").And.EndWith("|");
+            column.Trim('|').Split('|').Should().BeEquivalentTo("red", "blue");
+
+            var found = await RunAsync(ReadJournal.CurrentEventsByTag("red", NoOffset.Instance));
+            found.Select(e => e.SequenceNr).Should().Equal(1L);
+            found[0].Tags.Should().BeEquivalentTo("red", "blue");
+        }
+    }
+
+    /// <summary>Two read journals in one system, with the same write plugin and table name, both tracking gaps.</summary>
+    public class TwoReadJournalsSpec : QueryBehaviorSpecBase
+    {
+        private const string SecondId = "akka.persistence.query.journal.embedded-2";
+
+        public TwoReadJournalsSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        {
+        }
+
+        private TwoReadJournalsSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(
+                db,
+                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
+                    akka.persistence.query.journal.embedded.journal-sequence-retrieval.enabled = on
+                    akka.persistence.query.journal.embedded-2 {
+                        class = "Akka.Persistence.Embedded.Query.SqliteReadJournalProvider, Akka.Persistence.Embedded"
+                        write-plugin = "akka.persistence.journal.embedded"
+                        refresh-interval = 100ms
+                        parallelism = 3
+                        journal-sequence-retrieval.enabled = on
+                    }
+                    """),
+                nameof(TwoReadJournalsSpec),
+                output)
+        {
+        }
+
+        [Fact(DisplayName = "Should_start_both_trackers_and_use_own_section_When_two_read_journals_share_a_table")]
+        public async Task Should_start_both_trackers_and_use_own_section_When_two_read_journals_share_a_table()
+        {
+            await WriteOneAsync("two", 1, new TestEvent("a"));
+
+            SqliteReadJournal second = null!;
+            // the setting only the second section has is reported under the second plugin id, so its own section was read
+            await EventFilter.Warning(contains: $"[{SecondId}] ignores setting(s)").ExpectOneAsync(
+                () =>
+                {
+                    second = Sys.ReadJournalFor<SqliteReadJournal>(SecondId);
+                    return Task.CompletedTask;
+                });
+            var first = ReadJournal;
+
+            first.Should().NotBeSameAs(second);
+            foreach (var journal in new[] { first, second })
+            {
+                var events = await journal.CurrentAllEvents(NoOffset.Instance).RunWith(Sink.Seq<EventEnvelope>(), Mat).WaitAsync(Timeout);
+                events.Select(e => e.PersistenceId).Should().Equal("two");
+            }
+        }
+    }
 }

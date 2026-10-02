@@ -127,8 +127,20 @@ namespace Akka.Persistence.Embedded.Snapshot
 
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {
-            // serialize on the actor thread, then hand plain values to the worker
-            var (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot, _settings.DefaultSerializer);
+            // serialize on the actor thread, then hand plain values to the worker. A serializer error faults the task
+            // (-> SaveSnapshotFailure) instead of throwing into the caller.
+            byte[] bytes;
+            string manifest;
+            int identifier;
+            try
+            {
+                (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot, _settings.DefaultSerializer);
+            }
+            catch (Exception e)
+            {
+                return Task.FromException(e);
+            }
+
             var created = metadata.Timestamp.Ticks;
             return _worker.Run(
                 connection =>

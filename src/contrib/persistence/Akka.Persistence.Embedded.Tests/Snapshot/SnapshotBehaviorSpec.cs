@@ -193,6 +193,36 @@ namespace Akka.Persistence.Embedded.Tests.Snapshot
             Rows("del-meta-old").Should().Equal(3L, 5L);
         }
 
+        [Fact(DisplayName = "Should_store_snapshot_row_with_the_same_storage_classes_as_Sql")]
+        public async Task Should_store_snapshot_row_with_the_same_storage_classes_as_Sql()
+        {
+            await SaveAsync("classes", 3, T0, "s3");
+
+            // Akka.Persistence.Sql 1.5.70 capture: text, integer, integer, blob, text (''), integer
+            var row = Db.Query(
+                "SELECT typeof(persistence_id), typeof(sequence_number), typeof(created), typeof(snapshot), typeof(manifest), typeof(serializer_id), " +
+                "created, manifest, serializer_id FROM snapshot WHERE persistence_id = 'classes'")[0];
+            row.Take(6).Should().Equal("text", "integer", "integer", "blob", "text", "integer");
+            row[6].Should().Be(T0.Ticks);
+            row[7].Should().Be("E");
+            row[8].Should().Be(7301L);
+        }
+
+        [Fact(DisplayName = "Should_fail_the_save_cleanly_When_the_snapshot_cannot_be_serialized")]
+        public async Task Should_fail_the_save_cleanly_When_the_snapshot_cannot_be_serialized()
+        {
+            var probe = CreateTestProbe();
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata("bad-snap", 1, T0), new UnserializableEvent("x")), probe.Ref);
+
+            var failure = await probe.ExpectMsgAsync<SaveSnapshotFailure>(Timeout);
+
+            failure.Cause.Should().BeOfType<InvalidOperationException>();
+            Rows("bad-snap").Should().BeEmpty();
+            // the store is still alive
+            await SaveAsync("bad-snap", 2, T0, "fine");
+            Rows("bad-snap").Should().Equal(2L);
+        }
+
         [Fact(DisplayName = "Should_return_utc_timestamp_When_loading")]
         public async Task Should_return_utc_timestamp_When_loading()
         {

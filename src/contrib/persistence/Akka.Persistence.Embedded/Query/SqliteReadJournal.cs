@@ -53,7 +53,8 @@ namespace Akka.Persistence.Embedded.Query
         private readonly SqliteWorkerPool _pool;
         private readonly SemaphoreSlim _throttle;
         private readonly IActorRef? _sequenceActor;
-        private volatile bool _ready;
+        private readonly object _initLock = new();
+        private Task? _initialization;
 
         /// <summary>Test seam: query permits that are not in use.</summary>
         internal int AvailablePermitsForTests => _throttle.CurrentCount;
@@ -61,11 +62,11 @@ namespace Akka.Persistence.Embedded.Query
         /// <summary>The reference configuration of the plugin. Core adds it to the system config on first use.</summary>
         public static Config DefaultConfiguration() => SqlitePersistence.DefaultConfiguration;
 
-        internal SqliteReadJournal(ExtendedActorSystem system, Config config)
+        internal SqliteReadJournal(ExtendedActorSystem system, Config config, string pluginPath)
         {
             _system = system;
-            _pluginPath = Identifier;
-            _log = Logging.GetLogger(system, Identifier);
+            _pluginPath = pluginPath;
+            _log = Logging.GetLogger(system, pluginPath);
             _settings = QuerySettings.Create(config, _pluginPath, system.Settings.Config);
             foreach (var warning in _settings.Warnings)
                 _log.Warning(warning);
@@ -96,11 +97,26 @@ namespace Akka.Persistence.Embedded.Query
 
         // ---- plumbing ------------------------------------------------------------------------------
 
-        private async Task EnsureInitializedAsync()
+        /// <summary>
+        /// The first successful handshake is cached and shared by every query, also by queries that start while it is
+        /// still running. A failed one (timeout, missing column) is dropped so the next query tries again.
+        /// </summary>
+        private Task EnsureInitializedAsync()
         {
-            if (_ready)
-                return;
+            var current = Volatile.Read(ref _initialization);
+            if (current is not null && !current.IsFaulted && !current.IsCanceled)
+                return current;
 
+            lock (_initLock)
+            {
+                if (_initialization is null || _initialization.IsFaulted || _initialization.IsCanceled)
+                    _initialization = InitializeAsync();
+                return _initialization;
+            }
+        }
+
+        private async Task InitializeAsync()
+        {
             try
             {
                 await _journal.Ask<Initialized>(EnsureInitialized.Instance, _settings.WritePluginInitTimeout).ConfigureAwait(false);
@@ -123,8 +139,6 @@ namespace Akka.Persistence.Embedded.Query
                     return true;
                 },
                 CancellationToken.None).ConfigureAwait(false);
-
-            _ready = true;
         }
 
         /// <summary>Runs one SQL round trip on a query thread, after the write plugin is ready and the throttle allows it.</summary>

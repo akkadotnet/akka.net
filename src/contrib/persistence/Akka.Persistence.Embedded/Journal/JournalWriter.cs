@@ -121,6 +121,10 @@ namespace Akka.Persistence.Embedded.Journal
 
         internal int QueuedForTests => _queue.Count;
 
+        internal int ConnectionResetsForTests => _holder.ResetCount;
+
+        internal string HolderConnectionStringForTests => _holder.ConnectionString;
+
         internal int FullRejectionsForTests => Volatile.Read(ref _fullRejections);
 
         /// <summary>Test seam: runs on the writer thread after it took the first item of a round, before it collects the batch.</summary>
@@ -161,8 +165,6 @@ namespace Akka.Persistence.Embedded.Journal
             _shutdown.Cancel();
             if (_thread.ThreadState != System.Threading.ThreadState.Unstarted && !_thread.Join(JoinTimeout))
                 _log.Warning("[{0}] writer thread did not stop within 5s.", _settings.PluginPath);
-
-            ConnectionHolder.ReleasePool(_settings.ConnectionString);
         }
 
         private void Loop()

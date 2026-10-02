@@ -91,7 +91,28 @@ namespace Akka.Persistence.Embedded.Tests.Schema
             var failure = Assert.Throws<SqliteSchemaException>(() => SqliteSchema.EnsureJournalSchema(connection, settings, false, false));
 
             failure.Message.Should().Be(
-                "Table [journal] is missing column(s) [tags] required by tag-write-mode = Csv, use-writer-uuid-column = true. This plugin never alters tables.");
+                "Table [journal] is missing column(s): tags (required by tag-write-mode = Csv). This plugin never alters tables.");
+
+            // the same table also fails when only the read side wants the column
+            var tagTable = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
+            var tagTableSettings = JournalSettings.Create(tagTable.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, tagTable);
+            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, tagTableSettings, requireTagsColumnForReads: true))
+                .Message.Should().Be("Table [journal] is missing column(s): tags (required by tag-read-mode = Csv). This plugin never alters tables.");
+        }
+
+        [Fact(DisplayName = "Should_blame_writer_uuid_setting_When_writer_uuid_column_is_absent")]
+        public async Task Should_blame_writer_uuid_setting_When_writer_uuid_column_is_absent()
+        {
+            using var db = new SqliteTestDb();
+            await WithSystemAsync("schema-no-uuid", SqliteSpecConfig.Create(db, SqliteTestMode.NW), InitializeAsync);
+
+            var withUuid = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
+            var settings = JournalSettings.Create(withUuid.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, withUuid);
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
+            connection.Open();
+
+            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, settings))
+                .Message.Should().Be("Table [journal] is missing column(s): writer_uuid (required by use-writer-uuid-column = true). This plugin never alters tables.");
         }
     }
 

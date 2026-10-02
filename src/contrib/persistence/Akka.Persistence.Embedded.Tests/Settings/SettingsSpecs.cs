@@ -128,6 +128,16 @@ namespace Akka.Persistence.Embedded.Tests.Settings
             failure.Message.Should().Be($"[{JournalPath}.tag-write-mode] must be Csv, TagTable or Both. Found [Bogus].");
         }
 
+        [Fact(DisplayName = "Should_keep_serializer_null_When_core_journal_fallback_says_json")]
+        public void Should_keep_serializer_null_When_core_journal_fallback_says_json()
+        {
+            // what core hands a journal: its section with akka.persistence.journal-plugin-fallback underneath
+            var system = Full("").WithFallback(Persistence.DefaultConfig());
+            var section = system.GetConfig(JournalPath).WithFallback(system.GetConfig("akka.persistence.journal-plugin-fallback"));
+
+            JournalSettings.Create(section, JournalPath, system).DefaultSerializer.Should().BeNull("the reference config's null hides core's json");
+        }
+
         [Fact(DisplayName = "Should_throw_When_Sql_Common_root_keys_are_set")]
         public void Should_throw_When_Sql_Common_root_keys_are_set()
         {

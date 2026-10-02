@@ -32,8 +32,6 @@ namespace Akka.Persistence.Embedded.Tests.Query.TagTable
             ReadJournal = Sys.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier);
         }
 
-        protected override bool AllocatesAllPersistenceIDsPublisher => false;
-
         public override async ValueTask DisposeAsync()
         {
             await base.DisposeAsync();

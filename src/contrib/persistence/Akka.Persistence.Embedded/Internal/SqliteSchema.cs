@@ -201,15 +201,17 @@ namespace Akka.Persistence.Embedded.Internal
 
             var columns = RequireTable(connection, t.Journal, dataSource);
             var needsTagsColumn = settings.WritesTagsColumn || requireTagsColumnForReads;
-            var required = new List<string>
+            const string schema = "the journal schema";
+            var required = new List<(string Column, string Reason)>
             {
-                t.Ordering, t.Created, t.Deleted, t.PersistenceId, t.SequenceNumber, t.Message, t.Manifest, t.Identifier
+                (t.Ordering, schema), (t.Created, schema), (t.Deleted, schema), (t.PersistenceId, schema),
+                (t.SequenceNumber, schema), (t.Message, schema), (t.Manifest, schema), (t.Identifier, schema)
             };
             if (settings.UseWriterUuid)
-                required.Add(t.WriterUuid);
+                required.Add((t.WriterUuid, "use-writer-uuid-column = true"));
             if (needsTagsColumn)
-                required.Add(t.Tags);
-            RequireColumns(columns, t.Journal, required, settings);
+                required.Add((t.Tags, settings.WritesTagsColumn ? $"tag-write-mode = {settings.TagWriteMode}" : "tag-read-mode = Csv"));
+            RequireColumns(columns, t.Journal, required);
 
             var ordering = columns.First(c => string.Equals(c.Name, t.Ordering, StringComparison.OrdinalIgnoreCase));
             if (ordering.Pk != 1 || !string.Equals(ordering.Type, "INTEGER", StringComparison.OrdinalIgnoreCase))
@@ -223,13 +225,17 @@ namespace Akka.Persistence.Embedded.Internal
             if (settings.WritesTagTable || requireTagTableForReads)
             {
                 var tagColumns = RequireTable(connection, t.TagTable, dataSource);
-                RequireColumns(tagColumns, t.TagTable, [t.TagOrderingId, t.TagValue, t.TagSequenceNr, t.TagPersistenceId], settings);
+                var tagReason = settings.WritesTagTable ? $"tag-write-mode = {settings.TagWriteMode}" : "tag-read-mode = TagTable";
+                RequireColumns(
+                    tagColumns, t.TagTable,
+                    [(t.TagOrderingId, tagReason), (t.TagValue, tagReason), (t.TagSequenceNr, tagReason), (t.TagPersistenceId, tagReason)]);
             }
 
             if (settings.DeleteCompatibilityMode)
             {
                 var metaColumns = RequireTable(connection, t.Metadata, dataSource);
-                RequireColumns(metaColumns, t.Metadata, [t.MetadataPersistenceId, t.MetadataSequenceNumber], settings);
+                const string reason = "delete-compatibility-mode = true";
+                RequireColumns(metaColumns, t.Metadata, [(t.MetadataPersistenceId, reason), (t.MetadataSequenceNumber, reason)]);
             }
 
             return warnings;
@@ -276,17 +282,15 @@ namespace Akka.Persistence.Embedded.Internal
             return result;
         }
 
-        private static void RequireColumns(List<ColumnInfo> columns, string table, IEnumerable<string> required, JournalSettings settings)
+        /// <summary>Throws naming each missing column and the setting (or the schema itself) that requires it.</summary>
+        private static void RequireColumns(List<ColumnInfo> columns, string table, IEnumerable<(string Column, string Reason)> required)
         {
             var missing = required
-                .Where(r => !columns.Any(c => string.Equals(c.Name, r, StringComparison.OrdinalIgnoreCase)))
+                .Where(r => !columns.Any(c => string.Equals(c.Name, r.Column, StringComparison.OrdinalIgnoreCase)))
+                .Select(r => $"{r.Column} (required by {r.Reason})")
                 .ToArray();
             if (missing.Length > 0)
-            {
-                throw new SqliteSchemaException(
-                    $"Table [{table}] is missing column(s) [{string.Join(", ", missing)}] required by tag-write-mode = {settings.TagWriteMode}, " +
-                    $"use-writer-uuid-column = {(settings.UseWriterUuid ? "true" : "false")}. This plugin never alters tables.");
-            }
+                throw new SqliteSchemaException($"Table [{table}] is missing column(s): {string.Join(", ", missing)}. This plugin never alters tables.");
         }
 
         private static bool HasUniqueIndex(SqliteConnection connection, string table, string first, string second)
