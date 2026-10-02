@@ -1214,6 +1214,27 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Double:
                 w.Raw("SizeOfDouble(").Value(value).Raw(")");
                 break;
+            case FieldKind.Single:
+                w.Raw("SizeOfSingle(").Value(value).Raw(")");
+                break;
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.Char:
+                // Every one of these widens to int without loss and encodes exactly as that int does
+                // (a non-negative value uses the unsigned MessagePack codes either way).
+                w.Raw("SizeOfInt32((int)").Value(value).Raw(")");
+                break;
+            case FieldKind.UInt32:
+                w.Raw("SizeOfInt64((long)").Value(value).Raw(")");
+                break;
+            case FieldKind.UInt64:
+                w.Raw("SizeOfUInt64(").Value(value).Raw(")");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("SizeOfInt64(").Value(value).Raw(".Ticks)");
+                break;
             case FieldKind.Decimal:
                 w.Raw("SizeOfDecimal(").Value(value).Raw(")");
                 break;
@@ -1643,7 +1664,20 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Int64:
             case FieldKind.Boolean:
             case FieldKind.Double:
+            case FieldKind.Single:
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.UInt32:
+            case FieldKind.UInt64:
                 w.Raw("writer.Write(").Value(value).Line(");");
+                break;
+            case FieldKind.Char:
+                w.Raw("writer.Write((ushort)").Value(value).Line(");");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("writer.Write(").Value(value).Line(".Ticks);");
                 break;
             case FieldKind.Decimal:
                 w.Raw("WriteDecimal(ref writer, ").Value(value).Line(");");
@@ -1794,6 +1828,33 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Double:
                 w.Local(target).Line(" = reader.ReadDouble();");
                 break;
+            case FieldKind.Single:
+                w.Local(target).Line(" = ReadSingle(ref reader);");
+                break;
+            case FieldKind.Int16:
+                w.Local(target).Line(" = ReadInt16(ref reader);");
+                break;
+            case FieldKind.SByte:
+                w.Local(target).Line(" = ReadSByte(ref reader);");
+                break;
+            case FieldKind.Byte:
+                w.Local(target).Line(" = ReadByte(ref reader);");
+                break;
+            case FieldKind.UInt16:
+                w.Local(target).Line(" = ReadUInt16(ref reader);");
+                break;
+            case FieldKind.UInt32:
+                w.Local(target).Line(" = ReadUInt32(ref reader);");
+                break;
+            case FieldKind.UInt64:
+                w.Local(target).Line(" = ReadUInt64(ref reader);");
+                break;
+            case FieldKind.Char:
+                w.Local(target).Line(" = ReadChar(ref reader);");
+                break;
+            case FieldKind.TimeSpan:
+                w.Local(target).Line(" = new global::System.TimeSpan(reader.ReadInt64());");
+                break;
             case FieldKind.Decimal:
                 w.Local(target).Line(" = ReadDecimal(ref reader);");
                 break;
@@ -1920,7 +1981,9 @@ public sealed partial class AkkaSerializerGenerator
 
     private static bool IsScalarValueKind(FieldKind kind)
         => kind is FieldKind.Int32 or FieldKind.Int64 or FieldKind.Boolean or FieldKind.Double
-            or FieldKind.Decimal or FieldKind.Guid or FieldKind.DateTime or FieldKind.DateTimeOffset or FieldKind.Enum;
+            or FieldKind.Decimal or FieldKind.Guid or FieldKind.DateTime or FieldKind.DateTimeOffset or FieldKind.Enum
+            or FieldKind.Int16 or FieldKind.SByte or FieldKind.Byte or FieldKind.UInt16 or FieldKind.UInt32 or FieldKind.UInt64
+            or FieldKind.Single or FieldKind.Char or FieldKind.TimeSpan;
 
     // ----- WRITE -----
 
@@ -2038,7 +2101,20 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Int64:
             case FieldKind.Boolean:
             case FieldKind.Double:
+            case FieldKind.Single:
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.UInt32:
+            case FieldKind.UInt64:
                 w.Raw("writer.Write(").Value(value).Line(");");
+                break;
+            case FieldKind.Char:
+                w.Raw("writer.Write((ushort)").Value(value).Line(");");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("writer.Write(").Value(value).Line(".Ticks);");
                 break;
             case FieldKind.Decimal:
                 w.Raw("WriteDecimal(ref writer, ").Value(value).Line(");");
@@ -2358,6 +2434,33 @@ public sealed partial class AkkaSerializerGenerator
                 break;
             case FieldKind.Double:
                 w.Raw("reader.ReadDouble()");
+                break;
+            case FieldKind.Single:
+                w.Raw("ReadSingle(ref reader)");
+                break;
+            case FieldKind.Int16:
+                w.Raw("ReadInt16(ref reader)");
+                break;
+            case FieldKind.SByte:
+                w.Raw("ReadSByte(ref reader)");
+                break;
+            case FieldKind.Byte:
+                w.Raw("ReadByte(ref reader)");
+                break;
+            case FieldKind.UInt16:
+                w.Raw("ReadUInt16(ref reader)");
+                break;
+            case FieldKind.UInt32:
+                w.Raw("ReadUInt32(ref reader)");
+                break;
+            case FieldKind.UInt64:
+                w.Raw("ReadUInt64(ref reader)");
+                break;
+            case FieldKind.Char:
+                w.Raw("ReadChar(ref reader)");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("new global::System.TimeSpan(reader.ReadInt64())");
                 break;
             case FieldKind.Decimal:
                 w.Raw("ReadDecimal(ref reader)");

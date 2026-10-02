@@ -327,7 +327,7 @@ public sealed record ShippingAddress(
 
 | Kind | Types | Notes |
 |---|---|---|
-| Scalars | `string`, `int`, `long`, `bool`, `double`, `decimal`, `Guid`, `DateTime`, `DateTimeOffset` | Native `MessagePackWriter`/`Reader` calls; see [Wire format](#wire-format) for the encoding each one uses. |
+| Scalars | `string`, `int`, `long`, `bool`, `double`, `float`, `short`, `byte`, `sbyte`, `ushort`, `uint`, `ulong`, `char`, `decimal`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan` | Native `MessagePackWriter`/`Reader` calls; see [Scalar encodings](#scalar-encodings) for the encoding each one uses. |
 | Raw bytes | `byte[]` | Encoded as a MessagePack `bin`, not an array of integers. |
 | Enums | Any `enum` backed by `sbyte`, `byte`, `short`, `ushort`, or `int` | Written as an `int32`. A `long`- or `uint`-backed enum fails compilation with **AKKASG014**. |
 | Nullable | `Nullable<T>` for any supported value type, plus nullable reference types | See [Nullable fields](#nullable-fields). |
@@ -343,12 +343,29 @@ public sealed record ShippingAddress(
 | Unions | A closed, explicitly enumerated set of concrete types | See [Unions](#unions). |
 | Envelope payloads | A property typed `object` or `object?`, resolved through Akka's own serializer lookup at runtime | See [Envelope payloads](#envelope-payloads). |
 
-**Not supported:** `float`, `single`, plain `byte`, `sbyte`, `short`, `ushort`, `uint`, and `ulong`
-as scalar field types. These are only meaningful as an enum's underlying type. Also not supported:
-a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported: a
-dictionary whose key type is `object`. Any of these fails
-compilation with **AKKASG003**, naming the offending property and type. So does a collection of a
-type that neither the generator nor a registered [formatter](#hand-written-formatters) handles.
+**Not supported:** a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not
+supported: a dictionary whose key type is `object`. Any of these fails compilation with
+**AKKASG003**, naming the offending property and type. So does a collection of a type that neither
+the generator nor a registered [formatter](#hand-written-formatters) handles. A foreign type that
+has no support at all, such as `Uri` or `Half`, fails with **AKKASG007**. Register a formatter for it.
+
+### Scalar Encodings
+
+| Type | Wire encoding |
+|---|---|
+| `string`, `bool`, `int`, `long` | MessagePack `str`, `bool`, and the smallest MessagePack integer that holds the value. |
+| `double` | MessagePack `float64`. |
+| `float` | MessagePack `float32`. |
+| `short`, `sbyte`, `byte`, `ushort`, `uint`, `ulong` | MessagePack integer, in the smallest encoding that holds the value, exactly as `int` and `long` are written. |
+| `char` | MessagePack unsigned integer of the character's UTF-16 code unit. |
+| `TimeSpan` | MessagePack integer (`int64`) of its `Ticks`. |
+
+Every one of these works as a field, as a `Nullable<T>` field, and as a collection element,
+dictionary key, or dictionary value. A nullable value that is absent is MessagePack `nil`; a present
+one is written exactly as the non-nullable type. Integers are read by value, not by width, so a peer
+may write the same number with a different MessagePack integer encoding. A value the target type
+cannot hold, such as `70000` read into a `short` or `-1` read into a `ulong`, throws a
+`MessagePackSerializationException` that names the type. It is never truncated.
 
 ## Unions
 
@@ -1096,7 +1113,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
-| AKKASG007 | Error | Nested value object serialization definition is required | A nested field's type isn't `[AkkaSerializable]` with its own `[AkkaField]`s. |
+| AKKASG007 | Error | Nested value object serialization definition is required | A field's type isn't `[AkkaSerializable]` with its own `[AkkaField]`s and has no registered formatter. For a type declared in another assembly (including the BCL), the message names the assembly and offers a formatter, or `[AkkaSerializable]` in the type's own assembly. |
 | AKKASG008 | Error | Formatter type must not be abstract | A registered `TFormatter` is abstract and can't be instantiated. |
 | AKKASG009 | Error | Duplicate formatter registration | A serializer registers more than one formatter for the same target type. |
 | AKKASG010 | Error | Formatter constructor not usable | A formatter has neither a public parameterless constructor nor one taking `ExtendedActorSystem`. |

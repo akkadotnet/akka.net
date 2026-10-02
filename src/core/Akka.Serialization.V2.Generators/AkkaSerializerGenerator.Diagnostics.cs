@@ -92,17 +92,20 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    // Same id/title/severity as MissingNestedSerializableDefinition. Used only when the nested
-    // type's assembly is not the one being compiled and the generator found no [AkkaSerializable]
-    // schema it can read there. The generator reads a referenced type's schema from that assembly's
-    // metadata, so the usual cause is a missing [AkkaSerializable] (or [AkkaField]) in the other
-    // assembly. An inaccessible type or member is AKKASG039 instead.
+    // Same id/title/severity as MissingNestedSerializableDefinition. Used only when the type's
+    // assembly is not the one being compiled and the generator found no [AkkaSerializable]
+    // schema it can read there. That is a BCL type such as System.Uri or a third-party type as often
+    // as a sibling project's message. The generator reads a referenced type's schema from that
+    // assembly's metadata, so for a type the author owns the usual cause is a missing
+    // [AkkaSerializable] (or [AkkaField]) in the other assembly. "Declare the type in this assembly"
+    // is not offered: it is impossible for a type the author does not own. An inaccessible type or
+    // member is AKKASG039 instead.
     private static readonly DiagnosticDescriptor MissingNestedSerializableDefinitionCrossAssembly = new(
         "AKKASG007",
         "Nested value object serialization definition is required",
-        "Property '{0}' on type '{1}' uses nested value object type '{2}', which is declared in assembly '{3}' but has no [AkkaSerializable] schema this generator can read there. " +
-        "Annotate it with [AkkaSerializable] and [AkkaField] properties in that assembly, " +
-        "register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or declare the type in this assembly.",
+        "Property '{0}' on type '{1}' uses type '{2}', which is declared in assembly '{3}' but has no [AkkaSerializable] schema this generator can read there. " +
+        "Register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or, if you own the type, " +
+        "annotate it with [AkkaSerializable] and [AkkaField] properties in that assembly.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

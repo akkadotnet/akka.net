@@ -1,0 +1,12 @@
+﻿case: scalars-in-every-collection-shape-single-element
+message-type: ScalarCollectionsMessage
+manifest: scalar-collections-v1
+serializer-id: 122003
+byte-count: 91
+
+0000  8f 01 91 ce 00 26 25 a0  02 91 ca bf 00 00 00 03  |.....&%.........|
+0010  92 c0 cd 01 2c 04 91 cc  ff 05 91 d0 9c 06 91 cd  |....,...........|
+0020  9c 40 07 91 ce ff ff ff  ff 08 91 cf ff ff ff ff  |.@..............|
+0030  ff ff ff ff 09 91 78 0a  81 01 02 0b 81 79 ce 00  |......x......y..|
+0040  01 11 70 0c 81 fd ca 40  20 00 00 0d 81 a4 6e 6f  |..p....@ .....no|
+0050  6e 65 c0 0e 92 c0 fb 0f  81 09 c0                 |ne.........|
