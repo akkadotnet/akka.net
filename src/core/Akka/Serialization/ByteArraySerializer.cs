@@ -26,6 +26,12 @@ namespace Akka.Serialization
         {
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ByteArraySerializer) ? 4 : base.Identifier;
+
         /// <summary>
         /// Byte arrays preserve their legacy empty manifest for wire compatibility.
         /// </summary>

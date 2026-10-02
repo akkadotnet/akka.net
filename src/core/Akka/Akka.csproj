@@ -21,6 +21,16 @@
   <ItemGroup Label="PublicAnalyzers">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
   </ItemGroup>
+
+  <!--
+    MSBuild logic that ships with the package. The file name must match the package id ("Akka") or
+    NuGet never imports it. buildTransitive/ reaches both direct references and projects that depend
+    on Akka indirectly. No build/ copy: that folder is only for NuGet clients older than 5.0, and
+    none of those can consume a net10.0 package in the first place.
+  -->
+  <ItemGroup>
+    <None Include="buildTransitive/Akka.targets" Pack="true" PackagePath="buildTransitive/" />
+  </ItemGroup>
   
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">

@@ -10,6 +10,7 @@
     "**/.Tests.MultiNode.csproj",
     "**/Akka.MultiNode.TestAdapter.Tests.csproj",
     "**/Akka.MultiNode.TestAdapter.Xunit2.Tests.csproj",
+    "src/contrib/hosting/**",
     "src/examples/**"
   ],
   "target": [

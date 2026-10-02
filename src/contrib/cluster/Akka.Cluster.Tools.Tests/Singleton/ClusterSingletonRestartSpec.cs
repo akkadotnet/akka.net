@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -91,6 +92,62 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }, max);
         }
 
+        /// <summary>
+        /// Runs <paramref name="handOver"/> and then waits for <paramref name="newOldest"/> to log the
+        /// "Hand-over in progress at" INFO line that <see cref="ClusterSingletonManager"/> writes when it
+        /// receives <c>HandOverInProgress</c> from the previous oldest - the confirmation that the hand-over
+        /// started. A failure here names the broken hand-over instead of letting it surface as an unrelated
+        /// timeout further down (see #8589 for the transport-level loss that can cause it).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// At least one, deliberately not exactly one. TWO independent paths repeat the line, both
+        /// designed behavior, so do not tighten this back to an exact count after "fixing" the retry timer.
+        /// </para>
+        /// <para>
+        /// 1. Timer-less cross-fire - this is the one CI actually hit (build 131691: zero
+        /// "Retry [n], sending HandOverToMe" lines, and both "Hand-over in progress at" lines on the same
+        /// thread at the same millisecond). The new oldest sends its first HandOverToMe on OldestChanged
+        /// (ClusterSingletonManager.cs:916). Independently, the previous oldest sends TakeOverFromMe
+        /// (:801, and re-sent once a second from WasOldest at :1237-1244). The new oldest, still in BecomingOldest,
+        /// answers that TakeOverFromMe with a SECOND HandOverToMe (:1061) - and the previous oldest, now in
+        /// HandingOver, answers every HandOverToMe it sees with HandOverInProgress (:1304-1308). So the
+        /// new oldest logs the line once per HandOverToMe it sent, with no timer involved, whenever the
+        /// remote TakeOverFromMe round trip beats the local PoisonPill/Terminated one.
+        /// </para>
+        /// <para>
+        /// 2. HandOverRetryTimer - the new oldest arms it at hand-over-retry-interval (1s) on entering
+        /// BecomingOldest (:1420) and re-sends HandOverToMe when it fires (:1080-1083), which draws another
+        /// HandOverInProgress from the same :1308 case. The first confirmation cancels the timer (:983), which
+        /// is why this path leaves no trace in a log that already contains the line.
+        /// </para>
+        /// <para>
+        /// Both paths produce N >= 1 lines, so "at least one" is the only correct expectation: an exact
+        /// EventFilter count fails on a loaded agent. Fishing returns on the first match and ignores repeats.
+        /// </para>
+        /// </remarks>
+        private async Task AwaitHandOverConfirmationAsync(ActorSystem newOldest, TimeSpan max, Func<Task> handOver)
+        {
+            // subscribe before the hand-over runs, so a confirmation that lands while it is still in flight
+            // is buffered on the probe rather than missed
+            var probe = CreateTestProbe(newOldest);
+            newOldest.EventStream.Subscribe(probe.Ref, typeof(Info));
+            try
+            {
+                await handOver();
+
+                await probe.FishForMessageAsync(
+                    m => m is Info info &&
+                         info.Message?.ToString()?.StartsWith("Hand-over in progress at") == true,
+                    max,
+                    $"[{newOldest.Name}] never logged the hand-over confirmation from the previous oldest");
+            }
+            finally
+            {
+                newOldest.EventStream.Unsubscribe(probe.Ref, typeof(Info));
+            }
+        }
+
         [Fact]
         public async Task Restarting_cluster_node_with_same_hostname_and_port_must_handover_to_next_oldest()
         {
@@ -108,7 +165,14 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             // on the same host:port below. dot-netty's tcp-reuse-addr is off-for-windows, so that rebind
             // is exactly the kind of thing that fails on Windows and nowhere else. Terminate() runs
             // CoordinatedShutdown to completion: the hand-over to sys2 finishes and the port is released.
-            await _sys1.Terminate();
+            //
+            // A failure here means sys2 never logged the hand-over confirmation from sys1 - i.e. the
+            // "Hand-over in progress at" message that ClusterSingletonManager.BecomingOldest logs on
+            // receiving HandOverToMe (see #8589 for the transport-level loss that can cause this). Naming
+            // it here turns a later, unrelated-looking timeout into a failure at the point the hand-over
+            // actually broke.
+            await AwaitHandOverConfirmationAsync(_sys2, TimeSpan.FromSeconds(10),
+                async () => { await _sys1.Terminate(); });
             // it will be downed by the join attempts of the new incarnation
 
             // ReSharper disable once PossibleInvalidOperationException
@@ -140,15 +204,29 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             await AwaitProxyReplyAsync(_sys2, proxy2, "hello2", TimeSpan.FromSeconds(5));
 
-            Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
-
-            await AwaitAssertAsync(() =>
+            // As above: a failure here means sys3 never saw the "Hand-over in progress at" confirmation
+            // from sys2, which is what happened in PR #8588 build 131555 - sys2's HandOverInProgress and
+            // HandOverDone were written to the socket before it closed, but a TCP RST on Windows (see
+            // #8589) discarded them on the wire, so sys3 never cancelled its hand-over retry timer and
+            // fell back to the removal-margin/hand-over-retries path instead. That path does eventually
+            // recover the singleton, but only after 20s+ (removal margin) or ~27s (hand-over retries
+            // exhausted, manager crash-restart) - both well outside the 5s AwaitProxyReplyAsync budget
+            // below, which is sized for the designed hand-over path (HandOverDone reaches sys3 about
+            // 1ms after sys2 starts handing over, before sys2's system terminates). The budget is deliberately not widened to cover the fallback: doing
+            // so would only make the test pass on a path where the hand-over was lost and the manager had
+            // to crash to recover, which defeats the point of a spec named after the hand-over.
+            await AwaitHandOverConfirmationAsync(_sys3, TimeSpan.FromSeconds(10), async () =>
             {
-                Cluster.Get(_sys3)
-                    .State.Members.Select(x => x.UniqueAddress)
-                    .Should()
-                    .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
-            }, TimeSpan.FromSeconds(15));
+                Cluster.Get(_sys2).Leave(Cluster.Get(_sys2).SelfAddress);
+
+                await AwaitAssertAsync(() =>
+                {
+                    Cluster.Get(_sys3)
+                        .State.Members.Select(x => x.UniqueAddress)
+                        .Should()
+                        .Equal(Cluster.Get(_sys3).SelfUniqueAddress);
+                }, TimeSpan.FromSeconds(15));
+            });
 
             var proxy3 =
                 _sys3.ActorOf(ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3)),

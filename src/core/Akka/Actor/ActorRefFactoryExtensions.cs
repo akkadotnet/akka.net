@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Akka.Actor
 {
     /// <summary>
@@ -19,7 +21,7 @@ namespace Akka.Actor
         /// <param name="factory">TBD</param>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static IActorRef ActorOf<TActor>(this IActorRefFactory factory, string name = null)
+        public static IActorRef ActorOf<[DynamicallyAccessedMembers(Props.ActorTypeMembers)] TActor>(this IActorRefFactory factory, string name = null)
             where TActor : ActorBase, new()
         {
             return factory.ActorOf(Props.Create<TActor>(), name: name);

@@ -158,7 +158,7 @@ These loggers are also available as separate nuget packages
 
 * **Akka.Logger.Serilog** which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
 * **Akka.Logger.NLog**  which logs using [NLog](http://nlog-project.org/)
-* **Microsoft.Extensions.Logging** - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
+* **Microsoft.Extensions.Logging** - which is [built into Akka.Hosting](xref:hosting-logging).
 
 Note that you need to modify the config as explained below.
 
@@ -184,7 +184,7 @@ akka {
 }
 ```
 
-Or using [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting), you can configure loggers programmatically using strongly typed references to the underlying logging classes:
+Or using [Akka.Hosting](xref:hosting-logging), you can configure loggers programmatically using strongly typed references to the underlying logging classes:
 
 ```csharp
 builder.Services.AddAkka("MyActorSystem", configurationBuilder =>

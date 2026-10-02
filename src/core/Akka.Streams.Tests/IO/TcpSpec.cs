@@ -190,6 +190,33 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public async Task Outgoing_TCP_stream_must_not_log_an_error_when_upstream_finishes_while_still_connecting()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                // Regression test for CloseConnectionUpstreamFinished's null-guard: with halfClose
+                // off, Source.Empty completes upstream before the outbound connect finishes, so
+                // _connection is still null when that branch runs -- this used to throw instead of
+                // completing gracefully (the interpreter still logs the exception at Error first).
+                await EventFilter.Error().ExpectAsync(0, async () =>
+                {
+                    var task = Source.Empty<ReadOnlySequence<byte>>()
+                        .ViaMaterialized(
+                            Sys.TcpStream().OutgoingConnection(
+                                new IPEndPoint(IPAddress.Parse("192.0.2.1"), 666),
+                                halfClose: false,
+                                connectionTimeout: TimeSpan.FromSeconds(1)),
+                            Keep.Right)
+                        .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Left)
+                        .Run(Materializer);
+
+                    await Awaiting(() => task.WaitAsync(3.Seconds()))
+                        .Should().ThrowAsync<Exception>().WithMessage("Connection failed*");
+                });
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task Outgoing_TCP_stream_must_work_when_client_closes_write_then_remote_closes_write()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -842,6 +869,93 @@ namespace Akka.Streams.Tests.IO
                 (await total.WaitAsync(10.Seconds())).Should().Be(100);
 
                 await AssertThrowsAsync<StreamTcpException>(() => rejected).WaitAsync(3.Seconds());
+            }, Materializer);
+        }
+
+        [Fact(DisplayName =
+            "Incoming_TCP_stream_with_halfClose_and_cancelled_read_side_must_complete_promptly_without_the_clients_FIN")]
+        public async Task Incoming_TCP_stream_with_halfClose_and_cancelled_read_side_must_complete_promptly_without_the_clients_FIN()
+        {
+            // Regression test for #8634: Artery's inbound connections use halfClose: true and
+            // write Source.Empty, so they send ConfirmedClose right after accept; on shutdown
+            // the kill switch cancels the read side, sending Tcp.Close - which used to be
+            // dropped while the ConfirmedClose was still draining, so the connection waited
+            // forever for the client's FIN.
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var serverAddress = TestUtils.TemporaryServerAddress();
+                var readProbeTcs = new TaskCompletionSource<TestSubscriber.Probe<ReadOnlySequence<byte>>>();
+
+                var binding = await Sys.TcpStream()
+                    .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: true)
+                    .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(conn =>
+                    {
+                        var readSide = this.SinkProbe<ReadOnlySequence<byte>>();
+                        var writeEmptyReadViaProbe =
+                            Flow.FromSinkAndSource(readSide, Source.Empty<ReadOnlySequence<byte>>(), Keep.Left);
+                        readProbeTcs.TrySetResult(
+                            conn.Flow.JoinMaterialized(writeEmptyReadViaProbe, Keep.Right).Run(Materializer));
+                    }), Keep.Left)
+                    .Run(Materializer);
+
+                try
+                {
+                    using var client = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                    await client.ConnectAsync(serverAddress).WaitAsync(5.Seconds());
+
+                    var readProbe = await readProbeTcs.Task.WaitAsync(5.Seconds());
+                    await readProbe.EnsureSubscriptionAsync();
+
+                    // Wait for the server's own FIN -- this proves Source.Empty has already
+                    // completed and ConfirmedClose has already been sent, i.e. the connection is
+                    // in exactly the state the fix's "already drained" branch applies to.
+                    var buffer = new byte[1];
+                    using (var confirmedCts = new CancellationTokenSource(5.Seconds()))
+                    {
+                        (await client.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, confirmedCts.Token))
+                            .Should().Be(0);
+                    }
+
+                    // The client stays fully open on its own send side -- no Shutdown, no Close
+                    // -- so without the fix the server would wait forever for its FIN.
+                    await readProbe.CancelAsync();
+
+                    // A read alone can't tell "stuck open" (unfixed) apart from "closed" (fixed)
+                    // -- both look like a clean EOF. Writing can: once the server actually closes
+                    // its socket, the OS resets the next segment; while stuck open, the write just
+                    // succeeds silently. Poll with a bounded overall timeout.
+                    using var overallCts = new CancellationTokenSource(5.Seconds());
+                    Exception? reset = null;
+                    while (reset is null && !overallCts.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            await client.SendAsync(buffer.AsMemory(), SocketFlags.None, overallCts.Token);
+                            await client.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, overallCts.Token);
+                        }
+                        catch (SocketException ex)
+                        {
+                            reset = ex;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+
+                        if (reset is null && !overallCts.IsCancellationRequested)
+                        {
+                            try { await Task.Delay(100, overallCts.Token); }
+                            catch (OperationCanceledException) { break; }
+                        }
+                    }
+
+                    reset.Should().NotBeNull(
+                        "the server should have closed its socket instead of waiting forever for the client's FIN");
+                }
+                finally
+                {
+                    await binding.Unbind().WaitAsync(3.Seconds());
+                }
             }, Materializer);
         }
     }

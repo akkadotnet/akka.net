@@ -280,6 +280,7 @@ namespace Akka.Cluster.Metrics.Serialization
     public class ClusterMetricsMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMetricsMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }

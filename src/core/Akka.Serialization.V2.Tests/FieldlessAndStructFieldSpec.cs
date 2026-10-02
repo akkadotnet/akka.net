@@ -190,6 +190,18 @@ public sealed class FieldlessAndStructFieldSpec : IAsyncLifetime
         deserialized.Should().Be(new GapOptionalHandshakeMessage(null));
     }
 
+    [Fact(DisplayName = "Documented SessionId should round-trip when its generated property carries AkkaField")]
+    public void Should_RoundTripSessionId_When_GeneratedPropertyCarriesAkkaField()
+    {
+        var message = new GapSessionMessage((SessionId)"session-123");
+
+        var deserialized = RoundTrip(message);
+
+        deserialized.Id.Value.Should().Be("session-123");
+        deserialized.Id.Should().Be(message.Id);
+        deserialized.Id.ToString().Should().Be("session-123");
+    }
+
     private TMessage RoundTrip<TMessage>(TMessage message)
         where TMessage : class, IGapFixProtocol
     {
@@ -202,6 +214,24 @@ public sealed class FieldlessAndStructFieldSpec : IAsyncLifetime
 public interface IGapFixProtocol
 {
 }
+
+#region SessionId
+/// <summary>
+/// Strongly-typed session identity. Wraps the entity key string used for
+/// actor routing and persistence identity.
+/// </summary>
+[Serializable]
+[AkkaSerializable]
+public readonly record struct SessionId([property: AkkaField(0)] string Value)
+{
+    public static explicit operator SessionId(string value) => new(value);
+
+    public override string ToString() => Value;
+}
+#endregion
+
+[AkkaSerializable(Manifest = "gap-session-v1")]
+public sealed record GapSessionMessage([property: AkkaField(0)] SessionId Id) : IGapFixProtocol;
 
 /// <summary>
 /// Mirrors Artery's <c>ArteryHeartbeat</c>: a deliberately fieldless message where arrival IS the

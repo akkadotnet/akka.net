@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\xunitSettings.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtTestVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Resources\akka-validcert.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -4791,6 +4791,7 @@ namespace Akka.Streams.Serialization
     public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object o) { }

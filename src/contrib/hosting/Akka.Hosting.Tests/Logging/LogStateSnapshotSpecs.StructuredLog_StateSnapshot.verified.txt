@@ -1,0 +1,10 @@
+﻿LogLevel: Information
+Message: [LEVEL][DateTime][Thread 0001][ActorSystem(test)] User 12345 performed Login
+State:
+  [{OriginalFormat}] = User {UserId} performed {Action}
+  [Action] = Login
+  [ActorPath] = akka://test/...
+  [LogSource] = LogSource
+  [Thread] = 1
+  [Timestamp] = DateTime
+  [UserId] = 12345

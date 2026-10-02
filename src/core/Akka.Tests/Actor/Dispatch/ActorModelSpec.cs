@@ -86,27 +86,26 @@ namespace Akka.Tests.Actor.Dispatch
             public AtomicCounterLong Counter { get; }
         }
 
-        sealed class AwaitLatch : IActorModelMessage
-        {
-            public AwaitLatch(CountdownEvent latch)
-            {
-                Latch = latch;
-            }
-
-            public CountdownEvent Latch { get; }
-        }
-
         protected sealed class Meet : IActorModelMessage
         {
-            public Meet(CountdownEvent acknowledge, CountdownEvent waitFor)
+            public Meet(CountdownEvent acknowledge, CountdownEvent waitFor, TimeSpan maxWait)
             {
                 Acknowledge = acknowledge;
                 WaitFor = waitFor;
+                MaxWait = maxWait;
             }
 
             public CountdownEvent Acknowledge { get; }
 
             public CountdownEvent WaitFor { get; }
+
+            /// <summary>
+            /// Hard upper bound on how long the handler parks the worker thread it is running on.
+            /// An unbounded wait here is a process-wide hazard: a test that fails before it releases
+            /// <see cref="WaitFor"/> leaves the actor parked on a ThreadPool worker for the rest of the
+            /// test host's life, which starves every later spec in the assembly.
+            /// </summary>
+            public TimeSpan MaxWait { get; }
         }
 
         sealed class CountDownNStop : IActorModelMessage
@@ -116,28 +115,6 @@ namespace Akka.Tests.Actor.Dispatch
                 Latch = latch;
             }
 
-            public CountdownEvent Latch { get; }
-        }
-
-        sealed class Wait : IActorModelMessage
-        {
-            public Wait(int time)
-            {
-                Time = time;
-            }
-
-            public long Time { get; }
-        }
-
-        sealed class WaitAck : IActorModelMessage
-        {
-            public WaitAck(long time, CountdownEvent latch)
-            {
-                Time = time;
-                Latch = latch;
-            }
-
-            public long Time { get; }
             public CountdownEvent Latch { get; }
         }
 
@@ -218,10 +195,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             public DispatcherActor()
             {
-                Receive<AwaitLatch>(latch => { Ack(); latch.Latch.Wait(); _busy.SwitchOff(); });
-                Receive<Meet>(meet => { Ack(); meet.Acknowledge.Signal(); meet.WaitFor.Wait(); _busy.SwitchOff(); });
-                Receive<Wait>(wait => { Ack(); Thread.Sleep((int)wait.Time); _busy.SwitchOff(); });
-                Receive<WaitAck>(waitAck => { Ack(); Thread.Sleep((int)waitAck.Time); waitAck.Latch.Signal(); _busy.SwitchOff(); });
+                Receive<Meet>(meet => { Ack(); meet.Acknowledge.Signal(); meet.WaitFor.Wait(meet.MaxWait); _busy.SwitchOff(); });
                 Receive<Reply>(reply => { Ack(); Sender.Tell(reply.Expect); _busy.SwitchOff(); });
                 Receive<TryReply>(tryReply => { Ack(); Sender.Tell(tryReply.Expect, null); _busy.SwitchOff(); });
                 Receive<Forward>(forward => { Ack(); forward.To.Forward(forward.Msg); _busy.SwitchOff(); });
@@ -333,12 +307,33 @@ namespace Akka.Tests.Actor.Dispatch
             }
         }
 
-        protected void AssertDispatcher(MessageDispatcherInterceptor dispatcher, long stops)
+        /// <summary>
+        /// Upper bound handed to every <see cref="Meet"/> message so a failed assertion can never
+        /// leave an actor parked on a ThreadPool worker for the remainder of the test host's life.
+        /// </summary>
+        protected TimeSpan MeetMaxWait => Dilated(TimeSpan.FromSeconds(10));
+
+        /// <remarks>
+        /// <para>
+        /// The dispatcher's idle shutdown is driven off the scheduler -- one
+        /// <see cref="MessageDispatcher.ShutdownTimeout"/> round per re-arm -- and the run that
+        /// unregisters the last actor needs a worker from the same pool the test is running on
+        /// (<c>my-test-dispatcher</c> uses <c>executor = default-executor</c>, i.e. the shared
+        /// .NET ThreadPool). This polls with <c>Task.Delay</c> so the calling thread goes back to
+        /// the pool between checks; the old implementation ran a <see cref="SpinWait"/> loop that
+        /// pinned the calling thread AND burned a core, which on a 2-vCPU agent competes directly
+        /// with the workers it is waiting for -- and pushes the pool's starvation heuristic into
+        /// its slow (CPU-saturated) thread-injection rate.
+        /// </para>
+        /// </remarks>
+        protected async Task AssertDispatcherAsync(MessageDispatcherInterceptor dispatcher, long stops)
         {
-            var deadline = MonotonicClock.GetMilliseconds() + (long)(dispatcher.ShutdownTimeout.TotalMilliseconds * 5);
             try
             {
-                Await(deadline, () => stops == dispatcher.Stops.Current);
+                await AwaitAssertAsync(
+                    () => dispatcher.Stops.Current.ShouldBe(stops, $"dispatcher [{dispatcher.Id}] stop count"),
+                    dispatcher.ShutdownTimeout * 5,
+                    TimeSpan.FromMilliseconds(50));
             }
             catch (Exception ex)
             {
@@ -347,14 +342,26 @@ namespace Akka.Tests.Actor.Dispatch
             }
         }
 
-        protected void AssertCountdown(CountdownEvent latch, int wait, string hint)
+        /// <remarks>
+        /// Polls <see cref="CountdownEvent.IsSet"/> rather than calling
+        /// <see cref="CountdownEvent.Wait(TimeSpan)"/>: the latter blocks the test's own ThreadPool
+        /// worker, and because it blocks inside <see cref="ManualResetEventSlim"/> it does not trip
+        /// the pool's blocking compensation either. With the pool floor at 2 on a 2-vCPU agent, a
+        /// test thread parked in <c>Wait</c> plus an actor parked in a handler is the whole floor,
+        /// and the mailbox run the test is waiting for cannot start until the starvation heuristic
+        /// injects another thread.
+        /// </remarks>
+        protected async Task AssertCountdownAsync(CountdownEvent latch, TimeSpan wait, string hint)
         {
-            Assert.True(latch.Wait(wait), $"Failed to count down within {wait} milliseconds." + hint);
+            var countedDown = await AwaitConditionNoThrowAsync(() => latch.IsSet, wait, TimeSpan.FromMilliseconds(25));
+            Assert.True(countedDown, $"Failed to count down within {wait.TotalMilliseconds} milliseconds." + hint);
         }
 
-        protected void AssertNoCountdown(CountdownEvent latch, int wait, string hint)
+        /// <inheritdoc cref="AssertCountdownAsync"/>
+        protected async Task AssertNoCountdownAsync(CountdownEvent latch, TimeSpan wait, string hint)
         {
-            Assert.False(latch.Wait(wait), $"Expected count down to fail after {wait} milliseconds." + hint);
+            var countedDown = await AwaitConditionNoThrowAsync(() => latch.IsSet, wait, TimeSpan.FromMilliseconds(25));
+            Assert.False(countedDown, $"Expected count down to fail after {wait.TotalMilliseconds} milliseconds." + hint);
         }
 
         protected InterceptorStats StatsFor(IActorRef actorRef, MessageDispatcher dispatcher = null)
@@ -362,16 +369,16 @@ namespace Akka.Tests.Actor.Dispatch
             return dispatcher?.AsInstanceOf<MessageDispatcherInterceptor>().GetStats(actorRef);
         }
 
-        protected void AssertRefDefaultZero(IActorRef actorRef, MessageDispatcher dispatcher = null, long suspensions = 0, long resumes = 0, long registers = 0,
+        protected Task AssertRefDefaultZeroAsync(IActorRef actorRef, MessageDispatcher dispatcher = null, long suspensions = 0, long resumes = 0, long registers = 0,
             long unregisters = 0, long msgsReceived = 0, long msgsProcessed = 0, long restarts = 0)
         {
-            AssertRef(actorRef, suspensions, resumes,
+            return AssertRefAsync(actorRef, suspensions, resumes,
                 registers, unregisters, msgsReceived, msgsProcessed, restarts, dispatcher);
         }
 
-        protected void AssertRef(IActorRef actorRef, MessageDispatcher dispatcher = null)
+        protected Task AssertRefAsync(IActorRef actorRef, MessageDispatcher dispatcher = null)
         {
-            AssertRef(actorRef, StatsFor(actorRef, dispatcher).Suspensions.Current,
+            return AssertRefAsync(actorRef, StatsFor(actorRef, dispatcher).Suspensions.Current,
                 StatsFor(actorRef, dispatcher).Resumes.Current,
                 StatsFor(actorRef, dispatcher).Registers.Current,
                 StatsFor(actorRef, dispatcher).Unregisters.Current,
@@ -379,25 +386,31 @@ namespace Akka.Tests.Actor.Dispatch
                 StatsFor(actorRef, dispatcher).MsgsProcessed.Current,
                 StatsFor(actorRef, dispatcher).Restarts.Current,
                 dispatcher);
-
         }
 
-
-        protected void AssertRef(IActorRef actorRef, long suspensions,
+        /// <remarks>
+        /// One polling assertion over the whole stats tuple. The old code ran seven successive
+        /// spin-waits against a single shared, non-dilated 1 s budget, so whichever counter settled
+        /// last only got whatever milliseconds the earlier six had left over -- and the spinning
+        /// itself stole CPU from the dispatcher that had to move those counters.
+        /// </remarks>
+        protected async Task AssertRefAsync(IActorRef actorRef, long suspensions,
             long resumes, long registers, long unregisters, long msgsReceived,
             long msgsProcessed, long restarts, MessageDispatcher dispatcher = null)
         {
-            var deadline = MonotonicClock.GetMilliseconds() + 1000;
             var stats = StatsFor(actorRef, dispatcher);
             try
             {
-                Await(deadline, () => stats.Suspensions.Current == suspensions);
-                Await(deadline, () => stats.Resumes.Current == resumes);
-                Await(deadline, () => stats.Registers.Current == registers);
-                Await(deadline, () => stats.Unregisters.Current == unregisters);
-                Await(deadline, () => stats.MsgsReceived.Current == msgsReceived);
-                Await(deadline, () => stats.MsgsProcessed.Current == msgsProcessed);
-                Await(deadline, () => stats.Restarts.Current == restarts);
+                await AwaitAssertAsync(() =>
+                {
+                    stats.Suspensions.Current.ShouldBe(suspensions, "suspensions");
+                    stats.Resumes.Current.ShouldBe(resumes, "resumes");
+                    stats.Registers.Current.ShouldBe(registers, "registers");
+                    stats.Unregisters.Current.ShouldBe(unregisters, "unregisters");
+                    stats.MsgsReceived.Current.ShouldBe(msgsReceived, "msgsReceived");
+                    stats.MsgsProcessed.Current.ShouldBe(msgsProcessed, "msgsProcessed");
+                    stats.Restarts.Current.ShouldBe(restarts, "restarts");
+                }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(25));
             }
             catch (Exception ex)
             {
@@ -410,21 +423,6 @@ namespace Akka.Tests.Actor.Dispatch
             }
         }
 
-        private static void Await(long until, Func<bool> condition)
-        {
-            var spinWait = new SpinWait();
-            var done = false;
-            while (MonotonicClock.GetMilliseconds() <= until && !done)
-            {
-                done = condition();
-                if (!done)
-                    spinWait.SpinOnce();
-            }
-
-            if (!done)
-                throw new Exception("Await failed");
-        }
-
         protected abstract MessageDispatcherInterceptor InterceptedDispatcher();
         protected abstract string DispatcherType { get; }
 
@@ -433,9 +431,9 @@ namespace Akka.Tests.Actor.Dispatch
             return Sys.ActorOf(Props.Create<DispatcherActor>().WithDispatcher(dispatcher));
         }
 
-        void AwaitStarted(IActorRef actorRef)
+        private Task AwaitStartedAsync(IActorRef actorRef)
         {
-            AwaitCondition(() =>
+            return AwaitConditionAsync(() =>
             {
                 if (actorRef is RepointableActorRef)
                     return actorRef.AsInstanceOf<RepointableActorRef>().IsStarted;
@@ -444,15 +442,24 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_must_dynamically_handle_its_own_lifecycle()
+        public async Task A_dispatcher_must_dynamically_handle_its_own_lifecycle()
         {
             var dispatcher = InterceptedDispatcher();
-            AssertDispatcher(dispatcher, 0);
+            await AssertDispatcherAsync(dispatcher, 0);
             var a = NewTestActor(dispatcher.Id);
-            AssertDispatcher(dispatcher, 0);
+            await AssertDispatcherAsync(dispatcher, 0);
+
+            // Wait for the actor to actually terminate before asserting on the dispatcher's stop
+            // count. Sys.Stop is fire-and-forget: the Unregister that arms the dispatcher's idle
+            // shutdown only runs when the Terminate message reaches the mailbox, which needs a
+            // worker thread. Without this, "the dispatcher never shut down" and "the actor never
+            // stopped" produce the same failure, and only the latter needs a ThreadPool worker.
+            var aTerminated = a.WatchAsync();
             Sys.Stop(a);
-            AssertDispatcher(dispatcher, 1);
-            AssertRef(a, suspensions: 0,
+            (await aTerminated.WaitAsync(RemainingOrDefault)).ShouldBeTrue("actor a should have terminated");
+
+            await AssertDispatcherAsync(dispatcher, 1);
+            await AssertRefAsync(a, suspensions: 0,
                 resumes: 0,
                 registers: 1,
                 unregisters: 1,
@@ -463,22 +470,24 @@ namespace Akka.Tests.Actor.Dispatch
 
             /* we don't run tasks directly on the dispatcher... */
             var a2 = NewTestActor(dispatcher.Id);
+            var a2Terminated = a2.WatchAsync();
             Sys.Stop(a2);
-            AssertDispatcher(dispatcher, 2);
+            (await a2Terminated.WaitAsync(RemainingOrDefault)).ShouldBeTrue("actor a2 should have terminated");
+            await AssertDispatcherAsync(dispatcher, 2);
         }
 
         [Fact]
-        public void A_dispatcher_must_process_messages_one_at_a_time()
+        public async Task A_dispatcher_must_process_messages_one_at_a_time()
         {
             var dispatcher = InterceptedDispatcher();
             var start = new CountdownEvent(1);
             var oneAtTime = new CountdownEvent(1);
             var a = NewTestActor(dispatcher.Id);
-            AwaitStarted(a);
+            await AwaitStartedAsync(a);
 
             a.Tell(new CountDown(start));
-            AssertCountdown(start, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process first message within 3 seconds");
-            AssertRefDefaultZero(a, registers: 1, msgsReceived: 1, msgsProcessed: 1, dispatcher: dispatcher);
+            await AssertCountdownAsync(start, Dilated(TimeSpan.FromSeconds(3.0)), "Should process first message within 3 seconds");
+            await AssertRefDefaultZeroAsync(a, registers: 1, msgsReceived: 1, msgsProcessed: 1, dispatcher: dispatcher);
 
             // Deterministically hold the actor busy with a latch the test controls,
             // instead of racing a wall-clock Thread.Sleep(1000) against a fixed deadline.
@@ -486,22 +495,32 @@ namespace Akka.Tests.Actor.Dispatch
             // 'release' keeps it busy until the test explicitly lets it go.
             var busyStarted = new CountdownEvent(1);
             var release = new CountdownEvent(1);
-            a.Tell(new Meet(busyStarted, release));
-            AssertCountdown(busyStarted, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should start processing the blocking message within 3 seconds");
+            try
+            {
+                a.Tell(new Meet(busyStarted, release, MeetMaxWait));
+                await AssertCountdownAsync(busyStarted, Dilated(TimeSpan.FromSeconds(3.0)), "Should start processing the blocking message within 3 seconds");
 
-            // While the actor is deterministically held busy, the second message must NOT be
-            // processed. This positively proves the "one message at a time" property rather than
-            // inferring it from a restart that never happens.
-            a.Tell(new CountDown(oneAtTime));
-            AssertNoCountdown(oneAtTime, (int)Dilated(TimeSpan.FromMilliseconds(500)).TotalMilliseconds, "Should not process the next message while the actor is busy");
+                // While the actor is deterministically held busy, the second message must NOT be
+                // processed. This positively proves the "one message at a time" property rather than
+                // inferring it from a restart that never happens.
+                a.Tell(new CountDown(oneAtTime));
+                await AssertNoCountdownAsync(oneAtTime, Dilated(TimeSpan.FromMilliseconds(500)), "Should not process the next message while the actor is busy");
+            }
+            finally
+            {
+                // Release the gate even when an assertion above threw. A failed test must not leave
+                // the actor parked in the Meet handler on a ThreadPool worker: that worker never
+                // comes back, and every later spec in the assembly pays for it.
+                if (!release.IsSet)
+                    release.Signal();
+            }
 
-            // Release the gate; the queued message must now be processed once the actor is free.
-            release.Signal();
-            AssertCountdown(oneAtTime, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process message when allowed");
-            AssertRefDefaultZero(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, dispatcher: dispatcher);
+            // The queued message must now be processed once the actor is free.
+            await AssertCountdownAsync(oneAtTime, Dilated(TimeSpan.FromSeconds(3.0)), "Should process message when allowed");
+            await AssertRefDefaultZeroAsync(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, dispatcher: dispatcher);
 
             Sys.Stop(a);
-            AssertRefDefaultZero(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, unregisters: 1, dispatcher: dispatcher);
+            await AssertRefDefaultZeroAsync(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, unregisters: 1, dispatcher: dispatcher);
         }
 
         [Fact]
@@ -526,9 +545,9 @@ namespace Akka.Tests.Actor.Dispatch
 
             try
             {
-                AssertCountdown(counter, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds,
+                await AssertCountdownAsync(counter, Dilated(TimeSpan.FromSeconds(3.0)),
                     "Should process 200 messages");
-                AssertRefDefaultZero(a, dispatcher, registers: 1, msgsReceived: 200, msgsProcessed: 200);
+                await AssertRefDefaultZeroAsync(a, dispatcher, registers: 1, msgsReceived: 200, msgsProcessed: 200);
             }
             finally
             {
@@ -542,37 +561,37 @@ namespace Akka.Tests.Actor.Dispatch
         }
 
         [Fact]
-        public void A_dispatcher_should_not_process_messages_for_a_suspended_actor()
+        public async Task A_dispatcher_should_not_process_messages_for_a_suspended_actor()
         {
             var dispatcher = InterceptedDispatcher();
             var a = NewTestActor(dispatcher.Id).AsInstanceOf<IInternalActorRef>();
-            AwaitStarted(a);
+            await AwaitStartedAsync(a);
             var done = new CountdownEvent(1);
             a.Suspend();
             a.Tell(new CountDown(done));
-            AssertNoCountdown(done, 1000, "Should not process messages while suspended");
-            AssertRefDefaultZero(a, dispatcher, registers: 1, msgsReceived: 1, suspensions: 1);
+            await AssertNoCountdownAsync(done, Dilated(TimeSpan.FromSeconds(1.0)), "Should not process messages while suspended");
+            await AssertRefDefaultZeroAsync(a, dispatcher, registers: 1, msgsReceived: 1, suspensions: 1);
 
             a.Resume(causedByFailure: null);
-            AssertCountdown(done, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should resume processing of messages when resumed");
-            AssertRefDefaultZero(a, dispatcher, registers: 1, msgsReceived: 1, msgsProcessed: 1, suspensions: 1, resumes: 1);
+            await AssertCountdownAsync(done, Dilated(TimeSpan.FromSeconds(3.0)), "Should resume processing of messages when resumed");
+            await AssertRefDefaultZeroAsync(a, dispatcher, registers: 1, msgsReceived: 1, msgsProcessed: 1, suspensions: 1, resumes: 1);
 
             Sys.Stop(a);
-            AssertRefDefaultZero(a, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1, suspensions: 1, resumes: 1);
+            await AssertRefDefaultZeroAsync(a, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1, suspensions: 1, resumes: 1);
         }
 
         [Fact]
-        public void A_dispatcher_must_handle_waves_of_actors()
+        public async Task A_dispatcher_must_handle_waves_of_actors()
         {
             var dispatcher = InterceptedDispatcher();
             var props = Props.Create(() => new DispatcherActor()).WithDispatcher(dispatcher.Id);
 
-            Action<int> flood = num =>
+            async Task Flood(int num)
             {
                 var cachedMessage = new CountDownNStop(new CountdownEvent(num));
                 var stopLatch = new CountdownEvent(num);
                 var keepAliveLatch = new CountdownEvent(1);
-                var waitTime = (int)Dilated(TimeSpan.FromSeconds(20)).TotalMilliseconds;
+                var waitTime = Dilated(TimeSpan.FromSeconds(20));
                 Action<IActorDsl> bossActor = c =>
                 {
                     c.Receive<string>(str => str.Equals("run"), (_, context) =>
@@ -600,30 +619,31 @@ namespace Akka.Tests.Actor.Dispatch
                         keepAliveLatch.Wait(waitTime);
                     });
                     boss.Tell("run");
-                    AssertCountdown(cachedMessage.Latch, waitTime, "Counting down from " + num);
-                    AssertCountdown(stopLatch, waitTime, "Expected all children to stop.");
+                    await AssertCountdownAsync(cachedMessage.Latch, waitTime, "Counting down from " + num);
+                    await AssertCountdownAsync(stopLatch, waitTime, "Expected all children to stop.");
                 }
                 finally
                 {
-                    keepAliveLatch.Signal();
+                    if (!keepAliveLatch.IsSet)
+                        keepAliveLatch.Signal();
                     Sys.Stop(boss);
                 }
-            };
+            }
 
             for (var i = 1; i <= 3; i++)
             {
-                flood(50000);
-                AssertDispatcher(dispatcher, i);
+                await Flood(50000);
+                await AssertDispatcherAsync(dispatcher, i);
             }
         }
 
         /* @Aaronontheweb: Left out the thread interrupt specs, because I don't think they behave the same way in .NET / Windows */
 
         [Fact]
-        public void A_dispatcher_must_continue_to_process_messages_when_exception_is_thrown()
+        public async Task A_dispatcher_must_continue_to_process_messages_when_exception_is_thrown()
         {
-            EventFilter.Exception<IndexOutOfRangeException>().And.Exception<InvalidComObjectException>().Expect(2,
-                () =>
+            await EventFilter.Exception<IndexOutOfRangeException>().And.Exception<InvalidComObjectException>().ExpectAsync(2,
+                async () =>
                 {
                     var dispatcher = InterceptedDispatcher();
                     var a = NewTestActor(dispatcher.Id);
@@ -634,21 +654,23 @@ namespace Akka.Tests.Actor.Dispatch
                     var f5 = a.Ask(new ThrowException(new InvalidComObjectException("InvalidComObjectException")));
                     var f6 = a.Ask(new Reply("bar2"));
 
-                    Assert.True(f1.Wait(GetTimeoutOrDefault(null)));
-                    f1.Result.ShouldBe("foo");
-                    Assert.True(f2.Wait(GetTimeoutOrDefault(null)));
-                    f2.Result.ShouldBe("bar");
-                    Assert.True(f4.Wait(GetTimeoutOrDefault(null)));
-                    f4.Result.ShouldBe("foo2");
-                    Assert.True(f6.Wait(GetTimeoutOrDefault(null)));
-                    f6.Result.ShouldBe("bar2");
+                    // Await the asks instead of Task.Wait-ing them: every blocked Wait costs the
+                    // dispatcher one of the ThreadPool workers it needs to answer the next ask.
+                    // RemainingOrDefault is the dilated single-expect default; the old
+                    // GetTimeoutOrDefault(null) was a raw, non-dilated 3s.
+                    (await f1.WaitAsync(RemainingOrDefault)).ShouldBe("foo");
+                    (await f2.WaitAsync(RemainingOrDefault)).ShouldBe("bar");
+                    (await f4.WaitAsync(RemainingOrDefault)).ShouldBe("foo2");
+                    (await f6.WaitAsync(RemainingOrDefault)).ShouldBe("bar2");
+
+                    // the two throwing messages are never answered
                     Assert.False(f3.IsCompleted);
                     Assert.False(f5.IsCompleted);
                 });
         }
 
         [Fact]
-        public void A_dispatcher_must_not_double_deregister()
+        public async Task A_dispatcher_must_not_double_deregister()
         {
             var dispatcher = InterceptedDispatcher();
             for (var i = 1; i <= 1000; i++)
@@ -657,8 +679,8 @@ namespace Akka.Tests.Actor.Dispatch
             }
             var a = NewTestActor(dispatcher.Id);
             a.Tell(DoubleStop.Instance);
-            AwaitCondition(() => StatsFor(a, dispatcher).Registers.Current == 1);
-            AwaitCondition(() => StatsFor(a, dispatcher).Unregisters.Current == 1);
+            await AwaitConditionAsync(() => StatsFor(a, dispatcher).Registers.Current == 1);
+            await AwaitConditionAsync(() => StatsFor(a, dispatcher).Unregisters.Current == 1);
         }
     }
 
@@ -702,20 +724,31 @@ namespace Akka.Tests.Actor.Dispatch
             var a = NewTestActor(dispatcher.Id);
             var b = NewTestActor(dispatcher.Id);
 
-            a.Tell(new Meet(aStart, aStop));
-            AssertCountdown(aStart, (int)Dilated(TimeSpan.FromSeconds(3)).TotalMilliseconds, "Should process first message within 3 seconds");
+            try
+            {
+                a.Tell(new Meet(aStart, aStop, MeetMaxWait));
+                await AssertCountdownAsync(aStart, Dilated(TimeSpan.FromSeconds(3)), "Should process first message within 3 seconds");
 
-            b.Tell(new CountDown(bParallel));
-            AssertCountdown(bParallel, (int)Dilated(TimeSpan.FromSeconds(3)).TotalMilliseconds, "Should process other actors in parallel");
+                b.Tell(new CountDown(bParallel));
+                await AssertCountdownAsync(bParallel, Dilated(TimeSpan.FromSeconds(3)), "Should process other actors in parallel");
+            }
+            finally
+            {
+                // Release 'a' even when an assertion above failed. Signalling only on the happy path
+                // is how this test used to take the rest of the assembly down with it: a held 'a'
+                // inside its handler, the ActorSystem could not terminate, and the ThreadPool worker
+                // under 'a' was gone for the remainder of the test host's life.
+                if (!aStop.IsSet)
+                    aStop.Signal();
+            }
 
-            aStop.Signal();
             Sys.Stop(a);
             Sys.Stop(b);
 
             await Task.WhenAll(a.WatchAsync(), b.WatchAsync()).WaitAsync(RemainingOrDefault);
 
-            AssertRefDefaultZero(a, dispatcher, registers:1, unregisters:1, msgsReceived:1, msgsProcessed:1);
-            AssertRefDefaultZero(b, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1);
+            await AssertRefDefaultZeroAsync(a, dispatcher, registers:1, unregisters:1, msgsReceived:1, msgsProcessed:1);
+            await AssertRefDefaultZeroAsync(b, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1);
         }
     }
 }

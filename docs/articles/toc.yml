@@ -6,6 +6,8 @@
   href: concepts/toc.yml
 - name: Actors
   href: actors/toc.yml
+- name: Hosting
+  href: hosting/toc.yml
 - name: Persistence
   href: persistence/toc.yml
 - name: Streams

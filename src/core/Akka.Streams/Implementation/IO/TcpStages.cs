@@ -750,8 +750,11 @@ namespace Akka.Streams.Implementation.IO
                 {
                     if (_writeInProgress)
                         _connectionClosePending = true; // continues once WriteAck drains the write buffer
-                    else
+                    else if (_connection != null)
                         _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                    else
+                        // Not yet connected (_connection null) when upstream finished -- nothing to flush.
+                        CompleteStage();
                 }
                 // We still read, so we only close the write side
                 else if (_connection != null)
@@ -777,7 +780,7 @@ namespace Akka.Streams.Implementation.IO
                     SetHandler(_bytesOut, _readHandler);
                     _connection = inbound.Connection;
                     GetStageActor(Connected).Watch(_connection);
-                    _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                    _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true), StageActor.Ref);
                     Pull(_bytesIn);
                 }
                 else
@@ -838,7 +841,7 @@ namespace Akka.Streams.Implementation.IO
                         StageActor.Unwatch(outbound.Manager);
                         StageActor.Become(Connected);
                         StageActor.Watch(_connection);
-                        _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
+                        _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true), StageActor.Ref);
 
                         if (IsAvailable(_bytesOut))
                             _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
