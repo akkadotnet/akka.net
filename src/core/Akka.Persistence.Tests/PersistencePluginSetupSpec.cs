@@ -9,6 +9,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -125,9 +126,11 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        [Fact(DisplayName = "PersistencePluginSetup should create the built-in plugin proxy When dynamic type loading is off")]
-        public async Task Should_create_builtin_plugin_proxy_When_dynamic_type_loading_is_off()
+        [Fact(DisplayName = "PersistencePluginSetup should start and use the built-in plugin proxy When dynamic type loading is off")]
+        public async Task Should_start_and_use_builtin_plugin_proxy_When_dynamic_type_loading_is_off()
         {
+            const string journalProxy = "akka.persistence.journal.proxy";
+            const string snapshotProxy = "akka.persistence.snapshot-store.proxy";
             const string hocon = """
                 akka.persistence.journal.proxy {
                     start-target-journal = on
@@ -139,13 +142,17 @@ namespace Akka.Persistence.Tests
                 }
                 """;
 
-            await RunAsync(false, hocon, null, system =>
+            await RunAsync(false, hocon, null, async system =>
             {
                 var persistence = Persistence.Instance.Apply(system);
 
-                UnderlyingProps(persistence.JournalFor("akka.persistence.journal.proxy")).Type.Should().Be(typeof(PersistencePluginProxy));
-                UnderlyingProps(persistence.SnapshotStoreFor("akka.persistence.snapshot-store.proxy")).Type.Should().Be(typeof(PersistencePluginProxy));
-                return Task.CompletedTask;
+                UnderlyingProps(persistence.JournalFor(journalProxy)).Type.Should().Be(typeof(PersistencePluginProxy));
+                UnderlyingProps(persistence.SnapshotStoreFor(snapshotProxy)).Type.Should().Be(typeof(PersistencePluginProxy));
+
+                // the proxies start their targets (PreStart asks for them by id) and forward to them
+                var writer = system.ActorOf(Props.Create(() => new Writer("p-proxy", journalProxy, snapshotProxy)));
+                (await writer.Ask<string>("evt", Timeout)).Should().Be("evt");
+                (await writer.Ask<string>("snap", Timeout)).Should().Be("snapshot-saved");
             });
         }
 
@@ -166,37 +173,93 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistencePluginSetup should use reflection When the journal is unregistered and the switch is on")]
-        public async Task Should_use_reflection_When_journal_is_unregistered_and_switch_is_on()
+        [Fact(DisplayName = "PersistencePluginSetup should throw a ConfigurationException naming the setting and the switch When the snapshot store is unregistered and the switch is off")]
+        public async Task Should_throw_ConfigurationException_naming_setting_and_switch_When_snapshot_store_is_unregistered_and_switch_is_off()
         {
-            await RunAsync(true, JournalHocon(typeof(UnregisteredJournal)), null, system =>
+            await RunAsync(false, SnapshotHocon(typeof(UnregisteredSnapshotStore)), null, system =>
             {
-                var journal = Persistence.Instance.Apply(system).JournalFor(JournalPath);
+                var persistence = Persistence.Instance.Apply(system);
 
-                UnderlyingProps(journal).Type.Should().Be(typeof(UnregisteredJournal));
+                var exception = Assert.Throws<ConfigurationException>(() => persistence.SnapshotStoreFor(SnapshotPath));
+
+                exception.Message.Should().Contain($"[{SnapshotPath}.class]");
+                exception.Message.Should().Contain(typeof(UnregisteredSnapshotStore).FullName!);
+                exception.Message.Should().Contain("Akka.DynamicTypeLoading");
+                exception.Message.Should().Contain("PersistencePluginSetup");
                 return Task.CompletedTask;
             });
         }
 
-        [Fact(DisplayName = "PersistencePluginSetup should call the registered factory instead of reflection When the switch is on")]
-        public async Task Should_call_registered_factory_instead_of_reflection_When_switch_is_on()
+        [Fact(DisplayName = "PersistencePluginSetup should use reflection When the journal and the snapshot store are unregistered and the switch is on")]
+        public async Task Should_use_reflection_When_journal_and_snapshot_store_are_unregistered_and_switch_is_on()
         {
-            var calls = 0;
-            var setup = PersistencePluginSetup.Empty.WithJournal(config =>
+            var hocon = JournalHocon(typeof(UnregisteredJournal)) + SnapshotHocon(typeof(UnregisteredSnapshotStore));
+
+            await RunAsync(true, hocon, null, system =>
             {
-                calls++;
-                return new RegisteredJournal(config);
+                var persistence = Persistence.Instance.Apply(system);
+
+                UnderlyingProps(persistence.JournalFor(JournalPath)).Type.Should().Be(typeof(UnregisteredJournal));
+                UnderlyingProps(persistence.SnapshotStoreFor(SnapshotPath)).Type.Should().Be(typeof(UnregisteredSnapshotStore));
+                return Task.CompletedTask;
             });
+        }
 
-            await RunAsync(true, JournalHocon(typeof(RegisteredJournal)), setup, async system =>
+        // The switch-on parity tests below name each type without its assembly. Reflection
+        // (Type.GetType) cannot find a type in this test assembly by that name, so they only pass
+        // when the registration is what resolves it.
+
+        [Fact(DisplayName = "PersistencePluginSetup should prefer a registered journal and snapshot store to reflection When the switch is on")]
+        public async Task Should_prefer_registered_journal_and_snapshot_store_to_reflection_When_switch_is_on()
+        {
+            var setup = PersistencePluginSetup.Empty
+                .WithJournal(config => new RegisteredJournal(config))
+                .WithSnapshotStore(_ => new RegisteredSnapshotStore());
+            var hocon = JournalHocon(typeof(RegisteredJournal).FullName!) + SnapshotHocon(typeof(RegisteredSnapshotStore).FullName!);
+
+            await RunAsync(true, hocon, setup, system =>
             {
-                var journal = Persistence.Instance.Apply(system).JournalFor(JournalPath);
+                var persistence = Persistence.Instance.Apply(system);
 
-                var writer = system.ActorOf(Props.Create(() => new Writer("p-factory", JournalPath, "akka.persistence.snapshot-store.inmem")));
-                await writer.Ask<string>("evt", Timeout);
+                UnderlyingProps(persistence.JournalFor(JournalPath)).Type.Should().Be(typeof(RegisteredJournal));
+                UnderlyingProps(persistence.SnapshotStoreFor(SnapshotPath)).Type.Should().Be(typeof(RegisteredSnapshotStore));
+                return Task.CompletedTask;
+            });
+        }
 
-                calls.Should().Be(1);
-                UnderlyingProps(journal).Type.Should().Be(typeof(RegisteredJournal));
+        [Fact(DisplayName = "PersistencePluginSetup should prefer a registered event adapter and binding to reflection When the switch is on")]
+        public async Task Should_prefer_registered_event_adapter_and_binding_to_reflection_When_switch_is_on()
+        {
+            var tagAdapter = new TagAdapter();
+            var setup = PersistencePluginSetup.Empty
+                .WithEventAdapter(_ => tagAdapter)
+                .WithEventAdapter(_ => new WriteOnlyAdapter())
+                .WithEventAdapter(_ => new ReadOnlyAdapter())
+                .WithEventAdapterBinding<TaggedEvent>()
+                .WithEventAdapterBinding<WriteOnlyEvent>()
+                .WithEventAdapterBinding<ReadOnlyAdapter>();
+
+            await RunAsync(true, AdapterHocon(assemblyQualified: false), setup, system =>
+            {
+                var adapters = Persistence.Instance.Apply(system).AdaptersFor("akka.persistence.journal.inmem");
+
+                adapters.Get<TaggedEvent>().Should().BeSameAs(tagAdapter, "the registered factory built it");
+                adapters.Get<WriteOnlyEvent>().Should().BeOfType<NoopReadEventAdapter>();
+                adapters.Get<ReadOnlyAdapter>().Should().BeOfType<NoopWriteEventAdapter>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistencePluginSetup should prefer a registered stash overflow configurator to reflection When the switch is on")]
+        public async Task Should_prefer_registered_stash_overflow_configurator_to_reflection_When_switch_is_on()
+        {
+            var setup = PersistencePluginSetup.Empty.WithStashOverflowStrategy(() => new CustomStashConfigurator());
+            var hocon = $"akka.persistence.internal-stash-overflow-strategy = \"{typeof(CustomStashConfigurator).FullName}\"";
+
+            await RunAsync(true, hocon, setup, system =>
+            {
+                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
+                return Task.CompletedTask;
             });
         }
 
@@ -268,25 +331,21 @@ namespace Akka.Persistence.Tests
             var secondCalls = 0;
             var first = PersistencePluginSetup.Empty.WithJournal(config =>
             {
-                firstCalls++;
+                Interlocked.Increment(ref firstCalls);
                 return new RegisteredJournal(config);
             });
             var second = PersistencePluginSetup.Empty
                 .WithJournal(config =>
                 {
-                    secondCalls++;
+                    Interlocked.Increment(ref secondCalls);
                     return new RegisteredJournal(config);
                 })
                 .WithSnapshotStore(_ => new RegisteredSnapshotStore());
 
-            // With* returns a new instance
-            PersistencePluginSetup.Empty.RegisteredTypes.Should().BeEmpty();
-            first.RegisteredTypes.Should().BeEquivalentTo(new[] { typeof(RegisteredJournal) });
-
             var merged = first.Merge(second);
 
             merged.RegisteredTypes.Should().BeEquivalentTo(new[] { typeof(RegisteredJournal), typeof(RegisteredSnapshotStore) });
-            first.RegisteredTypes.Should().HaveCount(1, "Merge leaves its operands alone");
+            first.RegisteredTypes.Should().BeEquivalentTo(new[] { typeof(RegisteredJournal) }, "Merge leaves its operands alone");
 
             await RunAsync(false, JournalHocon(typeof(RegisteredJournal)), merged, async system =>
             {
@@ -297,6 +356,12 @@ namespace Akka.Persistence.Tests
 
             secondCalls.Should().BeGreaterThan(0);
             firstCalls.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "PersistencePluginSetup should reject a null argument or a type with no adapter interface When registering")]
+        public void Should_reject_null_argument_or_type_with_no_adapter_interface_When_registering()
+        {
+            PersistencePluginSetup.Empty.RegisteredTypes.Should().BeEmpty();
 
             Assert.Throws<ArgumentNullException>(() => PersistencePluginSetup.Empty.WithJournal<RegisteredJournal>(null!));
             Assert.Throws<ArgumentNullException>(() => PersistencePluginSetup.Empty.WithSnapshotStore<RegisteredSnapshotStore>(null!));
@@ -334,16 +399,29 @@ namespace Akka.Persistence.Tests
         [Fact(DisplayName = "PersistencePluginSetup should throw naming the event adapter setting When the adapter is unregistered and the switch is off")]
         public async Task Should_throw_naming_event_adapter_setting_When_adapter_is_unregistered_and_switch_is_off()
         {
+            const string notBuiltIn = " is not built in and dynamic type loading is disabled. Use ";
+            const string switchText = " or enable the [Akka.DynamicTypeLoading] feature switch.";
+
             // the binding is registered, the adapter is not
             var adapterMissing = PersistencePluginSetup.Empty.WithEventAdapterBinding<TaggedEvent>();
 
             await RunAsync(false, AdapterHocon(), adapterMissing, system =>
             {
+                // through the journal: the setting is named with the plugin path in front
                 var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor("akka.persistence.journal.inmem"));
 
                 exception.Message.Should().Contain("akka.persistence.journal.inmem.event-adapters.");
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
                 exception.Message.Should().Contain("PersistencePluginSetup");
+
+                // through the public overload, which does not know the plugin path: the setting starts at event-adapters
+                var config = system.Settings.Config.GetConfig("akka.persistence.journal.inmem");
+                var relative = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
+
+                relative.Message.Should().StartWith("[event-adapters.");
+                relative.Message.Should().Contain("] [" + typeof(TagAdapter).FullName);
+                relative.Message.Should().NotContain("event-adapters.event-adapters");
+                relative.Message.Should().EndWith(notBuiltIn + "an event adapter registered through PersistencePluginSetup" + switchText);
                 return Task.CompletedTask;
             });
 
@@ -359,44 +437,12 @@ namespace Akka.Persistence.Tests
 
                 exception.Message.Should().Contain("akka.persistence.journal.inmem.event-adapter-bindings");
                 exception.Message.Should().Contain("WithEventAdapterBinding");
-                return Task.CompletedTask;
-            });
-        }
 
-        [Fact(DisplayName = "EventAdapters.Create should name event-adapters and event-adapter-bindings without a plugin path When called through the public overload")]
-        public async Task Should_name_settings_without_plugin_path_When_event_adapters_are_created_through_the_public_overload()
-        {
-            const string notBuiltIn = " is not built in and dynamic type loading is disabled. Use ";
-            const string switchText = " or enable the [Akka.DynamicTypeLoading] feature switch.";
-
-            // the adapter is unregistered: the setting reads event-adapters.<name>
-            var bindingOnly = PersistencePluginSetup.Empty.WithEventAdapterBinding<TaggedEvent>();
-            await RunAsync(false, AdapterHocon(), bindingOnly, system =>
-            {
                 var config = system.Settings.Config.GetConfig("akka.persistence.journal.inmem");
+                var relative = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
 
-                var exception = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
-
-                exception.Message.Should().StartWith("[event-adapters.");
-                exception.Message.Should().Contain("] [" + typeof(TagAdapter).FullName);
-                exception.Message.Should().NotContain("event-adapters.event-adapters");
-                exception.Message.Should().EndWith(notBuiltIn + "an event adapter registered through PersistencePluginSetup" + switchText);
-                return Task.CompletedTask;
-            });
-
-            // the adapters are registered, a binding key is not: the setting reads event-adapter-bindings
-            var adaptersOnly = PersistencePluginSetup.Empty
-                .WithEventAdapter(_ => new TagAdapter())
-                .WithEventAdapter(_ => new WriteOnlyAdapter())
-                .WithEventAdapter(_ => new ReadOnlyAdapter());
-            await RunAsync(false, AdapterHocon(), adaptersOnly, system =>
-            {
-                var config = system.Settings.Config.GetConfig("akka.persistence.journal.inmem");
-
-                var exception = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
-
-                exception.Message.Should().StartWith("[event-adapter-bindings] [");
-                exception.Message.Should().EndWith(notBuiltIn + "an event type registered through PersistencePluginSetup.WithEventAdapterBinding" + switchText);
+                relative.Message.Should().StartWith("[event-adapter-bindings] [");
+                relative.Message.Should().EndWith(notBuiltIn + "an event type registered through PersistencePluginSetup.WithEventAdapterBinding" + switchText);
                 return Task.CompletedTask;
             });
         }
@@ -454,28 +500,34 @@ namespace Akka.Persistence.Tests
             }
             """;
 
-        private static string SnapshotHocon(Type type) => $$"""
+        private static string SnapshotHocon(Type type) => SnapshotHocon($"{type.FullName}, {TestAssembly}");
+
+        private static string SnapshotHocon(string className) => $$"""
             {{SnapshotPath}} {
-                class = "{{type.FullName}}, {{TestAssembly}}"
+                class = "{{className}}"
                 plugin-dispatcher = "akka.actor.default-dispatcher"
                 marker = from-hocon
             }
             """;
 
-        private static string AdapterHocon() => $$"""
-            akka.persistence.journal.inmem {
-                event-adapters {
-                    tagger = "{{typeof(TagAdapter).FullName}}, {{TestAssembly}}"
-                    writer = "{{typeof(WriteOnlyAdapter).FullName}}, {{TestAssembly}}"
-                    reader = "{{typeof(ReadOnlyAdapter).FullName}}, {{TestAssembly}}"
+        private static string AdapterHocon(bool assemblyQualified = true)
+        {
+            var assembly = assemblyQualified ? ", " + TestAssembly : string.Empty;
+            return $$"""
+                akka.persistence.journal.inmem {
+                    event-adapters {
+                        tagger = "{{typeof(TagAdapter).FullName}}{{assembly}}"
+                        writer = "{{typeof(WriteOnlyAdapter).FullName}}{{assembly}}"
+                        reader = "{{typeof(ReadOnlyAdapter).FullName}}{{assembly}}"
+                    }
+                    event-adapter-bindings {
+                        "{{typeof(TaggedEvent).FullName}}{{assembly}}" = tagger
+                        "{{typeof(WriteOnlyEvent).FullName}}{{assembly}}" = writer
+                        "{{typeof(ReadOnlyAdapter).FullName}}{{assembly}}" = reader
+                    }
                 }
-                event-adapter-bindings {
-                    "{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = tagger
-                    "{{typeof(WriteOnlyEvent).FullName}}, {{TestAssembly}}" = writer
-                    "{{typeof(ReadOnlyAdapter).FullName}}, {{TestAssembly}}" = reader
-                }
-            }
-            """;
+                """;
+        }
 
         private static Props UnderlyingProps(IActorRef actor) => ((ActorRefWithCell)actor).Underlying.Props;
 
@@ -516,6 +568,10 @@ namespace Akka.Persistence.Tests
         }
 
         public sealed class RegisteredSnapshotStore : MemorySnapshotStore
+        {
+        }
+
+        public sealed class UnregisteredSnapshotStore : MemorySnapshotStore
         {
         }
 

@@ -146,8 +146,13 @@ With the switch on nothing changes for an app that registers nothing.
 
 Two more things to plan for. Event adapter bindings need a registration too: register each event type
 that a binding names with `WithEventAdapterBinding`. And when the switch is off, `PersistenceQuery`
-does not call a read journal's static `DefaultConfiguration()` method for you, so add that
-configuration to your own config with `WithFallback`.
+does not call a read journal's static `DefaultConfiguration()` method for you, so the plugin section
+is missing unless your app adds it. Put the read journal's default HOCON in your config yourself:
+
+```csharp
+var config = ConfigurationFactory.ParseString(myHocon)
+    .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+```
 
 ## Not Supported Yet
 
