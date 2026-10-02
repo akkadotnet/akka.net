@@ -149,25 +149,23 @@ serializer. See
 A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then `Serializer`. So it
 satisfies Akka's classic reflection contract: a public constructor that takes
 `ExtendedActorSystem`, and a stable `Identifier`. You can register it exactly like any hand-written
-serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks.
-Akka.Remote registers its own generated Artery control-message serializer this same way today, in
-`Remote.conf`:
+serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks:
 
 ```hocon
 akka.actor {
   serializers {
-    artery-control = "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote"
+    order-benchmark = "MyApp.OrderBenchmarkSerializer, MyApp"
   }
   serialization-bindings {
-    "Akka.Remote.Artery.IArteryControlMessage, Akka.Remote" = artery-control
-  }
-  serialization-identifiers {
-    "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote" = 23
+    "MyApp.IOrderBenchmarkProtocol, MyApp" = order-benchmark
   }
 }
 ```
 
-Nothing about this is generator-specific. It is the same three HOCON blocks the
+The generated serializer emits its own `Identifier` in code, from the id in `[AkkaSerializer<T>]`, so
+it needs no `akka.actor.serialization-identifiers` row. A row for it would be ignored.
+
+Nothing about this is generator-specific. It is the same two HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use
 `CreateRegistration()` and `CreateSetup()` when you want AOT-safe, compiler-checked composition.
 Use HOCON when you follow an existing configuration-driven setup.
@@ -273,6 +271,11 @@ parameter has no covering `[AkkaField]` property. It then silently resets to its
 deserialize. **AKKASG028** fires when an `[AkkaField]` property is not an accessible instance
 property, such as a static property or a getter the generated code cannot reach.
 
+The same reach rule applies to the message type itself. The generated serializer is a separate
+class, so it cannot name a type declared `private` or `protected`, or nested inside one. A message
+nested in another class must be `internal` or `public`, and so must every type that contains it.
+**AKKASG045** reports a violation at the type declaration.
+
 ### Structs
 
 A `struct`, including a `readonly record struct`, can carry `[AkkaSerializable]` and `[AkkaField]`
@@ -342,8 +345,8 @@ public sealed record ShippingAddress(
 
 **Not supported:** `float`, `single`, plain `byte`, `sbyte`, `short`, `ushort`, `uint`, and `ulong`
 as scalar field types. These are only meaningful as an enum's underlying type. Also not supported:
-a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported yet: an
-`object` element inside a collection, such as `List<object>` or `object[]`. Any of these fails
+a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported: a
+dictionary whose key type is `object`. Any of these fails
 compilation with **AKKASG003**, naming the offending property and type.
 
 ## Unions
@@ -809,6 +812,12 @@ An earlier `dev` build marked this with an explicit `[AkkaEnvelopePayload]` attr
 attribute was removed before the first 1.6 beta; the `object` type now carries the same meaning on
 its own.
 
+The same rule applies to a collection element. A `List<object>`, an `object[]`, an
+`ImmutableList<object>`, or a `Dictionary<string, object>` value typed `object` or `object?` is an
+envelope payload for each element, with the same runtime lookup. A `null` element round-trips as
+`null` when the element type is `object?`. A dictionary *key* typed `object` is not supported
+(**AKKASG003**), since a round-tripped payload has no stable identity to hash.
+
 Reach for an envelope payload instead of a union when the set of possible payload types is not
 closed at compile time. A generic delivery wrapper is one example: its payload could be *any*
 message type in the application, including ones the wrapper's own serializer never sees. A payload
@@ -1095,6 +1104,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG042 | Info | Closed-set expansion produced constructions | A `ManifestPrefix` registration expanded; the message names how many constructions it produced. |
 | AKKASG043 | Error | Protocol is owned by an upstream serializer | A type declared here implements a protocol that a serializer in a referenced assembly already binds; that assembly can never see this type. See [Serializer Placement](#serializer-placement). |
 | AKKASG044 | Warning | Serializer has no messages | A serializer has no messages here, in any referenced assembly, or in its own registrations -- often a sign the serializer is placed upstream of its messages. See [Serializer Placement](#serializer-placement). |
+| AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
 
 ## Limitations Today and Planned Changes
 
@@ -1102,9 +1112,9 @@ The generator reads what Roslyn can see at compile time: syntax trees for this c
 declarations, and compiled metadata for a referenced assembly's. Two concrete consequences follow
 today. First, a construction built through reflection over a type the generator never saw at
 compile time fails only when it is first sent. This never happens at compile time. A generic
-instantiation assembled dynamically at runtime is one example. Second, an `object` element inside a
-collection, such as `List<object>` or `object[]`, is not yet a supported envelope boundary; it fails
-compilation with **AKKASG003**.
+instantiation assembled dynamically at runtime is one example. Second, a dictionary whose key type is
+`object` fails compilation with **AKKASG003**. A round-tripped envelope payload has no stable
+identity to use as a lookup key.
 
 A top-level protocol implementor, a nested field type, a union member type, a marked union base's
 members, and a closed generic's own open definition can all live in a referenced assembly today;
@@ -1114,9 +1124,6 @@ The following work is planned. None of it ships on `dev` today. It is tracked ag
 [issue #8384](https://github.com/akkadotnet/akka.net/issues/8384) and
 `openspec/changes/messagepack-sourcegen-validation/design.md`:
 
-* **Support for an `object` element inside a collection.** A collection element typed `object`,
-  such as `List<object>` or `object[]`, is not yet a supported envelope boundary. It will follow
-  the same rule a property's own `object` type already follows today.
 * **Serializer parts.** Splitting a serializer's identity from its encoders, so a serializer
   declared upstream of its own messages can still dispatch them, composed explicitly at startup with
   no scanning. A documented follow-up, not needed by the shapes this generator targets today.

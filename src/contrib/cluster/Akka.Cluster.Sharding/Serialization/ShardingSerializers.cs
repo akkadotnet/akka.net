@@ -13,7 +13,7 @@ using Akka.Serialization;
 namespace Akka.Cluster.Sharding.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Akka.Cluster.Sharding's reference.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Cluster.Sharding's serializers, bindings and ids. They register as defaults when the module is deployed; its reference.conf carries no rows for them.
     /// </summary>
     internal sealed class ShardingSerializers : ModuleSerializers
     {
