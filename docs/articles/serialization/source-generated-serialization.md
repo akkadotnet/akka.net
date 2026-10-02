@@ -149,25 +149,23 @@ serializer. See
 A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then `Serializer`. So it
 satisfies Akka's classic reflection contract: a public constructor that takes
 `ExtendedActorSystem`, and a stable `Identifier`. You can register it exactly like any hand-written
-serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks.
-Akka.Remote registers its own generated Artery control-message serializer this same way today, in
-`Remote.conf`:
+serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks:
 
 ```hocon
 akka.actor {
   serializers {
-    artery-control = "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote"
+    order-benchmark = "MyApp.OrderBenchmarkSerializer, MyApp"
   }
   serialization-bindings {
-    "Akka.Remote.Artery.IArteryControlMessage, Akka.Remote" = artery-control
-  }
-  serialization-identifiers {
-    "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote" = 23
+    "MyApp.IOrderBenchmarkProtocol, MyApp" = order-benchmark
   }
 }
 ```
 
-Nothing about this is generator-specific. It is the same three HOCON blocks the
+The generated serializer emits its own `Identifier` in code, from the id in `[AkkaSerializer<T>]`, so
+it needs no `akka.actor.serialization-identifiers` row. A row for it would be ignored.
+
+Nothing about this is generator-specific. It is the same two HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use
 `CreateRegistration()` and `CreateSetup()` when you want AOT-safe, compiler-checked composition.
 Use HOCON when you follow an existing configuration-driven setup.

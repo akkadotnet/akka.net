@@ -13,7 +13,7 @@ using Akka.Serialization;
 namespace Akka.Persistence.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of persistence.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Persistence's serializers, bindings and ids. They register as defaults when the module is deployed; persistence.conf carries no rows for them.
     /// </summary>
     internal sealed class PersistenceSerializers : ModuleSerializers
     {

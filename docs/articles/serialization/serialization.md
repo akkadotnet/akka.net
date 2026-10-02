@@ -62,6 +62,14 @@ subtype of the other, a warning will be issued.
 
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
+#### Built-in Serializers Register From Code
+
+Akka.NET registers the serializers, bindings and serializer ids of its own modules from code: Akka.Remote, Akka.Cluster, Akka.Cluster.Tools, Akka.Cluster.Sharding, Akka.DistributedData, Akka.Cluster.Metrics, Akka.Persistence and Akka.Streams. A module's serializers are in place as soon as its assembly is deployed with your application, with no HOCON row behind them. These modules no longer put rows for them under `akka.actor.serializers`, `akka.actor.serialization-bindings` or `akka.actor.serialization-identifiers`, so you will not find those rows in `ActorSystem.Settings.Config`. The serializers in core, `json` and `bytes`, also declare their ids in code. Core still ships its own rows for them in `akka.conf`.
+
+To find out which serializer handles a type, ask the `Serialization` extension (`FindSerializerForType`, `FindSerializerFor`) instead of reading the configuration.
+
+You can still change them. A row of your own under `akka.actor.serializers` replaces a built-in alias, and a row under `akka.actor.serialization-bindings` rebinds a built-in type. Both win over the built-in default, and a `SerializationSetup` wins over both.
+
 ### Configuring Serialization Bindings Programmatically
 
 As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup).
@@ -186,40 +194,24 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
-### Overriding Default Serializer Ids
+### Serializer Ids
 
-> [!WARNING]
-> Changing the identification does not change the serialization binding, it only change the identification used by the serializer when it serialize a message. In fact, depending on the code, this might actually break the serializer as it might expect a specific identifier. You have been warned.
+Serializer ids are part of the wire format: two nodes that disagree about an id cannot read each other's messages. Ids from 0 to 40 are reserved for Akka.NET.
 
-Generally, overriding a default serializer identification is not recommended. The more recommended way is to change the serialization binding as was done when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer).
+Every serializer Akka.NET ships declares its id in code: `json` and `bytes` in core, and the serializers of Akka.Remote, Akka.Cluster and the other first-party modules. Nothing in HOCON changes them, so there is nothing to override. To change which serializer handles a type, change the serialization binding instead, as when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer).
 
-In the rare case where you do need to override them, you can do it in one of two ways:
+A custom serializer gets its id one of two ways:
 
-* Overriding the `Identifier` property in your custom serializer class that inherits from the `Akka.Serialization.Serializer` abstract class. The `Identifier` property will override any HOCON settings; in fact, you will get a warning in your log when you do that, reminding you that you actually did that.
-* Overriding the identifier inside your HOCON settings. To do this, you have to both change the original default serializer id and declare your own serializer using the original default serializer id.
+* It overrides the `Identifier` property. This is the simplest way, and it wins over any HOCON row.
+* It leaves `Identifier` alone, and Akka.NET reads the id from `akka.actor.serialization-identifiers`, using the serializer's own type name as the key:
 
-```c#
- serialization-identifiers {
-  "Akka.Serialization.NewtonSoftJsonSerializer, Akka" : 1000001
-  "MyAssembly.MyDefaultSerializer, SomeAssembly" : 1
-}
- ```
-
-this would in effect results this final HOCON settings:
-
-```c#
-serialization-identifiers : {
-    "Akka.Serialization.ByteArraySerializer, Akka" : 4
-    "Akka.Serialization.NewtonSoftJsonSerializer, Akka" : 1000001
-    "Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote" : 2
-    "Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote" : 3
-    "Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote" : 6
-    "Akka.Remote.Serialization.MiscMessageSerializer, Akka.Remote" : 16
-    "Akka.Remote.Serialization.PrimitiveSerializers, Akka.Remote" : 17
-    "Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote" : 22
-    "MyAssembly.MyDefaultSerializer, SomeAssembly" : 1
+```hocon
+akka.actor.serialization-identifiers {
+  "MyAssembly.MySerializer, MyAssembly" = 1001
 }
 ```
+
+This applies to a subclass of a built-in serializer too. A subclass of `NewtonSoftJsonSerializer` reads its own row from `akka.actor.serialization-identifiers`, never the row of its base type, so give it an id that no other serializer uses. See [Built-in Serializers Register From Code](#built-in-serializers-register-from-code).
 
 ### Programmatically Change NewtonSoft JSON Serializer Settings
 

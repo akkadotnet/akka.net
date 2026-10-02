@@ -128,7 +128,9 @@
 		"DeadLetter",
 		"Blocksharp",
 		"Akkatecture",
-		"SharpPulsar"
+		"SharpPulsar",
+		"remoted",
+		"blocklist"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

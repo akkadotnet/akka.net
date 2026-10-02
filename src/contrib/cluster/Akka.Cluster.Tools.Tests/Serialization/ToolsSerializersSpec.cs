@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
@@ -33,25 +34,29 @@ namespace Akka.Cluster.Tools.Tests
     }
 
     /// <summary>
-    /// Keeps <see cref="ToolsSerializers"/> in sync with Akka.Cluster.Tools' three reference.conf files
-    /// (Client, PublishSubscribe, Singleton). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
+    /// Checks how <see cref="ToolsSerializers"/> behaves in a running system. What the table contains is approved in
+    /// Akka.API.Tests (<c>SerializerTableSpec</c>). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class ToolsSerializersSpec : AkkaSpec
     {
-        private static readonly Config ToolsRows = ClusterClientReceptionist.DefaultConfig()
+        private static readonly Config ToolsConfig = ClusterClientReceptionist.DefaultConfig()
             .WithFallback(DistributedPubSub.DefaultConfig())
             .WithFallback(ClusterSingleton.DefaultConfig());
 
-        public ToolsSerializersSpec(ITestOutputHelper output) : base(ToolsRows, output)
+        public ToolsSerializersSpec(ITestOutputHelper output) : base(ToolsConfig, output)
         {
         }
 
-        [Fact(DisplayName = "ToolsSerializers should list no serializer or type that its reference.conf files do not")]
-        public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
+        private ImmutableHashSet<SerializerDetails> Table => new ToolsSerializers().Create((ExtendedActorSystem)Sys);
+
+        [Fact(DisplayName = "Serialization should resolve every Tools table entry on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_table_When_a_plain_system_has_no_Tools_rows()
         {
-            var table = new ToolsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ToolsRows, table.Create((ExtendedActorSystem)Sys));
+            // core's module map names Akka.Cluster.Tools, and ToolsSerializers is what it loads for it
+            ModuleSerializerTable.Default.ForAssembly("Akka.Cluster.Tools").Should().NotBeNull();
+
+            await ModuleSerializerSpecs.AssertPlainSystemResolvesTable("tools-plain", Table, (s, id) => s.GetSerializerById(id));
         }
 
         [Fact(DisplayName = "ToolsSerializers should build without throwing on a system that never loaded its reference.conf")]
@@ -60,15 +65,21 @@ namespace Akka.Cluster.Tools.Tests
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
-            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("tools-aqn", ToolsRows, Sys);
+            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("tools-aqn", Table, Sys);
 
-        [Fact(DisplayName = "Serialization should let application.conf override a reference.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_Tools_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in Tools binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_Tools_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("tools-override", overrides, ToolsRows, system =>
+            await ModuleSerializerSpecs.WithSystem("tools-override", overrides, withCopiedRows ? ModuleSerializerSpecs.RowsOf(Table) : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
@@ -76,6 +87,11 @@ namespace Akka.Cluster.Tools.Tests
                 serialization.FindSerializerForType(typeof(IDistributedPubSubMessage)).Should().BeOfType<DistributedPubSubMessageSerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace a built-in Tools alias when dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_a_Tools_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("tools-alias-override", "akka-pubsub",
+                typeof(IDistributedPubSubMessage), typeof(SendToOneSubscriber));
 
         [Fact(DisplayName = "Serialization should build every Tools serializer under its usual id, without a warning, when dynamic type loading is off")]
         public async Task Should_keep_the_Tools_serializer_ids_When_dynamic_type_loading_is_disabled()

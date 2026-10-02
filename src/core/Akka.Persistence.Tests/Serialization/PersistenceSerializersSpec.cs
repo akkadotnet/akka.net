@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -30,67 +31,27 @@ namespace Akka.Persistence.Tests.Serialization
     }
 
     /// <summary>
-    /// Keeps <see cref="PersistenceSerializers"/> in sync with persistence.conf. The shared checks live in
-    /// <see cref="ModuleSerializerSpecs"/>; this spec adds what is specific to Persistence, including the internal
-    /// API needed to force a reflection-only baseline for the parity comparison below.
+    /// Checks how <see cref="PersistenceSerializers"/> behaves in a running system. What the table contains is approved in
+    /// Akka.API.Tests (<c>SerializerTableSpec</c>). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class PersistenceSerializersSpec : AkkaSpec
     {
-        private const string SwitchName = "Akka.DynamicTypeLoading";
-
-        private static readonly ModuleSerializerTable NoModules = new(new Dictionary<string, Func<ModuleSerializers?>>());
-
-        private static readonly Config PersistenceRows = Persistence.DefaultConfig();
-
         private static readonly Type[] BoundSamples = { typeof(AtLeastOnceDeliverySnapshot), typeof(Akka.Persistence.Serialization.Snapshot) };
 
-        public PersistenceSerializersSpec(ITestOutputHelper output) : base(PersistenceRows, output)
+        public PersistenceSerializersSpec(ITestOutputHelper output) : base(Persistence.DefaultConfig(), output)
         {
         }
 
-        private static AkkaSerialization Build(ActorSystem system, ModuleSerializerTable table, bool dynamicTypeLoading)
-        {
-            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
-            AppContext.SetSwitch(SwitchName, dynamicTypeLoading);
-            try
-            {
-                return new AkkaSerialization((ExtendedActorSystem)system, table);
-            }
-            finally
-            {
-                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
-            }
-        }
+        private ImmutableHashSet<SerializerDetails> Table => new PersistenceSerializers().Create((ExtendedActorSystem)Sys);
 
-        [Fact(DisplayName = "PersistenceSerializers should resolve every persistence.conf row to the type and serializer reflection does")]
-        public void Should_match_reflection_When_resolving_every_persistence_conf_row()
+        [Fact(DisplayName = "Serialization should resolve every Persistence table entry on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_table_When_a_plain_system_has_no_Persistence_rows()
         {
-            var table = new PersistenceSerializers();
-            var details = table.Create((ExtendedActorSystem)Sys);
-            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, details);
-
             // core's module map names Akka.Persistence, and PersistenceSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Persistence").Should().NotBeNull();
 
-            var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
-            var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-
-            foreach (var entry in details)
-            {
-                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
-                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
-            }
-
-            foreach (var type in BoundSamples)
-                fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType(), type.FullName);
-        }
-
-        [Fact(DisplayName = "PersistenceSerializers should list no serializer or type that persistence.conf does not")]
-        public void Should_have_a_persistence_conf_row_When_the_table_lists_a_type()
-        {
-            var table = new PersistenceSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(PersistenceRows, table.Create((ExtendedActorSystem)Sys));
+            await ModuleSerializerSpecs.AssertPlainSystemResolvesTable("persistence-plain", Table, (s, id) => s.GetSerializerById(id));
         }
 
         [Fact(DisplayName = "PersistenceSerializers should build without throwing on a system that never loaded persistence.conf")]
@@ -99,15 +60,21 @@ namespace Akka.Persistence.Tests.Serialization
 
         [Fact(DisplayName = "Serialization should resolve persistence.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
-            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("persistence-aqn", PersistenceRows, Sys, BoundSamples);
+            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("persistence-aqn", Table, Sys, BoundSamples);
 
-        [Fact(DisplayName = "Serialization should let application.conf override a reference.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_Persistence_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in Persistence binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_Persistence_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Persistence.Serialization.Snapshot, Akka.Persistence"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("persistence-override", overrides, PersistenceRows, system =>
+            await ModuleSerializerSpecs.WithSystem("persistence-override", overrides, withCopiedRows ? ModuleSerializerSpecs.RowsOf(Table) : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
@@ -115,6 +82,11 @@ namespace Akka.Persistence.Tests.Serialization
                 serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<PersistenceMessageSerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace a built-in Persistence alias when dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_a_Persistence_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("persistence-alias-override", "akka-persistence-message",
+                typeof(AtLeastOnceDeliverySnapshot));
 
         [Fact(DisplayName = "Serialization should build every Persistence serializer under its usual id, without a warning, when dynamic type loading is off")]
         public async Task Should_keep_the_Persistence_serializer_ids_When_dynamic_type_loading_is_disabled()
