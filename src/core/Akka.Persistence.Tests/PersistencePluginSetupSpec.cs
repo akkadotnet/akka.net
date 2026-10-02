@@ -363,6 +363,44 @@ namespace Akka.Persistence.Tests
             });
         }
 
+        [Fact(DisplayName = "EventAdapters.Create should name event-adapters and event-adapter-bindings without a plugin path When called through the public overload")]
+        public async Task Should_name_settings_without_plugin_path_When_event_adapters_are_created_through_the_public_overload()
+        {
+            const string notBuiltIn = " is not built in and dynamic type loading is disabled. Use ";
+            const string switchText = " or enable the [Akka.DynamicTypeLoading] feature switch.";
+
+            // the adapter is unregistered: the setting reads event-adapters.<name>
+            var bindingOnly = PersistencePluginSetup.Empty.WithEventAdapterBinding<TaggedEvent>();
+            await RunAsync(false, AdapterHocon(), bindingOnly, system =>
+            {
+                var config = system.Settings.Config.GetConfig("akka.persistence.journal.inmem");
+
+                var exception = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
+
+                exception.Message.Should().StartWith("[event-adapters.");
+                exception.Message.Should().Contain("] [" + typeof(TagAdapter).FullName);
+                exception.Message.Should().NotContain("event-adapters.event-adapters");
+                exception.Message.Should().EndWith(notBuiltIn + "an event adapter registered through PersistencePluginSetup" + switchText);
+                return Task.CompletedTask;
+            });
+
+            // the adapters are registered, a binding key is not: the setting reads event-adapter-bindings
+            var adaptersOnly = PersistencePluginSetup.Empty
+                .WithEventAdapter(_ => new TagAdapter())
+                .WithEventAdapter(_ => new WriteOnlyAdapter())
+                .WithEventAdapter(_ => new ReadOnlyAdapter());
+            await RunAsync(false, AdapterHocon(), adaptersOnly, system =>
+            {
+                var config = system.Settings.Config.GetConfig("akka.persistence.journal.inmem");
+
+                var exception = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, config));
+
+                exception.Message.Should().StartWith("[event-adapter-bindings] [");
+                exception.Message.Should().EndWith(notBuiltIn + "an event type registered through PersistencePluginSetup.WithEventAdapterBinding" + switchText);
+                return Task.CompletedTask;
+            });
+        }
+
         [Fact(DisplayName = "PersistencePluginSetup should resolve the built-in stash overflow configurators When the switch is off")]
         public async Task Should_resolve_builtin_stash_overflow_configurators_When_switch_is_off()
         {

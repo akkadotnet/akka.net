@@ -301,13 +301,14 @@ namespace Akka.Persistence.Journal
         /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
-            => Create(system, config, "event-adapters");
+            => Create(system, config, string.Empty);
 
         /// <summary>
         /// INTERNAL API
         ///
         /// Same as <see cref="Create(ExtendedActorSystem, Config)"/>, but the caller names the plugin section
         /// that <paramref name="config"/> came from so that a failure points at the setting the user has to fix.
+        /// An empty path means the section is unknown, and the setting names start at <c>event-adapters</c>.
         /// </summary>
         internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath)
         {
@@ -346,7 +347,7 @@ namespace Akka.Persistence.Journal
                     type = registeredType;
                 else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                        $"{pluginPath}.event-adapter-bindings",
+                        $"{SettingPrefix(pluginPath)}event-adapter-bindings",
                         kv.Key,
                         "an event type registered through PersistencePluginSetup.WithEventAdapterBinding"));
                 else
@@ -443,6 +444,9 @@ namespace Akka.Persistence.Journal
             return adapter;
         }
 
+        private static string SettingPrefix(string pluginPath)
+            => string.IsNullOrEmpty(pluginPath) ? string.Empty : pluginPath + ".";
+
         private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system,
             PersistencePluginRegistry registry, string pluginPath)
         {
@@ -452,7 +456,7 @@ namespace Akka.Persistence.Journal
 
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                    $"{pluginPath}.event-adapters.{adapterName}",
+                    $"{SettingPrefix(pluginPath)}event-adapters.{adapterName}",
                     qualifiedName,
                     "an event adapter registered through PersistencePluginSetup"));
 
