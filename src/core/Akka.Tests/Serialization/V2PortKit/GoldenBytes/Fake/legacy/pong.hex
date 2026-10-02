@@ -1,0 +1,7 @@
+# Akka.NET golden bytes, Legacy wire. Recapture: AKKA_GOLDEN_CAPTURE=legacy dotnet test ...
+# case: pong
+# serializer: FakeLegacySerializer, id 39
+# manifest: "Q"
+# message: FakePong
+0000: 51 7c 70 6f 6e 67 2d 31 7c 39 30 30 30 30 30 30
+0010: 30 30 30 7c 54 72 75 65

@@ -1,0 +1,7 @@
+# Akka.NET golden bytes, V2 wire. Recapture: AKKA_GOLDEN_CAPTURE=v2 dotnet test ...
+# case: pong-false
+# serializer: FakeV2Serializer, id 79
+# manifest: "Q"
+# message: FakePong
+0000: 02 00 00 00 00 00 00 00 00 06 70 6f 6e 67 2d 32
+0010: 00
