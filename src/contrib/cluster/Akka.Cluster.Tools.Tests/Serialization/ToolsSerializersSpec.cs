@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
@@ -33,16 +34,12 @@ namespace Akka.Cluster.Tools.Tests
     }
 
     /// <summary>
-    /// Keeps <see cref="ToolsSerializers"/> in step with the rows Akka.Cluster.Tools' three reference.conf files
-    /// (Client, PublishSubscribe, Singleton) shipped at 1.6.0-beta1, which <see cref="FrozenSerializerRows"/> keeps.
-    /// The shared checks live in <see cref="ModuleSerializerSpecs"/>.
+    /// Checks how <see cref="ToolsSerializers"/> behaves in a running system. What the table contains is approved in
+    /// Akka.API.Tests (<c>SerializerTableSpec</c>). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class ToolsSerializersSpec : AkkaSpec
     {
-        // the three reference.conf files no longer ship these rows; the table has to keep matching what 1.6.0-beta1 shipped
-        private static readonly Config ToolsRows = FrozenSerializerRows.ClusterTools;
-
         private static readonly Config ToolsConfig = ClusterClientReceptionist.DefaultConfig()
             .WithFallback(DistributedPubSub.DefaultConfig())
             .WithFallback(ClusterSingleton.DefaultConfig());
@@ -51,16 +48,16 @@ namespace Akka.Cluster.Tools.Tests
         {
         }
 
-        [Fact(DisplayName = "ToolsSerializers should match the rows the reference.conf files shipped at 1.6.0-beta1")]
-        public void Should_match_the_frozen_rows_When_the_table_is_built()
-        {
-            var table = new ToolsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(ToolsRows, table.Create((ExtendedActorSystem)Sys));
-        }
+        private ImmutableHashSet<SerializerDetails> Table => new ToolsSerializers().Create((ExtendedActorSystem)Sys);
 
-        [Fact(DisplayName = "Serialization should resolve every frozen Tools row on a plain system, with dynamic type loading on and off")]
-        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Tools_rows()
-            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("tools-plain", ToolsRows, (s, id) => s.GetSerializerById(id));
+        [Fact(DisplayName = "Serialization should resolve every Tools table entry on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_table_When_a_plain_system_has_no_Tools_rows()
+        {
+            // core's module map names Akka.Cluster.Tools, and ToolsSerializers is what it loads for it
+            ModuleSerializerTable.Default.ForAssembly("Akka.Cluster.Tools").Should().NotBeNull();
+
+            await ModuleSerializerSpecs.AssertPlainSystemResolvesTable("tools-plain", Table, (s, id) => s.GetSerializerById(id));
+        }
 
         [Fact(DisplayName = "ToolsSerializers should build without throwing on a system that never loaded its reference.conf")]
         public async Task Should_build_without_throwing_When_its_config_is_absent()
@@ -68,7 +65,7 @@ namespace Akka.Cluster.Tools.Tests
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
-            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("tools-aqn", ToolsRows, Sys);
+            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("tools-aqn", Table, Sys);
 
         /// <remarks>
         /// With the rows present, the config is one an application copied from 1.5; without them, it is the
@@ -82,7 +79,7 @@ namespace Akka.Cluster.Tools.Tests
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("tools-override", overrides, withCopiedRows ? ToolsRows : null, system =>
+            await ModuleSerializerSpecs.WithSystem("tools-override", overrides, withCopiedRows ? ModuleSerializerSpecs.RowsOf(Table) : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 

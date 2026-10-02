@@ -1,0 +1,77 @@
+﻿module Akka.Cluster
+  akka-cluster: Akka.Cluster.Serialization.ClusterMessageSerializer, Akka.Cluster (id 5)
+    Akka.Cluster.IClusterMessage, Akka.Cluster
+    Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster
+  reliable-delivery: Akka.Cluster.Serialization.ReliableDeliverySerializer, Akka.Cluster (id 36)
+    Akka.Delivery.Internal.IDeliverySerializable, Akka
+module Akka.Cluster.Metrics
+  akka-cluster-metrics: Akka.Cluster.Metrics.Serialization.ClusterMetricsMessageSerializer, Akka.Cluster.Metrics (id 10)
+    Akka.Cluster.Metrics.AdaptiveLoadBalancingPool, Akka.Cluster.Metrics
+    Akka.Cluster.Metrics.CpuMetricsSelector, Akka.Cluster.Metrics
+    Akka.Cluster.Metrics.MemoryMetricsSelector, Akka.Cluster.Metrics
+    Akka.Cluster.Metrics.MixMetricsSelector, Akka.Cluster.Metrics
+    Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope, Akka.Cluster.Metrics
+module Akka.Cluster.Sharding
+  akka-sharding: Akka.Cluster.Sharding.Serialization.ClusterShardingMessageSerializer, Akka.Cluster.Sharding (id 13)
+    Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding
+module Akka.Cluster.Tools
+  akka-cluster-client: Akka.Cluster.Tools.Client.Serialization.ClusterClientMessageSerializer, Akka.Cluster.Tools (id 15)
+    Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools
+    Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, Akka.Cluster.Tools
+  akka-pubsub: Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools (id 9)
+    Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools
+    Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools
+  akka-singleton: Akka.Cluster.Tools.Singleton.Serialization.ClusterSingletonMessageSerializer, Akka.Cluster.Tools (id 14)
+    Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools
+module Akka.DistributedData
+  akka-data-replication: Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData (id 12)
+    Akka.DistributedData.IReplicatorMessage, Akka.DistributedData
+  akka-replicated-data: Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData (id 11)
+    Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData
+module Akka.Persistence
+  akka-persistence-message: Akka.Persistence.Serialization.PersistenceMessageSerializer, Akka.Persistence (id 7)
+    Akka.Persistence.Serialization.IMessage, Akka.Persistence
+  akka-persistence-snapshot: Akka.Persistence.Serialization.PersistenceSnapshotSerializer, Akka.Persistence (id 8)
+    Akka.Persistence.Serialization.Snapshot, Akka.Persistence
+module Akka.Remote
+  akka-containers: Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote (id 6)
+    Akka.Actor.ActorSelectionMessage, Akka
+  akka-misc: Akka.Remote.Serialization.MiscMessageSerializer, Akka.Remote (id 16)
+    Akka.Actor.ActorIdentity, Akka
+    Akka.Actor.IActorRef, Akka
+    Akka.Actor.Identify, Akka
+    Akka.Actor.IntentionalRestart, Akka
+    Akka.Actor.Kill, Akka
+    Akka.Actor.PoisonPill, Akka
+    Akka.Actor.RemoteScope, Akka
+    Akka.Actor.Status+Failure, Akka
+    Akka.Actor.Status+Success, Akka
+    Akka.Configuration.Config, Akka
+    Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote
+    Akka.Remote.RemoteWatcher+HeartbeatRsp, Akka.Remote
+    Akka.Remote.Routing.RemoteRouterConfig, Akka.Remote
+    Akka.Routing.BroadcastPool, Akka
+    Akka.Routing.ConsistentHashingPool, Akka
+    Akka.Routing.DefaultResizer, Akka
+    Akka.Routing.FromConfig, Akka
+    Akka.Routing.RandomPool, Akka
+    Akka.Routing.RoundRobinPool, Akka
+    Akka.Routing.ScatterGatherFirstCompletedPool, Akka
+    Akka.Routing.TailChoppingPool, Akka
+  akka-system-msg: Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote (id 22)
+    Akka.Dispatch.SysMsg.SystemMessage, Akka
+  artery-control: Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote (id 23)
+    Akka.Remote.Artery.IArteryControlMessage, Akka.Remote
+  daemon-create: Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote (id 3)
+    Akka.Remote.DaemonMsgCreate, Akka.Remote
+  primitive: Akka.Remote.Serialization.PrimitiveSerializers, Akka.Remote (id 17)
+    System.Int32, System.Private.CoreLib
+    System.Int64, System.Private.CoreLib
+    System.String, System.Private.CoreLib
+  proto: Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote (id 2)
+    Google.Protobuf.IMessage, Google.Protobuf
+module Akka.Streams
+  akka-stream-ref: Akka.Streams.Serialization.StreamRefSerializer, Akka.Streams (id 30)
+    Akka.Streams.Implementation.StreamRef.IStreamRefsProtocol, Akka.Streams
+    Akka.Streams.Implementation.StreamRef.SinkRefImpl, Akka.Streams
+    Akka.Streams.Implementation.StreamRef.SourceRefImpl, Akka.Streams

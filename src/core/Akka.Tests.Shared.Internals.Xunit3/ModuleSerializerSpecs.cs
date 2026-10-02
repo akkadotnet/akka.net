@@ -18,102 +18,66 @@ using FluentAssertions;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// The parity checks a module's serializer-table spec runs against <see cref="FrozenSerializerRows"/> - the
-    /// rows the module's HOCON shipped at 1.6.0-beta1, before the table became the only source of them: the table
-    /// matches the frozen rows in both directions, Akka.Hosting's AssemblyQualifiedName spelling still resolves,
-    /// and building with the switch off logs no warning. Every member here takes only public Akka types - a module's
-    /// internal <c>ModuleSerializers</c> table, and the internal API needed to force a reflection-only baseline for
-    /// comparison, stay in that module's own spec, which already has the access to use them.
+    /// The behavioural checks a module's serializer-table spec runs against its own live table: a plain system
+    /// resolves every alias, id and binding the table lists, a HOCON alias or binding override still wins, Akka.Hosting's
+    /// AssemblyQualifiedName spelling still resolves, and building with the switch off logs no warning. What the
+    /// tables contain is approved in Akka.API.Tests (<c>SerializerTableSpec</c>), so nothing here keeps a second
+    /// copy of it. Every member takes only public Akka types - a module's internal <c>ModuleSerializers</c> table
+    /// stays in that module's own spec, which already has the access to use it.
     /// </summary>
     public static class ModuleSerializerSpecs
     {
         private const string SwitchName = "Akka.DynamicTypeLoading";
 
-        /// <summary>The alias/type-name rows of `akka.actor.serializers` in <paramref name="moduleConfig"/>.</summary>
-        public static IEnumerable<(string Alias, string TypeName)> SerializerRows(Config moduleConfig) =>
-            moduleConfig.GetConfig("akka.actor.serializers").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetString()));
-
-        /// <summary>The type-name/alias rows of `akka.actor.serialization-bindings` in <paramref name="moduleConfig"/>.</summary>
-        public static IEnumerable<(string TypeName, string Alias)> BindingRows(Config moduleConfig) =>
-            moduleConfig.GetConfig("akka.actor.serialization-bindings").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetString()));
-
-        /// <summary>The type-name/id rows of `akka.actor.serialization-identifiers` in <paramref name="moduleConfig"/>.</summary>
-        public static IEnumerable<(string TypeName, int Id)> IdentifierRows(Config moduleConfig) =>
-            moduleConfig.GetConfig("akka.actor.serialization-identifiers").AsEnumerable().Select(kv => (kv.Key, kv.Value.GetInt()));
+        private static string Spell(Type type) => $"{type.FullName}, {type.Assembly.GetName().Name}";
 
         /// <summary>
-        /// Asserts a module's table is a complete, alias-accurate mirror of the rows 1.6.0-beta1 shipped: every
-        /// registration's alias names that registration's serializer type in `akka.actor.serializers` (and vice
-        /// versa - no extra alias), every `akka.actor.serialization-bindings` row matches exactly one registration
-        /// whose <c>UseFor</c> contains that row's type under that row's alias (and vice versa - no extra binding in
-        /// the table), and every serializer's <c>Identifier</c> equals its `akka.actor.serialization-identifiers`
-        /// row. The table also has to be consistent with itself: aliases are unique, and no type is bound twice.
+        /// The `akka.actor.serializers` and `akka.actor.serialization-bindings` rows an application would have copied
+        /// from a 1.5 reference.conf, written from <paramref name="table"/>.
         /// </summary>
-        /// <param name="frozenRows">The module's rows from <see cref="FrozenSerializerRows"/>.</param>
-        /// <param name="details">The module's built serializers, as its <c>ModuleSerializers.Create</c> returns them.</param>
-        public static void AssertTableMatchesFrozenRows(Config frozenRows, IEnumerable<SerializerDetails> details)
+        public static Config RowsOf(IEnumerable<SerializerDetails> table)
         {
-            var table = details.ToList();
-
-            table.Select(r => r.Alias).Should().OnlyHaveUniqueItems("an alias names one serializer");
-            table.SelectMany(r => r.UseFor).Should().OnlyHaveUniqueItems("a type is bound to one serializer");
-
-            var configuredTypeByAlias = SerializerRows(frozenRows)
-                .ToDictionary(r => r.Alias, r => Type.GetType(r.TypeName, throwOnError: true)!);
-
-            // aliases match in both directions: every table alias is a frozen row for the same type, and every
-            // frozen row has a table entry
-            table.Select(r => (r.Alias, Type: r.Serializer.GetType())).Should().BeEquivalentTo(
-                configuredTypeByAlias.Select(kv => (Alias: kv.Key, Type: kv.Value)));
-
-            var configuredBindings = BindingRows(frozenRows)
-                .Select(r => (Type: Type.GetType(r.TypeName, throwOnError: true)!, r.Alias));
-
-            var tableBindings = table.SelectMany(r => r.UseFor.Select(t => (Type: t, r.Alias)));
-
-            // bindings match in both directions: every table binding is a frozen row under the same alias, and
-            // every frozen row is bound by exactly one registration under that alias
-            tableBindings.Should().BeEquivalentTo(configuredBindings);
-
-            // ids match in both directions: the serializer ids are the wire contract with older nodes
-            table.Select(r => (Type: r.Serializer.GetType(), Id: r.Serializer.Identifier)).Should().BeEquivalentTo(
-                IdentifierRows(frozenRows).Select(r => (Type: Type.GetType(r.TypeName, throwOnError: true)!, r.Id)));
+            var details = table.ToList();
+            var serializers = details.Select(d => $@"{d.Alias} = ""{Spell(d.Serializer.GetType())}""");
+            var bindings = details.SelectMany(d => d.UseFor.Select(t => $@"""{Spell(t)}"" = {d.Alias}"));
+            return ConfigurationFactory.ParseString(
+                $"akka.actor.serializers {{\n{string.Join("\n", serializers)}\n}}\n" +
+                $"akka.actor.serialization-bindings {{\n{string.Join("\n", bindings)}\n}}");
         }
 
         /// <summary>
         /// Asserts a plain system - its config holds none of the module's rows, only the module's assembly is
-        /// deployed - resolves what 1.6.0-beta1 resolved from the shipped rows: every serializer id gives the
-        /// frozen type, and every bound type finds the serializer type its frozen alias names. Runs with dynamic
-        /// type loading on and off.
+        /// deployed - resolves what <paramref name="table"/> lists: every serializer id gives the table's serializer
+        /// type, and every bound type finds it. Runs with dynamic type loading on and off.
         /// </summary>
         /// <param name="systemName">A name for the throwaway systems.</param>
-        /// <param name="frozenRows">The module's rows from <see cref="FrozenSerializerRows"/>.</param>
+        /// <param name="table">The module's built serializers, as its <c>ModuleSerializers.Create</c> returns them.</param>
         /// <param name="getSerializerById">
         /// <c>(serialization, id) =&gt; serialization.GetSerializerById(id)</c> - that method is internal to Akka, which
         /// the module's test project can reach and this shared project cannot.
         /// </param>
-        public static async Task AssertPlainSystemResolvesFrozenRows(
-            string systemName, Config frozenRows, Func<Serialization, int, Serializer> getSerializerById)
+        public static async Task AssertPlainSystemResolvesTable(
+            string systemName, IEnumerable<SerializerDetails> table, Func<Serialization, int, Serializer> getSerializerById)
         {
-            var typeByAlias = SerializerRows(frozenRows)
-                .ToDictionary(r => r.Alias, r => Type.GetType(r.TypeName, throwOnError: true)!);
+            var details = table.ToList();
 
             foreach (var dynamicTypeLoading in new[] { true, false })
             {
                 await WithSystem($"{systemName}-{dynamicTypeLoading}", Config.Empty, null, system =>
                 {
-                    SerializerRows(system.Settings.Config).Select(r => r.Alias)
-                        .Should().NotContain(typeByAlias.Keys, "the module's rows are not in the config");
+                    system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().Select(kv => kv.Key)
+                        .Should().NotContain(details.Select(d => d.Alias), "the module's rows are not in the config");
 
                     var serialization = BuildDefault(system, dynamicTypeLoading);
 
-                    foreach (var (typeName, id) in IdentifierRows(frozenRows))
-                        getSerializerById(serialization, id).Should().BeOfType(Type.GetType(typeName, throwOnError: true)!, $"id {id}");
-
-                    foreach (var (typeName, alias) in BindingRows(frozenRows))
+                    foreach (var entry in details)
                     {
-                        var type = Type.GetType(typeName, throwOnError: true)!;
-                        serialization.FindSerializerForType(type).Should().BeOfType(typeByAlias[alias], $"{type.FullName}, dynamic type loading {dynamicTypeLoading}");
+                        var expected = entry.Serializer.GetType();
+                        getSerializerById(serialization, entry.Serializer.Identifier).Should().BeOfType(expected, $"id of {entry.Alias}");
+
+                        foreach (var type in entry.UseFor)
+                            serialization.FindSerializerForType(type).Should()
+                                .BeOfType(expected, $"{type.FullName}, dynamic type loading {dynamicTypeLoading}");
                     }
                 });
             }
@@ -155,7 +119,7 @@ namespace Akka.Serialization
         /// <summary>
         /// Starts a throwaway system from <paramref name="config"/> (falling back to <paramref name="moduleConfig"/>,
         /// then the default config), runs <paramref name="body"/>, then terminates it. <paramref name="moduleConfig"/>
-        /// may be null when a test deliberately wants a system without the module's own rows.
+        /// may be null when a test deliberately wants a system without any module rows.
         /// </summary>
         public static async Task WithSystem(string name, Config config, Config? moduleConfig, Action<ActorSystem> body)
         {
@@ -173,24 +137,25 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Asserts every row in <paramref name="moduleConfig"/>, respelled as an AssemblyQualifiedName the way
+        /// Asserts every alias and bound type of <paramref name="table"/>, respelled as an AssemblyQualifiedName the way
         /// Akka.Hosting writes it, still resolves with the switch off, matching what <paramref name="reference"/>
-        /// (a system already built from the module's own config) resolves for the same type. Pass
-        /// <paramref name="extraTypes"/> for bound types the binding rows alone don't name, such as a closed
+        /// (a system with no rows, so everything comes from the module's defaults) resolves for the same type. Pass
+        /// <paramref name="extraTypes"/> for bound types the table alone doesn't name, such as a closed
         /// generic sample of an open generic binding.
         /// </summary>
         public static async Task AssertHostingSpellingResolves(
-            string systemName, Config moduleConfig, ActorSystem reference, IEnumerable<Type>? extraTypes = null)
+            string systemName, IEnumerable<SerializerDetails> table, ActorSystem reference, IEnumerable<Type>? extraTypes = null)
         {
-            string Aqn(string typeName) => Type.GetType(typeName, throwOnError: true)!.AssemblyQualifiedName!;
+            var details = table.ToList();
             var hosting = ConfigurationFactory.ParseString(string.Join("\n",
-                SerializerRows(moduleConfig).Select(r => $@"akka.actor.serializers.{r.Alias} = ""{Aqn(r.TypeName)}""")
-                    .Concat(BindingRows(moduleConfig).Select(r => $@"akka.actor.serialization-bindings {{ ""{Aqn(r.TypeName)}"" = {r.Alias} }}"))));
+                details.Select(d => $@"akka.actor.serializers.{d.Alias} = ""{d.Serializer.GetType().AssemblyQualifiedName}""")
+                    .Concat(details.SelectMany(d => d.UseFor.Select(t =>
+                        $@"akka.actor.serialization-bindings {{ ""{t.AssemblyQualifiedName}"" = {d.Alias} }}")))));
 
-            await WithSystem(systemName, hosting, moduleConfig, system =>
+            await WithSystem(systemName, hosting, null, system =>
             {
                 var serialization = BuildDefault(system, dynamicTypeLoading: false);
-                var types = BindingRows(moduleConfig).Select(r => Type.GetType(r.TypeName, throwOnError: true)!);
+                var types = details.SelectMany(d => d.UseFor);
                 if (extraTypes is not null)
                     types = types.Concat(extraTypes);
 

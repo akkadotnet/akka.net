@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -32,20 +33,13 @@ namespace Akka.Streams.Tests.Serialization
     }
 
     /// <summary>
-    /// Keeps <see cref="StreamsSerializers"/> in step with the rows Akka.Streams' reference.conf shipped at
-    /// 1.6.0-beta1, which <see cref="FrozenSerializerRows"/> keeps. The shared checks live in
-    /// <see cref="ModuleSerializerSpecs"/>; this spec adds what is specific to Streams, including the internal
-    /// API needed to force a reflection-only baseline for the parity comparison below.
+    /// Checks how <see cref="StreamsSerializers"/> behaves in a running system. What the table contains is approved in
+    /// Akka.API.Tests (<c>SerializerTableSpec</c>). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class StreamsSerializersSpec : AkkaSpec
     {
         private const string SwitchName = "Akka.DynamicTypeLoading";
-
-        private static readonly ModuleSerializerTable NoModules = new(new Dictionary<string, Func<ModuleSerializers?>>());
-
-        // reference.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
-        private static readonly Config StreamsRows = FrozenSerializerRows.Streams;
 
         private static readonly Type[] BoundSamples = { typeof(SinkRefImpl<int>), typeof(SourceRefImpl<int>), typeof(CumulativeDemand) };
 
@@ -53,60 +47,15 @@ namespace Akka.Streams.Tests.Serialization
         {
         }
 
-        private static AkkaSerialization Build(ActorSystem system, ModuleSerializerTable table, bool dynamicTypeLoading)
-        {
-            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
-            AppContext.SetSwitch(SwitchName, dynamicTypeLoading);
-            try
-            {
-                return new AkkaSerialization((ExtendedActorSystem)system, table);
-            }
-            finally
-            {
-                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
-            }
-        }
+        private ImmutableHashSet<SerializerDetails> Table => new StreamsSerializers().Create((ExtendedActorSystem)Sys);
 
-        [Theory(DisplayName = "Serialization should resolve the Streams serializer and bound types as 1.6.0-beta1 did, with no Streams rows in the config")]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task Should_match_the_beta1_rows_When_the_config_has_no_Streams_rows(bool dynamicTypeLoading)
+        [Fact(DisplayName = "Serialization should resolve every Streams table entry on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_table_When_a_plain_system_has_no_Streams_rows()
         {
-            var details = new StreamsSerializers().Create((ExtendedActorSystem)Sys);
-
             // core's module map names Akka.Streams, and StreamsSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Streams").Should().NotBeNull();
 
-            // beta1 read the frozen rows from reference.conf and resolved them by reflection, with no module table
-            await ModuleSerializerSpecs.WithSystem("streams-beta1", Config.Empty, StreamsRows, system =>
-            {
-                var reflected = Build(system, NoModules, dynamicTypeLoading: true);
-
-                // Sys carries no Streams rows at all: everything below comes from the table's defaults
-                Sys.Settings.Config.HasPath("akka.actor.serializers.akka-stream-ref").Should().BeFalse();
-                var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading);
-
-                foreach (var entry in details)
-                {
-                    entry.Serializer.Identifier.Should().Be(30);
-                    entry.Serializer.Should().BeOfType(reflected.GetSerializerById(30).GetType(), entry.Alias);
-                    fromTable.GetSerializerById(30).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
-                }
-
-                foreach (var type in BoundSamples)
-                    fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType());
-            });
-        }
-
-        [Fact(DisplayName = "Serialization should resolve every frozen Streams row on a plain system, with dynamic type loading on and off")]
-        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Streams_rows()
-            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("streams-plain", StreamsRows, (s, id) => s.GetSerializerById(id));
-
-        [Fact(DisplayName = "StreamsSerializers should match the rows reference.conf shipped at 1.6.0-beta1")]
-        public void Should_match_the_frozen_rows_When_the_table_is_built()
-        {
-            var table = new StreamsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(StreamsRows, table.Create((ExtendedActorSystem)Sys));
+            await ModuleSerializerSpecs.AssertPlainSystemResolvesTable("streams-plain", Table, (s, id) => s.GetSerializerById(id));
         }
 
         [Fact(DisplayName = "StreamsSerializers should build without throwing on a system that never loaded its reference.conf")]
@@ -115,7 +64,7 @@ namespace Akka.Streams.Tests.Serialization
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
-            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("streams-aqn", StreamsRows, Sys, BoundSamples);
+            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("streams-aqn", Table, Sys, BoundSamples);
 
         /// <remarks>
         /// With the rows present, the config is one an application copied from 1.5; without them, it is the
@@ -129,7 +78,7 @@ namespace Akka.Streams.Tests.Serialization
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Streams.Implementation.StreamRef.SinkRefImpl, Akka.Streams"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("streams-override", overrides, withCopiedRows ? StreamsRows : null, system =>
+            await ModuleSerializerSpecs.WithSystem("streams-override", overrides, withCopiedRows ? ModuleSerializerSpecs.RowsOf(Table) : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 

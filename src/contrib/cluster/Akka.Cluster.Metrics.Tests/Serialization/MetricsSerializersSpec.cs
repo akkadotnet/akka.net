@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
@@ -28,16 +29,12 @@ namespace Akka.Cluster.Metrics.Tests
     }
 
     /// <summary>
-    /// Keeps <see cref="MetricsSerializers"/> in step with the rows Akka.Cluster.Metrics' reference.conf shipped at
-    /// 1.6.0-beta1, which <see cref="FrozenSerializerRows"/> keeps. The shared checks live in
-    /// <see cref="ModuleSerializerSpecs"/>.
+    /// Checks how <see cref="MetricsSerializers"/> behaves in a running system. What the table contains is approved in
+    /// Akka.API.Tests (<c>SerializerTableSpec</c>). The shared checks live in <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class MetricsSerializersSpec : AkkaSpec
     {
-        // reference.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
-        private static readonly Config MetricsRows = FrozenSerializerRows.Metrics;
-
         private static readonly Type[] BoundSamples =
         {
             typeof(MetricsGossipEnvelope), typeof(AdaptiveLoadBalancingPool), typeof(MixMetricsSelector),
@@ -48,16 +45,16 @@ namespace Akka.Cluster.Metrics.Tests
         {
         }
 
-        [Fact(DisplayName = "MetricsSerializers should match the rows reference.conf shipped at 1.6.0-beta1")]
-        public void Should_match_the_frozen_rows_When_the_table_is_built()
-        {
-            var table = new MetricsSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(MetricsRows, table.Create((ExtendedActorSystem)Sys));
-        }
+        private ImmutableHashSet<SerializerDetails> Table => new MetricsSerializers().Create((ExtendedActorSystem)Sys);
 
-        [Fact(DisplayName = "Serialization should resolve every frozen Metrics row on a plain system, with dynamic type loading on and off")]
-        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Metrics_rows()
-            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("metrics-plain", MetricsRows, (s, id) => s.GetSerializerById(id));
+        [Fact(DisplayName = "Serialization should resolve every Metrics table entry on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_table_When_a_plain_system_has_no_Metrics_rows()
+        {
+            // core's module map names Akka.Cluster.Metrics, and MetricsSerializers is what it loads for it
+            ModuleSerializerTable.Default.ForAssembly("Akka.Cluster.Metrics").Should().NotBeNull();
+
+            await ModuleSerializerSpecs.AssertPlainSystemResolvesTable("metrics-plain", Table, (s, id) => s.GetSerializerById(id));
+        }
 
         [Fact(DisplayName = "MetricsSerializers should build without throwing on a system that never loaded its reference.conf")]
         public async Task Should_build_without_throwing_When_its_config_is_absent()
@@ -65,7 +62,7 @@ namespace Akka.Cluster.Metrics.Tests
 
         [Fact(DisplayName = "Serialization should resolve reference.conf rows spelled as Akka.Hosting writes them when dynamic type loading is off")]
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
-            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("metrics-aqn", MetricsRows, Sys);
+            => await ModuleSerializerSpecs.AssertHostingSpellingResolves("metrics-aqn", Table, Sys);
 
         /// <remarks>
         /// With the rows present, the config is one an application copied from 1.5; without them, it is the
@@ -79,7 +76,7 @@ namespace Akka.Cluster.Metrics.Tests
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope, Akka.Cluster.Metrics"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("metrics-override", overrides, withCopiedRows ? MetricsRows : null, system =>
+            await ModuleSerializerSpecs.WithSystem("metrics-override", overrides, withCopiedRows ? ModuleSerializerSpecs.RowsOf(Table) : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
