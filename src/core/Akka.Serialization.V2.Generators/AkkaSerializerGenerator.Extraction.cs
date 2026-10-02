@@ -881,7 +881,33 @@ public sealed partial class AkkaSerializerGenerator
             isAbstract: symbol.IsAbstract,
             isValueType: symbol.IsValueType,
             foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes),
-            baseTypeNames: GetBaseTypeNames(symbol));
+            baseTypeNames: GetBaseTypeNames(symbol),
+            inaccessibleReason: DescribeInaccessibleDeclaration(symbol));
+    }
+
+    /// <summary>
+    /// Finds why generated code cannot name <paramref name="symbol"/>: it, or a type that contains
+    /// it, is declared private, protected, or private protected. The generated serializer is a
+    /// separate class that neither nests nor derives from the message, so it needs the whole
+    /// declaration chain to be public, internal, or protected internal. Returns an empty string when
+    /// the type is nameable. Only a type declared in this compilation can fail here: a
+    /// referenced-assembly type reaches ExtractMessageCore only after the AKKASG039 accessibility
+    /// check passed.
+    /// </summary>
+    private static string DescribeInaccessibleDeclaration(INamedTypeSymbol symbol)
+    {
+        for (INamedTypeSymbol? type = symbol; type != null; type = type.ContainingType)
+        {
+            if (!IsAccessibleFromGeneratedCode(type.DeclaredAccessibility))
+            {
+                var accessibility = type.DeclaredAccessibility == Accessibility.ProtectedAndInternal
+                    ? "private protected"
+                    : type.DeclaredAccessibility.ToString().ToLowerInvariant();
+                return type.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat) + " is " + accessibility;
+            }
+        }
+
+        return string.Empty;
     }
 
     /// <summary>

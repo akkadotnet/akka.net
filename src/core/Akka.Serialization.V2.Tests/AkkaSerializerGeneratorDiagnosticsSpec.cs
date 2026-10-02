@@ -2506,6 +2506,165 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostic.GetMessage(null).Contains("AkkaSerializerFormatter<", StringComparison.Ordinal).Should().BeFalse();
     }
 
+    private const string PrivateNestedMessageSource = """
+        #nullable enable
+        using Akka.Actor;
+        using Akka.Serialization.V2;
+
+        namespace DiagnosticSample;
+
+        public interface IProtocol
+        {
+        }
+
+        [AkkaSerializer<IProtocol>("sample", 199101)]
+        public sealed partial class SampleSerializer : AkkaSerializer
+        {
+            public static partial SerializerRegistration CreateRegistration();
+        }
+
+        public static class Holder
+        {
+            [AkkaSerializable(Manifest = "hidden-v1")]
+            private sealed record Hidden([property: AkkaField(1)] string Value) : IProtocol;
+        }
+        """;
+
+    [Fact(DisplayName = "Should_ReportAKKASG045_When_MessageTypeIsPrivateNested")]
+    public void Should_ReportAKKASG045_When_MessageTypeIsPrivateNested()
+    {
+        var result = GeneratorTestHarness.Run(PrivateNestedMessageSource);
+
+        var diagnostic = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG045").Subject;
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
+        diagnostic.GetMessage(null).Should().Contain("DiagnosticSample.Holder.Hidden is private");
+        diagnostic.GetMessage(null).Should().Contain("internal or public");
+
+        // The diagnostic reports at the type declaration, not on the serializer.
+        diagnostic.Location.Should().NotBe(Location.None);
+        var expectedLine = PrivateNestedMessageSource.Split('\n')
+            .Select((text, index) => (text, index))
+            .First(x => x.text.Contains("private sealed record Hidden", StringComparison.Ordinal)).index;
+        diagnostic.Location.GetLineSpan().StartLinePosition.Line.Should().Be(expectedLine);
+
+        // With AKKASG045 reported, the generator emits nothing that fails with CS0122.
+        result.AllDiagnostics.Should().NotContain(d => d.Id == "CS0122");
+    }
+
+    [Fact(DisplayName = "Should_ReportAKKASG045_When_MessageTypeIsPublicNestedInPrivateType")]
+    public void Should_ReportAKKASG045_When_MessageTypeIsPublicNestedInPrivateType()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 199102)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            public static class Holder
+            {
+                private static class Inner
+                {
+                    [AkkaSerializable(Manifest = "deep-v1")]
+                    public sealed record Deep([property: AkkaField(1)] string Value) : IProtocol;
+                }
+            }
+            """;
+
+        var result = GeneratorTestHarness.Run(source);
+
+        var diagnostic = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG045").Subject;
+        diagnostic.GetMessage(null).Should().Contain("DiagnosticSample.Holder.Inner is private");
+        result.AllDiagnostics.Should().NotContain(d => d.Id == "CS0122");
+    }
+
+    [Fact(DisplayName = "Should_NotReportAKKASG045_When_NestedMessageTypesAreInternalOrPublic")]
+    public void Should_NotReportAKKASG045_When_NestedMessageTypesAreInternalOrPublic()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 199103)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            public static class Holder
+            {
+                [AkkaSerializable(Manifest = "visible-v1")]
+                internal sealed record Visible([property: AkkaField(1)] string Value) : IProtocol;
+
+                [AkkaSerializable(Manifest = "open-v1")]
+                public sealed record Open([property: AkkaField(1)] string Value) : IProtocol;
+            }
+            """;
+
+        var result = GeneratorTestHarness.Run(source);
+
+        result.AllDiagnostics.Should().NotContain(d => d.Id == "AKKASG045");
+        result.AllDiagnostics.Should().NotContain(d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Should_NotClaimCrossAssemblyTypesUnsupported_When_ReportingAKKASG007ForReferencedType")]
+    public void Should_NotClaimCrossAssemblyTypesUnsupported_When_ReportingAKKASG007ForReferencedType()
+    {
+        const string assemblyA = """
+            #nullable enable
+            namespace DiagnosticSample.AssemblyA;
+
+            public sealed record Money(long Cents);
+            """;
+
+        const string assemblyB = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+            using DiagnosticSample.AssemblyA;
+
+            namespace DiagnosticSample.AssemblyB;
+
+            public interface IShop
+            {
+            }
+
+            [AkkaSerializable(Manifest = "pay-v1")]
+            public sealed record Pay([property: AkkaField(1)] Money Amount) : IShop;
+
+            [AkkaSerializer<IShop>("shop", 199104)]
+            public sealed partial class ShopSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var reference = GeneratorTestHarness.CompileToReference(assemblyA, "DiagnosticSampleAssemblyA");
+        var result = GeneratorTestHarness.Run(assemblyB, reference);
+
+        var message = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG007").Subject.GetMessage(null);
+        message.Should().Contain("is declared in assembly 'DiagnosticSampleAssemblyA'");
+        message.Should().Contain("[AkkaSerializable]");
+        message.Should().NotContain("cannot read a schema from a referenced assembly");
+    }
+
     // Delegates to the shared harness (Harness/GeneratorTestHarness.cs), which builds the base
     // metadata reference set once per process instead of once per test. Return shape/semantics are
     // unchanged: generator diagnostics followed by post-generation compile diagnostics.
