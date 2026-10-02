@@ -59,9 +59,9 @@ public sealed class WireFormatSnapshotFormatterSpec : IAsyncLifetime
 
     public static IEnumerable<object[]> CaseNames() => AllCaseNames.Select(name => new object[] { name });
 
-    [Theory(DisplayName = "Should_MatchCommittedSnapshot_When_FormatterAndScalarShapesAreSerialized")]
+    [Theory(DisplayName = "Should_MatchCommittedSnapshot_When_FormatterCollectionShapesAreSerialized")]
     [MemberData(nameof(CaseNames))]
-    public Task Should_MatchCommittedSnapshot_When_FormatterAndScalarShapesAreSerialized(string caseName)
+    public Task Should_MatchCommittedSnapshot_When_FormatterCollectionShapesAreSerialized(string caseName)
     {
         var wireCase = BuildCase(caseName);
         var hexDump = HexDumpFormatter.Format(caseName, wireCase.MessageType, wireCase.Manifest, wireCase.SerializerId, wireCase.Bytes);

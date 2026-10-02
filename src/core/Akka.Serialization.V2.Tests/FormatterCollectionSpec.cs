@@ -159,23 +159,6 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
         _serializer.ToBinary(message).Should().Equal(expected);
     }
 
-    [Fact(DisplayName = "Should_WriteFormatterBytesForKeysAndValues_When_DictionaryOfAddressToAddress")]
-    public void Should_WriteFormatterBytesForKeysAndValues_When_DictionaryOfAddressToAddress()
-    {
-        var message = new AddressToAddressMessage(new Dictionary<Address, Address> { [Local] = Remote });
-
-        var expected = WriteBytes((ref MessagePackWriter writer) =>
-        {
-            writer.WriteMapHeader(1);
-            writer.Write(1);
-            writer.WriteMapHeader(1);
-            new AddressFormatter().Write(ref writer, Local);
-            new AddressFormatter().Write(ref writer, Remote);
-        });
-
-        _serializer.ToBinary(message).Should().Equal(expected);
-    }
-
     [Fact(DisplayName = "Should_WriteSameBytesAsFieldPosition_When_FormattedTypeIsAFieldAndAnElement")]
     public void Should_WriteSameBytesAsFieldPosition_When_FormattedTypeIsAFieldAndAnElement()
     {
@@ -185,23 +168,6 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
         // Field position: map(1) { 1: <address> }. Element position: map(1) { 1: array(1) [<address>] }.
         // The address bytes are identical; the only difference is the one-byte array header.
         asElement.Should().Equal(asField.Take(2).Concat(new byte[] { 0x91 }).Concat(asField.Skip(2)));
-    }
-
-    [Fact(DisplayName = "Should_WriteNilForNullElements_When_FormattedElementIsNull")]
-    public void Should_WriteNilForNullElements_When_FormattedElementIsNull()
-    {
-        var message = new NullableAddressElementsMessage(new List<Address?> { null, Local });
-
-        var expected = WriteBytes((ref MessagePackWriter writer) =>
-        {
-            writer.WriteMapHeader(1);
-            writer.Write(1);
-            writer.WriteArrayHeader(2);
-            writer.WriteNil();
-            new AddressFormatter().Write(ref writer, Local);
-        });
-
-        _serializer.ToBinary(message).Should().Equal(expected);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -230,27 +196,6 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
         _serializer.SizeHint(message).Should().Be(_serializer.ToBinary(message).Length);
     }
 
-    [Fact(DisplayName = "Should_UseTheFormatterEncoding_When_ReferenceFormatterIsAnElement")]
-    public void Should_UseTheFormatterEncoding_When_ReferenceFormatterIsAnElement()
-    {
-        var message = new TagPositions(new List<PositionTag> { new("a") }, null, null, null, null, null);
-
-        var expected = WriteBytes((ref MessagePackWriter writer) =>
-        {
-            writer.WriteMapHeader(6);
-            writer.Write(1);
-            writer.WriteArrayHeader(1);
-            writer.Write("tag:a"); // PositionTagFormatter's own wire form, not a nested { 1: "a" } map
-            for (var field = 2; field <= 6; field++)
-            {
-                writer.Write(field);
-                writer.WriteNil();
-            }
-        });
-
-        _serializer.ToBinary(message).Should().Equal(expected);
-    }
-
     [Fact(DisplayName = "Should_RoundTripValueTypeFormatter_When_UsedAsElementKeyAndNullableValue")]
     public void Should_RoundTripValueTypeFormatter_When_UsedAsElementKeyAndNullableValue()
     {
@@ -273,32 +218,6 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
         _serializer.SizeHint(message).Should().Be(_serializer.ToBinary(message).Length);
     }
 
-    [Fact(DisplayName = "Should_WriteNilForNullElements_When_ValueTypeFormatterElementIsNullable")]
-    public void Should_WriteNilForNullElements_When_ValueTypeFormatterElementIsNullable()
-    {
-        var message = new CelsiusPositions(null, null, new List<PositionCelsius?> { null, new PositionCelsius(2.5) }, default, null, null);
-
-        var expected = WriteBytes((ref MessagePackWriter writer) =>
-        {
-            writer.WriteMapHeader(6);
-            writer.Write(1);
-            writer.WriteNil();
-            writer.Write(2);
-            writer.WriteNil();
-            writer.Write(3);
-            writer.WriteArrayHeader(2);
-            writer.WriteNil();
-            writer.Write(2.5); // PositionCelsiusFormatter writes a bare float64, no wrapper
-            for (var field = 4; field <= 6; field++)
-            {
-                writer.Write(field);
-                writer.WriteNil();
-            }
-        });
-
-        _serializer.ToBinary(message).Should().Equal(expected);
-    }
-
     [Fact(DisplayName = "Should_RoundTripActorRefs_When_CustomFormatterOverridesNativeEncodingInCollections")]
     public void Should_RoundTripActorRefs_When_CustomFormatterOverridesNativeEncodingInCollections()
     {
@@ -318,33 +237,6 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
         recovered.ByKey!.Keys.Single().Path.Should().Be(worker.Path);
         recovered.ImmutableArrayOf.Select(r => r.Path).Should().Equal(worker.Path, _system.DeadLetters.Path);
         _serializer.SizeHint(message).Should().Be(_serializer.ToBinary(message).Length);
-    }
-
-    [Fact(DisplayName = "Should_UseTheCustomActorRefFormatter_When_ActorRefIsAnElement")]
-    public void Should_UseTheCustomActorRefFormatter_When_ActorRefIsAnElement()
-    {
-        var path = Akka.Serialization.Serialization.SerializedActorPath(_system.DeadLetters);
-        var message = new RefPositions(new List<IActorRef> { _system.DeadLetters }, null, null, null, ImmutableArray<IActorRef>.Empty);
-
-        var expected = WriteBytes((ref MessagePackWriter writer) =>
-        {
-            writer.WriteMapHeader(5);
-            writer.Write(1);
-            writer.WriteArrayHeader(1);
-            writer.WriteArrayHeader(2); // PositionRefFormatter's own wire form: ["ref", path]
-            writer.Write("ref");
-            writer.Write(path);
-            writer.Write(2);
-            writer.WriteNil();
-            writer.Write(3);
-            writer.WriteNil();
-            writer.Write(4);
-            writer.WriteNil();
-            writer.Write(5);
-            writer.WriteArrayHeader(0);
-        });
-
-        _serializer.ToBinary(message).Should().Equal(expected);
     }
 
     [Fact(DisplayName = "Should_KeepNativeActorRefEncoding_When_NoActorRefFormatterIsRegistered")]
@@ -409,6 +301,22 @@ public sealed class FormatterCollectionSpec : IAsyncLifetime
 
         _serializer.ToBinary(message).Should().Equal(expected);
         RoundTrip(message).Natives.Should().Equal("x", "y");
+    }
+
+    [Fact(DisplayName = "Should_ReportUnknownSizeAndStillRoundTrip_When_AFormatterCannotSizeAnElementKeyOrValue")]
+    public void Should_ReportUnknownSizeAndStillRoundTrip_When_AFormatterCannotSizeAnElementKeyOrValue()
+    {
+        var element = new UnsizedElementMessage(new List<UnsizedTag> { new("a"), new("b") });
+        var key = new UnsizedKeyMessage(new Dictionary<UnsizedTag, int> { [new UnsizedTag("k")] = 1 });
+        var value = new UnsizedValueMessage(new Dictionary<int, UnsizedTag> { [1] = new UnsizedTag("v") });
+
+        _serializer.SizeHint(element).Should().Be(Akka.Serialization.SerializerV2.UnknownSize);
+        _serializer.SizeHint(key).Should().Be(Akka.Serialization.SerializerV2.UnknownSize);
+        _serializer.SizeHint(value).Should().Be(Akka.Serialization.SerializerV2.UnknownSize);
+
+        RoundTrip(element).Tags.Should().Equal(new UnsizedTag("a"), new UnsizedTag("b"));
+        RoundTrip(key).Tags.Should().BeEquivalentTo(new Dictionary<UnsizedTag, int> { [new UnsizedTag("k")] = 1 });
+        RoundTrip(value).Tags.Should().BeEquivalentTo(new Dictionary<int, UnsizedTag> { [1] = new UnsizedTag("v") });
     }
 
     private TMessage RoundTrip<TMessage>(TMessage message)
@@ -513,6 +421,7 @@ public sealed class PositionRefFormatter : IAkkaMessagePackFormatter<IActorRef>
 [AkkaSerializerFormatter<ActorPath, ActorPathFormatter>]
 [AkkaSerializerFormatter<PositionTag, PositionTagFormatter>]
 [AkkaSerializerFormatter<PositionCelsius, PositionCelsiusFormatter>]
+[AkkaSerializerFormatter<UnsizedTag, UnsizedTagFormatter>]
 [AkkaSerializerFormatter<IActorRef, PositionRefFormatter>]
 public sealed partial class FormatterPositionSerializer : AkkaSerializer
 {
@@ -600,3 +509,27 @@ public sealed record ActorPathPositions(
 public sealed record MixedMessage(
     [property: AkkaField(1)] List<string> Natives,
     [property: AkkaField(2)] List<Address> Addresses) : IFormatterPositionProtocol;
+
+/// <summary>A formatter that cannot cheaply size its value, so it reports <see cref="SerializerV2.UnknownSize"/>.</summary>
+public sealed record UnsizedTag(string Value);
+
+public sealed class UnsizedTagFormatter : IAkkaMessagePackFormatter<UnsizedTag>
+{
+    public void Write(ref MessagePackWriter writer, UnsizedTag value) => writer.Write(value.Value);
+
+    public UnsizedTag Read(ref MessagePackReader reader) => new(reader.ReadString() ?? string.Empty);
+
+    public int SizeOf(UnsizedTag value) => Akka.Serialization.SerializerV2.UnknownSize;
+}
+
+[AkkaSerializable(Manifest = "unsized-element-v1")]
+public sealed record UnsizedElementMessage(
+    [property: AkkaField(1)] List<UnsizedTag> Tags) : IFormatterPositionProtocol;
+
+[AkkaSerializable(Manifest = "unsized-key-v1")]
+public sealed record UnsizedKeyMessage(
+    [property: AkkaField(1)] Dictionary<UnsizedTag, int> Tags) : IFormatterPositionProtocol;
+
+[AkkaSerializable(Manifest = "unsized-value-v1")]
+public sealed record UnsizedValueMessage(
+    [property: AkkaField(1)] Dictionary<int, UnsizedTag> Tags) : IFormatterPositionProtocol;
