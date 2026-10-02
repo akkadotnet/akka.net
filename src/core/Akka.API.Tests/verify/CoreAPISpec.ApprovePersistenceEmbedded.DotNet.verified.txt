@@ -66,6 +66,11 @@ namespace Akka.Persistence.Embedded
         public static Akka.Configuration.Config DefaultQueryConfiguration { get; }
         public static Akka.Configuration.Config DefaultSnapshotConfiguration { get; }
     }
+    public static class SqlitePersistenceSetupExtensions
+    {
+        public static Akka.Persistence.PersistencePluginSetup WithEmbeddedPersistence(this Akka.Persistence.PersistencePluginSetup setup) { }
+        public static Akka.Persistence.Query.PersistenceQuerySetup WithEmbeddedReadJournal(this Akka.Persistence.Query.PersistenceQuerySetup setup) { }
+    }
     public enum TagWriteMode
     {
         Csv = 0,
