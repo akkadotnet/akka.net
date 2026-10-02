@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#nullable enable
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -394,4 +392,3 @@ namespace Akka.Routing
         #endregion
     }
 }
-
