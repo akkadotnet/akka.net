@@ -450,8 +450,12 @@ namespace Akka.Persistence.Embedded.Tests.Query
             first.Should().NotBeSameAs(second);
             foreach (var journal in new[] { first, second })
             {
-                var events = await journal.CurrentAllEvents(NoOffset.Instance).RunWith(Sink.Seq<EventEnvelope>(), Mat).WaitAsync(Timeout);
-                events.Select(e => e.PersistenceId).Should().Equal("two");
+                // the tracker answers 0 until its first poll finished, so a query right after start may see nothing yet
+                await AwaitAssertAsync(async () =>
+                {
+                    var events = await journal.CurrentAllEvents(NoOffset.Instance).RunWith(Sink.Seq<EventEnvelope>(), Mat).WaitAsync(Timeout);
+                    events.Select(e => e.PersistenceId).Should().Equal("two");
+                }, Timeout);
             }
         }
     }
