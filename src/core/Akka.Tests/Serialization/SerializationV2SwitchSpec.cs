@@ -27,7 +27,7 @@ using AkkaSerialization = Akka.Serialization.Serialization;
 namespace Akka.Tests.Serialization
 {
     /// <summary>
-    /// The Serialization V2 switch (<c>akka.actor.serialization-v2</c> / <see cref="SerializationV2Setup"/>), driven by
+    /// The Serialization V2 switch (<c>akka.actor.serialization-v2</c>), driven by
     /// a fake module keyed as "Akka.Tests": a legacy row, the read-only V2 row that supersedes it, and an unrelated
     /// native row the switch must leave alone. No first-party module ships a V2 row yet.
     /// </summary>
@@ -338,26 +338,6 @@ namespace Akka.Tests.Serialization
                 serialization.FindSerializerForType(typeof(ProtocolMessage)).Should().BeOfType<LegacySerializer>();
                 serialization.FindSerializerForType(typeof(OtherProtocolMessage)).Should().BeOfType<V2Serializer>();
             }, setup);
-        }
-
-        [Theory(DisplayName = "Should_let_SerializationV2Setup_win_over_HOCON_When_both_set_the_switch")]
-        [InlineData("akka.actor.serialization-v2 = on", false, true)]
-        [InlineData("akka.actor.serialization-v2 = on", false, false)]
-        [InlineData("akka.actor.serialization-v2 = off", true, true)]
-        [InlineData("akka.actor.serialization-v2 = off", true, false)]
-        [InlineData(null, true, false)]
-        public async Task Should_let_SerializationV2Setup_win_over_HOCON_When_both_set_the_switch(string? hocon, bool setupEnabled, bool dynamicTypeLoading)
-        {
-            await WithSystem(hocon, async system =>
-            {
-                var serialization = await Build(system, dynamicTypeLoading);
-
-                if (setupEnabled)
-                    AssertV2Bindings(serialization);
-                else
-                    AssertLegacyBindings(serialization);
-                AssertBothFormatsRead(serialization);
-            }, SerializationV2Setup.Create(setupEnabled));
         }
 
         [Theory(DisplayName = "Should_move_the_taken_over_bindings_to_the_override_When_user_HOCON_overrides_the_V2_alias")]
