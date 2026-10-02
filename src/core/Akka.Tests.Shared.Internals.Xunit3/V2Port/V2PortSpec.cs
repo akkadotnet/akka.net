@@ -9,12 +9,16 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Serialization;
 using FluentAssertions;
+using VerifyXunit;
 using Xunit;
+using Xunit.Sdk;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit;
@@ -22,28 +26,35 @@ namespace Akka.TestKit;
 /// <summary>One message of a port's corpus and the manifest the legacy serializer gives it.</summary>
 /// <param name="Message">A deterministic message (no clock, no random values), or the golden bytes drift.</param>
 /// <param name="Manifest">The legacy manifest token. The V2 serializer must reuse it.</param>
-/// <param name="Name">Unique in the corpus. Names the golden file.</param>
+/// <param name="Name">Unique in the corpus. Names the snapshot files.</param>
 public sealed record V2PortCase(object Message, string Manifest, string Name);
 
 /// <summary>
 /// The spec a V2 serializer port derives from: a legacy serializer gets a V2 twin at id + 40 (inside 40-79) with
-/// the same manifests. Supply the two serializers, a corpus and a golden folder; the tests come with the base class.
+/// the same manifests. Supply the two serializers and a corpus; the tests come with the base class. The golden checks
+/// are Verify snapshots in a <c>Snapshots</c> folder next to the derived spec's source file (see the README).
 /// Both serializers must be registered the way a deployed node has them (a module's table, or a setup), with no bindings on the V2 row.
 /// </summary>
 public abstract class V2PortSpec : AkkaSpec
 {
     private const string DynamicTypeLoadingSwitch = "Akka.DynamicTypeLoading";
 
+    private readonly string _sourceFile;
+
     /// <param name="output">Forwarded to <see cref="AkkaSpec"/> so actor system logs reach the test output.</param>
     /// <param name="config">The system's config.</param>
-    protected V2PortSpec(ITestOutputHelper output, Config? config = null) : base(output, config)
+    /// <param name="sourceFile">Filled in by the compiler with the derived spec's source path. Leave it out.</param>
+    protected V2PortSpec(ITestOutputHelper output, Config? config = null, [CallerFilePath] string sourceFile = "") : base(output, config)
     {
+        _sourceFile = sourceFile;
     }
 
     /// <param name="setup">The system's setup, for ports that register serializers through a <see cref="SerializationSetup"/>.</param>
     /// <param name="output">Forwarded to <see cref="AkkaSpec"/>.</param>
-    protected V2PortSpec(ActorSystemSetup setup, ITestOutputHelper output) : base(setup, output)
+    /// <param name="sourceFile">Filled in by the compiler with the derived spec's source path. Leave it out.</param>
+    protected V2PortSpec(ActorSystemSetup setup, ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(setup, output)
     {
+        _sourceFile = sourceFile;
     }
 
     /// <summary>Builds the legacy serializer.</summary>
@@ -55,8 +66,8 @@ public abstract class V2PortSpec : AkkaSpec
     /// <summary>The corpus: every manifest the legacy serializer writes, edge values included.</summary>
     protected abstract IReadOnlyList<V2PortCase> Cases { get; }
 
-    /// <summary>The golden folder, <c>GoldenBytes.For("GoldenBytes/X")</c>. Files go in its <c>legacy</c> and <c>v2</c> sub-folders.</summary>
-    protected abstract GoldenBytes Golden { get; }
+    /// <summary>Starts the snapshot file names: <c>Snapshots/{SnapshotPrefix}.{case}.legacy.verified.txt</c>. Defaults to the spec's type name.</summary>
+    protected virtual string SnapshotPrefix => GetType().Name;
 
     private ExtendedActorSystem Node => (ExtendedActorSystem)Sys;
 
@@ -151,21 +162,47 @@ public abstract class V2PortSpec : AkkaSpec
     }
 
     [Fact(DisplayName = "Should_MatchGoldenV2Bytes_When_V2Serializes")]
-    public void Should_MatchGoldenV2Bytes_When_V2Serializes()
+    public Task Should_MatchGoldenV2Bytes_When_V2Serializes()
     {
         var v2 = CreateV2(Node);
 
-        foreach (var c in Cases)
-            Golden.Check("v2/" + c.Name, v2.ToBinary(c.Message));
+        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message));
     }
 
     [Fact(DisplayName = "Should_MatchGoldenLegacyBytes_When_LegacySerializes")]
-    public void Should_MatchGoldenLegacyBytes_When_LegacySerializes()
+    public Task Should_MatchGoldenLegacyBytes_When_LegacySerializes()
     {
         var legacy = CreateLegacy(Node);
 
+        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message));
+    }
+
+    /// <summary>
+    /// Verifies one hex dump per case as <c>{prefix}.{case}.{kind}</c>. Every case runs before the test fails, so a first
+    /// run writes all the <c>.received.txt</c> files at once.
+    /// </summary>
+    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize)
+    {
+        var failures = new List<string>();
+
         foreach (var c in Cases)
-            Golden.Check("legacy/" + c.Name, legacy.ToBinary(c.Message));
+        {
+            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), c.Manifest, serializerId, serialize(c));
+
+            try
+            {
+                await Verifier.Verify(hexDump, sourceFile: _sourceFile)
+                    .UseDirectory("Snapshots")
+                    .UseFileName($"{SnapshotPrefix}.{c.Name}.{kind}");
+            }
+            catch (Exception e) // Verify's mismatch exception is internal
+            {
+                failures.Add($"{c.Name} ({kind}): {e.Message}");
+            }
+        }
+
+        if (failures.Count > 0)
+            throw new XunitException(string.Join(Environment.NewLine + Environment.NewLine, failures));
     }
 
     private static void AssertV2RoundTrip(SerializerV2 v2, V2PortCase c)
