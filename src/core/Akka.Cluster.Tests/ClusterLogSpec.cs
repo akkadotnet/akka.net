@@ -20,7 +20,6 @@ namespace Akka.Cluster.Tests
     {
         public const string Config = @"
             akka.cluster {
-              auto-down-unreachable-after = 0s
               publish-stats-interval = 0s # always, when it happens
               run-coordinated-shutdown-when-down = off
             }

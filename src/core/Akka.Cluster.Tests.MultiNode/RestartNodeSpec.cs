@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = DebugConfig(true)
-                .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after = 5s"))
+                .WithFallback(AutoDowning.GetConfig(TimeSpan.FromSeconds(5)))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }

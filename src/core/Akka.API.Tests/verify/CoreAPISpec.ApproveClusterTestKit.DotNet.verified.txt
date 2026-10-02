@@ -1,0 +1,96 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.Cluster.TestKit
+{
+    public sealed class AutoDowning : Akka.Cluster.IDowningProvider
+    {
+        public AutoDowning(Akka.Actor.ActorSystem system, Akka.Cluster.Cluster cluster) { }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props? DowningActorProps { get; }
+        public static Akka.Configuration.Config GetConfig(System.TimeSpan autoDownUnreachableAfter) { }
+    }
+    public abstract class MultiNodeClusterSpec : Akka.Remote.TestKit.MultiNodeSpec
+    {
+        protected MultiNodeClusterSpec(Akka.Remote.TestKit.MultiNodeConfig config, System.Type type) { }
+        protected MultiNodeClusterSpec(Akka.Remote.TestKit.RoleName myself, Akka.Actor.ActorSystem system, System.Collections.Immutable.ImmutableList<Akka.Remote.TestKit.RoleName> roles, System.Func<Akka.Remote.TestKit.RoleName, System.Collections.Immutable.ImmutableList<string>> deployments) { }
+        protected MultiNodeClusterSpec(Akka.Remote.TestKit.RoleName myself, Akka.Actor.Setup.ActorSystemSetup setup, System.Collections.Immutable.ImmutableList<Akka.Remote.TestKit.RoleName> roles, System.Func<Akka.Remote.TestKit.RoleName, System.Collections.Immutable.ImmutableList<string>> deployments) { }
+        public Akka.Cluster.Cluster Cluster { get; }
+        protected override int InitialParticipantsValueFactory { get; }
+        protected override void AfterTermination() { }
+        public void AssertLeader(params Akka.Remote.TestKit.RoleName[] nodesInCluster) { }
+        public void AssertLeaderIn(System.Collections.Immutable.ImmutableList<Akka.Remote.TestKit.RoleName> nodesInCluster) { }
+        public void AssertMembers(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> gotMembers, params Akka.Actor.Address[] expectedAddresses) { }
+        protected override void AtStartup() { }
+        public void AwaitAllReachable() { }
+        public System.Threading.Tasks.Task AwaitAllReachableAsync() { }
+        public void AwaitClusterUp(params Akka.Remote.TestKit.RoleName[] roles) { }
+        public System.Threading.Tasks.Task AwaitClusterUpAsync(params Akka.Remote.TestKit.RoleName[] roles) { }
+        public System.Threading.Tasks.Task AwaitClusterUpAsync(System.Threading.CancellationToken cancellationToken, params Akka.Remote.TestKit.RoleName[] roles) { }
+        public void AwaitMembersUp(int numbersOfMembers, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> canNotBePartOfMemberRing = null, [Akka.TestKit.AutoDilate] System.TimeSpan? timeout = default) { }
+        public System.Threading.Tasks.Task AwaitMembersUpAsync(int numbersOfMembers, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> canNotBePartOfMemberRing = null, [Akka.TestKit.AutoDilate] System.TimeSpan? timeout = default, System.Threading.CancellationToken cancellationToken = default) { }
+        public void AwaitSeenSameState(params Akka.Actor.Address[] addresses) { }
+        public System.Threading.Tasks.Task AwaitSeenSameStateAsync(System.Threading.CancellationToken cancellationToken, params Akka.Actor.Address[] addresses) { }
+        public Akka.Cluster.Tests.MultiNode.FailureDetectorPuppet FailureDetectorPuppet(Akka.Actor.Address address) { }
+        public Akka.Actor.Address GetAddress(Akka.Remote.TestKit.RoleName role) { }
+        public bool IsFailureDetectorPuppet() { }
+        public void JoinWithin(Akka.Remote.TestKit.RoleName joinNode, [Akka.TestKit.AutoDilate] System.TimeSpan? max = default, System.TimeSpan? interval = default) { }
+        public void MarkNodeAsAvailable(Akka.Actor.Address address) { }
+        public void MarkNodeAsUnavailable(Akka.Actor.Address address) { }
+        public virtual void MuteLog(Akka.Actor.ActorSystem sys = null) { }
+        protected void MuteMarkingAsReachable(Akka.Actor.ActorSystem system = null) { }
+        protected void MuteMarkingAsUnreachable(Akka.Actor.ActorSystem system = null) { }
+        public Akka.Remote.TestKit.RoleName RoleName(Akka.Actor.Address addr) { }
+        public Akka.Remote.TestKit.RoleName RoleOfLeader(System.Collections.Immutable.ImmutableList<Akka.Remote.TestKit.RoleName> nodesInCluster) { }
+        public void StartClusterNode() { }
+        public System.Threading.Tasks.Task StartClusterNodeAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public static Akka.Configuration.Config ClusterConfig() { }
+        public static Akka.Configuration.Config ClusterConfig(bool failureDetectorPuppet) { }
+        public static Akka.Configuration.Config ClusterConfigWithFailureDetectorPuppet() { }
+        public class EndActor : Akka.Actor.UntypedActor
+        {
+            public EndActor(Akka.Actor.IActorRef testActor, Akka.Actor.Address target) { }
+            protected override void OnReceive(object message) { }
+            public sealed class End
+            {
+                public static Akka.Cluster.TestKit.MultiNodeClusterSpec.EndActor.End Instance { get; }
+            }
+            public sealed class EndAck
+            {
+                public static Akka.Cluster.TestKit.MultiNodeClusterSpec.EndActor.EndAck Instance { get; }
+            }
+            public sealed class SendEnd
+            {
+                public static Akka.Cluster.TestKit.MultiNodeClusterSpec.EndActor.SendEnd Instance { get; }
+            }
+        }
+        public class RoleNameComparer : System.Collections.Generic.IComparer<Akka.Remote.TestKit.RoleName>
+        {
+            public RoleNameComparer(Akka.Cluster.TestKit.MultiNodeClusterSpec spec) { }
+            public int Compare(Akka.Remote.TestKit.RoleName x, Akka.Remote.TestKit.RoleName y) { }
+        }
+    }
+}
+namespace Akka.Cluster.Tests.MultiNode
+{
+    public class FailureDetectorPuppet : Akka.Remote.FailureDetector
+    {
+        public FailureDetectorPuppet(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
+        public override bool IsAvailable { get; }
+        public override bool IsMonitoring { get; }
+        public override void HeartBeat() { }
+        public void MarkNodeAsAvailable() { }
+        public void MarkNodeAsUnavailable() { }
+        public enum Status
+        {
+            Up = 0,
+            Down = 1,
+            Unknown = 2,
+        }
+    }
+    public static class MultiNodeLoggingConfig
+    {
+        public static Akka.Configuration.Config LoggingConfig { get; }
+    }
+}

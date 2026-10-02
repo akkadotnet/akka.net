@@ -1,4 +1,7 @@
-﻿//-----------------------------------------------------------------------
+﻿extern alias ClusterTestKit;
+extern alias ClusterTestKitXunit2;
+
+//-----------------------------------------------------------------------
 // <copyright file="CoreAPISpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -20,6 +23,8 @@ using Akka.Persistence.Query.InMemory;
 using Akka.Streams;
 using Akka.TestKit;
 using VerifyXunit;
+using ClusterTestKitAutoDowning = ClusterTestKit::Akka.Cluster.TestKit.AutoDowning;
+using ClusterTestKitXunit2AutoDowning = ClusterTestKitXunit2::Akka.Cluster.TestKit.AutoDowning;
 
 namespace Akka.API.Tests
 {
@@ -77,6 +82,18 @@ namespace Akka.API.Tests
         public Task ApproveCluster()
         {
             return VerifyAssembly<ClusterSettings>();
+        }
+
+        [Fact]
+        public Task ApproveClusterTestKit()
+        {
+            return VerifyAssembly<ClusterTestKitAutoDowning>();
+        }
+
+        [Fact]
+        public Task ApproveClusterTestKitXunit2()
+        {
+            return VerifyAssembly<ClusterTestKitXunit2AutoDowning>();
         }
 
         [Fact]

@@ -45,9 +45,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.loglevel = DEBUG
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI stalls during formation (default 3s); keep 0s auto-down (spec crashes nodes)
+                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI stalls during formation (default 3s); keep zero-delay TestKit downing (spec crashes nodes)
             ")
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.Zero))
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());

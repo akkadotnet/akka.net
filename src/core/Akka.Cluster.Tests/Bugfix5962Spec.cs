@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    public class Bugfix5962Spec : TestKit.Xunit.TestKit
+    public class Bugfix5962Spec : global::Akka.TestKit.Xunit.TestKit
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
 akka {

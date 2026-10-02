@@ -35,11 +35,11 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                  akka.cluster.auto-down-unreachable-after = 2s
                   akka.cluster.retry-unsuccessful-join-after = 3s
                   akka.remote.retry-gate-closed-for = 45s
                   akka.remote.log-remote-lifecycle-events = INFO
                 "))
+                .WithFallback(AutoDowning.GetConfig(TimeSpan.FromSeconds(2)))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }

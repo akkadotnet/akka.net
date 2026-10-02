@@ -20,13 +20,6 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster
 {
-    [Akka.Annotations.InternalApi]
-    public sealed class AutoDowning : Akka.Cluster.IDowningProvider
-    {
-        public AutoDowning(Akka.Actor.ActorSystem system, Akka.Cluster.Cluster cluster) { }
-        public System.TimeSpan DownRemovalMargin { get; }
-        public Akka.Actor.Props DowningActorProps { get; }
-    }
     public class Cluster : Akka.Actor.IExtension
     {
         public Cluster(Akka.Actor.Internal.ActorSystemImpl system) { }
@@ -195,9 +188,6 @@ namespace Akka.Cluster
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public bool AllowWeaklyUpMembers { get; }
         public Akka.Util.AppVersion AppVersion { get; }
-        [System.Obsolete("Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR " +
-            "instead")]
-        public System.TimeSpan? AutoDownUnreachableAfter { get; }
         public System.Type DowningProviderType { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
