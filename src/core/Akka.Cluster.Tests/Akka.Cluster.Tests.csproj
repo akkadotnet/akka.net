@@ -21,4 +21,8 @@
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="CsCheck" Version="4.8.0" />
+  </ItemGroup>
+
 </Project>
