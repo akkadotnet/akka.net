@@ -187,7 +187,7 @@ public sealed partial class ScalarGoldenSerializer
             switch (__fieldId)
             {
                 case 1:
-                    span = new global::System.TimeSpan(reader.ReadInt64());
+                    span = ReadTimeSpan(ref reader);
                     __hasSpan = true;
                     break;
                 case 2:
@@ -347,7 +347,7 @@ public sealed partial class ScalarGoldenSerializer
                     if (reader.TryReadNil())
                         span = null;
                     else
-                        span = new global::System.TimeSpan(reader.ReadInt64());
+                        span = ReadTimeSpan(ref reader);
                     break;
                 case 2:
                     if (reader.TryReadNil())
@@ -570,7 +570,7 @@ public sealed partial class ScalarGoldenSerializer
                         for (var __i2 = 0; __i2 < __len0; __i2++)
                         {
                             global::System.TimeSpan __item3;
-                            __item3 = new global::System.TimeSpan(reader.ReadInt64());
+                            __item3 = ReadTimeSpan(ref reader);
                             __col1.Add(__item3);
                         }
                         spans = __col1;
@@ -632,7 +632,7 @@ public sealed partial class ScalarGoldenSerializer
                         for (var __i15 = 0; __i15 < __len13; __i15++)
                         {
                             global::System.TimeSpan __key16;
-                            __key16 = new global::System.TimeSpan(reader.ReadInt64());
+                            __key16 = ReadTimeSpan(ref reader);
                             float? __val17;
                             if (reader.TryReadNil())
                                 __val17 = null;

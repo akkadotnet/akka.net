@@ -413,6 +413,10 @@ public abstract class AkkaSerializer : SerializerV2
             throw new MessagePackSerializationException(
                 $"The integer on the wire does not fit in a signed 64-bit integer, so it cannot be read as [{targetType}].", ex);
         }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [{targetType}]: {ex.Message}", ex);
+        }
     }
 
     private static ulong ReadUnsignedInteger(ref MessagePackReader reader, string targetType)
@@ -426,10 +430,21 @@ public abstract class AkkaSerializer : SerializerV2
             throw new MessagePackSerializationException(
                 $"The integer on the wire is negative or too large for an unsigned 64-bit integer, so it cannot be read as [{targetType}].", ex);
         }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [{targetType}]: {ex.Message}", ex);
+        }
     }
 
     private static MessagePackSerializationException OutOfRange(string targetType, string value, string range)
         => new($"The integer [{value}] on the wire is outside the range of [{targetType}] ({range}).");
+
+    /// <summary>
+    /// Reads a <see cref="TimeSpan"/> written as the signed integer of its <see cref="TimeSpan.Ticks"/>.
+    /// Every int64 is a valid tick count, so only a value beyond int64 (or a non-integer) is rejected.
+    /// </summary>
+    protected static TimeSpan ReadTimeSpan(ref MessagePackReader reader)
+        => new(ReadSignedInteger(ref reader, "System.TimeSpan"));
 
     protected static short ReadInt16(ref MessagePackReader reader)
     {
@@ -498,7 +513,16 @@ public abstract class AkkaSerializer : SerializerV2
     /// </summary>
     protected static float ReadSingle(ref MessagePackReader reader)
     {
-        var wide = reader.ReadDouble();
+        double wide;
+        try
+        {
+            wide = reader.ReadDouble();
+        }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [System.Single]: {ex.Message}", ex);
+        }
+
         var narrow = (float)wide;
         if (float.IsInfinity(narrow) && !double.IsInfinity(wide))
             throw new MessagePackSerializationException(

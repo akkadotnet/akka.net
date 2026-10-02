@@ -1853,7 +1853,7 @@ public sealed partial class AkkaSerializerGenerator
                 w.Local(target).Line(" = ReadChar(ref reader);");
                 break;
             case FieldKind.TimeSpan:
-                w.Local(target).Line(" = new global::System.TimeSpan(reader.ReadInt64());");
+                w.Local(target).Line(" = ReadTimeSpan(ref reader);");
                 break;
             case FieldKind.Decimal:
                 w.Local(target).Line(" = ReadDecimal(ref reader);");
@@ -2460,7 +2460,7 @@ public sealed partial class AkkaSerializerGenerator
                 w.Raw("ReadChar(ref reader)");
                 break;
             case FieldKind.TimeSpan:
-                w.Raw("new global::System.TimeSpan(reader.ReadInt64())");
+                w.Raw("ReadTimeSpan(ref reader)");
                 break;
             case FieldKind.Decimal:
                 w.Raw("ReadDecimal(ref reader)");

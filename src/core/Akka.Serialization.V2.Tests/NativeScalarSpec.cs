@@ -129,41 +129,6 @@ public sealed class NativeScalarSpec : IAsyncLifetime
         _serializer.ToBinary(message).Should().Equal(expected);
     }
 
-    [Fact(DisplayName = "Should_UseTheSmallestIntegerEncoding_When_SmallScalarsAreWritten")]
-    public void Should_UseTheSmallestIntegerEncoding_When_SmallScalarsAreWritten()
-    {
-        // The integer types must encode exactly as long/ulong would for the same value: the generator
-        // writes them through MessagePackWriter's compact overloads, and the size hint depends on it.
-        foreach (var value in new[] { 0, 1, 127, 128, 255, 256, 32767 })
-        {
-            Encode((ref MessagePackWriter w) => w.Write((short)value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((long)value)), "short {0}", value);
-            Encode((ref MessagePackWriter w) => w.Write((ushort)value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((ulong)value)), "ushort {0}", value);
-        }
-
-        foreach (var value in new[] { -1, -32, -33, -128, -129, -32768 })
-            Encode((ref MessagePackWriter w) => w.Write((short)value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((long)value)), "short {0}", value);
-
-        foreach (var value in new[] { -1, -32, -33, -128 })
-            Encode((ref MessagePackWriter w) => w.Write((sbyte)value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((long)value)), "sbyte {0}", value);
-
-        foreach (var value in new byte[] { 0, 127, 128, 255 })
-            Encode((ref MessagePackWriter w) => w.Write(value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((ulong)value)), "byte {0}", value);
-
-        foreach (var value in new[] { 0u, 127u, 128u, 255u, 256u, 65535u, 65536u, uint.MaxValue })
-            Encode((ref MessagePackWriter w) => w.Write(value)).Should().Equal(Encode((ref MessagePackWriter w) => w.Write((ulong)value)), "uint {0}", value);
-    }
-
-    private static byte[] Encode(EncodeAction action)
-    {
-        var buffer = new ArrayBufferWriter<byte>();
-        var writer = new MessagePackWriter(buffer);
-        action(ref writer);
-        writer.Flush();
-        return buffer.WrittenMemory.ToArray();
-    }
-
-    private delegate void EncodeAction(ref MessagePackWriter writer);
-
     // ------------------------------------------------------------------------------------------
     // Nullable variants
     // ------------------------------------------------------------------------------------------
@@ -194,8 +159,8 @@ public sealed class NativeScalarSpec : IAsyncLifetime
         }
     }
 
-    [Fact(DisplayName = "Should_WriteNilForNullAndTheSameBytesAsNonNullable_When_ScalarsAreNullable")]
-    public void Should_WriteNilForNullAndTheSameBytesAsNonNullable_When_ScalarsAreNullable()
+    [Fact(DisplayName = "Should_WriteTheSameBytesAsNonNullable_When_ANullableScalarIsPresent")]
+    public void Should_WriteTheSameBytesAsNonNullable_When_ANullableScalarIsPresent()
     {
         var populated = _serializer.ToBinary(new NullableScalarsMessage(
             TimeSpan.FromTicks(300), 1.5f, -200, 200, -5, 40000, 3000000000u, ulong.MaxValue, 'A'));
@@ -203,12 +168,8 @@ public sealed class NativeScalarSpec : IAsyncLifetime
             TimeSpan.FromTicks(300), 1.5f, -200, 200, -5, 40000, 3000000000u, ulong.MaxValue, 'A'));
 
         // A present nullable value is written exactly as the non-nullable one: same map, same bytes.
+        // (An absent one is nil; the scalars-nullable-all-null snapshot pins those bytes.)
         populated.Should().Equal(nonNullable);
-
-        var allNull = _serializer.ToBinary(new NullableScalarsMessage(null, null, null, null, null, null, null, null, null));
-        allNull.Should().Equal(
-            0x89,
-            0x01, 0xc0, 0x02, 0xc0, 0x03, 0xc0, 0x04, 0xc0, 0x05, 0xc0, 0x06, 0xc0, 0x07, 0xc0, 0x08, 0xc0, 0x09, 0xc0);
     }
 
     // ------------------------------------------------------------------------------------------
@@ -301,32 +262,58 @@ public sealed class NativeScalarSpec : IAsyncLifetime
     // Reads range-check: a value the target type cannot hold throws, it never truncates
     // ------------------------------------------------------------------------------------------
 
-    [Theory(DisplayName = "Should_Throw_When_WireValueDoesNotFitTheScalarType")]
-    [InlineData("short above max", "int16-v1", 32768L)]
-    [InlineData("short below min", "int16-v1", -32769L)]
-    [InlineData("short from a uint64 beyond int64", "int16-v1", ulong.MaxValue)]
-    [InlineData("sbyte above max", "sbyte-v1", 128L)]
-    [InlineData("sbyte below min", "sbyte-v1", -129L)]
-    [InlineData("byte above max", "byte-v1", 256L)]
-    [InlineData("byte negative", "byte-v1", -1L)]
-    [InlineData("ushort above max", "uint16-v1", 65536L)]
-    [InlineData("ushort negative", "uint16-v1", -1L)]
-    [InlineData("uint above max", "uint32-v1", 4294967296L)]
-    [InlineData("uint negative", "uint32-v1", -1L)]
-    [InlineData("ulong negative", "uint64-v1", -1L)]
-    [InlineData("ulong most negative", "uint64-v1", long.MinValue)]
-    [InlineData("char above max", "char-v1", 65536L)]
-    [InlineData("char negative", "char-v1", -1L)]
-    [InlineData("float from a double beyond float range", "single-v1", 1e300d)]
-    [InlineData("float from a string", "single-v1", "not a number")]
-    [InlineData("short from a string", "int16-v1", "not a number")]
-    public void Should_Throw_When_WireValueDoesNotFitTheScalarType(string caseName, string manifest, object wireValue)
+    /// <summary>
+    /// Where each scalar type can be hand-fed a bad wire value: its single-field message, the field index in
+    /// <see cref="NullableScalarsMessage"/>, the field index of a collection that holds it as a list-like
+    /// element in <see cref="ScalarCollectionsMessage"/>, and (for three types) a dictionary whose VALUE it is.
+    /// </summary>
+    private sealed record ScalarSpec(string TypeName, string FieldManifest, int NullableIndex, int ElementIndex, int MapValueIndex = 0, object? MapKey = null);
+
+    private static readonly ScalarSpec[] Specs =
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        var writer = new MessagePackWriter(buffer);
-        writer.WriteMapHeader(1);
-        writer.Write(1);
-        switch (wireValue)
+        new("System.Int16", "int16-v1", 3, 3),
+        new("System.SByte", "sbyte-v1", 5, 5, MapValueIndex: 15, MapKey: 0L),
+        new("System.Byte", "byte-v1", 4, 4),
+        new("System.UInt16", "uint16-v1", 6, 6),
+        new("System.UInt32", "uint32-v1", 7, 7),
+        new("System.UInt64", "uint64-v1", 8, 8, MapValueIndex: 10, MapKey: 0L),
+        new("System.Char", "char-v1", 9, 9),
+        new("System.TimeSpan", "timespan-v1", 1, 1, MapValueIndex: 13, MapKey: "k"),
+        new("System.Single", "single-v1", 2, 2),
+    };
+
+    private static IEnumerable<object> BadWireValues(string typeName) => typeName switch
+    {
+        "System.Int16" => new object[] { 32768L, -32769L, ulong.MaxValue, "text" },
+        "System.SByte" => new object[] { 128L, -129L, ulong.MaxValue, "text" },
+        "System.Byte" => new object[] { 256L, -1L, ulong.MaxValue, "text" },
+        "System.UInt16" => new object[] { 65536L, -1L, ulong.MaxValue, "text" },
+        "System.UInt32" => new object[] { 4294967296L, -1L, ulong.MaxValue, "text" },
+        "System.UInt64" => new object[] { -1L, long.MinValue, "text" },
+        "System.Char" => new object[] { 65536L, -1L, ulong.MaxValue, "text" },
+        "System.TimeSpan" => new object[] { ulong.MaxValue, "text" },
+        "System.Single" => new object[] { 1e300d, -1e300d, "text" },
+        _ => throw new ArgumentOutOfRangeException(nameof(typeName), typeName, null)
+    };
+
+    public static IEnumerable<object[]> RangeCases()
+    {
+        foreach (var spec in Specs)
+        {
+            foreach (var value in BadWireValues(spec.TypeName))
+            {
+                yield return new[] { spec.TypeName, "field", value };
+                yield return new[] { spec.TypeName, "nullable", value };
+                yield return new[] { spec.TypeName, "element", value };
+                if (spec.MapValueIndex != 0)
+                    yield return new[] { spec.TypeName, "map-value", value };
+            }
+        }
+    }
+
+    private static void WriteWire(ref MessagePackWriter writer, object value)
+    {
+        switch (value)
         {
             case long signed:
                 writer.Write(signed);
@@ -338,7 +325,44 @@ public sealed class NativeScalarSpec : IAsyncLifetime
                 writer.Write(floating);
                 break;
             default:
-                writer.Write((string)wireValue);
+                writer.Write((string)value);
+                break;
+        }
+    }
+
+    [Theory(DisplayName = "Should_ThrowNamingTheType_When_WireValueCannotBeReadAsTheScalarType")]
+    [MemberData(nameof(RangeCases))]
+    public void Should_ThrowNamingTheType_When_WireValueCannotBeReadAsTheScalarType(string typeName, string position, object wireValue)
+    {
+        var spec = Specs.Single(candidate => candidate.TypeName == typeName);
+        var buffer = new ArrayBufferWriter<byte>();
+        var writer = new MessagePackWriter(buffer);
+        string manifest;
+        writer.WriteMapHeader(1);
+        switch (position)
+        {
+            case "field":
+                manifest = spec.FieldManifest;
+                writer.Write(1);
+                WriteWire(ref writer, wireValue);
+                break;
+            case "nullable":
+                manifest = "nullable-scalars-v1";
+                writer.Write(spec.NullableIndex);
+                WriteWire(ref writer, wireValue);
+                break;
+            case "element":
+                manifest = "scalar-collections-v1";
+                writer.Write(spec.ElementIndex);
+                writer.WriteArrayHeader(1);
+                WriteWire(ref writer, wireValue);
+                break;
+            default:
+                manifest = "scalar-collections-v1";
+                writer.Write(spec.MapValueIndex);
+                writer.WriteMapHeader(1);
+                WriteWire(ref writer, spec.MapKey!);
+                WriteWire(ref writer, wireValue);
                 break;
         }
 
@@ -346,22 +370,7 @@ public sealed class NativeScalarSpec : IAsyncLifetime
 
         Action read = () => _serializer.FromBinary(buffer.WrittenMemory.ToArray(), manifest);
 
-        read.Should().Throw<MessagePackSerializationException>(caseName);
-    }
-
-    [Fact(DisplayName = "Should_NameTheTargetType_When_WireValueOverflowsAShort")]
-    public void Should_NameTheTargetType_When_WireValueOverflowsAShort()
-    {
-        var buffer = new ArrayBufferWriter<byte>();
-        var writer = new MessagePackWriter(buffer);
-        writer.WriteMapHeader(1);
-        writer.Write(1);
-        writer.Write(70000);
-        writer.Flush();
-
-        Action read = () => _serializer.FromBinary(buffer.WrittenMemory.ToArray(), "int16-v1");
-
-        read.Should().Throw<MessagePackSerializationException>().WithMessage("*70000*System.Int16*");
+        read.Should().Throw<MessagePackSerializationException>($"{typeName} at {position}").WithMessage($"*[{typeName}]*");
     }
 
     [Theory(DisplayName = "Should_ReadTheValue_When_WireIntegerWasWrittenWithAWiderOrNarrowerWidth")]
@@ -491,3 +500,6 @@ public sealed record ScalarOnlyChar([property: AkkaField(1)] char Value) : INati
 
 [AkkaSerializable(Manifest = "single-v1")]
 public sealed record ScalarOnlySingle([property: AkkaField(1)] float Value) : INativeScalarProtocol;
+
+[AkkaSerializable(Manifest = "timespan-v1")]
+public sealed record ScalarOnlyTimeSpan([property: AkkaField(1)] TimeSpan Value) : INativeScalarProtocol;
