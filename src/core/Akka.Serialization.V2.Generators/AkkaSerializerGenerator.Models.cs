@@ -558,7 +558,8 @@ public sealed partial class AkkaSerializerGenerator
             bool isAbstract = false,
             bool isValueType = false,
             string foreignAssemblyName = "",
-            ImmutableArray<string> baseTypeNames = default)
+            ImmutableArray<string> baseTypeNames = default,
+            string inaccessibleReason = "")
         {
             SimpleName = simpleName;
             Key = key;
@@ -575,6 +576,7 @@ public sealed partial class AkkaSerializerGenerator
             IsValueType = isValueType;
             ForeignAssemblyName = foreignAssemblyName;
             BaseTypeNames = baseTypeNames.IsDefault ? ImmutableArray<string>.Empty : baseTypeNames;
+            InaccessibleReason = inaccessibleReason;
         }
 
         public string SimpleName { get; }
@@ -659,13 +661,23 @@ public sealed partial class AkkaSerializerGenerator
         public ImmutableArray<string> BaseTypeNames { get; }
 
         /// <summary>
+        /// Why generated code cannot name this message's type, for a type declared in THIS
+        /// compilation: the narrowest declaration, this type or a type that contains it, that is
+        /// private, protected, or private protected (for example <c>Outer.Inner is private</c>).
+        /// Generated serializer code lives in a separate class, so it would fail with CS0122 on
+        /// such a type; AKKASG045 reports it instead. Empty when the type is accessible. A
+        /// referenced-assembly type never sets this: AKKASG039 covers that case.
+        /// </summary>
+        public string InaccessibleReason { get; }
+
+        /// <summary>
         /// Used by formatter resolution to swap in fields with a resolved <see cref="TypeMapping"/>.
         /// <see cref="ConstructionPlan"/> is keyed by field NAME, not by <see cref="FieldInfo"/>
         /// reference, so it stays valid across this substitution without needing to be rebuilt.
         /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName, BaseTypeNames);
+            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName, BaseTypeNames, InaccessibleReason);
         }
 
         public bool Equals(MessageInfo? other)
@@ -686,6 +698,7 @@ public sealed partial class AkkaSerializerGenerator
                 && IsAbstract == other.IsAbstract
                 && IsValueType == other.IsValueType
                 && string.Equals(ForeignAssemblyName, other.ForeignAssemblyName, StringComparison.Ordinal)
+                && string.Equals(InaccessibleReason, other.InaccessibleReason, StringComparison.Ordinal)
                 && ConstructionPlan.Equals(other.ConstructionPlan)
                 && ValueEquality.SequenceEquals(Fields, other.Fields)
                 && ValueEquality.SequenceEquals(Protocols, other.Protocols)
@@ -708,6 +721,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, IsAbstract);
             hash = ValueEquality.Combine(hash, IsValueType);
             hash = ValueEquality.Combine(hash, ForeignAssemblyName);
+            hash = ValueEquality.Combine(hash, InaccessibleReason);
             hash = ValueEquality.Combine(hash, ConstructionPlan.GetHashCode());
             hash = ValueEquality.Combine(hash, Fields);
             hash = ValueEquality.Combine(hash, Protocols);
@@ -1748,7 +1762,8 @@ public sealed partial class AkkaSerializerGenerator
         ClosedSetExpansionCount,
         ProtocolOwnedUpstream,
         SerializerHasNoMessages,
-        DuplicateProtocolBindingCrossAssembly
+        DuplicateProtocolBindingCrossAssembly,
+        MessageTypeNotAccessible
     }
 
     /// <summary>
