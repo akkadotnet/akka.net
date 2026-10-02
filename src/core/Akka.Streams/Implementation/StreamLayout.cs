@@ -2416,27 +2416,48 @@ namespace Akka.Streams.Implementation
                 // (This is an attempt to clean up after an exception during materialization)
                 var ex = new MaterializationPanicException(cause);
 
+                // Clean-up is best effort: a step that fails here (e.g. the NotSupportedException a foreign
+                // IUntypedSubscriber/IUntypedPublisher raises with Akka.DynamicTypeLoading off) must not
+                // replace the materialization failure the caller needs to see, nor skip the other ports.
                 foreach (var value in _subscribersStack.SelectMany(subMap => subMap.Values))
-                    switch (value)
+                {
+                    try
                     {
-                        case UntypedSubscriber subscriber:
-                            subscriber.SubscribeToErrorPublisher(ex);
-                            continue;
-                        case IUntypedSubscriber subscriber:
-                            SubscribeToErrorPublisherReflectively(subscriber, ex);
-                            continue;
-                        case IUntypedVirtualPublisher virtualPublisher:
-                            virtualPublisher.RegisterErrorPublisher(ex);
-                            break;
+                        switch (value)
+                        {
+                            case UntypedSubscriber subscriber:
+                                subscriber.SubscribeToErrorPublisher(ex);
+                                break;
+                            case IUntypedSubscriber subscriber:
+                                SubscribeToErrorPublisherReflectively(subscriber, ex);
+                                break;
+                            case IUntypedVirtualPublisher virtualPublisher:
+                                virtualPublisher.RegisterErrorPublisher(ex);
+                                break;
+                        }
                     }
+                    catch (Exception cleanupFailure)
+                    {
+                        if (IsDebug)
+                            Console.WriteLine($"failing subscriber {value} after a materialization panic failed: {cleanupFailure}");
+                    }
+                }
 
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
                     {
-                        if (publisher is UntypedPublisher untyped)
-                            untyped.SubscribeCancellingSubscriber();
-                        else
-                            SubscribeCancellingSubscriberReflectively(publisher);
+                        try
+                        {
+                            if (publisher is UntypedPublisher untyped)
+                                untyped.SubscribeCancellingSubscriber();
+                            else
+                                SubscribeCancellingSubscriberReflectively(publisher);
+                        }
+                        catch (Exception cleanupFailure)
+                        {
+                            if (IsDebug)
+                                Console.WriteLine($"cancelling publisher {publisher} after a materialization panic failed: {cleanupFailure}");
+                        }
                     }
 
                 throw;

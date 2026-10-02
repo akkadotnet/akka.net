@@ -7,9 +7,8 @@ DI-constructed one both round-trip through `Ask`; `WithActorSystemLivenessCheck(
 `Microsoft.Extensions.Diagnostics.HealthChecks`; `ConfigureLoggers`'s `AddLoggerFactory` actually
 routes Akka's logs through `Microsoft.Extensions.Logging`; `Watch`/`Terminated` (DeathWatch)
 works; and Akka.Streams graphs that cross island boundaries run (`StreamsScenarios.cs`: `.Async()`,
-`Sink.AsPublisher` into `Source.FromPublisher`, a fan-out publisher, `Source.ActorPublisher`,
-`Source.Queue` and a graph that reads its own materialized value, each with a value-type and/or a
-reference-type element). The streams part needs no `TrimmerRootDescriptor`; if Akka.Streams ever
+`Sink.AsPublisher` into `Source.FromPublisher`, a fan-out publisher, `Source.ActorPublisher` and a
+graph that reads its own materialized value, each with an `int` and a `string` element). The streams part needs no `TrimmerRootDescriptor`; if Akka.Streams ever
 builds a boundary type reflectively again, the run fails with `MissingMethodException` (#8731). A
 `WatchdogLoggerProvider` fails the run on any Warning/Error logged anywhere in the host.
 

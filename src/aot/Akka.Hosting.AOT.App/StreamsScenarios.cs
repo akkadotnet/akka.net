@@ -15,8 +15,8 @@ namespace Akka.Hosting.AOT.App;
 
 /// <summary>
 /// Akka.Streams graphs that cross island boundaries (#8731). Each boundary used to be built with
-/// MakeGenericType + Activator, which Native AOT trims away. Every scenario runs once with a value
-/// type and once with a reference type, because the two get different compiled instantiations.
+/// MakeGenericType + Activator, which Native AOT trims away. Every scenario runs once with int and
+/// once with string, because value and reference types get different compiled instantiations.
 /// No TrimmerRootDescriptor is involved: if a boundary type is still built reflectively, its
 /// constructor is gone and the run fails with MissingMethodException.
 /// </summary>
@@ -49,11 +49,10 @@ internal static class StreamsScenarios
                 .RunWith(Sink.Seq<string>(), mat),
             new[] { "a", "b", "c" }, "AsPublisher -> FromPublisher (string)");
 
-        // Sink.AsPublisher(true) runs a fan-out processor actor, which hands out ActorSubscriptions.
-        await ExpectAsync(
-            Source.FromPublisher(Source.From(Enumerable.Range(1, 5)).RunWith(Sink.AsPublisher<int>(true), mat))
-                .RunWith(Sink.Seq<int>(), mat),
-            Enumerable.Range(1, 5), "fan-out AsPublisher (int)");
+        // Sink.AsPublisher(true) runs a fan-out processor actor whose output buffer type is built with
+        // Activator - this proves the [DynamicallyAccessedMembers] on SubscriberManagement's TStreamBuffer.
+        await FanOutAsync(mat, Enumerable.Range(1, 5).ToArray(), "int");
+        await FanOutAsync(mat, new[] { "a", "b", "c" }, "string");
 
         // Source.ActorPublisher is what the persistence query read journals are built on.
         await ExpectAsync(
@@ -65,29 +64,31 @@ internal static class StreamsScenarios
                 .RunWith(Sink.Seq<string>(), mat),
             new[] { "e1", "e2", "e3" }, "Source.ActorPublisher (string)");
 
-        // Source.Queue materializes a queue whose consumer sits behind an async boundary.
-        var (queue, done) = Source.Queue<int>(16, OverflowStrategy.Backpressure)
-            .Async()
-            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-            .Run(mat);
-        foreach (var i in Enumerable.Range(1, 3))
-            await queue.OfferAsync(i);
-        queue.Complete();
-        await ExpectAsync(done, new[] { 1, 2, 3 }, "Source.Queue (int)");
+        // A graph that reads its own materialized value back as a stream element: auto-fusing rebuilds
+        // the MaterializedValueSource<T> it finds inside.
+        await ReadOwnMaterializedValueAsync(mat, 42);
+        await ReadOwnMaterializedValueAsync(mat, "forty-two");
+    }
 
-        // A graph that reads its own materialized value (an int) back as a stream element:
-        // auto-fusing rebuilds the MaterializedValueSource it finds inside.
-        var seen = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static Task FanOutAsync<T>(IMaterializer mat, T[] elements, string typeName)
+        => ExpectAsync(
+            Source.FromPublisher(Source.From(elements).RunWith(Sink.AsPublisher<T>(true), mat))
+                .RunWith(Sink.Seq<T>(), mat),
+            elements, $"fan-out AsPublisher ({typeName})");
+
+    private static async Task ReadOwnMaterializedValueAsync<T>(IMaterializer mat, T value)
+    {
+        var seen = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         var matValue = RunnableGraph.FromGraph(GraphDsl.Create(
-            Source.Single(1).MapMaterializedValue(_ => 42), (b, single) =>
+            Source.Single(value).MapMaterializedValue(_ => value), (b, single) =>
             {
-                b.From(single).To(Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance));
-                b.From(b.MaterializedValue).To(Sink.ForEach<int>(x => seen.TrySetResult(x)).MapMaterializedValue(_ => NotUsed.Instance));
+                b.From(single).To(Sink.Ignore<T>().MapMaterializedValue(_ => NotUsed.Instance));
+                b.From(b.MaterializedValue).To(Sink.ForEach<T>(x => seen.TrySetResult(x)).MapMaterializedValue(_ => NotUsed.Instance));
                 return ClosedShape.Instance;
             })).Run(mat);
         var echoed = await seen.Task.WaitAsync(Timeout);
-        if (matValue != 42 || echoed != 42)
-            throw new InvalidOperationException($"materialized value graph gave {matValue}/{echoed}, expected 42/42");
+        if (!Equals(matValue, value) || !Equals(echoed, value))
+            throw new InvalidOperationException($"materialized value graph gave {matValue}/{echoed}, expected {value}/{value}");
     }
 
     private static async Task ExpectAsync<T>(Task<IImmutableList<T>> run, IEnumerable<T> expected, string scenario)

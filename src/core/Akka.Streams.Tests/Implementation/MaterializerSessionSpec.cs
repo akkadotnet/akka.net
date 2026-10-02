@@ -15,8 +15,9 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.TestKit;
+using Akka.Streams.Tests.Serialization;
 using FluentAssertions;
+using Reactive.Streams;
 using Xunit;
 
 namespace Akka.Streams.Tests.Implementation
@@ -24,10 +25,14 @@ namespace Akka.Streams.Tests.Implementation
     /// <summary>
     /// Wiring and materialization-panic paths of <see cref="MaterializerSession"/>. These used to build
     /// their wrappers with MakeGenericType from the runtime type of the subscriber or publisher; they
-    /// now use the element type the wrappers already carry (#8731).
+    /// now use the element type the wrappers already carry (#8731). Some specs turn
+    /// <c>Akka.DynamicTypeLoading</c> off, so the class runs in the non-parallel switch collection.
     /// </summary>
+    [Collection(DynamicTypeLoadingCollection.Name)]
     public class MaterializerSessionSpec : Akka.TestKit.Xunit.TestKit
     {
+        private const string SwitchName = "Akka.DynamicTypeLoading";
+
         public MaterializerSessionSpec(ITestOutputHelper output) : base(output: output)
         {
         }
@@ -37,7 +42,7 @@ namespace Akka.Streams.Tests.Implementation
         {
             var publisher = this.CreateManualPublisherProbe<int>();
             var subscriber = this.CreateManualSubscriberProbe<int>();
-            var session = new ProbeSession<int>(SourceToSink(), publisher, subscriber, plainSubscriber: true, throwAfter: int.MaxValue);
+            var session = new ProbeSession(SourceToSink(), () => subscriber, () => UntypedPublisher.FromTyped(publisher), throwAfter: int.MaxValue);
 
             session.Materialize();
 
@@ -46,19 +51,13 @@ namespace Akka.Streams.Tests.Implementation
             await subscriber.ExpectSubscriptionAsync();
         }
 
-        [Fact(DisplayName = "Should_fail_subscribers_and_cancel_publishers_When_materialization_panics_with_a_value_type")]
-        public Task Should_fail_subscribers_and_cancel_publishers_When_materialization_panics_with_a_value_type()
-            => PanicAsync<int>();
-
-        [Fact(DisplayName = "Should_fail_subscribers_and_cancel_publishers_When_materialization_panics_with_a_reference_type")]
-        public Task Should_fail_subscribers_and_cancel_publishers_When_materialization_panics_with_a_reference_type()
-            => PanicAsync<string>();
-
-        private async Task PanicAsync<T>()
+        [Fact(DisplayName = "Should_fail_subscribers_and_cancel_publishers_When_materialization_panics")]
+        public async Task Should_fail_subscribers_and_cancel_publishers_When_materialization_panics()
         {
-            var publisher = this.CreateManualPublisherProbe<T>();
-            var subscriber = this.CreateManualSubscriberProbe<T>();
-            var session = new ProbeSession<T>(SourceToSink(), publisher, subscriber, plainSubscriber: false, throwAfter: 2);
+            var publisher = this.CreateManualPublisherProbe<int>();
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+            var session = new ProbeSession(SourceToSink(), () => UntypedSubscriber.FromTyped(subscriber),
+                () => UntypedPublisher.FromTyped(publisher), throwAfter: 2);
 
             session.Invoking(s => s.Materialize()).Should().Throw<TestException>().WithMessage("boom");
 
@@ -68,7 +67,7 @@ namespace Akka.Streams.Tests.Implementation
 
             // the panic subscribes a CancellingSubscriber<T> to every publisher...
             var cancelling = await publisher.ExpectSubscriptionAsync();
-            cancelling.Subscriber.Should().BeOfType<CancellingSubscriber<T>>();
+            cancelling.Subscriber.Should().BeOfType<CancellingSubscriber<int>>();
             await cancelling.ExpectCancellationAsync();
 
             // ...and an ErrorPublisher<T> to every subscriber
@@ -76,6 +75,69 @@ namespace Akka.Streams.Tests.Implementation
             var error = await subscriber.ExpectErrorAsync();
             error.Should().BeOfType<MaterializerSession.MaterializationPanicException>()
                 .Which.InnerException.Should().BeOfType<TestException>();
+        }
+
+        [Fact(DisplayName = "Should_rethrow_the_materialization_failure_and_clean_up_the_other_ports_When_failing_a_foreign_subscriber_throws")]
+        public async Task Should_rethrow_the_materialization_failure_and_clean_up_the_other_ports_When_failing_a_foreign_subscriber_throws()
+        {
+            var publisher = this.CreateManualPublisherProbe<int>();
+            var foreign = new ForeignSubscriber();
+            var session = new ProbeSession(SourceToSink(), () => foreign, () => UntypedPublisher.FromTyped(publisher), throwAfter: 2);
+
+            // with the switch off, failing the foreign subscriber throws NotSupportedException inside the
+            // panic handler; the caller must still see the original failure
+            WithDynamicTypeLoadingOff(() =>
+                session.Invoking(s => s.Materialize()).Should().Throw<TestException>().WithMessage("boom"));
+
+            // the publisher is cleaned up after the subscriber that could not be, so it proves the loop went on
+            await publisher.ExpectSubscriptionAsync();
+            var cancelling = await publisher.ExpectSubscriptionAsync();
+            cancelling.Subscriber.Should().BeOfType<CancellingSubscriber<int>>();
+            await cancelling.ExpectCancellationAsync();
+        }
+
+        [Fact(DisplayName = "Should_throw_NotSupportedException_naming_the_switch_When_a_foreign_publisher_is_wired_with_dynamic_type_loading_off")]
+        public void Should_throw_NotSupportedException_naming_the_switch_When_a_foreign_publisher_is_wired_with_dynamic_type_loading_off()
+        {
+            var subscriber = this.CreateManualSubscriberProbe<int>();
+            var session = new ProbeSession(SourceToSink(), () => subscriber, () => new ForeignPublisher(), throwAfter: int.MaxValue);
+
+            WithDynamicTypeLoadingOff(() =>
+                session.Invoking(s => s.Materialize()).Should().Throw<NotSupportedException>()
+                    .WithMessage($"*{nameof(ForeignPublisher)}*{SwitchName}*"));
+        }
+
+        [Fact(DisplayName = "Should_throw_NotSupportedException_naming_the_switch_When_a_non_generic_port_needs_a_boundary_with_dynamic_type_loading_off")]
+        public void Should_throw_NotSupportedException_naming_the_switch_When_a_non_generic_port_needs_a_boundary_with_dynamic_type_loading_off()
+        {
+            var inlet = new ForeignInlet("in");
+            var outlet = new ForeignOutlet("out");
+
+            WithDynamicTypeLoadingOff(() =>
+            {
+                inlet.Invoking(i => i.CreateBoundarySubscriber(TestActor, null!, 0))
+                    .Should().Throw<NotSupportedException>().WithMessage($"*{nameof(ForeignInlet)}*{SwitchName}*");
+                outlet.Invoking(o => o.CreateBoundaryPublisher(TestActor, null!, 0, out _))
+                    .Should().Throw<NotSupportedException>().WithMessage($"*{nameof(ForeignOutlet)}*{SwitchName}*");
+                outlet.Invoking(o => o.CreateActorOutputBoundary(TestActor, null!, 0))
+                    .Should().Throw<NotSupportedException>().WithMessage($"*{SwitchName}*");
+                outlet.Invoking(o => o.CreateMaterializedValueSource(StreamLayout.Ignore.Instance))
+                    .Should().Throw<NotSupportedException>().WithMessage($"*{SwitchName}*");
+            });
+        }
+
+        private static void WithDynamicTypeLoadingOff(Action action)
+        {
+            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
+            AppContext.SetSwitch(SwitchName, false);
+            try
+            {
+                action();
+            }
+            finally
+            {
+                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
+            }
         }
 
         private static IModule SourceToSink()
@@ -104,23 +166,22 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         /// <summary>
-        /// Assigns the probes to the ports of each atomic module, the way a source or sink module would,
-        /// and throws once <c>throwAfter</c> atomic modules have been materialized.
+        /// Assigns a subscriber (an <see cref="IUntypedSubscriber"/>, or a plain one the way a sink module
+        /// does) to every inlet and a publisher to every outlet, and throws once <c>throwAfter</c> atomic
+        /// modules have been materialized.
         /// </summary>
-        private sealed class ProbeSession<T> : MaterializerSession
+        private sealed class ProbeSession : MaterializerSession
         {
-            private readonly TestPublisher.ManualProbe<T> _publisher;
-            private readonly TestSubscriber.ManualProbe<T> _subscriber;
-            private readonly bool _plainSubscriber;
+            private readonly Func<object> _subscriber;
+            private readonly Func<IUntypedPublisher> _publisher;
             private readonly int _throwAfter;
             private int _materialized;
 
-            public ProbeSession(IModule module, TestPublisher.ManualProbe<T> publisher, TestSubscriber.ManualProbe<T> subscriber,
-                bool plainSubscriber, int throwAfter) : base(module, Attributes.None)
+            public ProbeSession(IModule module, Func<object> subscriber, Func<IUntypedPublisher> publisher, int throwAfter)
+                : base(module, Attributes.None)
             {
-                _publisher = publisher;
                 _subscriber = subscriber;
-                _plainSubscriber = plainSubscriber;
+                _publisher = publisher;
                 _throwAfter = throwAfter;
             }
 
@@ -128,15 +189,48 @@ namespace Akka.Streams.Tests.Implementation
                 IDictionary<IModule, object> materializedValues)
             {
                 foreach (var inPort in atomic.InPorts)
-                    AssignPort(inPort, _plainSubscriber ? _subscriber : UntypedSubscriber.FromTyped(_subscriber));
+                    AssignPort(inPort, _subscriber());
                 foreach (var outPort in atomic.OutPorts)
-                    AssignPort(outPort, UntypedPublisher.FromTyped(_publisher));
+                    AssignPort(outPort, _publisher());
 
                 if (++_materialized == _throwAfter)
                     throw new TestException("boom");
 
                 return NotUsed.Instance;
             }
+        }
+
+        // Port, publisher and subscriber types from outside Akka.Streams: none of them is an
+        // Inlet<T>/Outlet<T>/UntypedPublisher/UntypedSubscriber, so they reach the reflective fallback.
+
+        private sealed class ForeignInlet : Inlet
+        {
+            public ForeignInlet(string name) : base(name) { }
+            public override Inlet CarbonCopy() => new ForeignInlet(Name);
+        }
+
+        private sealed class ForeignOutlet : Outlet
+        {
+            public ForeignOutlet(string name) : base(name) { }
+            public override Outlet CarbonCopy() => new ForeignOutlet(Name);
+        }
+
+        private sealed class ForeignPublisher : IUntypedPublisher
+        {
+            public void Subscribe(IUntypedSubscriber subscriber) => throw new InvalidOperationException("not expected");
+        }
+
+        /// <summary>
+        /// Also an <see cref="ISubscriber{T}"/>, so the regular wiring (which unwraps to the typed
+        /// subscriber) can connect it before the panic.
+        /// </summary>
+        private sealed class ForeignSubscriber : IUntypedSubscriber, ISubscriber<int>
+        {
+            public void OnSubscribe(ISubscription subscription) { }
+            public void OnNext(int element) { }
+            public void OnNext(object element) { }
+            public void OnError(Exception cause) { }
+            public void OnComplete() { }
         }
     }
 }

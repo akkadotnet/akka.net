@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Akka.Streams
 {
@@ -21,6 +22,9 @@ namespace Akka.Streams
         /// <param name="genericParam">TBD</param>
         /// <param name="constructorArgs">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT; will be removed in 1.7. Obsolete since v1.6.0")]
+        [RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not have compiled it.")]
+        [RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which constructor is needed.")]
         public static object Instantiate(this Type genericType, Type genericParam, params object[] constructorArgs)
         {
             var gen = genericType.MakeGenericType(genericParam);
@@ -34,6 +38,9 @@ namespace Akka.Streams
         /// <param name="genericParams">TBD</param>
         /// <param name="constructorArgs">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT; will be removed in 1.7. Obsolete since v1.6.0")]
+        [RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not have compiled it.")]
+        [RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which constructor is needed.")]
         public static object Instantiate(this Type genericType, Type[] genericParams, params object[] constructorArgs)
         {
             var gen = genericType.MakeGenericType(genericParams);
