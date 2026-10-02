@@ -27,26 +27,30 @@ namespace Akka.Cluster.Sharding.Tests
     }
 
     /// <summary>
-    /// Keeps <see cref="ShardingSerializers"/> in sync with Akka.Cluster.Sharding's reference.conf. The shared
-    /// checks live in <see cref="ModuleSerializerSpecs"/>.
+    /// Keeps <see cref="ShardingSerializers"/> in step with the rows Akka.Cluster.Sharding's reference.conf shipped
+    /// at 1.6.0-beta1, which <see cref="FrozenSerializerRows"/> keeps. The shared checks live in
+    /// <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class ShardingSerializersSpec : AkkaSpec
     {
-        // sharding's own rows only; ClusterSharding.DefaultConfig() also falls back to DistributedData's reference.conf
-        private static readonly Config ShardingRows =
-            ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf");
+        // reference.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
+        private static readonly Config ShardingRows = FrozenSerializerRows.Sharding;
 
         public ShardingSerializersSpec(ITestOutputHelper output) : base(ClusterSharding.DefaultConfig(), output)
         {
         }
 
-        [Fact(DisplayName = "ShardingSerializers should list no serializer or type that reference.conf does not")]
-        public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
+        [Fact(DisplayName = "ShardingSerializers should match the rows reference.conf shipped at 1.6.0-beta1")]
+        public void Should_match_the_frozen_rows_When_the_table_is_built()
         {
             var table = new ShardingSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ShardingRows, table.Create((ExtendedActorSystem)Sys));
+            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(ShardingRows, table.Create((ExtendedActorSystem)Sys));
         }
+
+        [Fact(DisplayName = "Serialization should resolve every frozen Sharding row on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Sharding_rows()
+            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("sharding-plain", ShardingRows, (s, id) => s.GetSerializerById(id));
 
         [Fact(DisplayName = "ShardingSerializers should build without throwing on a system that never loaded its reference.conf")]
         public async Task Should_build_without_throwing_When_its_config_is_absent()
@@ -56,19 +60,30 @@ namespace Akka.Cluster.Sharding.Tests
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("sharding-aqn", ShardingRows, Sys);
 
-        [Fact(DisplayName = "Serialization should let application.conf override a reference.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_Sharding_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in Sharding binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_Sharding_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("sharding-override", overrides, ShardingRows, system =>
+            await ModuleSerializerSpecs.WithSystem("sharding-override", overrides, withCopiedRows ? ShardingRows : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
                 serialization.FindSerializerForType(typeof(ShardRegion.StartEntity)).Should().BeOfType<ByteArraySerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace the built-in sharding alias when dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_the_sharding_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("sharding-alias-override", "akka-sharding",
+                typeof(ShardRegion.StartEntity));
 
         [Fact(DisplayName = "Serialization should build ClusterShardingMessageSerializer under id 13, without a warning, when dynamic type loading is off")]
         public async Task Should_keep_the_sharding_serializer_id_When_dynamic_type_loading_is_disabled()

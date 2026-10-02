@@ -62,6 +62,14 @@ subtype of the other, a warning will be issued.
 
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
+#### Built-in Serializers Register From Code
+
+Akka.NET registers the serializers, bindings and serializer ids of its own modules from code: Akka.Remote, Akka.Cluster, Akka.Cluster.Tools, Akka.Cluster.Sharding, Akka.DistributedData, Akka.Cluster.Metrics, Akka.Persistence and Akka.Streams. A module's serializers are in place as soon as its assembly is deployed with your application, with no HOCON row behind them. These modules no longer put rows for them under `akka.actor.serializers`, `akka.actor.serialization-bindings` or `akka.actor.serialization-identifiers`, so you will not find those rows in `ActorSystem.Settings.Config`.
+
+To find out which serializer handles a type, ask the `Serialization` extension (`FindSerializerForType`, `GetSerializerById`) instead of reading the configuration.
+
+You can still change them. A row of your own under `akka.actor.serializers` replaces a built-in alias, and a row under `akka.actor.serialization-bindings` rebinds a built-in type. Both win over the built-in default, and a `SerializationSetup` wins over both.
+
 ### Configuring Serialization Bindings Programmatically
 
 As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup).
@@ -211,15 +219,11 @@ this would in effect results this final HOCON settings:
 serialization-identifiers : {
     "Akka.Serialization.ByteArraySerializer, Akka" : 4
     "Akka.Serialization.NewtonSoftJsonSerializer, Akka" : 1000001
-    "Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote" : 2
-    "Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote" : 3
-    "Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote" : 6
-    "Akka.Remote.Serialization.MiscMessageSerializer, Akka.Remote" : 16
-    "Akka.Remote.Serialization.PrimitiveSerializers, Akka.Remote" : 17
-    "Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote" : 22
     "MyAssembly.MyDefaultSerializer, SomeAssembly" : 1
 }
 ```
+
+The serializers of Akka.Remote, Akka.Cluster and the other first-party modules declare their ids in code, so they have no row in this block. See [Built-in Serializers Register From Code](#built-in-serializers-register-from-code).
 
 ### Programmatically Change NewtonSoft JSON Serializer Settings
 

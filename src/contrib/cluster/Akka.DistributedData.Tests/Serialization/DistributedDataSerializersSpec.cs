@@ -27,24 +27,30 @@ namespace Akka.DistributedData.Tests.Serialization
     }
 
     /// <summary>
-    /// Keeps <see cref="DistributedDataSerializers"/> in sync with Akka.DistributedData's reference.conf. The
-    /// shared checks live in <see cref="ModuleSerializerSpecs"/>.
+    /// Keeps <see cref="DistributedDataSerializers"/> in step with the rows Akka.DistributedData's reference.conf
+    /// shipped at 1.6.0-beta1, which <see cref="FrozenSerializerRows"/> keeps. The shared checks live in
+    /// <see cref="ModuleSerializerSpecs"/>.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class DistributedDataSerializersSpec : AkkaSpec
     {
-        private static readonly Config DDataRows = DistributedData.DefaultConfig();
+        // reference.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
+        private static readonly Config DDataRows = FrozenSerializerRows.DistributedData;
 
-        public DistributedDataSerializersSpec(ITestOutputHelper output) : base(DDataRows, output)
+        public DistributedDataSerializersSpec(ITestOutputHelper output) : base(DistributedData.DefaultConfig(), output)
         {
         }
 
-        [Fact(DisplayName = "DistributedDataSerializers should list no serializer or type that reference.conf does not")]
-        public void Should_have_a_reference_conf_row_When_the_table_lists_a_type()
+        [Fact(DisplayName = "DistributedDataSerializers should match the rows reference.conf shipped at 1.6.0-beta1")]
+        public void Should_match_the_frozen_rows_When_the_table_is_built()
         {
             var table = new DistributedDataSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(DDataRows, table.Create((ExtendedActorSystem)Sys));
+            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(DDataRows, table.Create((ExtendedActorSystem)Sys));
         }
+
+        [Fact(DisplayName = "Serialization should resolve every frozen DistributedData row on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_DistributedData_rows()
+            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("ddata-plain", DDataRows, (s, id) => s.GetSerializerById(id));
 
         [Fact(DisplayName = "DistributedDataSerializers should build without throwing on a system that never loaded its reference.conf")]
         public async Task Should_build_without_throwing_When_its_config_is_absent()
@@ -54,13 +60,19 @@ namespace Akka.DistributedData.Tests.Serialization
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("ddata-aqn", DDataRows, Sys);
 
-        [Fact(DisplayName = "Serialization should let application.conf override a reference.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_DistributedData_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in DistributedData binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_DistributedData_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.DistributedData.IReplicatorMessage, Akka.DistributedData"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("ddata-override", overrides, DDataRows, system =>
+            await ModuleSerializerSpecs.WithSystem("ddata-override", overrides, withCopiedRows ? DDataRows : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
@@ -68,6 +80,11 @@ namespace Akka.DistributedData.Tests.Serialization
                 serialization.FindSerializerForType(typeof(GSet<string>)).Should().BeOfType<ReplicatedDataSerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace a built-in DistributedData alias when dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_a_DistributedData_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("ddata-alias-override", "akka-replicated-data",
+                typeof(GSet<string>));
 
         [Fact(DisplayName = "Serialization should build every DistributedData serializer under its usual id, without a warning, when dynamic type loading is off")]
         public async Task Should_keep_the_DistributedData_serializer_ids_When_dynamic_type_loading_is_disabled()

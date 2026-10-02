@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Configuration;
@@ -33,9 +34,10 @@ namespace Akka.Cluster.Tests.Serialization
     }
 
     /// <summary>
-    /// Keeps <see cref="ClusterSerializers"/> in sync with Cluster.conf. The shared checks live in
-    /// <see cref="ModuleSerializerSpecs"/>; this spec adds what is specific to Cluster, including the internal
-    /// API needed to force a reflection-only baseline for the parity comparison below.
+    /// Keeps <see cref="ClusterSerializers"/> in step with the rows Cluster.conf shipped at 1.6.0-beta1, which
+    /// <see cref="FrozenSerializerRows"/> keeps. The shared checks live in <see cref="ModuleSerializerSpecs"/>; this
+    /// spec adds what is specific to Cluster, including the internal API needed to force a reflection-only
+    /// baseline for the parity comparison below.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class ClusterSerializersSpec : AkkaSpec
@@ -46,7 +48,8 @@ namespace Akka.Cluster.Tests.Serialization
 
         private static readonly ModuleSerializerTable NoModules = new(new Dictionary<string, Func<ModuleSerializers?>>());
 
-        private static readonly Config ClusterRows = ClusterConfigFactory.Default();
+        // Cluster.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
+        private static readonly Config ClusterRows = FrozenSerializerRows.Cluster;
 
         private static readonly Type[] BoundSamples =
         {
@@ -71,34 +74,48 @@ namespace Akka.Cluster.Tests.Serialization
             }
         }
 
-        [Fact(DisplayName = "ClusterSerializers should resolve every Cluster.conf row to the type and serializer reflection does")]
-        public void Should_match_reflection_When_resolving_every_Cluster_conf_row()
+        [Theory(DisplayName = "Serialization should resolve every built-in Cluster serializer and bound type as 1.6.0-beta1 did, with no Cluster rows in the config")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_match_the_beta1_rows_When_the_config_has_no_Cluster_rows(bool dynamicTypeLoading)
         {
-            var table = new ClusterSerializers();
-            var details = table.Create((ExtendedActorSystem)Sys);
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, details);
+            var details = new ClusterSerializers().Create((ExtendedActorSystem)Sys);
 
             // core's module map names Akka.Cluster, and ClusterSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Cluster").Should().NotBeNull();
 
-            var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
-            var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-
-            foreach (var entry in details)
+            // beta1 read the frozen rows from Cluster.conf and resolved them by reflection, with no module table
+            await ModuleSerializerSpecs.WithSystem("cluster-beta1", ClusterConfigFactory.Default(), ClusterRows, system =>
             {
-                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
-                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
-            }
+                var reflected = Build(system, NoModules, dynamicTypeLoading: true);
 
-            foreach (var type in BoundSamples)
-                fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType(), type.FullName);
+                // Sys carries no Cluster rows at all: everything below comes from the table's defaults
+                Sys.Settings.Config.HasPath("akka.actor.serializers.akka-cluster").Should().BeFalse();
+                var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading);
+
+                foreach (var entry in details)
+                {
+                    entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
+                    fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
+                }
+
+                foreach (var type in BoundSamples)
+                    fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType(), type.FullName);
+
+                foreach (var type in details.SelectMany(d => d.UseFor))
+                    fromTable.FindSerializerForType(type).Should().BeOfType(reflected.FindSerializerForType(type).GetType(), type.FullName);
+            });
         }
 
-        [Fact(DisplayName = "ClusterSerializers should list no serializer or type that Cluster.conf does not")]
-        public void Should_have_a_Cluster_conf_row_When_the_table_lists_a_type()
+        [Fact(DisplayName = "Serialization should resolve every frozen Cluster row on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Cluster_rows()
+            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("cluster-plain", ClusterRows, (s, id) => s.GetSerializerById(id));
+
+        [Fact(DisplayName = "ClusterSerializers should match the rows Cluster.conf shipped at 1.6.0-beta1")]
+        public void Should_match_the_frozen_rows_When_the_table_is_built()
         {
             var table = new ClusterSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(ClusterRows, table.Create((ExtendedActorSystem)Sys));
+            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(ClusterRows, table.Create((ExtendedActorSystem)Sys));
         }
 
         [Fact(DisplayName = "ClusterSerializers should build without throwing on a system that never loaded Cluster.conf")]
@@ -109,13 +126,19 @@ namespace Akka.Cluster.Tests.Serialization
         public async Task Should_resolve_assembly_qualified_names_When_dynamic_type_loading_is_disabled()
             => await ModuleSerializerSpecs.AssertHostingSpellingResolves("cluster-aqn", ClusterRows, Sys, BoundSamples);
 
-        [Fact(DisplayName = "Serialization should let application.conf override a reference.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_Cluster_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in Cluster binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_Cluster_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(
                 @"akka.actor.serialization-bindings { ""Akka.Delivery.Internal.IDeliverySerializable, Akka"" = bytes }");
 
-            await ModuleSerializerSpecs.WithSystem("cluster-override", overrides, ClusterRows, system =>
+            await ModuleSerializerSpecs.WithSystem("cluster-override", overrides, withCopiedRows ? ClusterRows : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
@@ -123,6 +146,11 @@ namespace Akka.Cluster.Tests.Serialization
                 serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat)).Should().BeOfType<ClusterMessageSerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace a built-in Cluster alias when dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_a_Cluster_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("cluster-alias-override", "akka-cluster",
+                typeof(ClusterHeartbeatSender.Heartbeat), typeof(ClusterRouterPool));
 
         [Fact(DisplayName = "Serialization should build every Cluster serializer under its usual id, without a warning, when dynamic type loading is off")]
         public async Task Should_keep_the_Cluster_serializer_ids_When_dynamic_type_loading_is_disabled()

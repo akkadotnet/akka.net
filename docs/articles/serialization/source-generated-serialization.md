@@ -149,9 +149,7 @@ serializer. See
 A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then `Serializer`. So it
 satisfies Akka's classic reflection contract: a public constructor that takes
 `ExtendedActorSystem`, and a stable `Identifier`. You can register it exactly like any hand-written
-serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks.
-Akka.Remote registers its own generated Artery control-message serializer this same way today, in
-`Remote.conf`:
+serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks:
 
 ```hocon
 akka.actor {
@@ -166,6 +164,10 @@ akka.actor {
   }
 }
 ```
+
+This is how Akka.Remote's generated Artery control-message serializer was registered through 1.6.0-beta1.
+Akka.Remote now registers it, and its other serializers, from code, so `Remote.conf` no longer carries
+these rows. Your own generated serializers still register the way the example shows.
 
 Nothing about this is generator-specific. It is the same three HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use

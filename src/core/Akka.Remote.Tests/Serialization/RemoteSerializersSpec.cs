@@ -37,9 +37,10 @@ namespace Akka.Remote.Tests.Serialization
     }
 
     /// <summary>
-    /// Keeps <see cref="RemoteSerializers"/> in sync with Remote.conf. The shared checks live in
-    /// <see cref="ModuleSerializerSpecs"/>; this spec adds what is specific to Remote, including the internal
-    /// API needed to force a reflection-only baseline for the parity comparison below.
+    /// Keeps <see cref="RemoteSerializers"/> in step with the rows Remote.conf shipped at 1.6.0-beta1, which
+    /// <see cref="FrozenSerializerRows"/> keeps. The shared checks live in <see cref="ModuleSerializerSpecs"/>; this
+    /// spec adds what is specific to Remote, including the internal API needed to force a reflection-only baseline
+    /// for the parity comparison below.
     /// </summary>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class RemoteSerializersSpec : AkkaSpec
@@ -52,7 +53,8 @@ namespace Akka.Remote.Tests.Serialization
 
         private static readonly ModuleSerializerTable NoModules = new(new Dictionary<string, Func<ModuleSerializers?>>());
 
-        private static readonly Config RemoteRows = RemoteConfigFactory.Default();
+        // Remote.conf no longer ships these rows; the table has to keep matching what 1.6.0-beta1 shipped
+        private static readonly Config RemoteRows = FrozenSerializerRows.Remote;
 
         public RemoteSerializersSpec(ITestOutputHelper output) : base(RemoteProvider, output)
         {
@@ -87,44 +89,55 @@ namespace Akka.Remote.Tests.Serialization
             }
         }
 
-        [Fact(DisplayName = "RemoteSerializers should resolve every Remote.conf row to the type and serializer reflection does")]
-        public void Should_match_reflection_When_resolving_every_Remote_conf_row()
+        [Theory(DisplayName = "Serialization should resolve every built-in Remote serializer and bound type as 1.6.0-beta1 did, with no Remote rows in the config")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_match_the_beta1_rows_When_the_config_has_no_Remote_rows(bool dynamicTypeLoading)
         {
-            var table = new RemoteSerializers();
-            var details = table.Create((ExtendedActorSystem)Sys);
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, details);
+            var details = new RemoteSerializers().Create((ExtendedActorSystem)Sys);
 
             // core's module map names Akka.Remote, and RemoteSerializers is what it loads for it
             ModuleSerializerTable.Default.ForAssembly("Akka.Remote").Should().NotBeNull();
 
-            var reflected = Build(Sys, NoModules, dynamicTypeLoading: true);
-            var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading: true);
-
-            foreach (var entry in details)
+            // beta1 read the frozen rows from Remote.conf and resolved them by reflection, with no module table
+            await ModuleSerializerSpecs.WithSystem("remote-beta1", RemoteConfigFactory.Default(), RemoteRows, system =>
             {
-                // the table builds what reflection builds, under the same id
-                entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
-                fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
-            }
+                var reflected = Build(system, NoModules, dynamicTypeLoading: true);
 
-            foreach (var type in details.SelectMany(d => d.UseFor))
-            {
-                var expected = reflected.FindSerializerForType(type);
-                var actual = fromTable.FindSerializerForType(type);
-                actual.Should().BeOfType(expected.GetType(), type.Name);
-                actual.Identifier.Should().Be(expected.Identifier, type.Name);
-            }
+                // Sys carries no Remote rows at all: everything below comes from the table's defaults
+                Sys.Settings.Config.HasPath("akka.actor.serializers.akka-misc").Should().BeFalse();
+                var fromTable = Build(Sys, ModuleSerializerTable.Default, dynamicTypeLoading);
 
-            // primitive's settings block reached the table
-            fromTable.FindSerializerForType(typeof(string)).Manifest("s")
-                .Should().Be(reflected.FindSerializerForType(typeof(string)).Manifest("s"));
+                foreach (var entry in details)
+                {
+                    // the table builds what reflection builds, under the same id
+                    entry.Serializer.Should().BeOfType(reflected.GetSerializerById(entry.Serializer.Identifier).GetType(), entry.Alias);
+                    fromTable.GetSerializerById(entry.Serializer.Identifier).Should().BeOfType(entry.Serializer.GetType(), entry.Alias);
+                }
+
+                foreach (var type in details.SelectMany(d => d.UseFor))
+                {
+                    var expected = reflected.FindSerializerForType(type);
+                    var actual = fromTable.FindSerializerForType(type);
+                    actual.Should().BeOfType(expected.GetType(), type.Name);
+                    actual.Identifier.Should().Be(expected.Identifier, type.Name);
+                }
+
+                // primitive's settings block reached the table
+                fromTable.FindSerializerForType(typeof(string)).Manifest("s")
+                    .Should().Be(reflected.FindSerializerForType(typeof(string)).Manifest("s"));
+            });
         }
 
-        [Fact(DisplayName = "RemoteSerializers should list no serializer or type that Remote.conf does not")]
-        public void Should_have_a_Remote_conf_row_When_the_table_lists_a_type()
+        [Fact(DisplayName = "Serialization should resolve every frozen Remote row on a plain system, with dynamic type loading on and off")]
+        public async Task Should_resolve_the_frozen_rows_When_a_plain_system_has_no_Remote_rows()
+            => await ModuleSerializerSpecs.AssertPlainSystemResolvesFrozenRows("remote-plain", RemoteRows, (s, id) => s.GetSerializerById(id));
+
+        [Fact(DisplayName = "RemoteSerializers should match the rows Remote.conf shipped at 1.6.0-beta1")]
+        public void Should_match_the_frozen_rows_When_the_table_is_built()
         {
             var table = new RemoteSerializers();
-            ModuleSerializerSpecs.AssertTableMatchesConfig(RemoteRows, table.Create((ExtendedActorSystem)Sys));
+            ModuleSerializerSpecs.AssertTableMatchesFrozenRows(RemoteRows, table.Create((ExtendedActorSystem)Sys));
         }
 
         [Fact(DisplayName = "RemoteSerializers should build without throwing on a system that never loaded Remote.conf")]
@@ -157,21 +170,34 @@ namespace Akka.Remote.Tests.Serialization
             serialization.FindSerializerForType(typeof(HandshakeReq)).Should().BeOfType<ArteryControlMessageSerializer>();
         }
 
-        [Fact(DisplayName = "Serialization should let application.conf override a Remote.conf row when dynamic type loading is off")]
-        public async Task Should_honor_an_application_override_When_it_rebinds_a_Remote_type()
+        /// <remarks>
+        /// With the rows present, the config is one an application copied from 1.5; without them, it is the
+        /// shipped one. Either way the application's own row beats the module default.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should let application.conf override a built-in Remote binding when dynamic type loading is off")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_honor_an_application_override_When_it_rebinds_a_Remote_type(bool withCopiedRows)
         {
             var overrides = ConfigurationFactory.ParseString(@"
                 akka.actor.serialization-bindings { ""Akka.Actor.Identify, Akka"" = bytes }
                 akka.actor.serialization-settings.primitive.use-legacy-behavior = off");
 
-            await ModuleSerializerSpecs.WithSystem("remote-override", overrides, RemoteRows, system =>
+            await ModuleSerializerSpecs.WithSystem("remote-override", overrides, withCopiedRows ? RemoteRows : null, system =>
             {
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
                 serialization.FindSerializerForType(typeof(Identify)).Should().BeOfType<ByteArraySerializer>();
                 serialization.FindSerializerForType(typeof(string)).Manifest("s").Should().Be("S");
+                // an untouched binding keeps its module default
+                serialization.FindSerializerForType(typeof(ActorIdentity)).Should().BeOfType<MiscMessageSerializer>();
             });
         }
+
+        [Fact(DisplayName = "Serialization should let application.conf replace a built-in Remote alias When dynamic type loading is off")]
+        public async Task Should_honor_an_alias_override_When_it_replaces_a_Remote_alias()
+            => await ModuleSerializerSpecs.AssertAliasOverrideWins("remote-alias-override", "akka-misc",
+                typeof(Identify), typeof(IActorRef), typeof(RemoteWatcher.Heartbeat));
 
         [Fact(DisplayName = "Serialization should probe and register Remote's serializers as defaults even when the config has no Remote rows")]
         public async Task Should_probe_Remote_When_a_local_config_has_no_Remote_rows()

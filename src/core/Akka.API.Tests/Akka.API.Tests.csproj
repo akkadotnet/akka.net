@@ -29,6 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the rows each module's HOCON shipped at 1.6.0-beta1; one copy, shared with the module specs -->
+    <Compile Include="..\Akka.Tests.Shared.Internals.Xunit3\FrozenSerializerRows.cs" Link="FrozenSerializerRows.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <!--
