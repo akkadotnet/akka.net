@@ -36,6 +36,7 @@ namespace Akka.Persistence.Embedded.Query
     public sealed class SqliteReadJournalProvider : Akka.Persistence.Query.IReadJournalProvider
     {
         public SqliteReadJournalProvider(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public SqliteReadJournalProvider(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config, string pluginPath) { }
         public Akka.Persistence.Query.IReadJournal GetReadJournal() { }
     }
 }
@@ -68,8 +69,10 @@ namespace Akka.Persistence.Embedded
     }
     public static class SqlitePersistenceSetupExtensions
     {
-        public static Akka.Persistence.PersistencePluginSetup WithEmbeddedPersistence(this Akka.Persistence.PersistencePluginSetup setup) { }
-        public static Akka.Persistence.Query.PersistenceQuerySetup WithEmbeddedReadJournal(this Akka.Persistence.Query.PersistenceQuerySetup setup) { }
+        public static Akka.Persistence.PersistenceSetup WithEmbeddedJournal(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.journal.embedded", System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null) { }
+        public static Akka.Persistence.PersistenceSetup WithEmbeddedPersistence(this Akka.Persistence.PersistenceSetup setup, System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null) { }
+        public static Akka.Persistence.PersistenceSetup WithEmbeddedReadJournal(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.query.journal.embedded") { }
+        public static Akka.Persistence.PersistenceSetup WithEmbeddedSnapshotStore(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.snapshot-store.embedded") { }
     }
     public enum TagWriteMode
     {

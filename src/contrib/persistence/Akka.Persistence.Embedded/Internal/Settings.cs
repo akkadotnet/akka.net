@@ -337,8 +337,9 @@ namespace Akka.Persistence.Embedded.Internal
             }
 
             var writeSection = systemConfig.GetConfig(writePluginPath);
+            // a journal registered in a PersistenceSetup has no `class` in HOCON; only a class that names another journal is wrong
             var writeClass = writeSection.GetString("class", "") ?? "";
-            if (!IsEmbeddedJournalClass(writeClass))
+            if (writeClass.Length > 0 && !IsEmbeddedJournalClass(writeClass))
             {
                 throw new ConfigurationException(
                     $"[{pluginPath}.write-plugin] names [{writePluginPath}], whose class [{writeClass}] is not the Akka.Persistence.Embedded journal.");

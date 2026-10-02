@@ -8,7 +8,7 @@
     read journal ends in such a boundary when it is run into a sink, and without these roots it dies
     at runtime with MissingMethodException on BoundarySubscriber`1 / UntypedSubscriberImpl`1.
     Reference-type elements only (EventEnvelope, string) - they share one compiled instantiation.
-    Delete this file when #8731 is fixed.
+    Keep this file until the Akka.Streams fix (#8732) has merged and this app publishes and runs without it; then delete it.
   -->
   <assembly fullname="Akka.Streams">
     <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/BoundarySubscriber`1" preserve="all" />

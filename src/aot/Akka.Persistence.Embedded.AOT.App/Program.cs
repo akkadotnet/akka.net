@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Embedded;
 using Akka.Persistence.Embedded.Query;
+using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Serialization;
 using Akka.Streams;
@@ -41,6 +42,7 @@ internal static class Program
             CheckNativeLibrary();
             await RunTagTableAsync(NewDatabase(files));
             await RunCsvAsync(NewDatabase(files));
+            await RunBothAsync(NewDatabase(files));
             await RunUnregisteredAsync(NewDatabase(files));
 
             Console.WriteLine("[canary-sqlite] OK");
@@ -89,18 +91,23 @@ internal static class Program
 
     private static ActorSystem CreateSystem(string label, string path, string tagWriteMode, bool register, LogWatchdogFilter watchdog)
     {
+        // HOCON only picks the default plugins and says where the database is. The plugin's class names and reference
+        // configuration come with the registration below, so there is nothing to resolve by name and nothing to add as a fallback.
         var config = ConfigurationFactory.ParseString($$"""
-                akka.persistence.journal.plugin = "akka.persistence.journal.embedded"
-                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
-                akka.persistence.journal.embedded {
-                    connection-string = "Data Source={{path}}"
-                    tag-write-mode = {{tagWriteMode}}
-                }
-                akka.persistence.snapshot-store.embedded.connection-string = "Data Source={{path}}"
-                akka.persistence.query.journal.embedded.refresh-interval = 100ms
-                """)
-            // PersistenceQuery injects this by reflection when the switch is on. With it off the app supplies it.
-            .WithFallback(SqlitePersistence.DefaultConfiguration);
+            akka.persistence.journal.plugin = "akka.persistence.journal.embedded"
+            akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
+            akka.persistence.journal.embedded {
+                connection-string = "Data Source={{path}}"
+                tag-write-mode = {{tagWriteMode}}
+            }
+            akka.persistence.snapshot-store.embedded.connection-string = "Data Source={{path}}"
+            akka.persistence.query.journal.embedded.refresh-interval = 100ms
+            """);
+
+        // Only the unregistered scenario needs the HOCON class names: it shows what a user who forgot the registration
+        // sees (core finds the class name and, with the switch off, refuses to load it).
+        if (!register)
+            config = config.WithFallback(SqlitePersistence.DefaultConfiguration);
 
         var setup = BootstrapSetup.Create().WithConfig(config)
             .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
@@ -109,9 +116,9 @@ internal static class Program
 
         if (register)
         {
-            setup = setup
-                .And(PersistencePluginSetup.Empty.WithEmbeddedPersistence())
-                .And(PersistenceQuerySetup.Empty.WithEmbeddedReadJournal());
+            // one line registers the journal, the snapshot store and the read journal; the adapter is the journal's
+            setup = setup.And(PersistenceSetup.Create().WithEmbeddedPersistence(
+                [EventAdapterDetails.Create("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))]));
         }
 
         // Serialization and Mailboxes log-and-continue when a configured type name does not resolve, so a
@@ -188,6 +195,15 @@ internal static class Program
             Require(label, loaded.Snapshot is null, "a snapshot survived DeleteSnapshots(Latest)");
             Console.WriteLine($"[canary-sqlite] {label}: DeleteSnapshots left nothing to load");
 
+            // 7. the registered event adapter tagged an event on its way in
+            var adapted = system.ActorOf(Props.Create(() => new CanaryPersistentActor("p3", true)), "p3");
+            Require(label, await adapted.Ask<int>(new PersistCmd("adapted-1", false), AskTimeout) == 1, "persist on p3");
+            var adaptedFound = await readJournal.CurrentEventsByTag("adapted", Offset.NoOffset())
+                .RunWith(Sink.Seq<EventEnvelope>(), materializer).WaitAsync(AskTimeout);
+            Require(label, adaptedFound.Count == 1 && adaptedFound[0].PersistenceId == "p3" && adaptedFound[0].Tags.SequenceEqual(["adapted"]),
+                $"CurrentEventsByTag(adapted) returned {adaptedFound.Count} envelopes - the event adapter did not run");
+            Console.WriteLine($"[canary-sqlite] {label}: the registered event adapter tagged an event");
+
             system.Log.Info("[canary-sqlite] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
         }
@@ -247,6 +263,37 @@ internal static class Program
             Require(label, found.Count == 1 && found[0].SequenceNr == 1 && found[0].Tags.SequenceEqual(["red"]),
                 $"CurrentEventsByTag(red) returned {found.Count} envelopes");
             Console.WriteLine($"[canary-sqlite] {label}: found the tagged event through the Csv column");
+
+            watchdog.ThrowIfAnyProblems(label, "run");
+        }
+        finally
+        {
+            await system.Terminate().WaitAsync(TerminateTimeout);
+        }
+
+        Console.WriteLine($"[canary-sqlite] {label}: terminated");
+    }
+
+    /// <summary>A third database in Both mode: tags go to the column and the table, and a delete cleans up the tag table.</summary>
+    private static async Task RunBothAsync(string path)
+    {
+        const string label = "both";
+        var watchdog = new LogWatchdogFilter();
+        var system = CreateSystem(label, path, "Both", register: true, watchdog);
+        try
+        {
+            var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("both-1", true)), "both-1");
+            Require(label, await actor.Ask<int>(new PersistCmd("plain", false), AskTimeout) == 1, "persist plain");
+            Require(label, await actor.Ask<int>(new PersistCmd("tagged", true), AskTimeout) == 2, "persist tagged");
+            Require(label, await actor.Ask<int>(new PersistCmd("last", true), AskTimeout) == 3, "persist last");
+            Require(label, await actor.Ask<long>(new DeleteTo(2), AskTimeout) == 2, "delete up to 2");
+
+            var readJournal = system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier);
+            var found = await readJournal.CurrentEventsByTag("red", Offset.NoOffset())
+                .RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(AskTimeout);
+            Require(label, found.Count == 1 && found[0].SequenceNr == 3 && found[0].Tags.SequenceEqual(["red"]),
+                $"CurrentEventsByTag(red) returned {found.Count} envelopes after the delete");
+            Console.WriteLine($"[canary-sqlite] {label}: tag lookup and delete work with the column and the table");
 
             watchdog.ThrowIfAnyProblems(label, "run");
         }

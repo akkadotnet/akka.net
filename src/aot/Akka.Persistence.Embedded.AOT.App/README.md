@@ -2,7 +2,8 @@
 
 A Native AOT canary for the SQLite persistence plugin (`Akka.Persistence.Embedded`). It sets the
 `Akka.DynamicTypeLoading` feature switch to `false` with `Trim="true"`, registers the plugin in code
-(`WithEmbeddedPersistence()` and `WithEmbeddedReadJournal()`) and runs three scenarios (`Program.cs`):
+(`PersistenceSetup.Create().WithEmbeddedPersistence(...)`, one call for the journal, snapshot store and read journal) and runs
+four scenarios (`Program.cs`):
 
 1. **TagTable database.** A persistent actor persists five events (two tagged `red`), snapshots at
    sequence number 3, stops, and a new incarnation recovers with the snapshot. `DeleteMessages(2)` and a
@@ -10,8 +11,10 @@ A Native AOT canary for the SQLite persistence plugin (`Akka.Persistence.Embedde
    runs (`CurrentPersistenceIds`, `CurrentEventsByPersistenceId`, `CurrentEventsByTag`, `CurrentAllEvents`,
    `CurrentAllEvents(FromEnd(1))`), a live `EventsByTag` and a live `PersistenceIds` each see a new event,
    and `DeleteSnapshots(Latest)` leaves nothing to load.
+   An event adapter registered with the journal tags one event, and `CurrentEventsByTag` finds it.
 2. **Csv database.** A second system and file in `tag-write-mode = Csv` finds a tagged event.
-3. **Unregistered.** A system without `WithEmbeddedPersistence()` must fail at start with a
+3. **Both database.** A third one in `tag-write-mode = Both` finds a tagged event after a delete.
+4. **Unregistered.** A system without `WithEmbeddedPersistence()` must fail at start with a
    `ConfigurationException` that names `Akka.DynamicTypeLoading`.
 
 It also opens a `SqliteConnection` first and prints `sqlite_version()`, which proves the native library
@@ -54,4 +57,4 @@ dotnet run scripts/CheckAotWarnings.cs -- \
 Akka.Streams builds the generic types on the boundary between two stream islands with `MakeGenericType`
 and `Activator.CreateInstance` (akkadotnet/akka.net#8731). Every query crosses such a boundary, and without
 a root the trimmer removes the constructor and the query fails with `MissingMethodException`.
-`StreamsRoots.xml` roots those types for this app. It goes away when Akka.Streams is fixed.
+`StreamsRoots.xml` roots those types for this app. Keep it until the Akka.Streams fix (#8732) has merged and the app runs without it.

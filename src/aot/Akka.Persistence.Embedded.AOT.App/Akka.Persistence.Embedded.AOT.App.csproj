@@ -38,7 +38,7 @@
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
   </ItemGroup>
 
-  <!-- Roots the Akka.Streams boundary types every query crosses. See StreamsRoots.xml (#8731). -->
+  <!-- Roots the Akka.Streams boundary types every query crosses. See StreamsRoots.xml (#8731, kept until the fix in #8732 has merged). -->
   <ItemGroup>
     <TrimmerRootDescriptor Include="StreamsRoots.xml" />
   </ItemGroup>

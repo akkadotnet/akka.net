@@ -30,6 +30,21 @@ public sealed record GetState;
 public sealed record CanaryState(string[] Values, long SnapshotSequenceNr, long LastSequenceNr);
 
 /// <summary>
+/// Tags every event whose value starts with "adapted-". Only the registration in a <see cref="PersistenceSetup"/> lets
+/// core build it with <c>Akka.DynamicTypeLoading</c> off.
+/// </summary>
+public sealed class CanaryTagger : IWriteEventAdapter
+{
+    private static readonly string[] Tags = ["adapted"];
+
+    public string Manifest(object evt) => string.Empty;
+
+    public object ToJournal(object evt) => evt is CanaryEvent { Value: { } value } && value.StartsWith("adapted-", StringComparison.Ordinal)
+        ? new Tagged(evt, Tags)
+        : evt;
+}
+
+/// <summary>
 /// Hand-written, reflection-free serializer for <see cref="CanaryEvent"/> and <see cref="CanarySnapshot"/>.
 /// With <c>Akka.DynamicTypeLoading</c> off core registers no fallback serializer, so an AOT application
 /// binds one for each of its own event and snapshot types through <see cref="SerializationSetup"/>.

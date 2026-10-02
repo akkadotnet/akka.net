@@ -43,10 +43,16 @@ namespace Akka.Persistence.Embedded.Tests.Registration
         public async Task Should_start_plugins_through_setup_registration_When_dynamic_type_loading_is_off()
         {
             using var db = new SqliteTestDb();
-            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
+            // the whole HOCON a user writes: which plugins are the default and where the database is. No class, no reference config.
+            var config = ConfigurationFactory.ParseString($$"""
+                akka.persistence.journal.plugin = "akka.persistence.journal.embedded"
+                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
+                akka.persistence.journal.embedded.connection-string = "{{db.HoconConnectionString}}"
+                akka.persistence.snapshot-store.embedded.connection-string = "{{db.HoconConnectionString}}"
+                akka.persistence.query.journal.embedded.refresh-interval = 100ms
+                """);
             var setup = BootstrapSetup.Create().WithConfig(config)
-                .And(PersistencePluginSetup.Empty.WithEmbeddedPersistence())
-                .And(PersistenceQuerySetup.Empty.WithEmbeddedReadJournal())
+                .And(PersistenceSetup.Create().WithEmbeddedPersistence())
                 .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
                     SerializerDetails.Create("test-event", new TestEventSerializer(system), ImmutableHashSet.Create(typeof(TestEvent))))));
 
@@ -78,6 +84,46 @@ namespace Akka.Persistence.Embedded.Tests.Registration
             finally
             {
                 AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
+            }
+        }
+
+        [Fact(DisplayName = "Should_start_two_registered_read_journals_with_gap_tracking_When_their_ids_differ")]
+        public async Task Should_start_two_registered_read_journals_with_gap_tracking_When_their_ids_differ()
+        {
+            using var db = new SqliteTestDb();
+            var config = ConfigurationFactory.ParseString($$"""
+                akka.persistence.journal.plugin = "akka.persistence.journal.embedded"
+                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
+                akka.persistence.journal.embedded.connection-string = "{{db.HoconConnectionString}}"
+                akka.persistence.snapshot-store.embedded.connection-string = "{{db.HoconConnectionString}}"
+                akka.persistence.query.journal.embedded.journal-sequence-retrieval.enabled = on
+                akka.persistence.query.journal.second.journal-sequence-retrieval.enabled = on
+                akka.persistence.query.journal.second.write-plugin = "akka.persistence.journal.embedded"
+                """);
+            var setup = BootstrapSetup.Create().WithConfig(config)
+                .And(PersistenceSetup.Create().WithEmbeddedPersistence().WithEmbeddedReadJournal("akka.persistence.query.journal.second"))
+                .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
+                    SerializerDetails.Create("test-event", new TestEventSerializer(system), ImmutableHashSet.Create(typeof(TestEvent))))));
+
+            var system = (ExtendedActorSystem)ActorSystem.Create("two-registered", setup);
+            try
+            {
+                var actor = system.ActorOf(Props.Create(() => new RecordingActor("two-registered")));
+                (await actor.Ask<int>("only", Timeout)).Should().Be(1);
+
+                // the second one used to fail with InvalidActorNameException: both trackers had the same name
+                var first = system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier);
+                var second = system.ReadJournalFor<SqliteReadJournal>("akka.persistence.query.journal.second");
+                foreach (var journal in new[] { first, second })
+                {
+                    var events = await journal.CurrentEventsByPersistenceId("two-registered", 0, long.MaxValue)
+                        .RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(Timeout);
+                    events.Should().HaveCount(1);
+                }
+            }
+            finally
+            {
+                await system.Terminate().WaitAsync(Timeout);
             }
         }
 
