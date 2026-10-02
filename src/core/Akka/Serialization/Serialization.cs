@@ -206,6 +206,12 @@ namespace Akka.Serialization
         private Dictionary<int, string> _defaultSerializerIdAlias = new();
         private Dictionary<string, (SerializerV2 Serializer, ImmutableHashSet<Type> UseFor)> _moduleDefaultsByAlias = new(StringComparer.Ordinal);
 
+        /// <summary>The HOCON key of the Serialization V2 switch; a <see cref="SerializationV2Setup"/> overrides it.</summary>
+        internal const string SerializationV2Key = "akka.actor.serialization-v2";
+
+        // the last Serialization V2 line logged per system, so a rebuilt Serialization doesn't repeat it
+        private static readonly ConditionalWeakTable<ExtendedActorSystem, StrongBox<string>> LoggedSerializationV2 = new();
+
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
 
@@ -328,6 +334,12 @@ namespace Akka.Serialization
 
             _logSerializerOverrideOnStart = system.Settings.LogSerializerOverrideOnStart;
 
+            // the Serialization V2 switch decides which module row holds a superseded legacy row's default bindings;
+            // it never changes which ids are registered, so reads don't depend on it
+            var serializationV2 = system.Settings.Setup.Get<SerializationV2Setup>().Select(s => s.Enabled)
+                .GetOrElse(system.Settings.Config.GetBoolean(SerializationV2Key, false));
+            List<LoadedModule> takeoverModules = null;
+
             // modules this system ships with, by assembly name. Every module the table knows about is built here,
             // up front - the first-party modules deployed with the app get their serializers registered as
             // defaults before any HOCON row is read. A module whose assembly isn't loaded counts as absent, silently.
@@ -352,15 +364,22 @@ namespace Akka.Serialization
                     continue;
                 }
 
+                if (serializationV2 && built.Takeovers.Count > 0)
+                    (takeoverModules ??= new List<LoadedModule>()).Add(built);
+
                 foreach (var details in built.Details)
                 {
+                    // with the V2 switch on, a superseded legacy row's types are bound to its V2 row instead - still
+                    // as defaults, so a HOCON or Setup binding below (a user pin) overrides them like any other default
+                    var useFor = built.DefaultBindings(details, serializationV2);
+
                     AddSerializer(details.Alias, details.SerializerV2, isDefault: true);
-                    foreach (var type in details.UseFor)
+                    foreach (var type in useFor)
                         AddSerializationMap(type, details.SerializerV2, isDefault: true);
 
                     // the detail a later non-default AddSerializer needs to move this alias's own
                     // bound types to whatever replaces it
-                    _moduleDefaultsByAlias[details.Alias] = (details.SerializerV2, details.UseFor);
+                    _moduleDefaultsByAlias[details.Alias] = (details.SerializerV2, useFor);
                 }
             }
 
@@ -524,6 +543,9 @@ namespace Akka.Serialization
                     AddSerializationMap(t, details.SerializerV2);
                 }
             }
+
+            if (serializationV2)
+                LogSerializationV2(system, takeoverModules);
 
             // default bookkeeping is construction-only - drop it now so nothing that runs after the
             // constructor (e.g. the Deserialize-miss caching path in FindSerializerV2ForType) can read it
@@ -938,6 +960,41 @@ namespace Akka.Serialization
                 $"The serializers of module [{assembly}] are not registered: its serializer table failed to load, " +
                 $"most likely because [{assembly}] and Akka.dll are different versions. Its messages will fall back to " +
                 $"other serializers. Cause: {error.GetType().Name}: {error.Message}"), ActorRefs.Nobody);
+        }
+
+        /// <summary>
+        /// One line saying which legacy aliases the V2 switch moved to their V2 rows, and how many of each one's
+        /// bindings a user pin kept. A system rebuilds its <see cref="Serialization"/> whenever a module injects
+        /// config, so a line identical to the last one logged for the same system is skipped.
+        /// </summary>
+        private void LogSerializationV2(ExtendedActorSystem system, List<LoadedModule> takeoverModules)
+        {
+            var takeovers = (takeoverModules ?? Enumerable.Empty<LoadedModule>())
+                .SelectMany(m => m.Takeovers)
+                .OrderBy(t => t.Legacy.Alias, StringComparer.Ordinal)
+                .Select(t =>
+                {
+                    var moved = t.Legacy.UseFor.Count(type =>
+                        _serializerMap.TryGetValue(type, out var now) && ReferenceEquals(now, t.V2.SerializerV2));
+                    var kept = t.Legacy.UseFor.Count - moved;
+                    return $"[{t.Legacy.Alias}] -> [{t.V2.Alias}] ({moved} of {t.Legacy.UseFor.Count} bindings" +
+                           (kept > 0 ? $", {kept} kept by user configuration)" : ")");
+                })
+                .ToList();
+
+            var message = takeovers.Count == 0
+                ? $"Serialization V2 is on ({SerializationV2Key}), but no deployed module has a V2 serializer yet; every binding stays on its legacy serializer."
+                : $"Serialization V2 is on ({SerializationV2Key}): {string.Join("; ", takeovers)}. Legacy serializers stay registered for reads.";
+
+            var last = LoggedSerializationV2.GetValue(system, _ => new StrongBox<string>());
+            lock (last)
+            {
+                if (last.Value == message)
+                    return;
+                last.Value = message;
+            }
+
+            _initializationLogger.Tell(new Info(nameof(Serialization), typeof(Serialization), message), ActorRefs.Nobody);
         }
 
         private void LogWarning(string str)
