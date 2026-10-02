@@ -337,7 +337,7 @@ public sealed record ShippingAddress(
 | Read-only collections | `IReadOnlyCollection<T>` (for example a `ReadOnlyCollection<T>`) | |
 | Immutable collections | `ImmutableArray<T>`, `ImmutableList<T>`, `ImmutableHashSet<T>`, `ImmutableDictionary<TKey,TValue>` | Every collection shape shares identical wire framing; only the in-memory construction on deserialize differs. |
 | Actor references | `IActorRef` | Native support via `Serialization.SerializedActorPath` and `Provider.ResolveActorRef`. No formatter needed. |
-| Addresses and paths | `Akka.Actor.Address`, `Akka.Actor.ActorPath` | Via the built-in `AddressFormatter` and `ActorPathFormatter`. See [Hand-written formatters](#hand-written-formatters). Not native, since `Akka.Actor` cannot reference `Akka.Serialization.V2`. |
+| Addresses and paths | `Akka.Actor.Address`, `Akka.Actor.ActorPath` | Via the built-in `AddressFormatter` and `ActorPathFormatter`, as fields or inside any collection above. See [Hand-written formatters](#hand-written-formatters). Not native, since `Akka.Actor` cannot reference `Akka.Serialization.V2`. |
 | Nested messages | Any `[AkkaSerializable]` class or struct | See [Nested value objects](#nested-akkaserializable-value-objects). |
 | Closed generic constructions | A `[AkkaSerializable]` generic type, registered per closed construction | See [Closed generic registrations](#closed-generic-registrations). |
 | Unions | A closed, explicitly enumerated set of concrete types | See [Unions](#unions). |
@@ -347,7 +347,8 @@ public sealed record ShippingAddress(
 as scalar field types. These are only meaningful as an enum's underlying type. Also not supported:
 a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported: a
 dictionary whose key type is `object`. Any of these fails
-compilation with **AKKASG003**, naming the offending property and type.
+compilation with **AKKASG003**, naming the offending property and type. So does a collection of a
+type that neither the generator nor a registered [formatter](#hand-written-formatters) handles.
 
 ## Unions
 
@@ -874,8 +875,8 @@ Some types cannot be annotated with `[AkkaSerializable]`. A core Akka type like
 `Akka.Actor.Address` is the most common case. It lives in an assembly that cannot reference
 `Akka.Serialization.V2` without creating a dependency cycle. Apply
 `[AkkaSerializerFormatter<TTarget, TFormatter>]` to the `[AkkaSerializer]` class instead. It routes
-every field of type `TTarget` through a hand-written `IAkkaMessagePackFormatter<TTarget>`
-implementation:
+every field of type `TTarget`, and every collection element, dictionary key, and dictionary value of
+type `TTarget`, through a hand-written `IAkkaMessagePackFormatter<TTarget>` implementation:
 
 ```csharp
 public interface IAkkaMessagePackFormatter<T>
@@ -953,6 +954,32 @@ public sealed partial class ControlMirrorSerializer : AkkaSerializer
     public static partial SerializerRegistration CreateRegistration();
 }
 ```
+
+### Formatters Inside Collections
+
+A registered formatter applies at every position a `TTarget` can sit, in every collection shape the
+generator supports: `T[]`, `List<T>`, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`,
+`ImmutableArray<T>`, `ImmutableList<T>`, `ImmutableHashSet<T>`, the three dictionary shapes (as key
+or as value), and nested combinations such as `Dictionary<string, List<Address>>`. With
+`[AkkaSerializerFormatter<Address, AddressFormatter>]` registered, these all work:
+
+```csharp
+[AkkaSerializable(Manifest = "route-v1")]
+public sealed record Route(
+    [property: AkkaField(1)] List<Address> Hops,
+    [property: AkkaField(2)] Dictionary<Address, long> LastSeen,
+    [property: AkkaField(3)] ImmutableArray<Address> Candidates) : IRoutingProtocol;
+```
+
+The wire form is the array or map the collection already uses, with each element exactly the bytes the
+formatter writes at field position. There is no wrapper, so `Hops` above is `array(n)` of the 4-element
+`Address` arrays. As at field position, the generator owns `nil`: a `null` element, or an absent
+`Nullable<T>` element, is written as `nil` and the formatter only sees present values. `SizeOf` is
+summed over the elements, so the exact-size contract holds for the whole collection.
+
+A formatter registered for a type the generator also supports natively takes precedence at every
+position, not only at field position. Register an `IActorRef` formatter, for example, and `List<IActorRef>`
+uses it. Without one, `IActorRef` keeps its native encoding.
 
 ### The Two Built-in Formatters
 
@@ -1065,7 +1092,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 |---|---|---|---|
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
-| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
+| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode, or it is a collection with an element, key, or value that neither the generator nor a registered formatter can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
 | AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |

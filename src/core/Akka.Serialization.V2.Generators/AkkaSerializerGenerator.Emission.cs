@@ -599,6 +599,9 @@ public sealed partial class AkkaSerializerGenerator
                     field.Mapping.TypeFullName.Length > 0 &&
                     formattersByTarget.ContainsKey(field.Mapping.Key))
                     return true;
+
+                if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                    return true;
             }
 
             return false;
@@ -641,6 +644,14 @@ public sealed partial class AkkaSerializerGenerator
                 {
                     resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.Key), formatter));
                 }
+                else if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                {
+                    // A formatter serves a collection's element, dictionary key, and dictionary value
+                    // exactly as it serves a field: the position changes where the formatter is called,
+                    // never what it writes, so the wire form is the array/map the collection already
+                    // is, with each element exactly what the formatter writes at field position.
+                    resolvedFields.Add(field.WithMapping(ResolveCollectionFormatters(field.Mapping, formattersByTarget)));
+                }
                 else
                 {
                     resolvedFields.Add(field);
@@ -651,6 +662,69 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return builder?.ToImmutable() ?? allMessagesByType;
+    }
+
+    /// <summary>
+    /// Whether a registered formatter can serve this mapping when it sits in an element, key, or value
+    /// position -- the same rule <see cref="ResolveMessages"/> applies at field position: the mapping
+    /// names a type (<see cref="TypeMapping.TypeFullName"/>), and is not the object-typed envelope
+    /// boundary, which no formatter may claim.
+    /// </summary>
+    private static bool CanBeFormatted(TypeMapping mapping)
+        => mapping.Kind != FieldKind.EnvelopePayload && mapping.TypeFullName.Length > 0;
+
+    /// <summary>
+    /// Whether any element, dictionary key, or dictionary value anywhere inside this collection mapping
+    /// (including nested collections) has a registered formatter. Cheap and allocation-free: it lets
+    /// <see cref="ResolveMessages"/> skip every collection field in the common no-formatter case.
+    /// </summary>
+    private static bool CollectionNeedsFormatter(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    {
+        foreach (var child in collection.TypeArguments)
+        {
+            if (CanBeFormatted(child) && formattersByTarget.ContainsKey(child.Key))
+                return true;
+
+            if (IsCollectionKind(child.Kind) && CollectionNeedsFormatter(child, formattersByTarget))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Rebuilds a collection mapping with every element, key, and value that has a registered formatter
+    /// swapped for a <see cref="FieldKind.Formatted"/> mapping carrying that formatter, recursing into
+    /// nested collections. The replacement keeps the position's declared type name and nullability (the
+    /// read temporaries and the nil handling depend on them) and takes its value-type-ness from the
+    /// formatter's target, mirroring <see cref="FormatterInfo.IsTargetValueType"/> at field position.
+    /// </summary>
+    private static TypeMapping ResolveCollectionFormatters(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    {
+        var resolved = ImmutableArray.CreateBuilder<TypeMapping>(collection.TypeArguments.Length);
+        foreach (var child in collection.TypeArguments)
+        {
+            if (CanBeFormatted(child) && formattersByTarget.TryGetValue(child.Key, out var formatter))
+            {
+                resolved.Add(new TypeMapping(
+                    FieldKind.Formatted,
+                    child.Key,
+                    isValueType: formatter.IsTargetValueType,
+                    declaredTypeName: child.DeclaredTypeName,
+                    isNullable: child.IsNullable,
+                    formatter: formatter));
+            }
+            else if (IsCollectionKind(child.Kind))
+            {
+                resolved.Add(ResolveCollectionFormatters(child, formattersByTarget));
+            }
+            else
+            {
+                resolved.Add(child);
+            }
+        }
+
+        return collection.WithTypeArguments(resolved.ToImmutable());
     }
 
     /// <summary>
@@ -753,6 +827,9 @@ public sealed partial class AkkaSerializerGenerator
             {
                 if (field.Mapping.Kind == FieldKind.Formatted && field.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
                     used.Add(formatter);
+
+                if (IsCollectionKind(field.Mapping.Kind))
+                    CollectCollectionFormatters(field.Mapping, seen, used);
             }
         }
 
@@ -760,6 +837,17 @@ public sealed partial class AkkaSerializerGenerator
             return ImmutableArray<FormatterInfo>.Empty;
 
         return used.ToImmutable().Sort((a, b) => string.CompareOrdinal(a.TargetTypeFullName, b.TargetTypeFullName));
+    }
+
+    private static void CollectCollectionFormatters(TypeMapping collection, HashSet<string> seen, ImmutableArray<FormatterInfo>.Builder used)
+    {
+        foreach (var child in collection.TypeArguments)
+        {
+            if (child.Kind == FieldKind.Formatted && child.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
+                used.Add(formatter);
+            else if (IsCollectionKind(child.Kind))
+                CollectCollectionFormatters(child, seen, used);
+        }
     }
 
     private static void GenerateFormatterFields(CodeWriter w, ImmutableArray<FormatterInfo> usedFormatters)
@@ -1822,6 +1910,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload => true,
             FieldKind.Object => !mapping.IsValueType,
+            FieldKind.Formatted => !mapping.IsValueType,
             _ => false
         };
     }
@@ -1898,6 +1987,30 @@ public sealed partial class AkkaSerializerGenerator
         if (mapping.Kind == FieldKind.EnvelopePayload)
         {
             w.Raw("WriteEnvelopePayload(ref writer, ").Value(value).Line(");");
+            return;
+        }
+
+        // A formatter-handled element, dictionary key, or dictionary value: exactly what the formatter
+        // writes at field position, with no wrapper. Nil handling mirrors FieldKind.Object above: a
+        // non-nullable value-type target goes straight to the formatter; anything that can be null (a
+        // reference target, which a collection may hold a null of whatever its annotation says, or a
+        // Nullable<T> value target) writes nil for null, which the formatter itself is never asked to
+        // represent (see the IAkkaMessagePackFormatter Write remarks).
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Identifier(GetFormatterFieldName(mapping.Formatter!)).Raw(".Write(ref writer, ").Value(value).Line(");");
+                return;
+            }
+
+            var formatted = mapping.IsValueType ? value.Member("Value") : value;
+            w.Raw("if (").Value(value).Line(" is null)");
+            using (w.Indented())
+                w.Line("writer.WriteNil();");
+            w.Line("else");
+            using (w.Indented())
+                w.Identifier(GetFormatterFieldName(mapping.Formatter!)).Raw(".Write(ref writer, ").Value(formatted).Line(");");
             return;
         }
 
@@ -2184,6 +2297,25 @@ public sealed partial class AkkaSerializerGenerator
             return;
         }
 
+        // Mirrors the Formatted case in EmitWriteElement: a non-nullable value-type target reads
+        // straight through the formatter; anything that can be null checks for nil first.
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Local(resultVar).Raw(" = ").Identifier(GetFormatterFieldName(mapping.Formatter!)).Line(".Read(ref reader);");
+                return;
+            }
+
+            w.Line("if (reader.TryReadNil())");
+            using (w.Indented())
+                w.Local(resultVar).Line(" = null;");
+            w.Line("else");
+            using (w.Indented())
+                w.Local(resultVar).Raw(" = ").Identifier(GetFormatterFieldName(mapping.Formatter!)).Line(".Read(ref reader);");
+            return;
+        }
+
         if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
         {
             w.Line("if (reader.TryReadNil())");
@@ -2325,6 +2457,31 @@ public sealed partial class AkkaSerializerGenerator
         {
             var elementSize = alloc.Next("size");
             w.Raw("var ").Local(elementSize).Raw(" = SizeOfEnvelopePayload(").Value(value).Raw(")");
+            w.Line(";");
+            w.Raw("if (").Local(elementSize).Line(" < 0)");
+            using (w.Indented())
+                w.Line("return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            w.Local(sizeVar).Raw(" += ").Local(elementSize).Line(";");
+            return;
+        }
+
+        // Mirrors the Formatted case in EmitWriteElement. A formatter may report UnknownSize, so the
+        // same "< 0" propagation guard as every other sized-by-callee kind applies.
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            var elementSize = alloc.Next("size");
+            var formatterField = GetFormatterFieldName(mapping.Formatter!);
+            w.Raw("var ").Local(elementSize).Raw(" = ");
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Identifier(formatterField).Raw(".SizeOf(").Value(value).Raw(")");
+            }
+            else
+            {
+                var sizedValue = mapping.IsValueType ? value.Member("Value") : value;
+                w.Value(value).Raw(" is null ? SizeOfNil() : ").Identifier(formatterField).Raw(".SizeOf(").Value(sizedValue).Raw(")");
+            }
+
             w.Line(";");
             w.Raw("if (").Local(elementSize).Line(" < 0)");
             using (w.Indented())

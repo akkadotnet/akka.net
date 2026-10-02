@@ -1,0 +1,10 @@
+﻿case: formatter-key-and-value-address-dictionary
+message-type: AddressToAddressMessage
+manifest: address-to-address-v1
+serializer-id: 122001
+byte-count: 54
+
+0000  81 01 81 94 a4 61 6b 6b  61 a3 73 79 73 a9 6c 6f  |.....akka.sys.lo|
+0010  63 61 6c 68 6f 73 74 cd  09 f8 94 a8 61 6b 6b 61  |calhost.....akka|
+0020  2e 74 63 70 a5 6f 74 68  65 72 a8 31 30 2e 30 2e  |.tcp.other.10.0.|
+0030  30 2e 32 cd 0f d5                                 |0.2...|
