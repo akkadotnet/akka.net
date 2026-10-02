@@ -293,9 +293,15 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         internal static IActorSubscription Create(IActorRef implementor, IUntypedSubscriber subscriber)
         {
-            var subscribedType = subscriber.GetType().GetGenericArguments().First(); // assumes type is UntypedSubscriberWrapper
-            var subscriptionType = typeof(ActorSubscription<>).MakeGenericType(subscribedType);
-            return (IActorSubscription) Activator.CreateInstance(subscriptionType, implementor, UntypedSubscriber.ToTyped(subscriber));
+            if (subscriber is UntypedSubscriber untyped)
+                return untyped.CreateActorSubscription(implementor);
+
+            // an IUntypedSubscriber implemented outside Akka.Streams (#8731)
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(subscriber);
+
+            var subscribedType = RuntimeGenerics.FirstGenericArgument(subscriber);
+            return (IActorSubscription)RuntimeGenerics.Instantiate(typeof(ActorSubscription<>), subscribedType, implementor, UntypedSubscriber.ToTyped(subscriber));
         }
 
         /// <summary>

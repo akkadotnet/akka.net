@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -207,7 +208,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
-    internal sealed class FanoutPublisherSink<TIn, TStreamBuffer> : SinkModule<TIn, IPublisher<TIn>> where TStreamBuffer : IStreamBuffer<TIn>
+    internal sealed class FanoutPublisherSink<TIn, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : SinkModule<TIn, IPublisher<TIn>> where TStreamBuffer : IStreamBuffer<TIn>
     {
         private readonly Action _onTerminated;
 

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
@@ -19,7 +20,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
-    internal class FanoutOutputs<T, TStreamBuffer> : SubscriberManagement<T, TStreamBuffer>, IOutputs where TStreamBuffer : IStreamBuffer<T>
+    internal class FanoutOutputs<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : SubscriberManagement<T, TStreamBuffer>, IOutputs where TStreamBuffer : IStreamBuffer<T>
     {
         private long _downstreamBufferSpace;
         private bool _downstreamCompleted;
@@ -217,7 +218,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
-    internal sealed class FanoutProcessorImpl<T, TStreamBuffer> : ActorProcessorImpl where TStreamBuffer : IStreamBuffer<T>
+    internal sealed class FanoutProcessorImpl<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : ActorProcessorImpl where TStreamBuffer : IStreamBuffer<T>
     {
         private readonly Action _onTerminated;
 

@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Dispatch;
@@ -102,9 +101,6 @@ namespace Akka.Streams.Implementation
 
         private sealed class ActorMaterializerSession : MaterializerSession
         {
-            private static readonly MethodInfo ProcessorForMethod =
-                typeof(ActorMaterializerSession).GetMethod("ProcessorFor",
-                    BindingFlags.NonPublic | BindingFlags.Instance);
             private readonly ActorMaterializerImpl _materializer;
             private readonly Func<GraphInterpreterShell, IActorRef> _subflowFuser;
             private readonly string _flowName;
@@ -142,12 +138,10 @@ namespace Akka.Streams.Implementation
                     }
                     case IProcessorModule module:
                     {
-                        var t = module.CreateProcessor();
-                        var processor = t.Item1;
-                        var materialized = t.Item2;
+                        var (subscriber, publisher, materialized) = module.CreateUntypedProcessor();
 
-                        AssignPort(module.In, UntypedSubscriber.FromTyped(processor));
-                        AssignPort(module.Out, UntypedPublisher.FromTyped(processor));
+                        AssignPort(module.In, subscriber);
+                        AssignPort(module.Out, publisher);
                         materializedValues.Add(atomic, materialized);
                         break;
                     }
@@ -193,9 +187,7 @@ namespace Akka.Streams.Implementation
                 while (inletsEnumerator.MoveNext())
                 {
                     var inlet = inletsEnumerator.Current;
-                    var elementType = inlet.GetType().GetGenericArguments().First();
-                    var subscriber = typeof(ActorGraphInterpreter.BoundarySubscriber<>).Instantiate(elementType, impl, shell, i);
-                    AssignPort(inlet, UntypedSubscriber.FromTyped(subscriber));
+                    AssignPort(inlet, inlet.CreateBoundarySubscriber(impl, shell, i));
                     i++;
                 }
 
@@ -204,11 +196,10 @@ namespace Akka.Streams.Implementation
                 while (outletsEnumerator.MoveNext())
                 {
                     var outlet = outletsEnumerator.Current;
-                    var elementType = outlet.GetType().GetGenericArguments().First();
-                    var publisher = typeof(ActorGraphInterpreter.BoundaryPublisher<>).Instantiate(elementType, impl, shell, i);
-                    var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, (IActorPublisher)publisher);
+                    var publisher = outlet.CreateBoundaryPublisher(impl, shell, i, out var actorPublisher);
+                    var message = new ActorGraphInterpreter.ExposedPublisher(shell, i, actorPublisher);
                     impl.Tell(message);
-                    AssignPort(outletsEnumerator.Current, (IUntypedPublisher) publisher);
+                    AssignPort(outlet, publisher);
                     i++;
                 }
             }

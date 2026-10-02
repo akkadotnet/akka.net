@@ -5,8 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Streams.Implementation;
-using Akka.Streams.Util;
 
 namespace Akka.Streams
 {
@@ -25,6 +25,12 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="publisher">TBD</param>
         void RegisterPublisher(IUntypedPublisher publisher);
+        /// <summary>
+        /// Registers an <see cref="ErrorPublisher{T}"/> of this publisher's element type, failing with
+        /// <paramref name="cause"/>.
+        /// </summary>
+        /// <param name="cause">The failure to signal.</param>
+        void RegisterErrorPublisher(Exception cause);
     }
 
     /// <summary>
@@ -43,22 +49,14 @@ namespace Akka.Streams
         /// <param name="publisher">TBD</param>
         public abstract void RegisterPublisher(IUntypedPublisher publisher);
 
+        /// <inheritdoc/>
+        public abstract void RegisterErrorPublisher(Exception cause);
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
         public abstract object Unwrap();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="publisher">TBD</param>
-        /// <returns>TBD</returns>
-        public static UntypedVirtualPublisher FromTyped(object publisher)
-        {
-            var publishedType = publisher.GetType().GetPublishedType();
-            return (UntypedVirtualPublisher) typeof(UntypedPublisherImpl<>).Instantiate(publishedType, publisher);
-        }
 
         /// <summary>
         /// TBD
@@ -129,6 +127,9 @@ namespace Akka.Streams
         {
             _publisher.RegisterPublisher(UntypedPublisher.ToTyped<T>(publisher));
         }
+
+        /// <inheritdoc/>
+        public override void RegisterErrorPublisher(Exception cause) => ((IUntypedVirtualPublisher)_publisher).RegisterErrorPublisher(cause);
 
         /// <summary>
         /// TBD
