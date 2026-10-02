@@ -102,6 +102,7 @@ namespace Akka.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithActors(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver> actorStarter) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, Akka.Hosting.IAkkaHealthCheck healthCheck, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.ActorRegistry, System.Threading.CancellationToken, System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult>> healthCheck, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSerializationV2(this Akka.Hosting.AkkaConfigurationBuilder builder, bool enabled = true) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithStrictSerialization(this Akka.Hosting.AkkaConfigurationBuilder builder, bool enabled = true) { }
     }
     public static class AkkaOpenTelemetryExtensions
