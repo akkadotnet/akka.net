@@ -1,0 +1,11 @@
+# Trim/AOT warning baseline for the SQLite persistence Native AOT canary (src/aot/Akka.Persistence.Embedded.AOT.App).
+#
+# Same format and checker as the plain-core canary's baseline (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) -
+# see that file for the key format and how added/gone entries are handled.
+#
+# Scope here is one prefix: src/contrib/persistence/Akka.Persistence.Embedded/. The goal for the plugin is zero
+# warnings from its own code, so this file holds nothing but this header. Warnings from Akka core, Akka.Persistence,
+# Akka.Streams and Microsoft.Data.Sqlite are out of scope: the core canaries baseline their own.
+#
+# An empty baseline never trips the checker's "measured nothing" guard, so the publish and the run of the app in CI
+# are what prove ILC ran and the plugin works.

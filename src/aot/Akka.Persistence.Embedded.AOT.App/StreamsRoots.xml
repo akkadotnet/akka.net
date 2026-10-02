@@ -1,0 +1,24 @@
+<linker>
+  <!--
+    Workaround for akkadotnet/akka.net#8731 (do not fix Akka.Streams from this app).
+
+    Akka.Streams builds the generic types that sit on the boundary between two stream islands with
+    MakeGenericType + Activator.CreateInstance (Construct.Instantiate, ActorMaterializerImpl,
+    ActorGraphInterpreter, ActorSubscription), which the trimmer cannot see. Every query of the SQLite
+    read journal ends in such a boundary when it is run into a sink, and without these roots it dies
+    at runtime with MissingMethodException on BoundarySubscriber`1 / UntypedSubscriberImpl`1.
+    Reference-type elements only (EventEnvelope, string) - they share one compiled instantiation.
+    Delete this file when #8731 is fixed.
+  -->
+  <assembly fullname="Akka.Streams">
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/BoundarySubscriber`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/BoundaryPublisher`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.Fusing.ActorGraphInterpreter/ActorOutputBoundary`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.ActorSubscription`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.ErrorPublisher`1" preserve="all" />
+    <type fullname="Akka.Streams.Implementation.CancellingSubscriber`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedPublisherImpl`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedSubscriberImpl`1" preserve="all" />
+    <type fullname="Akka.Streams.UntypedVirtualPublisherImpl`1" preserve="all" />
+  </assembly>
+</linker>
