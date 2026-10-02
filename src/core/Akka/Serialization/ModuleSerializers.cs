@@ -32,7 +32,7 @@ namespace Akka.Serialization
         /// The legacy row each of this module's V2 rows supersedes, as V2 alias to legacy alias - for example
         /// <c>["reliable-delivery-v2"] = "reliable-delivery"</c>. Both rows must come from <see cref="Create"/>, and the
         /// V2 row ships read-only (empty <see cref="SerializerDetails.UseFor"/>). When the Serialization V2 switch
-        /// (<c>akka.actor.serialization-v2</c> or <see cref="SerializationV2Setup"/>) is on, the V2 row takes over the
+        /// (<c>akka.actor.serialization-v2</c>) is on, the V2 row takes over the
         /// legacy row's default bindings; when it is off, nothing moves. Both ids stay registered either way.
         /// </summary>
         public virtual ImmutableDictionary<string, string> Supersedes => ImmutableDictionary<string, string>.Empty;

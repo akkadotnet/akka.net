@@ -6,7 +6,7 @@
 
 #nullable enable
 using System;
-using Akka.Serialization;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -25,35 +25,53 @@ public sealed class SerializationV2SpecsEnabled : TestKit
         builder.WithSerializationV2();
     }
 
-    [Fact(DisplayName = "Should_add_an_enabled_SerializationV2Setup_When_WithSerializationV2_is_called")]
-    public void Should_add_an_enabled_SerializationV2Setup_When_WithSerializationV2_is_called()
+    [Fact(DisplayName = "Should_set_the_serialization_v2_HOCON_key_to_true_When_WithSerializationV2_is_called")]
+    public async Task Should_set_the_serialization_v2_HOCON_key_to_true_When_WithSerializationV2_is_called()
     {
-        var setup = Sys.Settings.Setup.Get<SerializationV2Setup>();
-        setup.HasValue.Should().BeTrue();
-        setup.Value.Enabled.Should().BeTrue();
+        await Task.Yield();
+        Sys.Settings.Config.GetBoolean("akka.actor.serialization-v2", false).Should().BeTrue();
     }
 }
 
-public sealed class SerializationV2SpecsOverridden : TestKit
+public sealed class SerializationV2SpecsDisabled : TestKit
 {
-    public SerializationV2SpecsOverridden(XunitTestOutputHelper output)
-        : base(nameof(SerializationV2SpecsOverridden), output, logLevel: LogLevel.Information)
+    public SerializationV2SpecsDisabled(XunitTestOutputHelper output)
+        : base(nameof(SerializationV2SpecsDisabled), output, logLevel: LogLevel.Information)
     {
     }
 
     protected override void ConfigureAkka(AkkaConfigurationBuilder builder, IServiceProvider provider)
     {
-        // HOCON says on, and the last builder call says off: the setup wins over HOCON, and the last call wins
+        // HOCON added earlier says on; the extension wins over it
         builder.AddHocon("akka.actor.serialization-v2 = on", HoconAddMode.Prepend);
-        builder.WithSerializationV2();
         builder.WithSerializationV2(false);
     }
 
-    [Fact(DisplayName = "Should_keep_only_the_last_SerializationV2Setup_When_WithSerializationV2_is_called_twice")]
-    public void Should_keep_only_the_last_SerializationV2Setup_When_WithSerializationV2_is_called_twice()
+    [Fact(DisplayName = "Should_set_the_serialization_v2_HOCON_key_to_false_When_WithSerializationV2_is_called_with_false")]
+    public async Task Should_set_the_serialization_v2_HOCON_key_to_false_When_WithSerializationV2_is_called_with_false()
     {
-        var setup = Sys.Settings.Setup.Get<SerializationV2Setup>();
-        setup.HasValue.Should().BeTrue();
-        setup.Value.Enabled.Should().BeFalse();
+        await Task.Yield();
+        Sys.Settings.Config.GetBoolean("akka.actor.serialization-v2", true).Should().BeFalse();
+    }
+}
+
+public sealed class SerializationV2SpecsLastCallWins : TestKit
+{
+    public SerializationV2SpecsLastCallWins(XunitTestOutputHelper output)
+        : base(nameof(SerializationV2SpecsLastCallWins), output, logLevel: LogLevel.Information)
+    {
+    }
+
+    protected override void ConfigureAkka(AkkaConfigurationBuilder builder, IServiceProvider provider)
+    {
+        builder.WithSerializationV2(false);
+        builder.WithSerializationV2();
+    }
+
+    [Fact(DisplayName = "Should_use_the_last_value_When_WithSerializationV2_is_called_twice")]
+    public async Task Should_use_the_last_value_When_WithSerializationV2_is_called_twice()
+    {
+        await Task.Yield();
+        Sys.Settings.Config.GetBoolean("akka.actor.serialization-v2", false).Should().BeTrue();
     }
 }

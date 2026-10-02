@@ -206,7 +206,7 @@ namespace Akka.Serialization
         private Dictionary<int, string> _defaultSerializerIdAlias = new();
         private Dictionary<string, (SerializerV2 Serializer, ImmutableHashSet<Type> UseFor)> _moduleDefaultsByAlias = new(StringComparer.Ordinal);
 
-        /// <summary>The HOCON key of the Serialization V2 switch; a <see cref="SerializationV2Setup"/> overrides it.</summary>
+        /// <summary>The HOCON key of the Serialization V2 switch.</summary>
         internal const string SerializationV2Key = "akka.actor.serialization-v2";
 
         // the last Serialization V2 line logged per system, so a rebuilt Serialization doesn't repeat it
@@ -336,8 +336,7 @@ namespace Akka.Serialization
 
             // the Serialization V2 switch decides which module row holds a superseded legacy row's default bindings;
             // it never changes which ids are registered, so reads don't depend on it
-            var serializationV2 = system.Settings.Setup.Get<SerializationV2Setup>().Select(s => s.Enabled)
-                .GetOrElse(system.Settings.Config.GetBoolean(SerializationV2Key, false));
+            var serializationV2 = system.Settings.Config.GetBoolean(SerializationV2Key, false);
             List<LoadedModule> takeoverModules = null;
 
             // modules this system ships with, by assembly name. Every module the table knows about is built here,
