@@ -294,6 +294,22 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             replay.HighestSequenceNr.Should().Be(2L);
         }
 
+        [Fact(DisplayName = "Should_read_highest_sequence_number_above_from_When_recovering_from_a_snapshot")]
+        public async Task Should_read_highest_sequence_number_above_from_When_recovering_from_a_snapshot()
+        {
+            await WriteAsync(Write(Evt("from-snapshot", 1, new TestEvent("a")), Evt("from-snapshot", 2, new TestEvent("b")), Evt("from-snapshot", 3, new TestEvent("c"))));
+
+            // a recovery from a snapshot at sequence number 2 starts replaying at 3
+            var after = await ReplayAsync("from-snapshot", from: 3);
+            after.Replayed.Select(p => p.SequenceNr).Should().Equal(3L);
+            after.HighestSequenceNr.Should().Be(3L);
+
+            // nothing above the snapshot: the journal reports 0 and core keeps the snapshot's sequence number
+            var beyond = await ReplayAsync("from-snapshot", from: 4);
+            beyond.Replayed.Should().BeEmpty();
+            beyond.HighestSequenceNr.Should().Be(0L);
+        }
+
         [Fact(DisplayName = "Should_do_nothing_When_delete_target_is_below_first_event")]
         public async Task Should_do_nothing_When_delete_target_is_below_first_event()
         {
@@ -407,6 +423,18 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             var replay = await ReplayAsync("meta");
             replay.Replayed.Should().BeEmpty();
             replay.HighestSequenceNr.Should().Be(5L);
+        }
+
+        [Fact(DisplayName = "Should_read_highest_sequence_number_above_from_When_delete_compatibility_mode")]
+        public async Task Should_read_highest_sequence_number_above_from_When_delete_compatibility_mode()
+        {
+            await WriteAsync(Write(Evt("meta-from", 1, new TestEvent("a")), Evt("meta-from", 2, new TestEvent("b")), Evt("meta-from", 3, new TestEvent("c"))));
+            await DeleteToAsync("meta-from", 100);
+
+            var replay = await ReplayAsync("meta-from", from: 3);
+
+            replay.Replayed.Should().BeEmpty();
+            replay.HighestSequenceNr.Should().Be(3L);
         }
     }
 }
