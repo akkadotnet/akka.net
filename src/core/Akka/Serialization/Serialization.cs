@@ -330,18 +330,27 @@ namespace Akka.Serialization
 
             // modules this system ships with, by assembly name. Every module the table knows about is built here,
             // up front - the first-party modules deployed with the app get their serializers registered as
-            // defaults before any HOCON row is read. A module whose assembly isn't loaded, or whose table hits a
-            // version-skew error, counts as absent and contributes no defaults.
+            // defaults before any HOCON row is read. A module whose assembly isn't loaded counts as absent, silently.
+            // One whose table hits a version-skew error contributes no defaults either, but that is logged as an error.
             var builtModules = new Dictionary<string, (LoadedModule Module, Exception SkewError)>(StringComparer.OrdinalIgnoreCase);
             foreach (var assembly in modules.AssemblyNames)
             {
                 if (modules.ForAssembly(assembly) is not { } raw)
+                {
+                    // not deployed is fine and stays silent; deployed but broken is not
+                    if (modules.LoadError(assembly) is { } loadError)
+                        LogModuleSkew(assembly, loadError);
                     continue;
+                }
 
                 var built = LoadedModule.TryCreate(raw, system, out var skewError);
                 builtModules[assembly] = (built, skewError);
                 if (built is null)
+                {
+                    if (skewError is not null)
+                        LogModuleSkew(assembly, skewError);
                     continue;
+                }
 
                 foreach (var details in built.Details)
                 {
@@ -370,8 +379,8 @@ namespace Akka.Serialization
             var skippedAliases = new HashSet<string>(StringComparer.Ordinal);
 
             // With dynamic type loading off, a HOCON row core cannot resolve on its own is still fine if a
-            // SerializationSetup covers it: a module's reference.conf keeps its serializer and binding rows even
-            // when the application registers that serializer in code. The Setup is applied after the HOCON rows
+            // SerializationSetup covers it: an application's HOCON can keep a serializer and binding row even
+            // when it registers that serializer in code. The Setup is applied after the HOCON rows
             // either way, so these only decide whether a row is skipped or rejected - never what wins.
             var setupAliases = AkkaFeatures.IsDynamicTypeLoadingSupported
                 ? null
@@ -435,8 +444,8 @@ namespace Akka.Serialization
             }
 
             // A default alias may have been overridden above (by HOCON, then possibly again by Setup) without
-            // anything re-pointing its own bound types - there's no binding row to reprocess them on a system
-            // that never loaded this module's config. One pass, now that every alias override for this
+            // anything re-pointing its own bound types - a module's defaults have no binding row of their own to
+            // reprocess them. One pass, now that every alias override for this
             // Serialization is done, moves each default's still-unclaimed bound types to whatever its alias
             // currently resolves to. isDefault: true keeps them marked as defaults, so an explicit HOCON or
             // Setup binding for one of these types further down still overrides it silently, same as any other
@@ -578,9 +587,9 @@ namespace Akka.Serialization
         /// <list type="number">
         /// <item>The module the row's assembly half names.
         /// <c>"Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote"</c> is answered by Akka.Remote's module.</item>
-        /// <item>Every other built module. This covers bound types that live outside their module: Remote.conf
+        /// <item>Every other built module. This covers bound types that live outside their module: Akka.Remote
         /// binds <c>"System.String"</c> and <c>"Akka.Actor.Identify, Akka"</c> to its own serializers, and no
-        /// module owns CoreLib or Akka.dll, so lookup 1 can't answer for them.</item>
+        /// module owns CoreLib or Akka.dll, so lookup 1 can't answer for them. A HOCON row can still name one.</item>
         /// </list>
         /// Two modules that list the same name list the same <see cref="Type"/>, so the order they are asked in
         /// doesn't matter.
@@ -916,6 +925,19 @@ namespace Akka.Serialization
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// A deployed module whose serializer table fails with a version-skew error contributes no defaults. Startup
+        /// carries on, since an app that never uses the module should still run, but nothing may hide the loss: its
+        /// messages fall back to other serializers.
+        /// </summary>
+        private void LogModuleSkew(string assembly, Exception error)
+        {
+            _initializationLogger.Tell(new Error(error, nameof(Serialization), typeof(Serialization),
+                $"The serializers of module [{assembly}] are not registered: its serializer table failed to load, " +
+                $"most likely because [{assembly}] and Akka.dll are different versions. Its messages will fall back to " +
+                $"other serializers. Cause: {error.GetType().Name}: {error.Message}"), ActorRefs.Nobody);
         }
 
         private void LogWarning(string str)

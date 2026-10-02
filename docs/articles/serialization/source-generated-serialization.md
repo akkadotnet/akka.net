@@ -154,22 +154,18 @@ serializer, through the classic `akka.actor.serializers` and `serialization-bind
 ```hocon
 akka.actor {
   serializers {
-    artery-control = "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote"
+    order-benchmark = "MyApp.OrderBenchmarkSerializer, MyApp"
   }
   serialization-bindings {
-    "Akka.Remote.Artery.IArteryControlMessage, Akka.Remote" = artery-control
-  }
-  serialization-identifiers {
-    "Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote" = 23
+    "MyApp.IOrderBenchmarkProtocol, MyApp" = order-benchmark
   }
 }
 ```
 
-This is how Akka.Remote's generated Artery control-message serializer was registered through 1.6.0-beta1.
-Akka.Remote now registers it, and its other serializers, from code, so `Remote.conf` no longer carries
-these rows. Your own generated serializers still register the way the example shows.
+The generated serializer emits its own `Identifier` in code, from the id in `[AkkaSerializer<T>]`, so
+it needs no `akka.actor.serialization-identifiers` row. A row for it would be ignored.
 
-Nothing about this is generator-specific. It is the same three HOCON blocks the
+Nothing about this is generator-specific. It is the same two HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use
 `CreateRegistration()` and `CreateSetup()` when you want AOT-safe, compiler-checked composition.
 Use HOCON when you follow an existing configuration-driven setup.

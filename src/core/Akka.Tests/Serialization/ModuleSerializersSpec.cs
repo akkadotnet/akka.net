@@ -333,6 +333,52 @@ namespace Akka.Tests.Serialization
             });
         }
 
+        /// <remarks>
+        /// A module that fails with version skew cannot be allowed to vanish silently: with its HOCON rows gone
+        /// there is nothing else to tell the user its messages now fall back to other serializers. Startup still
+        /// succeeds, since an app that never uses the module has to keep running.
+        /// </remarks>
+        [Theory(DisplayName = "Serialization should log an error and still start when a deployed module's table fails with version skew")]
+        [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+SkewedModule, Akka.Tests", true)]
+        [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+StaticSkewedModule, Akka.Tests", true)]
+        [InlineData("Akka.Tests.Serialization.ModuleSerializersSpec+CreateSkewedModule, Akka.Tests", true)]
+        [InlineData("No.Such.Module, No.Such.Assembly", false)]
+        public async Task Should_log_an_error_When_a_deployed_module_table_is_skewed(string tableTypeName, bool expectError)
+        {
+            var table = TableOf(() => ModuleSerializerTable.Load(tableTypeName));
+            // no HOCON rows for the module anywhere
+            var config = ConfigurationFactory.ParseString($@"akka.stdout-logger-class = ""{RecordingLoggerName}""");
+            var system = ActorSystem.Create("module-skew-logs", config);
+            try
+            {
+                var logger = (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
+                // the system's own startup already built a Serialization against this logger
+                logger.Messages.Clear();
+
+                var serialization = await Build(system, table, dynamicTypeLoading: false);
+
+                var errors = logger.Messages.OfType<Error>().ToList();
+                if (expectError)
+                {
+                    var error = errors.Should().ContainSingle().Subject;
+                    error.Message.ToString().Should().Contain("[Akka.Tests]").And.Contain("not registered");
+                    error.Cause.Should().NotBeNull();
+                }
+                else
+                {
+                    // the module simply is not deployed: nothing to report
+                    errors.Should().BeEmpty();
+                }
+
+                // startup carried on with the other serializers
+                serialization.FindSerializerForType(typeof(byte[])).Should().BeOfType<ByteArraySerializer>();
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
         /// <remarks>Every module the table knows about is built up front, so its own types resolve even without a row for them.</remarks>
         [Fact(DisplayName = "Serialization should resolve a module-owned framework type binding when no module serializer row is present and dynamic type loading is off")]
         public async Task Should_resolve_a_framework_type_row_From_the_module_default_When_no_serializer_row_is_present()

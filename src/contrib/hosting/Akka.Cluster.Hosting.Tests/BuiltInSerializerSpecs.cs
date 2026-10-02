@@ -18,8 +18,10 @@ using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using AkkaSerialization = Akka.Serialization.Serialization;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Akka.Cluster.Hosting.Tests;
 
@@ -29,10 +31,18 @@ namespace Akka.Cluster.Hosting.Tests;
 /// </summary>
 public class BuiltInSerializerSpecs
 {
-    private static async Task<(IHost Host, ActorSystem System)> StartAsync(string name, Action<AkkaConfigurationBuilder> configure)
+    private readonly ITestOutputHelper _helper;
+
+    public BuiltInSerializerSpecs(ITestOutputHelper helper)
+    {
+        _helper = helper;
+    }
+
+    private async Task<(IHost Host, ActorSystem System)> StartAsync(string name, Action<AkkaConfigurationBuilder> configure)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var host = new HostBuilder()
+            .ConfigureLogging(builder => builder.AddProvider(new XUnitLoggerProvider(_helper, LogLevel.Information)))
             .ConfigureServices(services => services.AddAkka(name, (builder, _) =>
             {
                 builder

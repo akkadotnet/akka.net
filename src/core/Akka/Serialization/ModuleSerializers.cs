@@ -18,8 +18,8 @@ using Akka.Actor;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
-    /// can resolve those rows without <see cref="Type.GetType(string)"/>. <see cref="Create"/> has the same shape as
+    /// INTERNAL API. The serializers, bindings and ids of a first-party module, so <see cref="Serialization"/> can
+    /// register them without <see cref="Type.GetType(string)"/> and without any HOCON row. <see cref="Create"/> has the same shape as
     /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, every entry here
     /// is registered as a default as soon as the module loads - HOCON can still override an alias or a binding, and
     /// a <see cref="SerializationSetup"/> wins over both.
@@ -118,6 +118,7 @@ namespace Akka.Serialization
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
         private readonly ConcurrentDictionary<string, ModuleSerializers?> _loaded = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Exception> _loadErrors = new(StringComparer.OrdinalIgnoreCase);
 
         internal ModuleSerializerTable(IDictionary<string, Func<ModuleSerializers?>> modules)
             => _modules = new Dictionary<string, Func<ModuleSerializers?>>(modules, StringComparer.OrdinalIgnoreCase);
@@ -132,10 +133,16 @@ namespace Akka.Serialization
                 return null;
 
             // a race can load a module twice; the copies are equivalent and only one is kept
-            return _loaded.GetOrAdd(assembly, _ => TryLoad(load));
+            return _loaded.GetOrAdd(assembly, _ => TryLoad(assembly, load));
         }
 
-        private static ModuleSerializers? TryLoad(Func<ModuleSerializers?> load)
+        /// <summary>
+        /// The version-skew error that stopped <paramref name="assembly"/>'s table from loading, or null when it loaded
+        /// or simply is not deployed - an absent module is not an error, a broken one is.
+        /// </summary>
+        internal Exception? LoadError(string assembly) => _loadErrors.TryGetValue(assembly, out var error) ? error : null;
+
+        private ModuleSerializers? TryLoad(string assembly, Func<ModuleSerializers?> load)
         {
             try
             {
@@ -143,7 +150,9 @@ namespace Akka.Serialization
             }
             catch (Exception e) when (IsVersionSkew(e))
             {
-                // the module's table is missing from this build: the module counts as absent
+                // the module's table is missing from this build: the module counts as absent, and the caller
+                // can ask LoadError why
+                _loadErrors[assembly] = e;
                 return null;
             }
         }

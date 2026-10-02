@@ -234,7 +234,8 @@ akka.cluster.metrics {
   }
 }
 
-# Cluster metrics extension routers.
+# Router short names for the metrics routers. This mapping ships in Akka.NET core's akka.conf,
+# not in the Akka.Cluster.Metrics reference config.
 akka.actor {
 
   #  Provide routing of messages based on cluster metrics.
