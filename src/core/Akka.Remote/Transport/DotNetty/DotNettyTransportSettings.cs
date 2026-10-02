@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -575,8 +576,17 @@ namespace Akka.Remote.Transport.DotNetty
             string? expectedHostname = null,
             ILoggingAdapter? log = null)
         {
+            var warnedAboutExpectedHostname = 0;
             return (cert, chain, peer, errors, nonClosureLog) =>
             {
+                if (expectedHostname is not null && Interlocked.Exchange(ref warnedAboutExpectedHostname, 1) == 0)
+                {
+                    (log ?? nonClosureLog).Warning(
+                        "Akka.NET v1.5 does not enforce the explicit expected hostname [{0}]. " +
+                        "The value is used for diagnostics only; upgrade to Akka.NET v1.6 or later to enforce it.",
+                        expectedHostname);
+                }
+
                 if (cert == null)
                 {
                     (log ?? nonClosureLog).Error(

@@ -394,6 +394,9 @@ Accept only certificates with specific subject names:
 | `Combine()` | Compose multiple validators (AND logic) |
 | `ChainPlusThen()` | Chain validation + custom business logic |
 
+> [!WARNING]
+> In Akka.NET v1.5, passing an explicit `expectedHostname` to `ValidateHostname(expectedHostname)` does not compare that value with the certificate CN or SAN. The value is used only in failure diagnostics; `SslStream` still validates an outbound certificate against the connection target. Upgrade to Akka.NET v1.6 or later when the custom validator must enforce an explicit hostname.
+
 ### Custom Validator Precedence
 
 When both custom validators and HOCON config are present, custom validators take precedence:
