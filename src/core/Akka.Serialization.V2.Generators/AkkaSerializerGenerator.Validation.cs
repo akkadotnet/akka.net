@@ -668,6 +668,14 @@ public sealed partial class AkkaSerializerGenerator
             // construction's own registration attribute -- see MessageTypeLocationKey's doc comment.
             var messageAt = MessageTypeLocationKey(serializer, message);
 
+            // A private (or protected) nested message cannot be named by the generated serializer
+            // class, so its emitted helpers would not compile (CS0122). Report it here instead.
+            if (message.InaccessibleReason.Length > 0)
+            {
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MessageTypeNotAccessible, messageAt, ToDisplayName(message.FullyQualifiedName), message.InaccessibleReason));
+                isValid = false;
+            }
+
             if (message.Fields.Length == 0 && !message.AllowEmpty)
             {
                 diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingFields, messageAt, ToDisplayName(message.FullyQualifiedName)));

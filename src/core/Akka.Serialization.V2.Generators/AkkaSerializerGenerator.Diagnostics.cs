@@ -93,16 +93,16 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     // Same id/title/severity as MissingNestedSerializableDefinition. Used only when the nested
-    // type's assembly is not the one being compiled. This generator can only read a schema from
-    // the current compilation, so the type may already carry both attributes in its own assembly
-    // and still be unreadable from here. The message must name only the fixes that work today, and
-    // must not claim the type lacks the attributes.
+    // type's assembly is not the one being compiled and the generator found no [AkkaSerializable]
+    // schema it can read there. The generator reads a referenced type's schema from that assembly's
+    // metadata, so the usual cause is a missing [AkkaSerializable] (or [AkkaField]) in the other
+    // assembly. An inaccessible type or member is AKKASG039 instead.
     private static readonly DiagnosticDescriptor MissingNestedSerializableDefinitionCrossAssembly = new(
         "AKKASG007",
         "Nested value object serialization definition is required",
-        "Property '{0}' on type '{1}' uses nested value object type '{2}', which is declared in assembly '{3}'. " +
-        "This generator cannot read a schema from a referenced assembly yet. " +
-        "Register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or declare the type in this assembly.",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}', which is declared in assembly '{3}' but has no [AkkaSerializable] schema this generator can read there. " +
+        "Annotate it with [AkkaSerializable] and [AkkaField] properties in that assembly, " +
+        "register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or declare the type in this assembly.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -180,13 +180,13 @@ public sealed partial class AkkaSerializerGenerator
 
     // Same id/title/severity as UnionMemberNotSerializable. Used only when the member type's
     // assembly is not the one being compiled. See MissingNestedSerializableDefinitionCrossAssembly
-    // for why the member may already carry [AkkaSerializable] and still be unreadable from here.
+    // for when the generator can and cannot read a schema from that assembly.
     private static readonly DiagnosticDescriptor UnionMemberNotSerializableCrossAssembly = new(
         "AKKASG015",
         "Union member type is not serializable",
-        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}'. " +
-        "This generator cannot read a schema from a referenced assembly yet. " +
-        "Register [AkkaSerializerFormatter<{0}, TFormatter>] on '{4}', or declare the member in this assembly.",
+        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}' but has no [AkkaSerializable] schema this generator can read there. " +
+        "Annotate it with [AkkaSerializable] and [AkkaField] properties in that assembly, " +
+        "register [AkkaSerializerFormatter<{0}, TFormatter>] on '{4}', or declare the member in this assembly.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -488,6 +488,20 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// A message type declared in this compilation that generated code cannot name: the type, or a
+    /// type that contains it, is private, protected, or private protected. The generated serializer
+    /// is a separate class, so without this diagnostic the build fails with CS0122 inside generated
+    /// code and no AKKASG id. Reported at the message type's declaration.
+    /// </summary>
+    private static readonly DiagnosticDescriptor MessageTypeNotAccessible = new(
+        "AKKASG045",
+        "Message type is not accessible to generated code",
+        "[AkkaSerializable] type '{0}' cannot be used by the generated serializer because {1}. Make the type, and every type that contains it, internal or public.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -545,6 +559,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.ProtocolOwnedUpstream => ProtocolOwnedUpstream,
             DiagnosticKey.SerializerHasNoMessages => SerializerHasNoMessages,
             DiagnosticKey.DuplicateProtocolBindingCrossAssembly => DuplicateProtocolBindingCrossAssembly,
+            DiagnosticKey.MessageTypeNotAccessible => MessageTypeNotAccessible,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 
