@@ -614,6 +614,55 @@ public sealed partial class AkkaSerializerGenerator
         return messages.ToImmutable();
     }
 
+    /// <summary>
+    /// The kind that decides which diagnostic a field gets. A non-collection field is its own
+    /// <see cref="TypeMapping.Kind"/>. A collection field is usable only if every element, key, and
+    /// value is, so one that still holds an unusable leaf after formatter resolution (see
+    /// <see cref="ResolveMessages"/>) reports exactly what it did when extraction collapsed such a
+    /// collection up front: <see cref="FieldKind.UnsupportedEnumUnderlyingType"/> (AKKASG014, naming
+    /// the enum) when the first unusable leaf is an unsupported enum, otherwise
+    /// <see cref="FieldKind.Unsupported"/> (AKKASG003, naming the full field type). "First" is
+    /// depth-first with a dictionary key before its value -- the order the old collapse resolved
+    /// ties in. <paramref name="deciding"/> is the leaf (or, for a non-collection field, the field's
+    /// own mapping) the diagnostic's details come from.
+    /// </summary>
+    private static FieldKind GetDiagnosticKind(FieldInfo field, out TypeMapping deciding)
+    {
+        deciding = field.Mapping;
+        if (field.Mapping.TypeArguments.IsEmpty || !FindUnusableLeaf(field.Mapping, out var leaf))
+            return field.Mapping.Kind;
+
+        deciding = leaf;
+        return leaf.Kind == FieldKind.UnsupportedEnumUnderlyingType
+            ? FieldKind.UnsupportedEnumUnderlyingType
+            : FieldKind.Unsupported;
+    }
+
+    /// <summary>
+    /// Depth-first search (key before value) for the first collection element/key/value mapping that no
+    /// generated code path can serve: <see cref="FieldKind.Unsupported"/>,
+    /// <see cref="FieldKind.MissingSerializableDefinition"/>, or
+    /// <see cref="FieldKind.UnsupportedEnumUnderlyingType"/>. A leaf a formatter resolved is already
+    /// <see cref="FieldKind.Formatted"/> by the time validation runs, so it is never found here.
+    /// </summary>
+    private static bool FindUnusableLeaf(TypeMapping mapping, out TypeMapping leaf)
+    {
+        foreach (var argument in mapping.TypeArguments)
+        {
+            if (argument.Kind is FieldKind.Unsupported or FieldKind.MissingSerializableDefinition or FieldKind.UnsupportedEnumUnderlyingType)
+            {
+                leaf = argument;
+                return true;
+            }
+
+            if (FindUnusableLeaf(argument, out leaf))
+                return true;
+        }
+
+        leaf = default;
+        return false;
+    }
+
     // Walks a mapping and its collection element/key/value mappings, yielding every Object mapping
     // found. A nested [AkkaSerializable] type used only inside a collection (a List<Reading>
     // element, say) is found this way too. Yields the full mapping, not just its name, so a caller
@@ -727,7 +776,7 @@ public sealed partial class AkkaSerializerGenerator
                 isValid = false;
             }
 
-            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
+            foreach (var field in message.Fields.Where(field => GetDiagnosticKind(field, out _) == FieldKind.Unsupported))
             {
                 var at = new LocationKey(message.Key, field.Name);
                 diagnostics.Add(field.Mapping.SuggestsEnvelopeOrUnion
@@ -742,10 +791,12 @@ public sealed partial class AkkaSerializerGenerator
                 isValid = false;
             }
 
-            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.UnsupportedEnumUnderlyingType))
+            foreach (var field in message.Fields.Where(field => GetDiagnosticKind(field, out _) == FieldKind.UnsupportedEnumUnderlyingType))
             {
+                // For a collection field the enum is the unusable element/key/value, not the field.
+                GetDiagnosticKind(field, out var enumMapping);
                 var at = new LocationKey(message.Key, field.Name);
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnsupportedEnumUnderlyingType, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), ToDisplayName(field.Mapping.EnumUnderlyingTypeName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnsupportedEnumUnderlyingType, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(enumMapping.TypeFullName), ToDisplayName(enumMapping.EnumUnderlyingTypeName)));
                 isValid = false;
             }
 
@@ -764,6 +815,12 @@ public sealed partial class AkkaSerializerGenerator
             // declaring assembly says so).
             foreach (var field in message.Fields)
             {
+                // A collection that already failed on an unusable element/key/value is reported once,
+                // for the whole field (AKKASG003/AKKASG014 above), exactly as when extraction used to
+                // collapse it -- its other, healthy-looking leaves must not add a second diagnostic.
+                if (!field.Mapping.TypeArguments.IsEmpty && FindUnusableLeaf(field.Mapping, out _))
+                    continue;
+
                 var seenTypeKeys = new HashSet<TypeKey>();
                 foreach (var objectMapping in EnumerateObjectMappings(field.Mapping))
                 {

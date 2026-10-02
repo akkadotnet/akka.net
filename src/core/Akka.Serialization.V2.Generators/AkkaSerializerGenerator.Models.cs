@@ -1318,6 +1318,16 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public bool UnionDeclaredOnObjectField { get; }
 
+        /// <summary>
+        /// Replaces this field's mapping, keeping everything else. Used by formatter resolution when a
+        /// registered formatter swaps a collection's element, key, or value mapping for a
+        /// <see cref="FieldKind.Formatted"/> one -- the field itself stays an ordinary collection field.
+        /// </summary>
+        public FieldInfo WithMapping(TypeMapping mapping)
+        {
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, Formatter, UnionMembers, UnionDeclaredOnObjectField);
+        }
+
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
             return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField);
@@ -1384,7 +1394,8 @@ public sealed partial class AkkaSerializerGenerator
             string enumUnderlyingTypeName = "",
             string foreignAssemblyName = "",
             bool suggestsEnvelopeOrUnion = false,
-            bool isGenericConstruction = false)
+            bool isGenericConstruction = false,
+            FormatterInfo? formatter = null)
         {
             Kind = kind;
             Key = key;
@@ -1396,6 +1407,7 @@ public sealed partial class AkkaSerializerGenerator
             ForeignAssemblyName = foreignAssemblyName;
             SuggestsEnvelopeOrUnion = suggestsEnvelopeOrUnion;
             IsGenericConstruction = isGenericConstruction;
+            Formatter = formatter;
         }
 
         public FieldKind Kind { get; }
@@ -1474,11 +1486,25 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public bool IsGenericConstruction { get; }
 
+        /// <summary>
+        /// For a <see cref="FieldKind.Formatted"/> collection element/key/value: the registered
+        /// formatter that reads and writes it. Set only by formatter resolution (see
+        /// <see cref="AkkaSerializerGenerator.ResolveMessages"/>) -- never at extraction time, because
+        /// the formatter set belongs to the serializer, not the message. A <see cref="FieldKind.Formatted"/>
+        /// FIELD keeps its formatter on <see cref="FieldInfo.Formatter"/> instead, so every field-position
+        /// model stays exactly as it was; null for every other mapping.
+        /// </summary>
+        public FormatterInfo? Formatter { get; }
+
         public TypeMapping WithKey(TypeKey key)
-            => new(Kind, key, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction);
+            => new(Kind, key, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
 
         public TypeMapping AsCollectionElement(string declaredTypeName, bool isNullable)
-            => new(Kind, Key, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction);
+            => new(Kind, Key, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
+
+        /// <summary>Replaces the child mappings of a collection kind, keeping everything else.</summary>
+        public TypeMapping WithTypeArguments(ImmutableArray<TypeMapping> typeArguments)
+            => new(Kind, Key, IsValueType, DeclaredTypeName, IsNullable, typeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
 
         // Explicit IEquatable implementation: the compiler-provided struct equality would compare
         // the TypeArguments ImmutableArray by underlying-array REFERENCE, breaking value equality
@@ -1494,6 +1520,7 @@ public sealed partial class AkkaSerializerGenerator
                 && string.Equals(ForeignAssemblyName, other.ForeignAssemblyName, StringComparison.Ordinal)
                 && SuggestsEnvelopeOrUnion == other.SuggestsEnvelopeOrUnion
                 && IsGenericConstruction == other.IsGenericConstruction
+                && Equals(Formatter, other.Formatter)
                 && ValueEquality.SequenceEquals(TypeArguments, other.TypeArguments);
         }
 
@@ -1511,6 +1538,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, ForeignAssemblyName);
             hash = ValueEquality.Combine(hash, SuggestsEnvelopeOrUnion);
             hash = ValueEquality.Combine(hash, IsGenericConstruction);
+            hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
             hash = ValueEquality.Combine(hash, TypeArguments);
             return hash;
         }
