@@ -301,63 +301,82 @@ namespace Akka.Persistence.Journal
         /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
-            => Create(system, config, string.Empty);
+            => Create(system, config, string.Empty, null);
 
         /// <summary>
         /// INTERNAL API
         ///
         /// Same as <see cref="Create(ExtendedActorSystem, Config)"/>, but the caller names the plugin section
-        /// that <paramref name="config"/> came from so that a failure points at the setting the user has to fix.
-        /// An empty path means the section is unknown, and the setting names start at <c>event-adapters</c>.
+        /// that <paramref name="config"/> came from so that a failure points at the setting the user has to fix,
+        /// and passes the adapters its journal registered in code. An empty path means the section is unknown,
+        /// and the setting names start at <c>event-adapters</c>.
+        /// <para>
+        /// HOCON adapters and registered ones both apply. On a name clash the registered adapter wins, and a
+        /// registered binding for an event type replaces a HOCON binding for the same type.
+        /// </para>
         /// </summary>
-        internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath)
+        internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath, IReadOnlyCollection<EventAdapterDetails>? registered)
         {
             var adapters = ConfigToMap(config, "event-adapters");
             var adapterBindings = ConfigToListMap(config, "event-adapter-bindings");
-
-            return Create(system, adapters, adapterBindings, pluginPath);
-        }
-
-        private static EventAdapters Create(ExtendedActorSystem system, IDictionary<string, string> adapters, IDictionary<string, string[]> adapterBindings, string pluginPath)
-        {
-            var registry = PersistencePluginRegistry.From(system.Settings.Setup);
+            registered ??= Array.Empty<EventAdapterDetails>();
 
             var adapterNames = new HashSet<string>(adapters.Keys);
+            adapterNames.UnionWith(registered.Select(r => r.Name));
             foreach (var kv in adapterBindings)
             {
                 foreach (var boundAdapter in kv.Value)
                 {
                     if (!adapterNames.Contains(boundAdapter))
                         throw new ArgumentException(string.Format("{0} was bound to undefined event-adapter: {1} (bindings: [{2}], known adapters: [{3}])",
-                            kv.Key, boundAdapter, string.Join(", ", kv.Value), string.Join(", ", adapters.Keys)));
+                            kv.Key, boundAdapter, string.Join(", ", kv.Value), string.Join(", ", adapterNames)));
                 }
             }
 
             // A Map of handler from alias to implementation (i.e. class implementing Akka.Serialization.ISerializer)
             // For example this defines a handler named 'country': `"country" -> com.example.comain.CountryTagsAdapter`
-            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Key, kv.Value, system, registry, pluginPath));
+            var registeredNames = new HashSet<string>(registered.Select(r => r.Name));
+            var handlers = adapters
+                .Where(kv => !registeredNames.Contains(kv.Key))
+                .ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Key, kv.Value, system, pluginPath));
+            foreach (var details in registered)
+                handlers[details.Name] = details.CreateAdapter(system);
+
+            // The event types registered adapters are bound to. Two adapters on one type combine, as in HOCON.
+            var registeredBindings = new Dictionary<Type, List<IEventAdapter>>();
+            foreach (var details in registered)
+            {
+                foreach (var type in details.BoundTypes)
+                {
+                    if (!registeredBindings.TryGetValue(type, out var list))
+                        registeredBindings[type] = list = new List<IEventAdapter>();
+                    list.Add(handlers[details.Name]);
+                }
+            }
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
-            var bindings = Sort(adapterBindings.Select(kv =>
+            var pairs = adapterBindings.Select(kv =>
             {
-                // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, guard, reflection
-                Type type;
-                if (registry.TryGetEventAdapterBindingType(kv.Key, out var registeredType))
-                    type = registeredType;
-                else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                // lookup order, written out at the site on purpose (see AkkaFeatures): guard, reflection.
+                // A registered binding never reaches here, it comes from an EventAdapterDetails.
+                if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                         $"{SettingPrefix(pluginPath)}event-adapter-bindings",
                         kv.Key,
-                        "an event type registered through PersistencePluginSetup.WithEventAdapterBinding"));
-                else
-                    type = ResolveBindingTypeByReflection(kv.Key);
+                        "an EventAdapterDetails that lists this event type, passed to the JournalDetails of this journal"));
+                var type = ResolveBindingTypeByReflection(kv.Key);
 
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
                     : CombineAdapters(kv.Value.Select(h => handlers[h]));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
-            }).ToList());
+            }).Where(pair => !registeredBindings.ContainsKey(pair.Key)).ToList();
+
+            pairs.AddRange(registeredBindings.Select(kv => new KeyValuePair<Type, IEventAdapter>(
+                kv.Key, kv.Value.Count == 1 ? kv.Value[0] : CombineAdapters(kv.Value))));
+
+            var bindings = Sort(pairs);
 
             var backing = new ConcurrentDictionary<Type, IEventAdapter>();
 
@@ -447,18 +466,15 @@ namespace Akka.Persistence.Journal
         private static string SettingPrefix(string pluginPath)
             => string.IsNullOrEmpty(pluginPath) ? string.Empty : pluginPath + ".";
 
-        private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system,
-            PersistencePluginRegistry registry, string pluginPath)
+        private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system, string pluginPath)
         {
-            // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, built-in (none), guard, reflection
-            if (registry.TryCreateEventAdapter(qualifiedName, system, out var registered))
-                return registered;
-
+            // lookup order, written out at the site on purpose (see AkkaFeatures): guard, reflection.
+            // A registered adapter never reaches here, it comes from an EventAdapterDetails.
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                     $"{SettingPrefix(pluginPath)}event-adapters.{adapterName}",
                     qualifiedName,
-                    "an event adapter registered through PersistencePluginSetup"));
+                    "an EventAdapterDetails with this name, passed to the JournalDetails of this journal"));
 
             return InstantiateAdapterByReflection(qualifiedName, system);
         }

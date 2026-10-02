@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.InMemory;
 using Akka.Serialization;
@@ -21,6 +22,8 @@ namespace Akka.Persistence.AOT.App;
 internal static class Program
 {
     private const string PersistenceId = "canary-1";
+    private const string CanaryJournalId = "akka.persistence.journal.canary";
+    private const string CanarySnapshotStoreId = "akka.persistence.snapshot-store.canary";
     private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan TerminateTimeout = TimeSpan.FromSeconds(30);
 
@@ -50,46 +53,30 @@ internal static class Program
 
     /// <summary>
     /// Boots with the switch off and everything registered in code, then persists, recovers, snapshots and queries.
-    /// The default journal, snapshot store and stash overflow configurator are registered, non-built-in types, the
-    /// way a third-party plugin would be. The built-in <c>inmem</c> plugins run beside them.
+    /// The default journal and snapshot store, the stash overflow configurator and the read journal are registered in one
+    /// <see cref="PersistenceSetup"/>, and the first three are not built-in types, the way a third-party plugin would be. The built-in <c>inmem</c> plugins run beside them.
     /// </summary>
     private static async Task RunPersistenceAsync()
     {
         const string label = "persistence";
         Console.WriteLine($"[canary-persistence] creating ActorSystem '{label}' ...");
 
+        // HOCON only picks the default plugins. Everything else is registered, so there is no `class` string to
+        // resolve, no adapter section to write, and no read journal config to add by hand.
         var config = ConfigurationFactory.ParseString($$"""
-                akka.persistence.journal.plugin = "akka.persistence.journal.canary"
-                akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.canary"
-                akka.persistence.internal-stash-overflow-strategy = "{{TypeName(typeof(CanaryStashConfigurator))}}"
-                akka.persistence.journal.canary {
-                    class = "{{TypeName(typeof(CanaryJournal))}}"
-                    plugin-dispatcher = "akka.actor.default-dispatcher"
-                    marker = from-hocon
-                    event-adapters {
-                        canary-tagger = "{{TypeName(typeof(CanaryTagger))}}"
-                    }
-                    event-adapter-bindings {
-                        "{{TypeName(typeof(CanaryEvent))}}" = canary-tagger
-                    }
-                }
-                akka.persistence.snapshot-store.canary {
-                    class = "{{TypeName(typeof(CanarySnapshotStore))}}"
-                    plugin-dispatcher = "akka.actor.default-dispatcher"
-                }
-                """)
-            // PersistenceQuery injects this by reflection when the switch is on. With it off the app supplies it.
-            .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+            akka.persistence.journal.plugin = "{{CanaryJournalId}}"
+            akka.persistence.snapshot-store.plugin = "{{CanarySnapshotStoreId}}"
+            """);
 
         var setup = BootstrapSetup.Create().WithConfig(config)
-            .And(PersistencePluginSetup.Empty
-                .WithJournal(static journalConfig => new CanaryJournal(journalConfig))
-                .WithSnapshotStore(static _ => new CanarySnapshotStore())
-                .WithStashOverflowStrategy(static () => new CanaryStashConfigurator())
-                .WithEventAdapter(static _ => new CanaryTagger())
-                .WithEventAdapterBinding<CanaryEvent>())
-            .And(PersistenceQuerySetup.Empty
-                .WithReadJournal(static (system, journalConfig) => new InMemoryReadJournalProvider(system, journalConfig)))
+            .And(PersistenceSetup.Create()
+                .WithJournal(CanaryJournalId, static journalConfig => new CanaryJournal(journalConfig),
+                    defaultConfig: ConfigurationFactory.ParseString("marker = from-default"),
+                    eventAdapters: [EventAdapterDetails.Create("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))])
+                .WithSnapshotStore(CanarySnapshotStoreId, static _ => new CanarySnapshotStore())
+                .WithReadJournal(InMemoryReadJournal.Identifier, static (system, journalConfig) => new InMemoryReadJournalProvider(system, journalConfig),
+                    InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
+                .WithStashOverflowStrategy(new CanaryStashConfigurator()))
             .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
                 SerializerDetails.Create("canary", new CanarySerializer(system),
                     ImmutableHashSet.Create(typeof(CanaryEvent), typeof(CanarySnapshot))))));
@@ -144,7 +131,7 @@ internal static class Program
 
     /// <summary>
     /// The default journal, snapshot store and stash overflow strategy are the registered ones, built by the
-    /// factories, once each, with the journal's HOCON section. The persist, recovery and queries above only work when they ran.
+    /// factories, once each, with the default config in the journal's section. The persist, recovery and queries above only work when they ran.
     /// </summary>
     private static void AssertRegisteredPluginsAreUsed(ActorSystem system)
     {
@@ -155,7 +142,7 @@ internal static class Program
             "the registered stash overflow configurator was not used");
 
         Require(label, CanaryJournal.Instances == 1, $"the registered journal was built {CanaryJournal.Instances} times, not 1");
-        Require(label, CanaryJournal.Marker == "from-hocon", $"the registered journal got marker [{CanaryJournal.Marker}] from its plugin section");
+        Require(label, CanaryJournal.Marker == "from-default", $"the registered journal got marker [{CanaryJournal.Marker}] from its default config");
         Require(label, CanarySnapshotStore.Instances == 1, $"the registered snapshot store was built {CanarySnapshotStore.Instances} times, not 1");
         Console.WriteLine($"[canary-persistence] {label}: registered journal, snapshot store and stash configurator are in use");
     }
@@ -172,8 +159,6 @@ internal static class Program
         Require(label, await actor.Ask<long>(new SaveNow(), AskTimeout) == 1, "the built-in inmem snapshot store did not save");
         Console.WriteLine($"[canary-persistence] {label}: the built-in inmem journal and snapshot store work too");
     }
-
-    private static string TypeName(Type type) => $"{type.FullName}, {type.Assembly.GetName().Name}";
 
     private static void AssertSerializer(ActorSystem system)
     {

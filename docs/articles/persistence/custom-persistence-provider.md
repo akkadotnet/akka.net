@@ -466,35 +466,40 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
 sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. Register
-the types in code with `PersistencePluginSetup`, and a read journal provider with
-`PersistenceQuerySetup`, and Akka.Persistence builds them without reflection:
+them in code with a `PersistenceSetup`, one record per plugin id, the way `SerializationSetup` registers
+serializers. Ship the registration as an extension method on `PersistenceSetup`, so your users add it
+with one call:
 
 ```csharp
 public static class MyPersistenceSetupExtensions
 {
-    public static PersistencePluginSetup WithMyPersistence(this PersistencePluginSetup setup)
+    public static PersistenceSetup WithMyPersistence(this PersistenceSetup setup)
         => setup
-            .WithJournal<MyJournal>(static config => new MyJournal(config))
-            .WithSnapshotStore<MySnapshotStore>(static config => new MySnapshotStore(config));
-
-    public static PersistenceQuerySetup WithMyReadJournal(this PersistenceQuerySetup setup)
-        => setup.WithReadJournal<MyReadJournalProvider>(static (system, config) => new MyReadJournalProvider(system, config));
+            .WithJournal("akka.persistence.journal.my-journal", static config => new MyJournal(config),
+                defaultConfig: MyPersistence.DefaultJournalConfig)
+            .WithSnapshotStore("akka.persistence.snapshot-store.my-store", static config => new MySnapshotStore(config),
+                defaultConfig: MyPersistence.DefaultSnapshotStoreConfig)
+            .WithReadJournal("akka.persistence.query.journal.my-journal",
+                static (system, config) => new MyReadJournalProvider(system, config),
+                MyPersistence.DefaultReadJournalConfig);
 }
 ```
 
-Your app passes both to the actor system next to its `BootstrapSetup`:
+`WithReadJournal` comes from `Akka.Persistence.Query`. Your app passes the setup to the actor system
+next to its `BootstrapSetup`:
 
 ```csharp
 var setup = BootstrapSetup.Create().WithConfig(config)
-    .And(PersistencePluginSetup.Empty.WithMyPersistence())
-    .And(PersistenceQuerySetup.Empty.WithMyReadJournal());
+    .And(PersistenceSetup.Create().WithMyPersistence());
 ```
 
-The factory gets the plugin's HOCON section, with the fallback sections applied. The `class` setting
-still has to name the type. Akka.Persistence matches it against the registered type by full name and,
-if the setting has one, assembly name. Registration is optional on the JIT. It is required when the
-`Akka.DynamicTypeLoading` feature switch is off, which is the default for a Native AOT publish. See
-[Native AOT and Trimming](xref:native-aot) for the whole picture, including event adapters.
+The registration is keyed by plugin id, so the `class` setting is not needed. The factory gets the
+plugin's HOCON section with your `defaultConfig` sitting under it, so the app can leave your defaults
+out of its HOCON. A plugin package that cannot add an extension method can use
+`PersistenceSetup.Create(system => ImmutableHashSet.Create<PersistencePluginDetails>(...))`. Registration
+is optional on the JIT. It is required when the `Akka.DynamicTypeLoading` feature switch is off, which
+is the default for a Native AOT publish. See [Native AOT and Trimming](xref:native-aot) for the whole
+picture, including event adapters.
 
 Keep reflection out of the plugin itself too: create child actors with `Props.CreateBy` and an
 `IIndirectActorProducer`, and read your own types without `Type.GetType`.

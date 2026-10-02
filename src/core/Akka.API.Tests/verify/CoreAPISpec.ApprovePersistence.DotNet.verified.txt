@@ -1,5 +1,6 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Query")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
@@ -344,6 +345,12 @@ namespace Akka.Persistence
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
     }
+    public sealed class JournalDetails : Akka.Persistence.PersistencePluginDetails
+    {
+        public System.Collections.Generic.IReadOnlyList<Akka.Persistence.Journal.EventAdapterDetails> EventAdapters { get; }
+        public static Akka.Persistence.JournalDetails Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal>(string pluginId, System.Func<Akka.Configuration.Config, TJournal> factory, Akka.Configuration.Config? defaultConfig = null, System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null)
+            where TJournal : Akka.Actor.ActorBase { }
+    }
     public sealed class JournalHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage
     {
         public JournalHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
@@ -434,21 +441,14 @@ namespace Akka.Persistence
         Degraded = 1,
         Unhealthy = 2,
     }
-    public sealed class PersistencePluginSetup : Akka.Actor.Setup.Setup
+    public abstract class PersistencePluginDetails : System.IEquatable<Akka.Persistence.PersistencePluginDetails>
     {
-        public System.Collections.Generic.IReadOnlyCollection<System.Type> RegisteredTypes { get; }
-        public static Akka.Persistence.PersistencePluginSetup Empty { get; }
-        public Akka.Persistence.PersistencePluginSetup Merge(Akka.Persistence.PersistencePluginSetup other) { }
-        public Akka.Persistence.PersistencePluginSetup WithEventAdapter<TAdapter>(System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory)
-            where TAdapter :  class { }
-        public Akka.Persistence.PersistencePluginSetup WithEventAdapterBinding(System.Type eventType) { }
-        public Akka.Persistence.PersistencePluginSetup WithEventAdapterBinding<TEvent>() { }
-        public Akka.Persistence.PersistencePluginSetup WithJournal<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal>(System.Func<Akka.Configuration.Config, TJournal> factory)
-            where TJournal : Akka.Actor.ActorBase { }
-        public Akka.Persistence.PersistencePluginSetup WithSnapshotStore<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TSnapshotStore>(System.Func<Akka.Configuration.Config, TSnapshotStore> factory)
-            where TSnapshotStore : Akka.Actor.ActorBase { }
-        public Akka.Persistence.PersistencePluginSetup WithStashOverflowStrategy<TConfigurator>(System.Func<TConfigurator> factory)
-            where TConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator { }
+        protected PersistencePluginDetails(string pluginId, Akka.Configuration.Config? defaultConfig) { }
+        public Akka.Configuration.Config? DefaultConfig { get; }
+        public string PluginId { get; }
+        public bool Equals(Akka.Persistence.PersistencePluginDetails? other) { }
+        public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
@@ -482,6 +482,20 @@ namespace Akka.Persistence
             public System.TimeSpan AutoUpdateInterval { get; }
             public long AutoUpdateReplayMax { get; }
         }
+    }
+    public sealed class PersistenceSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Persistence.PersistencePluginDetails>> CreatePlugins { get; }
+        public Akka.Persistence.PersistenceSetup Merge(Akka.Persistence.PersistenceSetup other) { }
+        public Akka.Persistence.PersistenceSetup WithJournal<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal>(string pluginId, System.Func<Akka.Configuration.Config, TJournal> factory, Akka.Configuration.Config? defaultConfig = null, System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null)
+            where TJournal : Akka.Actor.ActorBase { }
+        public Akka.Persistence.PersistenceSetup WithPlugin(Akka.Persistence.PersistencePluginDetails details) { }
+        public Akka.Persistence.PersistenceSetup WithPlugins(System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Persistence.PersistencePluginDetails>> createPlugins) { }
+        public Akka.Persistence.PersistenceSetup WithSnapshotStore<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TStore>(string pluginId, System.Func<Akka.Configuration.Config, TStore> factory, Akka.Configuration.Config? defaultConfig = null)
+            where TStore : Akka.Actor.ActorBase { }
+        public Akka.Persistence.PersistenceSetup WithStashOverflowStrategy(Akka.Persistence.IStashOverflowStrategyConfigurator configurator) { }
+        public static Akka.Persistence.PersistenceSetup Create() { }
+        public static Akka.Persistence.PersistenceSetup Create(System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Persistence.PersistencePluginDetails>> createPlugins) { }
     }
     [Akka.Annotations.InternalApi]
     [System.Serializable]
@@ -707,6 +721,11 @@ namespace Akka.Persistence
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public sealed class SnapshotStoreDetails : Akka.Persistence.PersistencePluginDetails
+    {
+        public static Akka.Persistence.SnapshotStoreDetails Create<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TStore>(string pluginId, System.Func<Akka.Configuration.Config, TStore> factory, Akka.Configuration.Config? defaultConfig = null)
+            where TStore : Akka.Actor.ActorBase { }
     }
     public sealed class SnapshotStoreHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse
     {
@@ -1029,6 +1048,14 @@ namespace Akka.Persistence.Journal
         public bool Equals(Akka.Persistence.Journal.IEventSequence other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+    }
+    public sealed class EventAdapterDetails
+    {
+        public System.Collections.Generic.IReadOnlyList<System.Type> BoundTypes { get; }
+        public string Name { get; }
+        public static Akka.Persistence.Journal.EventAdapterDetails Create(string name, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Persistence.Journal.IEventAdapter> factory, params System.Type[] boundTypes) { }
+        public static Akka.Persistence.Journal.EventAdapterDetails Create(string name, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Persistence.Journal.IReadEventAdapter> factory, params System.Type[] boundTypes) { }
+        public static Akka.Persistence.Journal.EventAdapterDetails Create(string name, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Persistence.Journal.IWriteEventAdapter> factory, params System.Type[] boundTypes) { }
     }
     public class EventAdapters
     {
