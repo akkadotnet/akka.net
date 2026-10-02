@@ -72,6 +72,10 @@ namespace Akka.Persistence.Hosting
         Journal = 1,
         SnapshotStore = 2,
     }
+    public static class PersistenceSetupHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithPersistenceSetup(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Func<Akka.Persistence.PersistenceSetup, Akka.Persistence.PersistenceSetup> configure) { }
+    }
     public abstract class SnapshotOptions
     {
         protected SnapshotOptions(bool isDefault) { }

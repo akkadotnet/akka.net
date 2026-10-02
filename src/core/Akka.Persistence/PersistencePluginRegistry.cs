@@ -7,11 +7,12 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Util;
 
 namespace Akka.Persistence
@@ -19,90 +20,59 @@ namespace Akka.Persistence
     /// <summary>
     /// INTERNAL API
     ///
-    /// The one place persistence reads code-based registrations from. Today the only source is the user's
-    /// <see cref="PersistencePluginSetup"/>; a module source can plug in here later without touching the
-    /// lookup sites. Answers the Setup arm only: each site writes the built-in, guard and reflection arms
-    /// out itself, see <see cref="AkkaFeatures"/>.
+    /// The one place persistence (and Akka.Persistence.Query) reads code-based registrations from, one per
+    /// actor system. Today the only source is the user's <see cref="PersistenceSetup"/>; a module source can
+    /// plug in here later without touching the lookup sites. Answers the registration arm only: each site
+    /// writes the built-in, guard and reflection arms out itself, see <see cref="AkkaFeatures"/>.
     /// </summary>
     internal sealed class PersistencePluginRegistry
     {
-        private readonly PersistencePluginSetup _setup;
+        private static readonly ConditionalWeakTable<ActorSystem, PersistencePluginRegistry> Registries = new();
 
-        public PersistencePluginRegistry(PersistencePluginSetup? setup)
+        private readonly Dictionary<string, PersistencePluginDetails> _plugins;
+
+        private PersistencePluginRegistry(Dictionary<string, PersistencePluginDetails> plugins, IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
         {
-            _setup = setup ?? PersistencePluginSetup.Empty;
+            _plugins = plugins;
+            StashOverflowConfigurator = stashOverflowConfigurator;
         }
 
-        public static PersistencePluginRegistry From(ActorSystemSetup setup)
-            => new(setup.Get<PersistencePluginSetup>().GetOrElse(null!));
+        /// <summary>
+        /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> when set.
+        /// </summary>
+        public IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
 
-        public bool TryCreatePluginProps(string? typeName, Config pluginConfig, [NotNullWhen(true)] out Props? props)
+        /// <summary>
+        /// The registry of <paramref name="system"/>. The setup's plugin factory runs once, on first use.
+        /// </summary>
+        public static PersistencePluginRegistry For(ExtendedActorSystem system)
+            => Registries.GetValue(system, static s => Create((ExtendedActorSystem)s));
+
+        private static PersistencePluginRegistry Create(ExtendedActorSystem system)
         {
-            foreach (var registration in _setup.PluginFactories)
-            {
-                if (TypeExtensions.MatchesTypeName(typeName, registration.Key))
-                {
-                    props = registration.Value(pluginConfig);
-                    return true;
-                }
-            }
+            var plugins = new Dictionary<string, PersistencePluginDetails>(StringComparer.Ordinal);
+            var setup = system.Settings.Setup.Get<PersistenceSetup>().GetOrElse(null!);
+            if (setup is null)
+                return new PersistencePluginRegistry(plugins, null);
 
-            props = null;
-            return false;
+            foreach (var details in setup.CreatePlugins(system))
+                plugins[details.PluginId] = details;
+
+            return new PersistencePluginRegistry(plugins, setup.StashOverflowConfigurator);
         }
 
-        public bool TryCreateEventAdapter(string? typeName, ExtendedActorSystem system, [NotNullWhen(true)] out IEventAdapter? adapter)
+        /// <summary>
+        /// Finds the registered plugin at <paramref name="pluginId"/> if it is a <typeparamref name="T"/>.
+        /// </summary>
+        public bool TryGet<T>(string? pluginId, [NotNullWhen(true)] out T? details) where T : PersistencePluginDetails
         {
-            foreach (var registration in _setup.AdapterFactories)
+            if (pluginId is not null && _plugins.TryGetValue(pluginId, out var found) && found is T typed)
             {
-                if (TypeExtensions.MatchesTypeName(typeName, registration.Key))
-                {
-                    adapter = registration.Value(system);
-                    return true;
-                }
+                details = typed;
+                return true;
             }
 
-            adapter = null;
-            return false;
-        }
-
-        public bool TryGetEventAdapterBindingType(string? typeName, [NotNullWhen(true)] out Type? type)
-        {
-            foreach (var bound in _setup.BindingTypes)
-            {
-                if (TypeExtensions.MatchesTypeName(typeName, bound))
-                {
-                    type = bound;
-                    return true;
-                }
-            }
-
-            // a registered adapter type is also a legal binding key
-            foreach (var registered in _setup.AdapterFactories.Keys)
-            {
-                if (TypeExtensions.MatchesTypeName(typeName, registered))
-                {
-                    type = registered;
-                    return true;
-                }
-            }
-
-            type = null;
-            return false;
-        }
-
-        public bool TryCreateStashOverflowConfigurator(string? typeName, [NotNullWhen(true)] out IStashOverflowStrategyConfigurator? configurator)
-        {
-            foreach (var registration in _setup.StashConfiguratorFactories)
-            {
-                if (TypeExtensions.MatchesTypeName(typeName, registration.Key))
-                {
-                    configurator = registration.Value();
-                    return true;
-                }
-            }
-
-            configurator = null;
+            details = null;
             return false;
         }
     }

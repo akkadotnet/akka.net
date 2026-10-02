@@ -35,8 +35,8 @@
 
   <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:
        buildTransitive/Akka.targets only does this automatically for the NuGet package, not for a
-       ProjectReference. With it off, only what PersistencePluginSetup and PersistenceQuerySetup
-       register (plus the plugins Akka.Persistence ships) can start. -->
+       ProjectReference. With it off, only what PersistenceSetup registers
+       (plus the plugins Akka.Persistence ships) can start. -->
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
   </ItemGroup>

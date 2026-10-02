@@ -21,7 +21,7 @@ namespace Akka.Persistence.Query
         private static readonly Type ReadJournalType = typeof(IReadJournal);
         
         private readonly ExtendedActorSystem _system;
-        private readonly PersistenceQueryRegistry _registry;
+        private readonly PersistencePluginRegistry _registry;
         private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
         private readonly object _lock = new ();
@@ -36,7 +36,7 @@ namespace Akka.Persistence.Query
         public PersistenceQuery(ExtendedActorSystem system)
         {
             _system = system;
-            _registry = PersistenceQueryRegistry.From(system.Settings.Setup);
+            _registry = PersistencePluginRegistry.For(system);
         }
 
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId) where TJournal : IReadJournal
@@ -55,10 +55,11 @@ namespace Akka.Persistence.Query
                 if (_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out plugin))
                     return plugin;
                 
-                // the default config is found by reflection on the provider type, which a trimmed app cannot do
-                var defaultConfig = AkkaFeatures.IsDynamicTypeLoadingSupported
-                    ? GetDefaultConfigByReflection(readJournalType)
-                    : null;
+                // a registered read journal brings its own default config; otherwise it is found by reflection on
+                // the journal type, which a trimmed app cannot do
+                Config defaultConfig = null;
+                if (!_registry.TryGet<ReadJournalDetails>(readJournalPluginId, out _) && AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    defaultConfig = GetDefaultConfigByReflection(readJournalType);
 
                 plugin = CreatePlugin(readJournalPluginId, defaultConfig).GetReadJournal();
                 _readJournalPluginExtensionIds[readJournalPluginId] = plugin;
@@ -68,6 +69,17 @@ namespace Akka.Persistence.Query
 
         private IReadJournalProvider CreatePlugin(string configPath, Config config)
         {
+            // lookup order, written out at the site on purpose (see AkkaFeatures): registration (by plugin id), built-in (none), guard, reflection
+            if (_registry.TryGet<ReadJournalDetails>(configPath, out var registered))
+            {
+                // HOCON first, then the registration's default config. A registered read journal needs no `class` setting.
+                var section = _system.Settings.Config.HasPath(configPath) ? _system.Settings.Config.GetConfig(configPath) : Config.Empty;
+                if (registered.DefaultConfig is { } defaultConfig)
+                    section = section.WithFallback(defaultConfig);
+
+                return registered.CreateProvider(_system, section);
+            }
+
             if (config != null)
                 _system.Settings.InjectTopLevelFallback(config);
 
@@ -77,15 +89,11 @@ namespace Akka.Persistence.Query
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
             var pluginTypeName = pluginConfig.GetString("class", null);
 
-            // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, built-in (none), guard, reflection
-            if (_registry.TryCreateProvider(pluginTypeName, _system, pluginConfig, out var registered))
-                return registered;
-
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                     $"{configPath}.class",
                     pluginTypeName,
-                    "a read journal provider registered through PersistenceQuerySetup"));
+                    "a ReadJournalDetails for this plugin id registered in a PersistenceSetup (WithReadJournal)"));
 
             return CreatePluginByReflection(pluginTypeName, pluginConfig);
         }

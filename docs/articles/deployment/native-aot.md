@@ -31,8 +31,8 @@ fallback entirely.
   through `Microsoft.Extensions.Logging`, and the built-in `ActorSystem` liveness health check.
 * Five `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
   (custom loggers and log formatter), `SerializationSetup` (custom serializers and bindings),
-  `ExtensionsSetup` (custom or third-party extensions), `PersistencePluginSetup` (journals, snapshot
-  stores, event adapters) and `PersistenceQuerySetup` (read journals). Combine them (plus a
+  `ExtensionsSetup` (custom or third-party extensions), `PersistenceSetup` (journals, snapshot
+  stores, event adapters, read journals). Combine them (plus a
   `BootstrapSetup` if you need one) with `ActorSystemSetup` and pass the result to
   `ActorSystem.Create`.
 * Akka.Persistence with the in-memory journal and snapshot store, event adapters and the in-memory
@@ -115,44 +115,57 @@ stays on that base fallback today, because it is generic.
 
 Akka.Persistence reads the type of every journal and snapshot store from the `class` setting of its
 HOCON section, and it reads event adapters, event adapter bindings and the stash overflow strategy the
-same way. With the switch off only the types Akka.Persistence ships resolve on their own:
-`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`, `LocalSnapshotStore`,
-`NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
-`DiscardConfigurator` stash overflow strategies. Anything else has to be registered in code.
+same way. Akka.Persistence.Query does the same for read journals. Without reflection, only code
+registrations and the types Akka.Persistence ships resolve.
 
-`PersistencePluginSetup` registers journals, snapshot stores, event adapters, event adapter bindings
-and stash overflow strategies. `PersistenceQuerySetup` registers read journal providers. HOCON
-stays the source of truth: a registration applies when the type it names is the type a HOCON setting
-names, matched by full name and, if the setting gives one, assembly name.
+`PersistenceSetup` registers plugins in code, one record per plugin id, the way `SerializationSetup`
+registers serializers. The records are journals, snapshot stores and, through `Akka.Persistence.Query`,
+read journals. Event adapters and the event types they bind to go with their journal. A registration for
+`akka.persistence.journal.my-journal` is used when persistence starts the plugin at that path, so the
+HOCON `class` setting is not needed. A `defaultConfig` you pass sits under the plugin's HOCON section,
+so HOCON still wins and the app does not repeat your defaults.
 
 ```csharp
 var setup = BootstrapSetup.Create().WithConfig(config)
-    .And(PersistencePluginSetup.Empty
-        .WithJournal<MyJournal>(static journalConfig => new MyJournal(journalConfig))
-        .WithSnapshotStore<MySnapshotStore>(static storeConfig => new MySnapshotStore(storeConfig))
-        .WithEventAdapter<MyTagger>(static _ => new MyTagger())
-        .WithEventAdapterBinding<MyEvent>())
-    .And(PersistenceQuerySetup.Empty
-        .WithReadJournal<MyReadJournalProvider>(static (system, journalConfig) => new MyReadJournalProvider(system, journalConfig)))
+    .And(PersistenceSetup.Create()
+        .WithJournal("akka.persistence.journal.my-journal", static journalConfig => new MyJournal(journalConfig),
+            eventAdapters: [EventAdapterDetails.Create("tagger", static _ => new MyTagger(), typeof(MyEvent))])
+        .WithSnapshotStore("akka.persistence.snapshot-store.my-store", static storeConfig => new MyStore(storeConfig))
+        .WithReadJournal("akka.persistence.query.journal.my-journal",
+            static (system, readConfig) => new MyReadJournalProvider(system, readConfig)))
     .And(SerializationSetup.Create(system => /* a serializer for MyEvent and your snapshot types */));
 
 var system = ActorSystem.Create("app", setup);
 ```
 
-Core looks each type up in this order: your setup, then the types Akka.Persistence ships, then - only
-if the switch is on - reflection. With the switch off, a type that is in none of the first two throws
-a `ConfigurationException` when the plugin starts. The message names the HOCON setting and the switch.
-With the switch on nothing changes for an app that registers nothing.
-
-Two more things to plan for. Event adapter bindings need a registration too: register each event type
-that a binding names with `WithEventAdapterBinding`. And when the switch is off, `PersistenceQuery`
-does not call a read journal's static `DefaultConfiguration()` method for you, so the plugin section
-is missing unless your app adds it. Put the read journal's default HOCON in your config yourself:
+With the switch off, `PersistenceQuery` does not call a read journal's static `DefaultConfiguration()`
+method for you. Pass the plugin's section of that config as the record's `defaultConfig`, as the canary
+does for the in-memory read journal:
 
 ```csharp
-var config = ConfigurationFactory.ParseString(myHocon)
-    .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+.WithReadJournal(InMemoryReadJournal.Identifier,
+    static (system, readConfig) => new InMemoryReadJournalProvider(system, readConfig),
+    InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
 ```
+
+Only one `PersistenceSetup` counts per `ActorSystemSetup`, as with `SerializationSetup`. Put every
+plugin in it, or combine setups with `Merge`. A plugin package can add its own records with
+`WithPlugins(system => ImmutableHashSet.Create<PersistencePluginDetails>(...))`. With Akka.Hosting, call
+`builder.WithPersistenceSetup(setup => setup.WithJournal(...))` from Akka.Persistence.Hosting. Calls
+build on each other.
+
+Core looks a plugin up in this order: your registration for its plugin id, then the plugins Akka.Persistence
+ships (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`, `LocalSnapshotStore`,
+`NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
+`DiscardConfigurator` stash overflow strategies), then - only if the switch is on - reflection on the
+`class` setting. With the switch off, a plugin that is in none of the first two throws a
+`ConfigurationException` when it starts. The message names the HOCON setting and the switch. With the
+switch on nothing changes for an app that registers nothing.
+
+Event adapters of a registered journal add to the adapters in its HOCON section, and a registered
+adapter wins a name clash. HOCON adapters and bindings only resolve with the switch on, so list your
+adapters and the event types they bind to in `EventAdapterDetails`. To replace the stash overflow
+strategy, call `WithStashOverflowStrategy` with a configurator.
 
 ## Not Supported Yet
 

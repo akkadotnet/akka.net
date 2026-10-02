@@ -81,7 +81,7 @@ namespace Akka.Persistence
                 throw ConfigurationException.NullOrEmptyConfig<PersistenceExtension>("akka.persistence");
 
             _log = Logging.GetLogger(_system, this);
-            _registry = PersistencePluginRegistry.From(_system.Settings.Setup);
+            _registry = PersistencePluginRegistry.For(_system);
 
             _defaultJournalPluginId = new Lazy<string>(() =>
             {
@@ -108,8 +108,8 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
 
-                // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, built-in, guard, reflection
-                if (_registry.TryCreateStashOverflowConfigurator(configuratorTypeName, out var registered))
+                // lookup order, written out at the site on purpose (see AkkaFeatures): registration, built-in, guard, reflection
+                if (_registry.StashOverflowConfigurator is { } registered)
                     return registered.Create(_system.Settings.Config);
 
                 if (BuiltInPersistencePlugins.TryCreateStashOverflowConfigurator(configuratorTypeName, out var builtIn))
@@ -119,7 +119,7 @@ namespace Akka.Persistence
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                         "akka.persistence.internal-stash-overflow-strategy",
                         configuratorTypeName,
-                        "ThrowExceptionConfigurator, DiscardConfigurator or a configurator registered through PersistencePluginSetup"));
+                        "ThrowExceptionConfigurator, DiscardConfigurator or a configurator set with PersistenceSetup.WithStashOverflowStrategy"));
 
                 return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
             });
@@ -345,12 +345,9 @@ namespace Akka.Persistence
             return system.SystemActorOf(RecoveryPermitter.Props(maxPermits), $"recoveryPermitter-{configPath}");
         }
 
-        private IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig)
+        private IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig, Props? registeredProps)
         {
             var pluginActorName = configPath;
-            var pluginTypeName = pluginConfig.GetString("class", null);
-            if (string.IsNullOrEmpty(pluginTypeName))
-                throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
 
             //todo wrap in backoffsupervisor ?
@@ -359,19 +356,29 @@ namespace Akka.Persistence
             var configurator = SupervisorStrategyConfigurator.CreateConfigurator(
                 pluginConfig.GetString("supervisor-strategy"), $"{configPath}.supervisor-strategy");
 
-            // lookup order, written out at the site on purpose (see AkkaFeatures): Setup, built-in, guard, reflection
+            // lookup order, written out at the site on purpose (see AkkaFeatures): registration (by plugin id), built-in, guard, reflection.
+            // A registered plugin needs no `class` setting.
             Props pluginProps;
-            if (_registry.TryCreatePluginProps(pluginTypeName, pluginConfig, out var registeredProps))
+            if (registeredProps is not null)
+            {
                 pluginProps = registeredProps;
-            else if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
-                pluginProps = builtInProps;
-            else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                    $"{configPath}.class",
-                    pluginTypeName,
-                    "a journal or snapshot store registered through PersistencePluginSetup"));
+            }
             else
-                pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
+            {
+                var pluginTypeName = pluginConfig.GetString("class", null);
+                if (string.IsNullOrEmpty(pluginTypeName))
+                    throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
+
+                if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
+                    pluginProps = builtInProps;
+                else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{configPath}.class",
+                        pluginTypeName,
+                        "a JournalDetails or SnapshotStoreDetails for this plugin id registered in a PersistenceSetup"));
+                else
+                    pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
+            }
 
             var pluginActorProps = pluginProps.WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
 
@@ -396,25 +403,47 @@ namespace Akka.Persistence
             return (IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType);
         }
 
-        private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
+        private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath, Config section, PersistencePluginDetails? registered)
         {
-            var pluginConfig = system.Settings.Config.GetConfig(configPath);
-            if (pluginConfig.IsNullOrEmpty())
+            // a registered plugin may have no HOCON section at all
+            if (registered is null && section.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
 
-            return EventAdapters.Create(system, pluginConfig, configPath);
+            return EventAdapters.Create(system, section, configPath, (registered as JournalDetails)?.EventAdapters);
         }
 
         private PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
         {
-            if (string.IsNullOrEmpty(configPath) || !system.Settings.Config.HasPath(configPath))
+            // a registration is keyed by plugin id, and a journal is not a snapshot store
+            PersistencePluginDetails? registered = null;
+            if (!string.IsNullOrEmpty(configPath))
+            {
+                if (fallbackPath == JournalFallbackConfigPath && _registry.TryGet<JournalDetails>(configPath, out var journal))
+                    registered = journal;
+                else if (fallbackPath == SnapshotStoreFallbackConfigPath && _registry.TryGet<SnapshotStoreDetails>(configPath, out var snapshotStore))
+                    registered = snapshotStore;
+            }
+
+            var hasSection = !string.IsNullOrEmpty(configPath) && system.Settings.Config.HasPath(configPath);
+            if (!hasSection && registered is null)
             {
                 throw new ArgumentException($"Persistence config is missing plugin config path for: {configPath}");
             }
 
-            var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
-            var plugin = CreatePlugin(system, configPath, config);
-            var adapters = CreateAdapters(system, configPath);
+            // HOCON first, then the registration's default config, then the shared plugin fallback
+            var section = hasSection ? system.Settings.Config.GetConfig(configPath) : Config.Empty;
+            if (registered?.DefaultConfig is { } defaultConfig)
+                section = section.WithFallback(defaultConfig);
+
+            var config = section.WithFallback(system.Settings.Config.GetConfig(fallbackPath));
+            var registeredProps = registered switch
+            {
+                JournalDetails j => j.CreateProps(config),
+                SnapshotStoreDetails s => s.CreateProps(config),
+                _ => null
+            };
+            var plugin = CreatePlugin(system, configPath, config, registeredProps);
+            var adapters = CreateAdapters(system, configPath, section, registered);
             var recoveryPermitter = CreateRecoveryPermitter(system, configPath, config);
 
             return new PluginHolder(plugin, adapters, config, recoveryPermitter);

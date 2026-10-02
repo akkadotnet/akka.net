@@ -29,7 +29,7 @@ public sealed record CanaryState(string[] Values, long SnapshotSequenceNr);
 
 /// <summary>
 /// Wraps every <see cref="CanaryEvent"/> in <see cref="Tagged"/>. Only the registration in
-/// <see cref="PersistencePluginSetup"/> lets core build it with <c>Akka.DynamicTypeLoading</c> off.
+/// <see cref="PersistenceSetup"/> lets core build it with <c>Akka.DynamicTypeLoading</c> off.
 /// </summary>
 public sealed class CanaryTagger : IWriteEventAdapter
 {
@@ -41,7 +41,7 @@ public sealed class CanaryTagger : IWriteEventAdapter
 }
 
 /// <summary>
-/// A journal that is not built in. Only <see cref="PersistencePluginSetup.WithJournal{TJournal}"/> lets core
+/// A journal that is not built in. Only <see cref="PersistenceSetup.WithJournal{TJournal}"/> lets core
 /// build it with <c>Akka.DynamicTypeLoading</c> off, which is the path a third-party journal takes.
 /// </summary>
 public sealed class CanaryJournal : MemoryJournal
