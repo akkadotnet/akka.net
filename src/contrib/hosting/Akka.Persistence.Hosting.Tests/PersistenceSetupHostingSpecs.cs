@@ -334,7 +334,7 @@ public class PersistenceSetupHostingSpecs
             });
     }
 
-    // ---- read journals and the stash overflow strategy ----
+    // ---- read journals ----
 
     [Theory(DisplayName = "WithReadJournal should read the events of the default journal When the system starts through Hosting")]
     [InlineData(false)]
@@ -357,20 +357,6 @@ public class PersistenceSetupHostingSpecs
                     .WaitAsync(Timeout);
 
                 events.Select(e => e.Event).Should().Equal("a", "b");
-            });
-    }
-
-    [Theory(DisplayName = "WithStashOverflowStrategy should replace the HOCON setting When the system starts through Hosting")]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Should_replace_the_HOCON_setting_When_the_system_starts_through_Hosting(bool dynamicTypeLoading)
-    {
-        await RunAsync(dynamicTypeLoading,
-            builder => builder.WithInMemoryJournal().WithStashOverflowStrategy(new TestStashConfigurator()),
-            system =>
-            {
-                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(TestStashConfigurator.Strategy);
-                return Task.CompletedTask;
             });
     }
 
@@ -415,7 +401,6 @@ public class PersistenceSetupHostingSpecs
 
         Assert.Throws<ArgumentNullException>(() => PluginActorFactory.For<JournalA>(null!));
         Assert.Throws<ArgumentNullException>(() => builder.WithReadJournal<TestProvider>("akka.persistence.query.journal.test", null!));
-        Assert.Throws<ArgumentNullException>(() => builder.WithStashOverflowStrategy(null!));
     }
 
     // ---- helpers ----
@@ -623,13 +608,6 @@ public class PersistenceSetupHostingSpecs
             Interlocked.Increment(ref _toJournal);
             return evt;
         }
-    }
-
-    public sealed class TestStashConfigurator : IStashOverflowStrategyConfigurator
-    {
-        public static readonly IStashOverflowStrategy Strategy = new ReplyToStrategy("overflow");
-
-        public IStashOverflowStrategy Create(Config config) => Strategy;
     }
 
     public sealed class TestProvider : IReadJournalProvider

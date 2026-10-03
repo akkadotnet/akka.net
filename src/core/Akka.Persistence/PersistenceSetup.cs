@@ -36,26 +36,20 @@ namespace Akka.Persistence
     /// </summary>
     internal sealed class PersistenceSetup : Setup
     {
-        private PersistenceSetup(ImmutableList<PersistenceRegistration> registrations, IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
+        private PersistenceSetup(ImmutableList<PersistenceRegistration> registrations)
         {
             Registrations = registrations;
-            StashOverflowConfigurator = stashOverflowConfigurator;
         }
 
         /// <summary>
         /// A setup with no registrations.
         /// </summary>
-        public static PersistenceSetup Create() => new(ImmutableList<PersistenceRegistration>.Empty, null);
+        public static PersistenceSetup Create() => new(ImmutableList<PersistenceRegistration>.Empty);
 
         /// <summary>
         /// The registrations in the order they were added.
         /// </summary>
         public ImmutableList<PersistenceRegistration> Registrations { get; }
-
-        /// <summary>
-        /// The configurator that replaces <c>akka.persistence.internal-stash-overflow-strategy</c>, if one was set.
-        /// </summary>
-        public IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
 
         /// <summary>
         /// Appends a plugin registration.
@@ -65,7 +59,7 @@ namespace Akka.Persistence
             if (details is null)
                 throw new ArgumentNullException(nameof(details));
 
-            return new PersistenceSetup(Registrations.Add(PersistenceRegistration.ForPlugin(details)), StashOverflowConfigurator);
+            return new PersistenceSetup(Registrations.Add(PersistenceRegistration.ForPlugin(details)));
         }
 
         /// <summary>
@@ -80,8 +74,7 @@ namespace Akka.Persistence
                 throw new ArgumentNullException(nameof(eventAdapters));
 
             return new PersistenceSetup(
-                Registrations.AddRange(eventAdapters.Select(a => PersistenceRegistration.ForEventAdapter(journalPluginId, a))),
-                StashOverflowConfigurator);
+                Registrations.AddRange(eventAdapters.Select(a => PersistenceRegistration.ForEventAdapter(journalPluginId, a))));
         }
 
         /// <summary>
@@ -105,16 +98,6 @@ namespace Akka.Persistence
             Config? defaultConfig = null) where TStore : ActorBase
             => WithPlugin(SnapshotStoreDetails.Create(pluginId, factory, defaultConfig));
 
-        /// <summary>
-        /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> with this configurator.
-        /// </summary>
-        public PersistenceSetup WithStashOverflowStrategy(IStashOverflowStrategyConfigurator configurator)
-        {
-            if (configurator is null)
-                throw new ArgumentNullException(nameof(configurator));
-
-            return new PersistenceSetup(Registrations, configurator);
-        }
     }
 
     /// <summary>

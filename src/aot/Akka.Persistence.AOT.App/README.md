@@ -9,14 +9,14 @@ the `Akka.Persistence.Hosting` builders. It references `Akka.Persistence.Hosting
    They run a journal and a snapshot store that Akka.Persistence does not ship (small subclasses of the
    in-memory ones). `WithJournalAndSnapshot` adds the journal's write event adapter with
    `AddWriteEventAdapter` with a factory, `WithReadJournal` adds the in-memory read journal,
-   `WithStashOverflowStrategy` adds a configurator, and `WithCustomSerializer` binds a hand-written
+   and `WithCustomSerializer` binds a hand-written
    `SerializerWithStringManifest`. No HOCON names a plugin class.
    A persistent actor persists `a` and `b` together (it stashes `b` while the write for `a` is in flight),
    saves a snapshot at sequence number 2, persists `c` and stops. A second incarnation recovers from the
    snapshot plus `c`. `CurrentEventsByPersistenceId` returns three envelopes; `CurrentEventsByTag("canary")`
    returns three too, which only happens when the event adapter ran. The app then checks that the journal and
    snapshot store were built once each, that the journal saw the default config of its options, and that the
-   configurator is the default stash overflow strategy. A second actor persists and snapshots through the
+   built-in stash overflow strategy resolves. A second actor persists and snapshots through the
    built-in `inmem` plugins in the same system (`WithInMemoryJournal`, `WithInMemorySnapshotStore`). The canary
    does not drive a real stash overflow.
 2. **A Hosting app whose journal options supply no factory.** The options name their class in HOCON, so starting

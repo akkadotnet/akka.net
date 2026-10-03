@@ -167,9 +167,8 @@ The order in which core looks a plugin up depends on the switch.
   journals, the `class` setting names the type, and Akka.Persistence.Hosting's registration is used only when
   HOCON has no `class` for that plugin id. For a read journal "HOCON" includes the `DefaultConfiguration` of the
   journal type, which is still found by reflection. An adapter that HOCON names is built from HOCON, and a
-  registered adapter is added only when HOCON does not name it. The stash overflow strategy follows the same
-  rule: an explicit HOCON setting wins, and a configurator from `WithStashOverflowStrategy` replaces the
-  default that `persistence.conf` ships.
+  registered adapter is added only when HOCON does not name it. The stash overflow strategy is read from
+  HOCON by reflection, as it always was.
 * **Switch off.** The registration for the plugin id comes first, then the plugins Akka.Persistence ships
   (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`, `LocalSnapshotStore`, `NoSnapshotStore`,
   `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and `DiscardConfigurator` stash overflow
@@ -180,9 +179,11 @@ The order in which core looks a plugin up depends on the switch.
 A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
 `WithJournal` or `WithSnapshot`. See [Registering Your Plugin for Native AOT](xref:custom-persistent-provider)
 if you write one. The Hosting builders that need no plugin package are `WithInMemoryJournal` and `WithInMemorySnapshotStore`.
-`WithReadJournal` registers a read journal provider and its default config, and `WithStashOverflowStrategy`
-takes a custom `IStashOverflowStrategyConfigurator`. The in-memory read journal is for tests and has no
-helper: register it with `WithReadJournal`, as the canary does, or keep using its HOCON on the JIT.
+`WithReadJournal` registers a read journal provider and its default config. The in-memory read journal is
+for tests and has no helper: register it with `WithReadJournal`, as the canary does, or keep using its HOCON
+on the JIT. The stash overflow strategy needs no registration: with the switch off use `ThrowExceptionConfigurator`
+or `DiscardConfigurator`, which resolve without reflection, or override `InternalStashOverflowStrategy` on the
+persistent actor.
 
 HOCON adapters in a journal section still work on the JIT. With the switch off an adapter has to come from
 `AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. HOCON that only repeats what those methods

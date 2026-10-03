@@ -133,17 +133,6 @@ public sealed class UnregisteredJournalOptions : JournalOptions
 }
 
 /// <summary>
-/// A stash overflow configurator that is not built in. It hands out one known strategy, so the canary
-/// can tell that core used the registration.
-/// </summary>
-public sealed class CanaryStashConfigurator : IStashOverflowStrategyConfigurator
-{
-    public static readonly IStashOverflowStrategy Strategy = new ReplyToStrategy("canary-overflow");
-
-    public IStashOverflowStrategy Create(Config config) => Strategy;
-}
-
-/// <summary>
 /// A journal that no setup registers, so a system that names it must fail at start with the switch off.
 /// </summary>
 public sealed class UnregisteredJournal : MemoryJournal

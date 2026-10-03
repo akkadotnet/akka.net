@@ -639,44 +639,15 @@ namespace Akka.Persistence.Tests
 
                 exception.Message.Should().Contain("[akka.persistence.internal-stash-overflow-strategy]");
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().Contain("WithStashOverflowStrategy");
+                exception.Message.Should().Contain("InternalStashOverflowStrategy");
                 return Task.CompletedTask;
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should use a registered stash overflow configurator When the switch is off")]
-        public async Task Should_use_a_registered_stash_overflow_configurator_When_the_switch_is_off()
+        [Fact(DisplayName = "PersistenceSetup should resolve a built-in stash overflow configurator through reflection When the switch is on")]
+        public async Task Should_resolve_a_builtin_stash_overflow_configurator_through_reflection_When_the_switch_is_on()
         {
-            var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
-            const string hocon = "akka.persistence.internal-stash-overflow-strategy = \"Some.Unknown.Configurator, Some.Assembly\"";
-
-            await RunAsync(false, hocon, setup, system =>
-            {
-                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact(DisplayName = "PersistenceSetup should use a registered stash overflow configurator When the switch is on and HOCON keeps the shipped default")]
-        public async Task Should_use_a_registered_stash_overflow_configurator_When_the_switch_is_on_and_hocon_keeps_the_shipped_default()
-        {
-            var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
-
-            // nothing in HOCON, so the setting is the one persistence.conf ships
-            await RunAsync(true, "", setup, system =>
-            {
-                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact(DisplayName = "PersistenceSetup should keep the HOCON setting When a stash overflow configurator is registered and the switch is on")]
-        public async Task Should_keep_the_hocon_setting_When_a_stash_overflow_configurator_is_registered_and_the_switch_is_on()
-        {
-            var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
-
-            // an explicit HOCON setting decides on the JIT, as it always did
-            await RunAsync(true, "akka.persistence.internal-stash-overflow-strategy = \"Akka.Persistence.DiscardConfigurator, Akka.Persistence\"", setup, system =>
+            await RunAsync(true, "akka.persistence.internal-stash-overflow-strategy = \"Akka.Persistence.DiscardConfigurator, Akka.Persistence\"", null, system =>
             {
                 Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(DiscardToDeadLetterStrategy.Instance);
                 return Task.CompletedTask;
@@ -695,7 +666,6 @@ namespace Akka.Persistence.Tests
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithPlugin(null!));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithEventAdapters(JournalPath, null!));
             Assert.Throws<ArgumentException>(() => PersistenceSetup.Create().WithEventAdapters(" ", []));
-            Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithStashOverflowStrategy(null!));
             Assert.Throws<ArgumentNullException>(() => EventAdapterDetails.Create("tagger", (Func<ExtendedActorSystem, IEventAdapter>)null!));
             Assert.Throws<ArgumentException>(() => JournalDetails.Create(" ", _ => new RegisteredJournal()));
             Assert.Throws<ArgumentException>(() => EventAdapterDetails.Create(" ", _ => new TagAdapter()));
@@ -815,13 +785,6 @@ namespace Akka.Persistence.Tests
         public sealed class ReadOnlyAdapter : IReadEventAdapter
         {
             public IEventSequence FromJournal(object evt, string manifest) => EventSequence.Single(evt);
-        }
-
-        public sealed class CustomStashConfigurator : IStashOverflowStrategyConfigurator
-        {
-            public static readonly IStashOverflowStrategy Strategy = new ReplyToStrategy("overflow");
-
-            public IStashOverflowStrategy Create(Config config) => Strategy;
         }
 
         private sealed class Writer : UntypedPersistentActor

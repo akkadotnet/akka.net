@@ -22,7 +22,6 @@ namespace Akka.Persistence.Hosting
             where TProvider :  class, Akka.Persistence.Query.IReadJournalProvider { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureBuilder) { }
-        public static Akka.Hosting.AkkaConfigurationBuilder WithStashOverflowStrategy(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.IStashOverflowStrategyConfigurator configurator) { }
     }
     public sealed class AkkaPersistenceJournalBuilder
     {

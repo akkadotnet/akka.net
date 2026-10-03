@@ -312,24 +312,6 @@ namespace Akka.Persistence.Hosting
         }
 
         /// <summary>
-        /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> with this configurator, created without reflection.
-        /// </summary>
-        /// <param name="builder">The builder instance being configured.</param>
-        /// <param name="configurator">The configurator to use.</param>
-        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
-        public static AkkaConfigurationBuilder WithStashOverflowStrategy(
-            this AkkaConfigurationBuilder builder,
-            IStashOverflowStrategyConfigurator configurator)
-        {
-            if (builder is null)
-                throw new ArgumentNullException(nameof(builder));
-            if (configurator is null)
-                throw new ArgumentNullException(nameof(configurator));
-
-            return builder.AddPersistenceRegistrations(setup => setup.WithStashOverflowStrategy(configurator));
-        }
-
-        /// <summary>
         /// Adds the Akka.NET v1.4 to v1.5 Akka.Cluster.Sharding persistence event migration adapter to a journal.
         /// </summary>
         /// <param name="builder">The builder instance being configured.</param>

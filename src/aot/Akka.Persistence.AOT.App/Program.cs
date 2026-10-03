@@ -77,7 +77,6 @@ internal static class Program
             .WithReadJournal(InMemoryReadJournal.Identifier,
                 static (system, config) => new InMemoryReadJournalProvider(system, config),
                 InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
-            .WithStashOverflowStrategy(new CanaryStashConfigurator())
             .WithCustomSerializer("canary", new[] { typeof(CanaryEvent), typeof(CanarySnapshot) }, static system => new CanarySerializer(system))
             .AddSetup(new LogFilterSetup([watchdog])));
 
@@ -128,7 +127,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// The default journal, snapshot store and stash overflow strategy are the registered ones, built by the
+    /// The default journal and snapshot store are the registered ones, built by the
     /// factories, once each, with the default config in the journal's section. The persist, recovery and queries above only work when they ran.
     /// </summary>
     private static void AssertRegisteredPluginsAreUsed(ActorSystem system)
@@ -136,13 +135,14 @@ internal static class Program
         const string label = "persistence";
         var persistence = Persistence.Instance.Apply(system);
 
-        Require(label, ReferenceEquals(persistence.DefaultInternalStashOverflowStrategy, CanaryStashConfigurator.Strategy),
-            "the registered stash overflow configurator was not used");
+        // the shipped default configurator resolves from the built-in table
+        Require(label, ReferenceEquals(persistence.DefaultInternalStashOverflowStrategy, ThrowOverflowExceptionStrategy.Instance),
+            "the built-in stash overflow configurator did not resolve");
 
         Require(label, CanaryJournal.Instances == 1, $"the registered journal was built {CanaryJournal.Instances} times, not 1");
         Require(label, CanaryJournal.Marker == "from-default", $"the registered journal got marker [{CanaryJournal.Marker}] from its default config");
         Require(label, CanarySnapshotStore.Instances == 1, $"the registered snapshot store was built {CanarySnapshotStore.Instances} times, not 1");
-        Console.WriteLine($"[canary-persistence] {label}: registered journal, snapshot store and stash configurator are in use");
+        Console.WriteLine($"[canary-persistence] {label}: registered journal and snapshot store are in use, and the built-in stash overflow strategy resolves");
     }
 
     /// <summary>

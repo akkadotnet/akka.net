@@ -38,18 +38,11 @@ namespace Akka.Persistence
 
         private PersistencePluginRegistry(
             Dictionary<string, PersistencePluginDetails> plugins,
-            Dictionary<string, List<EventAdapterDetails>> adapters,
-            IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
+            Dictionary<string, List<EventAdapterDetails>> adapters)
         {
             _plugins = plugins;
             _adapters = adapters;
-            StashOverflowConfigurator = stashOverflowConfigurator;
         }
-
-        /// <summary>
-        /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> when set.
-        /// </summary>
-        public IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
 
         /// <summary>
         /// The registry of <paramref name="system"/>, built from its <see cref="PersistenceSetup"/> on first use.
@@ -67,7 +60,7 @@ namespace Akka.Persistence
             var plugins = new Dictionary<string, PersistencePluginDetails>(StringComparer.Ordinal);
             var adapters = new Dictionary<string, List<EventAdapterDetails>>(StringComparer.Ordinal);
             if (setup is null)
-                return new PersistencePluginRegistry(plugins, adapters, null);
+                return new PersistencePluginRegistry(plugins, adapters);
 
             foreach (var registration in setup.Registrations)
             {
@@ -86,7 +79,7 @@ namespace Akka.Persistence
                 }
             }
 
-            return new PersistencePluginRegistry(plugins, adapters, setup.StashOverflowConfigurator);
+            return new PersistencePluginRegistry(plugins, adapters);
         }
 
         private static void AddAdapter(Dictionary<string, List<EventAdapterDetails>> adapters, string journalPluginId, EventAdapterDetails adapter)
