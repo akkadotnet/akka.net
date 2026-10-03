@@ -462,6 +462,40 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 [!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
 
+## Registering Your Plugin for Native AOT
+
+Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
+sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. If your
+plugin has Akka.Hosting support, one override on your options classes fixes that. Return a
+`PluginActorFactory` and Akka.Persistence.Hosting hands the plugin to core as code:
+
+```csharp
+public sealed class MyJournalOptions : JournalOptions
+{
+    public MyJournalOptions() : base(isDefault: false) { }
+
+    public override string Identifier { get; set; } = "my-journal";
+
+    protected override Config InternalDefaultConfig => MyPersistence.DefaultConfiguration().GetConfig("akka.persistence.journal.my-journal");
+
+    protected override PluginActorFactory? CreatePluginActorFactory() => PluginActorFactory.For(config => new MyJournal(config));
+}
+```
+
+`SnapshotOptions` has the same `CreatePluginActorFactory` override. The factory gets the plugin's HOCON section with its
+fallbacks applied, and it runs inside the actor's creation context. Users change nothing: they call
+`WithJournal(new MyJournalOptions { ... })` as before, and the plugin starts with
+`Akka.DynamicTypeLoading` off without a `class` setting. On the JIT the HOCON `class` still decides when
+there is one, and the factory is used when there is none. Without the override your plugin keeps working
+on the JIT through its HOCON `class` and fails to start under Native AOT, with a message that names the
+setting and Akka.Persistence.Hosting.
+A read journal registers the same way from your Hosting extension method:
+`builder.WithReadJournal("akka.persistence.query.journal.my-journal", (system, config) => new MyReadJournalProvider(system, config), MyPersistence.DefaultQueryConfiguration().GetConfig("akka.persistence.query.journal.my-journal"))`.
+See [Native AOT and Trimming](xref:native-aot) for the whole picture, including event adapters.
+
+Keep reflection out of the plugin itself too: create child actors with `Props.CreateBy` and an
+`IIndirectActorProducer`, and read your own types without `Type.GetType`.
+
 ## Unit Testing Journal and SnapshotStore
 
 Akka.Persistence came with a standardized Technology Compatibility Kit (TCK) test kit that can be readily incorporated into your unit testing suite to test that a custom provider adheres to a basic compatibility requirement.

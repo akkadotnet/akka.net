@@ -1,0 +1,84 @@
+  akka : {
+    persistence : {
+      snapshot-store : {
+        beta : {
+          class : "Some.SnapshotStore, Some.Assembly"
+          plugin-dispatcher : akka.actor.default-dispatcher
+          serializer : 
+          auto-initialize : on
+        }
+        alpha : {
+          class : "Some.SnapshotStore, Some.Assembly"
+          plugin-dispatcher : akka.actor.default-dispatcher
+          serializer : 
+          auto-initialize : off
+        }
+        plugin : akka.persistence.snapshot-store.inmem
+        mem : {
+          class : "Akka.Persistence.Snapshot.MemorySnapshotStore, Akka.Persistence"
+          plugin-dispatcher : akka.actor.default-dispatcher
+        }
+        inmem : {
+          class : "Akka.Persistence.Snapshot.MemorySnapshotStore, Akka.Persistence"
+          plugin-dispatcher : akka.actor.default-dispatcher
+        }
+      }
+      journal : {
+        beta : {
+          class : "Some.Journal, Some.Assembly"
+          plugin-dispatcher : akka.actor.default-dispatcher
+          connection-string : none
+          auto-initialize : on
+          serializer : json
+          event-adapters : {
+            coordinator-migration : "Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding"
+          }
+          event-adapter-bindings : {
+            "Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding" : coordinator-migration
+          }
+        }
+        alpha : {
+          class : "Some.Journal, Some.Assembly"
+          plugin-dispatcher : akka.actor.default-dispatcher
+          connection-string : none
+          auto-initialize : off
+          serializer : 
+          event-adapters : {
+            one : "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+AdapterOne, Akka.Persistence.Hosting.Tests"
+            two : "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+AdapterTwo, Akka.Persistence.Hosting.Tests"
+            three : "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+AdapterThree, Akka.Persistence.Hosting.Tests"
+            coordinator-migration : "Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding"
+          }
+          event-adapter-bindings : {
+            "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+EvtA, Akka.Persistence.Hosting.Tests" : [one]
+            "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+EvtB, Akka.Persistence.Hosting.Tests" : [one,two]
+            "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+EvtC, Akka.Persistence.Hosting.Tests" : [three]
+            "Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding" : coordinator-migration
+          }
+        }
+        plugin : akka.persistence.journal.inmem
+        mem : {
+          event-adapters : {
+            mem-two : "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+AdapterTwo, Akka.Persistence.Hosting.Tests"
+          }
+          event-adapter-bindings : {
+            "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+EvtA, Akka.Persistence.Hosting.Tests" : [mem-two]
+          }
+          class : "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+          plugin-dispatcher : akka.actor.default-dispatcher
+        }
+        inmem : {
+          class : "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+          plugin-dispatcher : akka.actor.default-dispatcher
+        }
+        legacy : {
+          event-adapters : {
+            legacy-one : "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+AdapterOne, Akka.Persistence.Hosting.Tests"
+          }
+          event-adapter-bindings : {
+            "Akka.Persistence.Hosting.Tests.HoconSnapshotSpecs+EvtC, Akka.Persistence.Hosting.Tests" : [legacy-one]
+          }
+        }
+      }
+    }
+  }

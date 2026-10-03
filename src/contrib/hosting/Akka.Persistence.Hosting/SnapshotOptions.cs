@@ -67,6 +67,20 @@ namespace Akka.Persistence.Hosting
         public Config DefaultConfig => InternalDefaultConfig.MoveTo(PluginId);
 
         public string PluginId => $"akka.persistence.snapshot-store.{Identifier}";
+
+        /// <summary>
+        /// How this plugin creates its snapshot store actor without reflection. A plugin that returns one starts
+        /// under Native AOT (<c>Akka.DynamicTypeLoading</c> off) with no HOCON <c>class</c> setting; the HOCON still
+        /// works everywhere else. The default, <c>null</c>, leaves the plugin on its HOCON <c>class</c>.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// protected override PluginActorFactory? CreatePluginActorFactory() => PluginActorFactory.For(config => new MySnapshotStore(config));
+        /// </code>
+        /// </example>
+        protected virtual PluginActorFactory? CreatePluginActorFactory() => null;
+
+        internal PluginActorFactory? GetFactory() => CreatePluginActorFactory();
         
         /// <summary>
         /// The chain config builder.

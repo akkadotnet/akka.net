@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
@@ -20,6 +21,10 @@ public sealed class AkkaPersistenceJournalBuilder
     internal readonly Dictionary<Type, HashSet<string>> Bindings = new Dictionary<Type, HashSet<string>>();
     internal readonly Dictionary<string, Type> Adapters = new Dictionary<string, Type>();
     internal readonly HashSet<AkkaHealthCheckRegistration> HealthCheckRegistrations = [];
+    // adapters from the reflection overloads: their HOCON is written, and this is its copy for Akka.DynamicTypeLoading off
+    internal readonly List<EventAdapterDetails> HoconAdapters = new();
+    // adapters from the factory overloads: no HOCON, so this is their only source
+    internal readonly List<EventAdapterDetails> FactoryAdapters = new();
 
     /// <summary>
     /// The <see cref="JournalOptions"/> instance used to configure this journal.
@@ -76,38 +81,128 @@ public sealed class AkkaPersistenceJournalBuilder
         return this;
     }
 
+    /// <summary>
+    /// Adds an event adapter that reads and writes. It is written to the HOCON as it always was, and the JIT builds
+    /// it from there. With <c>Akka.DynamicTypeLoading</c> off, where Native AOT has no use for the HOCON type name,
+    /// core builds it with the same <c>Activator</c> call, which the trimmer cannot follow; use the overload that
+    /// takes a factory for Native AOT.
+    /// </summary>
     public AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddHoconAdapter(eventAdapterName, types, system => (IEventAdapter)Instantiate(typeof(TAdapter), system));
 
         return this;
     }
 
+    /// <summary>
+    /// Adds an event adapter that reads and writes, created by <paramref name="factory"/> without reflection, so it
+    /// also works under Native AOT. The factory is the only source of this adapter: nothing goes into the HOCON.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IEventAdapter
+    {
+        if (factory is null)
+            throw new ArgumentNullException(nameof(factory));
+
+        FactoryAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IEventAdapter>)(system => factory(system)), boundTypes));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an event adapter that only reads. See <see cref="AddEventAdapter{TAdapter}(string, IEnumerable{Type})"/>.
+    /// </summary>
     public AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IReadEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddHoconAdapter(eventAdapterName, types, system => new NoopWriteEventAdapter((IReadEventAdapter)Instantiate(typeof(TAdapter), system)));
 
         return this;
     }
 
+    /// <summary>
+    /// Adds an event adapter that only reads, created by <paramref name="factory"/> without reflection, so it
+    /// also works under Native AOT. The factory is the only source of this adapter: nothing goes into the HOCON.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IReadEventAdapter
+    {
+        if (factory is null)
+            throw new ArgumentNullException(nameof(factory));
+
+        FactoryAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IReadEventAdapter>)(system => factory(system)), boundTypes));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an event adapter that only writes. See <see cref="AddEventAdapter{TAdapter}(string, IEnumerable{Type})"/>.
+    /// </summary>
     public AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IWriteEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddHoconAdapter(eventAdapterName, types, system => new NoopReadEventAdapter((IWriteEventAdapter)Instantiate(typeof(TAdapter), system)));
 
         return this;
     }
 
-    private void AddAdapter<TAdapter>(string eventAdapterName, IEnumerable<Type> boundTypes)
+    /// <summary>
+    /// Adds an event adapter that only writes, created by <paramref name="factory"/> without reflection, so it
+    /// also works under Native AOT. The factory is the only source of this adapter: nothing goes into the HOCON.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IWriteEventAdapter
+    {
+        if (factory is null)
+            throw new ArgumentNullException(nameof(factory));
+
+        FactoryAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IWriteEventAdapter>)(system => factory(system)), boundTypes));
+
+        return this;
+    }
+
+    // Enumerates boundTypes exactly once and in the same order as before, so a null or a lazy sequence behaves as it always did.
+    private List<Type> AddAdapter<TAdapter>(string eventAdapterName, IEnumerable<Type> boundTypes)
     {
         Adapters[eventAdapterName] = typeof(TAdapter);
+        var types = new List<Type>();
         foreach (var t in boundTypes)
         {
+            types.Add(t);
             if (!Bindings.ContainsKey(t))
                 Bindings[t] = new HashSet<string>();
             Bindings[t].Add(eventAdapterName);
+        }
+
+        return types;
+    }
+
+    // A second copy of what the HOCON says. It is only used with Akka.DynamicTypeLoading off, and Build adds it only
+    // when the HOCON is written, so a call that built nothing before still builds nothing. A name the HOCON
+    // would reject is skipped rather than made to throw here.
+    private void AddHoconAdapter(string eventAdapterName, List<Type> types, Func<ExtendedActorSystem, IEventAdapter> factory)
+    {
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            HoconAdapters.Add(EventAdapterDetails.Create(eventAdapterName, factory, types.ToArray()));
+    }
+
+    // core's reflection path: the constructor that takes the system, and when there is none, the parameterless one
+    private static object Instantiate(Type type, ExtendedActorSystem system)
+    {
+        try
+        {
+            return Activator.CreateInstance(type, system)!;
+        }
+        catch (MissingMethodException)
+        {
+            return Activator.CreateInstance(type)!;
         }
     }
 
@@ -131,6 +226,19 @@ public sealed class AkkaPersistenceJournalBuilder
         // add the health checks if specified - do this FIRST before any early returns
         foreach(var hc in HealthCheckRegistrations)
             Builder.WithHealthCheck(hc);
+
+        // The adapters in code. The factory ones are always registered. The reflection ones are registered only when
+        // the HOCON below is written, so that a call which built nothing before still builds nothing. The HOCON stays
+        // as it always was.
+        var registered = new List<EventAdapterDetails>();
+        if (Adapters.Count > 0 && Bindings.Count > 0)
+            registered.AddRange(HoconAdapters);
+        registered.AddRange(FactoryAdapters);
+        if (registered.Count > 0)
+        {
+            var pluginId = Options?.PluginId ?? $"akka.persistence.journal.{JournalId}";
+            Builder.AddPersistenceRegistrations(setup => setup.WithEventAdapters(pluginId, registered));
+        }
 
         // useless configuration - don't bother.
         if (Adapters.Count == 0 || Bindings.Count == 0)

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence
@@ -49,6 +51,7 @@ namespace Akka.Persistence
         private readonly ExtendedActorSystem _system;
 
         private readonly ILoggingAdapter _log;
+        private readonly PersistencePluginRegistry _registry;
         // all defaults are lazy, so that they don't need to be configured if they're not used
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
@@ -78,6 +81,7 @@ namespace Akka.Persistence
                 throw ConfigurationException.NullOrEmptyConfig<PersistenceExtension>("akka.persistence");
 
             _log = Logging.GetLogger(_system, this);
+            _registry = PersistencePluginRegistry.For(_system);
 
             _defaultJournalPluginId = new Lazy<string>(() =>
             {
@@ -103,11 +107,19 @@ namespace Akka.Persistence
             _defaultInternalStashOverflowStrategy = new Lazy<IStashOverflowStrategy>(() =>
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
-                var configuratorType = Type.GetType(configuratorTypeName);
-                if (configuratorType is null)
-                    throw new ConfigurationException(
-                        $"Could not resolve internal-stash-overflow-strategy type [{configuratorTypeName}]. Ensure the type name is fully qualified.");
-                return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
+
+                // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on it is
+                // reflection on the HOCON type name, exactly as it always was. With it off: built-in, then the guard.
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
+
+                if (BuiltInPersistencePlugins.TryCreateStashOverflowConfigurator(configuratorTypeName, out var builtIn))
+                    return builtIn.Create(_system.Settings.Config);
+
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    "akka.persistence.internal-stash-overflow-strategy",
+                    configuratorTypeName,
+                    "ThrowExceptionConfigurator or DiscardConfigurator, or override InternalStashOverflowStrategy on the persistent actor"));
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -331,46 +343,108 @@ namespace Akka.Persistence
             return system.SystemActorOf(RecoveryPermitter.Props(maxPermits), $"recoveryPermitter-{configPath}");
         }
 
-        private static IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig)
+        private IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig, Props? registeredProps)
         {
             var pluginActorName = configPath;
             var pluginTypeName = pluginConfig.GetString("class", null);
-            if (string.IsNullOrEmpty(pluginTypeName))
-                throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
-            var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
-            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
-            
+
+            // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, HOCON `class`
+            // decides as it always did, and a registration only fills in when there is no `class`. With reflection off:
+            // registration (by plugin id), built-in, guard.
+            Props pluginProps;
+            if (registeredProps is not null && (!AkkaFeatures.IsDynamicTypeLoadingSupported || string.IsNullOrEmpty(pluginTypeName)))
+            {
+                pluginProps = registeredProps;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(pluginTypeName))
+                    throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
+
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
+                else if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
+                    pluginProps = builtInProps;
+                else
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{configPath}.class",
+                        pluginTypeName,
+                        "a plugin registered through Akka.Persistence.Hosting (WithJournal or WithSnapshot, with options that supply a factory)"));
+            }
+
             //todo wrap in backoffsupervisor ?
-            
+
             //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
             var configurator = SupervisorStrategyConfigurator.CreateConfigurator(
                 pluginConfig.GetString("supervisor-strategy"), $"{configPath}.supervisor-strategy");
-            
-            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
-            
+
+            var pluginActorProps = pluginProps.WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
+
             return system.SystemActorOf(pluginActorProps, pluginActorName);
         }
-        
-        private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
-        {
-            var pluginConfig = system.Settings.Config.GetConfig(configPath);
-            if (pluginConfig.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
 
-            return EventAdapters.Create(system, pluginConfig);
+        [RequiresUnreferencedCode("Loads a persistence plugin type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Props CreatePluginPropsByReflection(string pluginTypeName, Config pluginConfig)
+        {
+            var pluginType = Type.GetType(pluginTypeName, true);
+            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
+            return new Props(pluginType, pluginActorArgs);
         }
 
-        private static PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
+        [RequiresUnreferencedCode("Loads a stash overflow configurator named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IStashOverflowStrategyConfigurator CreateStashOverflowConfiguratorByReflection(string configuratorTypeName)
         {
-            if (string.IsNullOrEmpty(configPath) || !system.Settings.Config.HasPath(configPath))
+            var configuratorType = Type.GetType(configuratorTypeName);
+            if (configuratorType is null)
+                throw new ConfigurationException(
+                    $"Could not resolve internal-stash-overflow-strategy type [{configuratorTypeName}]. Ensure the type name is fully qualified.");
+            return (IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType);
+        }
+
+        private EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath, Config section, PersistencePluginDetails? registered, bool isJournal)
+        {
+            var adapters = isJournal ? _registry.EventAdaptersFor(configPath) : null;
+
+            // a registered plugin, or a journal with adapters added by id, may have no HOCON section at all
+            if (registered is null && (adapters is null || adapters.Count == 0) && section.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
+
+            return EventAdapters.Create(system, section, configPath, adapters);
+        }
+
+        private PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
+        {
+            // a registration is keyed by plugin id, and a journal is not a snapshot store
+            PersistencePluginDetails? registered = null;
+            if (!string.IsNullOrEmpty(configPath))
+            {
+                if (fallbackPath == JournalFallbackConfigPath && _registry.TryGet<JournalDetails>(configPath, out var journal))
+                    registered = journal;
+                else if (fallbackPath == SnapshotStoreFallbackConfigPath && _registry.TryGet<SnapshotStoreDetails>(configPath, out var snapshotStore))
+                    registered = snapshotStore;
+            }
+
+            var hasSection = !string.IsNullOrEmpty(configPath) && system.Settings.Config.HasPath(configPath);
+            if (!hasSection && registered is null)
             {
                 throw new ArgumentException($"Persistence config is missing plugin config path for: {configPath}");
             }
 
-            var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
-            var plugin = CreatePlugin(system, configPath, config);
-            var adapters = CreateAdapters(system, configPath);
+            // HOCON first, then the registration's default config, then the shared plugin fallback
+            var section = hasSection ? system.Settings.Config.GetConfig(configPath) : Config.Empty;
+            if (registered?.DefaultConfig is { } defaultConfig)
+                section = section.WithFallback(defaultConfig);
+
+            var config = section.WithFallback(system.Settings.Config.GetConfig(fallbackPath));
+            var registeredProps = registered switch
+            {
+                JournalDetails j => j.CreateProps(config),
+                SnapshotStoreDetails s => s.CreateProps(config),
+                _ => null
+            };
+            var plugin = CreatePlugin(system, configPath, config, registeredProps);
+            var adapters = CreateAdapters(system, configPath, section, registered, fallbackPath == JournalFallbackConfigPath);
             var recoveryPermitter = CreateRecoveryPermitter(system, configPath, config);
 
             return new PluginHolder(plugin, adapters, config, recoveryPermitter);

@@ -18,6 +18,8 @@ namespace Akka.Persistence.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, string journalId, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithJournalAndSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions journalOptions, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithJournalAndSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions journalOptions, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? configureJournal, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureSnapshot) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithReadJournal<TProvider>(this Akka.Hosting.AkkaConfigurationBuilder builder, string pluginId, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Configuration.Config, TProvider> factory, Akka.Configuration.Config? defaultConfig = null)
+            where TProvider :  class, Akka.Persistence.Query.IReadJournalProvider { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithSnapshot(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.SnapshotOptions snapshotOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureBuilder) { }
     }
@@ -28,9 +30,15 @@ namespace Akka.Persistence.Hosting
         public Akka.Persistence.Hosting.JournalOptions? Options { get; }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IEventAdapter { }
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
+            where TAdapter : Akka.Persistence.Journal.IEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IReadEventAdapter { }
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
+            where TAdapter : Akka.Persistence.Journal.IReadEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+            where TAdapter : Akka.Persistence.Journal.IWriteEventAdapter { }
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
             where TAdapter : Akka.Persistence.Journal.IWriteEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithCustomHealthCheck(Akka.Hosting.AkkaHealthCheckRegistration registration) { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithHealthCheck(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 1, string? name = null, System.Collections.Generic.IEnumerable<string>? tags = null) { }
@@ -63,6 +71,7 @@ namespace Akka.Persistence.Hosting
         public string PluginId { get; }
         public string? Serializer { get; set; }
         protected virtual System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+        protected virtual Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
         public Akka.Configuration.Config ToConfig() { }
         public override sealed string ToString() { }
     }
@@ -71,6 +80,11 @@ namespace Akka.Persistence.Hosting
         Both = 0,
         Journal = 1,
         SnapshotStore = 2,
+    }
+    public sealed class PluginActorFactory
+    {
+        public static Akka.Persistence.Hosting.PluginActorFactory For<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TActor>(System.Func<Akka.Configuration.Config, TActor> factory)
+            where TActor : Akka.Actor.ActorBase { }
     }
     public abstract class SnapshotOptions
     {
@@ -83,6 +97,7 @@ namespace Akka.Persistence.Hosting
         public string PluginId { get; }
         public string? Serializer { get; set; }
         protected virtual System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+        protected virtual Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
         public Akka.Configuration.Config ToConfig() { }
         public override sealed string ToString() { }
     }

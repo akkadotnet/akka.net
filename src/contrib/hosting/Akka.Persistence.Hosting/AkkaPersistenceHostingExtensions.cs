@@ -1,6 +1,8 @@
 ﻿using System;
+using Akka.Configuration;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
+using Akka.Persistence.Query;
 using Akka.Actor;
 
 #nullable enable
@@ -132,6 +134,13 @@ namespace Akka.Persistence.Hosting
             builder.AddHocon(journalOptions.ToConfig(), HoconAddMode.Prepend);
             builder.AddHocon(journalOptions.DefaultConfig, HoconAddMode.Append);
 
+            // a plugin that supplies a factory starts without its HOCON `class`, which is what Native AOT needs
+            if (journalOptions.GetFactory() is { } factory)
+            {
+                var details = JournalDetails.FromProps(journalOptions.PluginId, factory.CreateProps);
+                builder.AddPersistenceRegistrations(setup => setup.WithPlugin(details));
+            }
+
             // Apply the builder configuration (adapters + health checks) if provided
             if (configureBuilder != null)
             {
@@ -186,6 +195,13 @@ namespace Akka.Persistence.Hosting
             // Apply the options configuration
             builder.AddHocon(snapshotOptions.ToConfig(), HoconAddMode.Prepend);
             builder.AddHocon(snapshotOptions.DefaultConfig, HoconAddMode.Append);
+
+            // a plugin that supplies a factory starts without its HOCON `class`, which is what Native AOT needs
+            if (snapshotOptions.GetFactory() is { } factory)
+            {
+                var details = SnapshotStoreDetails.FromProps(snapshotOptions.PluginId, factory.CreateProps);
+                builder.AddPersistenceRegistrations(setup => setup.WithPlugin(details));
+            }
 
             // Apply the builder configuration (health checks) if provided
             if (configureBuilder != null)
@@ -267,6 +283,32 @@ namespace Akka.Persistence.Hosting
                   """;
 
             return builder.AddHocon(liveConfig, HoconAddMode.Prepend);
+        }
+
+        /// <summary>
+        /// Registers a read journal, which <c>PersistenceQuery</c> then creates without reflection and without a HOCON
+        /// <c>class</c> setting. A plugin's Hosting package calls this from its own query extension method.
+        /// </summary>
+        /// <typeparam name="TProvider">The read journal provider type.</typeparam>
+        /// <param name="builder">The builder instance being configured.</param>
+        /// <param name="pluginId">The read journal's config path, for example <c>akka.persistence.query.journal.sql</c>.</param>
+        /// <param name="factory">Creates the provider from the actor system and the read journal's HOCON section.</param>
+        /// <param name="defaultConfig">The plugin's default section, which sits under the HOCON. <c>PersistenceQuery</c>
+        /// would add it by reflection on the JIT; with <c>Akka.DynamicTypeLoading</c> off nothing else does.</param>
+        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
+        public static AkkaConfigurationBuilder WithReadJournal<TProvider>(
+            this AkkaConfigurationBuilder builder,
+            string pluginId,
+            Func<ExtendedActorSystem, Config, TProvider> factory,
+            Config? defaultConfig = null) where TProvider : class, IReadJournalProvider
+        {
+            if (builder is null)
+                throw new ArgumentNullException(nameof(builder));
+            if (factory is null)
+                throw new ArgumentNullException(nameof(factory));
+
+            var details = ReadJournalDetails.Create(pluginId, factory, defaultConfig);
+            return builder.AddPersistenceRegistrations(setup => setup.WithPlugin(details));
         }
 
         /// <summary>

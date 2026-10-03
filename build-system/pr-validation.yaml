@@ -259,6 +259,56 @@ jobs:
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare Hosting AOT warnings against the baseline'
 
+      # --- Persistence canary (src/aot/Akka.Persistence.AOT.App): same job, runs after the Hosting canary ---
+      - bash: |
+          rm -rf src/aot/Akka.Persistence.AOT.App/bin src/aot/Akka.Persistence.AOT.App/obj
+        displayName: 'Clean the Persistence canary intermediate output'
+
+      # One publish serves both steps below: the run proves persist, recover, snapshot and query with
+      # everything registered in code, and the same log is what the warning check reads.
+      - bash: |
+          set -o pipefail
+          dotnet publish src/aot/Akka.Persistence.AOT.App -r linux-x64 -c Release \
+            -o "$(Agent.TempDirectory)/persistence-aot-publish" 2>&1 | tee "$(Agent.TempDirectory)/persistence-aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The publish of the Persistence AOT canary failed with exit code $rc."
+            exit 1
+          fi
+        displayName: 'Publish the Persistence AOT canary'
+
+      # Same reasoning as the Hosting canary's run step: exit 0 alone is not proof. The canary's log
+      # watchdog and its assertions are what make '[canary-persistence] OK' meaningful.
+      - bash: |
+          set -o pipefail
+          timeout 300 "$(Agent.TempDirectory)/persistence-aot-publish/Akka.Persistence.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/persistence-aot-run.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -eq 124 ]; then
+            echo "##vso[task.logissue type=error]The Persistence AOT canary did not exit within 300s."
+            exit 1
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The Persistence AOT canary exited with code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary-persistence] OK' "$(Agent.TempDirectory)/persistence-aot-run.log"; then
+            echo "##vso[task.logissue type=error]The Persistence AOT canary exited 0 but never printed '[canary-persistence] OK'."
+            exit 1
+          fi
+          echo "Persistence AOT canary: exit code 0 and '[canary-persistence] OK' on stdout."
+        displayName: 'Run the Persistence AOT canary'
+
+      # Fails on any IL2xxx/IL3xxx warning from the persistence core, PersistenceQuery, the in-memory
+      # read journal, Akka.Persistence.Hosting or Akka.Streams that is not in this canary's own baseline.
+      # src/core/Akka/ is left out of --scope because AotCanary's baseline already watches it.
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/persistence-aot-publish.log" \
+            --baseline src/aot/Akka.Persistence.AOT.App/aot-warnings.baseline.txt \
+            --scope "src/core/Akka.Persistence/,src/core/Akka.Persistence.Query/,src/contrib/persistence/Akka.Persistence.Query.InMemory/,src/contrib/hosting/Akka.Persistence.Hosting/,src/core/Akka.Streams/" \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare Persistence AOT warnings against the baseline'
+
       # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
       # re-running the job. always() because the interesting case is the one where a step above
       # failed.
