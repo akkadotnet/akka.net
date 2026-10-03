@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -144,21 +145,24 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public async Task WaitForRadioSilenceAsync_should_reset_timer_twice_only()
+        public async Task WaitForRadioSilenceAsync_should_reset_the_timer_on_each_message()
         {
             var probe = CreateTestProbe("probe");
-            var max = TimeSpan.FromMilliseconds(3000);
-            var halfMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds / 2);
-            var doubleMax = TimeSpan.FromMilliseconds(max.TotalMilliseconds * 2);
+            var max = TimeSpan.FromSeconds(4);
+            var elapsed = Stopwatch.StartNew();
             var task = probe.WaitForRadioSilenceAsync(max: max, maxMessages: 2);
-            await Task.Delay(halfMax);
             probe.Ref.Tell(1, TestActor);
-            await Task.Delay(halfMax);
+            // well inside the window that opened when 1 was received, so a slow agent cannot push 2 out of it
+            await Task.Delay(400);
             probe.Ref.Tell(2, TestActor);
-            await Task.Delay(doubleMax);
-            probe.Ref.Tell(3, TestActor);
+            var sent2At = elapsed.Elapsed;
+
             var messages = await task;
             messages.Should().BeEquivalentTo(new ArrayList { 1, 2 });
+
+            // Receiving 2 restarted the window, so the silence cannot end before max after 2 was sent. Without the
+            // reset it would have ended about max after the call, 400 ms sooner. Delays only make this larger.
+            elapsed.Elapsed.Should().BeGreaterOrEqualTo(sent2At + max - TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
