@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,14 +52,24 @@ namespace Akka.Tests.Routing
         #region Helpers
 
         /// <summary>
-        /// Reads the private ring dictionary out of a <see cref="ConsistentHash{T}"/> so tests can
-        /// assert on the exact key-&gt;node mapping (there is no public accessor).
+        /// Reads the private ring state out of a <see cref="ConsistentHash{T}"/> so tests can assert
+        /// on the exact key-&gt;node mapping (there is no public accessor). Since #8293 the ring is
+        /// stored as parallel sorted arrays rather than a retained SortedDictionary; rebuild the
+        /// dictionary shape here so the assertions (and the legacy-ring comparison) stay unchanged.
         /// </summary>
         private static SortedDictionary<int, T> Ring<T>(ConsistentHash<T> hash)
         {
-            var field = typeof(ConsistentHash<T>).GetField("_nodes", BindingFlags.NonPublic | BindingFlags.Instance);
-            field.Should().NotBeNull("the ConsistentHash<T>._nodes field is required by these tests");
-            return (SortedDictionary<int, T>)field.GetValue(hash);
+            var keysField = typeof(ConsistentHash<T>).GetField("_nodeHashRing", BindingFlags.NonPublic | BindingFlags.Instance);
+            var valuesField = typeof(ConsistentHash<T>).GetField("_nodeRing", BindingFlags.NonPublic | BindingFlags.Instance);
+            keysField.Should().NotBeNull("the ConsistentHash<T>._nodeHashRing field is required by these tests");
+            valuesField.Should().NotBeNull("the ConsistentHash<T>._nodeRing field is required by these tests");
+
+            var keys = (int[])keysField!.GetValue(hash)!;
+            var values = (T[])valuesField!.GetValue(hash)!;
+            var ring = new SortedDictionary<int, T>();
+            for (var i = 0; i < keys.Length; i++)
+                ring.Add(keys[i], values[i]); // Add, not the indexer: a duplicate ring slot must fail loudly
+            return ring;
         }
 
         /// <summary>
@@ -71,7 +83,7 @@ namespace Akka.Tests.Routing
             var dict = new SortedDictionary<int, T>();
             foreach (var node in nodes)
             {
-                var nodeHash = ConsistentHash.HashFor(node.ToString());
+                var nodeHash = ConsistentHash.HashFor(node!.ToString()!);
                 for (var v = 1; v <= factor; v++)
                     dict.Add(ConsistentHash.ConcatenateNodeHash(nodeHash, v), node);
             }
@@ -162,11 +174,11 @@ namespace Akka.Tests.Routing
         {
             var hash = ConsistentHash.Create(new[] { CollisionA }, CollisionFactor);
 
-            ConsistentHash<string> combined = null;
+            ConsistentHash<string>? combined = null;
             Action act = () => combined = hash + CollisionB;
             act.Should().NotThrow("adding a colliding node must probe rather than throw (#8031)");
 
-            var ring = Ring(combined);
+            var ring = Ring(combined!);
             ring.Count.Should().Be(2 * CollisionFactor);
             ring.Values.Count(v => v == CollisionB).Should().Be(CollisionFactor);
         }
@@ -307,6 +319,36 @@ namespace Akka.Tests.Routing
             compared.Should().BeGreaterThan(0, "the proof must actually compare non-colliding rings");
             // legacyCollisions is informational: at these scales the high-end configs usually exercise
             // the collision branch too, but the guarantee that matters is the equality asserted above.
+        }
+
+        [Fact]
+        public void Constructor_must_snapshot_the_dictionary_and_not_retain_it()
+        {
+            // #8293: the ring is materialized into parallel arrays at construction and the source
+            // SortedDictionary is deliberately NOT retained. Mutating the dictionary after construction
+            // must therefore have no effect on the built ring. Before #8293 the ring aliased the
+            // dictionary (IsEmpty and the operators read it live), so this would have failed.
+            var dict = new SortedDictionary<int, string> { { 10, "a" }, { 20, "b" }, { 30, "c" } };
+            var hash = new ConsistentHash<string>(dict, 1);
+
+            var before = Ring(hash);
+            before.Count.Should().Be(3);
+
+            dict.Clear(); // if the ring still aliased the dictionary this would empty the ring
+
+            hash.IsEmpty.Should().BeFalse("clearing the source dictionary must not empty a snapshotted ring");
+            hash.NodeFor("any-key").Should().Match<string>(n => n == "a" || n == "b" || n == "c",
+                "the ring must still route after the source dictionary is cleared");
+            AssertSameRing(before, Ring(hash));
+        }
+
+        [Fact]
+        public void Constructor_must_throw_ArgumentNullException_for_a_null_dictionary()
+        {
+            // #8293: the dictionary is read once in the constructor, so a null is rejected up front
+            // with a named-parameter ArgumentNullException rather than a bare NullReferenceException.
+            Action act = () => _ = new ConsistentHash<string>(null!, 1);
+            act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("nodes");
         }
     }
 }

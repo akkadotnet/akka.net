@@ -8,6 +8,7 @@
 using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
@@ -134,6 +135,24 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(cert, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
+            });
+        }
+
+        #endregion
+
+        #region ValidateHostname Tests
+
+        [Fact(DisplayName = "ValidateHostname should warn once when an explicit expected hostname is not enforced")]
+        public async Task ValidateHostname_should_warn_once_when_explicit_expected_hostname_is_not_enforced()
+        {
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("expected.example");
+
+            await EventFilter.Warning(contains: "does not enforce the explicit expected hostname").ExpectOneAsync(() =>
+            {
+                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
             });
         }
 
