@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Reactive.Streams;
@@ -22,7 +23,8 @@ namespace Akka.Streams.Util
         /// </summary>
         /// <param name="type">TBD</param>
         /// <returns>TBD</returns>
-        public static Type GetSubscribedType(this Type type)
+        [Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type's interfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static Type GetSubscribedType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type type)
         {
             return
                 type
@@ -37,7 +39,8 @@ namespace Akka.Streams.Util
         /// </summary>
         /// <param name="type">TBD</param>
         /// <returns>TBD</returns>
-        public static Type GetPublishedType(this Type type)
+        [Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type's interfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static Type GetPublishedType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type type)
         {
             return
                 type

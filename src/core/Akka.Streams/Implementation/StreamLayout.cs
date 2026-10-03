@@ -2223,6 +2223,9 @@ namespace Akka.Streams.Implementation
         public void RegisterPublisher(IUntypedPublisher publisher)
             => RegisterPublisher(UntypedPublisher.ToTyped<T>(publisher));
 
+        void IUntypedVirtualPublisher.RegisterErrorPublisher(Exception cause)
+            => RegisterPublisher(new ErrorPublisher<T>(cause, string.Empty));
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -2413,34 +2416,48 @@ namespace Akka.Streams.Implementation
                 // (This is an attempt to clean up after an exception during materialization)
                 var ex = new MaterializationPanicException(cause);
 
+                // Clean-up is best effort: a step that fails here (e.g. the NotSupportedException a foreign
+                // IUntypedSubscriber/IUntypedPublisher raises with Akka.DynamicTypeLoading off) must not
+                // replace the materialization failure the caller needs to see, nor skip the other ports.
                 foreach (var value in _subscribersStack.SelectMany(subMap => subMap.Values))
-                    switch (value)
+                {
+                    try
                     {
-                        case IUntypedSubscriber subscriber:
+                        switch (value)
                         {
-                            var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
-                            var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
-
-                            UntypedPublisher.FromTyped(publisher).Subscribe(subscriber);
-                            continue;
-                        }
-                        case IUntypedVirtualPublisher virtualPublisher:
-                        {
-                            var publishedType =
-                                UntypedVirtualPublisher.ToTyped(virtualPublisher).GetType().GetPublishedType();
-                            var publisher = typeof(ErrorPublisher<>).Instantiate(publishedType, ex, string.Empty);
-                            virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
-                            break;
+                            case UntypedSubscriber subscriber:
+                                subscriber.SubscribeToErrorPublisher(ex);
+                                break;
+                            case IUntypedSubscriber subscriber:
+                                SubscribeToErrorPublisherReflectively(subscriber, ex);
+                                break;
+                            case IUntypedVirtualPublisher virtualPublisher:
+                                virtualPublisher.RegisterErrorPublisher(ex);
+                                break;
                         }
                     }
+                    catch (Exception cleanupFailure)
+                    {
+                        if (IsDebug)
+                            Console.WriteLine($"failing subscriber {value} after a materialization panic failed: {cleanupFailure}");
+                    }
+                }
 
                 foreach (var pubMap in _publishersStack)
                     foreach (var publisher in pubMap.Values)
                     {
-                        var publishedType = UntypedPublisher.ToTyped(publisher).GetType().GetPublishedType();
-                        var subscriber = typeof(CancellingSubscriber<>).Instantiate(publishedType);
-
-                        publisher.Subscribe(UntypedSubscriber.FromTyped(subscriber));
+                        try
+                        {
+                            if (publisher is UntypedPublisher untyped)
+                                untyped.SubscribeCancellingSubscriber();
+                            else
+                                SubscribeCancellingSubscriberReflectively(publisher);
+                        }
+                        catch (Exception cleanupFailure)
+                        {
+                            if (IsDebug)
+                                Console.WriteLine($"cancelling publisher {publisher} after a materialization panic failed: {cleanupFailure}");
+                        }
                     }
 
                 throw;
@@ -2621,12 +2638,48 @@ namespace Akka.Streams.Implementation
                     publisher.Subscribe(subscriber);
                     return;
                 case IUntypedVirtualPublisher virtualPublisher:
-                    virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
+                    virtualPublisher.RegisterPublisher(publisher);
                     return;
                 default:
-                    publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
+                    // a sink module's plain ISubscriber<T>: the publisher knows the element type
+                    if (publisher is UntypedPublisher untyped)
+                        untyped.SubscribeTyped(subscriberOrVirtual);
+                    else
+                        SubscribeReflectively(publisher, subscriberOrVirtual);
                     break;
             }
+        }
+
+        // The three methods below only serve IUntypedPublisher/IUntypedSubscriber implementations from
+        // outside Akka.Streams; every built-in one is an UntypedPublisher/UntypedSubscriber (#8731).
+        private static void SubscribeReflectively(IUntypedPublisher publisher, object subscriber)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(publisher);
+
+            var subscribedType = RuntimeGenerics.ElementType(subscriber, typeof(ISubscriber<>));
+            publisher.Subscribe((IUntypedSubscriber)RuntimeGenerics.Instantiate(typeof(UntypedSubscriberImpl<>), subscribedType, subscriber));
+        }
+
+        private static void SubscribeToErrorPublisherReflectively(IUntypedSubscriber subscriber, Exception cause)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(subscriber);
+
+            var typed = UntypedSubscriber.ToTyped(subscriber);
+            var subscribedType = RuntimeGenerics.ElementType(typed, typeof(ISubscriber<>));
+            var publisher = RuntimeGenerics.Instantiate(typeof(ErrorPublisher<>), subscribedType, cause, string.Empty);
+            ((UntypedPublisher)RuntimeGenerics.Instantiate(typeof(UntypedPublisherImpl<>), subscribedType, publisher)).Subscribe(subscriber);
+        }
+
+        private static void SubscribeCancellingSubscriberReflectively(IUntypedPublisher publisher)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(publisher);
+
+            var publishedType = RuntimeGenerics.ElementType(UntypedPublisher.ToTyped(publisher), typeof(IPublisher<>));
+            var subscriber = RuntimeGenerics.Instantiate(typeof(CancellingSubscriber<>), publishedType);
+            publisher.Subscribe((IUntypedSubscriber)RuntimeGenerics.Instantiate(typeof(UntypedSubscriberImpl<>), publishedType, subscriber));
         }
     }
 
@@ -2646,9 +2699,9 @@ namespace Akka.Streams.Implementation
         Outlet Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the processor, wrapped for both of its ports, plus the materialized value.
         /// </summary>
-        (object, object) CreateProcessor();
+        (IUntypedSubscriber Subscriber, IUntypedPublisher Publisher, object Materialized) CreateUntypedProcessor();
     }
 
     /// <summary>
@@ -2728,6 +2781,12 @@ namespace Akka.Streams.Implementation
         {
             var result = _createProcessor();
             return (result.Item1, result.Item2);
+        }
+
+        (IUntypedSubscriber Subscriber, IUntypedPublisher Publisher, object Materialized) IProcessorModule.CreateUntypedProcessor()
+        {
+            var (processor, materialized) = _createProcessor();
+            return (UntypedSubscriber.FromTyped(processor), UntypedPublisher.FromTyped(processor), materialized);
         }
     }
 }

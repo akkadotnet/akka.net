@@ -9,7 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Actor;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
+using Akka.Util;
 
 namespace Akka.Streams
 {
@@ -76,7 +79,24 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Inlet CarbonCopy();
 
-        
+        /// <summary>
+        /// INTERNAL API
+        /// <para>
+        /// Builds the <see cref="ActorGraphInterpreter.BoundarySubscriber{T}"/> that feeds this port from
+        /// another island. <see cref="Inlet{T}"/> builds it for its own element type; this base version
+        /// only serves ports implemented outside Akka.Streams (#8731).
+        /// </para>
+        /// </summary>
+        internal virtual IUntypedSubscriber CreateBoundarySubscriber(IActorRef parent, GraphInterpreterShell shell, int id)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(this);
+
+            var elementType = RuntimeGenerics.FirstGenericArgument(this);
+            var subscriber = RuntimeGenerics.Instantiate(typeof(ActorGraphInterpreter.BoundarySubscriber<>), elementType, parent, shell, id);
+            return (IUntypedSubscriber)RuntimeGenerics.Instantiate(typeof(UntypedSubscriberImpl<>), elementType, subscriber);
+        }
+
         public sealed override string ToString() => Name;
     }
 
@@ -104,6 +124,9 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>TBD</returns>
         public override Inlet CarbonCopy() => new Inlet<T>(Name);
+
+        internal override IUntypedSubscriber CreateBoundarySubscriber(IActorRef parent, GraphInterpreterShell shell, int id)
+            => UntypedSubscriber.FromTyped(new ActorGraphInterpreter.BoundarySubscriber<T>(parent, shell, id));
     }
 
     /// <summary>
@@ -138,7 +161,51 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Outlet CarbonCopy();
 
-        
+        // INTERNAL API. The three factories below build the types that need this port's element type.
+        // Outlet<T> builds them directly; these base versions only serve ports implemented outside
+        // Akka.Streams (#8731).
+
+        /// <summary>
+        /// INTERNAL API: builds the <see cref="ActorGraphInterpreter.BoundaryPublisher{T}"/> that exposes
+        /// this port to another island, and the wrapper the materializer wires it up through.
+        /// </summary>
+        internal virtual IUntypedPublisher CreateBoundaryPublisher(IActorRef parent, GraphInterpreterShell shell, int id, out IActorPublisher actorPublisher)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(this);
+
+            var elementType = RuntimeGenerics.FirstGenericArgument(this);
+            var publisher = RuntimeGenerics.Instantiate(typeof(ActorGraphInterpreter.BoundaryPublisher<>), elementType, parent, shell, id);
+            actorPublisher = (IActorPublisher)publisher;
+            return (IUntypedPublisher)RuntimeGenerics.Instantiate(typeof(UntypedPublisherImpl<>), elementType, publisher);
+        }
+
+        /// <summary>
+        /// INTERNAL API: builds the <see cref="ActorGraphInterpreter.ActorOutputBoundary{T}"/> that drains
+        /// this port out of its island.
+        /// </summary>
+        internal virtual ActorGraphInterpreter.IActorOutputBoundary CreateActorOutputBoundary(IActorRef actor, GraphInterpreterShell shell, int id)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(this);
+
+            return (ActorGraphInterpreter.IActorOutputBoundary)RuntimeGenerics.Instantiate(
+                typeof(ActorGraphInterpreter.ActorOutputBoundary<>), RuntimeGenerics.FirstGenericArgument(this), actor, shell, id);
+        }
+
+        /// <summary>
+        /// INTERNAL API: builds a <see cref="MaterializedValueSource{T}"/> on this port for
+        /// <paramref name="computation"/>.
+        /// </summary>
+        internal virtual IMaterializedValueSource CreateMaterializedValueSource(StreamLayout.IMaterializedValueNode computation)
+        {
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw RuntimeGenerics.NotSupported(this);
+
+            return (IMaterializedValueSource)RuntimeGenerics.Instantiate(
+                typeof(MaterializedValueSource<>), RuntimeGenerics.FirstGenericArgument(this), computation, this);
+        }
+
         public sealed override string ToString() => Name;
     }
 
@@ -165,6 +232,19 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>TBD</returns>
         public override Outlet CarbonCopy() => new Outlet<T>(Name);
+
+        internal override IUntypedPublisher CreateBoundaryPublisher(IActorRef parent, GraphInterpreterShell shell, int id, out IActorPublisher actorPublisher)
+        {
+            var publisher = new ActorGraphInterpreter.BoundaryPublisher<T>(parent, shell, id);
+            actorPublisher = publisher;
+            return UntypedPublisher.FromTyped(publisher);
+        }
+
+        internal override ActorGraphInterpreter.IActorOutputBoundary CreateActorOutputBoundary(IActorRef actor, GraphInterpreterShell shell, int id)
+            => new ActorGraphInterpreter.ActorOutputBoundary<T>(actor, shell, id);
+
+        internal override IMaterializedValueSource CreateMaterializedValueSource(StreamLayout.IMaterializedValueNode computation)
+            => new MaterializedValueSource<T>(computation, this);
     }
 
     /// <summary>

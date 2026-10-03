@@ -6,7 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Streams.Util;
+using Akka.Actor;
+using Akka.Streams.Implementation;
 using Reactive.Streams;
 
 namespace Akka.Streams
@@ -72,15 +73,19 @@ namespace Akka.Streams
         public abstract object Unwrap();
 
         /// <summary>
-        /// TBD
+        /// Subscribes the wrapped subscriber to an <see cref="Implementation.ErrorPublisher{T}"/> failing
+        /// with <paramref name="cause"/>, typed by the element type this wrapper was built with.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <returns>TBD</returns>
-        public static UntypedSubscriber FromTyped(object subscriber)
-        {
-            var subscribedType = subscriber.GetType().GetSubscribedType();
-            return (UntypedSubscriber) typeof(UntypedSubscriberImpl<>).Instantiate(subscribedType, subscriber);
-        }
+        /// <param name="cause">The failure to signal.</param>
+        public abstract void SubscribeToErrorPublisher(Exception cause);
+
+        /// <summary>
+        /// Creates the <see cref="ActorSubscription{T}"/> that connects the wrapped subscriber to
+        /// <paramref name="implementor"/>.
+        /// </summary>
+        /// <param name="implementor">The actor behind the publisher.</param>
+        /// <returns>The subscription.</returns>
+        public abstract IActorSubscription CreateActorSubscription(IActorRef implementor);
 
         /// <summary>
         /// TBD
@@ -177,6 +182,14 @@ namespace Akka.Streams
         {
             return _subscriber;
         }
+
+        /// <inheritdoc/>
+        public override void SubscribeToErrorPublisher(Exception cause)
+            => new ErrorPublisher<T>(cause, string.Empty).Subscribe(_subscriber);
+
+        /// <inheritdoc/>
+        public override IActorSubscription CreateActorSubscription(IActorRef implementor)
+            => new ActorSubscription<T>(implementor, _subscriber);
 
         /// <summary>
         /// TBD

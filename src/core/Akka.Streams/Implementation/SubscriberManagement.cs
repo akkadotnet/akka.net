@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Akka.Pattern;
 using Akka.Streams.Actors;
@@ -144,7 +145,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
-    internal abstract class SubscriberManagement<T, TStreamBuffer> : ICursors where TStreamBuffer : IStreamBuffer<T>
+    internal abstract class SubscriberManagement<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : ICursors where TStreamBuffer : IStreamBuffer<T>
     {
         private readonly Lazy<IStreamBuffer<T>> _buffer;
 
@@ -162,6 +163,8 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected SubscriberManagement()
         {
+            // TStreamBuffer carries [DynamicallyAccessedMembers(PublicConstructors)], so the trimmer keeps
+            // the (int, int, ICursors) constructor of every buffer type this is closed over.
             _buffer = new Lazy<IStreamBuffer<T>>(() 
                 => (IStreamBuffer<T>) Activator.CreateInstance(typeof(TStreamBuffer), InitialBufferSize, MaxBufferSize, this));
         }

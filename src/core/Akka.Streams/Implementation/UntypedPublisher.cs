@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Streams.Util;
+using Akka.Streams.Implementation;
 using Reactive.Streams;
 
 namespace Akka.Streams
@@ -40,15 +40,17 @@ namespace Akka.Streams
         public abstract object Unwrap();
 
         /// <summary>
-        /// TBD
+        /// Subscribes a subscriber that was handed over as a plain object (what a sink module creates)
+        /// to the wrapped publisher, cast to the publisher's own element type.
         /// </summary>
-        /// <param name="publisher">TBD</param>
-        /// <returns>TBD</returns>
-        public static UntypedPublisher FromTyped(object publisher)
-        {
-            var publishedType = publisher.GetType().GetPublishedType();
-            return (UntypedPublisher) typeof(UntypedPublisherImpl<>).Instantiate(publishedType, publisher);
-        }
+        /// <param name="subscriber">An <see cref="ISubscriber{T}"/> of the wrapped publisher's element type.</param>
+        public abstract void SubscribeTyped(object subscriber);
+
+        /// <summary>
+        /// Subscribes a <see cref="Implementation.CancellingSubscriber{T}"/> of the wrapped publisher's
+        /// element type to it.
+        /// </summary>
+        public abstract void SubscribeCancellingSubscriber();
 
         /// <summary>
         /// TBD
@@ -119,6 +121,12 @@ namespace Akka.Streams
         {
             return _publisher;
         }
+
+        /// <inheritdoc/>
+        public override void SubscribeTyped(object subscriber) => _publisher.Subscribe((ISubscriber<T>) subscriber);
+
+        /// <inheritdoc/>
+        public override void SubscribeCancellingSubscriber() => _publisher.Subscribe(new CancellingSubscriber<T>());
 
         /// <summary>
         /// TBD

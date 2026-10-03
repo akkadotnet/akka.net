@@ -216,8 +216,7 @@ namespace Akka.Streams.Implementation.Fusing
             var offset = _assembly.ConnectionCount - _outputs.Length;
             for (int i = 0; i < _outputs.Length; i++)
             {
-                var outputType = _shape.Outlets[i].GetType().GetGenericArguments().First();
-                var output = (ActorGraphInterpreter.IActorOutputBoundary) typeof(ActorGraphInterpreter.ActorOutputBoundary<>).Instantiate(outputType, Self, this, i);
+                var output = _shape.Outlets[i].CreateActorOutputBoundary(Self, this, i);
                 _outputs[i] = output;
                 Interpreter.AttachDownstreamBoundary(_connections[i + offset], (DownstreamBoundaryStageLogic) output);
             }

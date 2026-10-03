@@ -497,9 +497,7 @@ namespace Akka.Streams.Implementation.Fusing
                         else
                             mapped = matNodeMapping[ms.Computation];
 
-                        var outputType = ms.Outlet.GetType().GetGenericArguments().First();
-                        var materializedValueSourceType = typeof(MaterializedValueSource<>).MakeGenericType(outputType);
-                        var newSrc = (IMaterializedValueSource) Activator.CreateInstance(materializedValueSourceType, mapped, ms.Outlet);
+                        var newSrc = ms.Outlet.CreateMaterializedValueSource(mapped);
                         var replacement = new CopiedModule(c.Shape, c.Attributes, newSrc.Module);
                         structInfo.Replace(c, replacement, localGroup);
                     }

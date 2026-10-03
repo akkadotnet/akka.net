@@ -106,6 +106,28 @@ With the switch off, the base `Serializer.FromBinary(byte[], string)` throws a `
 for a manifest it has not already cached (#8697). Persistence's `PersistentFSM.PersistentFSMSnapshot<>`
 stays on that base fallback today, because it is generic.
 
+## Akka.Streams Under Native AOT
+
+The Streams DSL works with the switch off: sources, flows and sinks, `.Async()` island boundaries,
+`Sink.AsPublisher` and `Source.FromPublisher`, `Source.ActorPublisher`, and your own `IPublisher<T>`,
+`ISubscriber<T>` and `IProcessor<TIn, TOut>` implementations passed in through `Source.FromPublisher`,
+`Sink.FromSubscriber` and `Flow.FromProcessor`. Elements crossing a boundary can be value types or
+reference types. The materializer builds every boundary type from code that already knows the element
+type, so no `TrimmerRootDescriptor` is needed (#8731).
+
+With the switch off, these do not work:
+
+* **Stream refs received over remoting.** See the stream refs entry under
+  [Not Supported Yet](#not-supported-yet) (#8673).
+* **Your own ports or untyped wrappers.** A subclass of `Inlet` or `Outlet` other than `Inlet<T>` and
+  `Outlet<T>`, or your own `IUntypedPublisher` or `IUntypedSubscriber` handed to the materializer
+  through a custom `MaterializerSession` or `SinkModule`. The materializer cannot learn their element
+  type without reflection, so it throws a `NotSupportedException` that names the switch.
+* **The obsolete reflection helpers.** `Construct.Instantiate` builds a generic type at runtime, which
+  Native AOT does not guarantee, and `TypeExtensions.GetSubscribedType`/`GetPublishedType` read a
+  type's interfaces through reflection. Akka.Streams no longer calls them; they are obsolete since
+  v1.6.0 and will be removed in 1.7.
+
 ## Not Supported Yet
 
 * **Akka.Remote with classic DotNetty remoting.** Does not work under Native AOT: transport,
@@ -126,7 +148,7 @@ stays on that base fallback today, because it is generic.
   yet for supplying a custom mailbox or dispatcher as a factory delegate instead of a type name.
 * **Stream refs with the switch off.** `SerializationTools.TypeFromString` has no built-in table for
   a stream ref's element type - it is generic over any type the application chooses - so it throws:
-  "stream refs need Akka.DynamicTypeLoading enabled at publish time" (#8667).
+  "stream refs need Akka.DynamicTypeLoading enabled at publish time" (#8673).
 * **The default JSON serializer.** Core does not register `json` or its `System.Object` binding when
   the switch is off, so message types need serializers you register yourself. Newtonsoft.Json is
   then trimmed away as a result - that is the consequence, not the cause.
