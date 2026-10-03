@@ -1648,7 +1648,16 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableArray,
         ImmutableList,
         ImmutableHashSet,
-        ImmutableDictionary
+        ImmutableDictionary,
+        Int16,
+        SByte,
+        Byte,
+        UInt16,
+        UInt32,
+        UInt64,
+        Single,
+        Char,
+        TimeSpan
     }
 
     /// <summary>

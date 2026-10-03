@@ -1241,10 +1241,19 @@ public sealed partial class AkkaSerializerGenerator
             SpecialType.System_Int64 => new TypeMapping(FieldKind.Int64),
             SpecialType.System_Boolean => new TypeMapping(FieldKind.Boolean),
             SpecialType.System_Double => new TypeMapping(FieldKind.Double),
+            SpecialType.System_Single => new TypeMapping(FieldKind.Single),
+            SpecialType.System_Int16 => new TypeMapping(FieldKind.Int16),
+            SpecialType.System_SByte => new TypeMapping(FieldKind.SByte),
+            SpecialType.System_Byte => new TypeMapping(FieldKind.Byte),
+            SpecialType.System_UInt16 => new TypeMapping(FieldKind.UInt16),
+            SpecialType.System_UInt32 => new TypeMapping(FieldKind.UInt32),
+            SpecialType.System_UInt64 => new TypeMapping(FieldKind.UInt64),
+            SpecialType.System_Char => new TypeMapping(FieldKind.Char),
             SpecialType.System_Decimal => new TypeMapping(FieldKind.Decimal),
             SpecialType.System_DateTime => new TypeMapping(FieldKind.DateTime),
             _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.Guid) => new TypeMapping(FieldKind.Guid),
             _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.DateTimeOffset) => new TypeMapping(FieldKind.DateTimeOffset),
+            _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.TimeSpan) => new TypeMapping(FieldKind.TimeSpan),
             _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.ActorRef) => new TypeMapping(FieldKind.ActorRef),
             _ => new TypeMapping(FieldKind.Unsupported)
         };
@@ -1578,6 +1587,7 @@ public sealed partial class AkkaSerializerGenerator
             GenericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
+            TimeSpan = compilation.GetTypeByMetadataName("System.TimeSpan");
             ActorRef = compilation.GetTypeByMetadataName("Akka.Actor.IActorRef");
             ListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1");
             ReadOnlyListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyList`1");
@@ -1613,6 +1623,7 @@ public sealed partial class AkkaSerializerGenerator
 
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
+        public INamedTypeSymbol? TimeSpan { get; }
         public INamedTypeSymbol? ActorRef { get; }
         public INamedTypeSymbol? ListOfT { get; }
         public INamedTypeSymbol? ReadOnlyListOfT { get; }
