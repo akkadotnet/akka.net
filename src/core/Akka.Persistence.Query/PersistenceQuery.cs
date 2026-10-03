@@ -93,7 +93,7 @@ namespace Akka.Persistence.Query
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                     $"{configPath}.class",
                     pluginTypeName,
-                    "a ReadJournalDetails for this plugin id registered in a PersistenceSetup (WithReadJournal)"));
+                    "a read journal registered through Akka.Persistence.Hosting (WithReadJournal)"));
 
             return CreatePluginByReflection(pluginTypeName, pluginConfig);
         }

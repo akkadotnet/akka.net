@@ -17,7 +17,7 @@ namespace Akka.Persistence.Query
     /// <see cref="PersistencePluginDetails.PluginId"/> without a HOCON <c>class</c> setting and without reflection.
     /// Add one to a <see cref="PersistenceSetup"/> with <see cref="PersistenceSetupExtensions.WithReadJournal{TProvider}"/>.
     /// </summary>
-    public sealed class ReadJournalDetails : PersistencePluginDetails
+    internal sealed class ReadJournalDetails : PersistencePluginDetails
     {
         private readonly Func<ExtendedActorSystem, Config, IReadJournalProvider> _createProvider;
 
@@ -52,7 +52,7 @@ namespace Akka.Persistence.Query
     /// <summary>
     /// Adds read journals to a <see cref="PersistenceSetup"/>.
     /// </summary>
-    public static class PersistenceSetupExtensions
+    internal static class PersistenceSetupExtensions
     {
         /// <summary>
         /// Registers a read journal provider for the plugin at <paramref name="pluginId"/>.

@@ -29,14 +29,13 @@ fallback entirely.
 * An Akka.Hosting application built with `AddAkka`: dependency injection through
   Akka.DependencyInjection, a custom extension registered with `WithExtension`, log output routed
   through `Microsoft.Extensions.Logging`, and the built-in `ActorSystem` liveness health check.
-* Five `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
+* Four `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
   (custom loggers and log formatter), `SerializationSetup` (custom serializers and bindings),
-  `ExtensionsSetup` (custom or third-party extensions), `PersistenceSetup` (journals, snapshot
-  stores, event adapters, read journals). Combine them (plus a
-  `BootstrapSetup` if you need one) with `ActorSystemSetup` and pass the result to
-  `ActorSystem.Create`.
-* Akka.Persistence with the in-memory journal and snapshot store, event adapters and the in-memory
-  read journal - see [Persistence Plugins](#persistence-plugins).
+  `ExtensionsSetup` (custom or third-party extensions) and `BootstrapSetup`. Combine them with
+  `ActorSystemSetup` and pass the result to `ActorSystem.Create`. Persistence has no setup of its own to
+  write: use the Akka.Persistence.Hosting builders, see [Persistence Plugins](#persistence-plugins).
+* Akka.Persistence through the Akka.Persistence.Hosting builders: journals, snapshot stores, event
+  adapters and read journals - see [Persistence Plugins](#persistence-plugins).
 * Serializer names for Akka.Remote, Akka.Cluster, Akka.Cluster.Tools, Akka.Cluster.Sharding,
   Akka.Cluster.Metrics, Akka.DistributedData, Akka.Persistence and Akka.Streams: each resolves its
   own `reference.conf` serializer rows from a built-in table instead of `Type.GetType`, the same as
@@ -115,57 +114,46 @@ stays on that base fallback today, because it is generic.
 
 Akka.Persistence reads the type of every journal and snapshot store from the `class` setting of its
 HOCON section, and it reads event adapters, event adapter bindings and the stash overflow strategy the
-same way. Akka.Persistence.Query does the same for read journals. Without reflection, only code
-registrations and the types Akka.Persistence ships resolve.
-
-`PersistenceSetup` registers plugins in code, one record per plugin id, the way `SerializationSetup`
-registers serializers. The records are journals, snapshot stores and, through `Akka.Persistence.Query`,
-read journals. Event adapters and the event types they bind to go with their journal. A registration for
-`akka.persistence.journal.my-journal` is used when persistence starts the plugin at that path, so the
-HOCON `class` setting is not needed. A `defaultConfig` you pass sits under the plugin's HOCON section,
-so HOCON still wins and the app does not repeat your defaults.
+same way. Akka.Persistence.Query does the same for read journals. Reflection is off the table under
+Native AOT, so use the Akka.Persistence.Hosting builders. They write the HOCON you always had and also
+hand core the plugins, adapters and read journals as code, so nothing needs a `class` string. Your code
+does not change between the JIT and Native AOT.
 
 ```csharp
-var setup = BootstrapSetup.Create().WithConfig(config)
-    .And(PersistenceSetup.Create()
-        .WithJournal("akka.persistence.journal.my-journal", static journalConfig => new MyJournal(journalConfig),
-            eventAdapters: [EventAdapterDetails.Create("tagger", static _ => new MyTagger(), typeof(MyEvent))])
-        .WithSnapshotStore("akka.persistence.snapshot-store.my-store", static storeConfig => new MyStore(storeConfig))
-        .WithReadJournal("akka.persistence.query.journal.my-journal",
-            static (system, readConfig) => new MyReadJournalProvider(system, readConfig)))
-    .And(SerializationSetup.Create(system => /* a serializer for MyEvent and your snapshot types */));
-
-var system = ActorSystem.Create("app", setup);
+services.AddAkka("app", builder => builder
+    .WithJournalAndSnapshot(new MyJournalOptions(), new MySnapshotOptions(),
+        configureJournal: journal => journal.AddWriteEventAdapter<MyTagger>("tagger", new[] { typeof(MyEvent) }),
+        configureSnapshot: null)
+    .WithInMemoryJournal(_ => { }, journalId: "scratch", isDefaultPlugin: false)
+    .WithInMemoryReadJournal()
+    .WithCustomSerializer("app", new[] { typeof(MyEvent) }, system => new MySerializer(system)));
 ```
 
-With the switch off, `PersistenceQuery` does not call a read journal's static `DefaultConfiguration()`
-method for you. Pass the plugin's section of that config as the record's `defaultConfig`, as the canary
-does for the in-memory read journal:
+Call the builders as often as you like, for as many plugin ids as you have. Akka.Persistence.Hosting keeps
+one registration list for the actor system. For one plugin id the later call wins, and the event
+adapters you add to a journal pile up across calls, whichever call configures the journal first. An
+adapter is created from a constructor that takes the `ExtendedActorSystem`, or else from a parameterless
+one. When it needs more, pass a factory: `AddWriteEventAdapter("tagger", system => new MyTagger(system), typeof(MyEvent))`.
 
-```csharp
-.WithReadJournal(InMemoryReadJournal.Identifier,
-    static (system, readConfig) => new InMemoryReadJournalProvider(system, readConfig),
-    InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
-```
-
-Only one `PersistenceSetup` counts per `ActorSystemSetup`, as with `SerializationSetup`. Put every
-plugin in it, or combine setups with `Merge`. A plugin package can add its own records with
-`WithPlugins(system => ImmutableHashSet.Create<PersistencePluginDetails>(...))`. With Akka.Hosting, call
-`builder.WithPersistenceSetup(setup => setup.WithJournal(...))` from Akka.Persistence.Hosting. Calls
-build on each other.
-
-Core looks a plugin up in this order: your registration for its plugin id, then the plugins Akka.Persistence
-ships (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`, `LocalSnapshotStore`,
-`NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
+Core looks a plugin up in this order: what Akka.Persistence.Hosting registered for its plugin id, then the
+plugins Akka.Persistence ships (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`,
+`LocalSnapshotStore`, `NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
 `DiscardConfigurator` stash overflow strategies), then - only if the switch is on - reflection on the
 `class` setting. With the switch off, a plugin that is in none of the first two throws a
-`ConfigurationException` when it starts. The message names the HOCON setting and the switch. With the
-switch on nothing changes for an app that registers nothing.
+`ConfigurationException` when it starts. The message names the HOCON setting and the switch, and points back
+to Akka.Persistence.Hosting. With the switch on nothing changes for an app that registers nothing.
 
-Event adapters of a registered journal add to the adapters in its HOCON section, and a registered
-adapter wins a name clash. HOCON adapters and bindings only resolve with the switch on, so list your
-adapters and the event types they bind to in `EventAdapterDetails`. To replace the stash overflow
-strategy, call `WithStashOverflowStrategy` with a configurator.
+A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
+`WithJournal` or `WithSnapshot`. See [Registering Your Plugin for Native AOT](xref:custom-persistent-provider)
+if you write one. The Hosting builders that need no plugin package are `WithInMemoryJournal`,
+`WithInMemorySnapshotStore` and `WithInMemoryReadJournal`. `WithStashOverflowStrategy` takes a custom
+`IStashOverflowStrategyConfigurator`.
+
+HOCON adapters in a journal section still work on the JIT. With the switch off an adapter has to come from
+`AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. HOCON that only repeats what those methods
+registered is harmless. `WithClusterShardingJournalMigrationAdapter` still names its adapter in HOCON, because
+Akka.Persistence.Hosting cannot reference Akka.Cluster.Sharding and Cluster Sharding is not supported under
+Native AOT yet (see below).
 
 ## Not Supported Yet
 

@@ -7,7 +7,6 @@
 
 #nullable enable
 using System;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -163,14 +162,16 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should start several plugins from one setup When it is built with a factory")]
-        public async Task Should_start_several_plugins_from_one_setup_When_it_is_built_with_a_factory()
+        [Fact(DisplayName = "PersistenceSetup should start several plugins from one setup When registrations are appended")]
+        public async Task Should_start_several_plugins_from_one_setup_When_registrations_are_appended()
         {
             const string secondJournalPath = "akka.persistence.journal.second";
-            var setup = PersistenceSetup.Create(_ => ImmutableHashSet.Create<PersistencePluginDetails>(
-                JournalDetails.Create(JournalPath, _ => new RegisteredJournal()),
-                JournalDetails.Create(secondJournalPath, _ => new SecondRegisteredJournal()),
-                SnapshotStoreDetails.Create(SnapshotPath, _ => new RegisteredSnapshotStore())));
+            const string secondSnapshotPath = "akka.persistence.snapshot-store.second";
+            var setup = PersistenceSetup.Create()
+                .WithJournal(JournalPath, _ => new RegisteredJournal())
+                .WithJournal(secondJournalPath, _ => new SecondRegisteredJournal())
+                .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore())
+                .WithSnapshotStore(secondSnapshotPath, _ => new SecondRegisteredSnapshotStore());
 
             await RunAsync(false, "", setup, async system =>
             {
@@ -179,46 +180,85 @@ namespace Akka.Persistence.Tests
                 UnderlyingProps(persistence.JournalFor(JournalPath)).Type.Should().Be(typeof(RegisteredJournal));
                 UnderlyingProps(persistence.JournalFor(secondJournalPath)).Type.Should().Be(typeof(SecondRegisteredJournal));
                 UnderlyingProps(persistence.SnapshotStoreFor(SnapshotPath)).Type.Should().Be(typeof(RegisteredSnapshotStore));
+                UnderlyingProps(persistence.SnapshotStoreFor(secondSnapshotPath)).Type.Should().Be(typeof(SecondRegisteredSnapshotStore));
 
-                var writer = system.ActorOf(Props.Create(() => new Writer("p-second", secondJournalPath, SnapshotPath)));
+                var writer = system.ActorOf(Props.Create(() => new Writer("p-second", secondJournalPath, secondSnapshotPath)));
                 (await writer.Ask<string>("evt", Timeout)).Should().Be("evt");
                 (await writer.Ask<string>("snap", Timeout)).Should().Be("snapshot-saved");
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should keep the later registration for a plugin id When adding and merging")]
-        public async Task Should_keep_later_registration_for_a_plugin_id_When_adding_and_merging()
+        [Fact(DisplayName = "PersistencePluginRegistry should let the later registration win the plugin When one id is registered twice")]
+        public void Should_let_the_later_registration_win_the_plugin_When_one_id_is_registered_twice()
         {
-            var firstCalls = 0;
-            var secondCalls = 0;
-            var first = PersistenceSetup.Create().WithJournal(JournalPath, _ =>
-            {
-                Interlocked.Increment(ref firstCalls);
-                return new RegisteredJournal();
-            });
+            var setup = PersistenceSetup.Create()
+                .WithJournal(JournalPath, _ => new RegisteredJournal(), ConfigurationFactory.ParseString("a = first\nb = first"))
+                .WithJournal(JournalPath, _ => new SecondRegisteredJournal(), ConfigurationFactory.ParseString("a = second"));
+
+            var registry = PersistencePluginRegistry.Build(setup);
+
+            registry.TryGet<JournalDetails>(JournalPath, out var journal).Should().BeTrue();
+            journal!.CreateProps(Config.Empty).Type.Should().Be(typeof(SecondRegisteredJournal));
+            journal.DefaultConfig!.GetString("a").Should().Be("second");
+            journal.DefaultConfig.HasPath("b").Should().BeFalse("the later registration replaces the default config, it does not merge it");
+        }
+
+        [Fact(DisplayName = "PersistencePluginRegistry should accumulate the event adapters of a journal When several registrations add them")]
+        public void Should_accumulate_the_event_adapters_of_a_journal_When_several_registrations_add_them()
+        {
+            var setup = PersistenceSetup.Create()
+                // an adapter added before its journal is registered
+                .WithEventAdapters(JournalPath, [EventAdapterDetails.Create("early", _ => new TagAdapter(), typeof(TaggedEvent))])
+                .WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+                [
+                    EventAdapterDetails.Create("own", _ => new WriteOnlyAdapter(), typeof(WriteOnlyEvent)),
+                    EventAdapterDetails.Create("clash", _ => new TagAdapter(), typeof(TaggedEvent)),
+                ])
+                // and one added in a later call, which also replaces the adapter that has its name
+                .WithEventAdapters(JournalPath, [EventAdapterDetails.Create("clash", _ => new ReadOnlyAdapter(), typeof(ReadOnlyEvent))])
+                .WithEventAdapters("akka.persistence.journal.other", [EventAdapterDetails.Create("elsewhere", _ => new TagAdapter())]);
+
+            var registry = PersistencePluginRegistry.Build(setup);
+
+            registry.EventAdaptersFor(JournalPath).Select(a => a.Name).Should().BeEquivalentTo(new[] { "early", "own", "clash" });
+            registry.EventAdaptersFor(JournalPath).Single(a => a.Name == "clash").BoundTypes.Should().BeEquivalentTo(new[] { typeof(ReadOnlyEvent) });
+            registry.EventAdaptersFor("akka.persistence.journal.other").Select(a => a.Name).Should().BeEquivalentTo(new[] { "elsewhere" });
+            registry.EventAdaptersFor("akka.persistence.journal.unknown").Should().BeEmpty();
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should keep the registrations of both sides in order When merging")]
+        public void Should_keep_the_registrations_of_both_sides_in_order_When_merging()
+        {
+            var first = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal());
             var second = PersistenceSetup.Create()
-                .WithJournal(JournalPath, _ =>
-                {
-                    Interlocked.Increment(ref secondCalls);
-                    return new RegisteredJournal();
-                })
-                .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore());
+                .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore())
+                .WithStashOverflowStrategy(new CustomStashConfigurator());
+
+            var merged = first.Merge(second);
 
             // With... returns a new setup and leaves the old one as it was
-            first.CreatePlugins(null!).Should().HaveCount(1);
-            var merged = first.Merge(second);
-            first.CreatePlugins(null!).Should().HaveCount(1, "Merge leaves its operands alone");
-            merged.CreatePlugins(null!).Select(d => d.PluginId).Should().BeEquivalentTo(new[] { JournalPath, SnapshotPath });
+            first.Registrations.Should().HaveCount(1);
+            merged.Registrations.Select(r => r.Plugin!.PluginId).Should().Equal(JournalPath, SnapshotPath);
+            merged.StashOverflowConfigurator.Should().BeSameAs(second.StashOverflowConfigurator);
+            first.Merge(PersistenceSetup.Create()).StashOverflowConfigurator.Should().BeNull();
+        }
 
-            await RunAsync(false, "", merged, async system =>
+        [Fact(DisplayName = "PersistenceSetup should add event adapters to a built-in journal When the switch is off")]
+        public async Task Should_add_event_adapters_to_a_builtin_journal_When_the_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithEventAdapters("akka.persistence.journal.inmem",
+            [
+                EventAdapterDetails.Create("tagger", _ => new TagAdapter(), typeof(TaggedEvent)),
+            ]);
+
+            await RunAsync(false, "", setup, system =>
             {
-                Persistence.Instance.Apply(system).JournalFor(JournalPath);
-                var writer = system.ActorOf(Props.Create(() => new Writer("p-merge", JournalPath, InMemSnapshotPath)));
-                await writer.Ask<string>("evt", Timeout);
-            });
+                var adapters = Persistence.Instance.Apply(system).AdaptersFor("akka.persistence.journal.inmem");
 
-            secondCalls.Should().BeGreaterThan(0);
-            firstCalls.Should().Be(0);
+                adapters.Get<TaggedEvent>().Should().BeOfType<TagAdapter>();
+                UnderlyingProps(Persistence.Instance.Apply(system).JournalFor("akka.persistence.journal.inmem")).Type.Should().Be(typeof(MemoryJournal));
+                return Task.CompletedTask;
+            });
         }
 
         // ---- built-ins, the guard and reflection ----
@@ -301,8 +341,8 @@ namespace Akka.Persistence.Tests
                 exception.Message.Should().Contain($"[{JournalPath}.class]");
                 exception.Message.Should().Contain(typeof(UnregisteredJournal).FullName!);
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().Contain("JournalDetails");
-                exception.Message.Should().Contain("PersistenceSetup");
+                exception.Message.Should().Contain("Akka.Persistence.Hosting");
+                exception.Message.Should().Contain("WithJournal");
                 return Task.CompletedTask;
             });
         }
@@ -319,7 +359,8 @@ namespace Akka.Persistence.Tests
                 exception.Message.Should().Contain($"[{SnapshotPath}.class]");
                 exception.Message.Should().Contain(typeof(UnregisteredSnapshotStore).FullName!);
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().Contain("SnapshotStoreDetails");
+                exception.Message.Should().Contain("Akka.Persistence.Hosting");
+                exception.Message.Should().Contain("WithSnapshot");
                 return Task.CompletedTask;
             });
         }
@@ -339,16 +380,33 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should prefer a registered journal and snapshot store to HOCON When the switch is on")]
-        public async Task Should_prefer_registered_journal_and_snapshot_store_to_hocon_When_switch_is_on()
+        [Fact(DisplayName = "PersistenceSetup should keep the HOCON class When the plugin is registered and the switch is on")]
+        public async Task Should_keep_the_hocon_class_When_the_plugin_is_registered_and_the_switch_is_on()
         {
-            // HOCON names the unregistered types; the registration for the plugin id wins
+            // with reflection on nothing changes: HOCON names the type, the registration is not consulted
             var hocon = JournalHocon(typeof(UnregisteredJournal)) + SnapshotHocon(typeof(UnregisteredSnapshotStore));
             var setup = PersistenceSetup.Create()
                 .WithJournal(JournalPath, _ => new RegisteredJournal())
                 .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore());
 
             await RunAsync(true, hocon, setup, system =>
+            {
+                var persistence = Persistence.Instance.Apply(system);
+
+                UnderlyingProps(persistence.JournalFor(JournalPath)).Type.Should().Be(typeof(UnregisteredJournal));
+                UnderlyingProps(persistence.SnapshotStoreFor(SnapshotPath)).Type.Should().Be(typeof(UnregisteredSnapshotStore));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should use a registered journal and snapshot store When the switch is on and HOCON names no class")]
+        public async Task Should_use_a_registered_journal_and_snapshot_store_When_the_switch_is_on_and_hocon_names_no_class()
+        {
+            var setup = PersistenceSetup.Create()
+                .WithJournal(JournalPath, _ => new RegisteredJournal())
+                .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore());
+
+            await RunAsync(true, "", setup, system =>
             {
                 var persistence = Persistence.Instance.Apply(system);
 
@@ -406,8 +464,41 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should use HOCON event adapters next to registered ones And let the registered adapter win a name clash When the switch is on")]
-        public async Task Should_use_hocon_event_adapters_next_to_registered_ones_and_let_registered_win_name_clash_When_switch_is_on()
+        [Fact(DisplayName = "PersistenceSetup should build an adapter from HOCON When HOCON and a registration share its name and the switch is on")]
+        public async Task Should_build_an_adapter_from_hocon_When_hocon_and_a_registration_share_its_name_and_the_switch_is_on()
+        {
+            var registeredTagger = new TagAdapter();
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+            [
+                EventAdapterDetails.Create("tagger", _ => registeredTagger, typeof(TaggedEvent)),
+                EventAdapterDetails.Create("extra", _ => new ReadOnlyAdapter(), typeof(ReadOnlyEvent)),
+            ]);
+            var hocon = $$"""
+                {{JournalPath}} {
+                    event-adapters {
+                        tagger = "{{typeof(WriteOnlyAdapter).FullName}}, {{TestAssembly}}"
+                    }
+                    event-adapter-bindings {
+                        "{{typeof(WriteOnlyEvent).FullName}}, {{TestAssembly}}" = tagger
+                    }
+                }
+                """;
+
+            await RunAsync(true, hocon, setup, system =>
+            {
+                var adapters = Persistence.Instance.Apply(system).AdaptersFor(JournalPath);
+
+                // with reflection on HOCON decides what it names, as it always did...
+                adapters.Get<WriteOnlyEvent>().Should().BeOfType<NoopReadEventAdapter>("HOCON built `tagger` from WriteOnlyAdapter");
+                adapters.Get<TaggedEvent>().Should().BeSameAs(IdentityEventAdapter.Instance, "the registered `tagger` is not used next to HOCON's");
+                // ...and a registration adds the adapters HOCON does not name
+                adapters.Get<ReadOnlyEvent>().Should().BeOfType<NoopWriteEventAdapter>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should use the registered adapter When HOCON and a registration share its name and the switch is off")]
+        public async Task Should_use_the_registered_adapter_When_hocon_and_a_registration_share_its_name_and_the_switch_is_off()
         {
             var registeredTagger = new TagAdapter();
             var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
@@ -417,21 +508,19 @@ namespace Akka.Persistence.Tests
             var hocon = $$"""
                 {{JournalPath}} {
                     event-adapters {
-                        tagger = "{{typeof(ReadOnlyAdapter).FullName}}, {{TestAssembly}}"
-                        writer = "{{typeof(WriteOnlyAdapter).FullName}}, {{TestAssembly}}"
+                        tagger = "{{typeof(WriteOnlyAdapter).FullName}}, {{TestAssembly}}"
                     }
                     event-adapter-bindings {
-                        "{{typeof(WriteOnlyEvent).FullName}}, {{TestAssembly}}" = writer
+                        "{{typeof(WriteOnlyEvent).FullName}}, {{TestAssembly}}" = tagger
                     }
                 }
                 """;
 
-            await RunAsync(true, hocon, setup, system =>
+            await RunAsync(false, hocon, setup, system =>
             {
                 var adapters = Persistence.Instance.Apply(system).AdaptersFor(JournalPath);
 
-                adapters.Get<TaggedEvent>().Should().BeSameAs(registeredTagger, "the registered adapter beats the HOCON one of the same name");
-                adapters.Get<WriteOnlyEvent>().Should().BeOfType<NoopReadEventAdapter>("HOCON adapters still work");
+                adapters.Get<TaggedEvent>().Should().BeSameAs(registeredTagger, "with reflection off the registration stands in for HOCON");
                 return Task.CompletedTask;
             });
         }
@@ -454,32 +543,63 @@ namespace Akka.Persistence.Tests
 
                 exception.Message.Should().Contain($"{JournalPath}.event-adapters.tagger");
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().Contain("EventAdapterDetails");
+                exception.Message.Should().Contain("Akka.Persistence.Hosting");
 
                 // through the public overload, which does not know the plugin path: the setting starts at event-adapters
                 var relative = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, system.Settings.Config.GetConfig(JournalPath)));
 
                 relative.Message.Should().StartWith("[event-adapters.tagger] [" + typeof(TagAdapter).FullName);
                 relative.Message.Should().NotContain("event-adapters.event-adapters");
-                relative.Message.Should().EndWith(notBuiltIn + "an EventAdapterDetails with this name, passed to the JournalDetails of this journal" + switchText);
+                relative.Message.Should().EndWith(notBuiltIn + "an event adapter added through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)" + switchText);
                 return Task.CompletedTask;
             });
 
-            // a binding in HOCON for a registered adapter: binding keys are types, so they come from EventAdapterDetails
+            // a HOCON binding for a type no registration lists, next to an adapter that is registered
             var bindingSetup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
             [
                 EventAdapterDetails.Create("tagger", _ => new TagAdapter()),
+                EventAdapterDetails.Create("writer", _ => new WriteOnlyAdapter()),
             ]);
             var bindingHocon = $$"""
-                {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = tagger
+                {{JournalPath}}.event-adapters.other = "{{typeof(ReadOnlyAdapter).FullName}}, {{TestAssembly}}"
+                {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = other
                 """;
             await RunAsync(false, bindingHocon, bindingSetup, system =>
             {
+                // the adapter `other` is in HOCON only, so it throws first, naming the adapter
                 var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
 
-                exception.Message.Should().Contain($"[{JournalPath}.event-adapter-bindings]");
-                exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().EndWith(notBuiltIn + "an EventAdapterDetails that lists this event type, passed to the JournalDetails of this journal" + switchText);
+                exception.Message.Should().Contain($"{JournalPath}.event-adapters.other");
+                return Task.CompletedTask;
+            });
+
+            var onlyBindingHocon = $$"""
+                {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = [tagger, unknown-in-hocon]
+                """;
+            await RunAsync(false, onlyBindingHocon, bindingSetup, system =>
+            {
+                // `unknown-in-hocon` is not an adapter anywhere, which is an error on every runtime
+                Assert.Throws<ArgumentException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should ignore a HOCON binding that only names registered adapters When the switch is off")]
+        public async Task Should_ignore_a_hocon_binding_that_only_names_registered_adapters_When_the_switch_is_off()
+        {
+            // what Akka.Persistence.Hosting writes next to its registrations: the same adapter and binding in HOCON
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+            [
+                EventAdapterDetails.Create("tagger", _ => new TagAdapter(), typeof(TaggedEvent)),
+            ]);
+            var hocon = $$"""
+                {{JournalPath}}.event-adapters.tagger = "{{typeof(TagAdapter).FullName}}, {{TestAssembly}}"
+                {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = tagger
+                """;
+
+            await RunAsync(false, hocon, setup, system =>
+            {
+                Persistence.Instance.Apply(system).AdaptersFor(JournalPath).Get<TaggedEvent>().Should().BeOfType<TagAdapter>();
                 return Task.CompletedTask;
             });
         }
@@ -543,12 +663,13 @@ namespace Akka.Persistence.Tests
         [Fact(DisplayName = "PersistenceSetup should reject a null argument, a blank id or a repeated adapter name When registering")]
         public void Should_reject_null_argument_blank_id_or_repeated_adapter_name_When_registering()
         {
-            PersistenceSetup.Create().CreatePlugins(null!).Should().BeEmpty();
+            PersistenceSetup.Create().Registrations.Should().BeEmpty();
 
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithJournal<RegisteredJournal>(JournalPath, null!));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithSnapshotStore<RegisteredSnapshotStore>(SnapshotPath, null!));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithPlugin(null!));
-            Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithPlugins(null!));
+            Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithEventAdapters(JournalPath, null!));
+            Assert.Throws<ArgumentException>(() => PersistenceSetup.Create().WithEventAdapters(" ", []));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithStashOverflowStrategy(null!));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().Merge(null!));
             Assert.Throws<ArgumentNullException>(() => EventAdapterDetails.Create("tagger", (Func<ExtendedActorSystem, IEventAdapter>)null!));
@@ -638,6 +759,10 @@ namespace Akka.Persistence.Tests
         }
 
         public sealed class UnregisteredSnapshotStore : MemorySnapshotStore
+        {
+        }
+
+        public sealed class SecondRegisteredSnapshotStore : MemorySnapshotStore
         {
         }
 

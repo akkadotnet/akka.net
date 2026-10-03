@@ -311,8 +311,9 @@ namespace Akka.Persistence.Journal
         /// and passes the adapters its journal registered in code. An empty path means the section is unknown,
         /// and the setting names start at <c>event-adapters</c>.
         /// <para>
-        /// HOCON adapters and registered ones both apply. On a name clash the registered adapter wins, and a
-        /// registered binding for an event type replaces a HOCON binding for the same type.
+        /// HOCON adapters and registered ones both apply. On a name clash the registered adapter wins when reflection is
+        /// off, and HOCON wins when it is on, so that nothing changes for a running JIT app. A registered binding for an
+        /// event type replaces a HOCON binding for the same type.
         /// </para>
         /// </summary>
         internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath, IReadOnlyCollection<EventAdapterDetails>? registered)
@@ -320,6 +321,11 @@ namespace Akka.Persistence.Journal
             var adapters = ConfigToMap(config, "event-adapters");
             var adapterBindings = ConfigToListMap(config, "event-adapter-bindings");
             registered ??= Array.Empty<EventAdapterDetails>();
+
+            // With reflection on, an adapter that HOCON also names is built from HOCON as it always was, and a registration
+            // only adds the adapters HOCON does not name. With reflection off the registrations stand in for HOCON.
+            if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                registered = registered.Where(r => !adapters.ContainsKey(r.Name)).ToList();
 
             var adapterNames = new HashSet<string>(adapters.Keys);
             adapterNames.UnionWith(registered.Select(r => r.Name));
@@ -361,17 +367,25 @@ namespace Akka.Persistence.Journal
                 // lookup order, written out at the site on purpose (see AkkaFeatures): guard, reflection.
                 // A registered binding never reaches here, it comes from an EventAdapterDetails.
                 if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    // HOCON that only points at registered adapters is what Akka.Persistence.Hosting writes next to
+                    // its registrations; the registrations carry the same bindings, so there is nothing to resolve
+                    if (kv.Value.All(registeredNames.Contains))
+                        return (KeyValuePair<Type, IEventAdapter>?)null;
+
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                         $"{SettingPrefix(pluginPath)}event-adapter-bindings",
                         kv.Key,
-                        "an EventAdapterDetails that lists this event type, passed to the JournalDetails of this journal"));
+                        "an event type bound through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)"));
+                }
+
                 var type = ResolveBindingTypeByReflection(kv.Key);
 
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
                     : CombineAdapters(kv.Value.Select(h => handlers[h]));
-                return new KeyValuePair<Type, IEventAdapter>(type, adapter);
-            }).Where(pair => !registeredBindings.ContainsKey(pair.Key)).ToList();
+                return (KeyValuePair<Type, IEventAdapter>?)new KeyValuePair<Type, IEventAdapter>(type, adapter);
+            }).Where(pair => pair.HasValue && !registeredBindings.ContainsKey(pair.Value.Key)).Select(pair => pair!.Value).ToList();
 
             pairs.AddRange(registeredBindings.Select(kv => new KeyValuePair<Type, IEventAdapter>(
                 kv.Key, kv.Value.Count == 1 ? kv.Value[0] : CombineAdapters(kv.Value))));
@@ -474,7 +488,7 @@ namespace Akka.Persistence.Journal
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                     $"{SettingPrefix(pluginPath)}event-adapters.{adapterName}",
                     qualifiedName,
-                    "an EventAdapterDetails with this name, passed to the JournalDetails of this journal"));
+                    "an event adapter added through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)"));
 
             return InstantiateAdapterByReflection(qualifiedName, system);
         }

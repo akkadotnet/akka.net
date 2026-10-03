@@ -108,20 +108,21 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
 
-                // lookup order, written out at the site on purpose (see AkkaFeatures): registration, built-in, guard, reflection
+                // lookup order, written out at the site on purpose (see AkkaFeatures): registration, then reflection when it is
+                // on as it always was, or built-in and the guard when it is off
                 if (_registry.StashOverflowConfigurator is { } registered)
                     return registered.Create(_system.Settings.Config);
+
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
 
                 if (BuiltInPersistencePlugins.TryCreateStashOverflowConfigurator(configuratorTypeName, out var builtIn))
                     return builtIn.Create(_system.Settings.Config);
 
-                if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                        "akka.persistence.internal-stash-overflow-strategy",
-                        configuratorTypeName,
-                        "ThrowExceptionConfigurator, DiscardConfigurator or a configurator set with PersistenceSetup.WithStashOverflowStrategy"));
-
-                return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    "akka.persistence.internal-stash-overflow-strategy",
+                    configuratorTypeName,
+                    "ThrowExceptionConfigurator, DiscardConfigurator or a configurator set with Akka.Persistence.Hosting's WithStashOverflowStrategy"));
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -348,37 +349,38 @@ namespace Akka.Persistence
         private IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig, Props? registeredProps)
         {
             var pluginActorName = configPath;
+            var pluginTypeName = pluginConfig.GetString("class", null);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
+
+            // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, HOCON `class`
+            // decides as it always did, and a registration only fills in when there is no `class`. With reflection off:
+            // registration (by plugin id), built-in, guard.
+            Props pluginProps;
+            if (registeredProps is not null && (!AkkaFeatures.IsDynamicTypeLoadingSupported || string.IsNullOrEmpty(pluginTypeName)))
+            {
+                pluginProps = registeredProps;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(pluginTypeName))
+                    throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
+
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
+                else if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
+                    pluginProps = builtInProps;
+                else
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{configPath}.class",
+                        pluginTypeName,
+                        "a plugin registered through Akka.Persistence.Hosting (WithJournal or WithSnapshot, with options that supply a factory)"));
+            }
 
             //todo wrap in backoffsupervisor ?
 
             //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
             var configurator = SupervisorStrategyConfigurator.CreateConfigurator(
                 pluginConfig.GetString("supervisor-strategy"), $"{configPath}.supervisor-strategy");
-
-            // lookup order, written out at the site on purpose (see AkkaFeatures): registration (by plugin id), built-in, guard, reflection.
-            // A registered plugin needs no `class` setting.
-            Props pluginProps;
-            if (registeredProps is not null)
-            {
-                pluginProps = registeredProps;
-            }
-            else
-            {
-                var pluginTypeName = pluginConfig.GetString("class", null);
-                if (string.IsNullOrEmpty(pluginTypeName))
-                    throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
-
-                if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
-                    pluginProps = builtInProps;
-                else if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                        $"{configPath}.class",
-                        pluginTypeName,
-                        "a JournalDetails or SnapshotStoreDetails for this plugin id registered in a PersistenceSetup"));
-                else
-                    pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
-            }
 
             var pluginActorProps = pluginProps.WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
 
@@ -403,13 +405,15 @@ namespace Akka.Persistence
             return (IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType);
         }
 
-        private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath, Config section, PersistencePluginDetails? registered)
+        private EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath, Config section, PersistencePluginDetails? registered, bool isJournal)
         {
-            // a registered plugin may have no HOCON section at all
-            if (registered is null && section.IsNullOrEmpty())
+            var adapters = isJournal ? _registry.EventAdaptersFor(configPath) : null;
+
+            // a registered plugin, or a journal with adapters added by id, may have no HOCON section at all
+            if (registered is null && (adapters is null || adapters.Count == 0) && section.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
 
-            return EventAdapters.Create(system, section, configPath, (registered as JournalDetails)?.EventAdapters);
+            return EventAdapters.Create(system, section, configPath, adapters);
         }
 
         private PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
@@ -443,7 +447,7 @@ namespace Akka.Persistence
                 _ => null
             };
             var plugin = CreatePlugin(system, configPath, config, registeredProps);
-            var adapters = CreateAdapters(system, configPath, section, registered);
+            var adapters = CreateAdapters(system, configPath, section, registered, fallbackPath == JournalFallbackConfigPath);
             var recoveryPermitter = CreateRecoveryPermitter(system, configPath, config);
 
             return new PluginHolder(plugin, adapters, config, recoveryPermitter);

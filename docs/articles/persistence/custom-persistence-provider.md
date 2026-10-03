@@ -465,41 +465,31 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 ## Registering Your Plugin for Native AOT
 
 Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
-sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. Register
-them in code with a `PersistenceSetup`, one record per plugin id, the way `SerializationSetup` registers
-serializers. Ship the registration as an extension method on `PersistenceSetup`, so your users add it
-with one call:
+sections. That works through reflection, which a Native AOT or trimmed app cannot rely on. If your
+plugin has Akka.Hosting support, one override on your options classes fixes that. Return a
+`PluginActorFactory` and Akka.Persistence.Hosting hands the plugin to core as code:
 
 ```csharp
-public static class MyPersistenceSetupExtensions
+public sealed class MyJournalOptions : JournalOptions
 {
-    public static PersistenceSetup WithMyPersistence(this PersistenceSetup setup)
-        => setup
-            .WithJournal("akka.persistence.journal.my-journal", static config => new MyJournal(config),
-                defaultConfig: MyPersistence.DefaultJournalConfig)
-            .WithSnapshotStore("akka.persistence.snapshot-store.my-store", static config => new MySnapshotStore(config),
-                defaultConfig: MyPersistence.DefaultSnapshotStoreConfig)
-            .WithReadJournal("akka.persistence.query.journal.my-journal",
-                static (system, config) => new MyReadJournalProvider(system, config),
-                MyPersistence.DefaultReadJournalConfig);
+    public MyJournalOptions() : base(isDefault: false) { }
+
+    public override string Identifier { get; set; } = "my-journal";
+
+    protected override Config InternalDefaultConfig => MyPersistence.DefaultConfiguration().GetConfig("akka.persistence.journal.my-journal");
+
+    protected override PluginActorFactory? CreatePluginActorFactory() => PluginActorFactory.For(config => new MyJournal(config));
 }
 ```
 
-`WithReadJournal` comes from `Akka.Persistence.Query`. Your app passes the setup to the actor system
-next to its `BootstrapSetup`:
-
-```csharp
-var setup = BootstrapSetup.Create().WithConfig(config)
-    .And(PersistenceSetup.Create().WithMyPersistence());
-```
-
-The registration is keyed by plugin id, so the `class` setting is not needed. The factory gets the
-plugin's HOCON section with your `defaultConfig` sitting under it, so the app can leave your defaults
-out of its HOCON. A plugin package that cannot add an extension method can use
-`PersistenceSetup.Create(system => ImmutableHashSet.Create<PersistencePluginDetails>(...))`. Registration
-is optional on the JIT. It is required when the `Akka.DynamicTypeLoading` feature switch is off, which
-is the default for a Native AOT publish. See [Native AOT and Trimming](xref:native-aot) for the whole
-picture, including event adapters.
+`SnapshotOptions` has the same `CreatePluginActorFactory` override. The factory gets the plugin's HOCON section with its
+fallbacks applied, and it runs inside the actor's creation context. Users change nothing: they call
+`WithJournal(new MyJournalOptions { ... })` as before, and the plugin starts with
+`Akka.DynamicTypeLoading` off without a `class` setting. Without the override your plugin keeps working
+on the JIT through its HOCON `class` and fails to start under Native AOT, with a message that points here.
+A read journal registers the same way from your Hosting extension method:
+`builder.WithReadJournal("akka.persistence.query.journal.my-journal", (system, config) => new MyReadJournalProvider(system, config), MyPersistence.DefaultQueryConfiguration().GetConfig("akka.persistence.query.journal.my-journal"))`.
+See [Native AOT and Trimming](xref:native-aot) for the whole picture, including event adapters.
 
 Keep reflection out of the plugin itself too: create child actors with `Props.CreateBy` and an
 `IIndirectActorProducer`, and read your own types without `Type.GetType`.

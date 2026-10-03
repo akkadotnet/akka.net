@@ -5,25 +5,24 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Persistence.Journal;
+using Akka.Hosting;
+using Akka.Persistence.Hosting;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.InMemory;
-using Akka.Serialization;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Persistence.AOT.App;
 
 internal static class Program
 {
     private const string PersistenceId = "canary-1";
-    private const string CanaryJournalId = "akka.persistence.journal.canary";
-    private const string CanarySnapshotStoreId = "akka.persistence.snapshot-store.canary";
     private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan TerminateTimeout = TimeSpan.FromSeconds(30);
 
@@ -52,40 +51,37 @@ internal static class Program
     }
 
     /// <summary>
-    /// Boots with the switch off and everything registered in code, then persists, recovers, snapshots and queries.
-    /// The default journal and snapshot store, the stash overflow configurator and the read journal are registered in one
-    /// <see cref="PersistenceSetup"/>, and the first three are not built-in types, the way a third-party plugin would be. The built-in <c>inmem</c> plugins run beside them.
+    /// Builds the system the way an Akka.Hosting app does, with the switch off: the plugin options supply their factories,
+    /// the event adapter and the read journal come from the Hosting builders, and no HOCON names a plugin class.
+    /// Then it persists, recovers, snapshots and queries. The journal and snapshot store are not built-in types, the way a
+    /// third-party plugin is not, and the built-in <c>inmem</c> plugins run beside them.
     /// </summary>
     private static async Task RunPersistenceAsync()
     {
         const string label = "persistence";
         Console.WriteLine($"[canary-persistence] creating ActorSystem '{label}' ...");
 
-        // HOCON only picks the default plugins. Everything else is registered, so there is no `class` string to
-        // resolve, no adapter section to write, and no read journal config to add by hand.
-        var config = ConfigurationFactory.ParseString($$"""
-            akka.persistence.journal.plugin = "{{CanaryJournalId}}"
-            akka.persistence.snapshot-store.plugin = "{{CanarySnapshotStoreId}}"
-            """);
-
-        var setup = BootstrapSetup.Create().WithConfig(config)
-            .And(PersistenceSetup.Create()
-                .WithJournal(CanaryJournalId, static journalConfig => new CanaryJournal(journalConfig),
-                    defaultConfig: ConfigurationFactory.ParseString("marker = from-default"),
-                    eventAdapters: [EventAdapterDetails.Create("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))])
-                .WithSnapshotStore(CanarySnapshotStoreId, static _ => new CanarySnapshotStore())
-                .WithReadJournal(InMemoryReadJournal.Identifier, static (system, journalConfig) => new InMemoryReadJournalProvider(system, journalConfig),
-                    InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
-                .WithStashOverflowStrategy(new CanaryStashConfigurator()))
-            .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
-                SerializerDetails.Create("canary", new CanarySerializer(system),
-                    ImmutableHashSet.Create(typeof(CanaryEvent), typeof(CanarySnapshot))))));
-
         // Serialization and Mailboxes log-and-continue when a configured type name does not resolve, so a
         // silent boot is not proof of anything. This watchdog turns any WARNING or ERROR that reaches the
         // stdout logger into a failed run.
         var watchdog = new LogWatchdogFilter();
-        var system = ActorSystem.Create(label, setup.And(new LogFilterSetup([watchdog])));
+
+        var host = Host.CreateApplicationBuilder();
+        host.Logging.ClearProviders();
+        host.Services.AddAkka(label, builder => builder
+            .WithJournalAndSnapshot(new CanaryJournalOptions(), new CanarySnapshotOptions(),
+                configureJournal: journal => journal.AddWriteEventAdapter<CanaryTagger>("canary-tagger", new[] { typeof(CanaryEvent) }),
+                configureSnapshot: null)
+            .WithInMemoryJournal(_ => { }, journalId: "inmem", isDefaultPlugin: false)
+            .WithInMemorySnapshotStore("inmem", isDefaultPlugin: false)
+            .WithInMemoryReadJournal()
+            .WithStashOverflowStrategy(new CanaryStashConfigurator())
+            .WithCustomSerializer("canary", new[] { typeof(CanaryEvent), typeof(CanarySnapshot) }, static system => new CanarySerializer(system))
+            .AddSetup(new LogFilterSetup([watchdog])));
+
+        using var app = host.Build();
+        await app.StartAsync();
+        var system = app.Services.GetRequiredService<ActorSystem>();
         try
         {
             watchdog.ThrowIfAnyProblems(label, "startup");
@@ -123,7 +119,7 @@ internal static class Program
         }
         finally
         {
-            await system.Terminate().WaitAsync(TerminateTimeout);
+            await app.StopAsync();
         }
 
         Console.WriteLine($"[canary-persistence] {label}: terminated");
@@ -196,22 +192,21 @@ internal static class Program
     }
 
     /// <summary>
-    /// A journal that nothing registers must fail at start with the switch off, and say why.
+    /// A journal whose options supply no factory must fail at start with the switch off, and say why.
     /// </summary>
     private static async Task RunUnregisteredAsync()
     {
         const string label = "unregistered";
-        var config = ConfigurationFactory.ParseString($$"""
-            akka.persistence.journal.plugin = "akka.persistence.journal.unregistered"
-            akka.persistence.journal.unregistered {
-                class = "{{typeof(UnregisteredJournal).FullName}}, {{typeof(UnregisteredJournal).Assembly.GetName().Name}}"
-                plugin-dispatcher = "akka.actor.default-dispatcher"
-            }
-            """);
 
-        var system = ActorSystem.Create(label, config);
+        var host = Host.CreateApplicationBuilder();
+        host.Logging.ClearProviders();
+        host.Services.AddAkka(label, builder => builder.WithJournal(new UnregisteredJournalOptions()));
+
+        using var app = host.Build();
+        await app.StartAsync();
         try
         {
+            var system = app.Services.GetRequiredService<ActorSystem>();
             var persistence = Persistence.Instance.Apply(system);
             ConfigurationException? thrown = null;
             try
@@ -223,15 +218,16 @@ internal static class Program
                 thrown = ex;
             }
 
-            Require(label, thrown is not null, "an unregistered journal started with Akka.DynamicTypeLoading off");
+            Require(label, thrown is not null, "a journal with no factory started with Akka.DynamicTypeLoading off");
             Require(label, thrown!.Message.Contains("Akka.DynamicTypeLoading", StringComparison.Ordinal)
-                           && thrown.Message.Contains("akka.persistence.journal.unregistered.class", StringComparison.Ordinal),
-                $"the exception did not name the setting and the switch: [{thrown.Message}]");
-            Console.WriteLine($"[canary-persistence] {label}: an unregistered journal failed at start as designed");
+                           && thrown.Message.Contains("akka.persistence.journal.unregistered.class", StringComparison.Ordinal)
+                           && thrown.Message.Contains("Akka.Persistence.Hosting", StringComparison.Ordinal),
+                $"the exception did not name the setting, the switch and Akka.Persistence.Hosting: [{thrown.Message}]");
+            Console.WriteLine($"[canary-persistence] {label}: a journal with no factory failed at start as designed");
         }
         finally
         {
-            await system.Terminate().WaitAsync(TerminateTimeout);
+            await app.StopAsync();
         }
 
         Console.WriteLine($"[canary-persistence] {label}: terminated");

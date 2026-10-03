@@ -2,11 +2,12 @@
 #
 # Same format and checker as the plain-core canary's baseline
 # (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
-# added/gone entries are handled. Scope differs: --scope passes three prefixes, comma-separated -
+# added/gone entries are handled. Scope differs: --scope passes four prefixes, comma-separated -
 #
 #   src/core/Akka.Persistence/                                   - the persistence core
 #   src/core/Akka.Persistence.Query/                             - PersistenceQuery
 #   src/contrib/persistence/Akka.Persistence.Query.InMemory/     - the read journal the canary queries
+#   src/contrib/hosting/Akka.Persistence.Hosting/                - the builders the canary is built with
 #
 # src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
 # So is src/core/Akka.Streams/. This app materializes streams (every query does), and that reaches

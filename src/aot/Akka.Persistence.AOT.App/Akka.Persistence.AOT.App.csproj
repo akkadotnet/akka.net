@@ -28,14 +28,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
-    <ProjectReference Include="..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj"/>
-    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj"/>
+    <!-- Same as Akka.Hosting.AOT.App: the full Microsoft.Extensions.Hosting package is what an application adds. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Akka.Persistence.Hosting brings Akka.Hosting, Akka.Persistence, Akka.Persistence.Query and the in-memory read journal. -->
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj"/>
   </ItemGroup>
 
   <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:
        buildTransitive/Akka.targets only does this automatically for the NuGet package, not for a
-       ProjectReference. With it off, only what PersistenceSetup registers
+       ProjectReference. With it off, only what the Akka.Persistence.Hosting builders register
        (plus the plugins Akka.Persistence ships) can start. -->
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />

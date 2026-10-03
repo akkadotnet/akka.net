@@ -19,102 +19,75 @@ using Akka.Persistence.Journal;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// Registers persistence plugins in code, keyed by plugin id, so Akka.Persistence can build journals and
-    /// snapshot stores (and, through Akka.Persistence.Query, read journals) without reflection. Required when
-    /// the Akka.DynamicTypeLoading feature switch is off (Native AOT, trimmed apps); optional otherwise.
+    /// INTERNAL API
+    ///
+    /// An ordered list of persistence plugin registrations that Akka.Persistence.Hosting builds so that plugins,
+    /// event adapters and read journals start without reflection (Native AOT, trimmed apps). Users never write
+    /// one: they call the Akka.Persistence.Hosting builders, and each call appends a registration.
     /// <para>
-    /// A plugin registered for <c>akka.persistence.journal.foo</c> is used when persistence starts the plugin
-    /// at that path. Its HOCON <c>class</c> setting is not needed and is ignored. HOCON stays in charge of
-    /// everything else in the section, and the registration's default config sits underneath it.
+    /// The registry merges the list, see <see cref="PersistencePluginRegistry"/>. Per plugin id the later
+    /// registration wins the factory and the default config. Event adapters for a journal accumulate across
+    /// registrations, and the later one wins an adapter-name clash.
     /// </para>
     /// <para>
-    /// Like <see cref="Akka.Serialization.SerializationSetup"/>, only one instance counts per
-    /// <see cref="ActorSystemSetup"/>: a second one passed to <see cref="ActorSystemSetup.And{T}"/> replaces the
-    /// first. Use <see cref="Merge"/> to combine setups.
+    /// Like any <see cref="Setup"/>, only one instance counts per <see cref="ActorSystemSetup"/>, so
+    /// Akka.Persistence.Hosting keeps a single one and replaces it with <see cref="Merge"/> or <c>With...</c>
+    /// results as calls come in.
     /// </para>
     /// </summary>
-    public sealed class PersistenceSetup : Setup
+    internal sealed class PersistenceSetup : Setup
     {
-        private readonly ImmutableList<Func<ExtendedActorSystem, IEnumerable<PersistencePluginDetails>>> _sources;
-
-        private PersistenceSetup(
-            ImmutableList<Func<ExtendedActorSystem, IEnumerable<PersistencePluginDetails>>> sources,
-            IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
+        private PersistenceSetup(ImmutableList<PersistenceRegistration> registrations, IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
         {
-            _sources = sources;
+            Registrations = registrations;
             StashOverflowConfigurator = stashOverflowConfigurator;
         }
 
         /// <summary>
-        /// A setup with no registrations. Add plugins with the <c>With...</c> methods.
+        /// A setup with no registrations.
         /// </summary>
-        public static PersistenceSetup Create()
-            => new(ImmutableList<Func<ExtendedActorSystem, IEnumerable<PersistencePluginDetails>>>.Empty, null);
+        public static PersistenceSetup Create() => new(ImmutableList<PersistenceRegistration>.Empty, null);
 
         /// <summary>
-        /// A setup whose plugins come from a factory that runs once when the <see cref="ActorSystem"/> starts,
-        /// the way <see cref="Akka.Serialization.SerializationSetup.Create"/> works. Plugin packages use this form.
+        /// The registrations in the order they were added.
         /// </summary>
-        /// <param name="createPlugins">Returns the plugin records, one per plugin id.</param>
-        public static PersistenceSetup Create(Func<ExtendedActorSystem, ImmutableHashSet<PersistencePluginDetails>> createPlugins)
-            => Create().WithPlugins(createPlugins);
-
-        /// <summary>
-        /// Runs every registration and returns the plugin records. On a repeated plugin id the later
-        /// registration wins.
-        /// </summary>
-        public Func<ExtendedActorSystem, ImmutableHashSet<PersistencePluginDetails>> CreatePlugins => system =>
-        {
-            var byId = new Dictionary<string, PersistencePluginDetails>(StringComparer.Ordinal);
-            foreach (var source in _sources)
-            {
-                foreach (var details in source(system))
-                    byId[details.PluginId] = details;
-            }
-
-            return byId.Values.ToImmutableHashSet();
-        };
+        public ImmutableList<PersistenceRegistration> Registrations { get; }
 
         /// <summary>
         /// The configurator that replaces <c>akka.persistence.internal-stash-overflow-strategy</c>, if one was set.
         /// </summary>
-        internal IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
+        public IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
 
         /// <summary>
-        /// Adds plugin records from a factory. Runs once when the <see cref="ActorSystem"/> starts.
+        /// Appends a plugin registration.
         /// </summary>
-        /// <param name="createPlugins">Returns the plugin records.</param>
-        /// <returns>A new setup that also holds these plugins.</returns>
-        public PersistenceSetup WithPlugins(Func<ExtendedActorSystem, ImmutableHashSet<PersistencePluginDetails>> createPlugins)
-        {
-            if (createPlugins is null)
-                throw new ArgumentNullException(nameof(createPlugins));
-
-            return new PersistenceSetup(_sources.Add(createPlugins), StashOverflowConfigurator);
-        }
-
-        /// <summary>
-        /// Adds one plugin record. On the same plugin id the new record replaces the old one.
-        /// </summary>
-        /// <param name="details">The plugin record, for example from <see cref="JournalDetails.Create{TJournal}"/>.</param>
-        /// <returns>A new setup that also holds this plugin.</returns>
         public PersistenceSetup WithPlugin(PersistencePluginDetails details)
         {
             if (details is null)
                 throw new ArgumentNullException(nameof(details));
 
-            return new PersistenceSetup(_sources.Add(_ => new[] { details }), StashOverflowConfigurator);
+            return new PersistenceSetup(Registrations.Add(PersistenceRegistration.ForPlugin(details)), StashOverflowConfigurator);
         }
 
         /// <summary>
-        /// Registers a journal for the plugin at <paramref name="pluginId"/>.
+        /// Appends event adapters for the journal at <paramref name="journalPluginId"/>, whichever way that journal
+        /// is registered: by a <see cref="JournalDetails"/>, as a built-in such as the in-memory journal, or in HOCON.
         /// </summary>
-        /// <typeparam name="TJournal">The journal actor type.</typeparam>
-        /// <param name="pluginId">The plugin's config path, for example <c>akka.persistence.journal.my-journal</c>.</param>
-        /// <param name="factory">Creates the journal inside its actor context, given the plugin's config section.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, so the app need not repeat it in HOCON.</param>
-        /// <param name="eventAdapters">The event adapters of this journal, each with the event types it is bound to.</param>
-        /// <returns>A new setup that also holds this journal.</returns>
+        public PersistenceSetup WithEventAdapters(string journalPluginId, IEnumerable<EventAdapterDetails> eventAdapters)
+        {
+            if (string.IsNullOrWhiteSpace(journalPluginId))
+                throw new ArgumentException("A plugin id is required.", nameof(journalPluginId));
+            if (eventAdapters is null)
+                throw new ArgumentNullException(nameof(eventAdapters));
+
+            return new PersistenceSetup(
+                Registrations.AddRange(eventAdapters.Select(a => PersistenceRegistration.ForEventAdapter(journalPluginId, a))),
+                StashOverflowConfigurator);
+        }
+
+        /// <summary>
+        /// Appends a journal registration.
+        /// </summary>
         public PersistenceSetup WithJournal<
             [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TJournal>(
             string pluginId,
@@ -124,13 +97,8 @@ namespace Akka.Persistence
             => WithPlugin(JournalDetails.Create(pluginId, factory, defaultConfig, eventAdapters));
 
         /// <summary>
-        /// Registers a snapshot store for the plugin at <paramref name="pluginId"/>.
+        /// Appends a snapshot store registration.
         /// </summary>
-        /// <typeparam name="TStore">The snapshot store actor type.</typeparam>
-        /// <param name="pluginId">The plugin's config path, for example <c>akka.persistence.snapshot-store.my-store</c>.</param>
-        /// <param name="factory">Creates the snapshot store inside its actor context, given the plugin's config section.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, so the app need not repeat it in HOCON.</param>
-        /// <returns>A new setup that also holds this snapshot store.</returns>
         public PersistenceSetup WithSnapshotStore<
             [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TStore>(
             string pluginId,
@@ -141,43 +109,64 @@ namespace Akka.Persistence
         /// <summary>
         /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> with this configurator.
         /// </summary>
-        /// <param name="configurator">The configurator to use.</param>
-        /// <returns>A new setup with this configurator.</returns>
         public PersistenceSetup WithStashOverflowStrategy(IStashOverflowStrategyConfigurator configurator)
         {
             if (configurator is null)
                 throw new ArgumentNullException(nameof(configurator));
 
-            return new PersistenceSetup(_sources, configurator);
+            return new PersistenceSetup(Registrations, configurator);
         }
 
         /// <summary>
-        /// Returns a setup with the registrations of both. On the same plugin id, <paramref name="other"/> wins,
-        /// and so does its stash overflow configurator if it has one.
+        /// Returns a setup that holds the registrations of this one followed by those of <paramref name="other"/>.
+        /// A stash overflow configurator in <paramref name="other"/> wins.
         /// </summary>
-        /// <param name="other">The setup to merge on top of this one.</param>
-        /// <returns>The combined setup.</returns>
         public PersistenceSetup Merge(PersistenceSetup other)
         {
             if (other is null)
                 throw new ArgumentNullException(nameof(other));
 
-            return new PersistenceSetup(_sources.AddRange(other._sources), other.StashOverflowConfigurator ?? StashOverflowConfigurator);
+            return new PersistenceSetup(Registrations.AddRange(other.Registrations), other.StashOverflowConfigurator ?? StashOverflowConfigurator);
         }
     }
 
     /// <summary>
-    /// A persistence plugin registered in code: its plugin id and the config that sits under its HOCON section.
-    /// Two records are equal when their <see cref="PluginId"/> is. Use <see cref="JournalDetails"/> and
-    /// <see cref="SnapshotStoreDetails"/>; Akka.Persistence.Query adds one for read journals.
+    /// INTERNAL API
+    ///
+    /// One entry in a <see cref="PersistenceSetup"/>: a plugin, or an event adapter for a journal.
     /// </summary>
-    public abstract class PersistencePluginDetails : IEquatable<PersistencePluginDetails>
+    internal sealed class PersistenceRegistration
     {
-        /// <summary>
-        /// Creates a record for the plugin at <paramref name="pluginId"/>.
-        /// </summary>
-        /// <param name="pluginId">The plugin's config path.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, or <c>null</c>.</param>
+        private PersistenceRegistration(PersistencePluginDetails? plugin, string? journalPluginId, EventAdapterDetails? eventAdapter)
+        {
+            Plugin = plugin;
+            JournalPluginId = journalPluginId;
+            EventAdapter = eventAdapter;
+        }
+
+        public static PersistenceRegistration ForPlugin(PersistencePluginDetails plugin) => new(plugin, null, null);
+
+        public static PersistenceRegistration ForEventAdapter(string journalPluginId, EventAdapterDetails adapter)
+            => new(null, journalPluginId, adapter);
+
+        /// <summary>The plugin, when this entry registers one.</summary>
+        public PersistencePluginDetails? Plugin { get; }
+
+        /// <summary>The journal the adapter belongs to, when this entry adds an adapter.</summary>
+        public string? JournalPluginId { get; }
+
+        /// <summary>The adapter, when this entry adds one.</summary>
+        public EventAdapterDetails? EventAdapter { get; }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// A persistence plugin registered in code: its plugin id and the config that sits under its HOCON section.
+    /// Two records are equal when their <see cref="PluginId"/> is.
+    /// </summary>
+    internal abstract class PersistencePluginDetails : IEquatable<PersistencePluginDetails>
+    {
         protected PersistencePluginDetails(string pluginId, Config? defaultConfig)
         {
             if (string.IsNullOrWhiteSpace(pluginId))
@@ -197,22 +186,20 @@ namespace Akka.Persistence
         /// </summary>
         public Config? DefaultConfig { get; }
 
-        /// <inheritdoc />
         public bool Equals(PersistencePluginDetails? other)
             => other is not null && string.Equals(PluginId, other.PluginId, StringComparison.Ordinal);
 
-        /// <inheritdoc />
         public override bool Equals(object? obj) => Equals(obj as PersistencePluginDetails);
 
-        /// <inheritdoc />
         public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(PluginId);
     }
 
     /// <summary>
-    /// A journal registered in code. Create one with <see cref="Create{TJournal}"/> or
-    /// <see cref="PersistenceSetup.WithJournal{TJournal}"/>.
+    /// INTERNAL API
+    ///
+    /// A journal registered in code.
     /// </summary>
-    public sealed class JournalDetails : PersistencePluginDetails
+    internal sealed class JournalDetails : PersistencePluginDetails
     {
         private readonly Func<Config, Props> _createProps;
 
@@ -224,20 +211,10 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// The event adapters of this journal. They add to the journal's HOCON <c>event-adapters</c>
-        /// and win on a name clash.
+        /// The event adapters this record brings with it.
         /// </summary>
         public IReadOnlyList<EventAdapterDetails> EventAdapters { get; }
 
-        /// <summary>
-        /// Registers a journal for the plugin at <paramref name="pluginId"/>.
-        /// </summary>
-        /// <typeparam name="TJournal">The journal actor type.</typeparam>
-        /// <param name="pluginId">The plugin's config path, for example <c>akka.persistence.journal.my-journal</c>.</param>
-        /// <param name="factory">Creates the journal inside its actor context, given the plugin's config section.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, so the app need not repeat it in HOCON.</param>
-        /// <param name="eventAdapters">The event adapters of this journal, each with the event types it is bound to.</param>
-        /// <returns>The record.</returns>
         public static JournalDetails Create<
             [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TJournal>(
             string pluginId,
@@ -257,14 +234,22 @@ namespace Akka.Persistence
             return new JournalDetails(pluginId, config => Props.CreateBy(new PluginActorProducer<TJournal>(factory, config)), defaultConfig, adapters);
         }
 
-        internal Props CreateProps(Config config) => _createProps(config);
+        /// <summary>
+        /// Registers a journal whose <see cref="Props"/> the caller builds, for example from an options class.
+        /// </summary>
+        public static JournalDetails FromProps(string pluginId, Func<Config, Props> createProps, Config? defaultConfig = null)
+            => new(pluginId, createProps ?? throw new ArgumentNullException(nameof(createProps)), defaultConfig,
+                ImmutableArray<EventAdapterDetails>.Empty);
+
+        public Props CreateProps(Config config) => _createProps(config);
     }
 
     /// <summary>
-    /// A snapshot store registered in code. Create one with <see cref="Create{TStore}"/> or
-    /// <see cref="PersistenceSetup.WithSnapshotStore{TStore}"/>.
+    /// INTERNAL API
+    ///
+    /// A snapshot store registered in code.
     /// </summary>
-    public sealed class SnapshotStoreDetails : PersistencePluginDetails
+    internal sealed class SnapshotStoreDetails : PersistencePluginDetails
     {
         private readonly Func<Config, Props> _createProps;
 
@@ -274,14 +259,6 @@ namespace Akka.Persistence
             _createProps = createProps;
         }
 
-        /// <summary>
-        /// Registers a snapshot store for the plugin at <paramref name="pluginId"/>.
-        /// </summary>
-        /// <typeparam name="TStore">The snapshot store actor type.</typeparam>
-        /// <param name="pluginId">The plugin's config path, for example <c>akka.persistence.snapshot-store.my-store</c>.</param>
-        /// <param name="factory">Creates the snapshot store inside its actor context, given the plugin's config section.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, so the app need not repeat it in HOCON.</param>
-        /// <returns>The record.</returns>
         public static SnapshotStoreDetails Create<
             [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TStore>(
             string pluginId,
@@ -294,6 +271,12 @@ namespace Akka.Persistence
             return new SnapshotStoreDetails(pluginId, config => Props.CreateBy(new PluginActorProducer<TStore>(factory, config)), defaultConfig);
         }
 
-        internal Props CreateProps(Config config) => _createProps(config);
+        /// <summary>
+        /// Registers a snapshot store whose <see cref="Props"/> the caller builds, for example from an options class.
+        /// </summary>
+        public static SnapshotStoreDetails FromProps(string pluginId, Func<Config, Props> createProps, Config? defaultConfig = null)
+            => new(pluginId, createProps ?? throw new ArgumentNullException(nameof(createProps)), defaultConfig);
+
+        public Props CreateProps(Config config) => _createProps(config);
     }
 }

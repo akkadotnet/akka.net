@@ -8,6 +8,7 @@
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.Hosting;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.Serialization;
@@ -28,8 +29,9 @@ public sealed record SaveNow;
 public sealed record CanaryState(string[] Values, long SnapshotSequenceNr);
 
 /// <summary>
-/// Wraps every <see cref="CanaryEvent"/> in <see cref="Tagged"/>. Only the registration in
-/// <see cref="PersistenceSetup"/> lets core build it with <c>Akka.DynamicTypeLoading</c> off.
+/// Wraps every <see cref="CanaryEvent"/> in <see cref="Tagged"/>. Added through
+/// <c>AkkaPersistenceJournalBuilder.AddWriteEventAdapter</c>, which is what lets core build it with
+/// <c>Akka.DynamicTypeLoading</c> off.
 /// </summary>
 public sealed class CanaryTagger : IWriteEventAdapter
 {
@@ -41,7 +43,7 @@ public sealed class CanaryTagger : IWriteEventAdapter
 }
 
 /// <summary>
-/// A journal that is not built in. Only <see cref="PersistenceSetup.WithJournal{TJournal}"/> lets core
+/// A journal that is not built in. Only the factory in <see cref="CanaryJournalOptions"/> lets core
 /// build it with <c>Akka.DynamicTypeLoading</c> off, which is the path a third-party journal takes.
 /// </summary>
 public sealed class CanaryJournal : MemoryJournal
@@ -75,6 +77,60 @@ public sealed class CanarySnapshotStore : MemorySnapshotStore
     {
         Interlocked.Increment(ref _instances);
     }
+}
+
+/// <summary>
+/// The options a plugin author writes: an identifier, the plugin's default config and a factory. Nothing else
+/// is needed to run the plugin with <c>Akka.DynamicTypeLoading</c> off.
+/// </summary>
+public sealed class CanaryJournalOptions : JournalOptions
+{
+    public CanaryJournalOptions() : base(isDefault: true)
+    {
+    }
+
+    public override string Identifier { get; set; } = "canary";
+
+    protected override Config InternalDefaultConfig => ConfigurationFactory.ParseString("""
+        plugin-dispatcher = "akka.actor.default-dispatcher"
+        marker = from-default
+        """);
+
+    protected override PluginActorFactory? CreatePluginActorFactory() => PluginActorFactory.For(static config => new CanaryJournal(config));
+}
+
+/// <summary>The snapshot store counterpart of <see cref="CanaryJournalOptions"/>.</summary>
+public sealed class CanarySnapshotOptions : SnapshotOptions
+{
+    public CanarySnapshotOptions() : base(isDefault: true)
+    {
+    }
+
+    public override string Identifier { get; set; } = "canary";
+
+    protected override Config InternalDefaultConfig => ConfigurationFactory.ParseString("""
+        plugin-dispatcher = "akka.actor.default-dispatcher"
+        """);
+
+    protected override PluginActorFactory? CreatePluginActorFactory() => PluginActorFactory.For(static _ => new CanarySnapshotStore());
+}
+
+/// <summary>
+/// Options for a journal that supplies no factory and names its class in HOCON, so it fails to start with the
+/// switch off.
+/// </summary>
+public sealed class UnregisteredJournalOptions : JournalOptions
+{
+    public UnregisteredJournalOptions() : base(isDefault: false)
+    {
+    }
+
+    public override string Identifier { get; set; } = "unregistered";
+
+    protected override Config InternalDefaultConfig => ConfigurationFactory.ParseString($$"""
+        class = "{{typeof(UnregisteredJournal).AssemblyQualifiedName}}"
+        plugin-dispatcher = "akka.actor.default-dispatcher"
+        """);
 }
 
 /// <summary>

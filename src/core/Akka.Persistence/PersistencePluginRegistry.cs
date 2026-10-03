@@ -9,10 +9,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Persistence.Journal;
 using Akka.Util;
 
 namespace Akka.Persistence
@@ -29,11 +31,18 @@ namespace Akka.Persistence
     {
         private static readonly ConditionalWeakTable<ActorSystem, PersistencePluginRegistry> Registries = new();
 
-        private readonly Dictionary<string, PersistencePluginDetails> _plugins;
+        private static readonly IReadOnlyList<EventAdapterDetails> NoAdapters = Array.Empty<EventAdapterDetails>();
 
-        private PersistencePluginRegistry(Dictionary<string, PersistencePluginDetails> plugins, IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
+        private readonly Dictionary<string, PersistencePluginDetails> _plugins;
+        private readonly Dictionary<string, List<EventAdapterDetails>> _adapters;
+
+        private PersistencePluginRegistry(
+            Dictionary<string, PersistencePluginDetails> plugins,
+            Dictionary<string, List<EventAdapterDetails>> adapters,
+            IStashOverflowStrategyConfigurator? stashOverflowConfigurator)
         {
             _plugins = plugins;
+            _adapters = adapters;
             StashOverflowConfigurator = stashOverflowConfigurator;
         }
 
@@ -43,22 +52,63 @@ namespace Akka.Persistence
         public IStashOverflowStrategyConfigurator? StashOverflowConfigurator { get; }
 
         /// <summary>
-        /// The registry of <paramref name="system"/>. The setup's plugin factory runs once, on first use.
+        /// The registry of <paramref name="system"/>, built from its <see cref="PersistenceSetup"/> on first use.
         /// </summary>
         public static PersistencePluginRegistry For(ExtendedActorSystem system)
-            => Registries.GetValue(system, static s => Create((ExtendedActorSystem)s));
+            => Registries.GetValue(system, static s => Build(((ExtendedActorSystem)s).Settings.Setup.Get<PersistenceSetup>().GetOrElse(null!)));
 
-        private static PersistencePluginRegistry Create(ExtendedActorSystem system)
+        /// <summary>
+        /// Merges the registrations of <paramref name="setup"/>, in order. Per plugin id the later registration
+        /// wins the factory and the default config. Event adapters of a journal accumulate over all registrations
+        /// for its id, and the later one wins a name clash.
+        /// </summary>
+        public static PersistencePluginRegistry Build(PersistenceSetup? setup)
         {
             var plugins = new Dictionary<string, PersistencePluginDetails>(StringComparer.Ordinal);
-            var setup = system.Settings.Setup.Get<PersistenceSetup>().GetOrElse(null!);
+            var adapters = new Dictionary<string, List<EventAdapterDetails>>(StringComparer.Ordinal);
             if (setup is null)
-                return new PersistencePluginRegistry(plugins, null);
+                return new PersistencePluginRegistry(plugins, adapters, null);
 
-            foreach (var details in setup.CreatePlugins(system))
-                plugins[details.PluginId] = details;
+            foreach (var registration in setup.Registrations)
+            {
+                if (registration.Plugin is { } plugin)
+                {
+                    plugins[plugin.PluginId] = plugin;
+                    if (plugin is JournalDetails journal)
+                    {
+                        foreach (var adapter in journal.EventAdapters)
+                            AddAdapter(adapters, journal.PluginId, adapter);
+                    }
+                }
+                else
+                {
+                    AddAdapter(adapters, registration.JournalPluginId!, registration.EventAdapter!);
+                }
+            }
 
-            return new PersistencePluginRegistry(plugins, setup.StashOverflowConfigurator);
+            return new PersistencePluginRegistry(plugins, adapters, setup.StashOverflowConfigurator);
+        }
+
+        private static void AddAdapter(Dictionary<string, List<EventAdapterDetails>> adapters, string journalPluginId, EventAdapterDetails adapter)
+        {
+            if (!adapters.TryGetValue(journalPluginId, out var list))
+                adapters[journalPluginId] = list = new List<EventAdapterDetails>();
+            list.Add(adapter);
+        }
+
+        /// <summary>
+        /// The event adapters registered for the journal at <paramref name="journalPluginId"/>, in registration
+        /// order. An adapter name that repeats keeps the later one.
+        /// </summary>
+        public IReadOnlyList<EventAdapterDetails> EventAdaptersFor(string journalPluginId)
+        {
+            if (!_adapters.TryGetValue(journalPluginId, out var added))
+                return NoAdapters;
+
+            var byName = new Dictionary<string, EventAdapterDetails>(StringComparer.Ordinal);
+            foreach (var adapter in added)
+                byName[adapter.Name] = adapter;
+            return byName.Values.ToList();
         }
 
         /// <summary>

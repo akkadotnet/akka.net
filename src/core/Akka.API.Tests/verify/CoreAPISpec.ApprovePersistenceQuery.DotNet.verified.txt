@@ -1,4 +1,7 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Hosting")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Hosting.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Query.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
@@ -104,16 +107,6 @@ namespace Akka.Persistence.Query
     {
         public PersistenceQueryProvider() { }
         public override Akka.Persistence.Query.PersistenceQuery CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-    }
-    public static class PersistenceSetupExtensions
-    {
-        public static Akka.Persistence.PersistenceSetup WithReadJournal<TProvider>(this Akka.Persistence.PersistenceSetup setup, string pluginId, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Configuration.Config, TProvider> factory, Akka.Configuration.Config? defaultConfig = null)
-            where TProvider :  class, Akka.Persistence.Query.IReadJournalProvider { }
-    }
-    public sealed class ReadJournalDetails : Akka.Persistence.PersistencePluginDetails
-    {
-        public static Akka.Persistence.Query.ReadJournalDetails Create<TProvider>(string pluginId, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Configuration.Config, TProvider> factory, Akka.Configuration.Config? defaultConfig = null)
-            where TProvider :  class, Akka.Persistence.Query.IReadJournalProvider { }
     }
     public sealed class Sequence : Akka.Persistence.Query.Offset, System.IComparable<Akka.Persistence.Query.Sequence>
     {

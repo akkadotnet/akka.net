@@ -18,7 +18,7 @@ namespace Akka.Persistence.Journal
     /// <see cref="JournalDetails.Create{TJournal}"/> and replaces the HOCON <c>event-adapters</c> entry and
     /// its <c>event-adapter-bindings</c> lines.
     /// </summary>
-    public sealed class EventAdapterDetails
+    internal sealed class EventAdapterDetails
     {
         private readonly Func<ExtendedActorSystem, IEventAdapter> _factory;
 

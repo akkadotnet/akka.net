@@ -112,8 +112,8 @@ namespace Akka.Persistence.Query.Tests
                 exception.Message.Should().Contain($"[{ProviderId}.class]");
                 exception.Message.Should().Contain(typeof(RegisteredProvider).FullName!);
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
-                exception.Message.Should().Contain("ReadJournalDetails");
-                exception.Message.Should().Contain("PersistenceSetup");
+                exception.Message.Should().Contain("Akka.Persistence.Hosting");
+                exception.Message.Should().Contain("WithReadJournal");
                 return Task.CompletedTask;
             });
         }
@@ -161,7 +161,7 @@ namespace Akka.Persistence.Query.Tests
                 .WithJournal(journalPath, _ => new RegisteredJournal())
                 .WithReadJournal(ProviderId, (_, _) => new RegisteredProvider());
 
-            setup.CreatePlugins(null!).Should().HaveCount(2);
+            setup.Registrations.Should().HaveCount(2);
 
             await RunAsync(false, "", setup, system =>
             {
