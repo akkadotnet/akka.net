@@ -48,25 +48,17 @@ configured type name does not resolve.
 
 `aot-warnings.baseline.txt` lists the `IL2xxx`/`IL3xxx` warnings the publish still emits from
 `src/core/Akka.Persistence/`, `src/core/Akka.Persistence.Query/`,
-`src/contrib/persistence/Akka.Persistence.Query.InMemory/` and `src/contrib/hosting/Akka.Persistence.Hosting/`, each with the reason. Check it the same way
+`src/contrib/persistence/Akka.Persistence.Query.InMemory/`, `src/contrib/hosting/Akka.Persistence.Hosting/` and `src/core/Akka.Streams/`, each with the reason. Check it the same way
 CI does:
 
 ```bash
 dotnet run scripts/CheckAotWarnings.cs -- \
     --log /tmp/pcanary.log \
     --baseline src/aot/Akka.Persistence.AOT.App/aot-warnings.baseline.txt \
-    --scope "src/core/Akka.Persistence/,src/core/Akka.Persistence.Query/,src/contrib/persistence/Akka.Persistence.Query.InMemory/,src/contrib/hosting/Akka.Persistence.Hosting/" \
+    --scope "src/core/Akka.Persistence/,src/core/Akka.Persistence.Query/,src/contrib/persistence/Akka.Persistence.Query.InMemory/,src/contrib/hosting/Akka.Persistence.Hosting/,src/core/Akka.Streams/" \
     --repo-root .
 ```
 
 The persistence lookup sites (journals, snapshot stores, stash overflow, event adapters, read journals)
 keep their reflection in `[RequiresUnreferencedCode]` methods behind `AkkaFeatures.IsDynamicTypeLoadingSupported`,
 so none of them shows up here.
-
-## `StreamsRoots.xml`
-
-Akka.Streams builds the generic types on the boundary between two stream islands with `MakeGenericType`
-and `Activator.CreateInstance`. The in-memory read journal uses `Source.ActorPublisher`, so each query
-crosses such a boundary, and without a root the trimmer removes the constructor and the query fails with
-`MissingMethodException`. `StreamsRoots.xml` roots those types for this app. It goes away when
-Akka.Streams annotates or replaces that reflection.

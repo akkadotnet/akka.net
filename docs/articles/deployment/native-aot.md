@@ -189,10 +189,6 @@ Native AOT yet (see below).
   HOCON type names they read still go through `Type.GetType` with no switch guard
   (`downing-provider-class`, the DData durable store, a custom sharding state store). Treat them as
   unsupported under Native AOT for now.
-* **Akka.Streams under Native AOT.** Materializing a stream builds generic types with
-  `MakeGenericType` and `Activator`, which the trimmer cannot see. An app that runs a stream that
-  crosses an island boundary - every query on the in-memory read journal does - has to root those
-  types itself. `src/aot/Akka.Persistence.AOT.App/StreamsRoots.xml` shows how.
 * **Remote deployment.** Akka.Remote's `DaemonMsgCreateSerializer` resolves a remotely deployed
   actor's implementation type from the wire with `Type.GetType(protoProps.Clazz)` in
   `PropsFromProto` - no built-in table, no switch guard. `Props.TypeName` and the `Props` surrogate

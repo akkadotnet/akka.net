@@ -47,10 +47,4 @@
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
   </ItemGroup>
 
-  <!-- Roots the Akka.Streams boundary types the in-memory read journal's queries instantiate by
-       reflection. See StreamsRoots.xml. -->
-  <ItemGroup>
-    <TrimmerRootDescriptor Include="StreamsRoots.xml" />
-  </ItemGroup>
-
 </Project>

@@ -2,23 +2,17 @@
 #
 # Same format and checker as the plain-core canary's baseline
 # (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
-# added/gone entries are handled. Scope differs: --scope passes four prefixes, comma-separated -
+# added/gone entries are handled. Scope differs: --scope passes five prefixes, comma-separated -
 #
 #   src/core/Akka.Persistence/                                   - the persistence core
 #   src/core/Akka.Persistence.Query/                             - PersistenceQuery
 #   src/contrib/persistence/Akka.Persistence.Query.InMemory/     - the read journal the canary queries
 #   src/contrib/hosting/Akka.Persistence.Hosting/                - the builders the canary is built with
+#   src/core/Akka.Streams/                                       - the streams every query runs on
 #
 # src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
-# So is src/core/Akka.Streams/. This app materializes streams (every query does), and that reaches
-# Akka.Streams code the Hosting canary never touches: Fusing.Descend and Construct.Instantiate build
-# generic types with MakeGenericType + Activator, and Util/TypeExtensions walks interfaces of an
-# unannotated Type. Seven warnings (IL3050, IL2055, IL2067, IL2070). They are not persistence code,
-# and they are not just noise: the unannotated constructors get trimmed, so a query dies at
-# runtime with MissingMethodException unless the app roots them. This app does, in StreamsRoots.xml.
-# Fixing it in Akka.Streams (annotate or replace the reflection) belongs in its own change; when
-# that lands, delete StreamsRoots.xml and add src/core/Akka.Streams/ to the scope. Streams joins the
-# gate once #8732 merges.
+# src/core/Akka.Streams/ is in scope: every query materializes a stream, and Akka.Streams no longer needs
+# trimmer roots or carries baselined warnings for that.
 #
 # Everything below is reached from this app and is not caused by plugin registration.
 

@@ -299,14 +299,13 @@ jobs:
         displayName: 'Run the Persistence AOT canary'
 
       # Fails on any IL2xxx/IL3xxx warning from the persistence core, PersistenceQuery, the in-memory
-      # read journal or Akka.Persistence.Hosting that is not in this canary's own baseline. src/core/Akka/ is left out of --scope
-      # because AotCanary's baseline already watches it; src/core/Akka.Streams/ is left out because the
-      # warnings it emits here are tracked in the baseline header, not gated.
+      # read journal, Akka.Persistence.Hosting or Akka.Streams that is not in this canary's own baseline.
+      # src/core/Akka/ is left out of --scope because AotCanary's baseline already watches it.
       - bash: |
           dotnet run scripts/CheckAotWarnings.cs -- \
             --log "$(Agent.TempDirectory)/persistence-aot-publish.log" \
             --baseline src/aot/Akka.Persistence.AOT.App/aot-warnings.baseline.txt \
-            --scope "src/core/Akka.Persistence/,src/core/Akka.Persistence.Query/,src/contrib/persistence/Akka.Persistence.Query.InMemory/,src/contrib/hosting/Akka.Persistence.Hosting/" \
+            --scope "src/core/Akka.Persistence/,src/core/Akka.Persistence.Query/,src/contrib/persistence/Akka.Persistence.Query.InMemory/,src/contrib/hosting/Akka.Persistence.Hosting/,src/core/Akka.Streams/" \
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare Persistence AOT warnings against the baseline'
 
