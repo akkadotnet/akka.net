@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Akka.Hosting support for Akka.Persistence.Embedded, the SQLite journal, snapshot store and read journal. Native AOT compatible.</Description>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;persistence;event sourcing;sqlite;aot</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsAotCompatible>true</IsAotCompatible>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\..\persistence\Akka.Persistence.Embedded\Akka.Persistence.Embedded.csproj" />
+    </ItemGroup>
+
+</Project>

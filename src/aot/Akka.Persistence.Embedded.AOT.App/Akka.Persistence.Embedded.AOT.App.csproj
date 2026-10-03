@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+
+    <!-- Same rationale as Akka.AOT.App.csproj: this app's job is to print ILC's IL2xxx/IL3xxx
+         list, so ILC's own warnings must not fail the publish. The app's own C# still builds with
+         warnings as errors (repo-wide TreatWarningsAsErrors). -->
+    <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- PublishAot is gated on a RuntimeIdentifier, same two reasons as Akka.AOT.App: a plain
+       solution build must not restore a RID-specific ILCompiler, and '-p:PublishAot=true' on the
+       command line is a GLOBAL property that would also turn on trim analysis for the library
+       projects, failing their build under repo-wide TreatWarningsAsErrors. -->
+  <PropertyGroup Label="AotSettings" Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <PropertyGroup Label="AotSettings">
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same as Akka.Hosting.AOT.App: the full Microsoft.Extensions.Hosting package is what an application adds. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Brings Akka.Hosting, Akka.Persistence.Hosting and the plugin. -->
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Embedded.Hosting\Akka.Persistence.Embedded.Hosting.csproj"/>
+  </ItemGroup>
+
+  <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:
+       buildTransitive/Akka.targets only does this automatically for the NuGet package, not for a
+       ProjectReference. With it off, only what the setups register can start. -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+  </ItemGroup>
+
+</Project>
