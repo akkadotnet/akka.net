@@ -126,6 +126,10 @@ namespace Akka.Persistence.Embedded.Journal
                     Sender.Tell(Initialized.Instance);
                     return true;
 
+                case GetWriterForTests:
+                    Sender.Tell(new WriterForTests(_writer));
+                    return true;
+
                 case CrashForTests:
                     throw new InvalidOperationException("The journal was told to crash by a test.");
 

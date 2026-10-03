@@ -109,11 +109,7 @@ namespace Akka.Persistence.Embedded.Journal
                 IsBackground = true,
                 Name = $"{settings.PluginPath}-writer"
             };
-            CreatedForTests?.Invoke(this);
         }
-
-        /// <summary>Test seam: called with every writer created, so a test can reach the writer of a journal actor.</summary>
-        internal static Action<JournalWriter>? CreatedForTests { get; set; }
 
         internal string ConnectionString => _settings.ConnectionString;
 

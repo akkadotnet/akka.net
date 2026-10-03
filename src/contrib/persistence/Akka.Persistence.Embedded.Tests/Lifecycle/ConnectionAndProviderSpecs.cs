@@ -82,25 +82,21 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
             // the db's own connection string, with Pooling added
             var pooled = ConfigurationFactory.ParseString($"akka.persistence.journal.embedded.connection-string = \"{db.HoconConnectionString};Pooling=True\"")
                 .WithFallback(config);
-            Akka.Persistence.Embedded.Journal.JournalWriter? writer = null;
-            Akka.Persistence.Embedded.Journal.JournalWriter.CreatedForTests = created =>
-            {
-                if (created.ConnectionString.StartsWith(db.ConnectionString, StringComparison.Ordinal))
-                    writer = created;
-            };
+            Akka.Persistence.Embedded.Journal.JournalWriter writer;
             var system = (ExtendedActorSystem)ActorSystem.Create("pooling-user-value", pooled);
             try
             {
-                await Persistence.Instance.Apply(system).JournalFor(null).Ask<Initialized>(EnsureInitialized.Instance, Timeout);
+                var journal = Persistence.Instance.Apply(system).JournalFor(null);
+                await journal.Ask<Initialized>(EnsureInitialized.Instance, Timeout);
+                writer = (await journal.Ask<WriterForTests>(GetWriterForTests.Instance, Timeout)).Writer;
+                // read it before the system stops: the holder string is plain data
+                PoolingOf(writer.HolderConnectionStringForTests).Should().BeTrue("the user wrote Pooling=True");
             }
             finally
             {
-                Akka.Persistence.Embedded.Journal.JournalWriter.CreatedForTests = null;
                 await system.Terminate();
             }
-
-            writer.Should().NotBeNull();
-            PoolingOf(writer!.HolderConnectionStringForTests).Should().BeTrue("the user wrote Pooling=True");
+            PoolingOf(writer.HolderConnectionStringForTests).Should().BeTrue("the user wrote Pooling=True");
         }
     }
 
