@@ -1,0 +1,61 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.Persistence.Embedded.Hosting
+{
+    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions
+    {
+        public EmbeddedJournalOptions() { }
+        public EmbeddedJournalOptions(bool isDefaultPlugin, string identifier = "embedded") { }
+        public int BatchSize { get; set; }
+        public int BufferSize { get; set; }
+        public string ConnectionString { get; set; }
+        public bool DeleteCompatibilityMode { get; set; }
+        public override string Identifier { get; set; }
+        protected override Akka.Configuration.Config InternalDefaultConfig { get; }
+        public string JournalTableName { get; set; }
+        public string MetadataTableName { get; set; }
+        public int ReadThreads { get; set; }
+        public int ReplayBatchSize { get; set; }
+        public string TagSeparator { get; set; }
+        public string TagTableName { get; set; }
+        public Akka.Persistence.Embedded.TagWriteMode TagWriteMode { get; set; }
+        public bool UseWriterUuidColumn { get; set; }
+        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
+    }
+    public static class EmbeddedPersistenceHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions journalOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? configureJournal = null, Akka.Persistence.Embedded.Hosting.EmbeddedReadJournalOptions? readJournalOptions = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions? journalOptions, Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions? snapshotOptions, Akka.Persistence.Embedded.Hosting.EmbeddedReadJournalOptions? readJournalOptions = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? configureJournal = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureSnapshot = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? configureJournal = null, Akka.Persistence.Hosting.PersistenceMode mode = 0, bool autoInitialize = true, Akka.Persistence.Embedded.TagWriteMode tagWriteMode = 1, string pluginIdentifier = "embedded", bool isDefaultPlugin = true, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureSnapshot = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedReadJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedReadJournalOptions? readJournalOptions = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedSnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions snapshotOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? configureSnapshot = null) { }
+    }
+    public sealed class EmbeddedReadJournalOptions
+    {
+        public EmbeddedReadJournalOptions() { }
+        public EmbeddedReadJournalOptions(string identifier) { }
+        public Akka.Configuration.Config DefaultConfig { get; }
+        public string Identifier { get; set; }
+        public bool JournalSequenceRetrievalEnabled { get; set; }
+        public int MaxBufferSize { get; set; }
+        public string PluginId { get; }
+        public System.TimeSpan RefreshInterval { get; set; }
+        public string WriteJournalIdentifier { get; set; }
+        public Akka.Configuration.Config ToConfig() { }
+        public override string ToString() { }
+    }
+    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
+    {
+        public EmbeddedSnapshotOptions() { }
+        public EmbeddedSnapshotOptions(bool isDefaultPlugin, string identifier = "embedded") { }
+        public string ConnectionString { get; set; }
+        public override string Identifier { get; set; }
+        protected override Akka.Configuration.Config InternalDefaultConfig { get; }
+        public string TableName { get; set; }
+        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
+    }
+}

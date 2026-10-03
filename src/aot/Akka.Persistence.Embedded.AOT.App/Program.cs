@@ -10,14 +10,20 @@ using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Hosting;
 using Akka.Persistence.Embedded;
+using Akka.Persistence.Embedded.Hosting;
 using Akka.Persistence.Embedded.Query;
-using Akka.Persistence.Journal;
+using Akka.Persistence.Hosting;
 using Akka.Persistence.Query;
 using Akka.Serialization;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Akka.Persistence.Embedded.AOT.App;
 
@@ -90,42 +96,72 @@ internal static class Program
         Console.WriteLine($"[canary-sqlite] native: SQLite {version} loaded");
     }
 
-    private static ActorSystem CreateSystem(string label, string path, string tagWriteMode, bool register, LogWatchdogFilter watchdog)
+    /// <summary>An Akka.Hosting host and the actor system it runs.</summary>
+    private sealed class HostedCanary : IAsyncDisposable
     {
-        // HOCON only picks the default plugins and says where the database is. The plugin's class names and reference
-        // configuration come with the registration below, so there is nothing to resolve by name and nothing to add as a fallback.
+        private readonly IHost _host;
+
+        public HostedCanary(IHost host)
+        {
+            _host = host;
+        }
+
+        public ActorSystem System => _host.Services.GetRequiredService<ActorSystem>();
+
+        public IServiceProvider Services => _host.Services;
+
+        public async ValueTask DisposeAsync()
+        {
+            await _host.StopAsync(TerminateTimeout);
+            _host.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Builds the system the way an application does: Akka.Hosting plus <c>WithEmbeddedPersistence</c>. HOCON is not
+    /// involved at all: no class names, no reference config, no loggers by name.
+    /// </summary>
+    private static async Task<HostedCanary> StartHostedAsync(string label, string path, TagWriteMode tagWriteMode, LogWatchdogFilter watchdog)
+    {
+        var appBuilder = Host.CreateApplicationBuilder();
+        appBuilder.Logging.ClearProviders();
+        appBuilder.Services.AddHealthChecks();
+        appBuilder.Services.AddAkka(label, (builder, _) => builder
+            .AddSetup(new LogFilterSetup([watchdog]))
+            // With Akka.DynamicTypeLoading off core registers no fallback serializer, so the app binds its own.
+            .WithCustomSerializer("canary", [typeof(CanaryEvent), typeof(CanarySnapshot)], system => new CanarySerializer(system))
+            .WithEmbeddedPersistence(
+                path.Insert(0, "Data Source="),
+                journal => journal
+                    .AddWriteEventAdapter("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))
+                    .WithHealthCheck(),
+                tagWriteMode: tagWriteMode,
+                configureSnapshot: snapshot => snapshot.WithHealthCheck())
+            .WithEmbeddedReadJournal(new EmbeddedReadJournalOptions { RefreshInterval = TimeSpan.FromMilliseconds(100) }));
+
+        var host = appBuilder.Build();
+        await host.StartAsync();
+        return new HostedCanary(host);
+    }
+
+    /// <summary>A system without the Hosting registration: HOCON names the plugin, and with the switch off core refuses it.</summary>
+    private static ActorSystem CreateUnregisteredSystem(string label, string path)
+    {
         var config = ConfigurationFactory.ParseString($$"""
             akka.persistence.journal.plugin = "akka.persistence.journal.embedded"
             akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
-            akka.persistence.journal.embedded {
-                connection-string = "Data Source={{path}}"
-                tag-write-mode = {{tagWriteMode}}
-            }
+            akka.persistence.journal.embedded.connection-string = "Data Source={{path}}"
             akka.persistence.snapshot-store.embedded.connection-string = "Data Source={{path}}"
-            akka.persistence.query.journal.embedded.refresh-interval = 100ms
-            """);
+            """).WithFallback(SqlitePersistence.DefaultConfiguration);
 
-        // Only the unregistered scenario needs the HOCON class names: it shows what a user who forgot the registration
-        // sees (core finds the class name and, with the switch off, refuses to load it).
-        if (!register)
-            config = config.WithFallback(SqlitePersistence.DefaultConfiguration);
+        return ActorSystem.Create(label, config);
+    }
 
-        var setup = BootstrapSetup.Create().WithConfig(config)
-            .And(SerializationSetup.Create(static system => ImmutableHashSet.Create(
-                SerializerDetails.Create("canary", new CanarySerializer(system),
-                    ImmutableHashSet.Create(typeof(CanaryEvent), typeof(CanarySnapshot))))));
-
-        if (register)
-        {
-            // one line registers the journal, the snapshot store and the read journal; the adapter is the journal's
-            setup = setup.And(PersistenceSetup.Create().WithEmbeddedPersistence(
-                [EventAdapterDetails.Create("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))]));
-        }
-
-        // Serialization and Mailboxes log-and-continue when a configured type name does not resolve, so a
-        // silent boot is not proof of anything. This watchdog turns any WARNING or ERROR that reaches the
-        // stdout logger into a failed run.
-        return ActorSystem.Create(label, setup.And(new LogFilterSetup([watchdog])));
+    private static async Task HealthyAsync(string label, HostedCanary hosted)
+    {
+        var report = await hosted.Services.GetRequiredService<HealthCheckService>().CheckHealthAsync();
+        Require(label, report.Status == HealthStatus.Healthy && report.Entries.Count >= 2,
+            $"the persistence health checks reported {report.Status} with {report.Entries.Count} entries");
     }
 
     /// <summary>
@@ -136,10 +172,11 @@ internal static class Program
         const string label = "tagtable";
         Console.WriteLine($"[canary-sqlite] creating ActorSystem '{label}' ...");
         var watchdog = new LogWatchdogFilter();
-        var system = CreateSystem(label, path, "TagTable", register: true, watchdog);
-        try
+        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.TagTable, watchdog);
+        var system = hosted.System;
         {
             watchdog.ThrowIfAnyProblems(label, "startup");
+            await HealthyAsync(label, hosted);
 
             // 1. five events (two red), snapshot at 3, stop, recover
             var first = system.ActorOf(Props.Create(() => new CanaryPersistentActor("p1", true)), "p1-first");
@@ -208,11 +245,6 @@ internal static class Program
             system.Log.Info("[canary-sqlite] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
         }
-        finally
-        {
-            await system.Terminate().WaitAsync(TerminateTimeout);
-        }
-
         Console.WriteLine($"[canary-sqlite] {label}: terminated");
     }
 
@@ -251,8 +283,8 @@ internal static class Program
     {
         const string label = "csv";
         var watchdog = new LogWatchdogFilter();
-        var system = CreateSystem(label, path, "Csv", register: true, watchdog);
-        try
+        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.Csv, watchdog);
+        var system = hosted.System;
         {
             var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("csv-1", true)), "csv-1");
             Require(label, await actor.Ask<int>(new PersistCmd("tagged", true), AskTimeout) == 1, "persist tagged");
@@ -267,11 +299,6 @@ internal static class Program
 
             watchdog.ThrowIfAnyProblems(label, "run");
         }
-        finally
-        {
-            await system.Terminate().WaitAsync(TerminateTimeout);
-        }
-
         Console.WriteLine($"[canary-sqlite] {label}: terminated");
     }
 
@@ -280,8 +307,8 @@ internal static class Program
     {
         const string label = "both";
         var watchdog = new LogWatchdogFilter();
-        var system = CreateSystem(label, path, "Both", register: true, watchdog);
-        try
+        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.Both, watchdog);
+        var system = hosted.System;
         {
             var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("both-1", true)), "both-1");
             Require(label, await actor.Ask<int>(new PersistCmd("plain", false), AskTimeout) == 1, "persist plain");
@@ -298,11 +325,6 @@ internal static class Program
 
             watchdog.ThrowIfAnyProblems(label, "run");
         }
-        finally
-        {
-            await system.Terminate().WaitAsync(TerminateTimeout);
-        }
-
         Console.WriteLine($"[canary-sqlite] {label}: terminated");
     }
 
@@ -310,7 +332,7 @@ internal static class Program
     private static async Task RunUnregisteredAsync(string path)
     {
         const string label = "unregistered";
-        var system = CreateSystem(label, path, "TagTable", register: false, new LogWatchdogFilter());
+        var system = CreateUnregisteredSystem(label, path);
         try
         {
             ConfigurationException? thrown = null;
