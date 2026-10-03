@@ -261,15 +261,8 @@ namespace Akka.Persistence.Embedded.Journal
             _writeInProgress.TryGetValue(persistenceId, out var pending);
             if (pending is not null)
             {
-                try
-                {
-                    // we only care that it finished, not whether it worked
-                    await pending.ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
+                // we only care that it finished, not whether it worked: WhenAny completes without throwing the write's error
+                await Task.WhenAny(pending).ConfigureAwait(false);
             }
 
             return await _readPool

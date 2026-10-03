@@ -33,11 +33,13 @@ namespace Akka.Persistence.Embedded.Internal
         private const int SqliteConstraint = 19;
 
         private readonly string _connectionString;
+        private readonly ILoggingAdapter _log;
         private SqliteConnection? _connection;
         private int _resetCount;
 
-        public ConnectionHolder(string connectionString)
+        public ConnectionHolder(string connectionString, ILoggingAdapter log)
         {
+            _log = log;
             _connectionString = new SqliteConnectionStringBuilder(connectionString) { Pooling = false }.ConnectionString;
         }
 
@@ -83,9 +85,10 @@ namespace Akka.Persistence.Embedded.Internal
             {
                 connection.Dispose();
             }
-            catch (Exception)
+            catch (Exception e) when (e is SqliteException or InvalidOperationException)
             {
-                // nothing useful to do with a failure to close a broken connection
+                // The connection is already broken and is being thrown away; the next Get opens a new one.
+                _log.Debug(e, "Closing a broken SQLite connection failed. It is dropped anyway.");
             }
         }
 
@@ -161,7 +164,7 @@ namespace Akka.Persistence.Embedded.Internal
 
         private void ThreadLoop()
         {
-            using var holder = new ConnectionHolder(_connectionString);
+            using var holder = new ConnectionHolder(_connectionString, _log);
             try
             {
                 foreach (var item in _queue.GetConsumingEnumerable(_shutdown.Token))
@@ -185,9 +188,9 @@ namespace Akka.Persistence.Embedded.Internal
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
             {
-                // shutdown
+                _log.Debug("[{0}] worker thread stopping.", Thread.CurrentThread.Name);
             }
         }
 

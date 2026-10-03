@@ -62,9 +62,10 @@ internal static class Program
                 {
                     File.Delete(file);
                 }
-                catch (IOException)
+                catch (IOException e)
                 {
-                    // a leftover temp file does not fail the canary
+                    // a leftover temp file does not fail the canary, but say so
+                    Console.WriteLine($"[canary-sqlite] could not delete {file}: {e.Message}");
                 }
             }
         }

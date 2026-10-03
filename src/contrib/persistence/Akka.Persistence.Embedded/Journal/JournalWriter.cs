@@ -103,7 +103,7 @@ namespace Akka.Persistence.Embedded.Journal
             _sql = sql;
             _log = log;
             _queue = new BlockingCollection<WriteWork>(settings.BufferSize);
-            _holder = new ConnectionHolder(settings.ConnectionString);
+            _holder = new ConnectionHolder(settings.ConnectionString, log);
             _thread = new Thread(Loop)
             {
                 IsBackground = true,
@@ -154,14 +154,8 @@ namespace Akka.Persistence.Embedded.Journal
         /// <summary>Stops the thread after the transaction it is in. Queued requests fail.</summary>
         public void Stop()
         {
-            try
-            {
-                _queue.CompleteAdding();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
+            // the queue is never disposed, so CompleteAdding cannot throw
+            _queue.CompleteAdding();
             _shutdown.Cancel();
             if (_thread.ThreadState != System.Threading.ThreadState.Unstarted && !_thread.Join(JoinTimeout))
                 _log.Warning("[{0}] writer thread did not stop within 5s.", _settings.PluginPath);
@@ -333,7 +327,8 @@ namespace Akka.Persistence.Embedded.Journal
                     }
                     catch (Exception rollbackError)
                     {
-                        _log.Warning("[{0}] rollback failed after a write error: {1}", _settings.PluginPath, rollbackError.Message);
+                        // the write error below is what the callers get; the rollback failure is only logged
+                        _log.Warning(rollbackError, "[{0}] rollback failed after a write error.", _settings.PluginPath);
                     }
 
                     transaction.Dispose();

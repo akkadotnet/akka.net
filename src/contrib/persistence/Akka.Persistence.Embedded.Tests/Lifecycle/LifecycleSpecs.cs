@@ -31,19 +31,26 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
 
             foreach (var fd in Directory.EnumerateFileSystemEntries("/proc/self/fd"))
             {
-                try
-                {
-                    var target = new FileInfo(fd).LinkTarget;
-                    if (target is not null && target.StartsWith(path, StringComparison.Ordinal))
-                        return true;
-                }
-                catch (IOException)
-                {
-                    // the descriptor closed while we looked at it
-                }
+                if (TryReadTarget(fd, out var target) && target.StartsWith(path, StringComparison.Ordinal))
+                    return true;
             }
 
             return false;
+        }
+
+        /// <summary>False when the descriptor is not a link or closed while we looked at it.</summary>
+        private static bool TryReadTarget(string fd, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? target)
+        {
+            try
+            {
+                target = new FileInfo(fd).LinkTarget;
+                return target is not null;
+            }
+            catch (IOException)
+            {
+                target = null;
+                return false;
+            }
         }
 
         [Fact(DisplayName = "Should_release_database_file_When_actor_system_terminates")]
