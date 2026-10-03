@@ -1,4 +1,4 @@
-#### 1.5.72 TBD ####
+#### 1.5.72 October 3rd, 2026 ####
 
 Akka.NET v1.5.72 backports a non-blocking Cluster extension startup, test-infrastructure hardening, a Cluster.Sharding hand-over fix, and a batch of de-flaked specs from `dev`.
 
@@ -32,6 +32,16 @@ Starting with this release, **Akka.Hosting ships from this repository**. The `Ak
 **Testing**
 * [Bugfix5962Spec de-flaked for the non-blocking cluster startup](https://github.com/akkadotnet/akka.net/pull/8398) - the spec's raw 1 second `ResolveOne` against `/system/cluster/core/daemon/downingProvider` raced the async cluster-extension init #8359 introduces above; replaced with a dilated retrying resolve, a dynamic port, and an async `TaskCompletionSource` member-up signal.
 * De-flaked a large batch of Cluster, Cluster.Sharding, Cluster.Tools, DistributedData, Streams, and Remote specs, both single-process and multi-node, to remove timing-sensitive failures under load.
+
+3 contributors since release 1.5.71
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 66 | 35268 | 2030 | Aaron Stannard |
+| 1 | 94 | 47 | Bojan Janjatović |
+| 1 | 2 | 1 | Matt Kotsenas |
+
+To see the full set of changes in Akka.NET v1.5.72, [click here](https://github.com/akkadotnet/akka.net/milestone/155?closed=1).
 
 #### 1.5.71 August 26th, 2026 ####
 
