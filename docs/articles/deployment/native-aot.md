@@ -72,6 +72,33 @@ Register a serializer for your own message types through a `SerializationSetup`.
 consequence of the switch, not of trimming - the same thing happens on the JIT if you turn the
 switch off there.
 
+## Registering Protobuf Messages
+
+`Akka.Remote.Serialization.ProtobufSerializer` uses generated parsers for messages registered through
+`ProtobufSerializerSetup`. Register each message type the actor system receives, using its generated
+descriptor:
+
+```csharp
+var setup = ProtobufSerializerSetup.Create(OrderPlaced.Descriptor, OrderShipped.Descriptor);
+var system = ActorSystem.Create("orders", BootstrapSetup.Create().And(setup));
+```
+
+With Akka.Remote.Hosting, add the same descriptors to the builder:
+
+```csharp
+builder.WithRemoting()
+    .WithProtobufSerializer(OrderPlaced.Descriptor, OrderShipped.Descriptor);
+```
+
+Registration applies to that actor system and does not automatically register other messages from the
+same `.proto` file. With `Akka.DynamicTypeLoading` off, an unregistered message fails with a
+`SerializationException` pointing to `ProtobufSerializerSetup`. With the switch on, unregistered
+messages keep the existing reflection fallback. Serializer ID 2 and CLR type manifests stay unchanged.
+
+This removes reflection from registered message deserialization; transport support under Native AOT
+is a separate requirement described below. The registration path can also be tested on the JIT by
+turning dynamic type loading off.
+
 ## Not Supported Yet
 
 * **Akka.Remote and Akka.Cluster.** Classic DotNetty remoting does not work under Native AOT. The

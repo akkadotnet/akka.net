@@ -463,7 +463,13 @@ namespace Akka.Remote.Serialization
         public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
         public override byte[] ToBinary(object obj) { }
+    }
+    public sealed class ProtobufSerializerSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Immutable.ImmutableHashSet<Google.Protobuf.Reflection.MessageDescriptor> MessageDescriptors { get; }
+        public static Akka.Remote.Serialization.ProtobufSerializerSetup Create(params Google.Protobuf.Reflection.MessageDescriptor[] messageDescriptors) { }
     }
     public sealed class SystemMessageSerializer : Akka.Serialization.Serializer
     {

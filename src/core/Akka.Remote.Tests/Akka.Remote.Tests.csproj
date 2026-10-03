@@ -44,6 +44,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)" PrivateAssets="all" />
+    <Protobuf Include="Serialization/ProtobufMessages.proto" GrpcServices="None" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />

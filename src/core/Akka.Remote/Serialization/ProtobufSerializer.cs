@@ -5,8 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Serialization;
 using Akka.Util;
@@ -20,6 +24,7 @@ namespace Akka.Remote.Serialization
     public class ProtobufSerializer : Serializer
     {
         private static readonly ConcurrentDictionary<string, MessageParser> TypeLookup = new();
+        private readonly Dictionary<string, MessageParser> _registeredParsers = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtobufSerializer"/> class.
@@ -27,6 +32,15 @@ namespace Akka.Remote.Serialization
         /// <param name="system">The actor system to associate with this serializer. </param>
         public ProtobufSerializer(ExtendedActorSystem system) : base(system)
         {
+            var setup = system.Settings.Setup.Get<ProtobufSerializerSetup>();
+            if (!setup.HasValue)
+                return;
+
+            foreach (var descriptor in setup.Value.MessageDescriptors)
+            {
+                _registeredParsers[descriptor.ClrType.TypeQualifiedName()] = descriptor.Parser;
+                _registeredParsers[descriptor.ClrType.FullName!] = descriptor.Parser;
+            }
         }
 
         /// <inheritdoc />
@@ -51,17 +65,47 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (_registeredParsers.Count != 0 && manifest is not null
+                && (_registeredParsers.TryGetValue(manifest, out var parser)
+                    || _registeredParsers.TryGetValue(TypeExtensions.StripAssemblyIdentity(manifest), out parser)))
+                return parser.ParseFrom(bytes);
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw UnregisteredMessage(manifest);
+
+            return base.FromBinary(bytes, manifest);
+        }
+
+        /// <inheritdoc />
         public override object FromBinary(byte[] bytes, Type type)
         {
-            if (TypeLookup.TryGetValue(type.FullName, out var parser))
+            if (_registeredParsers.TryGetValue(type.TypeQualifiedName(), out var parser))
+                return parser.ParseFrom(bytes);
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw UnregisteredMessage(type.TypeQualifiedName());
+
+            return FromBinaryReflecting(bytes, type);
+        }
+
+        private SerializationException UnregisteredMessage(string? manifest)
+            => new($"Cannot deserialize Protobuf manifest [{manifest}] for serializer [{Identifier}] with Akka.DynamicTypeLoading off. " +
+                   "Register the message descriptor through ProtobufSerializerSetup.");
+
+        [RequiresUnreferencedCode("Constructs an unregistered Protobuf message by reflection to obtain its parser.")]
+        private object FromBinaryReflecting(byte[] bytes, Type type)
+        {
+            if (TypeLookup.TryGetValue(type.FullName!, out var parser))
             {
                 return parser.ParseFrom(bytes);
             }
-            // MethodParser is not in the cache, look it up with reflection
-            IMessage msg = Activator.CreateInstance(type) as IMessage;
-            if(msg == null) throw new ArgumentException($"Can't deserialize a non-protobuf message using protobuf [{type.TypeQualifiedName()}]");
+            var msg = Activator.CreateInstance(type) as IMessage;
+            if (msg == null)
+                throw new ArgumentException($"Can't deserialize a non-protobuf message using protobuf [{type.TypeQualifiedName()}]");
             parser = msg.Descriptor.Parser;
-            TypeLookup.TryAdd(type.FullName, parser);
+            TypeLookup.TryAdd(type.FullName!, parser);
             return parser.ParseFrom(bytes);
         }
     }

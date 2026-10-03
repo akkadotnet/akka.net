@@ -4,15 +4,28 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Text;
 using Akka.Actor;
 using Akka.Hosting;
+using Akka.Remote.Serialization;
+using Google.Protobuf.Reflection;
 
 namespace Akka.Remote.Hosting
 {
     public static class AkkaRemoteHostingExtensions
     {
+        /// <summary>
+        /// Registers generated Protobuf message types for deserialization without dynamic type loading.
+        /// </summary>
+        /// <param name="builder">The actor system configuration builder.</param>
+        /// <param name="messageDescriptors">Descriptors for each Protobuf message type this system receives.</param>
+        /// <returns>The same configuration builder.</returns>
+        public static AkkaConfigurationBuilder WithProtobufSerializer(
+            this AkkaConfigurationBuilder builder, params MessageDescriptor[] messageDescriptors)
+            => builder.AddSetup(ProtobufSerializerSetup.Create(messageDescriptors));
+
         /// <summary>
         /// Adds Akka.Remote support to this <see cref="ActorSystem"/>.
         /// </summary>

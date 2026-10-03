@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package akka.remote.tests;
+option csharp_namespace = "Akka.Remote.Tests.Serialization";
+
+message RegisteredMessage {
+  string text = 1;
+}
+
+message UnregisteredMessage {
+  int32 value = 1;
+}

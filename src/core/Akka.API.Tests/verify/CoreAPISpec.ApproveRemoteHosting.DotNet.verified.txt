@@ -4,6 +4,7 @@ namespace Akka.Remote.Hosting
 {
     public static class AkkaRemoteHostingExtensions
     {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithProtobufSerializer(this Akka.Hosting.AkkaConfigurationBuilder builder, params Google.Protobuf.Reflection.MessageDescriptor[] messageDescriptors) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Remote.Hosting.RemoteOptions options) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.RemoteOptions> configure) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, string? hostname = null, int? port = default, string? publicHostname = null, int? publicPort = default) { }
