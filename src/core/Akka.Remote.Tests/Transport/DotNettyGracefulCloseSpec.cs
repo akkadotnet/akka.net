@@ -32,6 +32,13 @@ namespace Akka.Remote.Tests.Transport
     /// </summary>
     public class DotNettyGracefulCloseSpec : AkkaSpec
     {
+#if NETFRAMEWORK
+        private const string? GracefulCloseSkipReason =
+            "Socket half-close is not available to the v1.5 netstandard2.0 transport on .NET Framework.";
+#else
+        private const string? GracefulCloseSkipReason = null;
+#endif
+
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
             akka {
                 loglevel = INFO
@@ -62,7 +69,8 @@ namespace Akka.Remote.Tests.Transport
         {
         }
 
-        [Fact(DisplayName = "Should_deliver_last_frame_and_clean_EOF_When_disassociating_with_unread_inbound_data")]
+        [Fact(DisplayName = "Should_deliver_last_frame_and_clean_EOF_When_disassociating_with_unread_inbound_data",
+            Skip = GracefulCloseSkipReason)]
         public async Task Should_deliver_last_frame_and_clean_EOF_When_disassociating_with_unread_inbound_data()
         {
             var c = await ConnectRawPeer(Sys);
@@ -89,7 +97,8 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_TLS_is_enabled")]
+        [Fact(DisplayName = "Should_deliver_last_frame_without_reset_When_TLS_is_enabled",
+            Skip = GracefulCloseSkipReason)]
         public async Task Should_deliver_last_frame_without_reset_When_TLS_is_enabled()
         {
             var c = await ConnectRawPeer(Sys, TlsOverrides.WithFallback(Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp")));
