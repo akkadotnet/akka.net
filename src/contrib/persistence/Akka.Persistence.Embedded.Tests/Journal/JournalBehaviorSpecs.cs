@@ -76,21 +76,9 @@ namespace Akka.Persistence.Embedded.Tests.Journal
         /// <summary>Starts the journal and captures its writer. Call before anything else touches the journal.</summary>
         internal async Task CaptureWriterAsync()
         {
-            JournalWriter.CreatedForTests = writer =>
-            {
-                if (writer.ConnectionString == Db.ConnectionString)
-                    _writer = writer;
-            };
-            try
-            {
-                await InitializeJournalAsync();
-            }
-            finally
-            {
-                JournalWriter.CreatedForTests = null;
-            }
-
-            _ = _writer ?? throw new InvalidOperationException("journal writer was not created");
+            // asked of the journal actor itself, so nothing depends on how the database path is spelled
+            await InitializeJournalAsync();
+            _writer = (await Journal.Ask<WriterForTests>(GetWriterForTests.Instance, Timeout)).Writer;
         }
 
         internal JournalWriter Writer => _writer!;

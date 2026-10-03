@@ -40,6 +40,27 @@ namespace Akka.Persistence.Embedded.Internal
         }
     }
 
+    /// <summary>Test seam: asks the journal for its writer. The journal answers with <see cref="WriterForTests"/>.</summary>
+    internal sealed class GetWriterForTests
+    {
+        public static GetWriterForTests Instance { get; } = new();
+
+        private GetWriterForTests()
+        {
+        }
+    }
+
+    /// <summary>Reply to <see cref="GetWriterForTests"/>.</summary>
+    internal sealed class WriterForTests
+    {
+        public WriterForTests(Akka.Persistence.Embedded.Journal.JournalWriter writer)
+        {
+            Writer = writer;
+        }
+
+        public Akka.Persistence.Embedded.Journal.JournalWriter Writer { get; }
+    }
+
     /// <summary>The journal tells itself when a write for a persistence id has finished.</summary>
     internal sealed class WriteFinished
     {
