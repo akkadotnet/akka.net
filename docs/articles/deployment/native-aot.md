@@ -29,10 +29,13 @@ fallback entirely.
 * An Akka.Hosting application built with `AddAkka`: dependency injection through
   Akka.DependencyInjection, a custom extension registered with `WithExtension`, log output routed
   through `Microsoft.Extensions.Logging`, and the built-in `ActorSystem` liveness health check.
-* Three `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
-  (custom loggers and log formatter), `SerializationSetup` (custom serializers and bindings), and
-  `ExtensionsSetup` (custom or third-party extensions). Combine them (plus a `BootstrapSetup` if you
-  need one) with `ActorSystemSetup` and pass the result to `ActorSystem.Create`.
+* Four `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
+  (custom loggers and log formatter), `SerializationSetup` (custom serializers and bindings),
+  `ExtensionsSetup` (custom or third-party extensions) and `BootstrapSetup`. Combine them with
+  `ActorSystemSetup` and pass the result to `ActorSystem.Create`. Persistence has no setup of its own to
+  write: use the Akka.Persistence.Hosting builders, see [Persistence Plugins](#persistence-plugins).
+* Akka.Persistence through the Akka.Persistence.Hosting builders: journals, snapshot stores, event
+  adapters and read journals - see [Persistence Plugins](#persistence-plugins).
 * Serializer names for Akka.Remote, Akka.Cluster, Akka.Cluster.Tools, Akka.Cluster.Sharding,
   Akka.Cluster.Metrics, Akka.DistributedData, Akka.Persistence and Akka.Streams: each resolves its
   own `reference.conf` serializer rows from a built-in table instead of `Type.GetType`, the same as
@@ -42,10 +45,11 @@ fallback entirely.
   `ClusterMetricsExtensionProvider` resolve by name when their assembly is present. Anything else -
   your own extension, or any other third-party one - needs `ExtensionsSetup`.
 
-`src/aot/Akka.AOT.App` and `src/aot/Akka.Hosting.AOT.App` in the repository are the reference
-applications, for core and for Akka.Hosting. Both publish under Native AOT, fail the run if anything
-logs a `Warning` or `Error` during startup, and run in CI on every pull request, each checked against
-its own warning baseline (`src/aot/*/aot-warnings.baseline.txt`).
+`src/aot/Akka.AOT.App`, `src/aot/Akka.Hosting.AOT.App` and `src/aot/Akka.Persistence.AOT.App` in the
+repository are the reference applications, for core, Akka.Hosting and Akka.Persistence. All three
+publish under Native AOT, fail the run if anything logs a `Warning` or `Error` during startup, and
+run in CI on every pull request, each checked against its own warning baseline
+(`src/aot/*/aot-warnings.baseline.txt`).
 
 ## Turning It On
 
@@ -128,16 +132,67 @@ With the switch off, these do not work:
   type's interfaces through reflection. Akka.Streams no longer calls them; they are obsolete since
   v1.6.0 and will be removed in 1.7.
 
+## Persistence Plugins
+
+Akka.Persistence reads the type of every journal and snapshot store from the `class` setting of its
+HOCON section, and it reads event adapters, event adapter bindings and the stash overflow strategy the
+same way. Akka.Persistence.Query does the same for read journals. Reflection is off the table under
+Native AOT, so use the Akka.Persistence.Hosting builders. They write the HOCON you always had and also
+hand core the plugins, adapters and read journals as code, so nothing needs a `class` string. Your code
+does not change between the JIT and Native AOT.
+
+```csharp
+services.AddAkka("app", builder => builder
+    .WithJournalAndSnapshot(new MyJournalOptions(), new MySnapshotOptions(),
+        configureJournal: journal => journal.AddWriteEventAdapter<MyTagger>("tagger", new[] { typeof(MyEvent) }),
+        configureSnapshot: null)
+    .WithInMemoryJournal(_ => { }, journalId: "scratch", isDefaultPlugin: false)
+    .WithReadJournal("akka.persistence.query.journal.my-journal",
+        (system, config) => new MyReadJournalProvider(system, config), MyPersistence.DefaultQueryConfiguration())
+    .WithCustomSerializer("app", new[] { typeof(MyEvent) }, system => new MySerializer(system)));
+```
+
+Call the builders as often as you like, for as many plugin ids as you have. Akka.Persistence.Hosting keeps
+one registration list for the actor system. For one plugin id the later call wins, and the event
+adapters you add to a journal pile up across calls, whichever call configures the journal first. An
+adapter is created from a constructor that takes the `ExtendedActorSystem`, or else from a parameterless
+one. When it needs more, pass a factory: `AddWriteEventAdapter("tagger", system => new MyTagger(system), typeof(MyEvent))`.
+
+Core looks a plugin up in this order: what Akka.Persistence.Hosting registered for its plugin id, then the
+plugins Akka.Persistence ships (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`,
+`LocalSnapshotStore`, `NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
+`DiscardConfigurator` stash overflow strategies), then - only if the switch is on - reflection on the
+`class` setting. With the switch off, a plugin that is in none of the first two throws a
+`ConfigurationException` when it starts. The message names the HOCON setting and the switch, and points back
+to Akka.Persistence.Hosting. With the switch on nothing changes for an app that registers nothing.
+
+A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
+`WithJournal` or `WithSnapshot`. See [Registering Your Plugin for Native AOT](xref:custom-persistent-provider)
+if you write one. The Hosting builders that need no plugin package are `WithInMemoryJournal` and `WithInMemorySnapshotStore`.
+`WithReadJournal` registers a read journal provider and its default config, and `WithStashOverflowStrategy`
+takes a custom `IStashOverflowStrategyConfigurator`. The in-memory read journal is for tests and has no
+helper: register it with `WithReadJournal`, as the canary does, or keep using its HOCON on the JIT.
+
+HOCON adapters in a journal section still work on the JIT. With the switch off an adapter has to come from
+`AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. HOCON that only repeats what those methods
+registered is harmless. `WithClusterShardingJournalMigrationAdapter` still names its adapter in HOCON, because
+Akka.Persistence.Hosting cannot reference Akka.Cluster.Sharding and Cluster Sharding is not supported under
+Native AOT yet (see below).
+
 ## Not Supported Yet
 
 * **Akka.Remote with classic DotNetty remoting.** Does not work under Native AOT: transport,
   failure-detector and adapter classes still load from HOCON by `Type.GetType`, so startup fails with
   `Cannot instantiate transport [...TcpTransport,Akka.Remote]`. Artery (`akka.remote.artery.enabled =
   on`, experimental) is the target transport for AOT; no CI canary covers it yet.
-* **Akka.Cluster, Akka.Persistence and the cluster tools.** Their serializers resolve from built-in
-  tables, but other HOCON type names they read still go through `Type.GetType` with no switch guard
-  (`downing-provider-class`, journal/snapshot plugin `class`, event adapters, the DData durable
-  store, a custom sharding state store). Treat them as unsupported under Native AOT for now.
+* **Akka.Cluster and the cluster tools.** Their serializers resolve from built-in tables, but other
+  HOCON type names they read still go through `Type.GetType` with no switch guard
+  (`downing-provider-class`, the DData durable store, a custom sharding state store). Treat them as
+  unsupported under Native AOT for now.
+* **Akka.Streams under Native AOT.** Materializing a stream builds generic types with
+  `MakeGenericType` and `Activator`, which the trimmer cannot see. An app that runs a stream that
+  crosses an island boundary - every query on the in-memory read journal does - has to root those
+  types itself. `src/aot/Akka.Persistence.AOT.App/StreamsRoots.xml` shows how.
 * **Remote deployment.** Akka.Remote's `DaemonMsgCreateSerializer` resolves a remotely deployed
   actor's implementation type from the wire with `Type.GetType(protoProps.Clazz)` in
   `PropsFromProto` - no built-in table, no switch guard. `Props.TypeName` and the `Props` surrogate

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
@@ -20,6 +22,7 @@ public sealed class AkkaPersistenceJournalBuilder
     internal readonly Dictionary<Type, HashSet<string>> Bindings = new Dictionary<Type, HashSet<string>>();
     internal readonly Dictionary<string, Type> Adapters = new Dictionary<string, Type>();
     internal readonly HashSet<AkkaHealthCheckRegistration> HealthCheckRegistrations = [];
+    internal readonly List<EventAdapterDetails> RegisteredAdapters = new();
 
     /// <summary>
     /// The <see cref="JournalOptions"/> instance used to configure this journal.
@@ -76,28 +79,94 @@ public sealed class AkkaPersistenceJournalBuilder
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName,
+    private const DynamicallyAccessedMemberTypes AdapterMembers = DynamicallyAccessedMemberTypes.PublicConstructors;
+
+    /// <summary>
+    /// Adds an event adapter that reads and writes. It is created from a constructor that takes the
+    /// <see cref="ExtendedActorSystem"/>, or else from a parameterless one.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddEventAdapter<[DynamicallyAccessedMembers(AdapterMembers)] TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = boundTypes.ToArray();
+        AddAdapter<TAdapter>(eventAdapterName, types);
+        Register(eventAdapterName, name => EventAdapterDetails.Create(name,
+            (Func<ExtendedActorSystem, IEventAdapter>)(system => Instantiate<TAdapter>(system)), types));
 
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName,
+    /// <summary>
+    /// Adds an event adapter that reads and writes, created by <paramref name="factory"/>.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IEventAdapter
+    {
+        RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IEventAdapter>)(system => factory(system)), boundTypes));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an event adapter that only reads. It is created from a constructor that takes the
+    /// <see cref="ExtendedActorSystem"/>, or else from a parameterless one.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddReadEventAdapter<[DynamicallyAccessedMembers(AdapterMembers)] TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IReadEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = boundTypes.ToArray();
+        AddAdapter<TAdapter>(eventAdapterName, types);
+        Register(eventAdapterName, name => EventAdapterDetails.Create(name,
+            (Func<ExtendedActorSystem, IReadEventAdapter>)(system => Instantiate<TAdapter>(system)), types));
 
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName,
-        IEnumerable<Type> boundTypes) where TAdapter : IWriteEventAdapter
+    /// <summary>
+    /// Adds an event adapter that only reads, created by <paramref name="factory"/>.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IReadEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IReadEventAdapter>)(system => factory(system)), boundTypes));
 
         return this;
+    }
+
+    /// <summary>
+    /// Adds an event adapter that only writes. It is created from a constructor that takes the
+    /// <see cref="ExtendedActorSystem"/>, or else from a parameterless one.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<[DynamicallyAccessedMembers(AdapterMembers)] TAdapter>(string eventAdapterName,
+        IEnumerable<Type> boundTypes) where TAdapter : IWriteEventAdapter
+    {
+        var types = boundTypes.ToArray();
+        AddAdapter<TAdapter>(eventAdapterName, types);
+        Register(eventAdapterName, name => EventAdapterDetails.Create(name,
+            (Func<ExtendedActorSystem, IWriteEventAdapter>)(system => Instantiate<TAdapter>(system)), types));
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an event adapter that only writes, created by <paramref name="factory"/>.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName,
+        Func<ExtendedActorSystem, TAdapter> factory, params Type[] boundTypes) where TAdapter : IWriteEventAdapter
+    {
+        RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+            (Func<ExtendedActorSystem, IWriteEventAdapter>)(system => factory(system)), boundTypes));
+
+        return this;
+    }
+
+    // the code registration is a second copy of what the HOCON says, so it never makes a call fail that worked before
+    private void Register(string eventAdapterName, Func<string, EventAdapterDetails> create)
+    {
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            RegisteredAdapters.Add(create(eventAdapterName));
     }
 
     private void AddAdapter<TAdapter>(string eventAdapterName, IEnumerable<Type> boundTypes)
@@ -109,6 +178,15 @@ public sealed class AkkaPersistenceJournalBuilder
                 Bindings[t] = new HashSet<string>();
             Bindings[t].Add(eventAdapterName);
         }
+    }
+
+    // the same constructors the reflection path tries: (ExtendedActorSystem) first, then none
+    private static TAdapter Instantiate<[DynamicallyAccessedMembers(AdapterMembers)] TAdapter>(ExtendedActorSystem system)
+    {
+        var withSystem = typeof(TAdapter).GetConstructor(new[] { typeof(ExtendedActorSystem) });
+        return withSystem is not null
+            ? (TAdapter)withSystem.Invoke(new object[] { system })
+            : Activator.CreateInstance<TAdapter>();
     }
 
     private AkkaHealthCheckRegistration AddDefaultHealthCheck(string? name, HealthStatus unHealthyStatus, IEnumerable<string>? tags)
@@ -131,6 +209,13 @@ public sealed class AkkaPersistenceJournalBuilder
         // add the health checks if specified - do this FIRST before any early returns
         foreach(var hc in HealthCheckRegistrations)
             Builder.WithHealthCheck(hc);
+
+        // the adapters in code, for when Akka.DynamicTypeLoading is off. The HOCON below stays as it always was.
+        if (RegisteredAdapters.Count > 0)
+        {
+            var pluginId = Options?.PluginId ?? $"akka.persistence.journal.{JournalId}";
+            Builder.AddPersistenceRegistrations(setup => setup.WithEventAdapters(pluginId, RegisteredAdapters));
+        }
 
         // useless configuration - don't bother.
         if (Adapters.Count == 0 || Bindings.Count == 0)
