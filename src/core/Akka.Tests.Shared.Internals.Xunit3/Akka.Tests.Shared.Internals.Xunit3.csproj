@@ -4,6 +4,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- Verify looks for the solution only 2 folders up, and warns when this project builds on its own. Point it at the repo root. -->
+  <PropertyGroup Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">
+    <SolutionDir>$(MSBuildThisFileDirectory)..\..\..\</SolutionDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
@@ -13,6 +18,7 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Verify.XunitV3" Version="$(VerifyXunitV3Version)" />
   </ItemGroup>
 
 </Project>

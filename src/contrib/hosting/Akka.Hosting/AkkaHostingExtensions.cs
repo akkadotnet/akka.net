@@ -221,8 +221,7 @@ namespace Akka.Hosting
         }
 
         /// <summary>
-        /// Turns the Serialization V2 switch on or off by adding a <see cref="SerializationV2Setup"/>, which wins over
-        /// <c>akka.actor.serialization-v2</c> in HOCON. When on, each built-in serializer that has a V2 version takes
+        /// Turns the Serialization V2 switch (<c>akka.actor.serialization-v2</c>) on or off. When on, each built-in serializer that has a V2 version takes
         /// over the bindings of the legacy serializer it replaces; the legacy serializers stay registered for reads.
         /// <para>
         /// Turn it on only once every node runs a version of Akka.NET that can read the V2 formats. A binding you
@@ -234,9 +233,9 @@ namespace Akka.Hosting
         /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
         public static AkkaConfigurationBuilder WithSerializationV2(this AkkaConfigurationBuilder builder, bool enabled = true)
         {
-            // one switch per system: a later call replaces an earlier one instead of racing it in the set
-            builder.Setups.RemoveWhere(s => s is SerializationV2Setup);
-            return builder.AddSetup(SerializationV2Setup.Create(enabled));
+            // Prepend, like the other single-key extensions: wins over the reference config and earlier HOCON,
+            // and a later call wins over an earlier one
+            return AddHocon(builder, $"akka.actor.serialization-v2 = {(enabled ? "on" : "off")}", HoconAddMode.Prepend);
         }
         
         /// <summary>

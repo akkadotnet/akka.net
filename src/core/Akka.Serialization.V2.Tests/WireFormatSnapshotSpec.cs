@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.TestKit;
 using VerifyXunit;
 using Xunit;
 

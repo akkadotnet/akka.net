@@ -1179,7 +1179,19 @@ public sealed partial class AkkaSerializerGenerator
         // carries the arity suffix, so this guard still matters even though the key is no longer a
         // bare arity-less string. Generic field types keep a default (empty) key, can never match a
         // formatter, and still fail with AKKASG003.
-        var mapping = MapTypeCore(type, knownTypes);
+        return WithFallbackKey(MapTypeCore(type, knownTypes), type);
+    }
+
+    /// <summary>
+    /// Stamps a keyless mapping with the type's own <see cref="TypeKey"/> when the type is a plain,
+    /// non-generic named type, so a formatter registered for it can match (the formatter dictionary is
+    /// keyed by <see cref="TypeKey"/>). Shared by FIELD position (<see cref="MapType"/>) and collection
+    /// ELEMENT/KEY/VALUE position (<see cref="MapCollectionElement"/>), which is what makes formatter
+    /// resolution position-independent. A mapping that already names its type (Object, Enum, ...) keeps
+    /// the key it has; a generic or array type stays keyless and can never match a formatter.
+    /// </summary>
+    private static TypeMapping WithFallbackKey(TypeMapping mapping, ITypeSymbol type)
+    {
         if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol { IsGenericType: false } namedType)
             return mapping.WithKey(TypeKey.FromSymbol(namedType));
 
@@ -1273,12 +1285,14 @@ public sealed partial class AkkaSerializerGenerator
     /// and <see cref="TryMatchKeyValueKind"/> against the field's OWN declared generic type definition (not
     /// an "is-assignable" relationship, so e.g. a field declared <c>IReadOnlyList&lt;T&gt;</c> never matches
     /// the <c>IReadOnlyCollection&lt;T&gt;</c> shape even though the former extends the latter).
-    /// A collection whose element/key/value is itself unsupported collapses to
-    /// <see cref="FieldKind.Unsupported"/> so AKKASG003 fires with the full field type -- except an
-    /// enum element with an unsupported underlying type, which propagates as
-    /// <see cref="FieldKind.UnsupportedEnumUnderlyingType"/> so AKKASG014 fires naming the enum. An
+    /// A collection keeps its structure even when an element/key/value is not natively representable
+    /// (<see cref="FieldKind.Unsupported"/>, <see cref="FieldKind.MissingSerializableDefinition"/>, or an
+    /// enum with an unsupported underlying type): whether a registered formatter can serve that position
+    /// is only known later, once the serializer's formatters are in hand (<see cref="ResolveMessages"/>).
+    /// Validation then reports whatever is still unusable -- AKKASG003 with the full field type, or
+    /// AKKASG014 naming the enum -- see <see cref="FindUnusableLeaf"/>. An
     /// element/value typed <c>object</c> maps to <see cref="FieldKind.EnvelopePayload"/> instead (see
-    /// <see cref="MapCollectionElement"/>); a dictionary KEY typed <c>object</c> also collapses to
+    /// <see cref="MapCollectionElement"/>); a dictionary KEY typed <c>object</c> maps to
     /// <see cref="FieldKind.Unsupported"/>.
     /// <c>byte[]</c> is never seen here (it is intercepted earlier as <see cref="FieldKind.ByteArray"/>).
     /// </summary>
@@ -1289,9 +1303,7 @@ public sealed partial class AkkaSerializerGenerator
         if (type is IArrayTypeSymbol { Rank: 1 } arrayType && arrayType.ElementType.SpecialType != SpecialType.System_Byte)
         {
             var element = MapCollectionElement(arrayType.ElementType, knownTypes);
-            mapping = TryCollapseBadElement(element, out var collapsed)
-                ? collapsed
-                : new TypeMapping(FieldKind.Array, typeArguments: ImmutableArray.Create(element));
+            mapping = new TypeMapping(FieldKind.Array, typeArguments: ImmutableArray.Create(element));
             return true;
         }
 
@@ -1391,45 +1403,14 @@ public sealed partial class AkkaSerializerGenerator
     private static TypeMapping MapSingleArgumentCollection(FieldKind kind, INamedTypeSymbol namedType, KnownTypes knownTypes)
     {
         var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
-        return TryCollapseBadElement(element, out var collapsed)
-            ? collapsed
-            : new TypeMapping(kind, typeArguments: ImmutableArray.Create(element));
+        return new TypeMapping(kind, typeArguments: ImmutableArray.Create(element));
     }
 
     private static TypeMapping MapKeyValueCollection(FieldKind kind, INamedTypeSymbol namedType, KnownTypes knownTypes)
     {
         var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes, isKeyPosition: true);
         var value = MapCollectionElement(namedType.TypeArguments[1], knownTypes);
-        return TryCollapseBadElement(key, out var collapsedKey) ? collapsedKey
-            : TryCollapseBadElement(value, out var collapsedValue) ? collapsedValue
-            : new TypeMapping(kind, typeArguments: ImmutableArray.Create(key, value));
-    }
-
-    /// <summary>
-    /// Collapses a bad collection element/key/value mapping into the mapping the containing field
-    /// should carry. An enum with an unsupported underlying type keeps its identity (enum name plus
-    /// backing type) so AKKASG014 can name it even through arbitrarily deep nesting; every other bad
-    /// element collapses to plain <see cref="FieldKind.Unsupported"/> for AKKASG003.
-    /// </summary>
-    private static bool TryCollapseBadElement(TypeMapping element, out TypeMapping collapsed)
-    {
-        if (element.Kind == FieldKind.UnsupportedEnumUnderlyingType)
-        {
-            collapsed = new TypeMapping(
-                FieldKind.UnsupportedEnumUnderlyingType,
-                element.Key,
-                enumUnderlyingTypeName: element.EnumUnderlyingTypeName);
-            return true;
-        }
-
-        if (element.Kind is FieldKind.Unsupported or FieldKind.MissingSerializableDefinition)
-        {
-            collapsed = new TypeMapping(FieldKind.Unsupported);
-            return true;
-        }
-
-        collapsed = default;
-        return false;
+        return new TypeMapping(kind, typeArguments: ImmutableArray.Create(key, value));
     }
 
     /// <summary>
@@ -1456,7 +1437,7 @@ public sealed partial class AkkaSerializerGenerator
         var declaredTypeName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         if (TryGetNullableValueType(type, out var underlyingType))
-            return MapTypeCore(underlyingType, knownTypes).AsCollectionElement(declaredTypeName, isNullable: true);
+            return WithFallbackKey(MapTypeCore(underlyingType, knownTypes), underlyingType).AsCollectionElement(declaredTypeName, isNullable: true);
 
         var isNullable = type.IsReferenceType && type.NullableAnnotation == NullableAnnotation.Annotated;
 
@@ -1465,8 +1446,8 @@ public sealed partial class AkkaSerializerGenerator
         // type alone carries that meaning, with no attribute involved, at every position a supported
         // collection can hold it: an array/list element, a set member, or a dictionary value.
         //
-        // A dictionary KEY typed `object` is rejected instead (AKKASG003, via the same Unsupported
-        // collapse every other bad element/key/value already uses -- see TryCollapseBadElement):
+        // A dictionary KEY typed `object` is rejected instead (AKKASG003: the key stays a plain
+        // Unsupported mapping, which FindUnusableLeaf reports for the whole field):
         // Dictionary&lt;TKey,TValue&gt; throws on a null key at runtime, so a nullable `object?` key
         // would crash the first time an envelope legitimately decodes to null; and even a non-null
         // envelope payload has no stable identity across a round trip (ReadEnvelopePayload always
@@ -1479,7 +1460,7 @@ public sealed partial class AkkaSerializerGenerator
                 : new TypeMapping(FieldKind.EnvelopePayload).AsCollectionElement(declaredTypeName, isNullable);
         }
 
-        return MapTypeCore(type, knownTypes).AsCollectionElement(declaredTypeName, isNullable);
+        return WithFallbackKey(MapTypeCore(type, knownTypes), type).AsCollectionElement(declaredTypeName, isNullable);
     }
 
     private static bool IsNullableValueType(ITypeSymbol type)
