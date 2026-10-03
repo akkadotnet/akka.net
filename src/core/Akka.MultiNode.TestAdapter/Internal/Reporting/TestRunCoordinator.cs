@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 
@@ -17,7 +16,7 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
     /// <summary>
     /// Actor responsible for organizing all of the data for each test run
     /// </summary>
-    internal class TestRunCoordinator : ReceiveActor
+    internal class TestRunCoordinator : ReceiveActor, IWithUnboundedStash
     {
         #region Internal message classes
 
@@ -49,7 +48,7 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
                 Subscriber = subscriber;
             }
 
-                
+
             public IActorRef Subscriber { get; private set; }
         }
 
@@ -65,7 +64,7 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
             TestRunStarted = testRunStarted;
             TestRunData = new TestRunTree(testRunStarted.Ticks);
             Subscribers = new List<IActorRef>();
-            SetReceive();
+            Ready();
         }
 
         #region Internal fields and Properties
@@ -73,6 +72,14 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
         protected readonly DateTime TestRunStarted;
 
         protected IActorRef _currentSpecRunActor;
+
+        /// <summary>
+        /// Non-null while an <see cref="EndTestRun"/> is waiting for the in-flight spec to finish
+        /// before the whole run is completed and the reply returned.
+        /// </summary>
+        private IActorRef _testRunRequester;
+
+        public IStash Stash { get; set; }
 
         /// <summary>
         /// Automatically set when <see cref="EndTestRun"/> is sent to this actor.
@@ -104,7 +111,10 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
 
         #region Message-handling
 
-        private void SetReceive()
+        /// <summary>
+        /// Default ("ready") behavior: route node messages, begin/end specs, and answer state requests.
+        /// </summary>
+        private void Ready()
         {
             Receive<MultiNodeMessage>(message =>
             {
@@ -112,27 +122,95 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
                 _currentSpecRunActor.Forward(message);
             });
             Receive<BeginNewSpec>(ReceiveBeginSpecRun);
-            ReceiveAsync<EndSpec>(spec => _currentSpecRunActor != null ? ReceiveEndSpecRun(spec) : Task.CompletedTask);
+            Receive<EndSpec>(spec =>
+            {
+                //nothing to end; ignore (matches the previous no-op guard)
+                if (_currentSpecRunActor == null) return;
+                BeginEndSpecRun();
+            });
+            Receive<EndTestRun>(run =>
+            {
+                //clean up the current spec, if it hasn't been done already, then complete the run
+                if (_currentSpecRunActor != null)
+                {
+                    _testRunRequester = Sender;
+                    BeginEndSpecRun();
+                }
+                else
+                {
+                    CompleteTestRun(Sender);
+                }
+            });
             Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
             Receive<SubscribeFactCompletionMessages>(AddSubscriber);
             Receive<UnsubscribeFactCompletionMessages>(RemoveSubscriber);
-            ReceiveAsync<EndTestRun>(async run =>
+            // A watched SpecRunCoordinator that stopped after already reporting its FactData: harmless here.
+            Receive<Terminated>(_ => { });
+        }
+
+        /// <summary>
+        /// Ask the in-flight <see cref="SpecRunCoordinator"/> to finish by <see cref="ActorRefImplicitSenderExtensions.Tell"/>-ing
+        /// it <see cref="EndSpec"/> and awaiting its <see cref="FactData"/> reply as a message — no Ask timeout to race
+        /// under load. While waiting we stash every other message so the previous await-sequential ordering is preserved,
+        /// and DeathWatch guards against the coordinator dying without replying (which would otherwise hang the run).
+        /// </summary>
+        private void BeginEndSpecRun()
+        {
+            Context.Watch(_currentSpecRunActor);
+            _currentSpecRunActor.Tell(new EndSpec()); // sender = Self; SpecRunCoordinator replies to us with FactData
+            Become(AwaitingSpecCompletion);
+        }
+
+        private void AwaitingSpecCompletion()
+        {
+            Receive<FactData>(factData => OnSpecCompleted(factData));
+            Receive<Terminated>(terminated =>
             {
-                //clean up the current spec, if it hasn't been done already
-                if (_currentSpecRunActor != null)
-                {
-                    await ReceiveEndSpecRun(new EndSpec());
-                }
-
-                //Mark the test run as finished
-                TestRunData.Complete();
-
-                //Deliver the final copy of the TestRunData
-                Sender.Tell(TestRunData.Copy());
-
-                //shutdown
-                Context.Stop(Self);
+                //the spec coordinator stopped before replying — complete the spec with no data rather than hang the run
+                if (Equals(terminated.ActorRef, _currentSpecRunActor))
+                    OnSpecCompleted(null);
             });
+            //defer everything else until the in-flight spec has reported
+            ReceiveAny(_ => Stash.Stash());
+        }
+
+        private void OnSpecCompleted(FactData factData)
+        {
+            if (factData != null)
+            {
+                TestRunData.AddSpec(factData);
+
+                //Publish the FactData back to any subscribers who wanted it
+                foreach (var subscriber in Subscribers)
+                    subscriber.Tell(factData);
+            }
+
+            //Ready to begin the next spec
+            _currentSpecRunActor = null;
+            Become(Ready);
+
+            if (_testRunRequester != null)
+            {
+                var requester = _testRunRequester;
+                _testRunRequester = null;
+                CompleteTestRun(requester);
+            }
+            else
+            {
+                Stash.UnstashAll();
+            }
+        }
+
+        private void CompleteTestRun(IActorRef requester)
+        {
+            //Mark the test run as finished
+            TestRunData.Complete();
+
+            //Deliver the final copy of the TestRunData
+            requester.Tell(TestRunData.Copy());
+
+            //shutdown
+            Context.Stop(Self);
         }
 
         private void RemoveSubscriber(UnsubscribeFactCompletionMessages unsubscribe)
@@ -155,23 +233,6 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
                     Props.Create(() => new SpecRunCoordinator(spec.ClassName, spec.MethodName, spec.Nodes)));
         }
 
-        private async Task ReceiveEndSpecRun(EndSpec spec)
-        {
-            //Should receive a FactData in return
-            var factData = await _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
-
-            TestRunData.AddSpec(factData);
-
-            //Publish the FactData back to any subscribers who wanted it
-            foreach (var subscriber in Subscribers)
-            {
-                subscriber.Tell(factData);
-            }
-
-            //Ready to begin the next spec
-            _currentSpecRunActor = null;
-        }
-
         private static bool TestRunPassed(TestRunTree tree)
         {
             return tree.Specs.All(x => x.Passed.HasValue && x.Passed.Value);
@@ -180,4 +241,3 @@ namespace Akka.MultiNode.TestAdapter.Internal.Reporting
         #endregion
     }
 }
-
