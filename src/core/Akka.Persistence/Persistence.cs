@@ -108,9 +108,11 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
 
-                // lookup order, written out at the site on purpose (see AkkaFeatures): registration, then reflection when it is
-                // on as it always was, or built-in and the guard when it is off
-                if (_registry.StashOverflowConfigurator is { } registered)
+                // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, an explicit HOCON
+                // setting decides as it always did, and a registration fills in when HOCON says nothing or still holds the
+                // shipped default. With reflection off: registration, built-in, guard.
+                if (_registry.StashOverflowConfigurator is { } registered
+                    && (!AkkaFeatures.IsDynamicTypeLoadingSupported || IsDefaultStashOverflowSetting(configuratorTypeName)))
                     return registered.Create(_system.Settings.Config);
 
                 if (AkkaFeatures.IsDynamicTypeLoadingSupported)
@@ -394,6 +396,11 @@ namespace Akka.Persistence
             object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
             return new Props(pluginType, pluginActorArgs);
         }
+
+        // the setting persistence.conf ships; an app that never wrote one has not chosen a configurator
+        private static bool IsDefaultStashOverflowSetting(string configuratorTypeName)
+            => string.IsNullOrEmpty(configuratorTypeName)
+               || configuratorTypeName == Persistence.DefaultConfig().GetString("akka.persistence.internal-stash-overflow-strategy", null);
 
         [RequiresUnreferencedCode("Loads a stash overflow configurator named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         private static IStashOverflowStrategyConfigurator CreateStashOverflowConfiguratorByReflection(string configuratorTypeName)

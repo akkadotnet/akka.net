@@ -29,9 +29,8 @@ public sealed record SaveNow;
 public sealed record CanaryState(string[] Values, long SnapshotSequenceNr);
 
 /// <summary>
-/// Wraps every <see cref="CanaryEvent"/> in <see cref="Tagged"/>. Added through
-/// <c>AkkaPersistenceJournalBuilder.AddWriteEventAdapter</c>, which is what lets core build it with
-/// <c>Akka.DynamicTypeLoading</c> off.
+/// Wraps every <see cref="CanaryEvent"/> in <see cref="Tagged"/>. Added through the factory overload of
+/// <c>AkkaPersistenceJournalBuilder.AddWriteEventAdapter</c>, which builds it without reflection.
 /// </summary>
 public sealed class CanaryTagger : IWriteEventAdapter
 {

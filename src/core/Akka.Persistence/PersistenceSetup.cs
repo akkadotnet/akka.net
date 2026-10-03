@@ -31,8 +31,7 @@ namespace Akka.Persistence
     /// </para>
     /// <para>
     /// Like any <see cref="Setup"/>, only one instance counts per <see cref="ActorSystemSetup"/>, so
-    /// Akka.Persistence.Hosting keeps a single one and replaces it with <see cref="Merge"/> or <c>With...</c>
-    /// results as calls come in.
+    /// Akka.Persistence.Hosting keeps a single one and replaces it with the <c>With...</c> result as calls come in.
     /// </para>
     /// </summary>
     internal sealed class PersistenceSetup : Setup
@@ -116,18 +115,6 @@ namespace Akka.Persistence
 
             return new PersistenceSetup(Registrations, configurator);
         }
-
-        /// <summary>
-        /// Returns a setup that holds the registrations of this one followed by those of <paramref name="other"/>.
-        /// A stash overflow configurator in <paramref name="other"/> wins.
-        /// </summary>
-        public PersistenceSetup Merge(PersistenceSetup other)
-        {
-            if (other is null)
-                throw new ArgumentNullException(nameof(other));
-
-            return new PersistenceSetup(Registrations.AddRange(other.Registrations), other.StashOverflowConfigurator ?? StashOverflowConfigurator);
-        }
     }
 
     /// <summary>
@@ -163,9 +150,8 @@ namespace Akka.Persistence
     /// INTERNAL API
     ///
     /// A persistence plugin registered in code: its plugin id and the config that sits under its HOCON section.
-    /// Two records are equal when their <see cref="PluginId"/> is.
     /// </summary>
-    internal abstract class PersistencePluginDetails : IEquatable<PersistencePluginDetails>
+    internal abstract class PersistencePluginDetails
     {
         protected PersistencePluginDetails(string pluginId, Config? defaultConfig)
         {
@@ -185,13 +171,6 @@ namespace Akka.Persistence
         /// Config merged under the plugin's HOCON section: HOCON wins, this fills the gaps.
         /// </summary>
         public Config? DefaultConfig { get; }
-
-        public bool Equals(PersistencePluginDetails? other)
-            => other is not null && string.Equals(PluginId, other.PluginId, StringComparison.Ordinal);
-
-        public override bool Equals(object? obj) => Equals(obj as PersistencePluginDetails);
-
-        public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(PluginId);
     }
 
     /// <summary>

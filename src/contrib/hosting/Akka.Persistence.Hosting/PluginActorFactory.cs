@@ -19,7 +19,7 @@ namespace Akka.Persistence.Hosting
     /// </summary>
     /// <example>
     /// <code>
-    /// protected override PluginActorFactory? Factory
+    /// protected override PluginActorFactory? CreatePluginActorFactory()
     ///     => PluginActorFactory.For(config => new MyJournal(config));
     /// </code>
     /// </example>

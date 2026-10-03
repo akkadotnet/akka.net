@@ -15,7 +15,7 @@ namespace Akka.Persistence.Query
     /// <summary>
     /// A read journal registered in code. <see cref="PersistenceQuery"/> uses it for the plugin at
     /// <see cref="PersistencePluginDetails.PluginId"/> without a HOCON <c>class</c> setting and without reflection.
-    /// Add one to a <see cref="PersistenceSetup"/> with <see cref="PersistenceSetupExtensions.WithReadJournal{TProvider}"/>.
+    /// Akka.Persistence.Hosting adds one to a <see cref="PersistenceSetup"/> with <see cref="PersistenceSetup.WithPlugin"/>.
     /// </summary>
     internal sealed class ReadJournalDetails : PersistencePluginDetails
     {
@@ -47,32 +47,5 @@ namespace Akka.Persistence.Query
         }
 
         internal IReadJournalProvider CreateProvider(ExtendedActorSystem system, Config config) => _createProvider(system, config);
-    }
-
-    /// <summary>
-    /// Adds read journals to a <see cref="PersistenceSetup"/>.
-    /// </summary>
-    internal static class PersistenceSetupExtensions
-    {
-        /// <summary>
-        /// Registers a read journal provider for the plugin at <paramref name="pluginId"/>.
-        /// </summary>
-        /// <typeparam name="TProvider">The provider type.</typeparam>
-        /// <param name="setup">The setup to add to.</param>
-        /// <param name="pluginId">The plugin's config path, for example <c>akka.persistence.query.journal.my-journal</c>.</param>
-        /// <param name="factory">Called with the actor system and the plugin's config section.</param>
-        /// <param name="defaultConfig">Config that sits under the plugin's section, so the app need not repeat it in HOCON.</param>
-        /// <returns>A new setup that also holds this read journal.</returns>
-        public static PersistenceSetup WithReadJournal<TProvider>(
-            this PersistenceSetup setup,
-            string pluginId,
-            Func<ExtendedActorSystem, Config, TProvider> factory,
-            Config? defaultConfig = null) where TProvider : class, IReadJournalProvider
-        {
-            if (setup is null)
-                throw new ArgumentNullException(nameof(setup));
-
-            return setup.WithPlugin(ReadJournalDetails.Create(pluginId, factory, defaultConfig));
-        }
     }
 }

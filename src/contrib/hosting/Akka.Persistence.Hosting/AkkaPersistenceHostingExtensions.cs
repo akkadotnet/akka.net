@@ -321,6 +321,8 @@ namespace Akka.Persistence.Hosting
             this AkkaConfigurationBuilder builder,
             IStashOverflowStrategyConfigurator configurator)
         {
+            if (builder is null)
+                throw new ArgumentNullException(nameof(builder));
             if (configurator is null)
                 throw new ArgumentNullException(nameof(configurator));
 

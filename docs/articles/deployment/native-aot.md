@@ -144,7 +144,7 @@ does not change between the JIT and Native AOT.
 ```csharp
 services.AddAkka("app", builder => builder
     .WithJournalAndSnapshot(new MyJournalOptions(), new MySnapshotOptions(),
-        configureJournal: journal => journal.AddWriteEventAdapter<MyTagger>("tagger", new[] { typeof(MyEvent) }),
+        configureJournal: journal => journal.AddWriteEventAdapter("tagger", _ => new MyTagger(), typeof(MyEvent)),
         configureSnapshot: null)
     .WithInMemoryJournal(_ => { }, journalId: "scratch", isDefaultPlugin: false)
     .WithReadJournal("akka.persistence.query.journal.my-journal",
@@ -154,17 +154,28 @@ services.AddAkka("app", builder => builder
 
 Call the builders as often as you like, for as many plugin ids as you have. Akka.Persistence.Hosting keeps
 one registration list for the actor system. For one plugin id the later call wins, and the event
-adapters you add to a journal pile up across calls, whichever call configures the journal first. An
-adapter is created from a constructor that takes the `ExtendedActorSystem`, or else from a parameterless
-one. When it needs more, pass a factory: `AddWriteEventAdapter("tagger", system => new MyTagger(system), typeof(MyEvent))`.
+adapters you add to a journal pile up across calls, whichever call configures the journal first.
 
-Core looks a plugin up in this order: what Akka.Persistence.Hosting registered for its plugin id, then the
-plugins Akka.Persistence ships (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`,
-`LocalSnapshotStore`, `NoSnapshotStore`, `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and
-`DiscardConfigurator` stash overflow strategies), then - only if the switch is on - reflection on the
-`class` setting. With the switch off, a plugin that is in none of the first two throws a
-`ConfigurationException` when it starts. The message names the HOCON setting and the switch, and points back
-to Akka.Persistence.Hosting. With the switch on nothing changes for an app that registers nothing.
+For Native AOT add event adapters with the overloads that take a factory, as above. The overloads that take
+only the adapter type keep working as they always did, and they build the adapter through the HOCON type
+name with `Activator.CreateInstance`, which the trimmer cannot follow. With the switch off core builds such
+an adapter with the same call, so it works in a normal app and can fail in a trimmed one.
+
+The order in which core looks a plugin up depends on the switch.
+
+* **Switch on (the default).** HOCON decides, as it always did. For journals, snapshot stores and read
+  journals, the `class` setting names the type, and Akka.Persistence.Hosting's registration is used only when
+  HOCON has no `class` for that plugin id. For a read journal "HOCON" includes the `DefaultConfiguration` of the
+  journal type, which is still found by reflection. An adapter that HOCON names is built from HOCON, and a
+  registered adapter is added only when HOCON does not name it. The stash overflow strategy follows the same
+  rule: an explicit HOCON setting wins, and a configurator from `WithStashOverflowStrategy` replaces the
+  default that `persistence.conf` ships.
+* **Switch off.** The registration for the plugin id comes first, then the plugins Akka.Persistence ships
+  (`MemoryJournal`, `SharedMemoryJournal`, `MemorySnapshotStore`, `LocalSnapshotStore`, `NoSnapshotStore`,
+  `PersistencePluginProxy`, and the `ThrowExceptionConfigurator` and `DiscardConfigurator` stash overflow
+  strategies). A plugin that is in neither throws a `ConfigurationException` when it starts. The message
+  names the HOCON setting and the switch, and points to Akka.Persistence.Hosting (`WithJournal` or
+  `WithSnapshot` with options that supply a factory).
 
 A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
 `WithJournal` or `WithSnapshot`. See [Registering Your Plugin for Native AOT](xref:custom-persistent-provider)

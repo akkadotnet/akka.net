@@ -55,10 +55,10 @@ namespace Akka.Persistence.Query
                 if (_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out plugin))
                     return plugin;
                 
-                // a registered read journal brings its own default config; otherwise it is found by reflection on
-                // the journal type, which a trimmed app cannot do
+                // with reflection on, the default config is found by reflection on the journal type as it always was,
+                // which a trimmed app cannot do; with it off a registered read journal brings its own
                 Config defaultConfig = null;
-                if (!_registry.TryGet<ReadJournalDetails>(readJournalPluginId, out _) && AkkaFeatures.IsDynamicTypeLoadingSupported)
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                     defaultConfig = GetDefaultConfigByReflection(readJournalType);
 
                 plugin = CreatePlugin(readJournalPluginId, defaultConfig).GetReadJournal();
@@ -69,33 +69,48 @@ namespace Akka.Persistence.Query
 
         private IReadJournalProvider CreatePlugin(string configPath, Config config)
         {
-            // lookup order, written out at the site on purpose (see AkkaFeatures): registration (by plugin id), built-in (none), guard, reflection
-            if (_registry.TryGet<ReadJournalDetails>(configPath, out var registered))
-            {
-                // HOCON first, then the registration's default config. A registered read journal needs no `class` setting.
-                var section = _system.Settings.Config.HasPath(configPath) ? _system.Settings.Config.GetConfig(configPath) : Config.Empty;
-                if (registered.DefaultConfig is { } defaultConfig)
-                    section = section.WithFallback(defaultConfig);
+            // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, HOCON `class` decides
+            // as it always did, and a registration only fills in when there is no `class`. With reflection off:
+            // registration (by plugin id), then the guard. There is no built-in read journal.
+            _registry.TryGet<ReadJournalDetails>(configPath, out var registered);
 
-                return registered.CreateProvider(_system, section);
+            if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+            {
+                if (config != null)
+                    _system.Settings.InjectTopLevelFallback(config);
+
+                var hasSection = !string.IsNullOrEmpty(configPath) && _system.Settings.Config.HasPath(configPath);
+                var className = hasSection ? _system.Settings.Config.GetConfig(configPath).GetString("class", null) : null;
+                if (registered is not null && string.IsNullOrEmpty(className))
+                    return CreateRegistered(registered, configPath);
+
+                if (!hasSection)
+                    throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
+
+                return CreatePluginByReflection(className, _system.Settings.Config.GetConfig(configPath));
             }
 
-            if (config != null)
-                _system.Settings.InjectTopLevelFallback(config);
+            if (registered is not null)
+                return CreateRegistered(registered, configPath);
 
-            if (string.IsNullOrEmpty(configPath) || !_system.Settings.Config.HasPath(configPath))
-                throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
+            var pluginConfig = !string.IsNullOrEmpty(configPath) && _system.Settings.Config.HasPath(configPath)
+                ? _system.Settings.Config.GetConfig(configPath)
+                : throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
 
-            var pluginConfig = _system.Settings.Config.GetConfig(configPath);
-            var pluginTypeName = pluginConfig.GetString("class", null);
+            throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                $"{configPath}.class",
+                pluginConfig.GetString("class", null),
+                "a read journal registered through Akka.Persistence.Hosting (WithReadJournal)"));
+        }
 
-            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                    $"{configPath}.class",
-                    pluginTypeName,
-                    "a read journal registered through Akka.Persistence.Hosting (WithReadJournal)"));
+        private IReadJournalProvider CreateRegistered(ReadJournalDetails registered, string configPath)
+        {
+            // HOCON first, then the registration's default config
+            var section = _system.Settings.Config.HasPath(configPath) ? _system.Settings.Config.GetConfig(configPath) : Config.Empty;
+            if (registered.DefaultConfig is { } defaultConfig)
+                section = section.WithFallback(defaultConfig);
 
-            return CreatePluginByReflection(pluginTypeName, pluginConfig);
+            return registered.CreateProvider(_system, section);
         }
 
         [RequiresUnreferencedCode("Loads a read journal provider type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]

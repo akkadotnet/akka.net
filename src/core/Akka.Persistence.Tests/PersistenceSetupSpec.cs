@@ -226,23 +226,6 @@ namespace Akka.Persistence.Tests
             registry.EventAdaptersFor("akka.persistence.journal.unknown").Should().BeEmpty();
         }
 
-        [Fact(DisplayName = "PersistenceSetup should keep the registrations of both sides in order When merging")]
-        public void Should_keep_the_registrations_of_both_sides_in_order_When_merging()
-        {
-            var first = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal());
-            var second = PersistenceSetup.Create()
-                .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore())
-                .WithStashOverflowStrategy(new CustomStashConfigurator());
-
-            var merged = first.Merge(second);
-
-            // With... returns a new setup and leaves the old one as it was
-            first.Registrations.Should().HaveCount(1);
-            merged.Registrations.Select(r => r.Plugin!.PluginId).Should().Equal(JournalPath, SnapshotPath);
-            merged.StashOverflowConfigurator.Should().BeSameAs(second.StashOverflowConfigurator);
-            first.Merge(PersistenceSetup.Create()).StashOverflowConfigurator.Should().BeNull();
-        }
-
         [Fact(DisplayName = "PersistenceSetup should add event adapters to a built-in journal When the switch is off")]
         public async Task Should_add_event_adapters_to_a_builtin_journal_When_the_switch_is_off()
         {
@@ -525,18 +508,19 @@ namespace Akka.Persistence.Tests
             });
         }
 
+        private const string NotBuiltIn = " is not built in and dynamic type loading is disabled. Use ";
+        private const string SwitchText = " or enable the [Akka.DynamicTypeLoading] feature switch.";
+
+        private static string AdapterNamedInHocon() => $$"""
+            {{JournalPath}}.event-adapters.tagger = "{{typeof(TagAdapter).FullName}}, {{TestAssembly}}"
+            """;
+
         [Fact(DisplayName = "PersistenceSetup should throw naming the event adapter setting When HOCON names an adapter nothing registers and the switch is off")]
         public async Task Should_throw_naming_event_adapter_setting_When_hocon_names_an_adapter_nothing_registers_and_switch_is_off()
         {
-            const string notBuiltIn = " is not built in and dynamic type loading is disabled. Use ";
-            const string switchText = " or enable the [Akka.DynamicTypeLoading] feature switch.";
             var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal());
 
-            // an adapter in HOCON that no EventAdapterDetails covers
-            var adapterHocon = $$"""
-                {{JournalPath}}.event-adapters.tagger = "{{typeof(TagAdapter).FullName}}, {{TestAssembly}}"
-                """;
-            await RunAsync(false, adapterHocon, setup, system =>
+            await RunAsync(false, AdapterNamedInHocon(), setup, system =>
             {
                 // through the journal: the setting is named with the plugin path in front
                 var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
@@ -544,27 +528,40 @@ namespace Akka.Persistence.Tests
                 exception.Message.Should().Contain($"{JournalPath}.event-adapters.tagger");
                 exception.Message.Should().Contain("Akka.DynamicTypeLoading");
                 exception.Message.Should().Contain("Akka.Persistence.Hosting");
+                return Task.CompletedTask;
+            });
+        }
 
-                // through the public overload, which does not know the plugin path: the setting starts at event-adapters
+        [Fact(DisplayName = "EventAdapters.Create should name the setting without a plugin path When HOCON names an adapter nothing registers and the switch is off")]
+        public async Task Should_name_the_setting_without_a_plugin_path_When_hocon_names_an_adapter_nothing_registers_and_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal());
+
+            await RunAsync(false, AdapterNamedInHocon(), setup, system =>
+            {
+                // the public overload does not know the plugin path: the setting starts at event-adapters
                 var relative = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(system, system.Settings.Config.GetConfig(JournalPath)));
 
                 relative.Message.Should().StartWith("[event-adapters.tagger] [" + typeof(TagAdapter).FullName);
                 relative.Message.Should().NotContain("event-adapters.event-adapters");
-                relative.Message.Should().EndWith(notBuiltIn + "an event adapter added through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)" + switchText);
+                relative.Message.Should().EndWith(NotBuiltIn + "an event adapter added through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)" + SwitchText);
                 return Task.CompletedTask;
             });
+        }
 
-            // a HOCON binding for a type no registration lists, next to an adapter that is registered
-            var bindingSetup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+        [Fact(DisplayName = "PersistenceSetup should throw naming the adapter When a HOCON binding points at an adapter only HOCON names and the switch is off")]
+        public async Task Should_throw_naming_the_adapter_When_a_hocon_binding_points_at_an_adapter_only_hocon_names_and_the_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
             [
                 EventAdapterDetails.Create("tagger", _ => new TagAdapter()),
-                EventAdapterDetails.Create("writer", _ => new WriteOnlyAdapter()),
             ]);
-            var bindingHocon = $$"""
+            var hocon = $$"""
                 {{JournalPath}}.event-adapters.other = "{{typeof(ReadOnlyAdapter).FullName}}, {{TestAssembly}}"
                 {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = other
                 """;
-            await RunAsync(false, bindingHocon, bindingSetup, system =>
+
+            await RunAsync(false, hocon, setup, system =>
             {
                 // the adapter `other` is in HOCON only, so it throws first, naming the adapter
                 var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
@@ -572,16 +569,28 @@ namespace Akka.Persistence.Tests
                 exception.Message.Should().Contain($"{JournalPath}.event-adapters.other");
                 return Task.CompletedTask;
             });
+        }
 
-            var onlyBindingHocon = $$"""
+        [Fact(DisplayName = "PersistenceSetup should throw an ArgumentException When a HOCON binding names an adapter that does not exist")]
+        public async Task Should_throw_an_ArgumentException_When_a_hocon_binding_names_an_adapter_that_does_not_exist()
+        {
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+            [
+                EventAdapterDetails.Create("tagger", _ => new TagAdapter()),
+            ]);
+            var hocon = $$"""
                 {{JournalPath}}.event-adapter-bindings."{{typeof(TaggedEvent).FullName}}, {{TestAssembly}}" = [tagger, unknown-in-hocon]
                 """;
-            await RunAsync(false, onlyBindingHocon, bindingSetup, system =>
+
+            // `unknown-in-hocon` is not an adapter anywhere, which is an error on every runtime and either switch value
+            foreach (var dynamicTypeLoading in new[] { false, true })
             {
-                // `unknown-in-hocon` is not an adapter anywhere, which is an error on every runtime
-                Assert.Throws<ArgumentException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
-                return Task.CompletedTask;
-            });
+                await RunAsync(dynamicTypeLoading, hocon, setup, system =>
+                {
+                    Assert.Throws<ArgumentException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
+                    return Task.CompletedTask;
+                });
+            }
         }
 
         [Fact(DisplayName = "PersistenceSetup should ignore a HOCON binding that only names registered adapters When the switch is off")]
@@ -635,25 +644,41 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should use a registered stash overflow configurator in place of the HOCON setting When the switch is off or on")]
-        public async Task Should_use_registered_stash_overflow_configurator_in_place_of_hocon_setting_When_switch_is_off_or_on()
+        [Fact(DisplayName = "PersistenceSetup should use a registered stash overflow configurator When the switch is off")]
+        public async Task Should_use_a_registered_stash_overflow_configurator_When_the_switch_is_off()
         {
             var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
             const string hocon = "akka.persistence.internal-stash-overflow-strategy = \"Some.Unknown.Configurator, Some.Assembly\"";
 
-            foreach (var dynamicTypeLoading in new[] { false, true })
-            {
-                await RunAsync(dynamicTypeLoading, hocon, setup, system =>
-                {
-                    Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
-                    return Task.CompletedTask;
-                });
-            }
-
-            // and it survives a Merge with a setup that sets none
-            await RunAsync(false, hocon, setup.Merge(PersistenceSetup.Create()), system =>
+            await RunAsync(false, hocon, setup, system =>
             {
                 Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should use a registered stash overflow configurator When the switch is on and HOCON keeps the shipped default")]
+        public async Task Should_use_a_registered_stash_overflow_configurator_When_the_switch_is_on_and_hocon_keeps_the_shipped_default()
+        {
+            var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
+
+            // nothing in HOCON, so the setting is the one persistence.conf ships
+            await RunAsync(true, "", setup, system =>
+            {
+                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(CustomStashConfigurator.Strategy);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should keep the HOCON setting When a stash overflow configurator is registered and the switch is on")]
+        public async Task Should_keep_the_hocon_setting_When_a_stash_overflow_configurator_is_registered_and_the_switch_is_on()
+        {
+            var setup = PersistenceSetup.Create().WithStashOverflowStrategy(new CustomStashConfigurator());
+
+            // an explicit HOCON setting decides on the JIT, as it always did
+            await RunAsync(true, "akka.persistence.internal-stash-overflow-strategy = \"Akka.Persistence.DiscardConfigurator, Akka.Persistence\"", setup, system =>
+            {
+                Persistence.Instance.Apply(system).DefaultInternalStashOverflowStrategy.Should().BeSameAs(DiscardToDeadLetterStrategy.Instance);
                 return Task.CompletedTask;
             });
         }
@@ -671,7 +696,6 @@ namespace Akka.Persistence.Tests
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithEventAdapters(JournalPath, null!));
             Assert.Throws<ArgumentException>(() => PersistenceSetup.Create().WithEventAdapters(" ", []));
             Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().WithStashOverflowStrategy(null!));
-            Assert.Throws<ArgumentNullException>(() => PersistenceSetup.Create().Merge(null!));
             Assert.Throws<ArgumentNullException>(() => EventAdapterDetails.Create("tagger", (Func<ExtendedActorSystem, IEventAdapter>)null!));
             Assert.Throws<ArgumentException>(() => JournalDetails.Create(" ", _ => new RegisteredJournal()));
             Assert.Throws<ArgumentException>(() => EventAdapterDetails.Create(" ", _ => new TagAdapter()));
@@ -680,16 +704,6 @@ namespace Akka.Persistence.Tests
                 EventAdapterDetails.Create("tagger", _ => new TagAdapter(), typeof(TaggedEvent)),
                 EventAdapterDetails.Create("tagger", _ => new TagAdapter(), typeof(WriteOnlyEvent)),
             ]));
-        }
-
-        [Fact(DisplayName = "PersistencePluginDetails should be equal When the plugin ids are equal")]
-        public void Should_be_equal_When_plugin_ids_are_equal()
-        {
-            var journal = JournalDetails.Create(JournalPath, _ => new RegisteredJournal());
-
-            journal.Should().Be(JournalDetails.Create(JournalPath, _ => new SecondRegisteredJournal()));
-            journal.GetHashCode().Should().Be(JournalDetails.Create(JournalPath, _ => new SecondRegisteredJournal()).GetHashCode());
-            journal.Should().NotBe(JournalDetails.Create(JournalPath + "-other", _ => new RegisteredJournal()));
         }
 
         // ---- helpers ----

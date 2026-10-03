@@ -70,7 +70,7 @@ internal static class Program
         host.Logging.ClearProviders();
         host.Services.AddAkka(label, builder => builder
             .WithJournalAndSnapshot(new CanaryJournalOptions(), new CanarySnapshotOptions(),
-                configureJournal: journal => journal.AddWriteEventAdapter<CanaryTagger>("canary-tagger", new[] { typeof(CanaryEvent) }),
+                configureJournal: journal => journal.AddWriteEventAdapter("canary-tagger", _ => new CanaryTagger(), typeof(CanaryEvent)),
                 configureSnapshot: null)
             .WithInMemoryJournal(_ => { }, journalId: "inmem", isDefaultPlugin: false)
             .WithInMemorySnapshotStore("inmem", isDefaultPlugin: false)

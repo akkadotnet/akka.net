@@ -29,15 +29,15 @@ namespace Akka.Persistence.Hosting
         public AkkaPersistenceJournalBuilder(string journalId, Akka.Hosting.AkkaConfigurationBuilder builder) { }
         public AkkaPersistenceJournalBuilder(string journalId, Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions options) { }
         public Akka.Persistence.Hosting.JournalOptions? Options { get; }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
             where TAdapter : Akka.Persistence.Journal.IEventAdapter { }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IReadEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
             where TAdapter : Akka.Persistence.Journal.IReadEventAdapter { }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IWriteEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName, System.Func<Akka.Actor.ExtendedActorSystem, TAdapter> factory, params System.Type[] boundTypes)
             where TAdapter : Akka.Persistence.Journal.IWriteEventAdapter { }

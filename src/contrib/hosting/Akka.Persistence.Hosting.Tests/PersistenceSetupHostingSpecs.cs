@@ -107,6 +107,94 @@ public class PersistenceSetupHostingSpecs
             });
     }
 
+    [Theory(DisplayName = "AddReadEventAdapter should run an adapter built by a factory When the system starts through Hosting")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_run_an_adapter_built_by_a_factory_When_the_system_starts_through_Hosting_read(bool dynamicTypeLoading)
+    {
+        UnwrapAdapter.Reset();
+
+        await RunAsync(dynamicTypeLoading,
+            builder => builder
+                .WithInMemoryJournal(journal => journal
+                    .AddWriteEventAdapter("wrap", _ => new WrapOnlyAdapter(), typeof(string))
+                    .AddReadEventAdapter("unwrap", _ => new UnwrapAdapter(), typeof(string)))
+                .WithInMemorySnapshotStore(),
+            async system =>
+            {
+                await PersistAndRecoverAsync(system, "p-read", null, null);
+
+                UnwrapAdapter.FromJournalCalls.Should().BeGreaterThan(0, "the read adapter ran on recovery");
+            });
+    }
+
+    [Theory(DisplayName = "AddEventAdapter should run an adapter built by a factory When the system starts through Hosting")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_run_an_adapter_built_by_a_factory_When_the_system_starts_through_Hosting_read_write(bool dynamicTypeLoading)
+    {
+        WrapAdapter.Reset();
+
+        await RunAsync(dynamicTypeLoading,
+            builder => builder
+                .WithInMemoryJournal(journal => journal.AddEventAdapter("wrap", _ => new WrapAdapter(), typeof(string)))
+                .WithInMemorySnapshotStore(),
+            async system =>
+            {
+                await PersistAndRecoverAsync(system, "p-readwrite", null, null);
+
+                WrapAdapter.ToJournalCalls.Should().BeGreaterThan(0);
+                WrapAdapter.FromJournalCalls.Should().BeGreaterThan(0);
+            });
+    }
+
+    [Theory(DisplayName = "AddWriteEventAdapter should create an adapter that takes the ActorSystem When the switch is off or on")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_create_an_adapter_that_takes_the_ActorSystem_When_the_switch_is_off_or_on(bool dynamicTypeLoading)
+    {
+        PlainSystemAdapter.Reset();
+
+        // core's reflection path calls Activator.CreateInstance(type, system), which also takes an ActorSystem parameter
+        await RunAsync(dynamicTypeLoading,
+            builder => builder
+                .WithInMemoryJournal(journal => journal.AddWriteEventAdapter<PlainSystemAdapter>("plain-system", new[] { typeof(string) }))
+                .WithInMemorySnapshotStore(),
+            async system =>
+            {
+                await PersistAndRecoverAsync(system, "p-plain", null, null);
+
+                PlainSystemAdapter.Created.Should().Be(1);
+            });
+    }
+
+    [Fact(DisplayName = "AddWriteEventAdapter should not build an adapter When it is bound to no type and the switch is on")]
+    public async Task Should_not_build_an_adapter_When_it_is_bound_to_no_type_and_the_switch_is_on()
+    {
+        SystemAdapter.Reset();
+
+        // no bound type means no HOCON, so the JIT never built this adapter, and it still does not
+        await RunAsync(true,
+            builder => builder
+                .WithInMemoryJournal(journal => journal.AddWriteEventAdapter<SystemAdapter>("unbound", Array.Empty<Type>()))
+                .WithInMemorySnapshotStore(),
+            async system =>
+            {
+                await PersistAndRecoverAsync(system, "p-unbound", null, null);
+
+                SystemAdapter.Created.Should().Be(0);
+            });
+    }
+
+    [Fact(DisplayName = "AddWriteEventAdapter should throw a NullReferenceException When the bound types are null")]
+    public void Should_throw_a_NullReferenceException_When_the_bound_types_are_null()
+    {
+        var builder = new AkkaPersistenceJournalBuilder("null-types", new AkkaConfigurationBuilder(new ServiceCollection(), "null-types"));
+
+        // as it always did: the sequence is enumerated without a check
+        Assert.Throws<NullReferenceException>(() => builder.AddWriteEventAdapter<SystemAdapter>("adapter", (IEnumerable<Type>)null!));
+    }
+
     // ---- plugins that supply a factory ----
 
     [Theory(DisplayName = "WithJournalAndSnapshot should start plugins that supply a factory When there is no HOCON class")]
@@ -130,6 +218,27 @@ public class PersistenceSetupHostingSpecs
 
                 await PersistAndRecoverAsync(system, "p-custom", null, null);
                 WrapAdapter.ToJournalCalls.Should().BeGreaterThan(0);
+            });
+    }
+
+    [Theory(DisplayName = "WithJournal should pick the class or the factory When a plugin has both")]
+    [InlineData(true, typeof(JournalB))]
+    [InlineData(false, typeof(JournalA))]
+    public async Task Should_pick_the_class_or_the_factory_When_a_plugin_has_both(bool dynamicTypeLoading, Type expected)
+    {
+        // HOCON names JournalB and the factory builds JournalA: with reflection on HOCON `class` wins, as it always did
+        var journal = new TestJournalOptions("both", PluginActorFactory.For(_ => new JournalA()), className: typeof(JournalB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+        var snapshot = new TestSnapshotOptions("both", PluginActorFactory.For(_ => new SnapshotA()), className: typeof(SnapshotB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+
+        await RunAsync(dynamicTypeLoading,
+            builder => builder.WithJournalAndSnapshot(journal, snapshot),
+            async system =>
+            {
+                var persistence = Persistence.Instance.Apply(system);
+
+                PropsOf(persistence.JournalFor(null)).Type.Should().Be(expected);
+                PropsOf(persistence.SnapshotStoreFor(null)).Type.Should().Be(expected == typeof(JournalB) ? typeof(SnapshotB) : typeof(SnapshotA));
+                await PersistAndRecoverAsync(system, "p-both", null, null);
             });
     }
 
@@ -190,13 +299,10 @@ public class PersistenceSetupHostingSpecs
         var journal = new TestJournalOptions("late", PluginActorFactory.For(_ => new JournalA())) { IsDefaultPlugin = true };
 
         await RunAsync(dynamicTypeLoading,
-            builder =>
-            {
-                builder.WithJournal(journal).WithInMemorySnapshotStore();
-#pragma warning disable CS0618 // the string overload is how an adapter reaches a journal another call configured
-                builder.WithJournal("late", j => j.AddEventAdapter<WrapAdapter>("wrap", new[] { typeof(string) }));
-#pragma warning restore CS0618
-            },
+            builder => builder
+                .WithJournal(journal)
+                .WithInMemorySnapshotStore()
+                .WithJournal(journal, j => j.AddEventAdapter<WrapAdapter>("wrap", new[] { typeof(string) })),
             async system =>
             {
                 PropsOf(Persistence.Instance.Apply(system).JournalFor(null)).Type.Should().Be(typeof(JournalA), "the later call did not replace the journal");
@@ -215,13 +321,10 @@ public class PersistenceSetupHostingSpecs
         var journal = new TestJournalOptions("early", PluginActorFactory.For(_ => new JournalA())) { IsDefaultPlugin = true };
 
         await RunAsync(dynamicTypeLoading,
-            builder =>
-            {
-#pragma warning disable CS0618 // the string overload is how an adapter reaches a journal another call configures
-                builder.WithJournal("early", j => j.AddEventAdapter<WrapAdapter>("wrap", new[] { typeof(string) }));
-#pragma warning restore CS0618
-                builder.WithJournal(journal).WithInMemorySnapshotStore();
-            },
+            builder => builder
+                .WithJournal(journal, j => j.AddEventAdapter<WrapAdapter>("wrap", new[] { typeof(string) }))
+                .WithInMemorySnapshotStore()
+                .WithJournal(journal),
             async system =>
             {
                 PropsOf(Persistence.Instance.Apply(system).JournalFor(null)).Type.Should().Be(typeof(JournalA));
@@ -401,15 +504,19 @@ public class PersistenceSetupHostingSpecs
     {
         private readonly PluginActorFactory? _factory;
 
-        public TestSnapshotOptions(string identifier, PluginActorFactory? factory) : base(false)
+        private readonly string? _className;
+
+        public TestSnapshotOptions(string identifier, PluginActorFactory? factory, string? className = null) : base(false)
         {
             Identifier = identifier;
             _factory = factory;
+            _className = className;
         }
 
         public override string Identifier { get; set; }
 
-        protected override Config InternalDefaultConfig => ConfigurationFactory.ParseString("plugin-dispatcher = \"akka.actor.default-dispatcher\"");
+        protected override Config InternalDefaultConfig => ConfigurationFactory.ParseString(
+            $"plugin-dispatcher = \"akka.actor.default-dispatcher\"\n{(_className is null ? "" : $"class = \"{_className}\"")}");
 
         protected override PluginActorFactory? CreatePluginActorFactory() => _factory;
     }
@@ -442,6 +549,50 @@ public class PersistenceSetupHostingSpecs
             Interlocked.Increment(ref _fromJournal);
             return EventSequence.Single(evt is string s && s.StartsWith("w:", StringComparison.Ordinal) ? s.Substring(2) : evt);
         }
+    }
+
+    /// <summary>Wraps strings on the way in and leaves the way out alone.</summary>
+    public sealed class WrapOnlyAdapter : IWriteEventAdapter
+    {
+        public string Manifest(object evt) => "wrap";
+
+        public object ToJournal(object evt) => evt is string s ? "w:" + s : evt;
+    }
+
+    /// <summary>Unwraps what <see cref="WrapOnlyAdapter"/> wrapped and counts the reads.</summary>
+    public sealed class UnwrapAdapter : IReadEventAdapter
+    {
+        private static int _fromJournal;
+
+        public static int FromJournalCalls => Volatile.Read(ref _fromJournal);
+
+        public static void Reset() => _fromJournal = 0;
+
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            Interlocked.Increment(ref _fromJournal);
+            return EventSequence.Single(evt is string s && s.StartsWith("w:", StringComparison.Ordinal) ? s.Substring(2) : evt);
+        }
+    }
+
+    /// <summary>A write adapter whose only constructor takes an <see cref="ActorSystem"/>, which core's reflection path accepts.</summary>
+    public sealed class PlainSystemAdapter : IWriteEventAdapter
+    {
+        private static int _created;
+
+        public static int Created => Volatile.Read(ref _created);
+
+        public static void Reset() => _created = 0;
+
+        public PlainSystemAdapter(ActorSystem system)
+        {
+            system.Should().NotBeNull();
+            Interlocked.Increment(ref _created);
+        }
+
+        public string Manifest(object evt) => string.Empty;
+
+        public object ToJournal(object evt) => evt;
     }
 
     /// <summary>A write adapter whose only constructor takes the <see cref="ExtendedActorSystem"/>.</summary>

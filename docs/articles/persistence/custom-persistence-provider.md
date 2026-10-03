@@ -485,8 +485,10 @@ public sealed class MyJournalOptions : JournalOptions
 `SnapshotOptions` has the same `CreatePluginActorFactory` override. The factory gets the plugin's HOCON section with its
 fallbacks applied, and it runs inside the actor's creation context. Users change nothing: they call
 `WithJournal(new MyJournalOptions { ... })` as before, and the plugin starts with
-`Akka.DynamicTypeLoading` off without a `class` setting. Without the override your plugin keeps working
-on the JIT through its HOCON `class` and fails to start under Native AOT, with a message that points here.
+`Akka.DynamicTypeLoading` off without a `class` setting. On the JIT the HOCON `class` still decides when
+there is one, and the factory is used when there is none. Without the override your plugin keeps working
+on the JIT through its HOCON `class` and fails to start under Native AOT, with a message that names the
+setting and Akka.Persistence.Hosting.
 A read journal registers the same way from your Hosting extension method:
 `builder.WithReadJournal("akka.persistence.query.journal.my-journal", (system, config) => new MyReadJournalProvider(system, config), MyPersistence.DefaultQueryConfiguration().GetConfig("akka.persistence.query.journal.my-journal"))`.
 See [Native AOT and Trimming](xref:native-aot) for the whole picture, including event adapters.
