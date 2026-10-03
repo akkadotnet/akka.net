@@ -349,12 +349,12 @@ jobs:
           echo "SQLite AOT canary: exit code 0 and '[canary-sqlite] OK' on stdout."
         displayName: 'Run the SQLite AOT canary'
 
-      # Zero warnings from the plugin's own code is the bar; its baseline holds only a header.
+      # Zero warnings from the plugin, its Hosting package and Akka.Streams is the bar; the baseline holds only a header.
       - bash: |
           dotnet run scripts/CheckAotWarnings.cs -- \
             --log "$(Agent.TempDirectory)/sqlite-aot-publish.log" \
             --baseline src/aot/Akka.Persistence.Embedded.AOT.App/aot-warnings.baseline.txt \
-            --scope "src/contrib/persistence/Akka.Persistence.Embedded/" \
+            --scope "src/contrib/persistence/Akka.Persistence.Embedded/,src/contrib/hosting/Akka.Persistence.Embedded.Hosting/,src/core/Akka.Streams/" \
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare SQLite AOT warnings against the baseline'
 

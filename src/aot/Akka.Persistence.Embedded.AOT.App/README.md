@@ -1,9 +1,8 @@
 # Akka.Persistence.Embedded.AOT.App
 
 A Native AOT canary for the SQLite persistence plugin (`Akka.Persistence.Embedded`). It sets the
-`Akka.DynamicTypeLoading` feature switch to `false` with `Trim="true"`, registers the plugin in code
-(`PersistenceSetup.Create().WithEmbeddedPersistence(...)`, one call for the journal, snapshot store and read journal) and runs
-four scenarios (`Program.cs`):
+`Akka.DynamicTypeLoading` feature switch to `false` with `Trim="true"`, builds its systems with Akka.Hosting and
+`WithEmbeddedPersistence(...)` (one call for the journal, snapshot store and read journal) and runs four scenarios (`Program.cs`):
 
 1. **TagTable database.** A persistent actor persists five events (two tagged `red`), snapshots at
    sequence number 3, stops, and a new incarnation recovers with the snapshot. `DeleteMessages(2)` and a
@@ -41,20 +40,13 @@ configured type name does not resolve.
 
 ## Warning baseline
 
-`aot-warnings.baseline.txt` holds only its header: the plugin's own code must publish with zero
+`aot-warnings.baseline.txt` holds only its header: the plugin, its Hosting package and Akka.Streams must publish with zero
 `IL2xxx`/`IL3xxx` warnings. Check it the same way CI does:
 
 ```bash
 dotnet run scripts/CheckAotWarnings.cs -- \
     --log /tmp/scanary.log \
     --baseline src/aot/Akka.Persistence.Embedded.AOT.App/aot-warnings.baseline.txt \
-    --scope "src/contrib/persistence/Akka.Persistence.Embedded/" \
+    --scope "src/contrib/persistence/Akka.Persistence.Embedded/,src/contrib/hosting/Akka.Persistence.Embedded.Hosting/,src/core/Akka.Streams/" \
     --repo-root .
 ```
-
-## `StreamsRoots.xml`
-
-Akka.Streams builds the generic types on the boundary between two stream islands with `MakeGenericType`
-and `Activator.CreateInstance` (akkadotnet/akka.net#8731). Every query crosses such a boundary, and without
-a root the trimmer removes the constructor and the query fails with `MissingMethodException`.
-`StreamsRoots.xml` roots those types for this app. Keep it until the Akka.Streams fix (#8732) has merged and the app runs without it.

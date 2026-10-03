@@ -28,7 +28,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Embedded\Akka.Persistence.Embedded.csproj"/>
+    <!-- Same as Akka.Hosting.AOT.App: the full Microsoft.Extensions.Hosting package is what an application adds. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Brings Akka.Hosting, Akka.Persistence.Hosting and the plugin. -->
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Embedded.Hosting\Akka.Persistence.Embedded.Hosting.csproj"/>
   </ItemGroup>
 
   <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:
@@ -36,11 +42,6 @@
        ProjectReference. With it off, only what the setups register can start. -->
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
-  </ItemGroup>
-
-  <!-- Roots the Akka.Streams boundary types every query crosses. See StreamsRoots.xml (#8731, kept until the fix in #8732 has merged). -->
-  <ItemGroup>
-    <TrimmerRootDescriptor Include="StreamsRoots.xml" />
   </ItemGroup>
 
 </Project>

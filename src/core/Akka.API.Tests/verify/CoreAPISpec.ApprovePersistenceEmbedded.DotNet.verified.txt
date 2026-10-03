@@ -67,13 +67,6 @@ namespace Akka.Persistence.Embedded
         public static Akka.Configuration.Config DefaultQueryConfiguration { get; }
         public static Akka.Configuration.Config DefaultSnapshotConfiguration { get; }
     }
-    public static class SqlitePersistenceSetupExtensions
-    {
-        public static Akka.Persistence.PersistenceSetup WithEmbeddedJournal(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.journal.embedded", System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null) { }
-        public static Akka.Persistence.PersistenceSetup WithEmbeddedPersistence(this Akka.Persistence.PersistenceSetup setup, System.Collections.Generic.IEnumerable<Akka.Persistence.Journal.EventAdapterDetails>? eventAdapters = null) { }
-        public static Akka.Persistence.PersistenceSetup WithEmbeddedReadJournal(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.query.journal.embedded") { }
-        public static Akka.Persistence.PersistenceSetup WithEmbeddedSnapshotStore(this Akka.Persistence.PersistenceSetup setup, string pluginId = "akka.persistence.snapshot-store.embedded") { }
-    }
     public enum TagWriteMode
     {
         Csv = 0,
