@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>SQLite persistence for Akka.NET (journal, snapshot store, read journal). Native AOT compatible. Reads and writes the same tables as Akka.Persistence.Sql.</Description>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite;aot</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Akka.Persistence.Embedded.Tests" />
+  </ItemGroup>
+</Project>
