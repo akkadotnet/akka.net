@@ -125,7 +125,8 @@ services.AddAkka("app", builder => builder
         configureJournal: journal => journal.AddWriteEventAdapter<MyTagger>("tagger", new[] { typeof(MyEvent) }),
         configureSnapshot: null)
     .WithInMemoryJournal(_ => { }, journalId: "scratch", isDefaultPlugin: false)
-    .WithInMemoryReadJournal()
+    .WithReadJournal("akka.persistence.query.journal.my-journal",
+        (system, config) => new MyReadJournalProvider(system, config), MyPersistence.DefaultQueryConfiguration())
     .WithCustomSerializer("app", new[] { typeof(MyEvent) }, system => new MySerializer(system)));
 ```
 
@@ -145,9 +146,10 @@ to Akka.Persistence.Hosting. With the switch on nothing changes for an app that 
 
 A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
 `WithJournal` or `WithSnapshot`. See [Registering Your Plugin for Native AOT](xref:custom-persistent-provider)
-if you write one. The Hosting builders that need no plugin package are `WithInMemoryJournal`,
-`WithInMemorySnapshotStore` and `WithInMemoryReadJournal`. `WithStashOverflowStrategy` takes a custom
-`IStashOverflowStrategyConfigurator`.
+if you write one. The Hosting builders that need no plugin package are `WithInMemoryJournal` and `WithInMemorySnapshotStore`.
+`WithReadJournal` registers a read journal provider and its default config, and `WithStashOverflowStrategy`
+takes a custom `IStashOverflowStrategyConfigurator`. The in-memory read journal is for tests and has no
+helper: register it with `WithReadJournal`, as the canary does, or keep using its HOCON on the JIT.
 
 HOCON adapters in a journal section still work on the JIT. With the switch off an adapter has to come from
 `AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. HOCON that only repeats what those methods

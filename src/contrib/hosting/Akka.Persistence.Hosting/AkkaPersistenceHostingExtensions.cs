@@ -3,7 +3,6 @@ using Akka.Configuration;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Query;
-using Akka.Persistence.Query.InMemory;
 using Akka.Actor;
 
 #nullable enable
@@ -311,18 +310,6 @@ namespace Akka.Persistence.Hosting
             var details = ReadJournalDetails.Create(pluginId, factory, defaultConfig);
             return builder.AddPersistenceRegistrations(setup => setup.WithPlugin(details));
         }
-
-        /// <summary>
-        /// Adds the in-memory read journal, for <c>akka.persistence.query.journal.inmem</c>. It reads the events of the
-        /// default journal.
-        /// </summary>
-        /// <param name="builder">The builder instance being configured.</param>
-        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
-        public static AkkaConfigurationBuilder WithInMemoryReadJournal(this AkkaConfigurationBuilder builder)
-            => builder.WithReadJournal(
-                InMemoryReadJournal.Identifier,
-                static (system, config) => new InMemoryReadJournalProvider(system, config),
-                InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier));
 
         /// <summary>
         /// Replaces <c>akka.persistence.internal-stash-overflow-strategy</c> with this configurator, created without reflection.

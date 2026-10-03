@@ -74,7 +74,9 @@ internal static class Program
                 configureSnapshot: null)
             .WithInMemoryJournal(_ => { }, journalId: "inmem", isDefaultPlugin: false)
             .WithInMemorySnapshotStore("inmem", isDefaultPlugin: false)
-            .WithInMemoryReadJournal()
+            .WithReadJournal(InMemoryReadJournal.Identifier,
+                static (system, config) => new InMemoryReadJournalProvider(system, config),
+                InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier))
             .WithStashOverflowStrategy(new CanaryStashConfigurator())
             .WithCustomSerializer("canary", new[] { typeof(CanaryEvent), typeof(CanarySnapshot) }, static system => new CanarySerializer(system))
             .AddSetup(new LogFilterSetup([watchdog])));

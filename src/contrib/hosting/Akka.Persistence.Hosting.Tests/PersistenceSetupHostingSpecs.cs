@@ -233,13 +233,16 @@ public class PersistenceSetupHostingSpecs
 
     // ---- read journals and the stash overflow strategy ----
 
-    [Theory(DisplayName = "WithInMemoryReadJournal should read the events of the default journal When the system starts through Hosting")]
+    [Theory(DisplayName = "WithReadJournal should read the events of the default journal When the system starts through Hosting")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Should_read_the_events_of_the_default_journal_When_the_system_starts_through_Hosting(bool dynamicTypeLoading)
     {
         await RunAsync(dynamicTypeLoading,
-            builder => builder.WithInMemoryJournal().WithInMemorySnapshotStore().WithInMemoryReadJournal(),
+            builder => builder.WithInMemoryJournal().WithInMemorySnapshotStore().WithReadJournal(
+                InMemoryReadJournal.Identifier,
+                static (system, config) => new InMemoryReadJournalProvider(system, config),
+                InMemoryReadJournal.DefaultConfiguration().GetConfig(InMemoryReadJournal.Identifier)),
             async system =>
             {
                 await PersistAndRecoverAsync(system, "p-query", null, null);

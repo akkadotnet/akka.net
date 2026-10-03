@@ -8,7 +8,7 @@ the `Akka.Persistence.Hosting` builders. It references `Akka.Persistence.Hosting
    `CanarySnapshotOptions` are what a plugin author writes: an identifier, a default config and a `CreatePluginActorFactory` override.
    They run a journal and a snapshot store that Akka.Persistence does not ship (small subclasses of the
    in-memory ones). `WithJournalAndSnapshot` adds the journal's write event adapter with
-   `AddWriteEventAdapter<CanaryTagger>`, `WithInMemoryReadJournal` adds the read journal,
+   `AddWriteEventAdapter<CanaryTagger>`, `WithReadJournal` adds the in-memory read journal,
    `WithStashOverflowStrategy` adds a configurator, and `WithCustomSerializer` binds a hand-written
    `SerializerWithStringManifest`. No HOCON names a plugin class.
    A persistent actor persists `a` and `b` together (it stashes `b` while the write for `a` is in flight),

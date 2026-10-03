@@ -33,8 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Akka.Persistence.Hosting brings Akka.Hosting, Akka.Persistence, Akka.Persistence.Query and the in-memory read journal. -->
+    <!-- Akka.Persistence.Hosting brings Akka.Hosting, Akka.Persistence and Akka.Persistence.Query. -->
     <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj"/>
+    <!-- the read journal the canary queries; it is for testing, so Hosting has no helper for it -->
+    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj"/>
   </ItemGroup>
 
   <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:

@@ -9,7 +9,6 @@ namespace Akka.Persistence.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithClusterShardingJournalMigrationAdapter(this Akka.Hosting.AkkaConfigurationBuilder builder, string journalId) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithInMemoryJournal(this Akka.Hosting.AkkaConfigurationBuilder builder) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithInMemoryJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder> journalBuilder, string journalId = "inmem", bool isDefaultPlugin = true) { }
-        public static Akka.Hosting.AkkaConfigurationBuilder WithInMemoryReadJournal(this Akka.Hosting.AkkaConfigurationBuilder builder) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithInMemorySnapshotStore(this Akka.Hosting.AkkaConfigurationBuilder builder, string snapshotStoreId = "inmem", bool isDefaultPlugin = true) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions journalOptions) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithJournal(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions journalOptions, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? configureBuilder) { }
