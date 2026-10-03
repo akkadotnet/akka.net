@@ -4,10 +4,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- Verify looks for the solution only 2 folders up, and warns when this project builds on its own. Point it at the repo root. -->
-  <PropertyGroup Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">
-    <SolutionDir>$(MSBuildThisFileDirectory)..\..\..\</SolutionDir>
-  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />

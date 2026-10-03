@@ -16,6 +16,12 @@
     <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051;SYSLIB0050;SYSLIB0051;CS0672;CA2022</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <!-- Verify (snapshot tests) looks for the solution only two folders above a project, and its build props flow
+       into every test project that references the shared test kit. Point it at the repo root so a single test
+       project still builds on its own (dotnet test src/core/Akka.Streams.Tests). -->
+  <PropertyGroup Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">
+    <SolutionDir>$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
   <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <LangVersion>12.0</LangVersion>
