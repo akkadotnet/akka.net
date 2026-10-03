@@ -30,6 +30,16 @@ namespace Akka.Persistence.Embedded.Internal
         }
     }
 
+    /// <summary>Test seam: makes the journal throw, so tests can watch it restart.</summary>
+    internal sealed class CrashForTests
+    {
+        public static CrashForTests Instance { get; } = new();
+
+        private CrashForTests()
+        {
+        }
+    }
+
     /// <summary>The journal tells itself when a write for a persistence id has finished.</summary>
     internal sealed class WriteFinished
     {

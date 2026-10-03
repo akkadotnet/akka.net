@@ -15,7 +15,7 @@ namespace Akka.Persistence.Embedded.Tests.Schema
 {
     /// <summary>
     /// The expected text was captured by hand from linq2db 5.4.1.9 (the CreateTable that Akka.Persistence.Sql 1.5.70 uses) run on tables
-    /// of the same shapes with these custom names. The test does not run linq2db: the PR 3 fixture generator will regenerate it.
+    /// of the same shapes with these custom names. The test does not run linq2db. CustomNamesSpecs runs the plugin end to end with custom names.
     /// </summary>
     public class CustomNameDdlSpec
     {

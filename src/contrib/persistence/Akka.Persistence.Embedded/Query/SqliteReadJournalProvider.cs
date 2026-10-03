@@ -23,6 +23,8 @@ namespace Akka.Persistence.Embedded.Query
         /// finds the section's path by looking for the section under <c>akka.persistence.query.journal</c> that
         /// <paramref name="config"/> came from.
         /// </summary>
+        /// <exception cref="Akka.Configuration.ConfigurationException">No section there matches <paramref name="config"/>.
+        /// Register the plugin with <c>WithEmbeddedPersistence</c> instead, or use the constructor that takes the plugin path.</exception>
         public SqliteReadJournalProvider(ExtendedActorSystem system, Config config)
             : this(system, config, FindPluginPath(system, config))
         {
@@ -44,6 +46,7 @@ namespace Akka.Persistence.Embedded.Query
         {
             const string parentPath = "akka.persistence.query.journal";
             var parent = system.Settings.Config.GetConfig(parentPath);
+            var matches = new System.Collections.Generic.List<string>();
             if (parent is not null)
             {
                 var wanted = config.ToString();
@@ -51,11 +54,18 @@ namespace Akka.Persistence.Embedded.Query
                 {
                     var section = parent.GetConfig(entry.Key);
                     if (section is not null && string.Equals(section.ToString(), wanted, System.StringComparison.Ordinal))
-                        return $"{parentPath}.{entry.Key}";
+                        matches.Add($"{parentPath}.{entry.Key}");
                 }
             }
 
-            return SqlitePersistence.QueryPluginId;
+            // two sections with the same text cannot be told apart either
+            if (matches.Count == 1)
+                return matches[0];
+
+            // Guessing the default id would read another plugin's settings and log under the wrong name, so refuse.
+            throw new Akka.Configuration.ConfigurationException(
+                $"[{typeof(SqliteReadJournalProvider).FullName}] could not tell which section of [{parentPath}] its config came from ({matches.Count} sections match). " +
+                "Register the read journal with WithEmbeddedPersistence (Akka.Persistence.Embedded.Hosting), or create the provider with its plugin path.");
         }
     }
 }

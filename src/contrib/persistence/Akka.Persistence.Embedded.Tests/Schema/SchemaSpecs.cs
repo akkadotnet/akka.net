@@ -116,6 +116,47 @@ namespace Akka.Persistence.Embedded.Tests.Schema
         }
     }
 
+    public class OrderingColumnSchemaSpec
+    {
+        private const string Columns =
+            "created BIGINT NOT NULL, deleted BIT NOT NULL, persistence_id NVARCHAR(255) NOT NULL, sequence_number BIGINT NOT NULL, " +
+            "message VARBINARY NOT NULL, tags NVARCHAR(100) NULL, manifest NVARCHAR(500) NULL, identifier INTEGER NULL, writer_uuid NVARCHAR(128) NULL";
+
+        [Theory(DisplayName = "Should_fail_naming_the_ordering_column_When_it_is_not_an_INTEGER_PRIMARY_KEY")]
+        [InlineData("ordering INTEGER NOT NULL")]
+        [InlineData("ordering BIGINT NOT NULL PRIMARY KEY")]
+        [InlineData("ordering INTEGER NOT NULL UNIQUE")]
+        public void Should_fail_naming_the_ordering_column_When_it_is_not_an_INTEGER_PRIMARY_KEY(string orderingColumn)
+        {
+            using var db = new SqliteTestDb();
+            db.Execute($"CREATE TABLE journal ({orderingColumn}, {Columns})");
+            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
+            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, config);
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
+            connection.Open();
+
+            var failure = Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, settings));
+
+            failure.Message.Should().Be("Column [ordering] must be INTEGER PRIMARY KEY (rowid alias).");
+        }
+
+        [Fact(DisplayName = "Should_accept_the_ordering_column_When_it_is_an_INTEGER_PRIMARY_KEY_without_autoincrement")]
+        public void Should_accept_the_ordering_column_When_it_is_an_INTEGER_PRIMARY_KEY_without_autoincrement()
+        {
+            using var db = new SqliteTestDb();
+            db.Execute($"CREATE TABLE journal (ordering INTEGER NOT NULL PRIMARY KEY, {Columns})");
+            db.Execute("CREATE TABLE tags (ordering_id INTEGER NOT NULL, tag NVARCHAR(64) NOT NULL, sequence_nr INTEGER NOT NULL, persistence_id NVARCHAR(255) NOT NULL, PRIMARY KEY (ordering_id, tag))");
+            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
+            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, config);
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
+            connection.Open();
+
+            var warnings = SqliteSchema.VerifyJournalSchema(connection, settings);
+
+            warnings.Should().ContainSingle("only the unique index on the persistence id is missing").Which.Should().Contain("UNIQUE index");
+        }
+    }
+
     public class MissingUniqueIndexSpec : EmbeddedSpec
     {
         public MissingUniqueIndexSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)

@@ -108,10 +108,10 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         {
             (await WriteAsync(Write(Evt("survivor", 1, new TestEvent("a")), Evt("survivor", 2, new TestEvent("b"))))).Succeeded.Should().BeTrue();
 
-            // a message the journal cannot process crashes it; the default supervisor restarts it
-            await EventFilter.Exception<ArgumentNullException>().ExpectOneAsync(() =>
+            // the journal throws on this message; the default supervisor restarts it
+            await EventFilter.Exception<InvalidOperationException>().ExpectOneAsync(() =>
             {
-                Journal.Tell(new WriteFinished(null!, Task.CompletedTask));
+                Journal.Tell(CrashForTests.Instance);
                 return Task.CompletedTask;
             });
 

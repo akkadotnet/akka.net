@@ -20,6 +20,7 @@ namespace Akka.Persistence.Embedded
 
                   # Microsoft.Data.Sqlite connection string. Required.
                   # Busy waiting is controlled by its "Default Timeout" keyword (seconds, default 30).
+                  # The plugin opens its long-lived connections with Pooling=False unless this string sets Pooling itself.
                   connection-string = ""
 
                   # Only "default" is supported.

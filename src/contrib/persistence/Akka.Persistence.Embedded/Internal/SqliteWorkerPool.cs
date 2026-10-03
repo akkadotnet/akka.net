@@ -21,10 +21,11 @@ namespace Akka.Persistence.Embedded.Internal
     /// reopens after an error that may have left the connection unusable.
     /// </summary>
     /// <remarks>
-    /// The connection string is rewritten with <c>Pooling=False</c>. A thread keeps its connection for its whole life,
-    /// so pooling buys nothing, and with it Microsoft.Data.Sqlite can hand a reset thread the very handle that just
-    /// failed. Without the pool, <see cref="Reset"/> really closes the handle (which also releases the database file at
-    /// shutdown) and the next <see cref="Get"/> opens a new one.
+    /// <see cref="Prepare"/> adds <c>Pooling=False</c> to a connection string that does not say anything about pooling. A
+    /// thread keeps its connection for its whole life, so pooling buys nothing, and with it Microsoft.Data.Sqlite can hand a
+    /// reset thread the very handle that just failed. Without the pool, <see cref="Reset"/> really closes the handle (which
+    /// also releases the database file at shutdown) and the next <see cref="Get"/> opens a new one. A user who sets
+    /// <c>Pooling</c> explicitly keeps their value.
     /// </remarks>
     internal sealed class ConnectionHolder : IDisposable
     {
@@ -37,13 +38,40 @@ namespace Akka.Persistence.Embedded.Internal
         private SqliteConnection? _connection;
         private int _resetCount;
 
-        public ConnectionHolder(string connectionString, ILoggingAdapter log)
+        private static readonly ConcurrentDictionary<string, byte> PoolingNoticeGiven = new();
+
+        /// <summary>Takes a connection string already run through <see cref="Prepare"/>.</summary>
+        public ConnectionHolder(string preparedConnectionString, ILoggingAdapter log)
         {
             _log = log;
-            _connectionString = new SqliteConnectionStringBuilder(connectionString) { Pooling = false }.ConnectionString;
+            _connectionString = preparedConnectionString;
         }
 
-        /// <summary>The connection string the holder opens, with pooling off.</summary>
+        /// <summary>
+        /// Returns the connection string the plugin's long-lived connections open with: the user's own when it sets
+        /// <c>Pooling</c>, otherwise the same string with <c>Pooling=False</c>. The second case is logged once per
+        /// connection string and process.
+        /// </summary>
+        public static string Prepare(string connectionString, ILoggingAdapter log)
+        {
+            // SqliteConnectionStringBuilder reports every known keyword as present, so ask a plain builder what the string says
+            var written = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
+            if (written.ContainsKey("Pooling"))
+                return connectionString;
+
+            var builder = new SqliteConnectionStringBuilder(connectionString) { Pooling = false };
+            if (PoolingNoticeGiven.TryAdd(connectionString, 0))
+            {
+                log.Debug(
+                    "SQLite connections of [{0}] open with Pooling=False: every plugin thread keeps one connection, and without the pool a reset " +
+                    "really gets a new handle. Add Pooling=True to the connection string to keep Microsoft.Data.Sqlite's pool.",
+                    builder.DataSource);
+            }
+
+            return builder.ConnectionString;
+        }
+
+        /// <summary>The connection string the holder opens.</summary>
         public string ConnectionString => _connectionString;
 
         /// <summary>How many times the connection was dropped after an error. For tests.</summary>
@@ -122,7 +150,7 @@ namespace Akka.Persistence.Embedded.Internal
 
         public SqliteWorkerPool(string connectionString, int threadCount, string threadNamePrefix, ILoggingAdapter log)
         {
-            _connectionString = connectionString;
+            _connectionString = ConnectionHolder.Prepare(connectionString, log);
             _threadCount = threadCount;
             _threadNamePrefix = threadNamePrefix;
             _log = log;

@@ -131,13 +131,17 @@ internal static class Program
             // With Akka.DynamicTypeLoading off core registers no fallback serializer, so the app binds its own.
             .WithCustomSerializer("canary", [typeof(CanaryEvent), typeof(CanarySnapshot)], system => new CanarySerializer(system))
             .WithEmbeddedPersistence(
-                path.Insert(0, "Data Source="),
-                journal => journal
+                journalOptions: new EmbeddedJournalOptions
+                {
+                    ConnectionString = "Data Source=" + path,
+                    TagStorageMode = tagWriteMode,
+                    QueryRefreshInterval = TimeSpan.FromMilliseconds(100)
+                },
+                snapshotOptions: new EmbeddedSnapshotOptions { ConnectionString = "Data Source=" + path },
+                journalBuilder: journal => journal
                     .AddWriteEventAdapter("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))
                     .WithHealthCheck(),
-                tagWriteMode: tagWriteMode,
-                configureSnapshot: snapshot => snapshot.WithHealthCheck())
-            .WithEmbeddedReadJournal(new EmbeddedReadJournalOptions { RefreshInterval = TimeSpan.FromMilliseconds(100) }));
+                snapshotBuilder: snapshot => snapshot.WithHealthCheck()));
 
         var host = appBuilder.Build();
         await host.StartAsync();

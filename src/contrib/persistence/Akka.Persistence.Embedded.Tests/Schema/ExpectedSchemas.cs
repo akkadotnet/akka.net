@@ -12,7 +12,7 @@ namespace Akka.Persistence.Embedded.Tests.Schema
 {
     /// <summary>
     /// sqlite_master rows (type, name, tbl_name, sql) that Akka.Persistence.Sql 1.5.70 produces on SQLite,
-    /// ordered by type, name. Copied from the capture run (schema-A..E.txt). Generated, do not edit by hand.
+    /// ordered by type, name. Copied by hand from the capture run (schema-A..E.txt); no generator produces this file.
     /// </summary>
     internal static class ExpectedSchemas
     {
