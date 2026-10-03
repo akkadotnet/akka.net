@@ -15,8 +15,9 @@ namespace Akka.Persistence.Embedded.Hosting
 {
     /// <summary>
     /// Adds the SQLite journal, snapshot store and read journal to an Akka.Hosting <see cref="AkkaConfigurationBuilder"/>.
-    /// The plugins are registered in code, so they start with <c>Akka.DynamicTypeLoading</c> off (Native AOT) and need
-    /// no HOCON <c>class</c> setting.
+    /// The methods mirror <c>WithSqlPersistence</c> of Akka.Persistence.Sql.Hosting. The plugins are registered in code,
+    /// so they start with <c>Akka.DynamicTypeLoading</c> off (Native AOT) and need no HOCON <c>class</c> setting.
+    /// The read journal comes with the journal, and its settings are properties of <see cref="EmbeddedJournalOptions"/>.
     /// </summary>
     public static class EmbeddedPersistenceHostingExtensions
     {
@@ -24,136 +25,158 @@ namespace Akka.Persistence.Embedded.Hosting
         /// Adds the journal, the snapshot store and the read journal (<paramref name="mode"/> limits the first two) in one call.
         /// Call it again with another <paramref name="pluginIdentifier"/> to add a second database.
         /// </summary>
-        /// <param name="builder">The builder.</param>
+        /// <param name="builder">The builder instance being configured.</param>
         /// <param name="connectionString">Microsoft.Data.Sqlite connection string, for example <c>Data Source=app.db</c>.</param>
-        /// <param name="configureJournal">Event adapters and health checks of the journal.</param>
-        /// <param name="mode">Which plugins to add. The read journal comes with the journal.</param>
-        /// <param name="autoInitialize">Create missing tables on start.</param>
-        /// <param name="tagWriteMode">Where tags are stored.</param>
-        /// <param name="pluginIdentifier">Plugin identifier: <c>akka.persistence.journal.{id}</c>, <c>akka.persistence.snapshot-store.{id}</c> and <c>akka.persistence.query.journal.{id}</c>.</param>
-        /// <param name="isDefaultPlugin">Make these the default journal and snapshot store.</param>
-        /// <param name="configureSnapshot">Health checks of the snapshot store.</param>
+        /// <param name="mode">Which plugins to add. The read journal comes with the journal. Default <see cref="PersistenceMode.Both"/>.</param>
+        /// <param name="journalBuilder">Event adapters and health checks of the journal.</param>
+        /// <param name="snapshotBuilder">Health checks of the snapshot store.</param>
+        /// <param name="autoInitialize">Create missing tables on start. Default <c>true</c>.</param>
+        /// <param name="pluginIdentifier">Plugin identifier: <c>akka.persistence.journal.{id}</c>, <c>akka.persistence.snapshot-store.{id}</c> and <c>akka.persistence.query.journal.{id}</c>. Default <c>"embedded"</c>.</param>
+        /// <param name="isDefaultPlugin">Make these the default journal and snapshot store. Default <c>true</c>.</param>
+        /// <param name="tagStorageMode">Where tags are stored. Leave null for <see cref="TagWriteMode.TagTable"/>.</param>
+        /// <param name="deleteCompatibilityMode">If true, <c>journal_metadata</c> is created and used for deletes and highest sequence numbers.</param>
+        /// <param name="useWriterUuidColumn">Write the <c>writer_uuid</c> column. Turn off for tables created without it.</param>
+        /// <param name="maxConcurrentQueries">How many read journal queries run or wait at once.</param>
+        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
+        /// <exception cref="Exception">
+        /// Thrown when a builder is given for a plugin that <paramref name="mode"/> leaves out.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionString"/> is null or white space.</exception>
         public static AkkaConfigurationBuilder WithEmbeddedPersistence(
             this AkkaConfigurationBuilder builder,
             string connectionString,
-            Action<AkkaPersistenceJournalBuilder>? configureJournal = null,
             PersistenceMode mode = PersistenceMode.Both,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null,
             bool autoInitialize = true,
-            TagWriteMode tagWriteMode = TagWriteMode.TagTable,
             string pluginIdentifier = "embedded",
             bool isDefaultPlugin = true,
-            Action<AkkaPersistenceSnapshotBuilder>? configureSnapshot = null)
+            TagWriteMode? tagStorageMode = null,
+            bool? deleteCompatibilityMode = null,
+            bool? useWriterUuidColumn = null,
+            int? maxConcurrentQueries = null)
         {
+            if (mode == PersistenceMode.SnapshotStore && journalBuilder is not null)
+                throw new Exception($"{nameof(journalBuilder)} can only be set when {nameof(mode)} is set to either {PersistenceMode.Both} or {PersistenceMode.Journal}");
+
+            if (mode == PersistenceMode.Journal && snapshotBuilder is not null)
+                throw new Exception($"{nameof(snapshotBuilder)} can only be set when {nameof(mode)} is set to either {PersistenceMode.Both} or {PersistenceMode.SnapshotStore}");
+
             if (string.IsNullOrWhiteSpace(connectionString))
-                throw new ArgumentException("A connection string is required.", nameof(connectionString));
+                throw new ArgumentNullException(nameof(connectionString), $"{nameof(connectionString)} can not be null");
 
-            var includesJournal = mode is PersistenceMode.Both or PersistenceMode.Journal;
-            var includesSnapshots = mode is PersistenceMode.Both or PersistenceMode.SnapshotStore;
+            var journalOpt = new EmbeddedJournalOptions(isDefaultPlugin, pluginIdentifier)
+            {
+                ConnectionString = connectionString,
+                AutoInitialize = autoInitialize,
+                TagStorageMode = tagStorageMode,
+                DeleteCompatibilityMode = deleteCompatibilityMode,
+                UseWriterUuidColumn = useWriterUuidColumn,
+                MaxConcurrentQueries = maxConcurrentQueries,
+            };
 
-            return builder.WithEmbeddedPersistence(
-                includesJournal
-                    ? new EmbeddedJournalOptions(isDefaultPlugin, pluginIdentifier)
-                    {
-                        ConnectionString = connectionString,
-                        AutoInitialize = autoInitialize,
-                        TagWriteMode = tagWriteMode
-                    }
-                    : null,
-                includesSnapshots
-                    ? new EmbeddedSnapshotOptions(isDefaultPlugin, pluginIdentifier)
-                    {
-                        ConnectionString = connectionString,
-                        AutoInitialize = autoInitialize
-                    }
-                    : null,
-                includesJournal ? new EmbeddedReadJournalOptions(pluginIdentifier) { WriteJournalIdentifier = pluginIdentifier } : null,
-                configureJournal,
-                configureSnapshot);
+            var snapshotOpt = new EmbeddedSnapshotOptions(isDefaultPlugin, pluginIdentifier)
+            {
+                ConnectionString = connectionString,
+                AutoInitialize = autoInitialize,
+            };
+
+            return mode switch
+            {
+                PersistenceMode.Journal => builder.WithEmbeddedPersistence(journalOpt, null, journalBuilder, snapshotBuilder),
+                PersistenceMode.SnapshotStore => builder.WithEmbeddedPersistence(null, snapshotOpt, journalBuilder, snapshotBuilder),
+                PersistenceMode.Both => builder.WithEmbeddedPersistence(journalOpt, snapshotOpt, journalBuilder, snapshotBuilder),
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Invalid PersistenceMode defined."),
+            };
         }
 
         /// <summary>
-        /// Adds the plugins whose options are given: any of the journal, the snapshot store and the read journal.
+        /// Adds the journal, the snapshot store and the read journal. At least one of the configurator delegates
+        /// needs to be populated.
         /// </summary>
-        /// <param name="builder">The builder.</param>
-        /// <param name="journalOptions">The journal, or null for none.</param>
-        /// <param name="snapshotOptions">The snapshot store, or null for none.</param>
-        /// <param name="readJournalOptions">The read journal, or null for none. It reads <see cref="EmbeddedReadJournalOptions.WriteJournalIdentifier"/>.</param>
-        /// <param name="configureJournal">Event adapters and health checks of the journal.</param>
-        /// <param name="configureSnapshot">Health checks of the snapshot store.</param>
+        /// <param name="builder">The builder instance being configured.</param>
+        /// <param name="journalOptionConfigurator">Sets the properties of <see cref="EmbeddedJournalOptions"/>. Leave null for no journal.</param>
+        /// <param name="snapshotOptionConfigurator">Sets the properties of <see cref="EmbeddedSnapshotOptions"/>. Leave null for no snapshot store.</param>
+        /// <param name="isDefaultPlugin">Make these the default journal and snapshot store. Default <c>true</c>.</param>
+        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
+        /// <exception cref="ArgumentException">Thrown when both delegates are null.</exception>
         public static AkkaConfigurationBuilder WithEmbeddedPersistence(
             this AkkaConfigurationBuilder builder,
-            EmbeddedJournalOptions? journalOptions,
-            EmbeddedSnapshotOptions? snapshotOptions,
-            EmbeddedReadJournalOptions? readJournalOptions = null,
-            Action<AkkaPersistenceJournalBuilder>? configureJournal = null,
-            Action<AkkaPersistenceSnapshotBuilder>? configureSnapshot = null)
+            Action<EmbeddedJournalOptions>? journalOptionConfigurator = null,
+            Action<EmbeddedSnapshotOptions>? snapshotOptionConfigurator = null,
+            bool isDefaultPlugin = true)
+        {
+            if (journalOptionConfigurator is null && snapshotOptionConfigurator is null)
+                throw new ArgumentException($"{nameof(journalOptionConfigurator)} and {nameof(snapshotOptionConfigurator)} could not both be null");
+
+            EmbeddedJournalOptions? journalOptions = null;
+            if (journalOptionConfigurator is not null)
+            {
+                journalOptions = new EmbeddedJournalOptions(isDefaultPlugin);
+                journalOptionConfigurator(journalOptions);
+            }
+
+            EmbeddedSnapshotOptions? snapshotOptions = null;
+            if (snapshotOptionConfigurator is not null)
+            {
+                snapshotOptions = new EmbeddedSnapshotOptions(isDefaultPlugin);
+                snapshotOptionConfigurator(snapshotOptions);
+            }
+
+            return builder.WithEmbeddedPersistence(journalOptions, snapshotOptions);
+        }
+
+        /// <summary>
+        /// Adds the journal, the snapshot store and the read journal from their options. At least one of the options
+        /// has to be populated. The read journal reads the journal and takes its <c>Query*</c> settings from
+        /// <paramref name="journalOptions"/>, so there is nothing else to register.
+        /// </summary>
+        /// <param name="builder">The builder instance being configured.</param>
+        /// <param name="journalOptions">The journal, or null for none.</param>
+        /// <param name="snapshotOptions">The snapshot store, or null for none.</param>
+        /// <param name="journalBuilder">Event adapters and health checks of the journal.</param>
+        /// <param name="snapshotBuilder">Health checks of the snapshot store.</param>
+        /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
+        /// <exception cref="ArgumentException">Thrown when both options are null.</exception>
+        public static AkkaConfigurationBuilder WithEmbeddedPersistence(
+            this AkkaConfigurationBuilder builder,
+            EmbeddedJournalOptions? journalOptions = null,
+            EmbeddedSnapshotOptions? snapshotOptions = null,
+            Action<AkkaPersistenceJournalBuilder>? journalBuilder = null,
+            Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null)
         {
             if (builder is null)
                 throw new ArgumentNullException(nameof(builder));
 
+            if (journalOptions is null && snapshotOptions is null)
+                throw new ArgumentException($"{nameof(journalOptions)} and {nameof(snapshotOptions)} could not both be null");
+
             if (journalOptions is not null)
-                builder.WithJournal(journalOptions, configureJournal);
+            {
+                builder.WithJournal(journalOptions, journalBuilder);
+                builder.AddReadJournal(journalOptions.QueryPluginId, journalOptions);
+
+                // a default journal under another id is also what the default read journal id reads
+                if (journalOptions.IsDefaultPlugin && journalOptions.QueryPluginId != SqlitePersistence.QueryPluginId)
+                    builder.AddReadJournal(SqlitePersistence.QueryPluginId, journalOptions);
+            }
 
             if (snapshotOptions is not null)
-                builder.WithSnapshot(snapshotOptions, configureSnapshot);
-
-            if (readJournalOptions is not null)
-                builder.WithEmbeddedReadJournal(readJournalOptions);
+                builder.WithSnapshot(snapshotOptions, snapshotBuilder);
 
             return builder;
         }
 
-        /// <summary>Adds the journal and its read journal, without a snapshot store.</summary>
-        public static AkkaConfigurationBuilder WithEmbeddedJournal(
-            this AkkaConfigurationBuilder builder,
-            EmbeddedJournalOptions journalOptions,
-            Action<AkkaPersistenceJournalBuilder>? configureJournal = null,
-            EmbeddedReadJournalOptions? readJournalOptions = null)
+        private static void AddReadJournal(this AkkaConfigurationBuilder builder, string queryPluginId, EmbeddedJournalOptions journalOptions)
         {
-            if (journalOptions is null)
-                throw new ArgumentNullException(nameof(journalOptions));
+            // the plugin's reference section sits under the options' HOCON, which the journal options have already added
+            var defaults = SqlitePersistence.DefaultQueryConfiguration.MoveTo(queryPluginId);
+            builder.AddHocon(defaults, HoconAddMode.Append);
 
-            return builder.WithEmbeddedPersistence(
-                journalOptions,
-                null,
-                readJournalOptions ?? new EmbeddedReadJournalOptions(journalOptions.Identifier) { WriteJournalIdentifier = journalOptions.Identifier },
-                configureJournal);
-        }
-
-        /// <summary>Adds the snapshot store only.</summary>
-        public static AkkaConfigurationBuilder WithEmbeddedSnapshotStore(
-            this AkkaConfigurationBuilder builder,
-            EmbeddedSnapshotOptions snapshotOptions,
-            Action<AkkaPersistenceSnapshotBuilder>? configureSnapshot = null)
-        {
-            if (snapshotOptions is null)
-                throw new ArgumentNullException(nameof(snapshotOptions));
-
-            return builder.WithEmbeddedPersistence(null, snapshotOptions, null, null, configureSnapshot);
-        }
-
-        /// <summary>
-        /// Adds the read journal alone, for a journal that is configured elsewhere (for example with
-        /// <see cref="AkkaPersistenceHostingExtensions.WithJournal(AkkaConfigurationBuilder, JournalOptions)"/>).
-        /// </summary>
-        public static AkkaConfigurationBuilder WithEmbeddedReadJournal(
-            this AkkaConfigurationBuilder builder,
-            EmbeddedReadJournalOptions? readJournalOptions = null)
-        {
-            if (builder is null)
-                throw new ArgumentNullException(nameof(builder));
-
-            var options = readJournalOptions ?? new EmbeddedReadJournalOptions();
-            var pluginId = options.PluginId;
-
-            // HOCON first (the user's settings win), the plugin's reference config underneath
-            builder.AddHocon(options.ToConfig(), HoconAddMode.Prepend);
-            builder.AddHocon(options.DefaultConfig, HoconAddMode.Append);
-
-            return builder.WithReadJournal(
-                pluginId,
-                (system, config) => new SqliteReadJournalProvider(system, config, pluginId),
-                options.DefaultConfig.GetConfig(pluginId));
+            builder.WithReadJournal(
+                queryPluginId,
+                (system, config) => new SqliteReadJournalProvider(system, config, queryPluginId),
+                SqlitePersistence.DefaultQueryConfiguration);
         }
     }
 }

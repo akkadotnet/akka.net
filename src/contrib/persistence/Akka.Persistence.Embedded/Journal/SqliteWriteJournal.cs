@@ -126,6 +126,9 @@ namespace Akka.Persistence.Embedded.Journal
                     Sender.Tell(Initialized.Instance);
                     return true;
 
+                case CrashForTests:
+                    throw new InvalidOperationException("The journal was told to crash by a test.");
+
                 default:
                     return false;
             }

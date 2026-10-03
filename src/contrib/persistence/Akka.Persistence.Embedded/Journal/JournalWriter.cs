@@ -103,7 +103,7 @@ namespace Akka.Persistence.Embedded.Journal
             _sql = sql;
             _log = log;
             _queue = new BlockingCollection<WriteWork>(settings.BufferSize);
-            _holder = new ConnectionHolder(settings.ConnectionString, log);
+            _holder = new ConnectionHolder(ConnectionHolder.Prepare(settings.ConnectionString, log), log);
             _thread = new Thread(Loop)
             {
                 IsBackground = true,

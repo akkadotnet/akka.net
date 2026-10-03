@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Hosting;
@@ -109,10 +110,10 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                 .WithEmbeddedPersistence(
                     connectionString,
                     // the factory overload builds the adapter in code, so no type name is resolved
-                    journal => journal
+                    journalBuilder: journal => journal
                         .AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent))
                         .WithHealthCheck(),
-                    configureSnapshot: snapshot => snapshot.WithHealthCheck());
+                    snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 
         [Fact(DisplayName = "Should_persist_recover_snapshot_and_query_by_tag_When_dynamic_type_loading_is_off")]
         public async Task Should_persist_recover_snapshot_and_query_by_tag_When_dynamic_type_loading_is_off()
@@ -147,11 +148,11 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                 .WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system))
                 .WithEmbeddedPersistence(
                     firstDb.ConnectionString,
-                    journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
+                    journalBuilder: journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
                     pluginIdentifier: "first")
                 .WithEmbeddedPersistence(
                     secondDb.ConnectionString,
-                    journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
+                    journalBuilder: journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
                     pluginIdentifier: "second",
                     isDefaultPlugin: false));
             var system = hosted.System;
@@ -182,10 +183,10 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                 .WithEmbeddedPersistence(
                     connectionString,
                     // the type overload writes the adapter into HOCON and also registers it in code
-                    journal => journal
+                    journalBuilder: journal => journal
                         .AddWriteEventAdapter<RedTagger>("red-tagger", [typeof(HostingEvent)])
                         .WithHealthCheck(),
-                    configureSnapshot: snapshot => snapshot.WithHealthCheck());
+                    snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 
         [Fact(DisplayName = "Should_behave_the_same_When_dynamic_type_loading_is_on")]
         public async Task Should_behave_the_same_When_dynamic_type_loading_is_on()
@@ -217,20 +218,23 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
         [Fact(DisplayName = "Should_start_two_read_journals_with_gap_tracking_When_their_ids_differ")]
         public async Task Should_start_two_read_journals_with_gap_tracking_When_their_ids_differ()
         {
-            using var db = new TempDb();
+            using var firstDb = new TempDb();
+            using var secondDb = new TempDb();
             await using var hosted = await HostedSystem.StartAsync(true, builder => builder
                 .WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system))
                 .WithEmbeddedPersistence(
-                    new EmbeddedJournalOptions { ConnectionString = db.ConnectionString },
-                    new EmbeddedSnapshotOptions { ConnectionString = db.ConnectionString },
-                    new EmbeddedReadJournalOptions { JournalSequenceRetrievalEnabled = true })
-                .WithEmbeddedReadJournal(new EmbeddedReadJournalOptions("second") { JournalSequenceRetrievalEnabled = true }));
+                    new EmbeddedJournalOptions { ConnectionString = firstDb.ConnectionString, JournalSequenceRetrievalEnabled = true },
+                    new EmbeddedSnapshotOptions { ConnectionString = firstDb.ConnectionString })
+                .WithEmbeddedPersistence(
+                    new EmbeddedJournalOptions(false, "second") { ConnectionString = secondDb.ConnectionString, JournalSequenceRetrievalEnabled = true }));
             var system = hosted.System;
 
-            var actor = system.ActorOf(Props.Create(() => new HostingActor("two-readers", null, null)));
-            (await actor.Ask<int>(new Persist("only"), TimeSpan.FromSeconds(10))).Should().Be(1);
+            var first = system.ActorOf(Props.Create(() => new HostingActor("two-readers", null, null)));
+            (await first.Ask<int>(new Persist("only"), TimeSpan.FromSeconds(10))).Should().Be(1);
+            var second = system.ActorOf(Props.Create(() => new HostingActor("two-readers", "akka.persistence.journal.second", null)));
+            (await second.Ask<int>(new Persist("only"), TimeSpan.FromSeconds(10))).Should().Be(1);
 
-            // both trackers started: they used to share one actor name, and the second read journal failed to start
+            // both gap trackers started: they used to share one actor name, and the second read journal failed to start
             foreach (var id in new[] { "akka.persistence.query.journal.embedded", "akka.persistence.query.journal.second" })
             {
                 var journal = system.ReadJournalFor<SqliteReadJournal>(id);
@@ -253,6 +257,231 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
         }
     }
 
+
+    /// <summary>The ways to call WithEmbeddedPersistence, with <c>Akka.DynamicTypeLoading</c> off.</summary>
+    [Collection(DynamicTypeLoadingCollection.Name)]
+    public class HostingSurfaceSpec
+    {
+        private static AkkaConfigurationBuilder WithSerializer(AkkaConfigurationBuilder builder)
+            => builder.WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system));
+
+        private static void AddTagger(AkkaPersistenceJournalBuilder journal)
+            => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent));
+
+        private static async Task<string[]> TablesAsync(string path)
+        {
+            await using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name";
+            var names = new System.Collections.Generic.List<string>();
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                names.Add(reader.GetString(0));
+            return names.ToArray();
+        }
+
+        [Fact(DisplayName = "Should_run_the_scenario_When_options_objects_are_passed")]
+        public async Task Should_run_the_scenario_When_options_objects_are_passed()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(
+                    new EmbeddedJournalOptions { ConnectionString = db.ConnectionString, QueryRefreshInterval = TimeSpan.FromMilliseconds(100) },
+                    new EmbeddedSnapshotOptions { ConnectionString = db.ConnectionString },
+                    AddTagger));
+
+            await Scenario.RunAsync(hosted.System, "options-1");
+        }
+
+        [Fact(DisplayName = "Should_run_the_scenario_When_configurator_delegates_are_passed")]
+        public async Task Should_run_the_scenario_When_configurator_delegates_are_passed()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(
+                    journal =>
+                    {
+                        journal.ConnectionString = db.ConnectionString;
+                        journal.DeleteCompatibilityMode = true;
+                    },
+                    snapshot => snapshot.ConnectionString = db.ConnectionString));
+
+            // the delegate overload takes no adapters, so this checks persistence, snapshots and the metadata table only
+            var system = hosted.System;
+            var actor = system.ActorOf(Props.Create(() => new HostingActor("configurator-1", null, null)));
+            (await actor.Ask<int>(new Persist("a"), TimeSpan.FromSeconds(10))).Should().Be(1);
+            (await actor.Ask<long>(new Snapshot(), TimeSpan.FromSeconds(10))).Should().Be(1);
+
+            (await TablesAsync(db.FilePath)).Should().Contain("journal_metadata", "delete compatibility mode was set in the configurator");
+        }
+
+        [Fact(DisplayName = "Should_throw_When_both_configurator_delegates_are_null")]
+        public void Should_throw_When_both_configurator_delegates_are_null()
+        {
+            var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "x");
+            Assert.Throws<ArgumentException>(() => builder.WithEmbeddedPersistence((Action<EmbeddedJournalOptions>?)null, null));
+            Assert.Throws<ArgumentException>(() => builder.WithEmbeddedPersistence((EmbeddedJournalOptions?)null, null));
+        }
+
+        [Fact(DisplayName = "Should_persist_recover_and_query_When_only_the_journal_is_registered")]
+        public async Task Should_persist_recover_and_query_When_only_the_journal_is_registered()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(db.ConnectionString, PersistenceMode.Journal, journalBuilder: j =>
+                {
+                    AddTagger(j);
+                    j.WithHealthCheck();
+                }));
+            var system = hosted.System;
+
+            var first = system.ActorOf(Props.Create(() => new HostingActor("journal-only", null, null)));
+            (await first.Ask<int>(new Persist("plain-1"), TimeSpan.FromSeconds(10))).Should().Be(1);
+            (await first.Ask<int>(new Persist("red-2"), TimeSpan.FromSeconds(10))).Should().Be(2);
+            await first.GracefulStop(TimeSpan.FromSeconds(10));
+
+            var second = system.ActorOf(Props.Create(() => new HostingActor("journal-only", null, null)));
+            (await second.Ask<State>(new GetState(), TimeSpan.FromSeconds(10))).Values.Should().Equal("plain-1", "red-2");
+
+            var byTag = await system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier)
+                .CurrentEventsByTag("red", Offset.NoOffset()).RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(TimeSpan.FromSeconds(10));
+            byTag.Should().HaveCount(1);
+
+            (await TablesAsync(db.FilePath)).Should().NotContain("snapshot");
+            var health = await hosted.Services.GetRequiredService<HealthCheckService>().CheckHealthAsync();
+            health.Entries.Keys.Should().Contain("akka.persistence.journal.embedded").And.NotContain("akka.persistence.snapshot-store.embedded");
+        }
+
+        [Fact(DisplayName = "Should_store_and_load_snapshots_When_only_the_snapshot_store_is_registered")]
+        public async Task Should_store_and_load_snapshots_When_only_the_snapshot_store_is_registered()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(
+                    journalOptions: null,
+                    snapshotOptions: new EmbeddedSnapshotOptions { ConnectionString = db.ConnectionString },
+                    snapshotBuilder: s => s.WithHealthCheck())
+                .WithInMemoryJournal());
+            var system = hosted.System;
+
+            var first = system.ActorOf(Props.Create(() => new HostingActor("snapshot-only", null, null)));
+            (await first.Ask<int>(new Persist("a"), TimeSpan.FromSeconds(10))).Should().Be(1);
+            (await first.Ask<long>(new Snapshot(), TimeSpan.FromSeconds(10))).Should().Be(1);
+            await first.GracefulStop(TimeSpan.FromSeconds(10));
+
+            var second = system.ActorOf(Props.Create(() => new HostingActor("snapshot-only", null, null)));
+            var state = await second.Ask<State>(new GetState(), TimeSpan.FromSeconds(10));
+            state.SnapshotSequenceNr.Should().Be(1);
+            state.Values.Should().Equal("a");
+            (await TablesAsync(db.FilePath)).Should().Contain("snapshot").And.NotContain("journal");
+        }
+
+        [Fact(DisplayName = "Should_write_no_tag_table_When_tag_storage_mode_is_Csv")]
+        public async Task Should_write_no_tag_table_When_tag_storage_mode_is_Csv()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(db.ConnectionString, journalBuilder: AddTagger, tagStorageMode: TagWriteMode.Csv));
+
+            await Scenario.RunAsync(hosted.System, "csv-1");
+
+            (await TablesAsync(db.FilePath)).Should().NotContain("tags");
+        }
+
+        [Fact(DisplayName = "Should_leave_the_database_empty_and_fail_writes_When_autoInitialize_is_false")]
+        public async Task Should_leave_the_database_empty_and_fail_writes_When_autoInitialize_is_false()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(db.ConnectionString, autoInitialize: false, journalBuilder: AddTagger));
+            var system = hosted.System;
+
+            var actor = system.ActorOf(Props.Create(() => new HostingActor("no-tables", null, null)));
+            var attempt = () => actor.Ask<int>(new Persist("lost"), TimeSpan.FromSeconds(3));
+
+            await attempt.Should().ThrowAsync<Exception>("the journal table does not exist");
+            (await TablesAsync(db.FilePath)).Should().NotContain("journal");
+            system.Settings.Config.GetBoolean("akka.persistence.journal.embedded.auto-initialize").Should().BeFalse();
+        }
+
+        [Fact(DisplayName = "Should_read_the_journal_of_a_default_plugin_When_its_identifier_is_not_embedded")]
+        public async Task Should_read_the_journal_of_a_default_plugin_When_its_identifier_is_not_embedded()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(db.ConnectionString, journalBuilder: AddTagger, pluginIdentifier: "custom"));
+
+            // the default read journal id and the custom one both read the custom journal
+            await Scenario.RunAsync(hosted.System, "alias-1", readJournalId: SqliteReadJournal.Identifier);
+            var viaCustom = await hosted.System.ReadJournalFor<SqliteReadJournal>("akka.persistence.query.journal.custom")
+                .CurrentPersistenceIds().RunWith(Sink.Seq<string>(), hosted.System.Materializer()).WaitAsync(TimeSpan.FromSeconds(10));
+            viaCustom.Should().Equal("alias-1");
+        }
+
+        [Fact(DisplayName = "Should_apply_query_settings_from_the_journal_options_When_the_read_journal_starts")]
+        public async Task Should_apply_query_settings_from_the_journal_options_When_the_read_journal_starts()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(
+                    new EmbeddedJournalOptions
+                    {
+                        ConnectionString = db.ConnectionString,
+                        QueryRefreshInterval = TimeSpan.FromMilliseconds(250),
+                        QueryMaxBufferSize = 3,
+                        MaxConcurrentQueries = 7,
+                        QueryThrottleTimeout = TimeSpan.FromSeconds(2),
+                        QueryThreads = 2,
+                        JournalSequenceRetrievalEnabled = true
+                    },
+                    null,
+                    AddTagger));
+            var system = hosted.System;
+            var config = system.Settings.Config.GetConfig(SqliteReadJournal.Identifier);
+
+            config.GetTimeSpan("refresh-interval").Should().Be(TimeSpan.FromMilliseconds(250));
+            config.GetInt("max-buffer-size").Should().Be(3);
+            config.GetInt("max-concurrent-queries").Should().Be(7);
+            config.GetTimeSpan("query-throttle-timeout").Should().Be(TimeSpan.FromSeconds(2));
+            config.GetInt("query-threads").Should().Be(2);
+            config.GetBoolean("journal-sequence-retrieval.enabled").Should().BeTrue();
+
+            // the settings reach the read journal: 10 events come back through pages of 3
+            var actor = system.ActorOf(Props.Create(() => new HostingActor("paged", null, null)));
+            for (var i = 1; i <= 10; i++)
+                (await actor.Ask<int>(new Persist($"e-{i}"), TimeSpan.FromSeconds(10))).Should().Be(i);
+            var events = await system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier)
+                .CurrentEventsByPersistenceId("paged", 0, long.MaxValue)
+                .RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(TimeSpan.FromSeconds(10));
+            events.Select(e => e.SequenceNr).Should().Equal(Enumerable.Range(1, 10).Select(i => (long)i));
+        }
+
+        [Fact(DisplayName = "Should_use_custom_table_names_When_they_are_set_in_the_journal_and_snapshot_options")]
+        public async Task Should_use_custom_table_names_When_they_are_set_in_the_journal_and_snapshot_options()
+        {
+            using var db = new TempDb();
+            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
+                .WithEmbeddedPersistence(
+                    new EmbeddedJournalOptions
+                    {
+                        ConnectionString = db.ConnectionString,
+                        JournalTableName = "events",
+                        TagTableName = "event_tags",
+                        MetadataTableName = "event_meta",
+                        DeleteCompatibilityMode = true
+                    },
+                    new EmbeddedSnapshotOptions { ConnectionString = db.ConnectionString, TableName = "snaps" },
+                    AddTagger));
+
+            await Scenario.RunAsync(hosted.System, "names-1");
+
+            var tables = await TablesAsync(db.FilePath);
+            tables.Should().Contain(["events", "event_tags", "event_meta", "snaps"]);
+            tables.Should().NotContain(["journal", "tags", "snapshot", "journal_metadata"]);
+        }
+    }
+
     public class OptionsSpec
     {
         [Fact(DisplayName = "Should_write_every_setting_When_journal_options_are_turned_into_config")]
@@ -261,15 +490,17 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             var options = new EmbeddedJournalOptions(isDefaultPlugin: false, identifier: "custom")
             {
                 ConnectionString = "Data Source=a \"quoted\".db",
-                TagWriteMode = TagWriteMode.Both,
+                TagStorageMode = TagWriteMode.Both,
                 TagSeparator = "|",
                 DeleteCompatibilityMode = true,
                 UseWriterUuidColumn = false,
                 JournalTableName = "events",
-                BatchSize = 7
+                BatchSize = 7,
+                MaxConcurrentQueries = 9
             };
 
-            var config = options.ToConfig().GetConfig("akka.persistence.journal.custom");
+            var all = options.ToConfig();
+            var config = all.GetConfig("akka.persistence.journal.custom");
 
             config.GetString("connection-string").Should().Be("Data Source=a \"quoted\".db");
             config.GetString("tag-write-mode").Should().Be("Both");
@@ -278,14 +509,40 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             config.GetBoolean("default.journal.use-writer-uuid-column").Should().BeFalse();
             config.GetString("default.journal.table-name").Should().Be("events");
             config.GetInt("batch-size").Should().Be(7);
-            options.ToConfig().HasPath("akka.persistence.journal.plugin").Should().BeFalse("it is not the default plugin");
+            all.GetString("akka.persistence.query.journal.custom.write-plugin").Should().Be("akka.persistence.journal.custom");
+            all.GetInt("akka.persistence.query.journal.custom.max-concurrent-queries").Should().Be(9);
+            all.HasPath("akka.persistence.journal.plugin").Should().BeFalse("it is not the default plugin");
             options.DefaultConfig.GetString("akka.persistence.journal.custom.class").Should().Contain("SqliteWriteJournal");
+        }
+
+        [Fact(DisplayName = "Should_keep_the_reference_settings_When_options_are_left_null")]
+        public void Should_keep_the_reference_settings_When_options_are_left_null()
+        {
+            var options = new EmbeddedJournalOptions { ConnectionString = "Data Source=a.db" };
+
+            var merged = options.ToConfig().WithFallback(options.DefaultConfig).GetConfig("akka.persistence.journal.embedded");
+
+            merged.GetString("tag-write-mode").Should().Be("TagTable");
+            merged.GetInt("batch-size").Should().Be(100);
+            merged.GetString("default.journal.table-name").Should().Be("journal");
+            options.ToConfig().HasPath("akka.persistence.journal.embedded.batch-size").Should().BeFalse("a null property writes nothing");
         }
 
         [Fact(DisplayName = "Should_throw_When_connection_string_is_missing")]
         public void Should_throw_When_connection_string_is_missing()
         {
-            Assert.Throws<ArgumentException>(() => new AkkaConfigurationBuilder(new ServiceCollection(), "x").WithEmbeddedPersistence(""));
+            var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "x");
+            Assert.Throws<ArgumentNullException>(() => builder.WithEmbeddedPersistence(""));
+            Assert.Throws<ArgumentNullException>(() => new EmbeddedJournalOptions().ToConfig());
+            Assert.Throws<ArgumentNullException>(() => new EmbeddedSnapshotOptions().ToConfig());
+        }
+
+        [Fact(DisplayName = "Should_throw_When_a_builder_is_given_for_a_plugin_the_mode_leaves_out")]
+        public void Should_throw_When_a_builder_is_given_for_a_plugin_the_mode_leaves_out()
+        {
+            var builder = new AkkaConfigurationBuilder(new ServiceCollection(), "x");
+            Assert.Throws<Exception>(() => builder.WithEmbeddedPersistence("Data Source=a.db", PersistenceMode.SnapshotStore, journalBuilder: _ => { }));
+            Assert.Throws<Exception>(() => builder.WithEmbeddedPersistence("Data Source=a.db", PersistenceMode.Journal, snapshotBuilder: _ => { }));
         }
     }
 }

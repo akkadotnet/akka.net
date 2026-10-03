@@ -22,15 +22,19 @@ namespace Akka.Persistence.Embedded.Hosting
 
         public static string Bool(bool value) => value ? "true" : "false";
 
-        public static string Seconds(TimeSpan value) => value.TotalMilliseconds.ToString("0", CultureInfo.InvariantCulture) + "ms";
+        public static string Milliseconds(TimeSpan value) => value.TotalMilliseconds.ToString("0", CultureInfo.InvariantCulture) + "ms";
     }
 
     /// <summary>
-    /// Options of the SQLite journal. The default config is the plugin's reference configuration, and the plugin
-    /// is registered in code, so it needs no <c>class</c> setting and starts with <c>Akka.DynamicTypeLoading</c> off.
+    /// Options of the SQLite journal and of the read journal that reads it, shaped like Akka.Persistence.Sql.Hosting's
+    /// <c>SqlJournalOptions</c>. A property left null keeps the plugin's reference setting. The plugin is registered in code
+    /// (<see cref="CreatePluginActorFactory"/>), so it needs no <c>class</c> setting and starts with
+    /// <c>Akka.DynamicTypeLoading</c> off.
     /// </summary>
     public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions
     {
+        private static readonly Config Default = SqlitePersistence.DefaultJournalConfiguration;
+
         /// <summary>Creates options for the default journal, <c>akka.persistence.journal.embedded</c>.</summary>
         public EmbeddedJournalOptions() : this(true)
         {
@@ -40,50 +44,75 @@ namespace Akka.Persistence.Embedded.Hosting
         public EmbeddedJournalOptions(bool isDefaultPlugin, string identifier = "embedded") : base(isDefaultPlugin)
         {
             Identifier = identifier;
+            Serializer = null;
             AutoInitialize = true;
         }
 
         /// <inheritdoc />
         public override string Identifier { get; set; }
 
-        /// <summary>Microsoft.Data.Sqlite connection string. Required. <c>Default Timeout</c> sets how long a busy database is waited on.</summary>
-        public string ConnectionString { get; set; } = "";
+        /// <summary>
+        /// Microsoft.Data.Sqlite connection string. Required. <c>Default Timeout</c> sets how long a busy database is waited on.
+        /// The plugin adds <c>Pooling=False</c> to its long-lived connections unless the string sets <c>Pooling</c>.
+        /// </summary>
+        public string? ConnectionString { get; set; }
 
         /// <summary>Where tags are stored. Default <see cref="TagWriteMode.TagTable"/>.</summary>
-        public TagWriteMode TagWriteMode { get; set; } = TagWriteMode.TagTable;
+        public TagWriteMode? TagStorageMode { get; set; }
 
         /// <summary>Separator of the Csv tags column. Used with <see cref="TagWriteMode.Csv"/> and <see cref="TagWriteMode.Both"/>.</summary>
-        public string TagSeparator { get; set; } = ";";
+        public string? TagSeparator { get; set; }
 
         /// <summary>Create and use <c>journal_metadata</c> for deletes and highest sequence numbers.</summary>
-        public bool DeleteCompatibilityMode { get; set; }
+        public bool? DeleteCompatibilityMode { get; set; }
 
         /// <summary>Write the <c>writer_uuid</c> column. Turn off for tables created without it.</summary>
-        public bool UseWriterUuidColumn { get; set; } = true;
+        public bool? UseWriterUuidColumn { get; set; }
 
         /// <summary>Name of the journal table.</summary>
-        public string JournalTableName { get; set; } = "journal";
+        public string? JournalTableName { get; set; }
 
         /// <summary>Name of the tag table.</summary>
-        public string TagTableName { get; set; } = "tags";
+        public string? TagTableName { get; set; }
 
         /// <summary>Name of the metadata table.</summary>
-        public string MetadataTableName { get; set; } = "journal_metadata";
+        public string? MetadataTableName { get; set; }
 
         /// <summary>Write requests queued for the writer thread. Further writes fail.</summary>
-        public int BufferSize { get; set; } = 5000;
+        public int? BufferSize { get; set; }
 
         /// <summary>Rows per write transaction.</summary>
-        public int BatchSize { get; set; } = 100;
+        public int? BatchSize { get; set; }
 
         /// <summary>Rows per round trip during recovery.</summary>
-        public int ReplayBatchSize { get; set; } = 1000;
+        public int? ReplayBatchSize { get; set; }
 
         /// <summary>Threads that run recovery reads.</summary>
-        public int ReadThreads { get; set; } = 2;
+        public int? ReadThreads { get; set; }
+
+        /// <summary>Poll interval of the read journal's live queries.</summary>
+        public TimeSpan? QueryRefreshInterval { get; set; }
+
+        /// <summary>Rows per read journal round trip.</summary>
+        public int? QueryMaxBufferSize { get; set; }
+
+        /// <summary>Queries that run or wait at once.</summary>
+        public int? MaxConcurrentQueries { get; set; }
+
+        /// <summary>How long a query waits for a slot before it fails.</summary>
+        public TimeSpan? QueryThrottleTimeout { get; set; }
+
+        /// <summary>Threads that run read journal queries.</summary>
+        public int? QueryThreads { get; set; }
+
+        /// <summary>Bound live and by-tag batches with the Akka.Persistence.Sql style gap tracker. Off by default.</summary>
+        public bool? JournalSequenceRetrievalEnabled { get; set; }
 
         /// <inheritdoc />
-        protected override Config InternalDefaultConfig => SqlitePersistence.DefaultJournalConfiguration;
+        protected override Config InternalDefaultConfig => Default;
+
+        /// <summary>The read journal's plugin id: <c>akka.persistence.query.journal.{Identifier}</c>.</summary>
+        public string QueryPluginId => $"akka.persistence.query.journal.{Identifier}";
 
         /// <inheritdoc />
         protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory()
@@ -92,26 +121,69 @@ namespace Akka.Persistence.Embedded.Hosting
         /// <inheritdoc />
         protected override StringBuilder Build(StringBuilder sb)
         {
-            sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString)}");
-            sb.AppendLine($"tag-write-mode = {TagWriteMode}");
-            sb.AppendLine($"tag-separator = {HoconText.Quote(TagSeparator)}");
-            sb.AppendLine($"delete-compatibility-mode = {HoconText.Bool(DeleteCompatibilityMode)}");
-            sb.AppendLine($"buffer-size = {BufferSize}");
-            sb.AppendLine($"batch-size = {BatchSize}");
-            sb.AppendLine($"replay-batch-size = {ReplayBatchSize}");
-            sb.AppendLine($"read-threads = {ReadThreads}");
-            sb.AppendLine($"default.journal.use-writer-uuid-column = {HoconText.Bool(UseWriterUuidColumn)}");
-            sb.AppendLine($"default.journal.table-name = {HoconText.Quote(JournalTableName)}");
-            sb.AppendLine($"default.tag.table-name = {HoconText.Quote(TagTableName)}");
-            sb.AppendLine($"default.metadata.table-name = {HoconText.Quote(MetadataTableName)}");
+            if (string.IsNullOrWhiteSpace(ConnectionString))
+                throw new ArgumentNullException(nameof(ConnectionString), $"{nameof(ConnectionString)} can not be null or empty.");
 
-            return base.Build(sb);
+            sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString!)}");
+            if (TagStorageMode is not null)
+                sb.AppendLine($"tag-write-mode = {TagStorageMode}");
+            if (TagSeparator is not null)
+                sb.AppendLine($"tag-separator = {HoconText.Quote(TagSeparator)}");
+            if (DeleteCompatibilityMode is not null)
+                sb.AppendLine($"delete-compatibility-mode = {HoconText.Bool(DeleteCompatibilityMode.Value)}");
+            if (BufferSize is not null)
+                sb.AppendLine($"buffer-size = {BufferSize}");
+            if (BatchSize is not null)
+                sb.AppendLine($"batch-size = {BatchSize}");
+            if (ReplayBatchSize is not null)
+                sb.AppendLine($"replay-batch-size = {ReplayBatchSize}");
+            if (ReadThreads is not null)
+                sb.AppendLine($"read-threads = {ReadThreads}");
+            if (UseWriterUuidColumn is not null)
+                sb.AppendLine($"default.journal.use-writer-uuid-column = {HoconText.Bool(UseWriterUuidColumn.Value)}");
+            if (JournalTableName is not null)
+                sb.AppendLine($"default.journal.table-name = {HoconText.Quote(JournalTableName)}");
+            if (TagTableName is not null)
+                sb.AppendLine($"default.tag.table-name = {HoconText.Quote(TagTableName)}");
+            if (MetadataTableName is not null)
+                sb.AppendLine($"default.metadata.table-name = {HoconText.Quote(MetadataTableName)}");
+
+            base.Build(sb);
+
+            BuildQueryConfig(sb, QueryPluginId);
+
+            // a default journal under another id is also what the default read journal id reads
+            if (IsDefaultPlugin && QueryPluginId != SqlitePersistence.QueryPluginId)
+                BuildQueryConfig(sb, SqlitePersistence.QueryPluginId);
+
+            return sb;
+        }
+
+        private void BuildQueryConfig(StringBuilder sb, string queryPluginId)
+        {
+            sb.AppendLine($"{queryPluginId} {{");
+            sb.AppendLine($"write-plugin = {HoconText.Quote(PluginId)}");
+            if (QueryRefreshInterval is not null)
+                sb.AppendLine($"refresh-interval = {HoconText.Milliseconds(QueryRefreshInterval.Value)}");
+            if (QueryMaxBufferSize is not null)
+                sb.AppendLine($"max-buffer-size = {QueryMaxBufferSize}");
+            if (MaxConcurrentQueries is not null)
+                sb.AppendLine($"max-concurrent-queries = {MaxConcurrentQueries}");
+            if (QueryThrottleTimeout is not null)
+                sb.AppendLine($"query-throttle-timeout = {HoconText.Milliseconds(QueryThrottleTimeout.Value)}");
+            if (QueryThreads is not null)
+                sb.AppendLine($"query-threads = {QueryThreads}");
+            if (JournalSequenceRetrievalEnabled is not null)
+                sb.AppendLine($"journal-sequence-retrieval.enabled = {HoconText.Bool(JournalSequenceRetrievalEnabled.Value)}");
+            sb.AppendLine("}");
         }
     }
 
-    /// <summary>Options of the SQLite snapshot store.</summary>
+    /// <summary>Options of the SQLite snapshot store, shaped like Akka.Persistence.Sql.Hosting's <c>SqlSnapshotOptions</c>.</summary>
     public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
     {
+        private static readonly Config Default = SqlitePersistence.DefaultSnapshotConfiguration;
+
         /// <summary>Creates options for the default snapshot store, <c>akka.persistence.snapshot-store.embedded</c>.</summary>
         public EmbeddedSnapshotOptions() : this(true)
         {
@@ -121,6 +193,7 @@ namespace Akka.Persistence.Embedded.Hosting
         public EmbeddedSnapshotOptions(bool isDefaultPlugin, string identifier = "embedded") : base(isDefaultPlugin)
         {
             Identifier = identifier;
+            Serializer = null;
             AutoInitialize = true;
         }
 
@@ -128,13 +201,13 @@ namespace Akka.Persistence.Embedded.Hosting
         public override string Identifier { get; set; }
 
         /// <summary>Microsoft.Data.Sqlite connection string. Required.</summary>
-        public string ConnectionString { get; set; } = "";
+        public string? ConnectionString { get; set; }
 
         /// <summary>Name of the snapshot table.</summary>
-        public string TableName { get; set; } = "snapshot";
+        public string? TableName { get; set; }
 
         /// <inheritdoc />
-        protected override Config InternalDefaultConfig => SqlitePersistence.DefaultSnapshotConfiguration;
+        protected override Config InternalDefaultConfig => Default;
 
         /// <inheritdoc />
         protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory()
@@ -143,65 +216,14 @@ namespace Akka.Persistence.Embedded.Hosting
         /// <inheritdoc />
         protected override StringBuilder Build(StringBuilder sb)
         {
-            sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString)}");
-            sb.AppendLine($"default.snapshot.table-name = {HoconText.Quote(TableName)}");
+            if (string.IsNullOrWhiteSpace(ConnectionString))
+                throw new ArgumentNullException(nameof(ConnectionString), $"{nameof(ConnectionString)} can not be null or empty.");
+
+            sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString!)}");
+            if (TableName is not null)
+                sb.AppendLine($"default.snapshot.table-name = {HoconText.Quote(TableName)}");
 
             return base.Build(sb);
-        }
-    }
-
-    /// <summary>Options of the SQLite read journal.</summary>
-    public sealed class EmbeddedReadJournalOptions
-    {
-        /// <summary>Creates options for the default read journal, <c>akka.persistence.query.journal.embedded</c>.</summary>
-        public EmbeddedReadJournalOptions()
-        {
-        }
-
-        /// <summary>Creates options for a read journal registered under <paramref name="identifier"/>.</summary>
-        public EmbeddedReadJournalOptions(string identifier)
-        {
-            Identifier = identifier;
-        }
-
-        /// <summary>Identifier of the read journal: <c>akka.persistence.query.journal.{Identifier}</c>.</summary>
-        public string Identifier { get; set; } = "embedded";
-
-        /// <summary>Identifier of the journal this read journal reads: <c>akka.persistence.journal.{WriteJournalIdentifier}</c>.</summary>
-        public string WriteJournalIdentifier { get; set; } = "embedded";
-
-        /// <summary>The read journal's plugin id.</summary>
-        public string PluginId => $"akka.persistence.query.journal.{Identifier}";
-
-        /// <summary>Poll interval of live queries when the last batch was not full.</summary>
-        public TimeSpan RefreshInterval { get; set; } = TimeSpan.FromSeconds(1);
-
-        /// <summary>Rows per query round trip.</summary>
-        public int MaxBufferSize { get; set; } = 500;
-
-        /// <summary>Bound live and by-tag batches with the Akka.Persistence.Sql style gap tracker. Off by default.</summary>
-        public bool JournalSequenceRetrievalEnabled { get; set; }
-
-        /// <summary>The plugin's reference configuration for the read journal.</summary>
-        public Config DefaultConfig => SqlitePersistence.DefaultQueryConfiguration.MoveTo(PluginId);
-
-        /// <summary>The settings as a <see cref="Config"/>.</summary>
-        public Config ToConfig() => ToString();
-
-        /// <inheritdoc />
-        public override string ToString()
-        {
-            if (string.IsNullOrWhiteSpace(Identifier))
-                throw new InvalidOperationException($"Invalid {GetType()}, {nameof(Identifier)} is null or whitespace");
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"{PluginId} {{");
-            sb.AppendLine($"write-plugin = \"akka.persistence.journal.{WriteJournalIdentifier}\"");
-            sb.AppendLine($"refresh-interval = {HoconText.Seconds(RefreshInterval)}");
-            sb.AppendLine($"max-buffer-size = {MaxBufferSize}");
-            sb.AppendLine($"journal-sequence-retrieval.enabled = {HoconText.Bool(JournalSequenceRetrievalEnabled)}");
-            sb.AppendLine("}");
-            return sb.ToString();
         }
     }
 }

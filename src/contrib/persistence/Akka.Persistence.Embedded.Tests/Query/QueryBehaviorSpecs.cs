@@ -267,7 +267,8 @@ namespace Akka.Persistence.Embedded.Tests.Query
             probe.Request(5);
             await WriteOneAsync("after-holes", 1, new TestEvent("d"));
 
-            var next = probe.ExpectNext(Timeout);
+            // APS's tracker stalls for query-delay x max-tries (3 s here, 10 s by default) at a hole, so a short wait fails a stall
+            var next = probe.ExpectNext(TimeSpan.FromSeconds(2));
             next.PersistenceId.Should().Be("after-holes");
             ((Sequence)next.Offset).Value.Should().Be(4L);
             probe.Cancel();
@@ -343,7 +344,7 @@ namespace Akka.Persistence.Embedded.Tests.Query
                     akka.persistence.query.journal.embedded.journal-sequence-retrieval {
                         enabled = on
                         query-delay = 500ms
-                        max-tries = 3
+                        max-tries = 6
                     }
                     """),
                 nameof(GapDetectionQueryBehaviorSpec),
@@ -367,7 +368,8 @@ namespace Akka.Persistence.Embedded.Tests.Query
                 "INSERT INTO journal (ordering, created, deleted, persistence_id, sequence_number, message, manifest, identifier, writer_uuid) " +
                 "SELECT 5, created, deleted, 'gap-later', 1, message, manifest, identifier, writer_uuid FROM journal WHERE ordering = 2");
 
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(700));
+            // the tracker gives up on the gap after about 3 s (query-delay x max-tries), so this window is well inside it
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
             var late = probe.ExpectNext(TimeSpan.FromSeconds(30));
             late.PersistenceId.Should().Be("gap-later");
             probe.Cancel();

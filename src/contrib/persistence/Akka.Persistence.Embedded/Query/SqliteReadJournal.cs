@@ -59,6 +59,8 @@ namespace Akka.Persistence.Embedded.Query
         /// <summary>Test seam: query permits that are not in use.</summary>
         internal int AvailablePermitsForTests => _throttle.CurrentCount;
 
+        internal string PluginPathForTests => _pluginPath;
+
         /// <summary>The reference configuration of the plugin. Core adds it to the system config on first use.</summary>
         public static Config DefaultConfiguration() => SqlitePersistence.DefaultConfiguration;
 
