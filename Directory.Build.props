@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.71</VersionPrefix>
+    <VersionPrefix>1.5.72</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -56,37 +56,48 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.71 is a maintenance release that fixes a Cluster Sharding private-replicator recovery bug, hardens MultiNodeTestRunner conductor reliability, flushes graceful `Disassociate` PDUs before transport force-close on shutdown, and resolves a handful of TestKit, ClusterClientDiscovery, and DotNetty fixes.
+    <PackageReleaseNotes>Akka.NET v1.5.72 backports a non-blocking Cluster extension startup, test-infrastructure hardening, a Cluster.Sharding hand-over fix, and a batch of de-flaked specs from `dev`.
+
+Starting with this release, **Akka.Hosting ships from this repository**. The `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit`, and `Akka.Hosting.TestKit.Xunit2` packages are now built, tested, and published alongside every Akka.NET release at the same version number.
+
+**Akka.Hosting**
+* Akka.Hosting moves into the akka.net repository - The six Hosting packages now live under `src/contrib/hosting` and share the Akka.NET version and release cadence. No package IDs, namespaces, or public APIs changed; bump `Akka.Hosting.*` to the same version as `Akka.*`. Hosting-only hotfix versions (such as `1.5.60.1`) no longer exist: a Hosting fix ships in the next Akka.NET patch release. The documentation moved to [getakka.net/articles/hosting](https://getakka.net/articles/hosting/index.html). The [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository will be archived and keeps the full commit history and release notes for versions up to 1.5.71; the import was taken from commit [`cefe3c4c`](https://github.com/akkadotnet/Akka.Hosting/commit/cefe3c4ccdc3149c2a2b1c8980f956b303bf1b1a).
+* Microsoft.Extensions minimum version moves to 10.0 - The `Akka`, `Akka.DependencyInjection` and all `Akka.Hosting.*` packages now require `Microsoft.Extensions.*` 10.0.0 or later (previously 6.0 for the core packages and 9.0 for Akka.Hosting). The 10.0 packages still ship `netstandard2.0` assets, so applications on .NET Framework 4.8, .NET 6 and .NET 8 keep working; NuGet will lift the transitive `Microsoft.Extensions.*` references in those applications to 10.0.x. Akka.Hosting's `OpenTelemetry` dependency moves to 1.15.3 or later, which clears [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j).
+
+**Akka.TestKit / Akka.TestKit.Xunit**
+* [TestKit.Xunit: implement the async dispose chain](https://github.com/akkadotnet/akka.net/pull/8545) - `Akka.TestKit.Xunit.TestKit` now implements `InitializeAsync`/`DisposeAsync` directly instead of relying on a derived class's own no-op overrides. **Breaking change**: a derived spec that already declares its own `InitializeAsync`/`DisposeAsync` must mark them `override` and call the base method, or the build fails with `CS0114`. `Dispose(bool)` no longer terminates the `ActorSystem` by itself; the public `Dispose()`/`DisposeAsync()` entry points do, after calling the base chain.
+* [Put the DotNetty batching override under akka.remote](https://github.com/akkadotnet/akka.net/pull/8561) - The TestKit's write-batching override now lands under the key the transport actually reads. Every TestKit-hosted and multi-node test system runs with DotNetty write batching genuinely off for the first time.
+* [Add TestKitBase.ShutdownAsync](https://github.com/akkadotnet/akka.net/pull/8499) - New public `TestKitBase.ShutdownAsync` overloads shut an `ActorSystem` down without blocking a thread pool worker.
+* [Eliminate the MultiNodeTestRunner conductor port race](https://github.com/akkadotnet/akka.net/pull/8515) - The conductor node now binds port 0 and reports the real port over a stdout sentinel, instead of guessing a free port in advance, removing a race that could leave every other node waiting out a timeout against a conductor that never started. Adds the public `ConductorBindException` and `ConductorPortSentinel` types, and a 20-minute backstop that kills a node process that never exits on its own.
+
+**Akka.Streams**
+* [Tcp Unbind completes immediately when idle](https://github.com/akkadotnet/akka.net/pull/8570) - `ServerBinding.Unbind()` used to always wait out the subscription timeout even when no connection was pending. It now completes right away in that case, and still correctly waits when a connection was accepted but never subscribed to.
 
 **Akka.Cluster.Sharding**
-* [Fix Cluster Sharding private replicator recovery](https://github.com/akkadotnet/akka.net/pull/8480): Fixes a bug where a Cluster Sharding private replicator could fail to recover its state, leaving shard state inconsistent after a coordinated shutdown / recovery cycle. Adds a `ClusterShardingReplicatorResiliencySpec` covering the recovery path.
+* [Arm the remember-entities write timeout with updating-state-timeout](https://github.com/akkadotnet/akka.net/pull/8574) - Remember-entities writes are now timed against `updating-state-timeout` (5 seconds by default), matching what `reference.conf` always documented, instead of `waiting-for-state-timeout` (2 seconds). **Migration**: if you raised `waiting-for-state-timeout` to give a slow remember-entities store more time, move that value to `updating-state-timeout` instead - it no longer affects the write path.
+* [A coordinator hand-over only stops the local ShardRegion when the node is leaving](https://github.com/akkadotnet/akka.net/pull/8586) - Fixes [#8583](https://github.com/akkadotnet/akka.net/issues/8583): a routine singleton hand-over during a rolling restart no longer stops a `ShardRegion` that isn't leaving the cluster, which used to leave that region permanently unusable for the life of the process.
 
-**Akka.Remote**
-* [Backport #8421 to v1.5: flush graceful `Disassociate` PDUs before transport force-close on shutdown](https://github.com/akkadotnet/akka.net/pull/8487): Ensures in-flight graceful `Disassociate` control messages are flushed to the wire before the transport force-closes the connection on shutdown, preventing an abrupt teardown from silently dropping them.
-* [Akka.Remote: stop, don't restart, failed throttler children](https://github.com/akkadotnet/akka.net/pull/8437) - Fixes [#8433](https://github.com/akkadotnet/akka.net/issues/8433) and [#8434](https://github.com/akkadotnet/akka.net/issues/8434): A failing outbound-throttler child is now stopped rather than restarted, avoiding an unbounded restart loop that could stall remote message throughput.
-* [Clarify DotNetty hostname validation direction](https://github.com/akkadotnet/akka.net/pull/8464): Clarifies the direction of the DotNetty hostname validation check so it validates the expected peer identity instead of the local endpoint.
+**Akka.DistributedData**
+* [Fix Replicator.IsKnownNode to trust members first seen as Leaving/Exiting/Downed](https://github.com/akkadotnet/akka.net/pull/8582) - A `Replicator` started after a member had already begun leaving no longer silently drops that member's writes and gossip.
 
-**Akka.Remote.TestKit (MultiNodeTestRunner)**
-* [Backport MNTR conductor reliability to v1.5](https://github.com/akkadotnet/akka.net/pull/8488) - Backports [#8431](https://github.com/akkadotnet/akka.net/issues/8431) and [#8485](https://github.com/akkadotnet/akka.net/issues/8485): Hardens the MNTR `BarrierCoordinator`, `Conductor`, `Controller`, `Player`, and `RemoteConnection` against conductor-side races and disconnect handling, reducing multi-node spec flakiness.
+**Akka.Cluster**
+* [Prevent removed cluster members from being resurrected by stale gossip](https://github.com/akkadotnet/akka.net/pull/8484) - Gossip now carries UID-scoped removal tombstones and retains them for 24 hours by default (`akka.cluster.prune-gossip-tombstones-after`). The wire change is rolling-upgrade compatible: older nodes ignore the added protobuf field and upgraded nodes treat its absence as an empty tombstone set. Protection becomes fully effective after every node is upgraded; removals that occur while old nodes remain in the cluster are not guaranteed to retain their tombstones.
+* [Akka.Cluster: make Cluster extension startup non-blocking](https://github.com/akkadotnet/akka.net/pull/8359) - The `Cluster` constructor no longer blocks on a 20 second ask, and `akka.actor.creation-timeout` is no longer consulted by Akka.Cluster at all (Akka.Cluster.Sharding still uses it to bound its own start-up asks). This removes the "Failed to startup Cluster" failure mode, which could shut down a healthy node whenever every thread the startup needed was parked - a small fork-join or other dedicated dispatcher pool, or a stock pool starved under load. **Behavior note**: `Cluster.Get()` now returns before core initialization completes, and the cluster's internal actor tree (`/system/cluster/core`, `/system/cluster/core/daemon`, `/system/cluster/heartbeatReceiver`) is created after `Cluster.Get()` returns rather than before it. All public cluster APIs are message-based, so typical code is unaffected; code that used `Cluster.Get()` as a "core is started" synchronization point, or that resolves one of those internal paths right after obtaining the extension, should await `JoinAsync`/`RegisterOnMemberUp` or a cluster event instead.
+* [Akka.Cluster: route user commands through /system/cluster for the extension's lifetime; LeaveAsync re-sends its Leave](https://github.com/akkadotnet/akka.net/pull/8580) - All user-issued cluster commands (`Subscribe`, `Join`, `Leave`, `Down`, ...) now route through `/system/cluster` for the entire lifetime of the extension - two extra local mailbox hops on this low-traffic control plane - instead of switching to a direct core-daemon reference once startup resolves one, so back-to-back commands from one caller stay in order for good, not just during startup. A lost `Leave` no longer wedges every later `LeaveAsync()` for the life of the process. **Behavior note**: calling `Leave()`/`LeaveAsync()` again after the extension has already shut down now produces a dead-lettered `ClusterUserAction.Leave` - worth knowing about for dead-letter alerting or `EventFilter.DeadLetter` assertions.
 
-**Akka.TestKit**
-* [Add AutoDilate metadata to TestKit timeouts](https://github.com/akkadotnet/akka.net/pull/8441): Adds AutoDilate dilation metadata to TestKit timeout expectations so dilated deadlines are correctly tracked and reported.
-* [Fix torn read in `PromiseActorRef.GetPath` that made `Path` return null](https://github.com/akkadotnet/akka.net/pull/8436): Fixes a torn read in `PromiseActorRef.GetPath` that could return `null` under concurrent access.
-* [Fix double-dilated timeout in `ExpectMsgAsync&lt;T&gt;(Func&lt;T, IActorRef, bool&gt;, ...)`](https://github.com/akkadotnet/akka.net/pull/8430): Fixes a bug where the overload of `ExpectMsgAsync` that takes a predicate could apply its timeout dilation twice, causing spurious timeout failures.
+**Testing**
+* [Bugfix5962Spec de-flaked for the non-blocking cluster startup](https://github.com/akkadotnet/akka.net/pull/8398) - the spec's raw 1 second `ResolveOne` against `/system/cluster/core/daemon/downingProvider` raced the async cluster-extension init #8359 introduces above; replaced with a dilated retrying resolve, a dynamic port, and an async `TaskCompletionSource` member-up signal.
+* De-flaked a large batch of Cluster, Cluster.Sharding, Cluster.Tools, DistributedData, Streams, and Remote specs, both single-process and multi-node, to remove timing-sensitive failures under load.
 
-**Akka.Cluster.Tools**
-* [Fix ClusterClientDiscovery: preserve contact-point subscriptions across rediscovery](https://github.com/akkadotnet/akka.net/pull/8426): Ensures `ClusterClientDiscovery` keeps its contact-point subscriptions alive across rediscovery cycles instead of dropping them.
-
-**Tests**
-* [Make `ClusterShardingQueriesSpec` stats/region-state queries converge-then-assert (async)](https://github.com/akkadotnet/akka.net/pull/8311): Hardens `ClusterShardingQueriesSpec` by making its stats and region-state query assertions wait for convergence before asserting, reducing CI flakiness.
-
-1 contributor since release 1.5.70
+3 contributors since release 1.5.71
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 11 | 1376 | 468 | Aaron Stannard |
+| 66 | 35268 | 2030 | Aaron Stannard |
+| 1 | 94 | 47 | Bojan Janjatović |
+| 1 | 2 | 1 | Matt Kotsenas |
 
-To see the full set of changes in Akka.NET v1.5.71, [click here](https://github.com/akkadotnet/akka.net/milestone/154?closed=1).</PackageReleaseNotes>
+To see the full set of changes in Akka.NET v1.5.72, [click here](https://github.com/akkadotnet/akka.net/milestone/155?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
