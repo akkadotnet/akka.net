@@ -372,7 +372,7 @@ namespace Akka.Streams.Implementation.IO
         /// Reads one byte from the upstream stream, blocking until data arrives or the stream terminates.
         /// </summary>
         /// <exception cref="IllegalStateException">Thrown when the adapter receives messages before initialization.</exception>
-        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout. Fetching additional chunks within the same read may block without this timeout.</exception>
+        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout.</exception>
         /// <returns>The next byte as an unsigned value from 0 through 255, or -1 when the upstream has completed.</returns>
         public sealed override int ReadByte()
         {

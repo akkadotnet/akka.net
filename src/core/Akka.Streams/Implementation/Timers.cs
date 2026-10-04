@@ -242,14 +242,14 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// Gets the maximum interval allowed between upstream elements.
+        /// Gets the maximum interval without an upstream element, including before the first element.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// Creates a stage that fails if no upstream element arrives within the timeout interval.
+        /// Creates a stage that fails if no upstream element arrives within the timeout interval, measured from stage materialization and reset after each element.
         /// </summary>
-        /// <param name="timeout">The maximum allowed period without an upstream element.</param>
+        /// <param name="timeout">The maximum time without an upstream element, including the interval after materialization before the first element.</param>
         public Idle(TimeSpan timeout)
         {
             Timeout = timeout;
@@ -330,14 +330,14 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// Gets the maximum time allowed for downstream demand after an element is pushed.
+        /// Gets the maximum time allowed for initial downstream demand and for renewed demand after each pushed element.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// Creates a stage that fails when downstream does not request another element in time.
+        /// Creates a stage that fails if downstream demand does not arrive before the initial deadline or the deadline reset after a pushed element.
         /// </summary>
-        /// <param name="timeout">The maximum interval the stage waits for renewed downstream demand.</param>
+        /// <param name="timeout">The initial demand deadline and the interval allowed for renewed demand after each pushed element.</param>
         public BackpressureTimeout(TimeSpan timeout)
         {
             Timeout = timeout;
@@ -673,9 +673,9 @@ namespace Akka.Streams.Implementation
         private readonly Outlet<TOut> _out = new("IdleInject.out");
 
         /// <summary>
-        /// Creates a flow that emits a generated value after the timeout when no upstream element is available.
+        /// Creates a flow that starts its initial idle interval on downstream demand and emits an injected value when the interval expires while the outlet is available and no upstream element is ready.
         /// </summary>
-        /// <param name="timeout">The idle interval after which an output is generated.</param>
+        /// <param name="timeout">The idle interval measured from the first downstream pull and reset when an upstream element arrives or an injected element is emitted.</param>
         /// <param name="inject">Creates the output value to emit when the interval expires.</param>
         public IdleInject(TimeSpan timeout, Func<TOut> inject)
         {

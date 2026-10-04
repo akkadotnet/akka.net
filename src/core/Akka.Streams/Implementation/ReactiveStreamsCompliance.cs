@@ -18,7 +18,7 @@ namespace Akka.Streams.Implementation
     public interface ISpecViolation { }
 
     /// <summary>
-    /// Indicates that a subscriber threw while receiving a Reactive Streams signal.
+    /// Indicates that a subscriber or subscription callback threw during a Reactive Streams interaction.
     /// </summary>
     [Serializable]
     public class SignalThrewException : IllegalStateException, ISpecViolation

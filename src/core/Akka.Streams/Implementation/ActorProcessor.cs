@@ -194,7 +194,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels upstream input and discards any buffered elements.
+        /// Cancels an open upstream input and clears its buffered elements; after a prior completion or failure, it leaves the buffer intact.
         /// </summary>
         public virtual void Cancel()
         {
@@ -224,7 +224,7 @@ namespace Akka.Streams.Implementation
         public TransferState NeedsInputOrComplete { get; }
 
         /// <summary>
-        /// Gets whether upstream has completed or been canceled.
+        /// Gets whether upstream has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         public bool IsClosed => _isUpstreamCompleted;
         /// <summary>
@@ -232,7 +232,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public bool IsOpen => !IsClosed;
         /// <summary>
-        /// Gets whether upstream has completed and all buffered input has been consumed.
+        /// Gets whether upstream is terminal and all buffered input has been consumed.
         /// </summary>
         public bool AreInputsDepleted => _isUpstreamCompleted && _inputBufferElements == 0;
         /// <summary>
@@ -275,7 +275,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Marks upstream complete and forwards its failure to the processor implementation.
+        /// Marks upstream terminal and forwards the failure to the processor implementation.
         /// </summary>
         /// <param name="e">The upstream failure.</param>
         protected virtual void OnError(Exception e)
@@ -370,7 +370,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected long DownstreamDemand;
         /// <summary>
-        /// Gets whether downstream has completed or canceled.
+        /// Gets whether downstream has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         protected bool IsDownstreamCompleted;
 
@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels the publisher without sending a downstream terminal signal.
+        /// Cancels the registered subscriber without sending it a terminal signal; pending exposed subscribers are completed by publisher shutdown.
         /// </summary>
         public virtual void Cancel()
         {
@@ -471,7 +471,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Gets whether downstream is complete and a subscriber is present.
+        /// Gets whether downstream is terminal and a subscriber is present.
         /// </summary>
         public bool IsClosed => IsDownstreamCompleted && !ReferenceEquals(Subscriber, null);
         /// <summary>
@@ -640,7 +640,7 @@ namespace Akka.Streams.Implementation
         /// Subclass may override <see cref="ActiveReceive"/>
         /// </summary>
         /// <param name="message">The actor message to route to the active receive handler.</param>
-        /// <returns><see langword="true"/> if handled; otherwise the configured unhandled behavior applies.</returns>
+        /// <returns><see langword="true"/> when the message is buffered for later delivery or processed by the active handler; otherwise the configured unhandled behavior applies.</returns>
         protected sealed override bool Receive(object message) => _receive.Apply(message);
 
         /// <summary>
@@ -652,7 +652,7 @@ namespace Akka.Streams.Implementation
             => PrimaryInputs.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
         /// <summary>
-        /// Configures the pump's initial phase, waiting for the specified upstream subscriptions if needed.
+        /// Configures the pump's initial phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
         /// <param name="waitForUpstream">The number of subscriptions required before running the phase.</param>
         /// <param name="andThen">The phase to run after subscriptions arrive.</param>

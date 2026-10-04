@@ -404,9 +404,9 @@ namespace Akka.Streams.Implementation
         bool IsPumpFinished { get; }
 
         /// <summary>
-        /// Configures the first phase, optionally waiting for several upstream subscriptions.
+        /// Configures the first phase to wait for at least one upstream subscription.
         /// </summary>
-        /// <param name="waitForUpstream">The number of upstream subscriptions required before the phase starts.</param>
+        /// <param name="waitForUpstream">A positive number of upstream subscriptions required before the phase starts.</param>
         /// <param name="andThen">The phase to run after the required subscriptions arrive.</param>
         void InitialPhase(int waitForUpstream, TransferPhase andThen);
         /// <summary>
@@ -474,9 +474,9 @@ namespace Akka.Streams.Implementation
         public bool IsPumpFinished => TransferState.IsCompleted;
 
         /// <summary>
-        /// Configures the first phase, optionally waiting for upstream subscriptions.
+        /// Configures the first phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
-        /// <param name="waitForUpstream">The number of subscriptions required before the phase starts.</param>
+        /// <param name="waitForUpstream">A positive number of subscriptions required before the phase starts.</param>
         /// <param name="andThen">The phase to run after the required subscriptions arrive.</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
@@ -545,10 +545,10 @@ namespace Akka.Streams.Implementation
         });
 
         /// <summary>
-        /// Configures the initial phase after the required upstream subscriptions arrive.
+        /// Configures the initial phase to wait for at least one upstream subscription before continuing.
         /// </summary>
         /// <param name="self">The pump to initialize.</param>
-        /// <param name="waitForUpstream">The number of subscriptions required before continuing.</param>
+        /// <param name="waitForUpstream">A positive number of upstream subscriptions required before continuing.</param>
         /// <param name="andThen">The phase to install after the subscriptions arrive.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="waitForUpstream"/> is less than one.

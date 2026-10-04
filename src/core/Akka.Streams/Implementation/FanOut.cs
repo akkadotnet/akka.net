@@ -660,7 +660,7 @@ namespace Akka.Streams.Implementation
         public bool IsPumpFinished => this.IsPumpFinished();
 
         /// <summary>
-        /// Configures the initial pump phase, optionally waiting for upstream subscriptions.
+        /// Configures the initial pump phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
         /// <param name="waitForUpstream">The number of subscriptions required before running the phase.</param>
         /// <param name="andThen">The phase to run after subscriptions arrive.</param>

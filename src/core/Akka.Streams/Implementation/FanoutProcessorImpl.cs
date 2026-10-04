@@ -203,7 +203,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Gets whether output has completed or been canceled.
+        /// Gets whether output has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         public bool IsClosed => _downstreamCompleted;
 
@@ -226,7 +226,7 @@ namespace Akka.Streams.Implementation
         /// Creates local actor properties for the fan-out processor.
         /// </summary>
         /// <param name="settings">Materializer settings for input/output buffering.</param>
-        /// <param name="onTerminated">An optional callback invoked after the processor terminates.</param>
+        /// <param name="onTerminated">An optional callback invoked during subscriber-management shutdown before a stop request; it is not invoked on the error path.</param>
         /// <returns>Actor properties for creating the processor.</returns>
         public static Props Props(ActorMaterializerSettings settings, Action onTerminated = null)
             => Actor.Props.Create<FanoutProcessorImpl<T, TStreamBuffer>>(settings, onTerminated).WithDeploy(Deploy.Local);
@@ -237,10 +237,10 @@ namespace Akka.Streams.Implementation
         protected override IOutputs PrimaryOutputs { get; }
 
         /// <summary>
-        /// Creates a processor with the materializer's buffer settings and an optional termination callback.
+        /// Creates a processor with the materializer's buffer settings and an optional shutdown callback.
         /// </summary>
         /// <param name="settings">Materializer settings for input/output buffering.</param>
-        /// <param name="onTerminated">An optional callback invoked after the output is flushed.</param>
+        /// <param name="onTerminated">An optional callback invoked during subscriber-management shutdown before a stop request; it is not invoked on the error path.</param>
         /// If this gets changed you must change <see cref="FanoutProcessorImpl{T,TStreamBuffer}.Props"/> as well!
         public FanoutProcessorImpl(ActorMaterializerSettings settings, Action onTerminated) : base(settings)
         {
