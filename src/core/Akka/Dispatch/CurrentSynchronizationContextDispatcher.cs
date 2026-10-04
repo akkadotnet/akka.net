@@ -86,18 +86,18 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Behaves like a <see cref="PinnedDispatcher"/> and always executes using <see cref="CurrentSynchronizationContextExecutorServiceFactory"/>
+    /// A dispatcher whose executor is created by the supplied factory. The standard configurator supplies a factory that schedules work on the current synchronization context.
     /// </summary>
     public sealed class CurrentSynchronizationContextDispatcher : Dispatcher
     {
         /// <summary>
-        /// Creates a dispatcher that executes its work using the current synchronization context.
+        /// Creates a dispatcher using the supplied executor factory. The standard configurator supplies a factory bound to the current synchronization context.
         /// </summary>
         /// <param name="configurator">The configurator that created this dispatcher.</param>
         /// <param name="id">The dispatcher identifier.</param>
-        /// <param name="throughput">The maximum number of messages processed in one mailbox run.</param>
-        /// <param name="throughputDeadlineTime">The optional time budget, in ticks, for processing one mailbox run.</param>
-        /// <param name="executorServiceFactory">The factory that creates an executor bound to the current synchronization context.</param>
+        /// <param name="throughput">The throughput value passed to the base dispatcher.</param>
+        /// <param name="throughputDeadlineTime">The optional throughput-deadline duration in ticks passed to the base dispatcher.</param>
+        /// <param name="executorServiceFactory">The factory used to create the dispatcher executor.</param>
         /// <param name="shutdownTimeout">The time to wait for executor shutdown.</param>
         public CurrentSynchronizationContextDispatcher(MessageDispatcherConfigurator configurator, string id,
             int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory,

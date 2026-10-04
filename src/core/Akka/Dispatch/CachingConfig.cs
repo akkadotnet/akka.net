@@ -45,7 +45,7 @@ namespace Akka.Dispatch
             /// <summary>
             /// Creates a cached path result with an associated configuration value.
             /// </summary>
-            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="valid">Whether checking path existence completed without an error; reading its value can still fail and be cached as empty.</param>
             /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
             /// <param name="config">The cached configuration value, or an empty configuration when none is available.</param>
             public ValuePathEntry(bool valid, bool exists, Config config) : this()
@@ -58,7 +58,7 @@ namespace Akka.Dispatch
             /// <summary>
             /// Creates a cached path result without an associated configuration value.
             /// </summary>
-            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="valid">Whether checking path existence completed without an error; reading its value can still fail and be cached as empty.</param>
             /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
             public ValuePathEntry(bool valid, bool exists)
                 : this(valid, exists, EmptyConfig)
@@ -66,7 +66,7 @@ namespace Akka.Dispatch
             }
 
             /// <summary>
-            /// Whether the path lookup completed without a configuration error.
+            /// Whether checking path existence completed without an error. Reading the value can still fail and be cached as empty.
             /// </summary>
             public bool Valid { get; private set; }
             /// <summary>
@@ -87,7 +87,7 @@ namespace Akka.Dispatch
             /// <summary>
             /// Creates a cached string path result with its associated configuration value.
             /// </summary>
-            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="valid">Whether checking path existence completed without an error; reading its value can still fail and be cached as empty.</param>
             /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
             /// <param name="config">The cached configuration value for the path.</param>
             /// <param name="value">The string value read from the path.</param>
@@ -100,7 +100,7 @@ namespace Akka.Dispatch
             }
 
             /// <summary>
-            /// Whether the path lookup completed without a configuration error.
+            /// Whether checking path existence completed without an error. Reading the value can still fail and be cached as empty.
             /// </summary>
             public bool Valid { get; private set; }
             /// <summary>

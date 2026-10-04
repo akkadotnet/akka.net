@@ -123,9 +123,9 @@ namespace Akka.Actor
         /// <returns>The created actor reference.</returns>
         IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
-        /// <summary>Gets the actor reference for a specified path. A missing valid local path may resolve to an empty local reference; invalid or foreign paths resolve to dead letters.</summary>
+        /// <summary>Gets the result of resolving a serialized actor path. The result for missing, empty, or foreign paths depends on the provider implementation.</summary>
         /// <param name="path">The serialized actor path to parse and resolve.</param>
-        /// <returns>The actor reference at that path, an empty local reference for a missing valid local path, or dead letters for an invalid or foreign path.</returns>
+        /// <returns>The provider-specific resolution result, which may be an actor reference, an empty local reference, dead letters, or <see cref="ActorRefs.NoSender"/> for an empty path.</returns>
         IActorRef ResolveActorRef(string path);
 
         /// <summary>Gets the actor reference for a path. A valid local path with no actor may resolve to an empty local reference.</summary>

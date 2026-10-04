@@ -131,7 +131,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Runs an action as actor-scheduled asynchronous work, suspending the actor mailbox until it completes.
+        /// Runs an action as actor-scheduled work while the actor mailbox is suspended. Successful completion resumes the mailbox; a fault is sent to the actor as a failure.
         /// </summary>
         /// <param name="action">The synchronous action to run.</param>
         public static void RunTask(Action action)
@@ -144,7 +144,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Runs an asynchronous operation as actor-scheduled work and resumes the mailbox when it completes.
+        /// Runs an asynchronous operation as actor-scheduled work while the actor mailbox is suspended. Successful completion resumes the mailbox; a fault or cancellation is sent to the actor as a failure.
         /// </summary>
         /// <param name="asyncAction">The asynchronous operation to run.</param>
         /// <exception cref="InvalidOperationException">

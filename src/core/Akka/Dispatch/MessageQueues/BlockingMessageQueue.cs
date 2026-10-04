@@ -81,10 +81,10 @@ namespace Akka.Dispatch.MessageQueues
         }
 
         /// <summary>
-        /// Moves every remaining message into the supplied dead-letter queue.
+        /// Dequeues messages into the supplied dead-letter queue until a dequeue reports that the queue is empty.
         /// </summary>
         /// <param name="owner">The actor that owns this message queue and is used as the recipient during transfer.</param>
-        /// <param name="deadletters">The queue that receives the remaining envelopes.</param>
+        /// <param name="deadletters">The queue that receives dequeued envelopes. Stop producers first if all queued messages must be transferred, because a concurrent enqueue may occur after an empty dequeue.</param>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             while (TryDequeue(out var msg)) // lock gets acquired inside the TryDequeue method

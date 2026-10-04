@@ -51,7 +51,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Runs when the guardian starts. It is intentionally empty so a restart does not discard its children.
+        /// Runs when the guardian starts; this startup hook performs no actions.
         /// </summary>
         protected override void PreStart()
         {

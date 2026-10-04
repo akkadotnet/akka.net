@@ -122,7 +122,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Attempts to remove the next user-message envelope from this mailbox's message queue.
         /// </summary>
-        /// <param name="msg">When this method returns <c>true</c>, contains the dequeued envelope; otherwise, the default envelope.</param>
+        /// <param name="msg">When this method returns <c>true</c>, contains the dequeued envelope; otherwise, the value is determined by the message queue.</param>
         /// <returns><c>true</c> if an envelope was dequeued; otherwise, <c>false</c>.</returns>
         internal bool TryDequeue(out Envelope msg)
         {
