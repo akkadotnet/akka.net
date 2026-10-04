@@ -23,17 +23,17 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class FileSubscriber : ActorSubscriber
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a subscriber that writes incoming byte sequences to a file.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="fileMode">TBD</param>
-        /// <param name="autoFlush"></param>
-        /// <param name="flushCommand"></param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="f">The file to write.</param>
+        /// <param name="completionPromise">The promise completed with the write result.</param>
+        /// <param name="bufferSize">The request-strategy high watermark.</param>
+        /// <param name="startPosition">The byte position at which writing starts.</param>
+        /// <param name="fileMode">The mode used to open or create the file.</param>
+        /// <param name="autoFlush">Whether to flush the file after each element.</param>
+        /// <param name="flushCommand">Optional signaler that can request a file flush.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="bufferSize"/> is not positive or <paramref name="startPosition"/> is negative.</exception>
+        /// <returns>Local actor properties for the file subscriber.</returns>
         public static Props Props(
             FileInfo f,
             TaskCompletionSource<IOResult> completionPromise,
@@ -63,15 +63,15 @@ namespace Akka.Streams.Implementation.IO
         private long _bytesWritten;
 
         /// <summary>
-        /// TBD
+        /// Creates a subscriber actor that writes incoming byte sequences to a file.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="fileMode">TBD</param>
-        /// <param name="autoFlush"></param>
-        /// <param name="flushSignaler"></param>
+        /// <param name="f">The file to write.</param>
+        /// <param name="completionPromise">The promise completed with the write result.</param>
+        /// <param name="bufferSize">The request-strategy high watermark.</param>
+        /// <param name="startPosition">The byte position at which writing starts.</param>
+        /// <param name="fileMode">The mode used to open or create the file.</param>
+        /// <param name="autoFlush">Whether to flush the file after each element.</param>
+        /// <param name="flushSignaler">Optional signaler that can request a file flush.</param>
         /// If this changes you must change <see cref="FileSubscriber.Props"/> as well!
         public FileSubscriber(
             FileInfo f,
@@ -95,12 +95,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Requests elements according to the configured buffer-size high watermark.
         /// </summary>
         public override IRequestStrategy RequestStrategy => _requestStrategy;
 
         /// <summary>
-        /// TBD
+        /// Opens the file for writing at the configured position before starting the subscriber.
         /// </summary>
         protected override void PreStart()
         {
@@ -119,10 +119,10 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Writes elements, handles upstream termination, and processes explicit flush signals.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> when the message is handled; otherwise, <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
@@ -180,7 +180,7 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Closes the file and completes the write-result promise if it has not already completed.
         /// </summary>
         protected override void PostStop()
         {
