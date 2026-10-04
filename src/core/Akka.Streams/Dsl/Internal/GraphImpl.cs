@@ -15,7 +15,7 @@ namespace Akka.Streams.Dsl.Internal
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
+    /// <typeparam name="TShape">The type of the graph shape.</typeparam>
     /// <typeparam name="TMat">The type of the value produced when the graph is materialized.</typeparam>
     [InternalApi]
     public class GraphImpl<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
@@ -84,7 +84,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Extracts a graph module when the graph object implements <see cref="IModule"/>.
         /// </summary>
-        /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
+        /// <typeparam name="TShape">The type of the graph shape.</typeparam>
         /// <typeparam name="TMat">The type of the value produced when the graph is materialized.</typeparam>
         /// <param name="graph">The graph whose module should be extracted.</param>
         /// <returns>The graph module if <paramref name="graph"/> implements <see cref="IModule"/>; otherwise, <see cref="Option{T}.None"/>.</returns>

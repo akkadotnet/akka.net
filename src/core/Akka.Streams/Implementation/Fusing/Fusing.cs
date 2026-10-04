@@ -35,7 +35,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Fuse everything that is not forbidden via AsyncBoundary attribute.
         /// </summary>
-        /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
+        /// <typeparam name="TShape">The type of the graph shape.</typeparam>
         /// <typeparam name="TMat">The type of the value produced when the graph is materialized.</typeparam>
         /// <param name="graph">The graph whose fusable stages are combined.</param>
         /// <returns>A graph whose stages are fused unless an asynchronous boundary prevents fusion.</returns>
@@ -96,7 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Return the <see cref="StructuralInfoModule"/> for this Graph without any fusing
         /// </summary>
-        /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
+        /// <typeparam name="TShape">The type of the graph shape.</typeparam>
         /// <typeparam name="TMat"></typeparam>
         /// <param name="graph"></param>
         /// <param name="attributes"></param>
@@ -943,7 +943,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Writes the current port mappings and structural module information to the console for diagnostics.
+        /// Writes the structural input-port mappings to the console for diagnostics.
         /// </summary>
         internal void Dump()
         {

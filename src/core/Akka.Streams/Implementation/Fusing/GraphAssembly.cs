@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class GraphAssembly
     {
         /// <summary>
-        /// Creates an assembly for exposed graph ports with all owner entries marked as graph boundaries.
+        /// Creates an assembly for exposed graph ports, marking the missing outlet owner for each exposed input and the missing inlet owner for each exposed output as the boundary.
         /// </summary>
         /// <param name="inlets">The graph's exposed input ports.</param>
         /// <param name="outlets">The graph's exposed output ports.</param>
@@ -167,8 +167,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="materializedValues">The map updated with each module's materialized value.</param>
         /// <param name="register">The callback that registers copied materialized-value sources.</param>
         /// <param name="materializer">The materializer in use, made available to stages that build an eager materialized value.</param>
-        /// <exception cref="ArgumentException">Thrown when a stage shares an inlet or outlet port with another stage.</exception>
-        /// <returns>The connection table and initialized stage logics.</returns>
+        /// <exception cref="ArgumentException">Thrown when an inlet or outlet already has a port ID different from its index in the current stage shape.</exception>
+        /// <returns>The connection table and created stage logics.</returns>
         public (Connection[], GraphStageLogic[]) Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,

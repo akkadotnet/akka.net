@@ -177,7 +177,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public bool IsTerminated => _interpreterCompleted && CanShutdown;
         /// <summary>
-        /// Whether all exposed input and output boundaries have completed their shutdown handshakes.
+        /// Whether all exposed input-subscription and output-publisher registrations are no longer pending.
         /// </summary>
         public bool CanShutdown => _subscribersPending + _publishersPending == 0;
         /// <summary>
@@ -1717,10 +1717,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Processes a boundary event and runs the interpreter within the event budget.
+        /// Handles recognized boundary and shell-registration messages.
         /// </summary>
         /// <param name="message">The actor message to process.</param>
-        /// <returns>The remaining event budget after processing the boundary event.</returns>
+        /// <returns><c>true</c> when the message is handled; otherwise <c>false</c>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
