@@ -140,7 +140,7 @@ namespace Akka.Remote
         public sealed class StartupFinished : RemotingCommand { }
 
         /// <summary>
-        /// Requests transport shutdown after pending messages have been flushed.
+        /// Requests endpoint flushing followed by transport shutdown, reporting whether both completed successfully.
         /// </summary>
         public sealed class ShutdownAndFlush : RemotingCommand { }
 

@@ -40,7 +40,7 @@ namespace Akka.Remote
         /// Deserializes and dispatches an inbound message to its local or remote recipient.
         /// </summary>
         /// <param name="recipient">The actor reference resolved for the message recipient.</param>
-        /// <param name="recipientAddress">The local transport address on which the message arrived.</param>
+        /// <param name="recipientAddress">The address associated with the resolved recipient path.</param>
         /// <param name="message">The serialized message payload.</param>
         /// <param name="senderOption">The sender actor reference, if the message has one.</param>
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
@@ -77,7 +77,7 @@ namespace Akka.Remote
         /// Deserializes a payload and dispatches it according to recipient locality and untrusted-mode settings.
         /// </summary>
         /// <param name="recipient">The actor reference resolved for the message recipient.</param>
-        /// <param name="recipientAddress">The local transport address on which the message arrived.</param>
+        /// <param name="recipientAddress">The address associated with the resolved recipient path.</param>
         /// <param name="message">The serialized message payload.</param>
         /// <param name="senderOption">The sender actor reference, if the message has one.</param>
         public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,

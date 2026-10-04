@@ -135,7 +135,7 @@ namespace Akka.Remote.Transport
         /// Associates with a remote test transport using the currently configured association behavior.
         /// </summary>
         /// <param name="remoteAddress">Address of the remote test transport.</param>
-        /// <returns>A task that completes with the local association handle or fails if no transport is registered at that address.</returns>
+        /// <returns>A task that completes with the association handle according to the configured behavior; the default behavior fails if no transport is registered at that address.</returns>
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
             return AssociateBehavior.Apply(remoteAddress);
@@ -201,10 +201,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Removes the association from the registry and notifies both endpoints that it was disassociated.
+        /// Removes the association from the registry and, when it exists, notifies both endpoints that it was disassociated.
         /// </summary>
         /// <param name="handle">Association handle identifying the registry entry to remove.</param>
-        /// <returns>A task that completes with <see langword="true"/> after notifications are sent, including when the association was absent.</returns>
+        /// <returns>A task that completes with <see langword="true"/> after any applicable notifications are sent, including when the association was absent.</returns>
         public Task<bool> DefaultDisassociate(TestAssociationHandle handle)
         {
             var handlers = _registry.DeregisterAssociation(handle.Key);

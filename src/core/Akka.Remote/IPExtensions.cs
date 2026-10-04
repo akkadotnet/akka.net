@@ -35,7 +35,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Converts an IPv6 address to an IPv4 address using its final 32 bits. It returns an IPv4 address unchanged after reading the reflected address field.
+        /// Converts an IPv6 address to an IPv4 address using its final 32 bits. If the reflected address field is a non-null <see cref="ushort"/> array, IPv4 addresses are returned unchanged.
         /// </summary>
         /// <param name="ipa">The IP address to map.</param>
         /// <returns>The corresponding IPv4 address.</returns>

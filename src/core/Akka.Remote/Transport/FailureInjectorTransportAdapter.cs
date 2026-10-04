@@ -267,7 +267,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="remoteAddress">Remote address to associate with.</param>
         /// <param name="statusPromise">Completion source for the resulting association handle.</param>
-        /// <exception cref="FailureInjectorException">Thrown when configured inbound or outbound dropping simulates an association failure.</exception>
+        /// <remarks>When a configured drop rule simulates an association failure, the association task is faulted with <see cref="FailureInjectorException"/>.</remarks>
         protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             // Association is simulated to be failed if there was either an inbound or outbound message drop

@@ -239,9 +239,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Shuts down remoting and completes after the endpoint manager flushes and stops its transports.
+        /// Requests remoting shutdown and waits for the endpoint manager's shutdown-and-flush result.
         /// </summary>
-        /// <returns>A task that completes when shutdown and transport flushing finish.</returns>
+        /// <returns>A task that completes after the shutdown attempt; it does not guarantee that all messages were flushed successfully.</returns>
         public override Task Shutdown()
         {
             if (_endpointManager == null)

@@ -483,7 +483,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="path">The serialized actor path to resolve.</param>
         /// <param name="localAddress">The local transport address associated with the incoming message.</param>
-        /// <returns>Dead letters for a null path; a remote reference when the path has no address; otherwise the resolved local reference, which may be an empty local reference if the actor does not exist.</returns>
+        /// <returns>Dead letters for a null path; a remote reference using <paramref name="localAddress"/> when the path has no address; a local reference for this system's address; or a remote reference for another address. A missing local actor or failed remote-reference creation yields an empty local reference.</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             if (path is null)

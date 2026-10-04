@@ -207,7 +207,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(_ => Directive.Stop);
         /// <summary>
-        /// Stops this manager if one of its children fails; association recovery is handled by remoting.
+        /// Stops a failed child; association recovery is handled by remoting.
         /// </summary>
         /// <returns>The supervision strategy for this manager's children.</returns>
         protected override SupervisorStrategy SupervisorStrategy()
@@ -296,7 +296,7 @@ namespace Akka.Remote.Transport
         /// Creates an outbound association request for a remote address.
         /// </summary>
         /// <param name="remoteAddress">Remote address to associate with.</param>
-        /// <param name="statusCompletionSource">Completion source for the underlying association handle.</param>
+        /// <param name="statusCompletionSource">Completion source for the protocol-wrapped association handle.</param>
         /// <param name="refuseUid">Optional remote UID that the handshake must reject if it matches.</param>
         public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, long? refuseUid = null)
         {
@@ -329,7 +329,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Creates handshake information for a remote endpoint.
         /// </summary>
-        /// <param name="origin">Address advertised by the endpoint initiating the handshake.</param>
+        /// <param name="origin">Address advertised by the endpoint sending this handshake information.</param>
         /// <param name="uid">Unique identifier of the endpoint's actor system incarnation.</param>
         public HandshakeInfo(Address origin, long uid)
         {
@@ -338,7 +338,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Address advertised by the endpoint initiating the handshake.
+        /// Address advertised by the endpoint sending this handshake information.
         /// </summary>
         public Address Origin { get; private set; }
 
@@ -489,21 +489,21 @@ namespace Akka.Remote.Transport
     internal sealed class HandshakeTimer : INoSerializationVerificationNeeded { }
 
     /// <summary>
-    /// Inbound event carrying data received from the underlying association.
+    /// Event carrying the handle returned by an outbound association attempt.
     /// </summary>
     internal sealed class HandleMsg : INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// Creates an inbound message from the underlying association.
+        /// Creates an event for the handle returned by an outbound association attempt.
         /// </summary>
-        /// <param name="handle">Underlying association handle that delivered the message.</param>
+        /// <param name="handle">The established underlying association handle.</param>
         public HandleMsg(AssociationHandle handle)
         {
             Handle = handle;
         }
 
         /// <summary>
-        /// Underlying association handle that delivered the message.
+        /// Gets the established handle for the outbound association.
         /// </summary>
         public AssociationHandle Handle { get; private set; }
     }

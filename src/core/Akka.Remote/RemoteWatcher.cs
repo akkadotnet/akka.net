@@ -502,7 +502,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Publishes that all actors on a remote address have terminated due to an unreachable node.
+        /// Publishes an <see cref="AddressTerminated"/> signal after the remote address is marked unreachable.
         /// </summary>
         /// <param name="address">The address of the unreachable remote node.</param>
         protected virtual void PublishAddressTerminated(Address address)
