@@ -496,7 +496,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Creates an event for the handle returned by an outbound association attempt.
         /// </summary>
-        /// <param name="handle">The established underlying association handle.</param>
+        /// <param name="handle">The established outbound association handle.</param>
         public HandleMsg(AssociationHandle handle)
         {
             Handle = handle;
