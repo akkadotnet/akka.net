@@ -28,15 +28,14 @@ namespace Akka.Streams.Implementation.IO
         private readonly long _startPosition;
 
         /// <summary>
-        /// TBD
+        /// Creates a file source module that reads byte sequences from a file.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="f">The file to read.</param>
+        /// <param name="chunkSize">The number of bytes requested for each read.</param>
+        /// <param name="startPosition">The byte position at which reading starts.</param>
+        /// <param name="attributes">The attributes attached to this source module.</param>
+        /// <param name="shape">The source shape that emits byte sequences.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="chunkSize"/> is not positive or <paramref name="startPosition"/> is negative.</exception>
         public FileSource(FileInfo f, int chunkSize, long startPosition, Attributes attributes, SourceShape<ReadOnlySequence<byte>> shape) : base(shape)
         {
             if(chunkSize <= 0)
@@ -53,37 +52,37 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes attached to this source module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The diagnostic label for this file source.
         /// </summary>
         protected override string Label { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy of this module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to attach to the copy.</param>
+        /// <returns>A file source module with the supplied attributes and an amended shape.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new FileSource(_f, _chunkSize, _startPosition, attributes, AmendShape(attributes));
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this module with a replacement shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The source shape for the copy.</param>
+        /// <returns>A file source module with the supplied shape.</returns>
         protected override SourceModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlySequence<byte>> shape)
             => new FileSource(_f, _chunkSize, _startPosition, Attributes, shape);
 
         /// <summary>
-        /// TBD
+        /// Materializes the file publisher and returns its Reactive Streams publisher.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="task">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
+        /// <param name="task">Receives the task completed with the number of bytes read or an I/O failure.</param>
+        /// <returns>The publisher that emits chunks read from the file.</returns>
         public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {
             // FIXME rewrite to be based on GraphStage rather than dangerous downcasts
@@ -111,12 +110,12 @@ namespace Akka.Streams.Implementation.IO
         private readonly int _chunkSize;
 
         /// <summary>
-        /// TBD
+        /// Creates a source module backed by a stream created at materialization time.
         /// </summary>
-        /// <param name="createInputStream">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="createInputStream">Creates the input stream to read.</param>
+        /// <param name="chunkSize">The number of bytes requested for each read.</param>
+        /// <param name="attributes">The attributes attached to this source module.</param>
+        /// <param name="shape">The source shape that emits byte sequences.</param>
         public InputStreamSource(Func<Stream> createInputStream, int chunkSize, Attributes attributes, SourceShape<ReadOnlySequence<byte>> shape) : base(shape)
         {
             _createInputStream = createInputStream;
@@ -125,32 +124,32 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes attached to this source module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy of this module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to attach to the copy.</param>
+        /// <returns>An input-stream source module with the supplied attributes and an amended shape.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new InputStreamSource(_createInputStream, _chunkSize, attributes, AmendShape(attributes));
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this module with a replacement shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The source shape for the copy.</param>
+        /// <returns>An input-stream source module with the supplied shape.</returns>
         protected override SourceModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlySequence<byte>> shape)
             => new InputStreamSource(_createInputStream, _chunkSize, Attributes, shape);
 
         /// <summary>
-        /// TBD
+        /// Creates the input stream and materializes a publisher that reads it.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="task">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
+        /// <param name="task">Receives the task completed with the number of bytes read or the creation/read failure.</param>
+        /// <returns>The publisher that emits chunks read from the created stream, or an error publisher if stream creation fails.</returns>
         public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {
             var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
