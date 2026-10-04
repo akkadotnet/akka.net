@@ -24,20 +24,20 @@ namespace Akka.Dispatch
     internal sealed class CurrentSynchronizationContextExecutorServiceFactory : ExecutorServiceConfigurator
     {
         /// <summary>
-        /// TBD
+        /// Creates an executor service that uses the current synchronization context's task scheduler.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The identifier assigned to the executor service.</param>
+        /// <returns>An executor service that schedules work on the current synchronization context.</returns>
         public override ExecutorService Produce(string id)
         {
             return new TaskSchedulerExecutor(id, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the executor configurator with its configuration and dispatcher prerequisites.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The configuration for the dispatcher.</param>
+        /// <param name="prerequisites">The actor-system services required by the executor configurator.</param>
         public CurrentSynchronizationContextExecutorServiceFactory(Config config,
             IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
@@ -45,9 +45,7 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    /// Used to create instances of the <see cref="PinnedDispatcher"/>. 
-    /// 
-    /// Each actor created using the pinned dispatcher gets its own unique thread.
+    /// Creates dispatchers that execute work through the synchronization context captured when the dispatcher is created.
     /// <remarks>
     /// Always returns a new instance.
     /// </remarks>
@@ -57,10 +55,10 @@ namespace Akka.Dispatch
         private readonly ExecutorServiceConfigurator _executorServiceConfigurator;
 
         /// <summary>
-        /// TBD
+        /// Creates the configurator that reads settings for synchronization-context dispatchers.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The configuration containing the dispatcher settings.</param>
+        /// <param name="prerequisites">The actor-system services required by the dispatcher.</param>
         public CurrentSynchronizationContextDispatcherConfigurator(Config config,
             IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
@@ -71,9 +69,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a dispatcher from the configured identifier, throughput, deadline, and shutdown timeout.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new dispatcher that captures the current synchronization context during construction.</returns>
         public override MessageDispatcher Dispatcher()
         {
             if (Config.IsNullOrEmpty())
@@ -93,14 +91,14 @@ namespace Akka.Dispatch
     public sealed class CurrentSynchronizationContextDispatcher : Dispatcher
     {
         /// <summary>
-        /// TBD
+        /// Creates a dispatcher that executes its work using the current synchronization context.
         /// </summary>
-        /// <param name="configurator">TBD</param>
-        /// <param name="id">TBD</param>
-        /// <param name="throughput">TBD</param>
-        /// <param name="throughputDeadlineTime">TBD</param>
-        /// <param name="executorServiceFactory">TBD</param>
-        /// <param name="shutdownTimeout">TBD</param>
+        /// <param name="configurator">The configurator that created this dispatcher.</param>
+        /// <param name="id">The dispatcher identifier.</param>
+        /// <param name="throughput">The maximum number of messages processed in one mailbox run.</param>
+        /// <param name="throughputDeadlineTime">The optional time budget, in ticks, for processing one mailbox run.</param>
+        /// <param name="executorServiceFactory">The factory that creates an executor bound to the current synchronization context.</param>
+        /// <param name="shutdownTimeout">The time to wait for executor shutdown.</param>
         public CurrentSynchronizationContextDispatcher(MessageDispatcherConfigurator configurator, string id,
             int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory,
             TimeSpan shutdownTimeout)
@@ -130,9 +128,9 @@ namespace Akka.Dispatch
         private volatile ActorCell _owner;
 
         /// <summary>
-        /// TBD
+        /// Registers the owning actor cell, rejecting a different actor if this dispatcher already has an owner.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor cell to register with this dispatcher.</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the registering <paramref name="actor"/> is not the <see cref="_owner">owner</see>.
         /// </exception>
@@ -146,9 +144,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Unregisters the actor cell and clears the dispatcher's owner reference.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor cell being unregistered.</param>
         internal override void Unregister(ActorCell actor)
         {
             base.Unregister(actor);
