@@ -24,7 +24,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Creates a new instance of <see cref="GCounterKey"/> class.
         /// </summary>
-        /// <param name="id">TBD</param>
+        /// <param name="id">The unique identifier for the counter key.</param>
         public GCounterKey(string id) : base(id) { }
     }
 
@@ -54,12 +54,12 @@ namespace Akka.DistributedData
         private static readonly ulong Zero = 0UL;
 
         /// <summary>
-        /// TBD
+        /// Gets the per-node counter values that make up this counter.
         /// </summary>
         public ImmutableDictionary<UniqueAddress, ulong> State { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets an empty counter whose value is zero.
         /// </summary>
         public static GCounter Empty => new();
 
@@ -73,15 +73,15 @@ namespace Akka.DistributedData
         public GCounter Delta => _syncRoot;
 
         /// <summary>
-        /// TBD
+        /// Creates an empty counter with no per-node values.
         /// </summary>
         public GCounter() : this(ImmutableDictionary<UniqueAddress, ulong>.Empty) { }
 
         /// <summary>
-        /// TBD
+        /// Creates a counter from its per-node values and optional delta state.
         /// </summary>
-        /// <param name="state">TBD</param>
-        /// <param name="delta">TBD</param>
+        /// <param name="state">The map of node addresses to their counter values.</param>
+        /// <param name="delta">The optional delta state accumulated for replication.</param>
         internal GCounter(ImmutableDictionary<UniqueAddress, ulong> state, GCounter delta = null)
         {
             _syncRoot = delta;
@@ -99,12 +99,9 @@ namespace Akka.DistributedData
         /// <summary>
         /// Increment the counter with the delta specified. The delta must be zero or positive.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="n"/> is less than zero.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="node">The cluster node whose component is incremented.</param>
+        /// <param name="n">The non-negative amount to add to that node's component.</param>
+        /// <returns>A counter with the node component increased, or this instance when <paramref name="n"/> is zero.</returns>
         public GCounter Increment(UniqueAddress node, ulong n = 1)
         {
             if (n == 0) return this;
@@ -119,10 +116,10 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Merges per-node counter components by keeping the greater value for each node.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The counter to merge with this instance.</param>
+        /// <returns>A counter containing the merged per-node values.</returns>
         public override GCounter Merge(GCounter other)
         {
             if (ReferenceEquals(this, other) || other.IsAncestorOf(this)) return ClearAncestor();
@@ -153,10 +150,10 @@ namespace Akka.DistributedData
         public GCounter ResetDelta() => Delta == null ? this : AssignAncestor(new GCounter(State));
 
         /// <summary>
-        /// TBD
+        /// Returns whether this counter contains a component for the removed node that requires pruning.
         /// </summary>
-        /// <param name="removedNode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">The cluster node address to check.</param>
+        /// <returns><see langword="true"/> if the node has a component in this counter; otherwise, <see langword="false"/>.</returns>
         public bool NeedPruningFrom(UniqueAddress removedNode) => State.ContainsKey(removedNode);
 
         IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
@@ -164,11 +161,11 @@ namespace Akka.DistributedData
         IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         /// <summary>
-        /// TBD
+        /// Moves the removed node's counter component into the component for <paramref name="collapseInto"/>.
         /// </summary>
-        /// <param name="removedNode">TBD</param>
-        /// <param name="collapseInto">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">The cluster node address whose component is pruned.</param>
+        /// <param name="collapseInto">The cluster node address that receives the removed component's value.</param>
+        /// <returns>A counter with the removed component transferred, or this instance if it has no component for that node.</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
             return State.TryGetValue(removedNode, out var prunedNodeValue)
@@ -177,10 +174,10 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the removed node's component after pruning has been completed.
         /// </summary>
-        /// <param name="removedNode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">The cluster node address whose component is removed.</param>
+        /// <returns>A counter without the removed node's component.</returns>
         public GCounter PruningCleanup(UniqueAddress removedNode) => new(State.Remove(removedNode));
 
         
