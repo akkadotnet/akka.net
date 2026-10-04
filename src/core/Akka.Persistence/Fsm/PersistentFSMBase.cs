@@ -17,11 +17,12 @@ using static Akka.Persistence.Fsm.PersistentFSM;
 namespace Akka.Persistence.Fsm
 {
     /// <summary>
-    /// TBD
+    /// Base class for persistent finite state machine actors that define named states, state data, and state functions.
+    /// Concrete subclasses provide the persistence behavior for state changes and domain events.
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TData">TBD</typeparam>
-    /// <typeparam name="TEvent">TBD</typeparam>
+    /// <typeparam name="TState">The type used to identify FSM states.</typeparam>
+    /// <typeparam name="TData">The type of data held by the FSM state.</typeparam>
+    /// <typeparam name="TEvent">The type of domain events associated with FSM state changes.</typeparam>
     public abstract class PersistentFSMBase<TState, TData, TEvent> : PersistentActor, IListeners
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -36,18 +37,18 @@ namespace Akka.Persistence.Fsm
         }
 
         /// <summary>
-        /// TBD
+        /// Handles an event received by the FSM and returns the state descriptor to apply.
         /// </summary>
-        /// <param name="fsmEvent">TBD</param>
-        /// <param name="state">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="fsmEvent">The incoming FSM event and the state data current when it was received.</param>
+        /// <param name="state">An optional state descriptor supplied to the function.</param>
+        /// <returns>The state descriptor produced for this event, or <c>null</c> to allow another function to handle it.</returns>
         public delegate State<TState, TData, TEvent> StateFunction(FSMBase.Event<TData> fsmEvent, State<TState, TData, TEvent> state = null);
 
         /// <summary>
-        /// TBD
+        /// Handles a transition from one state to another.
         /// </summary>
-        /// <param name="initialState">TBD</param>
-        /// <param name="nextState">TBD</param>
+        /// <param name="initialState">The state being exited.</param>
+        /// <param name="nextState">The state being entered.</param>
         public delegate void TransitionHandler(TState initialState, TState nextState);
 
         // **
@@ -104,7 +105,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason" /> <see cref="FSMBase.Normal" />
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A state descriptor that stops the FSM with the normal stop reason.</returns>
         public State<TState, TData, TEvent> Stop()
         {
             return Stop(FSMBase.Normal.Instance);
@@ -113,48 +114,48 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason" />.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reason">The reason to report when stopping.</param>
+        /// <returns>A state descriptor that stops the FSM and retains the current state data.</returns>
         public State<TState, TData, TEvent> Stop(FSMBase.Reason reason)
         {
             return Stop(reason, _currentState.StateData);
         }
 
         /// <summary>
-        /// TBD
+        /// Produces a state descriptor that stops the FSM with the specified reason and state data.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <param name="stateData">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reason">The reason to report when stopping.</param>
+        /// <param name="stateData">The state data to retain in the stop descriptor.</param>
+        /// <returns>A descriptor for stopping while retaining the current state name and the supplied data.</returns>
         public State<TState, TData, TEvent> Stop(FSMBase.Reason reason, TData stateData)
         {
             return Stay().Copy(stateData: stateData, stopReason: reason);
         }
 
         /// <summary>
-        /// TBD
+        /// Provides a fluent wrapper for composing a state function with a transformation of its result.
         /// </summary>
         public sealed class TransformHelper
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="TransformHelper"/> class.
             /// </summary>
-            /// <param name="func">TBD</param>
+            /// <param name="func">The state function to wrap.</param>
             public TransformHelper(StateFunction func)
             {
                 Func = func;
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the wrapped state function.
             /// </summary>
             public StateFunction Func { get; }
 
             /// <summary>
-            /// TBD
+            /// Applies a transformation to the state descriptor returned by the wrapped function.
             /// </summary>
-            /// <param name="andThen">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="andThen">The function applied to the wrapped function's result.</param>
+            /// <returns>A state function that invokes the wrapped function and then transforms its result.</returns>
             public StateFunction Using(Func<State<TState, TData, TEvent>, State<TState, TData, TEvent>> andThen)
             {
                 StateFunction continuedDelegate = (@event, state) => andThen.Invoke(Func.Invoke(@event, state));
@@ -163,10 +164,10 @@ namespace Akka.Persistence.Fsm
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a helper for composing a state function with a transformation of its result.
         /// </summary>
-        /// <param name="func">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="func">The state function to wrap.</param>
+        /// <returns>A helper that exposes the wrapped function and supports result transformation.</returns>
         public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
@@ -217,8 +218,8 @@ namespace Akka.Persistence.Fsm
         /// unless the timer does not exist, has previously been cancelled, or
         /// if it was a single-shot timer whose message was already received.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the timer to check.</param>
+        /// <returns><c>true</c> if a timer with this name is active; otherwise, <c>false</c>.</returns>
         public bool IsTimerActive(string name)
         {
             return _timers.ContainsKey(name);
@@ -228,8 +229,8 @@ namespace Akka.Persistence.Fsm
         /// Set the state timeout explicitly. This method can be safely used from
         /// within a state handler.
         /// </summary>
-        /// <param name="state">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <param name="state">The state whose default timeout is being set.</param>
+        /// <param name="timeout">The default timeout for the state, or <c>null</c> to clear it.</param>
         public void SetStateTimeout(TState state, TimeSpan? timeout) => _stateTimeouts[state] = timeout;
 
         /// <summary>
@@ -240,7 +241,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Set handler which is called upon each state transition
         /// </summary>
-        /// <param name="transitionHandler">TBD</param>
+        /// <param name="transitionHandler">The handler to invoke when the FSM changes state.</param>
         public void OnTransition(TransitionHandler transitionHandler)
         {
             _transitionEvent.Add(transitionHandler);
@@ -250,7 +251,7 @@ namespace Akka.Persistence.Fsm
         /// Set the handler which is called upon termination of this FSM actor. Calling this
         /// method again will overwrite the previous contents.
         /// </summary>
-        /// <param name="terminationHandler">TBD</param>
+        /// <param name="terminationHandler">The handler to invoke when the FSM terminates.</param>
         public void OnTermination(Action<FSMBase.StopEvent<TState, TData>> terminationHandler)
         {
             _terminateEvent = terminationHandler;
@@ -260,7 +261,7 @@ namespace Akka.Persistence.Fsm
         /// Set handler which is called upon reception of unhandled FSM messages. Calling
         /// this method again will overwrite the previous contents.
         /// </summary>
-        /// <param name="stateFunction">TBD</param>
+        /// <param name="stateFunction">The function to try for events not handled by a state-specific function.</param>
         public void WhenUnhandled(StateFunction stateFunction)
         {
             HandleEvent = OrElse(stateFunction, HandleEventDefault);
@@ -535,9 +536,9 @@ namespace Akka.Persistence.Fsm
         }
 
         /// <summary>
-        /// TBD
+        /// Applies a state descriptor by making its transition or terminating the actor when it specifies a stop reason.
         /// </summary>
-        /// <param name="nextState">TBD</param>
+        /// <param name="nextState">The state descriptor to apply.</param>
         protected virtual void ApplyState(State<TState, TData, TEvent> nextState)
         {
             if (nextState.StopReason == null)
@@ -628,7 +629,7 @@ namespace Akka.Persistence.Fsm
         /// By default, <see cref="Failure" /> is logged at error level and other
         /// reason types are not logged. It is possible to override this behavior.
         /// </summary>
-        /// <param name="reason">TBD</param>
+        /// <param name="reason">The reason the FSM is terminating.</param>
         protected virtual void LogTermination(FSMBase.Reason reason)
         {
             if (reason is FSMBase.Failure failure)
