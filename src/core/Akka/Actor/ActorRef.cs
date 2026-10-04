@@ -108,9 +108,9 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <param name="result">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="provider">TBD</param>
+        /// <param name="result">The task completion source completed by messages sent to this reference.</param>
+        /// <param name="path">The actor path exposed by this reference.</param>
+        /// <param name="provider">The actor reference provider that owns this reference.</param>
         public FutureActorRef(TaskCompletionSource<T> result, ActorPath path, IActorRefProvider provider)
         {
             _result = result;
@@ -119,20 +119,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The path associated with this one-off actor reference.
         /// </summary>
         public override ActorPath Path => _path;
 
         /// <summary>
-        /// TBD
+        /// The provider that created this one-off actor reference.
         /// </summary>
         public override IActorRefProvider Provider => _provider;
 
         /// <summary>
-        /// TBD
+        /// Completes the task with the first ordinary message, or faults it when a failure message arrives.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to use as the task result, or a <see cref="Status.Failure"/> that represents task failure.</param>
+        /// <param name="sender">The sender of the message; it does not affect the task result.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
             var handled = false;
@@ -300,16 +300,16 @@ namespace Akka.Actor
         public class Surrogate : ISurrogate
         {
             /// <summary>
-            /// TBD
+            /// Creates a surrogate for an actor reference path.
             /// </summary>
-            /// <param name="path">TBD</param>
+            /// <param name="path">The serialized actor path to resolve when restoring the reference.</param>
             public Surrogate(string path)
             {
                 Path = path;
             }
 
             /// <summary>
-            /// TBD
+            /// The serialized path used to resolve the actor reference.
             /// </summary>
             public string Path { get; }
 
@@ -325,15 +325,15 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor path that identifies this reference.
         /// </summary>
         public abstract ActorPath Path { get; }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to this actor reference.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The actor that sent the message, or <see cref="ActorRefs.NoSender"/> when there is no sender.</param>
         public void Tell(object message, IActorRef sender)
         {
             if (sender == null)
@@ -345,10 +345,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to the implementation represented by this actor reference.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender associated with the message.</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
         
@@ -643,7 +643,7 @@ namespace Akka.Actor
             /// Converts the <see cref="ISurrogate"/> into a <see cref="IActorRef"/>.
             /// </summary>
             /// <param name="system">The actor system.</param>
-            /// <returns>TBD</returns>
+            /// <returns>The ignore reference restored in the supplied actor system.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new IgnoreActorRef(system.AsInstanceOf<ExtendedActorSystem>().Provider);
@@ -702,7 +702,7 @@ namespace Akka.Actor
             /// Converts the <see cref="ISurrogate"/> into a <see cref="IActorRef"/>.
             /// </summary>
             /// <param name="system">The actor system.</param>
-            /// <returns>TBD</returns>
+            /// <returns>The process-wide <see cref="Nobody"/> instance.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return Nobody.Instance;
@@ -732,10 +732,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a surrogate that identifies the singleton <see cref="Nobody"/> reference.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system requesting the surrogate. This singleton does not depend on the system.</param>
+        /// <returns>The surrogate used to serialize <see cref="Nobody"/>.</returns>
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return SurrogateInstance;
@@ -787,7 +787,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Holds virtual child references for a path whose child actors are managed separately.
     /// </summary>
     internal class VirtualPathContainer : MinimalActorRef
     {
@@ -799,12 +799,12 @@ namespace Akka.Actor
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new();
 
         /// <summary>
-        /// TBD
+        /// Initializes a container with its provider, actor path, parent reference, and logger.
         /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="parent">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="provider">The provider associated with this container.</param>
+        /// <param name="path">The path represented by this container.</param>
+        /// <param name="parent">The parent reference in the actor hierarchy.</param>
+        /// <param name="log">The logger used for child registration and removal diagnostics.</param>
         public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
             _parent = parent;
@@ -814,7 +814,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The provider associated with this container.
         /// </summary>
         public override IActorRefProvider Provider
         {
@@ -822,7 +822,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The parent reference in the actor hierarchy.
         /// </summary>
         public override IInternalActorRef Parent
         {
@@ -830,7 +830,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor path represented by this container.
         /// </summary>
         public override ActorPath Path
         {
@@ -838,7 +838,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The logger used by this container.
         /// </summary>
         public ILoggingAdapter Log
         {
@@ -846,21 +846,21 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Looks up a child by its direct name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The direct child name to find.</param>
+        /// <param name="child">Receives the child reference when one is registered under that name.</param>
+        /// <returns><c>true</c> if a child with that name is registered; otherwise, <c>false</c>.</returns>
         protected bool TryGetChild(string name, out IInternalActorRef child)
         {
             return _children.TryGetValue(name, out child);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a direct child reference under the supplied name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="actor">TBD</param>
+        /// <param name="name">The name under which to register the child.</param>
+        /// <param name="actor">The child reference to register.</param>
         public void AddChild(string name, IInternalActorRef actor)
         {
             _children.AddOrUpdate(name, actor, (_, v) =>
@@ -871,9 +871,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the child registered under the supplied name, if present.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name of the child to remove.</param>
         public void RemoveChild(string name)
         {
             IInternalActorRef tmp;
@@ -884,10 +884,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a child by name. The child argument is retained for compatibility and is not used to verify identity.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
+        /// <param name="name">The name of the child to remove.</param>
+        /// <param name="child">The child reference supplied by the caller; removal is performed by name.</param>
         public void RemoveChild(string name, IActorRef child)
         {
             IInternalActorRef tmp;
@@ -914,10 +914,10 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
 */
 
         /// <summary>
-        /// TBD
+        /// Resolves a sequence of child names relative to this container.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The remaining child path elements. An empty sequence or empty first element resolves to this container.</param>
+        /// <returns>The matching descendant, or <see cref="Nobody"/> when a child name is not registered.</returns>
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             //Using enumerator to avoid multiple enumerations of name.

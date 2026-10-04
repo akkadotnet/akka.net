@@ -26,9 +26,9 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorPath">The parsed actor path whose address selects a root guardian and whose elements select descendants.</param>
+        /// <param name="system">The actor system used to resolve the path's address.</param>
+        /// <returns>A selection rooted at the guardian for the path's address.</returns>
         public static ActorSelection ActorSelection(ActorPath actorPath, ActorSystem system)
         {
             return new ActorSelection(((ActorSystemImpl)system).Provider.RootGuardianAt(actorPath.Address), actorPath.Elements);
@@ -41,10 +41,10 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="lookupRoot">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">An absolute or relative actor path. An empty path selects dead letters.</param>
+        /// <param name="system">The actor system used to resolve absolute paths and dead letters.</param>
+        /// <param name="lookupRoot">The actor reference used as the root for a relative path.</param>
+        /// <returns>A selection rooted at the resolved guardian or lookup reference.</returns>
         public static ActorSelection ActorSelection(string path, ActorSystem system, IActorRef lookupRoot)
         {
             var provider = ((ActorSystemImpl)system).Provider;
@@ -80,13 +80,12 @@ namespace Akka.Actor
         ///     matching magic, so it is preferable to cache its result if the
         ///     intention is to send messages frequently.
         /// </summary>
-        /// <param name="anchorActorRef">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="anchorActorRef">The actor reference against which the relative path is resolved.</param>
+        /// <param name="path">A path expression relative to <paramref name="anchorActorRef"/>.</param>
+        /// <returns>A selection rooted at <paramref name="anchorActorRef"/>.</returns>
         public static ActorSelection ActorSelection(IActorRef anchorActorRef, string path)
         {
             return new ActorSelection(anchorActorRef, path);
         }
     }
 }
-
