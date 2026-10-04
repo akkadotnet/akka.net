@@ -304,7 +304,7 @@ namespace Akka.Remote
         public int Capacity { get; }
 
         /// <summary>
-        /// Gets messages sent by the sender that have not been cumulatively acknowledged.
+        /// Gets messages buffered by the sender that have not been cumulatively acknowledged, including messages not yet sent pending UID confirmation.
         /// </summary>
         public IImmutableList<T> NonAcked { get; }
 
@@ -455,7 +455,7 @@ namespace Akka.Remote
         public SeqNo CumulativeAck { get; }
 
         /// <summary>
-        /// Gets received messages that cannot yet be delivered in sequence.
+        /// Gets received messages awaiting extraction or a sequence gap to be filled.
         /// </summary>
         public ImmutableSortedSet<T> Buf { get; }
 

@@ -84,7 +84,7 @@ namespace Akka.Remote
         IActorRef InternalResolveActorRef(string path);
 
         /// <summary>
-        /// Creates and registers a remote actor on its target node, and arranges cleanup when it terminates.
+        /// Requests creation of a remote actor on its target node and arranges termination watching for cleanup.
         /// </summary>
         /// <param name="actor">The remote actor reference to instantiate.</param>
         /// <param name="props">The actor properties used to create the remote actor.</param>
@@ -483,7 +483,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="path">The serialized actor path to resolve.</param>
         /// <param name="localAddress">The local transport address associated with the incoming message.</param>
-        /// <returns>The internal actor reference represented by the path, or dead letters when it cannot be resolved.</returns>
+        /// <returns>Dead letters for a null path; a remote reference when the path has no address; otherwise the resolved local reference, which may be an empty local reference if the actor does not exist.</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             if (path is null)
@@ -582,7 +582,7 @@ namespace Akka.Remote
         /// Resolves an actor path to a local actor reference or constructs a remote actor reference for its address.
         /// </summary>
         /// <param name="actorPath">The actor path to resolve.</param>
-        /// <returns>The resolved local actor reference or a reference that sends to the remote path.</returns>
+        /// <returns>The resolved local actor reference, or a reference that sends to the remote path; if a remote reference cannot be created, returns an empty local actor reference.</returns>
         public IActorRef ResolveActorRef(ActorPath actorPath)
         {
             if (HasAddress(actorPath.Address))

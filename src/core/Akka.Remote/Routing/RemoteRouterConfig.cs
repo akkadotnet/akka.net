@@ -30,7 +30,7 @@ namespace Akka.Remote.Routing
         /// Initializes a new instance of the <see cref="RemoteRouterConfig"/> class.
         /// </summary>
         /// <param name="local">The local pool configuration that supplies routing and supervision behavior.</param>
-        /// <param name="nodes">The non-empty set of remote addresses across which routees are deployed.</param>
+        /// <param name="nodes">The non-empty sequence of addresses across which routees are deployed, in selection order.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the enumeration of specified nodes is empty.
         /// </exception>
@@ -75,11 +75,11 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// Creates a routee deployed on the next remote address in the configured sequence.
+        /// Creates a routee using the next address in the configured sequence.
         /// </summary>
         /// <param name="routeeProps">The properties used to create the routee.</param>
         /// <param name="context">The actor context that attaches the routee to the router.</param>
-        /// <returns>A routee wrapping the newly created remote actor reference.</returns>
+        /// <returns>A routee wrapping the actor reference created for the selected address; it may be local if that address belongs to this system.</returns>
         internal override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
             var name = "c" + _childNameCounter.IncrementAndGet();

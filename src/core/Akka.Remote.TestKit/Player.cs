@@ -348,7 +348,7 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
     }
 
     /// <summary>
-    /// Indicates that the test conductor's connection to another node failed.
+    /// Indicates that the player's connection to the test conductor failed.
     /// </summary>
     internal class ConnectionFailure : Exception
     {

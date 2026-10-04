@@ -23,9 +23,9 @@ namespace Akka.Remote
         /// Reads a field by name using reflection, including non-public instance and static fields.
         /// </summary>
         /// <param name="type">The type that declares the field.</param>
-        /// <param name="instance">The object from which to read the field value.</param>
+        /// <param name="instance">The object supplied when reading an instance field; ignored by reflection for static fields.</param>
         /// <param name="fieldName">The field's name.</param>
-        /// <returns>The value of the field on <paramref name="instance"/>.</returns>
+        /// <returns>The value of the named field.</returns>
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {
             BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -35,7 +35,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Converts an IPv6 address to an IPv4 address using its final 32 bits, leaving IPv4 addresses unchanged.
+        /// Converts an IPv6 address to an IPv4 address using its final 32 bits. It returns an IPv4 address unchanged after reading the reflected address field.
         /// </summary>
         /// <param name="ipa">The IP address to map.</param>
         /// <returns>The corresponding IPv4 address.</returns>

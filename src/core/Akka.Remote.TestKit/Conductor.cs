@@ -337,7 +337,7 @@ namespace Akka.Remote.TestKit
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="exitValue">is the return code which shall be given to System.exit</param>
         /// <exception cref="InvalidOperationException">The controller returned a result other than <see cref="Done"/> or a recognized disconnected failure.</exception>
-        /// <returns>A task that completes when the remote actor system exits or disconnects.</returns>
+        /// <returns>A task that completes when the controller replies with <see cref="Done"/> or reports a recognized client disconnection.</returns>
         public Task<Done> Exit(RoleName node, int exitValue)
         {
             // Use the async version with no cancellation token for consistency
@@ -352,7 +352,7 @@ namespace Akka.Remote.TestKit
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="exitValue">is the return code which shall be given to System.exit</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Task indicating completion</returns>
+        /// <returns>A task that completes when the controller replies with <see cref="Done"/> or reports a recognized client disconnection.</returns>
         public async Task<Done> ExitAsync(RoleName node, int exitValue, CancellationToken cancellationToken = default)
         {
             try

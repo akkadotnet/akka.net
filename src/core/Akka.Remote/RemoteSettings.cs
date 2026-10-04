@@ -174,7 +174,7 @@ namespace Akka.Remote
         /// </summary>
         public int SysMsgBufferSize { get; set; }
         /// <summary>
-        /// Gets or sets the maximum number of buffered system messages sent in one resend attempt.
+        /// Gets or sets the maximum number of unacknowledged system messages resent in one attempt; negatively acknowledged messages are resent separately.
         /// </summary>
         public int SysResendLimit { get; set; }
         /// <summary>
@@ -186,7 +186,7 @@ namespace Akka.Remote
         /// </summary>
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
         /// <summary>
-        /// Gets or sets how long an endpoint may remain without system-message activity before it is quarantined.
+        /// Gets or sets how long an idle association may remain without system-message activity before the endpoint manager considers quarantining it.
         /// </summary>
         public TimeSpan QuarantineSilentSystemTimeout { get; set; }
         /// <summary>

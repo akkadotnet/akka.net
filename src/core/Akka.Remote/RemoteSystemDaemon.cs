@@ -98,7 +98,7 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
-        /// <param name="terminator">The actor notified when system termination completes.</param>
+        /// <param name="terminator">The actor that receives <see cref="TerminationHookDone"/> after this daemon has no children.</param>
         /// <param name="log">The logger used by this daemon.</param>
         public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent,IActorRef terminator, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
