@@ -35,9 +35,9 @@ namespace Akka.Cluster.Sharding
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
     /// in the mailbox will be dropped. To support graceful passivation without losing such
-    /// messages the entity actor can send this <see cref="Passivate"/> message to its parent <see cref="ShardRegion"/>.
+    /// messages the entity actor can send this <see cref="Passivate"/> message to its parent shard.
     /// If the shard starts passivation in response to this command, it sends the specified wrapped
-    /// <see cref="StopMessage"/> to the entity, which is then expected to stop itself. The shard region
+    /// <see cref="StopMessage"/> to the entity, which is then expected to stop itself. The shard
     /// buffers incoming messages between the start of passivation and entity termination, then delivers
     /// those buffered messages to a new entity incarnation.
     ///

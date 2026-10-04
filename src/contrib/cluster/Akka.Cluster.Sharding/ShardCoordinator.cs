@@ -348,7 +348,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Shard-region acknowledgement that it accepted hosting a shard and initiated its startup.
+        /// Acknowledges that a region accepted hosting a shard; it does not confirm that the shard has initialized.
         /// </summary>
         [Serializable]
         internal sealed class ShardStarted : ICoordinatorMessage, IEquatable<ShardStarted>
@@ -359,7 +359,7 @@ namespace Akka.Cluster.Sharding
             public readonly ShardId Shard;
 
             /// <summary>
-            /// Creates an acknowledgement that the region initiated startup of the requested shard.
+            /// Creates an acknowledgement that the region accepted hosting the requested shard.
             /// </summary>
             /// <param name="shard">The id of the shard whose hosting was accepted.</param>
             public ShardStarted(ShardId shard)
