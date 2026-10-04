@@ -17,17 +17,17 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Result types returned by offers to a stream queue.
     /// </summary>
     public sealed class QueueOfferResult
     {
         /// <summary>
-        /// TBD
+        /// Result indicating that the offered element was enqueued.
         /// </summary>
         public sealed class Enqueued : IQueueOfferResult
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the enqueued result.
             /// </summary>
             public static readonly Enqueued Instance = new();
 
@@ -37,12 +37,12 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Result indicating that the offered element was dropped.
         /// </summary>
         public sealed class Dropped : IQueueOfferResult
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the dropped result.
             /// </summary>
             public static readonly Dropped Instance = new();
 
@@ -52,7 +52,7 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Result indicating that offering the element failed.
         /// </summary>
         public sealed class Failure : IQueueOfferResult
         {
@@ -72,12 +72,12 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Result indicating that the queue is closed and did not accept the offer.
         /// </summary>
         public sealed class QueueClosed : IQueueOfferResult
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the closed-queue result.
             /// </summary>
             public static readonly QueueClosed Instance = new();
 
