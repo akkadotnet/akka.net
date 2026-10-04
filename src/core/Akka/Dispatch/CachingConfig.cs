@@ -38,16 +38,16 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Cached result of looking up a configuration path whose value is not stored as a string.
         /// </summary>
         public struct ValuePathEntry : IPathEntry
         {
             /// <summary>
-            /// TBD
+            /// Creates a cached path result with an associated configuration value.
             /// </summary>
-            /// <param name="valid">TBD</param>
-            /// <param name="exists">TBD</param>
-            /// <param name="config">TBD</param>
+            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
+            /// <param name="config">The cached configuration value, or an empty configuration when none is available.</param>
             public ValuePathEntry(bool valid, bool exists, Config config) : this()
             {
                 Config = config;
@@ -56,41 +56,41 @@ namespace Akka.Dispatch
             }
 
             /// <summary>
-            /// TBD
+            /// Creates a cached path result without an associated configuration value.
             /// </summary>
-            /// <param name="valid">TBD</param>
-            /// <param name="exists">TBD</param>
+            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
             public ValuePathEntry(bool valid, bool exists)
                 : this(valid, exists, EmptyConfig)
             {
             }
 
             /// <summary>
-            /// TBD
+            /// Whether the path lookup completed without a configuration error.
             /// </summary>
             public bool Valid { get; private set; }
             /// <summary>
-            /// TBD
+            /// Whether the path exists in the wrapped configuration.
             /// </summary>
             public bool Exists { get; private set; }
             /// <summary>
-            /// TBD
+            /// The cached configuration value associated with the path.
             /// </summary>
             public Config Config { get; private set; }
         }
 
         /// <summary>
-        /// TBD
+        /// Cached result of looking up a configuration path whose value is a string.
         /// </summary>
         public struct StringPathEntry : IPathEntry
         {
             /// <summary>
-            /// TBD
+            /// Creates a cached string path result with its associated configuration value.
             /// </summary>
-            /// <param name="valid">TBD</param>
-            /// <param name="exists">TBD</param>
-            /// <param name="config">TBD</param>
-            /// <param name="value">TBD</param>
+            /// <param name="valid">Whether the lookup completed without a configuration error.</param>
+            /// <param name="exists">Whether the path exists in the wrapped configuration.</param>
+            /// <param name="config">The cached configuration value for the path.</param>
+            /// <param name="value">The string value read from the path.</param>
             public StringPathEntry(bool valid, bool exists, Config config, string value) : this()
             {
                 Config = config;
@@ -100,20 +100,20 @@ namespace Akka.Dispatch
             }
 
             /// <summary>
-            /// TBD
+            /// Whether the path lookup completed without a configuration error.
             /// </summary>
             public bool Valid { get; private set; }
             /// <summary>
-            /// TBD
+            /// Whether the path exists in the wrapped configuration.
             /// </summary>
             public bool Exists { get; private set; }
             /// <summary>
-            /// TBD
+            /// The cached configuration value associated with the path.
             /// </summary>
             public Config Config { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// The string value read from the path.
             /// </summary>
             public string Value { get; private set; }
         }
@@ -128,9 +128,10 @@ namespace Akka.Dispatch
         private readonly ConcurrentDictionary<string, IPathEntry> _entryMap;
 
         /// <summary>
-        /// TBD
+        /// Wraps a configuration and caches path-existence and string-value lookups. Wrapping another
+        /// <see cref="CachingConfig"/> reuses its underlying configuration and lookup cache.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration whose path lookups should be cached.</param>
         public CachingConfig(Config config)
         {
             var cachingConfig = config as CachingConfig;
@@ -187,7 +188,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the root HOCON value from the wrapped configuration.
         /// </summary>
         public override HoconValue Root
         {
@@ -195,18 +196,18 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a caching wrapper around this configuration combined with the supplied fallback.
         /// </summary>
-        /// <param name="fallback">TBD</param>
+        /// <param name="fallback">The configuration to use as a fallback.</param>
         public override Config WithFallback(Config fallback)
         {
             return new CachingConfig(_config.WithFallback(fallback));
         }
 
         /// <summary>
-        /// TBD
+        /// Checks whether the wrapped configuration contains the specified path, caching the lookup result.
         /// </summary>
-        /// <param name="path">TBD</param>
+        /// <param name="path">The configuration path to check.</param>
         public override bool HasPath(string path)
         {
             var entry = GetPathEntry(path);
@@ -217,7 +218,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the wrapped configuration is empty.
         /// </summary>
         public override bool IsEmpty
         {
@@ -225,9 +226,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Enumerates the key-value pairs exposed by the wrapped configuration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The wrapped configuration's key-value pairs.</returns>
         public override IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
         {
             return _config.AsEnumerable();
