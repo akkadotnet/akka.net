@@ -19,10 +19,10 @@ namespace Akka.Actor
         private IActorState _state = new DefaultActorState();
 
         /// <summary>
-        /// TBD
+        /// Starts watching an actor and delivers a <see cref="Terminated"/> notification when it stops.
         /// </summary>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subject">The actor to monitor.</param>
+        /// <returns>The monitored actor reference.</returns>
         public IActorRef Watch(IActorRef subject)
         {
             if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
@@ -40,11 +40,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Starts watching an actor and delivers the supplied message when it stops.
         /// </summary>
-        /// <param name="subject">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subject">The actor to monitor.</param>
+        /// <param name="message">The message to deliver to this actor after the watched actor terminates.</param>
+        /// <returns>The monitored actor reference.</returns>
         public IActorRef WatchWith(IActorRef subject, object message)
         {
             if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
@@ -65,10 +65,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Stops watching an actor and removes any queued termination notification for it.
         /// </summary>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subject">The actor to stop monitoring.</param>
+        /// <returns>The actor reference that is no longer watched.</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
             if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
@@ -87,9 +87,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Delivers a queued termination notification to the actor's current behavior.
         /// </summary>
-        /// <param name="t">TBD</param>
+        /// <param name="t">The termination notification received for a watched actor.</param>
         protected void ReceivedTerminated(Terminated t)
         {
             if (!_state.ContainsTerminated(t.ActorRef))
@@ -103,9 +103,9 @@ namespace Akka.Actor
         /// When this actor is watching the subject of <see cref="Terminated"/> message
         /// it will be propagated to user's receive.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="existenceConfirmed">TBD</param>
-        /// <param name="addressTerminated">TBD</param>
+        /// <param name="actor">The actor that terminated.</param>
+        /// <param name="existenceConfirmed">Whether the actor's existence was confirmed before termination.</param>
+        /// <param name="addressTerminated">Whether termination resulted from loss of the actor's remote address.</param>
         protected void WatchedActorTerminated(IActorRef actor, bool existenceConfirmed, bool addressTerminated)
         {
             if (TryGetWatching(actor, out var message)) // message is custom termination message that was requested
@@ -128,10 +128,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Records a termination notification until it can be delivered to the actor's receive behavior.
         /// </summary>
-        /// <param name="subject">Tracked subject</param>
-        /// <param name="customMessage">Terminated custom message</param>
+        /// <param name="subject">The watched actor that terminated.</param>
+        /// <param name="customMessage">The optional custom message registered by <see cref="WatchWith"/>.</param>
         public void TerminatedQueuedFor(IActorRef subject, Option<object> customMessage)
         {
             _state = _state.AddTerminated(subject, customMessage);
@@ -148,7 +148,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends death watch notifications to actors monitoring this actor, notifying remote watchers first.
         /// </summary>
         protected void TellWatchersWeDied()
         {
@@ -225,10 +225,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a watcher or watch relationship received as a system message.
         /// </summary>
-        /// <param name="watchee">TBD</param>
-        /// <param name="watcher">TBD</param>
+        /// <param name="watchee">The actor being watched.</param>
+        /// <param name="watcher">The actor that requested the watch.</param>
         protected void AddWatcher(IActorRef watchee, IActorRef watcher)
         {
             var watcheeSelf = watchee.Equals(Self);
@@ -256,10 +256,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a watcher or watch relationship received as a system message.
         /// </summary>
-        /// <param name="watchee">TBD</param>
-        /// <param name="watcher">TBD</param>
+        /// <param name="watchee">The actor that was being watched.</param>
+        /// <param name="watcher">The actor that requested the watch.</param>
         protected void RemWatcher(IActorRef watchee, IActorRef watcher)
         {
             // assert that watchee and watcher are not null
@@ -288,9 +288,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes remote watchers at the terminated address and notifies this actor about watched actors at that address.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The remote address that has terminated.</param>
         protected void AddressTerminated(Address address)
         {
             // cleanup watchedBy since we know they are dead
@@ -322,8 +322,8 @@ namespace Akka.Actor
         /// Ends subscription to AddressTerminated if subscribing and the
         /// block removes the last non-local ref from watching and watchedBy.
         /// </summary>
-        /// <param name="block">TBD</param>
-        /// <param name="change">TBD</param>
+        /// <param name="block">The change to make to the watch state.</param>
+        /// <param name="change">The reference being added or removed, used to determine whether remote-address monitoring is needed.</param>
         private void MaintainAddressTerminatedSubscription(Action block, IActorRef? change = null)
         {
             if (IsNonLocal(change))
