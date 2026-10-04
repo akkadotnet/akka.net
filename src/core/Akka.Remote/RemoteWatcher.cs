@@ -502,9 +502,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Publishes an <see cref="AddressTerminated"/> signal after the remote address is marked unreachable.
+        /// Publishes an <see cref="AddressTerminated"/> signal while handling a failure-detector decision that the remote address is unreachable.
         /// </summary>
-        /// <param name="address">The address of the unreachable remote node.</param>
+        /// <param name="address">The remote address reported as unreachable by the failure detector.</param>
         protected virtual void PublishAddressTerminated(Address address)
         {
             AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(address));
