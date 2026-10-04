@@ -64,11 +64,11 @@ namespace Akka.Streams
         /// <param name="name">The name used for the outlet and as a prefix for the fixed inlet; the additional inlet objects are named without this prefix.</param>
         public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
         /// <summary>
-        /// Creates the shape using the supplied output, fixed input, and repeated inputs.
+        /// Creates the shape using the supplied output and fixed input. The supplied repeated inputs determine how many new additional inlet objects are created; those repeated inlet objects themselves are ignored.
         /// </summary>
         /// <param name="outlet">The output port carrying <typeparamref name="TOut"/> elements.</param>
         /// <param name="in0">The fixed input port carrying <typeparamref name="T0"/> elements.</param>
-        /// <param name="inlets">The additional input ports carrying <typeparamref name="T1"/> elements.</param>
+        /// <param name="inlets">The repeated inlet objects whose count determines the number of additional inlets created by the shape. The supplied inlet objects are ignored.</param>
         public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Concat(inlets))) { }
 
         /// <summary>

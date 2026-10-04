@@ -18,18 +18,18 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// Creates a typed <see cref="UnzipWith{TIn,T0,T1}"/> stage from a function that maps one input element to multiple outputs.
+    /// Defines a factory that creates a result value from a function mapping an input value to an output value.
     /// </summary>
-    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
-    /// <typeparam name="TOut">The result type returned by the supplied function.</typeparam>
-    /// <typeparam name="T">The type returned by <see cref="Create"/>.</typeparam>
+    /// <typeparam name="TIn">The input type accepted by the function passed to <see cref="Create"/>.</typeparam>
+    /// <typeparam name="TOut">The output type returned by the function passed to <see cref="Create"/>.</typeparam>
+    /// <typeparam name="T">The result type returned by <see cref="Create"/>.</typeparam>
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
     {
         /// <summary>
-        /// Creates an unzip stage using the supplied splitter function.
+        /// Creates a result value using the supplied mapping function.
         /// </summary>
-        /// <param name="unzipper">The function used to create a value of type <typeparamref name="T"/> from an input.</param>
-        /// <returns>A value of type <typeparamref name="T"/> created from the supplied function.</returns>
+        /// <param name="unzipper">A function that maps a value of type <typeparamref name="TIn"/> to a value of type <typeparamref name="TOut"/>.</param>
+        /// <returns>A value of type <typeparamref name="T"/> created using <paramref name="unzipper"/>.</returns>
         T Create(Func<TIn, TOut> unzipper);
     }
 
