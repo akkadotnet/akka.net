@@ -59,7 +59,7 @@ namespace Akka.Streams
         /// Interface for stages that need timer services for their functionality. Schedules a
         /// single task with the given delay.
         /// </summary>
-        /// <param name="delay">The time to wait before scheduling the action.</param>
+        /// <param name="delay">The time to wait before the action runs.</param>
         /// <param name="action">The action to schedule.</param>
         /// <returns>
         /// A <see cref="ICancelable"/> that allows cancelling the timer. Cancelling is best effort, 

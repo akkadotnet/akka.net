@@ -88,7 +88,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// Exception raised when a stream buffer exceeds its capacity under an overflow strategy that fails the stream.
+    /// Exception raised when a full stream buffer or queue cannot accept an element.
     /// </summary>
     [Serializable]
     public class BufferOverflowException : Exception

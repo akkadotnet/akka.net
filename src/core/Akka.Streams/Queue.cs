@@ -34,7 +34,7 @@ namespace Akka.Streams
         /// you need to wait for last offer call task completion.</para>
         /// </summary>
         /// <param name="element">element to send to a stream</param>
-        /// <returns>A task that completes with an <see cref="IQueueOfferResult"/> when the offer is handled, or faults if the offer operation is rejected or the stream fails.</returns>
+        /// <returns>A task that completes with an <see cref="IQueueOfferResult"/> when the offer is handled, including a <see cref="QueueOfferResult.Failure"/> result when enqueueing fails; it faults if the offer is rejected by the queue's rules.</returns>
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>
@@ -92,11 +92,11 @@ namespace Akka.Streams
     {
         /// <summary>
         /// Method pulls elements from stream and returns task that:
-        /// <para>- fails if stream is finished</para>
-        /// <para>- completes with None in case if stream is completed after we got task</para>
+        /// <para>- completes with None after buffered elements are drained and upstream completion is observed</para>
+        /// <para>- fails if the stream fails, or if a pull is made after completion has already been reported</para>
         /// <para>- completes with `Some(element)` in case next element is available from stream.</para>
         /// </summary>
-        /// <returns>A task that completes with the next available element, or an empty option if the stream completes while the pull is pending.</returns>
+        /// <returns>A task that completes with the next available element, or an empty option after buffered elements are drained and upstream completion is observed.</returns>
         Task<Option<T>> PullAsync();
     }
 }

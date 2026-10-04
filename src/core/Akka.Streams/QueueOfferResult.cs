@@ -22,7 +22,7 @@ namespace Akka.Streams
     public sealed class QueueOfferResult
     {
         /// <summary>
-        /// Result indicating that the offered element was enqueued.
+        /// Result indicating that the offer was accepted, either by buffering the element or sending it directly downstream.
         /// </summary>
         public sealed class Enqueued : IQueueOfferResult
         {

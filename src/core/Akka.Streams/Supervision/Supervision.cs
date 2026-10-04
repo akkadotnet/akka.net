@@ -45,15 +45,15 @@ namespace Akka.Streams.Supervision
     public static class Deciders
     {
         /// <summary>
-        /// Decider that stops the stream when processing throws an exception.
+        /// Returns <see cref="Directive.Stop"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider StoppingDecider = _ => Directive.Stop;
         /// <summary>
-        /// Decider that drops the failed element and resumes processing.
+        /// Returns <see cref="Directive.Resume"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider ResumingDecider = _ => Directive.Resume;
         /// <summary>
-        /// Decider that drops the failed element and restarts the stage.
+        /// Returns <see cref="Directive.Restart"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider RestartingDecider = _ => Directive.Restart;
     }

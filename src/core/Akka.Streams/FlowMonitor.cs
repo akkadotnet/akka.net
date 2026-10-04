@@ -91,7 +91,7 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// Stream completed successfully
+        /// Upstream completed normally or downstream canceled.
         /// </summary>
         public class Finished : IStreamState
         {
