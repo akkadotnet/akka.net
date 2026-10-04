@@ -68,7 +68,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Handles an incoming system message and supported control messages.
+        /// Offers an incoming system message to the supported control-message handler; an unhandled system message is ignored.
         /// </summary>
         /// <param name="message">The system message to handle.</param>
         public override void SendSystemMessage(ISystemMessage message)
@@ -82,7 +82,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message to handle.</param>
         /// <param name="sender">The sender that should receive an identity response, when applicable.</param>
-        /// <returns><c>true</c> if the message was handled or suppressed; otherwise, <c>false</c>. <see cref="TellInternal"/> publishes an unhandled user message as a dead letter, while <see cref="SendSystemMessage"/> ignores an unhandled system message.</returns>
+        /// <returns><c>true</c> if the message was handled or suppressed; otherwise, <c>false</c> for an ordinary unsuppressed message. <see cref="TellInternal"/> publishes such an unhandled user message as a dead letter, while <see cref="SendSystemMessage"/> ignores an unhandled system message.</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             if (message is Watch watch)

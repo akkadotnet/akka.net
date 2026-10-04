@@ -129,9 +129,9 @@ namespace Akka.Actor
         public override IActorRefProvider Provider => _provider;
 
         /// <summary>
-        /// Completes the task for a reply compatible with <typeparamref name="T"/> and faults it for system messages, failure messages, or incompatible reply types.
+        /// Completes the task for a compatible ordinary reply and faults it for system messages, failure replies, or incompatible reply types.
         /// </summary>
-        /// <param name="message">A value compatible with <typeparamref name="T"/> completes the task; <c>null</c> completes it with the default value. <see cref="Status.Failure"/> faults the task unless <typeparamref name="T"/> accepts <see cref="Status"/> values.</param>
+        /// <param name="message">A compatible ordinary value completes the task, and <c>null</c> completes it with the default value. <see cref="Status.Failure"/> faults the task unless <typeparamref name="T"/> derives from <see cref="Status"/>; the legacy <see cref="Failure"/> follows the same rule for <see cref="Failure"/>. An incompatible ordinary value faults the task with an <see cref="ArgumentException"/>.</param>
         /// <param name="sender">The sender of the message; it does not affect the task result.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
