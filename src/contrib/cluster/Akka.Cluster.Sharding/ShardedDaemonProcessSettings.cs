@@ -72,7 +72,7 @@ namespace Akka.Cluster.Sharding
         /// Some settings can not be changed (remember-entities and related settings, passivation, number-of-shards),
         /// changing those settings will be ignored.
         /// </summary>
-        /// <param name="shardingSettings">TBD</param>
+        /// <param name="shardingSettings">The sharding settings to use for this daemon process.</param>
         public ShardedDaemonProcessSettings WithShardingSettings(ClusterShardingSettings shardingSettings) => Copy(shardingSettings: shardingSettings);
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Sharding
         /// If the role is not specified all nodes in the cluster are used. If the given role does
         /// not match the role of the current node the ShardedDaemonProcess will not be started.
         /// </summary>
-        /// <param name="role">TBD</param>
+        /// <param name="role">The cluster role required for nodes hosting this daemon process, or <c>null</c> to use all nodes.</param>
         public ShardedDaemonProcessSettings WithRole(string role) => Copy(role: role);
     }
 }
