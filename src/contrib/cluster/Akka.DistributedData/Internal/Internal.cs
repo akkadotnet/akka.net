@@ -639,7 +639,7 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// Gossip status message containing key digests and optional chunk and system identifiers.
+    /// Gossip status message containing key digests and chunk coordinates, with optional actor-system identifiers.
     /// </summary>
     [Serializable]
     internal sealed class Status : IReplicatorMessage, IEquatable<Status>, IDestinationSystemUid
