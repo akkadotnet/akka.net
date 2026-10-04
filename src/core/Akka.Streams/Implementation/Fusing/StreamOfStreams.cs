@@ -640,7 +640,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Creates a stage that routes each element to a substream selected by its key.
         /// </summary>
-        /// <param name="maxSubstreams">The maximum number of distinct keys supported; if exceeded, the exception is handled by the configured supervision strategy. Use -1 for no limit.</param>
+        /// <param name="maxSubstreams">The maximum number of active substreams plus remembered closed keys; exceeding it is handled by the supervision strategy. Closed keys are not remembered when <paramref name="allowClosedSubstreamRecreation"/> is enabled. Use -1 for no limit.</param>
         /// <param name="keyFor">Computes the key for each element</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         public GroupBy(int maxSubstreams, Func<T, TKey> keyFor, bool allowClosedSubstreamRecreation = false)
@@ -662,7 +662,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.GroupBy;
 
         /// <summary>
-        /// The flow shape that emits one source for each encountered key.
+        /// The flow shape that emits a source whenever a keyed substream is opened.
         /// </summary>
         public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
 
@@ -706,7 +706,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <typeparam name="T">The type of elements in the input and substreams.</typeparam>
         /// <param name="p">The predicate that selects boundaries and whose matching element begins the next substream.</param>
-        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation propagates upstream or the remainder of the current segment is drained before later segments are processed.</param>
         /// <returns>A graph that emits a source for each segment delimited by matching elements.</returns>
         public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
 
@@ -716,7 +716,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <typeparam name="T">The type of elements in the input and substreams.</typeparam>
         /// <param name="p">The predicate that selects the final element of each segment.</param>
-        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation propagates upstream or the remainder of the current segment is drained before later segments are processed.</param>
         /// <returns>A graph that emits a source for each segment ending in a matching element.</returns>
         public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
     }
@@ -967,7 +967,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="decision">Whether a matching element starts the next substream or ends the current substream.</param>
         /// <param name="predicate">The predicate that identifies substream boundaries.</param>
-        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation propagates upstream or the remainder of the current segment is drained before later segments are processed.</param>
         public Split(Split.SplitDecision decision, Func<T, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
         {
             _decision = decision;
@@ -1151,10 +1151,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Action<IActorSubscriberMessage> _externalCallback;
 
         /// <summary>
-        /// Creates a source stage that forwards downstream demand and cancellation to a callback.
+        /// Creates a sink stage that forwards upstream elements and termination signals to a callback.
         /// </summary>
-        /// <param name="name">The name used for the stage and its port.</param>
-        /// <param name="externalCallback">The callback that receives substream pull and cancellation commands.</param>
+        /// <param name="name">The name used to set the stage name and attributes.</param>
+        /// <param name="externalCallback">The callback that receives upstream element, completion, and failure signals.</param>
         public SubSink(string name, Action<IActorSubscriberMessage> externalCallback)
         {
             _name = name;
@@ -1175,13 +1175,16 @@ namespace Akka.Streams.Implementation.Fusing
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// Requests one element from the materialized substream, or records the request until materialization.
+        /// Requests one element from the materialized substream, or records one pending request until materialization.
         /// </summary>
+        /// <exception cref="IllegalStateException">Thrown if another command is already pending before materialization.</exception>
         public void PullSubstream() => DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
 
         /// <summary>
-        /// Cancels the materialized substream with the supplied cause, or records cancellation until materialization.
+        /// Completes the materialized sink on cancellation, or records one pending cancel until materialization. The cause is not propagated as a stage failure.
         /// </summary>
+        /// <param name="cause">The cause carried by the cancellation command.</param>
+        /// <exception cref="IllegalStateException">Thrown if a conflicting command is already pending before materialization; cancellation may replace a pending pull.</exception>
         public void CancelSubstream(Exception cause) => DispatchCommand(new SubSink.CancelScheduledBeforeMaterialization(cause));
 
         private void DispatchCommand(SubSink.CommandScheduledBeforeMaterialization newState)
@@ -1204,10 +1207,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Creates the logic that emits callback messages as stream signals.
+        /// Creates sink logic that forwards upstream elements and termination signals to the external callback, and applies pending pull or cancel commands.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
-        /// <returns>The logic for the substream source.</returns>
+        /// <returns>The logic that receives the substream elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -1294,10 +1297,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly AtomicReference<object> _status = new();
 
         /// <summary>
-        /// Creates a source stage that forwards downstream demand and cancellation to a callback.
+        /// Creates a source stage that forwards downstream demand and cancellation to its owner.
         /// </summary>
-        /// <param name="name">The name used for the stage and its port.</param>
-        /// <param name="externalCallback">The callback that receives substream pull and cancellation commands.</param>
+        /// <param name="name">The name used to set the stage name and attributes.</param>
+        /// <param name="externalCallback">The callback that receives pull and cancellation commands.</param>
         public SubSource(string name, Action<SubSink.ICommand> externalCallback)
         {
             _name = name;

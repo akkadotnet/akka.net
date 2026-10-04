@@ -106,10 +106,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// Creates stage logic that evaluates the predicate under the inherited supervision strategy.
+        /// Creates stage logic that applies the mapping function under the inherited supervision strategy.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that emits elements until the predicate returns false.</returns>
+        /// <returns>The logic that emits the mapped output for each input element.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -183,10 +183,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Creates stage logic that accumulates input elements under the inherited supervision strategy.
+        /// Creates stage logic that evaluates the predicate under the inherited supervision strategy.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that emits the initial and successive accumulated values.</returns>
+        /// <returns>The logic that passes through elements for which the predicate returns true.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -558,7 +558,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Collect;
 
         /// <summary>
-        /// The inlet that accepts elements to accumulate.
+        /// The inlet that accepts elements to inspect and collect.
         /// </summary>
         public Inlet<TIn> In { get; } = new("Collect.in");
 
@@ -2407,9 +2407,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
         /// <summary>
-        /// Creates a stage that groups input elements by accumulated cost and emits one aggregate per batch.
+        /// Creates a stage that aggregates input elements into batches according to their calculated costs.
         /// </summary>
-        /// <param name="max">The cost threshold that splits elements into batches; an element whose cost exceeds it can form a batch by itself.</param>
+        /// <param name="max">The cost budget available for adding elements to the current batch; an element that exceeds the remaining budget starts the next batch.</param>
         /// <param name="costFunc">The function that calculates the cost of each input element.</param>
         /// <param name="seed">The function that creates the initial aggregate from the first element of a batch.</param>
         /// <param name="aggregate">The function that adds each later element in the batch to the current aggregate.</param>
@@ -2435,7 +2435,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Creates batching logic that applies the inherited supervision strategy to aggregation failures.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that accumulates elements and emits batches when their cost threshold is reached.</returns>
+        /// <returns>The logic that accumulates elements and emits a batch when downstream demand arrives, an element exceeds the remaining cost budget, or upstream completes.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -2524,9 +2524,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TIn, IEnumerator<TOut>> _extrapolate;
 
         /// <summary>
-        /// Creates a stage that expands each input element into the sequence returned by the function.
+        /// Creates a stage that uses an iterator supplied for each input to produce output elements while waiting for newer input.
         /// </summary>
-        /// <param name="extrapolate">The function that creates an output iterator for each input element; an empty iterator produces no output for that element.</param>
+        /// <param name="extrapolate">The function that supplies an output iterator for an input; the iterator may be replaced when the next input arrives before all its values are emitted.</param>
         public Expand(Func<TIn, IEnumerator<TOut>> extrapolate)
         {
             _extrapolate = extrapolate;
@@ -3567,7 +3567,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Creates a stage that delays each buffered element before emitting it.
         /// </summary>
-        /// <param name="delay">The minimum time an element waits in the buffer before it can be emitted.</param>
+        /// <param name="delay">The configured wait before a buffered element can be emitted; <see cref="DelayOverflowStrategy.EmitEarly"/> may emit the oldest element sooner when the buffer is full.</param>
         /// <param name="strategy">The action to take if the stage's input buffer is full.</param>
         public Delay(TimeSpan delay, DelayOverflowStrategy strategy)
         {
@@ -3721,7 +3721,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">The type of values reduced to produce the stream's final sum.</typeparam>
+    /// <typeparam name="T">The type of input values and the reduction result.</typeparam>
     [InternalApi]
     public sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
@@ -3794,7 +3794,7 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<T, T, T> _reduce;
 
         /// <summary>
-        /// Creates a stage that reduces the input elements to one value.
+        /// Creates a stage that reduces a nonempty input stream to one value and fails if the stream is empty.
         /// </summary>
         /// <param name="reduce">The function that combines the accumulated value with the next element.</param>
         public Sum(Func<T, T, T> reduce)
@@ -3808,10 +3808,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sum;
 
         /// <summary>
-        /// Creates logic that reduces elements under the inherited supervision strategy.
+        /// Creates logic that reduces elements under the inherited supervision strategy and fails if upstream completes before the first element.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that emits the final reduced value.</returns>
+        /// <returns>The logic that emits the reduction of a nonempty input stream.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
@@ -4514,7 +4514,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         /// <summary>
         /// Creates the stage logic and a task for the selected flow's materialized value.
-        /// The task completes with an option containing that value when a flow is selected, or with <see cref="Option{T}.None"/> if the stage terminates first.
+        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally or downstream cancels before selection, and faults if upstream or flow creation fails.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
         /// <returns>The stage logic and a task containing the optional materialized value of the selected flow.</returns>
