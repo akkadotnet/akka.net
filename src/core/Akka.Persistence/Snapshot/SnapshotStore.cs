@@ -313,10 +313,10 @@ namespace Akka.Persistence.Snapshot
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Plugin hook called for snapshot operation responses before they are forwarded to the persistent actor, and for messages not handled by the built-in protocol.
+        /// Plugin hook called for save and delete success or failure responses before they are forwarded to the persistent actor, and for messages not handled by the built-in protocol, such as plugin replies piped back to the store.
         /// </summary>
         /// <param name="message">Message received by the snapshot store.</param>
-        /// <returns><c>true</c> if a message not handled by the built-in protocol was handled by the plugin; otherwise, <c>false</c>. The result is ignored for built-in snapshot operation responses.</returns>
+        /// <returns><c>true</c> if a message not handled by the built-in protocol was handled by the plugin; otherwise, <c>false</c>. The result is ignored for save and delete success or failure responses.</returns>
         protected virtual bool ReceivePluginInternal(object message)
         {
             return false;

@@ -140,11 +140,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Processes delivery confirmations and warnings before passing the message to the actor receive handler.
+        /// Consumes redelivery tick messages and passes other messages to the base actor receive handler.
         /// </summary>
         /// <param name="receive">Actor receive handler for the message.</param>
         /// <param name="message">Message received by the actor.</param>
-        /// <returns>true if the delivery semantic handled the message or the actor receive handler handled it; otherwise, false.</returns>
+        /// <returns>true because the base receive handler processes messages not consumed as redelivery ticks.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             return _atLeastOnceDeliverySemantic.AroundReceive(receive, message) || base.AroundReceive(receive, message);

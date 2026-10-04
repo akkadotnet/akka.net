@@ -158,12 +158,12 @@ namespace Akka.Persistence
         public string PersistenceId { get; }
 
         /// <summary>
-        /// Lowest sequence number in this atomic write.
+        /// Sequence number of the first representation in this atomic write.
         /// </summary>
         public long LowestSequenceNr { get; }
 
         /// <summary>
-        /// Highest sequence number in this atomic write.
+        /// Sequence number of the last representation in this atomic write.
         /// </summary>
         public long HighestSequenceNr { get; }
 
@@ -281,14 +281,14 @@ namespace Akka.Persistence
         IActorRef Sender { get; }
 
         /// <summary>
-        /// Creates a new deep copy of this message.
+        /// Creates a new persistent representation with the specified metadata values.
         /// </summary>
         /// <param name="sequenceNr">Sequence number for the copy.</param>
         /// <param name="persistenceId">Persistence identifier for the copy.</param>
         /// <param name="isDeleted">Whether the copy is marked as deleted.</param>
         /// <param name="sender">Sender associated with the copy.</param>
         /// <param name="writerGuid">Writer identifier associated with the copy.</param>
-        /// <returns>A deep copy with the specified values.</returns>
+        /// <returns>A new representation with the specified sequence number, persistence identifier, deletion state, sender, and writer identifier. The payload and manifest are retained; the timestamp is not copied.</returns>
         IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender, string writerGuid);
     }
 
@@ -310,7 +310,7 @@ namespace Akka.Persistence
         /// <param name="payload">Event payload.</param>
         /// <param name="sequenceNr">Sequence number assigned to the event.</param>
         /// <param name="persistenceId">Identifier of the persistent actor that owns the event.</param>
-        /// <param name="manifest">Serializer manifest for the payload.</param>
+        /// <param name="manifest">Event adapter manifest associated with the payload.</param>
         /// <param name="isDeleted">Whether the representation is marked as deleted.</param>
         /// <param name="sender">Actor that sent the event.</param>
         /// <param name="writerGuid">Unique identifier of the persistent actor writing the event.</param>

@@ -70,9 +70,9 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
-    /// An event sequence containing one or more events.
+    /// An event sequence containing zero or more supplied events.
     /// </summary>
-    /// <typeparam name="T">Event type associated with this sequence.</typeparam>
+    /// <typeparam name="T">Generic type argument for this sequence type; it does not constrain the event objects exposed through <see cref="Events"/>.</typeparam>
     [Serializable]
     public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
     {

@@ -220,7 +220,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Creates the throw-on-overflow stash strategy.
         /// </summary>
-        /// <param name="config">Configuration for the persistence plugin.</param>
+        /// <param name="config">Actor system configuration used by the persistence extension.</param>
         /// <returns>The singleton <see cref="ThrowOverflowExceptionStrategy"/> strategy.</returns>
         public IStashOverflowStrategy Create(Config config)
         {
@@ -236,7 +236,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Creates the discard-on-overflow stash strategy.
         /// </summary>
-        /// <param name="config">Configuration for the persistence plugin.</param>
+        /// <param name="config">Actor system configuration used by the persistence extension.</param>
         /// <returns>The singleton <see cref="DiscardToDeadLetterStrategy"/> strategy.</returns>
         public IStashOverflowStrategy Create(Config config)
         {
@@ -537,7 +537,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Registers a handler for any recovered message.
         /// </summary>
-        /// <param name="handler">Action invoked for each recovered message.</param>
+        /// <param name="handler">Action invoked for recovered messages not handled by earlier registered handlers.</param>
         protected void RecoverAny(Action<object> handler)
         {
             EnsureMayConfigureRecoverHandlers();
@@ -734,7 +734,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Registers a handler for incoming commands of any type.
         /// </summary>
-        /// <param name="handler">Action invoked for each command.</param>
+        /// <param name="handler">Action invoked for commands not handled by earlier registered handlers.</param>
         protected void Command(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
