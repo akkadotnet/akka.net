@@ -296,8 +296,8 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="provider">TBD</param>
+        /// <param name="system">The actor system that owns this remoting transport.</param>
+        /// <param name="provider">The remote actor reference provider used to resolve remote actor paths.</param>
         public ArteryRemoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {

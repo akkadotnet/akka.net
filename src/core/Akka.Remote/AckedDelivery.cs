@@ -200,12 +200,12 @@ namespace Akka.Remote
         public Ack(SeqNo cumulativeAck) : this(cumulativeAck, new List<SeqNo>()) { }
 
         /// <summary>
-        /// TBD
+        /// Gets the highest sequence number covered by this acknowledgement.
         /// </summary>
         public SeqNo CumulativeAck { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the sequence numbers at or below the cumulative acknowledgement that were not received and must be resent.
         /// </summary>
         public SortedSet<SeqNo> Nacks { get; private set; }
 
@@ -293,28 +293,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an empty resend buffer with the specified capacity and an initial maximum sequence number of -1.
         /// </summary>
-        /// <param name="capacity">TBD</param>
+        /// <param name="capacity">The maximum number of messages that can be retained for acknowledgement or resend.</param>
         public AckedSendBuffer(int capacity) : this(capacity, new SeqNo(-1)) { }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum number of messages the buffer can retain.
         /// </summary>
         public int Capacity { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets messages sent by the sender that have not been cumulatively acknowledged.
         /// </summary>
         public IImmutableList<T> NonAcked { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets messages identified as missing by a selective negative acknowledgement and retained for resend.
         /// </summary>
         public IImmutableList<T> Nacked { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the highest sequence number added to this buffer.
         /// </summary>
         public SeqNo MaxSeq { get; private set; }
 
@@ -380,15 +380,15 @@ namespace Akka.Remote
     /// <summary>
     /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of sequenced message delivered from a receive buffer.</typeparam>
     internal sealed class AckReceiveDeliverable<T> where T : IHasSequenceNumber
     {
         /// <summary>
-        /// TBD
+        /// Creates the result of extracting deliverable messages from a receive buffer.
         /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="deliverables">TBD</param>
-        /// <param name="ack">TBD</param>
+        /// <param name="buffer">The updated receive buffer after extracting messages that can be delivered.</param>
+        /// <param name="deliverables">The messages that can now be delivered in sequence.</param>
+        /// <param name="ack">The acknowledgement to send to the message sender.</param>
         public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, IReadOnlyList<T> deliverables, Ack ack)
         {
             Ack = ack;
@@ -397,17 +397,17 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the receive buffer after the deliverable messages have been removed.
         /// </summary>
         public AckedReceiveBuffer<T> Buffer { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets messages that are now safe to deliver to the application.
         /// </summary>
         public IReadOnlyList<T> Deliverables { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the acknowledgement to send back to the sender.
         /// </summary>
         public Ack Ack { get; private set; }
     }
@@ -420,7 +420,7 @@ namespace Akka.Remote
     internal sealed class AckedReceiveBuffer<T> : IEquatable<AckedReceiveBuffer<T>> where T : IHasSequenceNumber
     {
         /// <summary>
-        /// TBD
+        /// Compares sequenced messages using wrap-around-aware sequence ordering.
         /// </summary>
         public static readonly SeqNo.HasSeqNoComparer<T> Comparer = new();
 
@@ -438,24 +438,24 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an empty receive buffer with initial sequence positions set to -1.
         /// </summary>
         public AckedReceiveBuffer()
             : this(new SeqNo(-1), new SeqNo(-1), ImmutableSortedSet<T>.Empty.WithComparer(Comparer))
         { }
 
         /// <summary>
-        /// TBD
+        /// Gets the highest sequence number delivered contiguously to the application.
         /// </summary>
         public SeqNo LastDelivered { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the highest sequence number received, including messages waiting for a gap to be filled.
         /// </summary>
         public SeqNo CumulativeAck { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets received messages that cannot yet be delivered in sequence.
         /// </summary>
         public ImmutableSortedSet<T> Buf { get; }
 
@@ -525,12 +525,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a receive buffer using supplied values for selected fields and retaining the current values for the rest.
         /// </summary>
-        /// <param name="lastDelivered">TBD</param>
-        /// <param name="cumulativeAck">TBD</param>
-        /// <param name="buffer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="lastDelivered">Replacement sequence number last delivered contiguously, or <c>null</c> to retain the current value.</param>
+        /// <param name="cumulativeAck">Replacement highest received sequence number, or <c>null</c> to retain the current value.</param>
+        /// <param name="buffer">Replacement set of received messages awaiting delivery, or <c>null</c> to retain the current buffer.</param>
+        /// <returns>A new receive buffer containing the selected values.</returns>
         public AckedReceiveBuffer<T> Copy(SeqNo? lastDelivered = null, SeqNo? cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
         {
             return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? Buf);
@@ -560,4 +560,3 @@ namespace Akka.Remote
         }
     }
 }
-

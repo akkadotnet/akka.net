@@ -348,7 +348,7 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
     }
 
     /// <summary>
-    /// TBD
+    /// Indicates that the test conductor's connection to another node failed.
     /// </summary>
     internal class ConnectionFailure : Exception
     {

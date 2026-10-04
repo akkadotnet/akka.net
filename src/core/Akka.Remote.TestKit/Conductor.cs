@@ -336,8 +336,8 @@ namespace Akka.Remote.TestKit
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="exitValue">is the return code which shall be given to System.exit</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="InvalidOperationException">The controller returned a result other than <see cref="Done"/> or a recognized disconnected failure.</exception>
+        /// <returns>A task that completes when the remote actor system exits or disconnects.</returns>
         public Task<Done> Exit(RoleName node, int exitValue)
         {
             // Use the async version with no cancellation token for consistency
@@ -375,8 +375,8 @@ namespace Akka.Remote.TestKit
         /// removed, so that the remaining nodes may still pass subsequent barriers.
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
-        /// <param name="abort">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <param name="abort"><c>true</c> to abort the actor system immediately; <c>false</c> to terminate it gracefully.</param>
+        /// <exception cref="InvalidOperationException">The controller returned a result other than <see cref="Done"/> or a recognized disconnected failure.</exception>
         /// <returns>Task indicating completion</returns>
         public Task<Done> Shutdown(RoleName node, bool abort = false)
         {
@@ -390,7 +390,7 @@ namespace Akka.Remote.TestKit
         /// removed, so that the remaining nodes may still pass subsequent barriers.
         /// </summary>
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
-        /// <param name="abort">TBD</param>
+        /// <param name="abort"><c>true</c> to abort the actor system immediately; <c>false</c> to terminate it gracefully.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Task indicating completion</returns>
         public async Task<Done> ShutdownAsync(RoleName node, bool abort = false, CancellationToken cancellationToken = default)
@@ -663,4 +663,3 @@ namespace Akka.Remote.TestKit
         }
     }
 }
-
