@@ -22,7 +22,7 @@ using Akka.Util;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Extension operations that transform sources while preserving or combining their materialized values.
     /// </summary>
     public static class SourceOperations
     {
@@ -43,11 +43,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The source element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source whose failure may be recovered.</param>
+        /// <param name="partialFunc">Maps a handled failure to a final element; return <see cref="Option{TOut}.None"/> to fail with the original exception.</param>
         public static Source<TOut, TMat> Recover<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
@@ -73,11 +72,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The source element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source whose failures may be recovered by switching to another source.</param>
+        /// <param name="partialFunc">Selects an alternative source for a handled failure.</param>
         [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static Source<TOut, TMat> RecoverWith<TOut, TMat>(this Source<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
@@ -105,13 +103,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
+        /// <typeparam name="TOut">The element type emitted by the original and alternative sources.</typeparam>
+        /// <typeparam name="TMat">The materialized value type of the original and alternative sources.</typeparam>
+        /// <param name="flow">The source whose failures may be recovered by switching to another source.</param>
+        /// <param name="partialFunc">Receives a failure and selects an alternative source to materialize.</param>
         /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
         /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> RecoverWithRetries<TOut, TMat>(this Source<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
@@ -425,12 +422,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
+        /// <typeparam name="TOut">The element type emitted by the source and contained in each group.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to group.</param>
+        /// <param name="n">The maximum number of elements in each group.</param>
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
         public static Source<IEnumerable<TOut>, TMat> Grouped<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
@@ -459,11 +455,10 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The source element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to limit.</param>
+        /// <param name="max">The maximum cumulative number of elements allowed through the stage.</param>
         public static Source<T, TMat> Limit<T, TMat>(this Source<T, TMat> flow, long max)
         {
             return LimitWeighted(flow, max, _ => 1L);
@@ -493,12 +488,11 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="costFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The source element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to limit.</param>
+        /// <param name="max">The maximum cumulative cost allowed through the stage.</param>
+        /// <param name="costFunc">Returns the cost charged for each source element.</param>
         public static Source<T, TMat> LimitWeighted<T, TMat>(this Source<T, TMat> flow, long max, Func<T, long> costFunc)
         {
             return (Source<T, TMat>)InternalFlowOperations.LimitWeighted(flow, max, costFunc);
@@ -519,13 +513,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <param name="step">TBD</param>
+        /// <typeparam name="TOut">The element type contained in each window.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to divide into sliding windows.</param>
+        /// <param name="n">The maximum number of elements in a window.</param>
+        /// <param name="step">The number of elements by which each successive window advances.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
         public static Source<IEnumerable<TOut>, TMat> Sliding<TOut, TMat>(this Source<TOut, TMat> flow, int n, int step = 1)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.Sliding(flow, n, step);
@@ -549,13 +542,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut1">The source element type consumed by the accumulator.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and emitted element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to scan.</param>
+        /// <param name="zero">The initial accumulator value, emitted before source elements are processed.</param>
+        /// <param name="scan">Combines the current accumulator with each source element to produce the next accumulator.</param>
         public static Source<TOut2, TMat> Scan<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Scan(flow, zero, scan);
@@ -583,13 +575,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut1">The source element type consumed by the asynchronous accumulator.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and emitted element type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to scan asynchronously.</param>
+        /// <param name="zero">The initial accumulator value, emitted before source elements are processed.</param>
+        /// <param name="scan">Asynchronously combines the current accumulator with each source element.</param>
         public static Source<TOut2, TMat> ScanAsync<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, Task<TOut2>> scan)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.ScanAsync(flow, zero, scan);
@@ -612,13 +603,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut1">The source element type consumed by the fold.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and final result type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to fold.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">Combines the current accumulator with each source element to produce the next accumulator.</param>
         public static Source<TOut2, TMat> Aggregate<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Aggregate(flow, zero, fold);
@@ -643,13 +633,12 @@ namespace Akka.Streams.Dsl
         /// 
         /// <seealso cref="Aggregate{TOut1,TOut2,TMat}"/>
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut1">The source element type consumed by the asynchronous fold.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and final result type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to fold asynchronously.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">Asynchronously combines the current accumulator with each source element.</param>
         public static Source<TOut2, TMat> AggregateAsync<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, TOut2 zero,
             Func<TOut2, TOut1, Task<TOut2>> fold)
         {
@@ -673,11 +662,10 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="reduce">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The source element and reduction result type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to reduce.</param>
+        /// <param name="reduce">Combines the current result with the next source element.</param>
         public static Source<TOut, TMat> Sum<TOut, TMat>(this Source<TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Sum(flow, reduce);
@@ -701,14 +689,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="start">TBD</param>
-        /// <param name="inject">TBD</param>
-        /// <param name="end">TBD</param>
+        /// <typeparam name="TOut">The source element and separator type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to intersperse.</param>
+        /// <param name="start">The element emitted before the source elements.</param>
+        /// <param name="inject">The element inserted between consecutive source elements.</param>
+        /// <param name="end">The element emitted after the source completes.</param>
         /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut start, TOut inject, TOut end)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Intersperse(flow, start, inject, end);
@@ -732,12 +719,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="inject">TBD</param>
+        /// <typeparam name="TOut">The source element and separator type.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to intersperse.</param>
+        /// <param name="inject">The element inserted between consecutive source elements.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="inject"/> is undefined.</exception>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> Intersperse<TOut, TMat>(this Source<TOut, TMat> flow, TOut inject)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Intersperse(flow, inject);
@@ -761,13 +747,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream completes
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <typeparam name="TOut">The source element type contained in each group.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to group.</param>
+        /// <param name="n">The maximum number of elements in a group.</param>
+        /// <param name="timeout">The maximum time to wait before emitting a non-empty group.</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
-        /// <returns>TBD</returns>
         public static Source<IEnumerable<TOut>, TMat> GroupedWithin<TOut, TMat>(this Source<TOut, TMat> flow, int n, TimeSpan timeout)
         {
             return (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWithin(flow, n, timeout);
@@ -788,13 +773,12 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes(emits last group)</para>
         /// <para>Cancels when downstream completes</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="maxWeight">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="costFn">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The source element type contained in each group.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to group.</param>
+        /// <param name="maxWeight">The maximum total element weight buffered in a group.</param>
+        /// <param name="interval">The maximum time to wait before emitting a non-empty group.</param>
+        /// <param name="costFn">Returns the weight charged for each source element.</param>
         public static Source<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Source<TOut, TMat> flow, long maxWeight, TimeSpan interval, Func<TOut, long> costFn) =>
             (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWeightedWithin(flow, maxWeight, int.MaxValue, interval, costFn);
 
@@ -813,14 +797,13 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes(emits last group)</para>
         /// <para>Cancels when downstream completes</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="maxWeight">TBD</param>
-        /// <param name="maxNumber">TBD</param>
-        /// <param name="costFn">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The source element type contained in each group.</typeparam>
+        /// <typeparam name="TMat">The source materialized value type.</typeparam>
+        /// <param name="flow">The source to group.</param>
+        /// <param name="maxWeight">The maximum total element weight buffered in a group.</param>
+        /// <param name="maxNumber">The maximum number of elements buffered in a group.</param>
+        /// <param name="costFn">Returns the weight charged for each source element.</param>
+        /// <param name="interval">The maximum time to wait before emitting a non-empty group.</param>
         public static Source<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Source<TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
             (Source<IEnumerable<TOut>, TMat>)InternalFlowOperations.GroupedWeightedWithin(flow, maxWeight, maxNumber, interval, costFn);
 
