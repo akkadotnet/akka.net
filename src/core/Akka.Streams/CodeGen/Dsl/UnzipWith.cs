@@ -14,15 +14,15 @@ namespace Akka.Streams.Dsl
     /// Creates a typed <see cref="UnzipWith{TIn,T0,T1}"/> stage from a function that maps one input element to multiple outputs.
     /// </summary>
     /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
-    /// <typeparam name="TOut">The tuple type returned by the splitter.</typeparam>
-    /// <typeparam name="T">The unzip stage type created from the splitter.</typeparam>
+    /// <typeparam name="TOut">The result type returned by the supplied function.</typeparam>
+    /// <typeparam name="T">The type returned by <see cref="Create"/>.</typeparam>
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
     {
         /// <summary>
         /// Creates an unzip stage using the supplied splitter function.
         /// </summary>
-        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
-        /// <returns>The stage created for the splitter function.</returns>
+        /// <param name="unzipper">The function used to create a value of type <typeparamref name="T"/> from an input.</param>
+        /// <returns>A value of type <typeparamref name="T"/> created from the supplied function.</returns>
         T Create(Func<TIn, TOut> unzipper);
     }
 

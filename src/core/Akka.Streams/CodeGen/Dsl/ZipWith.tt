@@ -27,7 +27,7 @@ namespace Akka.Streams.Dsl
     var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TIn" + x));
 #>
         /// <summary>
-        /// Create a new <see cref="ZipWith{<#= typeParams #>, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{<#= typeParams #>, TOut}"/> specialized for <#= i #> inputs.
         /// </summary>
 <# for (int t = 0; t < i; t++) {  #>
         /// <typeparam name="TIn<#= t #>">The element type accepted by input <c>In<#= t #></c>.</typeparam>

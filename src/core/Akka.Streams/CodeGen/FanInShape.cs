@@ -20,7 +20,7 @@ namespace Akka.Streams
     public class FanInShapeN<T0, T1, TOut> : FanInShape<TOut>
     {
         /// <summary>
-        /// The number of additional <see cref="T1"/> inlets in <see cref="In1s"/>.
+        /// The number of additional <typeparamref name="T1"/> inlet objects in <see cref="In1s"/>.
         /// </summary>
         public readonly int N;
         /// <summary>
@@ -32,10 +32,10 @@ namespace Akka.Streams
         /// </summary>
         public readonly ImmutableArray<Inlet<T1>> In1s;
         /// <summary>
-        /// Creates the shape with <paramref name="n"/> repeated inlets and ports supplied by <paramref name="init"/>.
+        /// Creates the shape with <paramref name="n"/> additional inlet objects. The outlet and, when supplied, the first inlet from <paramref name="init"/> are used; remaining inlets are ignored and the additional inlet objects are not registered in <see cref="FanInShape{TOut}.Inlets"/>.
         /// </summary>
         /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
-        /// <param name="init">The outlet and any pre-registered inlets used to initialize the shape.</param>
+        /// <param name="init">The outlet and optional inlet sequence. Its first inlet initializes <see cref="In0"/> when present; further inlets are ignored.</param>
         public FanInShapeN(int n, IInit init) : base(init)
         {
             N = n;
@@ -51,10 +51,10 @@ namespace Akka.Streams
         /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
         public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
         /// <summary>
-        /// Creates the shape with <paramref name="n"/> additional inlets and the specified port-name prefix.
+        /// Creates the shape with <paramref name="n"/> additional inlet objects and the specified name for the outlet and fixed inlet.
         /// </summary>
         /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
-        /// <param name="name">The name used as the prefix for ports created by this shape.</param>
+        /// <param name="name">The name used for the outlet and as a prefix for the fixed inlet; the additional inlet objects are named without this prefix.</param>
         public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
         /// <summary>
         /// Creates the shape using the supplied output, fixed input, and repeated inputs.
@@ -79,10 +79,10 @@ namespace Akka.Streams
         }
         
         /// <summary>
-        /// Creates another shape of this type using the supplied initialized ports.
+        /// Creates another shape of this type using the supplied outlet and fixed inlet. Additional inlet objects are recreated, and any remaining supplied inlets are ignored.
         /// </summary>
-        /// <param name="init">The outlet and inlets to use for the new shape.</param>
-        /// <returns>A fan-in shape with the same number and types of ports.</returns>
+        /// <param name="init">The outlet and inlet sequence whose first inlet initializes the fixed input.</param>
+        /// <returns>A shape with the same outlet and fixed input plus newly created additional inlet objects, which are not registered in the shape's inlet collection.</returns>
         protected override FanInShape<TOut> Construct(IInit init)
         {
             return new FanInShapeN<T0, T1, TOut>(N, init);

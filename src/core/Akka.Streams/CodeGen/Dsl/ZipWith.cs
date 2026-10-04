@@ -17,7 +17,7 @@ namespace Akka.Streams.Dsl
     public partial class ZipWith
     {
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TOut}"/> specialized for 2 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -29,7 +29,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TOut}"/> specialized for 3 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -42,7 +42,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TOut}"/> specialized for 4 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -56,7 +56,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TOut}"/> specialized for 5 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -71,7 +71,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut}"/> specialized for 6 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -87,7 +87,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut}"/> specialized for 7 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -104,7 +104,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut}"/> specialized for 8 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
@@ -122,7 +122,7 @@ namespace Akka.Streams.Dsl
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut}"/> specialized for 9 inputs.
         /// </summary>
         /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
         /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
