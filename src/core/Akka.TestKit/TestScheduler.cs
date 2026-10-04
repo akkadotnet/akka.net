@@ -68,7 +68,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Advances virtual time to the specified instant and processes the work captured as due by then, in due-time order. Work scheduled by a callback for a time already reached waits for a later advance; callback exceptions propagate and interrupt this advance.
+        /// Advances virtual time to the specified instant and processes the due-time buckets selected for this advance, in due-time order. Callback exceptions propagate and interrupt processing.
         /// </summary>
         /// <param name="when">The target virtual time, which must not precede the current time.</param>
         /// <exception cref="InvalidOperationException">
