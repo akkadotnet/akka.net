@@ -36,7 +36,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Advances virtual time and processes the work captured as due by the new time, in due-time order. Work scheduled by a callback for a time already reached waits for a later advance; callback exceptions propagate and interrupt this advance.
+        /// Advances virtual time and processes the due-time buckets selected for this advance, in due-time order. Callback exceptions propagate and interrupt processing.
         /// </summary>
         /// <param name="offset">The amount of time to add to the scheduler's current time.</param>
         public void Advance(TimeSpan offset)
