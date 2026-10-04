@@ -56,7 +56,7 @@ namespace Akka.Streams.Implementation
         public interface IEndOfStream
         {
             /// <summary>
-            /// TBD
+            /// Applies a completed or failed terminal state to the subscriber.
             /// </summary>
             /// <typeparam name="T">The subscriber's element type.</typeparam>
             /// <param name="subscriber">The subscriber receiving the terminal signal.</param>
