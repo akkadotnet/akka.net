@@ -811,8 +811,9 @@ namespace Akka.Streams.Implementation
         private readonly Func<TSource, Task> _close;
 
         /// <summary>
-        /// Creates a source that asynchronously opens a resource, reads elements on demand, and closes the resource
-        /// when reading ends or the stream stops.
+        /// Creates a source that asynchronously opens a resource and reads elements on demand. It awaits the close
+        /// task when reading ends; if the stage stops while the resource is open, it invokes the close function without
+        /// awaiting its completion as part of stopping.
         /// </summary>
         /// <param name="create">Asynchronously opens and returns the resource used for reading.</param>
         /// <param name="readData">Asynchronously reads the next element, or returns <see cref="Option{T}.None"/> when exhausted.</param>

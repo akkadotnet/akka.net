@@ -188,9 +188,8 @@ namespace Akka.Streams.Implementation
             => new PublisherSink<TIn>(Attributes, shape);
 
         /// <summary>
-        /// This method is the reason why SinkModule.create may return something that is
-        /// not a Subscriber: a VirtualPublisher is used in order to avoid the immediate
-        /// subscription a VirtualProcessor would perform (and it also saves overhead).
+        /// Creates a <see cref="VirtualProcessor{T}"/> that receives the upstream subscription and exposes the
+        /// connected stream through the materialized publisher.
         /// </summary>
         /// <param name="context">The materialization context.</param>
         /// <param name="materializer">Receives the publisher exposed by this sink.</param>
@@ -867,9 +866,9 @@ namespace Akka.Streams.Implementation
 
         /// <summary>
         /// Creates stage logic and an <see cref="ISinkQueue{T}"/>. The queue returns available elements through
-        /// successful <see cref="Option{T}"/> results, completes with <see cref="Option{T}.None"/> at upstream
-        /// completion, and faults a pull task when the upstream fails or the stage detaches. Only one pull may be
-        /// outstanding at a time.
+        /// successful <see cref="Option{T}"/> results. After upstream completion, <see cref="Option{T}.None"/> is
+        /// returned once all buffered elements have been consumed; an outstanding pull may receive it immediately.
+        /// A pull task faults when the upstream fails or the stage detaches. Only one pull may be outstanding at a time.
         /// </summary>
         /// <param name="inheritedAttributes">The attributes used to select the input buffer size.</param>
         /// <exception cref="ArgumentException">The configured maximum input buffer size is not positive.</exception>

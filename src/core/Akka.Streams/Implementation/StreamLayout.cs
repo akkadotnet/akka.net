@@ -508,7 +508,8 @@ namespace Akka.Streams.Implementation
         ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// Gets whether the module has a closed shape whose ports are all supplied by its submodules.
+        /// Gets whether composition keeps this module as a single unit. A module is sealed when it is atomic, copied,
+        /// fused, or has attributes.
         /// </summary>
         bool IsSealed { get; }
 
@@ -528,9 +529,10 @@ namespace Akka.Streams.Implementation
         StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
         /// <summary>
-        /// Creates a carbon copy of this module and its layout.
+        /// Creates a carbon copy of this module's layout and exposed shape. Implementations may retain contained
+        /// modules or runtime dependencies from the original.
         /// </summary>
-        /// <returns>A new module with copied ports and submodules.</returns>
+        /// <returns>A module with copied layout ports; contained modules and runtime dependencies may be shared.</returns>
         IModule CarbonCopy();
 
         /// <summary>
@@ -883,9 +885,10 @@ namespace Akka.Streams.Implementation
         public abstract ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// Creates an independent copy of this module's layout.
+        /// Creates a copy of this module's layout and exposed shape. The implementation may retain contained modules
+        /// or runtime dependencies from the original.
         /// </summary>
-        /// <returns>A new module with copied ports and contained modules.</returns>
+        /// <returns>A module with copied layout ports; contained modules and runtime dependencies may be shared.</returns>
         public abstract IModule CarbonCopy();
 
         /// <summary>
@@ -1939,7 +1942,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="element">The element to forward.</param>
         /// <exception cref="ArgumentNullException">The element is <c>null</c>.</exception>
-        /// <exception cref="IllegalStateException">The subscriber violates Reactive Streams rules, such as by throwing from a signal callback or receiving an element without demand.</exception>
+        /// <exception cref="IllegalStateException">The upstream calls this method without downstream demand, or the downstream subscriber throws from a signal callback.</exception>
         public void OnNext(T element)
         {
             if (element == null)
@@ -2234,10 +2237,11 @@ namespace Akka.Streams.Implementation
 
         /// <summary>
         /// Registers the publisher and connects it to a pending subscriber, if present. Registration is valid only
-        /// once; an already occupied virtual publisher is an internal materialization error.
+        /// once; a prior publisher registration or a terminal state is an internal materialization error. A subscriber
+        /// registered before the publisher is accepted and connected.
         /// </summary>
         /// <param name="publisher">The publisher to register.</param>
-        /// <exception cref="IllegalStateException">A publisher or subscriber has already been registered.</exception>
+        /// <exception cref="IllegalStateException">A publisher has already been registered or the virtual publisher is terminal.</exception>
         public void RegisterPublisher(IPublisher<T> publisher)
         {
             if(VirtualProcessor<T>.IsDebug)
@@ -2565,12 +2569,13 @@ namespace Akka.Streams.Implementation
 
         /// <summary>
         /// Materializes an atomic module. Implementations create the runtime stage and record its materialized value in
-        /// <paramref name="materializedValues"/>.
+        /// <paramref name="materializedValues"/>, which is the channel used by the materializer to resolve graph
+        /// materialized values; the caller that materializes modules ignores this method's return value.
         /// </summary>
         /// <param name="atomic">The atomic module to materialize.</param>
         /// <param name="effectiveAttributes">The effective attributes for the module.</param>
         /// <param name="materializedValues">The values materialized for modules in the containing graph.</param>
-        /// <returns>The value created for the atomic module.</returns>
+        /// <returns>An implementation-defined value; the materializer caller uses <paramref name="materializedValues"/> instead.</returns>
         protected abstract object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes,
             IDictionary<IModule, object> materializedValues);
 

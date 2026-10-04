@@ -106,9 +106,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Creates an independent module copy with a carbon-copied outlet.
+        /// Creates a source module copy with a carbon-copied outlet. Source-specific runtime dependencies may remain
+        /// shared with the original module.
         /// </summary>
-        /// <returns>A new source module instance with a copied source shape.</returns>
+        /// <returns>A source module instance with a copied source shape.</returns>
         public override IModule CarbonCopy()
             => NewInstance(new SourceShape<TOut>(Outlet.Create<TOut>(_shape.Outlet.CarbonCopy())));
 
