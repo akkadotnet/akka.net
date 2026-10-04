@@ -52,7 +52,7 @@ namespace Akka.TestKit
         /// number of times <see cref="CountDown"/> must be called to make this instance become open.
         /// The default timeout is set to 5 seconds.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The number of calls to <see cref="CountDown"/> required to open the latch.</param>
         public TestLatch(int count)
             : this(count, TimeSpan.FromSeconds(5))
         {
@@ -63,8 +63,8 @@ namespace Akka.TestKit
         /// Initializes a new instance of the <see cref="TestLatch"/> class with the specified count, i.e
         /// number of times <see cref="CountDown"/> must be called to make this instance become open.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <param name="defaultTimeout">TBD</param>
+        /// <param name="count">The number of calls to <see cref="CountDown"/> required to open the latch.</param>
+        /// <param name="defaultTimeout">The timeout used by parameterless <see cref="Ready()"/>.</param>
         public TestLatch(int count, TimeSpan defaultTimeout)
         {
             _latch = new CountdownEvent(count);
@@ -75,9 +75,9 @@ namespace Akka.TestKit
         /// Creates a TestLatch with the specified dilate function, timeout and count. 
         /// Intended to be used by TestKit.
         /// </summary>
-        /// <param name="dilate">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <param name="defaultTimeout">TBD</param>
+        /// <param name="dilate">The function used to adjust explicit wait timeouts.</param>
+        /// <param name="count">The number of calls to <see cref="CountDown"/> required to open the latch.</param>
+        /// <param name="defaultTimeout">The timeout used by parameterless <see cref="Ready()"/>.</param>
         [EditorBrowsable(EditorBrowsableState.Never)]
         internal TestLatch(Func<TimeSpan, TimeSpan> dilate, int count, TimeSpan defaultTimeout)
             :this(dilate, defaultTimeout,count)
@@ -86,11 +86,11 @@ namespace Akka.TestKit
 
         //This one exists to be available to inheritors
         /// <summary>
-        /// TBD
+        /// Creates a latch whose explicit wait timeouts are transformed by the supplied function.
         /// </summary>
-        /// <param name="dilate">TBD</param>
-        /// <param name="defaultTimeout">TBD</param>
-        /// <param name="count">TBD</param>
+        /// <param name="dilate">The function used to adjust explicit wait timeouts.</param>
+        /// <param name="defaultTimeout">The timeout used by parameterless <see cref="Ready()"/>.</param>
+        /// <param name="count">The number of calls to <see cref="CountDown"/> required to open the latch.</param>
         protected TestLatch(Func<TimeSpan, TimeSpan> dilate, TimeSpan defaultTimeout, int count)
             : this(count, defaultTimeout)
         {
@@ -137,7 +137,7 @@ namespace Akka.TestKit
         /// <paramref name="timeout"/> is dilated, i.e. multiplied by <see cref="TestKitSettings.TestTimeFactor"/>
         /// </para>
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum time to wait before throwing <see cref="TimeoutException"/>.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when a too large timeout has been specified.
         /// </exception>
