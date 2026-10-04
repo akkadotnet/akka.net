@@ -28,7 +28,7 @@ namespace Akka.Streams
     public sealed class Attributes
     {
         /// <summary>
-        /// TBD
+        /// Marker interface for metadata that can be attached to a stream graph.
         /// </summary>
         public interface IAttribute { }
 
@@ -47,14 +47,14 @@ namespace Akka.Streams
         public sealed class Name : IAttribute, IEquatable<Name>
         {
             /// <summary>
-            /// TBD
+            /// The name associated with this operation.
             /// </summary>
             public readonly string Value;
 
             /// <summary>
-            /// TBD
+            /// Creates a name attribute.
             /// </summary>
-            /// <param name="value">TBD</param>
+            /// <param name="value">The non-empty name to associate with the operation.</param>
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="value"/> is undefined.
             /// </exception>
@@ -79,19 +79,19 @@ namespace Akka.Streams
         public sealed class InputBuffer : IMandatoryAttribute, IEquatable<InputBuffer>
         {
             /// <summary>
-            /// TBD
+            /// The initial number of buffer elements maintained for each inlet.
             /// </summary>
             public readonly int Initial;
             /// <summary>
-            /// TBD
+            /// The maximum number of buffer elements maintained for each inlet.
             /// </summary>
             public readonly int Max;
 
             /// <summary>
-            /// TBD
+            /// Creates an input-buffer attribute with the supplied initial and maximum sizes.
             /// </summary>
-            /// <param name="initial">TBD</param>
-            /// <param name="max">TBD</param>
+            /// <param name="initial">The initial buffer size in elements.</param>
+            /// <param name="max">The maximum buffer size in elements.</param>
             public InputBuffer(int initial, int max)
             {
                 Initial = initial;
@@ -116,7 +116,7 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Configures the log level used for element, completion, and failure events of a logging stage.
         /// </summary>
         public sealed class LogLevels : IAttribute, IEquatable<LogLevels>
         {
@@ -126,24 +126,24 @@ namespace Akka.Streams
             public static readonly LogLevel Off = Logging.LogLevelFor("off");
 
             /// <summary>
-            /// TBD
+            /// The level used when a logging stage emits an element.
             /// </summary>
             public readonly LogLevel OnElement;
             /// <summary>
-            /// TBD
+            /// The level used when a logging stage completes.
             /// </summary>
             public readonly LogLevel OnFinish;
             /// <summary>
-            /// TBD
+            /// The level used when a logging stage fails.
             /// </summary>
             public readonly LogLevel OnFailure;
 
             /// <summary>
-            /// TBD
+            /// Creates log-level settings for the three logging-stage event types.
             /// </summary>
-            /// <param name="onElement">TBD</param>
-            /// <param name="onFinish">TBD</param>
-            /// <param name="onFailure">TBD</param>
+            /// <param name="onElement">The level used for element events.</param>
+            /// <param name="onFinish">The level used for normal completion events.</param>
+            /// <param name="onFailure">The level used for failure events.</param>
             public LogLevels(LogLevel onElement, LogLevel onFinish, LogLevel onFailure)
             {
                 OnElement = onElement;
@@ -176,7 +176,7 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a boundary that prevents adjacent stream operations from being fused into the same processing stage.
         /// </summary>
         public sealed class AsyncBoundary : IAttribute, IEquatable<AsyncBoundary>
         {
@@ -427,15 +427,15 @@ namespace Akka.Streams
         /// that manages an input buffer for all inlets of its shape. This attribute configures
         /// the initial and maximal input buffer in number of elements for each inlet.
         /// </summary>
-        /// <param name="initial">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="initial">The initial buffer size in elements for each inlet.</param>
+        /// <param name="max">The maximum buffer size in elements for each inlet.</param>
+        /// <returns>Attributes containing the configured input-buffer sizes.</returns>
         public static Attributes CreateInputBuffer(int initial, int max) => new(new InputBuffer(initial, max));
 
         /// <summary>
-        /// TBD
+        /// Creates attributes that mark an asynchronous boundary.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// Attributes containing an asynchronous-boundary marker.
         public static Attributes CreateAsyncBoundary() => new(AsyncBoundary.Instance);
 
         ///<summary>
@@ -445,10 +445,10 @@ namespace Akka.Streams
         /// Passing in null as any of the arguments sets the level to its default value, which is:
         /// <see cref="Akka.Event.LogLevel.DebugLevel"/> for <paramref name="onElement"/> and <paramref name="onFinish"/>, and <see cref="Akka.Event.LogLevel.ErrorLevel"/> for <paramref name="onError"/>.
         ///</summary>
-        /// <param name="onElement">TBD</param>
-        /// <param name="onFinish">TBD</param>
-        /// <param name="onError">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="onElement">The level used when an element is logged.</param>
+        /// <param name="onFinish">The level used when the stage completes normally.</param>
+        /// <param name="onError">The level used when the stage fails.</param>
+        /// <returns>Attributes containing the configured logging levels.</returns>
         public static Attributes CreateLogLevels(LogLevel onElement = LogLevel.DebugLevel,
             LogLevel onFinish = LogLevel.DebugLevel, LogLevel onError = LogLevel.ErrorLevel)
             => new(new LogLevels(onElement, onFinish, onError));
@@ -458,9 +458,9 @@ namespace Akka.Streams
         /// Compute a name by concatenating all Name attributes that the given module
         /// has, returning the given default value if none are found.
         /// </summary>
-        /// <param name="module">TBD</param>
-        /// <param name="defaultIfNotFound">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="module">The module whose name attributes are extracted.</param>
+        /// <param name="defaultIfNotFound">The value returned when no name attribute is present.</param>
+        /// <returns>The concatenated name attributes, or <paramref name="defaultIfNotFound"/> when none are present.</returns>
         public static string ExtractName(IModule module, string defaultIfNotFound)
         {
             return module is CopiedModule copy
@@ -483,14 +483,14 @@ namespace Akka.Streams
         public sealed class Dispatcher : Attributes.IMandatoryAttribute, IEquatable<Dispatcher>
         {
             /// <summary>
-            /// TBD
+            /// The configured dispatcher name.
             /// </summary>
             public readonly string Name;
 
             /// <summary>
-            /// TBD
+            /// Creates a dispatcher attribute for stream execution.
             /// </summary>
-            /// <param name="name">TBD</param>
+            /// <param name="name">The dispatcher identifier used to execute stream stages.</param>
             public Dispatcher(string name)
             {
                 Name = name;
@@ -509,19 +509,19 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Configures a decider that maps exceptions from supported stream stages to supervision directives.
         /// </summary>
         public sealed class SupervisionStrategy : Attributes.IMandatoryAttribute
         {
             /// <summary>
-            /// TBD
+            /// The decider used by stages that support supervision attributes.
             /// </summary>
             public readonly Decider Decider;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="SupervisionStrategy"/> class.
             /// </summary>
-            /// <param name="decider">TBD</param>
+            /// <param name="decider">The function that selects a supervision directive for an exception.</param>
             public SupervisionStrategy(Decider decider)
             {
                 Decider = decider;
@@ -714,8 +714,8 @@ namespace Akka.Streams
         /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
-        /// <param name="dispatcherName">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="dispatcherName">The dispatcher identifier used to execute stream stages.</param>
+        /// <returns>Attributes selecting the dispatcher and creating an asynchronous boundary.</returns>
         public static Attributes CreateDispatcher(string dispatcherName) => new(new Dispatcher(dispatcherName));
 
         /// <summary>
@@ -725,8 +725,8 @@ namespace Akka.Streams
         /// support for these, it should be assumed it does not support supervision.
         /// </para>
         /// </summary>
-        /// <param name="strategy">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="strategy">The function that selects a supervision directive for an exception.</param>
+        /// <returns>Attributes containing the supervision strategy.</returns>
         public static Attributes CreateSupervisionStrategy(Decider strategy)
             => new(new SupervisionStrategy(strategy));
 
