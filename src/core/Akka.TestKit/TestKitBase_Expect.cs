@@ -472,7 +472,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Assert that no message is received for the specified time.
         /// </summary>
-        /// <param name="duration">TBD</param>
+        /// <param name="duration">The period during which no message is expected.</param>
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg([AutoDilate] TimeSpan duration, CancellationToken cancellationToken = default)
         {
@@ -488,7 +488,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Assert that no message is received for the specified time in milliseconds.
         /// </summary>
-        /// <param name="milliseconds">TBD</param>
+        /// <param name="milliseconds">The period during which no message is expected, in milliseconds.</param>
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg(int milliseconds, CancellationToken cancellationToken = default)
         {

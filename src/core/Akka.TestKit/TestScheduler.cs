@@ -17,7 +17,7 @@ using Akka.Event;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// A scheduler whose wall-clock time advances only when a test calls <see cref="Advance(TimeSpan)"/> or <see cref="AdvanceTo(DateTimeOffset)"/>.
     /// </summary>
     public class TestScheduler : IScheduler, IAdvancedScheduler
     {
@@ -25,10 +25,10 @@ namespace Akka.TestKit
         private readonly ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>  _scheduledWork; 
 
         /// <summary>
-        /// TBD
+        /// Creates a test scheduler initialized to the current UTC time. The configuration and logger parameters are not used.
         /// </summary>
-        /// <param name="schedulerConfig">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="schedulerConfig">The scheduler configuration required by <see cref="IScheduler"/>.</param>
+        /// <param name="log">The logger required by <see cref="IScheduler"/>.</param>
         public TestScheduler(Config schedulerConfig, ILoggingAdapter log)
         {
             _now = DateTimeOffset.UtcNow;
@@ -36,9 +36,9 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Advances virtual wall-clock time and runs scheduled work whose due time is at or before the new time.
         /// </summary>
-        /// <param name="offset">TBD</param>
+        /// <param name="offset">The amount of time to add to the scheduler's current time.</param>
         public void Advance(TimeSpan offset)
         {
             _now = _now.Add(offset);
@@ -68,9 +68,9 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Advances virtual wall-clock time to the specified instant and runs work that is due by then.
         /// </summary>
-        /// <param name="when">TBD</param>
+        /// <param name="when">The target virtual time, which must not precede the current time.</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown when the specified <paramref name="when"/> offset is less than the currently tracked time.
         /// </exception>
@@ -104,38 +104,38 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules a message to be sent after the specified delay when virtual time advances to its due time.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="delay">The time from the current virtual time until delivery.</param>
+        /// <param name="receiver">The recipient of the message.</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender supplied with the message.</param>
         public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             InternalSchedule(null, delay, receiver, message, null, sender, null);
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules a message to be sent after the specified delay, unless canceled before virtual time reaches its due time.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">The time from the current virtual time until delivery.</param>
+        /// <param name="receiver">The recipient of the message.</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender supplied with the message.</param>
+        /// <param name="cancelable">The cancellation handle checked before delivery.</param>
         public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             InternalSchedule(null, delay, receiver, message, null, sender, cancelable);
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules a message to be sent first after <paramref name="initialDelay"/> and again at each interval when virtual time advances.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="initialDelay">The delay before the first delivery.</param>
+        /// <param name="interval">The delay between subsequent deliveries.</param>
+        /// <param name="receiver">The recipient of each message.</param>
+        /// <param name="message">The message to send on each delivery.</param>
+        /// <param name="sender">The sender supplied with each message.</param>
         public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
             IActorRef sender)
         {
@@ -143,14 +143,14 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules a message to be sent repeatedly unless canceled before a due time.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">The delay before the first delivery.</param>
+        /// <param name="interval">The delay between subsequent deliveries.</param>
+        /// <param name="receiver">The recipient of each message.</param>
+        /// <param name="message">The message to send on each delivery.</param>
+        /// <param name="sender">The sender supplied with each message.</param>
+        /// <param name="cancelable">The cancellation handle checked before each delivery.</param>
         public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
         {
@@ -158,68 +158,68 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules an action to run after the specified delay when virtual time advances to its due time.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">The time from the current virtual time until execution.</param>
+        /// <param name="action">The action to run.</param>
+        /// <param name="cancelable">This implementation does not apply this parameter to the scheduled action.</param>
         public void ScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             InternalSchedule(null, delay, null, null, action, null, null);
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules an action to run after the specified delay when virtual time advances to its due time.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
+        /// <param name="delay">The time from the current virtual time until execution.</param>
+        /// <param name="action">The action to run.</param>
         public void ScheduleOnce(TimeSpan delay, Action action)
         {
             InternalSchedule(null, delay, null, null, action, null, null);
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules an action to run first after <paramref name="initialDelay"/> and again at each interval when virtual time advances.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">The delay before the first execution.</param>
+        /// <param name="interval">The delay between subsequent executions.</param>
+        /// <param name="action">The action to run.</param>
+        /// <param name="cancelable">The cancellation handle checked before each execution.</param>
         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, null, null, action, null, cancelable);
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules an action to run repeatedly when virtual time advances to each due time.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
+        /// <param name="initialDelay">The delay before the first execution.</param>
+        /// <param name="interval">The delay between subsequent executions.</param>
+        /// <param name="action">The action to run.</param>
         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
         {
             InternalSchedule(initialDelay, interval, null, null, action, null, null);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the scheduler's current virtual wall-clock time.
         /// </summary>
         protected DateTimeOffset TimeNow { get { return _now; } }
         /// <summary>
-        /// TBD
+        /// Gets the scheduler's current virtual wall-clock time.
         /// </summary>
         public DateTimeOffset Now { get { return _now; } }
         /// <summary>
-        /// TBD
+        /// Gets the elapsed monotonic time from the process-wide clock; this value is not advanced by <see cref="Advance(TimeSpan)"/>.
         /// </summary>
         public TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
         /// <summary>
-        /// TBD
+        /// Gets the high-resolution elapsed monotonic time from the process-wide clock; this value is not advanced by <see cref="Advance(TimeSpan)"/>.
         /// </summary>
         public TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
 
         /// <summary>
-        /// TBD
+        /// Gets this scheduler as its advanced scheduling interface.
         /// </summary>
         public IAdvancedScheduler Advanced
         {
@@ -227,78 +227,78 @@ namespace Akka.TestKit
         }
 
          /// <summary>
-        /// TBD
-        /// </summary>
+         /// Stores the details needed to deliver a scheduled message or run a scheduled action.
+         /// </summary>
        internal class ScheduledItem
         {
             /// <summary>
-            /// TBD
+            /// Gets or sets the delay before the first scheduled delivery or execution.
             /// </summary>
             public TimeSpan InitialDelay { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the repeat interval or one-time delay.
             /// </summary>
             public TimeSpan Delay { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets whether the item represents a message delivery or an action.
             /// </summary>
             public ScheduledItemType Type { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the message delivered by this item.
             /// </summary>
             public object Message { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the action run by this item.
             /// </summary>
             public Action Action { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets whether this item is rescheduled after delivery.
             /// </summary>
             public bool Repeating { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the message recipient.
             /// </summary>
             public ICanTell Receiver { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the sender supplied with the message.
             /// </summary>
             public IActorRef Sender { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the cancellation handle checked before delivery.
             /// </summary>
             public ICancelable Cancelable { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the number of times this item has been delivered or executed.
             /// </summary>
             public int DeliveryCount { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Identifies whether a scheduled item sends a message or invokes an action.
             /// </summary>
             public enum ScheduledItemType
             {
                 /// <summary>
-                /// TBD
+                /// A scheduled message delivery.
                 /// </summary>
                 Message,
                 /// <summary>
-                /// TBD
+                /// A scheduled action invocation.
                 /// </summary>
                 Action
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes a scheduled item with its delivery, timing, and cancellation data.
             /// </summary>
-            /// <param name="initialDelay">TBD</param>
-            /// <param name="delay">TBD</param>
-            /// <param name="type">TBD</param>
-            /// <param name="message">TBD</param>
-            /// <param name="action">TBD</param>
-            /// <param name="repeating">TBD</param>
-            /// <param name="receiver">TBD</param>
-            /// <param name="sender">TBD</param>
-            /// <param name="cancelable">TBD</param>
+            /// <param name="initialDelay">The delay before the first delivery or execution.</param>
+            /// <param name="delay">The one-time delay or repeat interval.</param>
+            /// <param name="type">Whether the item sends a message or invokes an action.</param>
+            /// <param name="message">The message to send, when the item is a message delivery.</param>
+            /// <param name="action">The action to invoke, when the item is an action.</param>
+            /// <param name="repeating">Whether the item is rescheduled after it runs.</param>
+            /// <param name="receiver">The message recipient, when the item sends a message.</param>
+            /// <param name="sender">The sender supplied with the message.</param>
+            /// <param name="cancelable">The cancellation handle checked before delivery.</param>
             public ScheduledItem(TimeSpan initialDelay, TimeSpan delay, ScheduledItemType type, object message, Action action, bool repeating, ICanTell receiver, 
                 IActorRef sender, ICancelable cancelable)
             {
