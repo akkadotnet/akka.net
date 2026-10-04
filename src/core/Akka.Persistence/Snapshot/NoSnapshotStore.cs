@@ -23,7 +23,7 @@ namespace Akka.Persistence.Snapshot
     public sealed class NoSnapshotStore : SnapshotStore
     {
         /// <summary>
-        /// TBD
+        /// Exception returned when a snapshot operation is attempted without a configured snapshot store.
         /// </summary>
         public class NoSnapshotStoreException : Exception
         {
