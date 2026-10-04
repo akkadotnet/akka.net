@@ -15,20 +15,20 @@ using Reactive.Streams;
 namespace Akka.Streams.Actors
 {
     /// <summary>
-    /// TBD
+    /// Message sent to an actor subscriber when the stream establishes its subscription.
     /// </summary>
     [Serializable]
     public sealed class OnSubscribe : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// The stream subscription used to request elements or cancel upstream.
         /// </summary>
         public readonly ISubscription Subscription;
 
         /// <summary>
-        /// TBD
+        /// Creates a message containing the stream subscription.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription provided by the publisher.</param>
         public OnSubscribe(ISubscription subscription)
         {
             Subscription = subscription;
@@ -36,25 +36,25 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Marker interface for messages delivered by the stream subscriber adapter.
     /// </summary>
     public interface IActorSubscriberMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression { }
 
     /// <summary>
-    /// TBD
+    /// Message carrying an element delivered by the stream to an actor subscriber.
     /// </summary>
     [Serializable]
     public sealed class OnNext : IActorSubscriberMessage
     {
         /// <summary>
-        /// TBD
+        /// The element delivered by the stream.
         /// </summary>
         public readonly object Element;
 
         /// <summary>
-        /// TBD
+        /// Creates a message carrying a stream element.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element delivered by the stream.</param>
         public OnNext(object element)
         {
             Element = element;
@@ -62,20 +62,20 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Message carrying the terminal failure signaled by the stream.
     /// </summary>
     [Serializable]
     public sealed class OnError : IActorSubscriberMessage
     {
         /// <summary>
-        /// TBD
+        /// The failure signaled by the publisher.
         /// </summary>
         public readonly Exception Cause;
 
         /// <summary>
-        /// TBD
+        /// Creates a message carrying the stream failure.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled by the publisher.</param>
         public OnError(Exception cause)
         {
             Cause = cause;
@@ -83,13 +83,13 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Singleton message indicating successful completion of the stream.
     /// </summary>
     [Serializable]
     public sealed class OnComplete : IActorSubscriberMessage
     {
         /// <summary>
-        /// TBD
+        /// The singleton stream-completion message.
         /// </summary>
         public static readonly OnComplete Instance = new();
         private OnComplete() { }
@@ -129,12 +129,12 @@ namespace Akka.Streams.Actors
         private bool _canceled;
 
         /// <summary>
-        /// TBD
+        /// The request strategy used to calculate demand after actor messages are processed.
         /// </summary>
         public abstract IRequestStrategy RequestStrategy { get; }
 
         /// <summary>
-        /// TBD
+        /// Whether this actor subscriber has canceled or received a terminal stream signal.
         /// </summary>
         public bool IsCanceled => _canceled;
 
@@ -145,11 +145,11 @@ namespace Akka.Streams.Actors
         protected int RemainingRequested => _requested > int.MaxValue ? int.MaxValue : (int)_requested;
 
         /// <summary>
-        /// TBD
+        /// Processes stream protocol messages and requests additional demand according to the request strategy.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The actor's receive handler.</param>
+        /// <param name="message">The message being processed.</param>
+        /// <returns>Always <see langword="true"/> after handling or delegating the message.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (message is OnNext)
@@ -200,7 +200,7 @@ namespace Akka.Streams.Actors
         #region Internal API
 
         /// <summary>
-        /// TBD
+        /// Calls the base pre-start hook and requests the initial demand calculated by the request strategy.
         /// </summary>
         public override void AroundPreStart()
         {
@@ -209,10 +209,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Restores the subscription, outstanding demand, and cancellation state saved before restart, then recalculates demand.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">The exception that caused the restart.</param>
+        /// <param name="message">The message being processed when the restart was requested.</param>
         public override void AroundPostRestart(Exception cause, object message)
         {
             var s = _state.Remove(Self);
@@ -229,10 +229,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Saves the subscription, outstanding demand, and cancellation state so they can be restored after restart.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">The exception that caused the restart.</param>
+        /// <param name="message">The message being processed when the restart was requested.</param>
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
@@ -241,7 +241,7 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Removes saved restart state and cancels an active subscription before invoking the base post-stop hook.
         /// </summary>
         public override void AroundPostStop()
         {
@@ -256,7 +256,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// Request a number of elements from upstream.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The number of elements to request. Non-positive values are ignored.</param>
         protected void Request(long n)
         {
             if (n > 0 && !_canceled)
@@ -298,24 +298,24 @@ namespace Akka.Streams.Actors
         /// Attach a <see cref="ActorSubscriber"/> actor as a <see cref="ISubscriber{T}"/>
         /// to a <see cref="IPublisher{T}"/> or <see cref="IFlow{TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="ref">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements delivered to the actor subscriber.</typeparam>
+        /// <param name="ref">The actor that handles the actor subscriber protocol.</param>
+        /// <returns>A stream subscriber adapter that sends protocol messages to <paramref name="ref"/>.</returns>
         public static ISubscriber<T> Create<T>(IActorRef @ref) => new ActorSubscriberImpl<T>(@ref);
     }
 
     /// <summary>
-    /// TBD
+    /// An <see cref="ISubscriber{T}"/> adapter that forwards stream signals to an actor.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements accepted by the subscriber.</typeparam>
     public sealed class ActorSubscriberImpl<T> : ISubscriber<T>
     {
         private readonly IActorRef _impl;
 
         /// <summary>
-        /// TBD
+        /// Creates a subscriber adapter for the specified actor.
         /// </summary>
-        /// <param name="impl">TBD</param>
+        /// <param name="impl">The actor that receives subscription, element, and terminal messages.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="impl"/> is undefined.
         /// </exception>
@@ -323,9 +323,9 @@ namespace Akka.Streams.Actors
             _impl = impl ?? throw new ArgumentNullException(nameof(impl), "ActorSubscriberImpl requires actor impl to be defined");
 
         /// <summary>
-        /// TBD
+        /// Forwards the subscription to the actor as an <see cref="OnSubscribe"/> message.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription provided by the stream publisher.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
         /// </exception>
@@ -336,15 +336,15 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards an element to the actor as an <see cref="OnNext"/> message.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element delivered by the stream.</param>
         public void OnNext(T element) => OnNext((object)element);
 
         /// <summary>
-        /// TBD
+        /// Forwards a non-null element to the actor as an <see cref="OnNext"/> message.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element delivered by the stream.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="element"/> is undefined.
         /// </exception>
@@ -355,9 +355,9 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards the terminal failure to the actor as an <see cref="OnError"/> message.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled by the stream publisher.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
@@ -368,41 +368,41 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards successful stream completion to the actor.
         /// </summary>
         public void OnComplete() => _impl.Tell(Actors.OnComplete.Instance);
     }
 
     /// <summary>
-    /// TBD
+    /// Actor-system extension that keeps subscriber state across actor restarts.
     /// </summary>
     public sealed class ActorSubscriberState : ExtensionIdProvider<ActorSubscriberState>, IExtension
     {
         /// <summary>
-        /// TBD
+        /// Snapshot of an actor subscriber's state retained while its actor restarts.
         /// </summary>
         [Serializable]
         public sealed class State
         {
             /// <summary>
-            /// TBD
+            /// The stream subscription, if one has arrived.
             /// </summary>
             public readonly ISubscription Subscription;
             /// <summary>
-            /// TBD
+            /// The element demand already requested from upstream and not yet received.
             /// </summary>
             public readonly long Requested;
             /// <summary>
-            /// TBD
+            /// Whether the actor subscriber has canceled or received a terminal signal.
             /// </summary>
             public readonly bool IsCanceled;
 
             /// <summary>
-            /// TBD
+            /// Creates a restart snapshot for an actor subscriber.
             /// </summary>
-            /// <param name="subscription">TBD</param>
-            /// <param name="requested">TBD</param>
-            /// <param name="isCanceled">TBD</param>
+            /// <param name="subscription">The stream subscription, if available.</param>
+            /// <param name="requested">The outstanding element demand.</param>
+            /// <param name="isCanceled">Whether the subscriber has canceled or terminated.</param>
             public State(ISubscription subscription, long requested, bool isCanceled)
             {
                 Subscription = subscription;
@@ -412,7 +412,7 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// The extension identifier used to obtain subscriber restart state storage.
         /// </summary>
         public static readonly ActorSubscriberState Instance = new();
 
@@ -421,10 +421,10 @@ namespace Akka.Streams.Actors
         private readonly ConcurrentDictionary<IActorRef, State> _state = new();
 
         /// <summary>
-        /// TBD
+        /// Gets the saved state for an actor reference, if present.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor whose state is requested.</param>
+        /// <returns>The saved state, or <see langword="null"/> when no state is stored for the actor.</returns>
         public State Get(IActorRef actorRef)
         {
             _state.TryGetValue(actorRef, out var state);
@@ -432,28 +432,27 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Adds or replaces the saved state for an actor reference.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor whose state is stored.</param>
+        /// <param name="s">The state to store.</param>
         public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (_, _) => s);
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the saved state for an actor reference, if present.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor whose state is removed.</param>
+        /// <returns>The removed state, or <see langword="null"/> when no state was stored for the actor.</returns>
         public State Remove(IActorRef actorRef)
         {
             return _state.TryRemove(actorRef, out var s) ? s : null;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an extension instance for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system receiving the extension.</param>
+        /// <returns>A new subscriber state extension.</returns>
         public override ActorSubscriberState CreateExtension(ExtendedActorSystem system) => new();
     }
 }

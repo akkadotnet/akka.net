@@ -20,19 +20,19 @@ namespace Akka.Streams.Actors
     #region Internal messages
 
     /// <summary>
-    /// TBD
+    /// Internal message sent to an actor-backed publisher to attach a stream subscriber.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements delivered to the subscriber.</typeparam>
     public sealed class Subscribe<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// The subscriber to attach.
         /// </summary>
         public readonly ISubscriber<T> Subscriber;
         /// <summary>
-        /// TBD
+        /// Creates a subscription request message for the specified subscriber.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The stream subscriber to attach.</param>
         public Subscribe(ISubscriber<T> subscriber)
         {
             Subscriber = subscriber;
@@ -40,33 +40,33 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Represents the lifecycle states tracked by <see cref="ActorPublisher{T}"/>.
     /// </summary>
     [Serializable]
     public enum LifecycleState
     {
         /// <summary>
-        /// TBD
+        /// The publisher is awaiting its first subscriber.
         /// </summary>
         PreSubscriber,
         /// <summary>
-        /// TBD
+        /// A subscriber is attached and the publisher can deliver requested elements.
         /// </summary>
         Active,
         /// <summary>
-        /// TBD
+        /// The subscriber canceled the subscription.
         /// </summary>
         Canceled,
         /// <summary>
-        /// TBD
+        /// The publisher signaled successful completion.
         /// </summary>
         Completed,
         /// <summary>
-        /// TBD
+        /// Completion was requested and the actor should stop after signaling the subscriber.
         /// </summary>
         CompleteThenStop,
         /// <summary>
-        /// TBD
+        /// The publisher signaled a terminal error.
         /// </summary>
         ErrorEmitted
     }
@@ -74,7 +74,7 @@ namespace Akka.Streams.Actors
     #endregion
 
     /// <summary>
-    /// TBD
+    /// Marker for messages used by the actor-backed publisher protocol.
     /// </summary>
     public interface IActorPublisherMessage: IDeadLetterSuppression { }
 
@@ -86,14 +86,14 @@ namespace Akka.Streams.Actors
     public sealed class Request : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// The number of elements requested by the subscriber.
         /// </summary>
         public readonly long Count;
 
         /// <summary>
-        /// TBD
+        /// Creates a request message for the specified demand count.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The requested number of elements.</param>
         public Request(long count)
         {
             Count = count;
@@ -118,7 +118,7 @@ namespace Akka.Streams.Actors
     public sealed class Cancel : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Singleton message indicating that the subscriber canceled its subscription.
         /// </summary>
         public static readonly Cancel Instance = new();
         private Cancel() { }
@@ -133,7 +133,7 @@ namespace Akka.Streams.Actors
     public sealed class SubscriptionTimeoutExceeded : IActorPublisherMessage, INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Singleton message indicating that the publisher's subscription timeout elapsed.
         /// </summary>
         public static readonly SubscriptionTimeoutExceeded Instance = new();
         private SubscriptionTimeoutExceeded() { }
@@ -192,7 +192,7 @@ namespace Akka.Streams.Actors
     /// failure, completed or canceled.
     /// </para>
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements published by this actor.</typeparam>
     public abstract class ActorPublisher<T> : ActorBase
     {
         private readonly ActorPublisherState _state = ActorPublisherState.Instance.Apply(Context.System);
@@ -205,7 +205,7 @@ namespace Akka.Streams.Actors
         private OnErrorBlock _onError;
 
         /// <summary>
-        /// TBD
+        /// Initializes a publisher with no subscription timeout.
         /// </summary>
         protected ActorPublisher()
         {
@@ -279,7 +279,7 @@ namespace Akka.Streams.Actors
         /// <see cref="IsActive"/> and <see cref="TotalDemand"/> &gt; 0,
         /// otherwise <see cref="OnNext"/> will throw <see cref="IllegalStateException"/>.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to deliver to the subscriber.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown for a number of reasons. These include:
         /// <dl>
@@ -399,7 +399,7 @@ namespace Akka.Streams.Actors
         /// Terminate the stream with failure. After that you are not allowed to
         /// call <see cref="OnNext"/>, <see cref="OnError"/> and <see cref="OnComplete"/>.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled to the subscriber.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown for a number of reasons. These include:
         /// <dl>
@@ -449,7 +449,7 @@ namespace Akka.Streams.Actors
         /// will be delayed until such <see cref="ISubscriber{T}"/> arrives.
         /// </para>
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled to the subscriber before the actor stops.</param>
         public void OnErrorThenStop(Exception cause)
         {
             switch (_lifecycleState)
@@ -479,11 +479,11 @@ namespace Akka.Streams.Actors
         #region Internal API
 
         /// <summary>
-        /// TBD
+        /// Handles publisher protocol messages before delegating them to the actor's receive handler.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The actor's receive handler.</param>
+        /// <param name="message">The message being processed.</param>
+        /// <returns><see langword="true"/> for publisher protocol messages; otherwise, the result from the base actor implementation.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (message is Request req)
@@ -574,7 +574,7 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Calls the base pre-start hook and schedules a subscription-timeout message when a finite timeout is configured.
         /// </summary>
         public override void AroundPreStart()
         {
@@ -594,10 +594,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Saves the subscriber, outstanding demand, and lifecycle state so they can be restored after restart.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">The exception that caused the restart.</param>
+        /// <param name="message">The message being processed when the restart was requested.</param>
         public override void AroundPreRestart(Exception cause, object message)
         {
             // some state must survive restart
@@ -606,10 +606,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Restores publisher state saved before restart, then invokes the base post-restart hook.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">The exception that caused the restart.</param>
+        /// <param name="message">The message being processed when the restart was requested.</param>
         public override void AroundPostRestart(Exception cause, object message)
         {
             var s = _state.Remove(Self);
@@ -624,7 +624,7 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels the subscription timeout, removes saved restart state, and completes an active subscriber before stopping.
         /// </summary>
         public override void AroundPostStop()
         {
@@ -645,31 +645,31 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Creates <see cref="IPublisher{T}"/> instances backed by actor references.
     /// </summary>
     public static class ActorPublisher
     {
         /// <summary>
-        /// TBD
+        /// Creates a publisher that forwards subscriber and demand messages to an actor reference.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="ref">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements published by the actor.</typeparam>
+        /// <param name="ref">The actor that implements the <see cref="ActorPublisher{T}"/> protocol.</param>
+        /// <returns>A publisher that sends subscription messages to <paramref name="ref"/>.</returns>
         public static IPublisher<T> Create<T>(IActorRef @ref) => new ActorPublisherImpl<T>(@ref);
     }
 
     /// <summary>
-    /// TBD
+    /// An <see cref="IPublisher{T}"/> adapter that sends subscriber attachment messages to an actor.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements published by the actor.</typeparam>
     public sealed class ActorPublisherImpl<T> : IPublisher<T>
     {
         private readonly IActorRef _ref;
 
         /// <summary>
-        /// TBD
+        /// Creates an actor-backed publisher adapter.
         /// </summary>
-        /// <param name="ref">TBD</param>
+        /// <param name="ref">The actor that receives subscriber attachment messages.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
@@ -677,9 +677,9 @@ namespace Akka.Streams.Actors
             _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
 
         /// <summary>
-        /// TBD
+        /// Attaches a subscriber by sending it to the backing actor.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to attach.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="subscriber"/> is undefined.
         /// </exception>
@@ -691,16 +691,16 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// An <see cref="ISubscription"/> adapter that sends demand and cancellation messages to an actor.
     /// </summary>
     public sealed class ActorPublisherSubscription : ISubscription
     {
         private readonly IActorRef _ref;
 
         /// <summary>
-        /// TBD
+        /// Creates a subscription that communicates with the specified actor.
         /// </summary>
-        /// <param name="ref">TBD</param>
+        /// <param name="ref">The actor receiving request and cancel messages.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
@@ -708,36 +708,36 @@ namespace Akka.Streams.Actors
             _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
 
         /// <summary>
-        /// TBD
+        /// Requests the specified number of elements from the actor-backed publisher.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The requested number of elements.</param>
         public void Request(long n) => _ref.Tell(new Request(n));
 
         /// <summary>
-        /// TBD
+        /// Cancels the subscription by sending a cancellation message to the actor.
         /// </summary>
         public void Cancel() => _ref.Tell(Actors.Cancel.Instance);
     }
 
     /// <summary>
-    /// TBD
+    /// Stores the failure signaled by an actor publisher and whether the actor should stop after delivering it.
     /// </summary>
     public sealed class OnErrorBlock
     {
         /// <summary>
-        /// TBD
+        /// The failure sent to the subscriber.
         /// </summary>
         public readonly Exception Cause;
         /// <summary>
-        /// TBD
+        /// Whether the actor is stopped after the failure is delivered to a subscriber.
         /// </summary>
         public readonly bool Stop;
 
         /// <summary>
-        /// TBD
+        /// Creates the state associated with a pending or delivered error signal.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="stop">TBD</param>
+        /// <param name="cause">The failure signaled to the subscriber.</param>
+        /// <param name="stop">Whether the actor should stop after delivering the error.</param>
         public OnErrorBlock(Exception cause, bool stop)
         {
             Cause = cause;
@@ -746,34 +746,34 @@ namespace Akka.Streams.Actors
     }
 
     /// <summary>
-    /// TBD
+    /// Actor-system extension that keeps publisher subscription state across actor restarts.
     /// </summary>
     internal sealed class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
         /// <summary>
-        /// TBD
+        /// Snapshot of the publisher state retained while its actor restarts.
         /// </summary>
         public sealed class State
         {
             /// <summary>
-            /// TBD
+            /// The subscriber associated with the publisher, if one was attached.
             /// </summary>
             public readonly IUntypedSubscriber Subscriber;
             /// <summary>
-            /// TBD
+            /// The demand outstanding when the actor restarted.
             /// </summary>
             public readonly long Demand;
             /// <summary>
-            /// TBD
+            /// The lifecycle state when the actor restarted.
             /// </summary>
             public readonly LifecycleState LifecycleState;
 
             /// <summary>
-            /// TBD
+            /// Creates a restart snapshot for an actor publisher.
             /// </summary>
-            /// <param name="subscriber">TBD</param>
-            /// <param name="demand">TBD</param>
-            /// <param name="lifecycleState">TBD</param>
+            /// <param name="subscriber">The subscriber associated with the publisher.</param>
+            /// <param name="demand">The outstanding element demand.</param>
+            /// <param name="lifecycleState">The publisher lifecycle state.</param>
             public State(IUntypedSubscriber subscriber, long demand, LifecycleState lifecycleState)
             {
                 Subscriber = subscriber;
@@ -785,17 +785,17 @@ namespace Akka.Streams.Actors
         private readonly ConcurrentDictionary<IActorRef, State> _state = new();
 
         /// <summary>
-        /// TBD
+        /// The extension identifier used to obtain publisher restart state storage.
         /// </summary>
         public static readonly ActorPublisherState Instance = new();
 
         private ActorPublisherState() { }
 
         /// <summary>
-        /// TBD
+        /// Gets the saved state for an actor reference, if present.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor whose state is requested.</param>
+        /// <returns>The saved state, or <see langword="null"/> when no state is stored for the actor.</returns>
         public State Get(IActorRef actorRef)
         {
             _state.TryGetValue(actorRef, out var state);
@@ -803,27 +803,27 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Adds or replaces the saved state for an actor reference.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="s">TBD</param>
+        /// <param name="actorRef">The actor whose state is stored.</param>
+        /// <param name="s">The state to store.</param>
         public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (_, _) => s);
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the saved state for an actor reference, if present.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor whose state is removed.</param>
+        /// <returns>The removed state, or <see langword="null"/> when no state was stored for the actor.</returns>
         public State Remove(IActorRef actorRef)
         {
             return _state.TryRemove(actorRef, out var s) ? s : null;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an extension instance for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system receiving the extension.</param>
+        /// <returns>A new publisher state extension.</returns>
         public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new();
     }
 }
