@@ -28,15 +28,15 @@ namespace Akka.Streams.Implementation
     public static class Timers
     {
         /// <summary>
-        /// TBD
+        /// Chooses the repeated check interval used by idle-timeout stages.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">The inactivity duration to enforce.</param>
+        /// <returns>An interval between one eighth and one half of the timeout, with a 100 ms lower bound when it fits.</returns>
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
             => new(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
 
         /// <summary>
-        /// TBD
+        /// Shared timer key used by the timeout and delay stages in this class.
         /// </summary>
         public const string GraphStageLogicTimer = "GraphStageLogicTimer";
     }
@@ -44,7 +44,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passing through the stage.</typeparam>
     [InternalApi]
     public sealed class Initial<T> : SimpleLinearGraphStage<T>
     {
@@ -89,42 +89,42 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the interval allowed for the first element to pass through.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that fails if no first element passes through before the timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The deadline for the first element to pass through.</param>
         public Initial(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the initial-element timeout stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Initial;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that forwards elements and fails if the first does not pass in time.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the initial-element timeout.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this timeout stage.</returns>
         public override string ToString() => "InitialTimeoutTimer";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passing through the stage.</typeparam>
     [InternalApi]
     public sealed class Completion<T> : SimpleLinearGraphStage<T>
     {
@@ -160,42 +160,42 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum time allowed for the stream to complete.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that fails if upstream does not complete before the timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum duration before the completion timeout fails the stream.</param>
         public Completion(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the completion-timeout stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Completion;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that forwards stream signals and fails if completion is not observed in time.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the completion timeout.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this timeout stage.</returns>
         public override string ToString() => "CompletionTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passing through the stage.</typeparam>
     [InternalApi]
     public sealed class Idle<T> : SimpleLinearGraphStage<T>
     {
@@ -242,42 +242,42 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum interval allowed between upstream elements.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that fails if no upstream element arrives within the timeout interval.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum allowed period without an upstream element.</param>
         public Idle(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the idle-timeout stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Idle;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that forwards elements and fails after an idle interval.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the idle timeout.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this timeout stage.</returns>
         public override string ToString() => "IdleTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passing through the stage.</typeparam>
     [InternalApi]
     public sealed class BackpressureTimeout<T> : SimpleLinearGraphStage<T>
     {
@@ -330,43 +330,43 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum time allowed for downstream demand after an element is pushed.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that fails when downstream does not request another element in time.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum interval the stage waits for renewed downstream demand.</param>
         public BackpressureTimeout(TimeSpan timeout)
         {
             Timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the backpressure-timeout stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.BackpressureTimeout;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that tracks downstream demand and fails after a prolonged demand gap.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the backpressure timeout.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this timeout stage.</returns>
         public override string ToString() => "BackpressureTimeout";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements on the first flow direction.</typeparam>
+    /// <typeparam name="TOut">The type of elements on the second flow direction.</typeparam>
     [InternalApi]
     public sealed class IdleTimeoutBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
     {
@@ -426,31 +426,31 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum inactivity interval across both flow directions.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Gets the inlet for elements in the first direction.
         /// </summary>
         public readonly Inlet<TIn> In1 = new("in1");
         /// <summary>
-        /// TBD
+        /// Gets the inlet for elements in the second direction.
         /// </summary>
         public readonly Inlet<TOut> In2 = new("in2");
         /// <summary>
-        /// TBD
+        /// Gets the outlet for elements in the first direction.
         /// </summary>
         public readonly Outlet<TIn> Out1 = new("out1");
         /// <summary>
-        /// TBD
+        /// Gets the outlet for elements in the second direction.
         /// </summary>
         public readonly Outlet<TOut> Out2 = new("out2");
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional flow stage that fails if neither direction has activity before the timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum period without an element passing through either direction.</param>
         public IdleTimeoutBidi(TimeSpan timeout)
         {
             Timeout = timeout;
@@ -458,33 +458,33 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the bidirectional idle-timeout stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleTimeoutBidi;
 
         /// <summary>
-        /// TBD
+        /// Gets the bidirectional shape containing both element paths.
         /// </summary>
         public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that forwards both directions and resets the idle deadline on activity.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the bidirectional idle timeout.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this timeout stage.</returns>
         public override string ToString() => "IdleTimeoutBidi";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passing through the stage.</typeparam>
     [InternalApi]
     public sealed class DelayInitial<T> : SimpleLinearGraphStage<T>
     {
@@ -535,44 +535,44 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the delay before the stage begins pulling upstream.
         /// </summary>
         public readonly TimeSpan Delay;
 
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that holds off pulling upstream until the initial delay has elapsed.
         /// </summary>
-        /// <param name="delay">TBD</param>
+        /// <param name="delay">The delay before upstream pulling is enabled.</param>
         public DelayInitial(TimeSpan delay) : base("DelayInitial")
         {
             Delay = delay;
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the initial-delay stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.DelayInitial;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that enables upstream pulls after the configured delay.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for the initial delay.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this delay stage.</returns>
         public override string ToString() => "DelayTimer";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type; it must also be assignable to <typeparamref name="TOut"/>.</typeparam>
+    /// <typeparam name="TOut">The output element type emitted for input or injected values.</typeparam>
     [InternalApi]
     public sealed class IdleInject<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>> where TIn : TOut
     {
@@ -673,10 +673,10 @@ namespace Akka.Streams.Implementation
         private readonly Outlet<TOut> _out = new("IdleInject.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a flow that emits a generated value after the timeout when no upstream element is available.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <param name="inject">TBD</param>
+        /// <param name="timeout">The idle interval after which an output is generated.</param>
+        /// <param name="inject">Creates the output value to emit when the interval expires.</param>
         public IdleInject(TimeSpan timeout, Func<TOut> inject)
         {
             _timeout = timeout;
@@ -686,26 +686,26 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the default attributes for the idle-injection stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.IdleInject;
 
         /// <summary>
-        /// TBD
+        /// Gets the flow shape for the input and output element types.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that prefers available upstream elements and injects a value after idle time.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to this stage.</param>
+        /// <returns>The timer logic for idle-value injection.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The fixed name of this injection stage.</returns>
         public override string ToString() => "IdleTimer";
     }
 }
