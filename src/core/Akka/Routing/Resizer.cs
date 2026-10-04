@@ -30,8 +30,8 @@ namespace Akka.Routing
         /// message to the pool, i.e. the ActorRef.!() method, hence it may be called
         /// concurrently.
         /// </summary>
-        /// <param name="messageCounter">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="messageCounter">The number of messages sent through the router, with zero used for the initial resize.</param>
+        /// <returns><c>true</c> when the resizer should reconsider the routee count.</returns>
         public abstract bool IsTimeForResize(long messageCounter);
 
         /// <summary>
@@ -43,15 +43,15 @@ namespace Akka.Routing
         ///
         /// This method is invoked only in the context of the Router actor.
         /// </summary>
-        /// <param name="currentRoutees">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="currentRoutees">The routees currently available to the router.</param>
+        /// <returns>The number of routees to add, remove, or leave unchanged.</returns>
         public abstract int Resize(IEnumerable<Routee> currentRoutees);
 
         /// <summary>
-        /// TBD
+        /// Creates a resizer from the nested <c>resizer</c> section when it is enabled.
         /// </summary>
-        /// <param name="parentConfig">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="parentConfig">The parent configuration containing the optional <c>resizer</c> section.</param>
+        /// <returns>A configured resizer, or <c>null</c> when resizing is disabled or unconfigured.</returns>
         public static Resizer FromConfig(Config parentConfig)
         {
             var defaultResizerConfig = parentConfig.GetConfig("resizer");
@@ -75,13 +75,13 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultResizer"/> class.
         /// </summary>
-        /// <param name="lower">TBD</param>
-        /// <param name="upper">TBD</param>
-        /// <param name="pressureThreshold">TBD</param>
-        /// <param name="rampupRate">TBD</param>
-        /// <param name="backoffThreshold">TBD</param>
-        /// <param name="backoffRate">TBD</param>
-        /// <param name="messagesPerResize">TBD</param>
+        /// <param name="lower">The minimum number of routees to keep.</param>
+        /// <param name="upper">The maximum number of routees to keep.</param>
+        /// <param name="pressureThreshold">The mailbox or processing threshold used to count a routee as busy.</param>
+        /// <param name="rampupRate">The fraction of current capacity to add when all routees are under pressure.</param>
+        /// <param name="backoffThreshold">The busy-routee fraction below which capacity can be reduced.</param>
+        /// <param name="backoffRate">The fraction of current capacity to remove when backing off.</param>
+        /// <param name="messagesPerResize">How many messages to send between resize checks.</param>
         /// <exception cref="ArgumentException">
         /// This exception can be thrown for a number of reasons. These include:
         /// <ul>
@@ -128,10 +128,10 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a resizer from a configuration containing a <c>resizer</c> section.
         /// </summary>
-        /// <param name="resizerConfig">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resizerConfig">The parent configuration with <c>resizer.enabled</c> and resizer settings.</param>
+        /// <returns>The configured resizer, or <c>null</c> when resizing is disabled.</returns>
         public new static DefaultResizer FromConfig(Config resizerConfig)
         {
             return resizerConfig.GetBoolean("resizer.enabled", false) ? DefaultResizer.Apply(resizerConfig.GetConfig("resizer")) : null;
@@ -140,8 +140,8 @@ namespace Akka.Routing
         /// <summary>
         /// Creates a new DefaultResizer from the given configuration
         /// </summary>
-        /// <param name="resizerConfig">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resizerConfig">The resizer settings, including lower and upper bounds and resize rates.</param>
+        /// <returns>A resizer populated from the supplied settings.</returns>
         internal static DefaultResizer Apply(Config resizerConfig)
         {
             if (resizerConfig.IsNullOrEmpty())
@@ -159,20 +159,20 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Checks whether the configured message interval has elapsed.
         /// </summary>
-        /// <param name="messageCounter">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="messageCounter">The number of messages sent through the router.</param>
+        /// <returns><c>true</c> when the count is a multiple of <see cref="MessagesPerResize"/>.</returns>
         public override bool IsTimeForResize(long messageCounter)
         {
             return messageCounter % MessagesPerResize == 0;
         }
 
         /// <summary>
-        /// TBD
+        /// Computes the routee-count change from current routee pressure and capacity bounds.
         /// </summary>
-        /// <param name="currentRoutees">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="currentRoutees">The routees currently available to the router.</param>
+        /// <returns>A positive count to add, a negative count to remove, or zero to leave capacity unchanged.</returns>
         public override int Resize(IEnumerable<Routee> currentRoutees)
         {
             return Capacity(currentRoutees);
