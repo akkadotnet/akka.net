@@ -54,7 +54,7 @@ namespace Akka.Streams.Extra
     public static class TimedFlowDsl
     {
         /// <summary>
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
+        /// Measures elapsed time from the first observed element until upstream completion or failure. The stopwatch context belongs to this graph and is shared when the graph is materialized more than once; the completion callback does not run for downstream cancellation alone.
         /// </summary>
         /// <typeparam name="TIn">The input element type of the flow.</typeparam>
         /// <typeparam name="TOut">The output element type of the flow before applying <paramref name="measuredOps"/>.</typeparam>

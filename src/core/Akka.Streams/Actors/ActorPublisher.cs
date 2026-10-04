@@ -479,7 +479,7 @@ namespace Akka.Streams.Actors
         #region Internal API
 
         /// <summary>
-        /// Handles publisher protocol messages before delegating them to the actor's receive handler.
+        /// Intercepts publisher protocol messages and delegates only messages that also need the actor's receive handler.
         /// </summary>
         /// <param name="receive">The actor's receive handler.</param>
         /// <param name="message">The message being processed.</param>

@@ -93,14 +93,14 @@ namespace Akka.Streams.Stage
         /// Pushes an element of the stage output type to downstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>A downstream directive representing the push.</returns>
+        /// <returns>The legacy context implementation performs the push and returns <see langword="null"/>.</returns>
         public IDownstreamDirective Push(object element) => Push((TOut)element);
 
         /// <summary>
         /// Pushes an element to downstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>A downstream directive representing the push.</returns>
+        /// <returns>The legacy context implementation performs the push and returns <see langword="null"/>.</returns>
         public IDownstreamDirective Push(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -110,7 +110,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Requests another element from upstream.
         /// </summary>
-        /// <returns>An upstream directive representing the pull.</returns>
+        /// <returns>The legacy context implementation performs the pull and returns <see langword="null"/>.</returns>
         public IUpstreamDirective Pull()
         {
             Pull(_shape.Inlet);
@@ -120,7 +120,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Cancels upstream and completes downstream successfully.
         /// </summary>
-        /// <returns>A directive representing successful stage completion.</returns>
+        /// <returns>The legacy context implementation completes the stage and returns <see langword="null"/>.</returns>
         public FreeDirective Finish()
         {
             return Finish(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
@@ -136,14 +136,14 @@ namespace Akka.Streams.Stage
         /// Pushes one final output element and completes the stage.
         /// </summary>
         /// <param name="element">The final output element to send downstream.</param>
-        /// <returns>A downstream directive representing the push and completion.</returns>
+        /// <returns>The legacy context implementation pushes and completes the stage, then returns <see langword="null"/>.</returns>
         public IDownstreamDirective PushAndFinish(object element) => PushAndFinish((TOut) element);
 
         /// <summary>
         /// Pushes one final output element and completes the stage.
         /// </summary>
         /// <param name="element">The final output element to send downstream.</param>
-        /// <returns>A downstream directive representing the push and completion.</returns>
+        /// <returns>The legacy context implementation pushes and completes the stage, then returns <see langword="null"/>.</returns>
         public IDownstreamDirective PushAndFinish(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -155,7 +155,7 @@ namespace Akka.Streams.Stage
         /// Fails the stage and its downstream with the supplied exception.
         /// </summary>
         /// <param name="cause">The exception used to fail the stage.</param>
-        /// <returns>A directive representing stage failure.</returns>
+        /// <returns>The legacy context implementation fails the stage and returns <see langword="null"/>.</returns>
         public FreeDirective Fail(Exception cause)
         {
             FailStage(cause);
@@ -195,14 +195,14 @@ namespace Akka.Streams.Stage
         /// Pushes an output element and requests another element from upstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>A directive representing the push and pull operation.</returns>
+        /// <returns>The legacy context implementation pushes and pulls, then returns <see langword="null"/>.</returns>
         public FreeDirective PushAndPull(object element) => PushAndPull((TOut) element);
 
         /// <summary>
         /// Pushes an output element and requests another element from upstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>A directive representing the push and pull operation.</returns>
+        /// <returns>The legacy context implementation pushes and pulls, then returns <see langword="null"/>.</returns>
         public FreeDirective PushAndPull(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -214,14 +214,14 @@ namespace Akka.Streams.Stage
         /// Holds the upstream event while pushing an element downstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>An upstream directive representing the held event and push.</returns>
+        /// <returns>The legacy context implementation pushes the element and returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstreamAndPush(object element) => HoldUpstreamAndPush((TOut) element);
 
         /// <summary>
         /// Holds the upstream event while pushing an element downstream.
         /// </summary>
         /// <param name="element">The output element to send downstream.</param>
-        /// <returns>An upstream directive representing the held event and push.</returns>
+        /// <returns>The legacy context implementation pushes the element and returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstreamAndPush(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -231,7 +231,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Holds downstream demand while requesting an element from upstream.
         /// </summary>
-        /// <returns>A downstream directive representing the held demand and pull.</returns>
+        /// <returns>The legacy context implementation pulls upstream and returns <see langword="null"/>.</returns>
         public IDownstreamDirective HoldDownstreamAndPull()
         {
             Pull(_shape.Inlet);
@@ -256,13 +256,13 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Holds the current downstream demand event.
         /// </summary>
-        /// <returns>A downstream directive representing the held demand.</returns>
+        /// <returns>The legacy context implementation returns <see langword="null"/>.</returns>
         public IDownstreamDirective HoldDownstream() => null;
 
         /// <summary>
         /// Holds the current upstream event.
         /// </summary>
-        /// <returns>An upstream directive representing the held event.</returns>
+        /// <returns>The legacy context implementation returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstream() => null;
 
         /// <summary>
@@ -358,7 +358,7 @@ namespace Akka.Streams.Stage
         /// Creates legacy stage logic and its materialized value using the effective attributes.
         /// </summary>
         /// <param name="inheritedAttributes">The attributes effective for this stage materialization.</param>
-        /// <returns>The graph logic and materialized value created by the factory.</returns>
+        /// <returns>A graph logic wrapper for the legacy stage returned by the factory, together with the factory's materialized value.</returns>
         public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var stageAndMat = Factory(inheritedAttributes);

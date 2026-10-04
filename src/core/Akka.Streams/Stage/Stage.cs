@@ -354,7 +354,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enumerator">The final elements to emit in order.</param>
         /// <param name="context">The context used to absorb termination and emit the final elements.</param>
-        /// <returns>Emission or completion is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
+        /// <returns>If the enumerator is empty, termination is handled immediately. Otherwise, termination is absorbed and elements are emitted as downstream demand arrives; the current legacy context implementation returns <see langword="null"/>.</returns>
         public ISyncDirective TerminationEmit(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if (!enumerator.MoveNext())

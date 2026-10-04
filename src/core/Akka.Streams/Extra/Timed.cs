@@ -25,7 +25,7 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures elapsed time from the first source element until the measured stream receives upstream completion or failure, then reports it.
+        /// Measures elapsed time in a stopwatch context shared by this graph from its first observed source element until upstream completion or failure, then reports it. Reusing the graph reuses that context, so concurrent materializations share the stopwatch state.
         /// </summary>
         /// <typeparam name="TIn">The element type of the source and input to the measured operations.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the measured operations.</typeparam>
@@ -33,7 +33,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="source">The source whose elements pass through the measured operations.</param>
         /// <param name="measuredOps">The source transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure; downstream cancellation alone does not invoke it.</param>
         /// <returns>The transformed source with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         [InternalApi]
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
@@ -49,7 +49,7 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures elapsed time from the first flow output element until the measured stream receives upstream completion or failure, then reports it.
+        /// Measures elapsed time in a stopwatch context shared by this graph from its first observed flow output element until upstream completion or failure, then reports it. Reusing the graph reuses that context, so concurrent materializations share the stopwatch state.
         /// </summary>
         /// <typeparam name="TIn">The input element type of the flow.</typeparam>
         /// <typeparam name="TOut">The output element type of the flow before applying <paramref name="measuredOps"/>.</typeparam>
@@ -58,7 +58,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="flow">The flow whose output passes through the measured operations.</param>
         /// <param name="measuredOps">The flow transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure; downstream cancellation alone does not invoke it.</param>
         /// <returns>The transformed flow with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         public static Flow<TIn, TOut2, TMat2> Timed<TIn, TOut, TOut2, TMat, TMat2>(Flow<TIn, TOut, TMat> flow, Func<Flow<TIn, TOut, TMat>, Flow<TIn, TOut2, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
