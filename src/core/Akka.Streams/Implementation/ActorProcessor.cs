@@ -639,7 +639,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Subclass may override <see cref="ActiveReceive"/>
         /// </summary>
-        /// <param name="message">The actor message to route to the active receive handler.</param>
+        /// <param name="message">The received actor message.</param>
         /// <returns><see langword="true"/> for every message passed to the exposure adapter. When publisher exposure replays buffered messages, messages rejected by the active handler are sent to the configured unhandled behavior.</returns>
         protected sealed override bool Receive(object message) => _receive.Apply(message);
 

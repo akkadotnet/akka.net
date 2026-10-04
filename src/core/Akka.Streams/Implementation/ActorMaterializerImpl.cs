@@ -438,7 +438,7 @@ namespace Akka.Streams.Implementation
             => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
         /// <summary>
-        /// Materializes a graph and supplies the shell-registration callback used when its effective attributes have no async boundary.
+        /// Materializes the graph and passes the shell-registration callback to the delegated materializer. The callback is used for graph shells without an effective async boundary.
         /// </summary>
         /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
         /// <param name="runnable">The closed graph to materialize.</param>
@@ -447,7 +447,7 @@ namespace Akka.Streams.Implementation
             => _delegateMaterializer.Materialize(runnable, _registerShell);
 
         /// <summary>
-        /// Materializes a graph with the supplied initial attributes and supplies the shell-registration callback when effective attributes have no async boundary.
+        /// Materializes the graph with the supplied initial attributes and passes the shell-registration callback to the delegated materializer. The callback is used for graph shells without an effective async boundary.
         /// </summary>
         /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
         /// <param name="runnable">The closed graph to materialize.</param>

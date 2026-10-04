@@ -131,16 +131,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Will only transfer an element when all marked outputs
-        /// have demand, and will complete as soon as any of the marked
-        /// outputs have canceled.
+        /// Is ready when the marked-pending count equals the marked-output count, and is complete when at least one marked output is canceled or no outputs are marked.
         /// </summary>
         public readonly TransferState AllOfMarkedOutputs;
 
         /// <summary>
-        /// Will transfer an element when any of the  marked outputs
-        /// have demand, and will complete when all of the marked
-        /// outputs have canceled.
+        /// Is ready when the marked-pending count is positive, and is complete when the marked-canceled count equals the marked-output count.
         /// </summary>
         public readonly TransferState AnyOfMarkedOutputs;
 
@@ -206,9 +202,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Calls <see cref="Error(int, Exception)"/> for each output that has not already terminated.
+        /// If this bunch has not already been canceled, calls <see cref="Error(int, Exception)"/> for every configured output index.
         /// </summary>
-        /// <param name="e">The failure passed to each eligible output manager.</param>
+        /// <param name="e">The failure passed to <see cref="Error(int, Exception)"/> for each configured output index.</param>
         public void Cancel(Exception e)
         {
             if (!_bunchCancelled)
@@ -220,7 +216,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Passes a failure to one output manager and marks it errored if that call returns.
+        /// For an output that is not completed, canceled, or errored, calls its manager's <c>Error</c> method, then marks and unmarks the output if that call returns.
         /// </summary>
         /// <param name="output">The output index to fail.</param>
         /// <param name="e">The failure passed to the output manager.</param>
@@ -347,7 +343,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Selects the next marked output with demand and advances the preferred index past it.
+        /// Calls <see cref="IdToEnqueue"/>, advances the preferred index past the selected output, and returns that index if selection succeeds.
         /// </summary>
         /// <returns>The selected output index.</returns>
         public int IdToEnqueueAndYield()
@@ -362,13 +358,13 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Enqueues an element to the next marked output with demand, then advances the preferred output.
+        /// Calls <see cref="IdToEnqueueAndYield"/> and enqueues the element to its selected output if selection succeeds.
         /// </summary>
         /// <param name="element">The element to enqueue.</param>
         public void EnqueueAndYield(T element) => Enqueue(IdToEnqueueAndYield(), element);
 
         /// <summary>
-        /// Enqueues an element to the next marked output with demand and sets the next preferred index.
+        /// Calls <see cref="IdToEnqueue"/> and, if selection succeeds, sets the next preferred index and enqueues the element to the selected output.
         /// </summary>
         /// <param name="element">The element to enqueue.</param>
         /// <param name="preferred">The output index to prefer on the next selection.</param>
@@ -616,7 +612,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels the input, passes the failure to unterminated output managers, and runs the current pump phase.
+        /// Calls input cancellation and the output bunch's <c>Cancel</c> method, then pumps the current phase.
         /// </summary>
         /// <param name="e">The failure passed to the output managers.</param>
        protected void Fail(Exception e)

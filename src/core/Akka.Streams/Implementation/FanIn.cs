@@ -144,7 +144,7 @@ namespace Akka.Streams.Implementation
         protected int LastDequeuedId => _lastDequeuedId;
 
         /// <summary>
-        /// Gets whether every upstream input has completed.
+        /// Gets whether the completed-message counter equals the configured input count.
         /// </summary>
         public bool IsAllCompleted => _inputCount == _completedCounter;
 
@@ -207,13 +207,13 @@ namespace Akka.Streams.Implementation
         public abstract void OnError(int id, Exception cause);
 
         /// <summary>
-        /// Called when an input has completed and its buffered elements are depleted.
+        /// Called by the completion handler's <c>!IsPending(input)</c> branch, or when a dequeue leaves the input buffer depleted.
         /// </summary>
         /// <param name="input">The depleted input index.</param>
         public virtual void OnDepleted(int input) { }
 
         /// <summary>
-        /// Called when every input completed without any element having arrived.
+        /// Called by the completion handler when no input element has been received and the completed-message counter equals the configured input count.
         /// </summary>
         public virtual void OnCompleteWhenNoInput() { }
 
@@ -631,7 +631,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected readonly int InputCount;
         /// <summary>
-        /// Gets the output manager for the merged stream.
+        /// Gets the downstream output manager.
         /// </summary>
         protected readonly SimpleOutputs PrimaryOutputs;
         /// <summary>
@@ -667,7 +667,7 @@ namespace Akka.Streams.Implementation
         private ILoggingAdapter _log;
 
         /// <summary>
-        /// Fails the fan-in actor, signals the error downstream, and completes its pump.
+        /// Sets the pump phase to completed, passes the failure to the downstream output manager, and runs the pump.
         /// </summary>
         /// <param name="cause">The failure to signal downstream.</param>
         protected void Fail(Exception cause)
@@ -681,7 +681,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels inputs and reports abrupt actor termination to the downstream output manager.
+        /// Calls <c>InputBunch.Cancel()</c>, passes abrupt termination to the downstream output manager, and calls the base implementation.
         /// </summary>
         protected override void PostStop()
         {
@@ -766,7 +766,7 @@ namespace Akka.Streams.Implementation
         public void PumpFailed(Exception e) => Fail(e);
 
         /// <summary>
-        /// Cancels all inputs and completes the downstream output when transfer ends.
+        /// Calls <c>InputBunch.Cancel()</c>, completes the downstream output manager, and stops the actor.
         /// </summary>
         public void PumpFinished()
         {
