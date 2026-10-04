@@ -147,6 +147,81 @@ public class DynamicTypeLoadingOffLoggerSetupSpec
     }
 }
 
+/// <summary>
+/// Not generic on purpose: a generic type's name carries its arguments' assembly identities, which no
+/// HOCON author writes by hand.
+/// </summary>
+public sealed class NamedInHoconLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    private static int _instances;
+    public static int Instances => _instances;
+
+    public NamedInHoconLogger() => Interlocked.Increment(ref _instances);
+
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+[Collection(DynamicTypeLoadingCollection.Name)]
+public class DynamicTypeLoadingOffLoggerSetupNamedInHoconSpec
+{
+    private static ActorSystemSetup SetupFor(string hoconTypeName)
+    {
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{hoconTypeName}""]");
+        return ActorSystemSetup.Create(
+            BootstrapSetup.Create().WithConfig(config),
+            LoggerSetup.Create(Props.Create<NamedInHoconLogger>()));
+    }
+
+    [Theory(DisplayName = "Should_StartLoggerOnce_When_HoconNamesATypeLoggerSetupRegisters_AndDynamicTypeLoadingIsDisabled")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger,akka.tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Tests, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null")]
+    public async Task Should_StartLoggerOnce_When_HoconNamesATypeLoggerSetupRegisters_AndDynamicTypeLoadingIsDisabled(
+        string hoconTypeName)
+    {
+        var before = NamedInHoconLogger.Instances;
+        ActorSystem? sys = null;
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            sys = ActorSystem.Create("NamedInHocon", SetupFor(hoconTypeName));
+            return Task.CompletedTask;
+        });
+
+        try
+        {
+            (NamedInHoconLogger.Instances - before).Should().Be(1);
+        }
+        finally
+        {
+            if (sys != null)
+                await sys.Terminate();
+        }
+    }
+
+    [Theory(DisplayName = "Should_Throw_When_HoconNamesATypeLoggerSetupDoesNotRegister_AndDynamicTypeLoadingIsDisabled")]
+    [InlineData("Akka.Tests.Loggers.NoSuchLogger, Akka.Tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Remote")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger")]
+    public async Task Should_Throw_When_HoconNamesATypeLoggerSetupDoesNotRegister_AndDynamicTypeLoadingIsDisabled(
+        string hoconTypeName)
+    {
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            Action create = () => ActorSystem.Create("NamedInHoconRejected", SetupFor(hoconTypeName));
+            create.Should().Throw<ConfigurationException>().WithMessage("*not built in*");
+            return Task.CompletedTask;
+        });
+    }
+}
+
 public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
 {
     private static readonly MarkerLogMessageFormatter SetupFormatter = new();

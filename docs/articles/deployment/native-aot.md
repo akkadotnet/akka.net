@@ -29,6 +29,9 @@ fallback entirely.
 * An Akka.Hosting application built with `AddAkka`: dependency injection through
   Akka.DependencyInjection, a custom extension registered with `WithExtension`, log output routed
   through `Microsoft.Extensions.Logging`, and the built-in `ActorSystem` liveness health check.
+* Akka.TestKit and Akka.Hosting.TestKit with the switch off, for suites that run on a trimmed
+  runtime or use the switch as a strict mode. They register `TestEventListener` and the calling-thread
+  dispatcher in code, so a TestKit-based test needs no extra setup.
 * Three `Setup` types that take an instance or factory instead of a HOCON type name: `LoggerSetup`
   (custom loggers and log formatter), `SerializationSetup` (custom serializers and bindings), and
   `ExtensionsSetup` (custom or third-party extensions). Combine them (plus a `BootstrapSetup` if you

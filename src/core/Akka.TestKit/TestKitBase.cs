@@ -7,6 +7,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
@@ -49,6 +50,8 @@ namespace Akka.TestKit
             public ILoggingAdapter Log { get; set; }
             public EventFilterFactory EventFilterFactory { get; set; }
         }
+
+        private const string TestActorDispatcherId = "akka.test.test-actor.dispatcher";
 
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
@@ -124,6 +127,45 @@ namespace Akka.TestKit
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
+        // The default config names TestEventListener by type. With Akka.DynamicTypeLoading off that name does not
+        // resolve, so register the type with LoggerSetup too; LoggingBus accepts a name LoggerSetup already
+        // started. Only when the effective config would start the listener anyway, so a spec that replaces
+        // akka.loggers keeps its own list, and an existing LoggerSetup (and its formatter) is kept.
+        private static ActorSystemSetup WithTestEventListenerSetup(ActorSystemSetup setup, Config config)
+        {
+            var listenerName = typeof(TestEventListener).FullName;
+            if (!config.GetStringList("akka.loggers", Array.Empty<string>())
+                    .Any(logger => string.Equals(TypeNameOf(logger), listenerName, StringComparison.Ordinal)))
+                return setup;
+
+            var listener = Props.Create<TestEventListener>();
+            var existing = setup.Get<LoggerSetup>();
+            if (!existing.HasValue)
+                return setup.WithSetup(LoggerSetup.Create(listener));
+
+            if (existing.Value.Loggers.Any(props => props.Type == typeof(TestEventListener)))
+                return setup;
+
+            var loggers = existing.Value.Loggers.Concat(new[] { listener }).ToArray();
+            return setup.WithSetup(existing.Value.Formatter is { } formatter
+                ? LoggerSetup.Create(formatter, loggers)
+                : LoggerSetup.Create(loggers));
+        }
+
+        private static bool NamesCallingThreadDispatcher(Config config, string dispatcherId)
+        {
+            var type = config.GetString(dispatcherId + ".type", null);
+            return type is not null && string.Equals(TypeNameOf(type),
+                typeof(CallingThreadDispatcherConfigurator).FullName, StringComparison.Ordinal);
+        }
+
+        // "Ns.Type, Assembly" -> "Ns.Type"
+        private static string TypeNameOf(string typeName)
+        {
+            var comma = typeName.IndexOf(',');
+            return (comma < 0 ? typeName : typeName.Substring(0, comma)).Trim();
+        }
+
         /// <summary>
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
@@ -151,7 +193,9 @@ namespace Akka.TestKit
                     newBootstrap =
                         newBootstrap.WithActorRefProvider(bootstrap.FlatSelect(x => x.ActorRefProvider).Value);
                 }
-                system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
+                var systemSetup = WithTestEventListenerSetup(config.WithSetup(newBootstrap),
+                    configWithDefaultFallback.HasValue ? configWithDefaultFallback.Value : _defaultConfig);
+                system = ActorSystem.Create(actorSystemName ?? "test", systemSetup);
             }
             else
             {
@@ -171,6 +215,13 @@ namespace Akka.TestKit
             //register the CallingThreadDispatcherConfigurator
             _testState.System.Dispatchers.RegisterConfigurator(CallingThreadDispatcher.Id,
                 new CallingThreadDispatcherConfigurator(_testState.System.Settings.Config, _testState.System.Dispatchers.Prerequisites));
+
+            // The test actor's dispatcher names the same configurator by type in HOCON, and that name only
+            // resolves through reflection. Register it too, so it works with Akka.DynamicTypeLoading off. Skip it
+            // when the config points the id at some other type, so an override keeps working.
+            if (NamesCallingThreadDispatcher(_testState.System.Settings.Config, TestActorDispatcherId))
+                _testState.System.Dispatchers.RegisterConfigurator(TestActorDispatcherId,
+                    new CallingThreadDispatcherConfigurator(_testState.System.Settings.Config, _testState.System.Dispatchers.Prerequisites));
 
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
@@ -788,7 +839,7 @@ namespace Akka.TestKit
             using var initComplete = new ManualResetEventSlim(false);
 
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue, initComplete))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+                .WithDispatcher(TestActorDispatcherId);
 
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
             // Use the new AttachChildWithAsync method to create TestActor synchronously
@@ -811,7 +862,7 @@ namespace Akka.TestKit
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+                .WithDispatcher(TestActorDispatcherId);
             
             // For additional test actors, always use the standard SystemActorOf
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);

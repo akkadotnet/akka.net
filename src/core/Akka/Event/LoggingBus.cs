@@ -144,8 +144,16 @@ namespace Akka.Event
                 if (loggerType == null)
                 {
                     if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    {
+                        // The LoggerSetup loop above already started a type the name points at, so there is
+                        // nothing left to resolve. This is how a library that ships its logger in default HOCON,
+                        // like Akka.TestKit, keeps that HOCON valid with the switch off.
+                        if (loggerSetupOpt.HasValue && IsRegisteredByLoggerSetup(loggerSetupOpt.Value, strLoggerType))
+                            continue;
+
                         throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                            "akka.loggers", strLoggerType, "one of the built-in loggers"));
+                            "akka.loggers", strLoggerType, "one of the built-in loggers, or a logger registered through LoggerSetup"));
+                    }
 
                     loggerType = ResolveLoggerType(strLoggerType);
                     if (loggerType == null)
@@ -269,6 +277,29 @@ namespace Akka.Event
                     => Type.GetType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
                 _ => null
             };
+        }
+
+        // True when loggerTypeName names a type that setup already carries. Type name and assembly must both match,
+        // the same rule the first-party tables use; a bare name only matches a type from Akka itself, which is all
+        // Type.GetType would have found for it.
+        private static bool IsRegisteredByLoggerSetup(LoggerSetup setup, string loggerTypeName)
+        {
+            if (!Util.TypeExtensions.TrySplitTypeName(loggerTypeName, out var name, out var assembly))
+                return false;
+
+            foreach (var props in setup.Loggers)
+            {
+                var type = props.Type;
+                if (!string.Equals(type.FullName, name, StringComparison.Ordinal))
+                    continue;
+
+                if (assembly is null
+                        ? type.Assembly == typeof(LoggingBus).Assembly
+                        : string.Equals(assembly, type.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 #nullable restore
 
