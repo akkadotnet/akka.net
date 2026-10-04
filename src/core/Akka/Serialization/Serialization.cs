@@ -889,11 +889,10 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a serializer for a type without marking the mapping as a module default.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="serializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">The type associated with the serializer.</param>
+        /// <param name="serializer">The serializer used for instances of <paramref name="type"/> and its subtypes.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, SerializerV2 serializer) => AddSerializationMap(type, serializer, isDefault: false);
 

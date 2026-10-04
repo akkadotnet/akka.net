@@ -10,22 +10,22 @@ using System;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Provides the built-in DNS cache, resolver, and manager based on .NET address resolution.
     /// </summary>
     public class InetAddressDnsProvider : IDnsProvider
     {
         private readonly DnsBase _cache = new SimpleDnsCache();
 
         /// <summary>
-        /// TBD
+        /// Gets the simple DNS cache used by this provider.
         /// </summary>
         public DnsBase Cache { get { return _cache; }}
         /// <summary>
-        /// TBD
+        /// Gets the built-in resolver actor type.
         /// </summary>
         public Type ActorClass { get { return typeof (InetAddressDnsResolver); } }
         /// <summary>
-        /// TBD
+        /// Gets the simple DNS manager actor type.
         /// </summary>
         public Type ManagerClass { get { return typeof (SimpleDnsManager); } }
     }
