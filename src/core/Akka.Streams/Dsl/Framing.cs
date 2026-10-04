@@ -20,7 +20,7 @@ using Akka.Util.Internal.Collections;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Creates stream stages that split byte sequences into frames.
     /// </summary>
     public static class Framing
     {
@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
         /// <param name="delimiter">The byte sequence to be treated as the end of the frame.</param>
         /// <param name="maximumFrameLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <param name="allowTruncation">If false, then when the last frame being decoded contains no valid delimiter this Flow fails the stream instead of returning a truncated frame.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow that emits frames separated by <paramref name="delimiter"/> without including the delimiter.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Delimiter(ReadOnlySequence<byte> delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
@@ -66,7 +66,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow that emits frames whose size is read from the configured length field.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
@@ -99,7 +99,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow that emits frames sized by the length field or by <paramref name="computeFrameSize"/>.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(
             int fieldLength,
             int fieldOffset,
@@ -130,7 +130,7 @@ namespace Akka.Streams.Dsl
         /// The length field encodes the length of the user payload excluding the header itself.
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A bidirectional flow that adds a four-byte big-endian length header to outgoing messages and removes it from incoming messages.</returns>
         public static BidiFlow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
             return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
@@ -140,8 +140,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol decoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
-        /// <param name="maximumMessageLength">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="maximumMessageLength">The largest payload size accepted by the framing protocol.</param>
+        /// <returns>A flow that decodes length-prefixed frames and removes their four-byte headers.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
             return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Slice(4));
@@ -150,15 +150,15 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Protocol encoder that is used by <see cref="SimpleFramingProtocol"/>
         /// </summary>
-        /// <param name="maximumMessageLength">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="maximumMessageLength">The largest payload size accepted by the framing protocol.</param>
+        /// <returns>A flow that prefixes each payload with its four-byte big-endian length.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
         {
             return Flow.Create<ReadOnlySequence<byte>>().Via(new SimpleFramingProtocolEncoderStage(maximumMessageLength));
         }
 
         /// <summary>
-        /// TBD
+        /// Exception raised when a framing stage encounters an invalid or truncated frame.
         /// </summary>
         public class FramingException : Exception
         {

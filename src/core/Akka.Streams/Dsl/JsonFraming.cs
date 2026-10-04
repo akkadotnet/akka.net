@@ -44,7 +44,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// </summary>
         /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow that emits each parsed JSON object as a separate byte sequence.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
         {
             return Flow.Create<ReadOnlySequence<byte>>().Via(new Scanner(maximumObjectLength));
@@ -105,24 +105,24 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumObjectLength;
 
             /// <summary>
-            /// TBD
+            /// Creates a framing stage that scans for JSON objects up to the specified maximum length.
             /// </summary>
-            /// <param name="maximumObjectLength">TBD</param>
+            /// <param name="maximumObjectLength">The maximum number of bytes allowed in one JSON object.</param>
             public Scanner(int maximumObjectLength)
             {
                 _maximumObjectLength = maximumObjectLength;
             }
 
             /// <summary>
-            /// TBD
+            /// The default name attribute for this JSON framing stage.
             /// </summary>
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("JsonFraming.objectScanner");
 
             /// <summary>
-            /// TBD
+            /// Creates the stage logic that parses incoming byte sequences.
             /// </summary>
-            /// <param name="inheritedAttributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="inheritedAttributes">Attributes inherited from the enclosing graph.</param>
+            /// <returns>The logic instance for this JSON scanner stage.</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
     }

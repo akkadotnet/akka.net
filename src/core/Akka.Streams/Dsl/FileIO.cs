@@ -17,7 +17,7 @@ namespace Akka.Streams.Dsl
 {
     // ReSharper disable once InconsistentNaming
     /// <summary>
-    /// TBD
+    /// Creates stream sources and sinks for file input and output.
     /// </summary>
     public static class FileIO
     {
@@ -35,7 +35,7 @@ namespace Akka.Streams.Dsl
         /// <param name="f">the File to read from</param>
         /// <param name="chunkSize">the size of each read operation, defaults to 8192</param>
         /// <param name="startPosition">the start position to read from, defaults to 0</param>
-        /// <returns>TBD</returns>
+        /// <returns>A source that emits file contents in chunks and materializes a task containing the read result.</returns>
         public static Source<ReadOnlySequence<byte>, Task<IOResult>> FromFile(FileInfo f, int chunkSize = 8192, long startPosition = 0) =>
             new(new FileSource(f, chunkSize, startPosition, DefaultAttributes.FileSource,
                 new SourceShape<ReadOnlySequence<byte>>(new Outlet<ReadOnlySequence<byte>>("FileSource"))));
@@ -55,7 +55,7 @@ namespace Akka.Streams.Dsl
         /// <param name="startPosition">the start position to write to, defaults to 0</param>
         /// <param name="autoFlush">when set, auto flush the file buffer to disk for every incoming element</param>
         /// <param name="flushSignaler">when passed an instance of <see cref="FlushSignaler"/>, can be used to send a manual flush signal to the file sink</param>
-        /// <returns>TBD</returns>
+        /// <returns>A sink that writes incoming chunks to the file and materializes a task containing the write result.</returns>
         public static Sink<ReadOnlySequence<byte>, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0, bool autoFlush = false, FlushSignaler flushSignaler = null) =>
             new(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
                 new SinkShape<ReadOnlySequence<byte>>(new Inlet<ReadOnlySequence<byte>>("FileSink")), autoFlush, flushSignaler));
