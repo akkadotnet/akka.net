@@ -126,7 +126,7 @@ namespace Akka.Streams.Dsl
             }
 
             /// <summary>
-            /// The local endpoint used by the outgoing connection, if specified.
+            /// The local endpoint assigned to the established outgoing connection.
             /// </summary>
             public readonly EndPoint LocalAddress;
 
@@ -247,7 +247,7 @@ namespace Akka.Streams.Dsl
         /// </param>
         /// <param name="connectionTimeout">Optional maximum time allowed to establish the TCP connection.</param>
         /// <param name="idleTimeout">Optional maximum interval without traffic in either direction before the flow fails.</param>
-        /// <returns>A byte flow that materializes to a task containing the established connection's endpoints.</returns>
+        /// <returns>A byte flow whose materialized task completes, on connection, with the requested remote endpoint and the established local endpoint.</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
@@ -274,7 +274,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="host">The remote host name or IP address.</param>
         /// <param name="port">The remote TCP port.</param>
-        /// <returns>A byte flow that materializes to a task containing the established connection's endpoints.</returns>
+        /// <returns>A byte flow whose materialized task completes, on connection, with the requested remote endpoint and the established local endpoint.</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
 

@@ -41,7 +41,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// The inlet consumed by this sink.
+        /// The sink shape containing the inlet consumed by this sink.
         /// </summary>
         public SinkShape<TIn> Shape => (SinkShape<TIn>)Module.Shape;
 

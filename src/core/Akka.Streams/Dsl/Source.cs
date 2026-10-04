@@ -47,7 +47,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// The outlet that emits this source's elements.
+        /// The source shape containing the outlet that emits this source's elements.
         /// </summary>
         public SourceShape<TOut> Shape => (SourceShape<TOut>)Module.Shape;
 
