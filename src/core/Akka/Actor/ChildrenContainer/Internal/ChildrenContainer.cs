@@ -16,74 +16,73 @@ namespace Akka.Actor.Internal
     public interface IChildrenContainer
     {
         /// <summary>
-        /// TBD
+        /// Adds a child restart entry under a name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name or reserved name to add.</param>
+        /// <param name="stats">The child's restart statistics or a name-reservation marker.</param>
+        /// <returns>A container that includes the entry.</returns>
         IChildrenContainer Add(string name, ChildRestartStats stats);
         /// <summary>
-        /// TBD
+        /// Removes the entry for a child reference.
         /// </summary>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="child">The child reference to remove.</param>
+        /// <returns>A container with that child's entry removed.</returns>
         IChildrenContainer Remove(IActorRef child);
         /// <summary>
-        /// TBD
+        /// Looks up an entry by child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name to find.</param>
+        /// <param name="stats">Receives the child statistics or name-reservation marker when found.</param>
+        /// <returns><c>true</c> if an entry exists under the name; otherwise, <c>false</c>.</returns>
         bool TryGetByName(string name, out IChildStats stats);
         /// <summary>
-        /// TBD
+        /// Looks up the restart statistics for a child reference.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The child reference to find.</param>
+        /// <param name="stats">Receives the child's restart statistics when found.</param>
+        /// <returns><c>true</c> if the reference is a registered child; otherwise, <c>false</c>.</returns>
         #nullable enable
         bool TryGetByRef(IActorRef actor, [NotNullWhen(true)] out ChildRestartStats? stats);
         #nullable restore
         /// <summary>
-        /// TBD
+        /// The live child references in this container.
         /// </summary>
         IReadOnlyCollection<IInternalActorRef> Children { get; }
         /// <summary>
-        /// TBD
+        /// The restart statistics for live children in this container.
         /// </summary>
         IReadOnlyCollection<ChildRestartStats> Stats { get; }
         /// <summary>
-        /// TBD
+        /// Marks a child as terminated while the parent is shutting down.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The child that terminated.</param>
+        /// <returns>A container reflecting the termination state.</returns>
         IChildrenContainer ShallDie(IActorRef actor);
         /// <summary>
-        /// TBD
+        /// Reserves a child name before the child reference is created.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name to reserve.</param>
+        /// <returns>A container with the name marked as reserved.</returns>
         IChildrenContainer Reserve(string name);
         /// <summary>
-        /// TBD
+        /// Releases a previously reserved child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The reserved name to release.</param>
+        /// <returns>A container with that reservation removed.</returns>
         IChildrenContainer Unreserve(string name);
         /// <summary>
-        /// TBD
+        /// Whether the parent has begun terminating its children.
         /// </summary>
         bool IsTerminating { get; }
         /// <summary>
-        /// TBD
+        /// Whether this container is in its normal, non-terminating state.
         /// </summary>
         bool IsNormal { get; }
         /// <summary>
-        /// TBD
+        /// Checks whether the specified actor reference is registered as a child.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The actor reference to find.</param>
+        /// <returns><c>true</c> if the actor is a child; otherwise, <c>false</c>.</returns>
         bool Contains(IActorRef actor);
     }
 }
-

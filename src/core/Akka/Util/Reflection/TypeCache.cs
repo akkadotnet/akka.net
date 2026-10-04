@@ -13,7 +13,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Akka.Util.Reflection
 {
     /// <summary>
-    /// TBD
+    /// Caches type resolutions by name to avoid repeating reflection lookups.
     /// </summary>
     public static class TypeCache
     {
@@ -30,7 +30,6 @@ namespace Akka.Util.Reflection
         /// The assembly-qualified name of the type to get. See <see cref="P:System.Type.AssemblyQualifiedName"/>.
         /// If the type is in Akka.dll or in Mscorlib.dll, it is sufficient to supply the type name qualified by its namespace.
         /// </param>
-        /// <returns>TBD</returns>
         [RequiresUnreferencedCode("Resolves typeName by reflection when it is not already cached. The trimmer cannot tell which type that is, so it may have been trimmed away. Guard with TryGetCached plus AkkaFeatures.IsDynamicTypeLoadingSupported instead of calling this directly on a cache miss.")]
         public static Type GetType(string typeName)
         {

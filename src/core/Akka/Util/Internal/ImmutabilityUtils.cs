@@ -23,15 +23,15 @@ namespace Akka.Util.Internal
         #region HashSet<T>
 
         /// <summary>
-        /// TBD
+        /// Creates a new hash set containing the existing elements and the supplied item.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="set">TBD</param>
-        /// <param name="item">TBD</param>
+        /// <typeparam name="T">The type of elements in the set.</typeparam>
+        /// <param name="set">The source set to copy.</param>
+        /// <param name="item">The item to add to the new set.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="set"/> is undefined.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A new set containing the source elements and <paramref name="item"/>. The elements themselves are not cloned.</returns>
         public static HashSet<T> CopyAndAdd<T>(this HashSet<T> set, T item)
         {
             if (set == null) throw new ArgumentNullException(nameof(set), "CopyAndAdd cause exception cannot be null");
@@ -43,15 +43,15 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new hash set containing the source elements except for the supplied item.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="set">TBD</param>
-        /// <param name="item">TBD</param>
+        /// <typeparam name="T">The type of elements in the set.</typeparam>
+        /// <param name="set">The source set to copy.</param>
+        /// <param name="item">The item to remove from the new set, if present.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="set"/> is undefined.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A new set containing the source elements except for <paramref name="item"/>. The elements themselves are not cloned.</returns>
         public static HashSet<T> CopyAndRemove<T>(this HashSet<T> set, T item)
         {
             if (set == null) throw new ArgumentNullException(nameof(set), "CopyAndRemove cause exception cannot be null");
@@ -68,13 +68,13 @@ namespace Akka.Util.Internal
         #region IDictionary<T>
 
         /// <summary>
-        /// TBD
+        /// Creates a new sorted dictionary containing the source entries and the supplied entries.
         /// </summary>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <typeparam name="TValue">TBD</typeparam>
-        /// <param name="dict">TBD</param>
-        /// <param name="values">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TKey">The type of dictionary keys.</typeparam>
+        /// <typeparam name="TValue">The type of dictionary values.</typeparam>
+        /// <param name="dict">The source dictionary to copy.</param>
+        /// <param name="values">The entries to add to the new dictionary.</param>
+        /// <returns>A new sorted dictionary containing both input sequences. Keys and values are reused, not cloned.</returns>
         public static SortedDictionary<TKey, TValue> CopyAndAdd<TKey, TValue>(this SortedDictionary<TKey, TValue> dict,
             IEnumerable<KeyValuePair<TKey, TValue>> values)
         {
@@ -85,13 +85,13 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new sorted dictionary containing source entries not present in the supplied entries.
         /// </summary>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <typeparam name="TValue">TBD</typeparam>
-        /// <param name="dict">TBD</param>
-        /// <param name="values">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TKey">The type of dictionary keys.</typeparam>
+        /// <typeparam name="TValue">The type of dictionary values.</typeparam>
+        /// <param name="dict">The source dictionary to copy.</param>
+        /// <param name="values">The entries to exclude from the new dictionary.</param>
+        /// <returns>A new sorted dictionary containing the remaining entries. Keys and values are reused, not cloned.</returns>
         public static SortedDictionary<TKey, TValue> CopyAndRemove<TKey, TValue>(this SortedDictionary<TKey, TValue> dict,
             IEnumerable<KeyValuePair<TKey, TValue>> values)
         {
@@ -104,4 +104,3 @@ namespace Akka.Util.Internal
         #endregion
     }
 }
-

@@ -23,27 +23,27 @@ namespace Akka.Actor
         private readonly IActorRef _deadLetters;
 
         /// <summary>
-        /// TBD
+        /// Creates a queue that immediately forwards enqueued messages to the dead-letters reference.
         /// </summary>
-        /// <param name="deadLetters">TBD</param>
+        /// <param name="deadLetters">The reference that receives the resulting dead-letter messages.</param>
         public DeadLetterMessageQueue(IActorRef deadLetters)
         {
             _deadLetters = deadLetters;
         }
 
         /// <summary>
-        /// TBD
+        /// Always <c>false</c>, because this queue forwards messages as they are enqueued.
         /// </summary>
         public bool HasMessages => false;
         /// <summary>
-        /// TBD
+        /// Always zero, because this queue does not retain user messages.
         /// </summary>
         public int Count => 0;
         /// <summary>
-        /// TBD
+        /// Forwards the envelope as a dead letter unless it is already a dead-letter event.
         /// </summary>
-        /// <param name="receiver">TBD</param>
-        /// <param name="envelope">TBD</param>
+        /// <param name="receiver">The actor reference that would receive the message.</param>
+        /// <param name="envelope">The message and sender to forward.</param>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
             if (envelope.Message is AllDeadLetters)
@@ -60,10 +60,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// This queue never stores messages, so dequeue always fails and returns a sentinel envelope.
         /// </summary>
-        /// <param name="envelope">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="envelope">Receives a sentinel envelope because no message is available.</param>
+        /// <returns>Always <c>false</c>.</returns>
         public bool TryDequeue(out Envelope envelope)
         {
             envelope = new Envelope(new NoMessage(), ActorRefs.NoSender);
@@ -71,10 +71,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Does nothing because messages are forwarded immediately and none remain to drain.
         /// </summary>
-        /// <param name="owner">TBD</param>
-        /// <param name="deadletters">TBD</param>
+        /// <param name="owner">The actor that owned this queue.</param>
+        /// <param name="deadletters">The queue that would receive remaining messages.</param>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
             // do nothing
@@ -92,9 +92,9 @@ namespace Akka.Actor
         private readonly IActorRef _deadLetters;
 
         /// <summary>
-        /// TBD
+        /// Creates a mailbox that forwards enqueued messages to the supplied dead-letters reference and remains closed.
         /// </summary>
-        /// <param name="deadLetters">TBD</param>
+        /// <param name="deadLetters">The reference that receives user and system messages as dead letters.</param>
         public DeadLetterMailbox(IActorRef deadLetters) : base(new DeadLetterMessageQueue(deadLetters))
         {
             _deadLetters = deadLetters;
@@ -102,28 +102,27 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Always <c>false</c>; this mailbox does not queue system messages.
         /// </summary>
         internal override bool HasSystemMessages => false;
         /// <summary>
-        /// TBD
+        /// Draining this mailbox always returns an empty system-message list.
         /// </summary>
-        /// <param name="newContents">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="newContents">The replacement system-message list, which this mailbox does not use.</param>
+        /// <returns>The empty system-message list.</returns>
         internal override EarliestFirstSystemMessageList SystemDrain(LatestFirstSystemMessageList newContents)
         {
             return SystemMessageList.ENil;
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards the system message to the dead-letters reference as a dead-letter event.
         /// </summary>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="receiver">The actor reference that would receive the system message.</param>
+        /// <param name="message">The system message to publish as a dead letter.</param>
         internal override void SystemEnqueue(IActorRef receiver, SystemMessage message)
         {
             _deadLetters.Tell(new DeadLetter(message, receiver, receiver));
         }
     }
 }
-

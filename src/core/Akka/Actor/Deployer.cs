@@ -74,7 +74,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The default deployment settings applied as fallbacks when parsing actor deployments.
         /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
@@ -102,10 +102,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Looks up deployment settings for an actor path beneath the <c>/user</c> guardian.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The actor path whose deployment configuration is requested.</param>
+        /// <returns>The matching deployment settings; this overload returns <see cref="Deploy.None"/> when its path checks reject the path, and may return <c>null</c> when no deployment matches.</returns>
         public Deploy Lookup(ActorPath path)
         {
             var rawElements = path.Elements;
@@ -119,19 +119,19 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Looks up deployment settings for a sequence of actor path elements.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The actor path elements to match against configured deployment paths.</param>
+        /// <returns>The matching deployment settings, or <c>null</c> when no configured path matches.</returns>
         public Deploy Lookup(IEnumerable<string> path)
         {
             return _deployments.Value.Find(path);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds deployment settings to the deployer's path index.
         /// </summary>
-        /// <param name="deploy">TBD</param>
+        /// <param name="deploy">The deployment settings and path to register.</param>
         /// <exception cref="IllegalActorNameException">
         /// This exception is thrown if the actor name in the deployment path is empty or contains invalid ASCII.
         /// Valid ASCII includes letters and anything from <see cref="ActorPath.ValidSymbols"/>. Note that paths

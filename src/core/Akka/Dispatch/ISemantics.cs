@@ -59,9 +59,9 @@ namespace Akka.Dispatch
     public interface IDequeBasedMessageQueueSemantics : ISemantics
     {
         /// <summary>
-        /// TBD
+        /// Adds the envelope at the front of the deque so it is the next message returned by dequeue.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The envelope to place at the front of the queue.</param>
         void EnqueueFirst(Envelope envelope);
     }
 
@@ -81,4 +81,3 @@ namespace Akka.Dispatch
     {
     }
 }
-

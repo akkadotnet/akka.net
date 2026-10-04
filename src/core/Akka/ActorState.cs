@@ -428,8 +428,8 @@ namespace Akka.Actor
         /// <summary>
         /// Removes a terminated actor
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The terminated actor whose queued custom notification is being removed.</param>
+        /// <returns>The current state and the queued custom message, or <see cref="Option{T}.None"/> if no termination was queued.</returns>
         public (IActorState, Option<object>) RemoveTerminated(IActorRef actor)
         {
             if (!_terminatedQueue.ContainsKey(actor)) 
@@ -444,8 +444,8 @@ namespace Akka.Actor
         /// Adds the provided <see cref="IActorRef"/> to the `Watching` set.
         /// </summary>
         /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
-        /// <param name="msg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="msg">The optional custom message to use for this actor's termination notification.</param>
+        /// <returns>This state after adding the watch registration.</returns>
         public IActorState AddWatching(IActorRef actor, Option<object> msg)
         {
             _watching.Add(actor, msg);
@@ -456,7 +456,7 @@ namespace Akka.Actor
         /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set.
         /// </summary>
         /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
-        /// <returns>TBD</returns>
+        /// <returns>This state after adding the actor to the watched-by set.</returns>
         public IActorState AddWatchedBy(IActorRef actor)
         {
             _watchedBy.Add(actor);
@@ -637,4 +637,3 @@ namespace Akka.Actor
         }
     }
 }
-

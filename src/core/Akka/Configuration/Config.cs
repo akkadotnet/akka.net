@@ -436,8 +436,8 @@ namespace Akka.Configuration
         /// <summary>
         /// Converts the current configuration to a string 
         /// </summary>
-        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
-        /// <returns>TBD</returns>
+        /// <param name="includeFallback">When <c>true</c>, returns the root's HOCON representation; fallback values appear only if they have already been merged into that root. When <c>false</c>, uses the default configuration string representation.</param>
+        /// <returns>The root's HOCON representation when <paramref name="includeFallback"/> is <c>true</c>, including fallback values only when they are already merged into the root; otherwise, the default configuration string representation.</returns>
         public string ToString(bool includeFallback)
         {
             if (includeFallback == false)
@@ -614,4 +614,3 @@ namespace Akka.Configuration
         }
     }
 }
-

@@ -219,10 +219,10 @@ namespace Akka.Routing
         /// <summary>
         /// Factory method to create a <see cref="ConsistentHash{T}"/> instance.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="nodes">TBD</param>
-        /// <param name="virtualNodesFactor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of node stored in the hash ring.</typeparam>
+        /// <param name="nodes">The distinct nodes to place on the ring. Each node must have a distinct, non-null <see cref="object.ToString"/> value.</param>
+        /// <param name="virtualNodesFactor">The number of virtual ring positions to create for each node.</param>
+        /// <returns>A consistent hash ring built from the supplied nodes.</returns>
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
@@ -274,11 +274,11 @@ namespace Akka.Routing
         #region Hashing methods
 
         /// <summary>
-        /// TBD
+        /// Combines a node hash and virtual-node index into a ring position.
         /// </summary>
-        /// <param name="nodeHash">TBD</param>
-        /// <param name="vnode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="nodeHash">The hash of a node's ring identity.</param>
+        /// <param name="vnode">The virtual-node index to include in the hash.</param>
+        /// <returns>The combined hash used as a position on the ring.</returns>
         internal static int ConcatenateNodeHash(int nodeHash, int vnode)
         {
             unchecked
@@ -372,20 +372,20 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Computes the ring hash for serialized key bytes.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="bytes">The bytes to hash.</param>
+        /// <returns>The 32-bit hash used by the ring.</returns>
         internal static int HashFor(byte[] bytes)
         {
             return MurmurHash.ByteHash(bytes);
         }
 
         /// <summary>
-        /// TBD
+        /// Computes the ring hash for a node identity string.
         /// </summary>
-        /// <param name="hashKey">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="hashKey">The node identity string.</param>
+        /// <returns>The 32-bit hash used by the ring.</returns>
         internal static int HashFor(string hashKey)
         {
             return MurmurHash.StringHash(hashKey);
@@ -394,4 +394,3 @@ namespace Akka.Routing
         #endregion
     }
 }
-

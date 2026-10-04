@@ -60,7 +60,7 @@ public class Cancelable : ICancelable, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="Cancelable"/> class.
     /// </summary>
-    /// <param name="scheduler">TBD</param>
+    /// <param name="scheduler">The scheduler whose advanced scheduling API is used for delayed cancellation.</param>
     public Cancelable(IScheduler scheduler)
         : this(scheduler.Advanced)
     {
@@ -70,7 +70,7 @@ public class Cancelable : ICancelable, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="Cancelable"/> class.
     /// </summary>
-    /// <param name="scheduler">TBD</param>
+    /// <param name="scheduler">The action scheduler used to manage this cancelable's cancellation token.</param>
     public Cancelable(IActionScheduler scheduler)
         : this(scheduler, new CancellationTokenSource())
     {

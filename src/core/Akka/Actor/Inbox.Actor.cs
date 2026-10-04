@@ -13,7 +13,7 @@ using Akka.Event;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Buffers messages for inbox clients and matches them with pending receive queries.
     /// </summary>
     internal class InboxActor : ActorBase
     {
@@ -33,18 +33,18 @@ namespace Akka.Actor
         private readonly IQuery[] _matched = new IQuery[1];
 
         /// <summary>
-        /// TBD
+        /// Creates an inbox actor with a maximum number of buffered messages.
         /// </summary>
-        /// <param name="size">TBD</param>
+        /// <param name="size">The maximum number of messages to retain when no receive query is waiting.</param>
         public InboxActor(int size)
         {
             _size = size;
         }
 
         /// <summary>
-        /// TBD
+        /// Records a pending query and the actor that requested it.
         /// </summary>
-        /// <param name="query">TBD</param>
+        /// <param name="query">The receive request to queue.</param>
         private void EnqueueQuery(IQuery query)
         {
             var q = query.WithClient(Sender);
@@ -53,9 +53,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Buffers a message while the inbox has no matching pending query.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message to buffer.</param>
         private void EnqueueMessage(object message)
         {
             if (_messages.Count < _size)
@@ -73,10 +73,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Tests whether a queued query accepts the current message.
         /// </summary>
-        /// <param name="query">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="query">The pending query to evaluate.</param>
+        /// <returns><c>true</c> when the query is an unconditional receive or its selection predicate matches.</returns>
         private bool ClientPredicate(IQuery query)
         {
             if (query is Select select)
@@ -86,10 +86,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Tests the current select query against a candidate buffered message.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The candidate message.</param>
+        /// <returns><c>true</c> when an active selection predicate matches the message.</returns>
         private bool MessagePredicate(object message)
         {
             if (_currentSelect.HasValue)
@@ -99,10 +99,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Processes receive queries, watched-actor notifications, and messages sent to the inbox.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The query, control message, or user message to process.</param>
+        /// <returns>Always <c>true</c>, because the inbox actor handles every message.</returns>
         protected override bool Receive(object message)
         {
             if (message is Get get)
