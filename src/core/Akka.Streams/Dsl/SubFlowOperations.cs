@@ -46,7 +46,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="partialFunc">Maps a failure to an optional recovery value; return <see cref="Option{T}.None"/> to emit no recovery element.</param>
+        /// <param name="partialFunc">Maps a failure to an optional recovery value. Return <see cref="Option{T}.None"/> to leave the failure unrecovered; no recovery element is emitted.</param>
         public static SubFlow<Option<TOut>, TMat, TClosed> Recover<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<Exception, Option<TOut>> partialFunc)
         {
             return (SubFlow<Option<TOut>, TMat, TClosed>)InternalFlowOperations.Recover(flow, partialFunc);
@@ -1666,9 +1666,10 @@ namespace Akka.Streams.Dsl
             (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.DivertTo(flow, that, when);
 
         ///<summary>
-        /// Materializes to <see cref="Task{Done}"/> that completes on stream termination.
-        /// The task completes with success when the stream completes normally or is canceled downstream; it faults
-        /// with the stream termination failure when the stream fails.
+        /// Passes a <see cref="Task{Done}"/> representing stream termination to <paramref name="materializerFunction"/>;
+        /// that function determines the resulting materialized value. The task succeeds on normal upstream completion
+        /// or nonfailure downstream cancellation. It faults on upstream failure, downstream cancellation with a failure
+        /// cause, or abrupt stage termination.
         ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
