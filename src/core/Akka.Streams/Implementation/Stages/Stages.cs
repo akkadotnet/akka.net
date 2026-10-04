@@ -263,11 +263,11 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         public static readonly Attributes UnfoldInf = Attributes.CreateName("unfoldInf");
         /// <summary>
-        /// Provides the default stage attribute named `unfoldResourceSource`.
+        /// Provides the `unfoldResourceSource` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes UnfoldResourceSource = Attributes.CreateName("unfoldResourceSource").And(IODispatcher);
         /// <summary>
-        /// Provides the default stage attribute named `unfoldResourceSourceAsync`.
+        /// Provides the `unfoldResourceSourceAsync` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes UnfoldResourceSourceAsync = Attributes.CreateName("unfoldResourceSourceAsync").And(IODispatcher);
         /// <summary>
@@ -361,15 +361,15 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         public static readonly Attributes QueueSource = Attributes.CreateName("queueSource");
         /// <summary>
-        /// Provides the default stage attribute named `inputStreamSource`.
+        /// Provides the `inputStreamSource` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes InputStreamSource = Attributes.CreateName("inputStreamSource").And(IODispatcher);
         /// <summary>
-        /// Provides the default stage attribute named `outputStreamSource`.
+        /// Provides the `outputStreamSource` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes OutputStreamSource = Attributes.CreateName("outputStreamSource").And(IODispatcher);
         /// <summary>
-        /// Provides the default stage attribute named `fileSource`.
+        /// Provides the `fileSource` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes FileSource = Attributes.CreateName("fileSource").And(IODispatcher);
 
@@ -382,11 +382,11 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         public static readonly Attributes CancelledSink = Attributes.CreateName("cancelledSink");
         /// <summary>
-        /// Provides the default stage attribute named `firstSink`.
+        /// Provides the `firstSink` stage attribute together with an input buffer configured with initial and maximum sizes of one.
         /// </summary>
         public static readonly Attributes FirstSink = Attributes.CreateName("firstSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
         /// <summary>
-        /// Provides the default stage attribute named `firstOrDefaultSink`.
+        /// Provides the `firstOrDefaultSink` stage attribute together with an input buffer configured with initial and maximum sizes of one.
         /// </summary>
         public static readonly Attributes FirstOrDefaultSink = Attributes.CreateName("firstOrDefaultSink").And(Attributes.CreateInputBuffer(initial: 1, max: 1));
         /// <summary>
@@ -438,15 +438,15 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         public static readonly Attributes LazySource = Attributes.CreateName("lazySource");
         /// <summary>
-        /// Provides the default stage attribute named `inputStreamSink`.
+        /// Provides the `inputStreamSink` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes InputStreamSink = Attributes.CreateName("inputStreamSink").And(IODispatcher);
         /// <summary>
-        /// Provides the default stage attribute named `outputStreamSink`.
+        /// Provides the `outputStreamSink` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes OutputStreamSink = Attributes.CreateName("outputStreamSink").And(IODispatcher);
         /// <summary>
-        /// Provides the default stage attribute named `fileSink`.
+        /// Provides the `fileSink` stage attribute together with the I/O dispatcher attribute.
         /// </summary>
         public static readonly Attributes FileSink = Attributes.CreateName("fileSink").And(IODispatcher);
         /// <summary>
@@ -492,7 +492,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// Creates the concrete stage using the effective attributes supplied by materialization.
         /// </summary>
-        /// <param name="effectiveAttributes">The attributes inherited by the materialized stage.</param>
+        /// <param name="effectiveAttributes">The effective attributes, including inherited and stage-local attributes.</param>
         /// <returns>The concrete stage implementation.</returns>
 #pragma warning disable CS0618 // Type or member is obsolete
         IStage<TIn, TOut> Create(Attributes effectiveAttributes);
@@ -523,7 +523,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// Creates the concrete stage using the effective attributes supplied by materialization.
         /// </summary>
-        /// <param name="effectiveAttributes">The attributes inherited by the materialized stage.</param>
+        /// <param name="effectiveAttributes">The effective attributes, including inherited and stage-local attributes.</param>
         /// <returns>The concrete stage implementation.</returns>
 #pragma warning disable CS0618 // Type or member is obsolete
         public abstract IStage<TIn, TOut> Create(Attributes effectiveAttributes);
@@ -539,7 +539,7 @@ namespace Akka.Streams.Implementation.Stages
     }
 
     /// <summary>
-    /// Sink stage that materializes a task completed with the first input element or the type's default value.
+    /// Sink stage that materializes a task with the first input element, returning the type's default for an empty stream unless configured to fault.
     /// </summary>
     /// <typeparam name="TIn">The input element type.</typeparam>
     public sealed class FirstOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>
@@ -623,7 +623,7 @@ namespace Akka.Streams.Implementation.Stages
     }
 
     /// <summary>
-    /// Sink stage that materializes a task completed with the last input element or the type's default value.
+    /// Sink stage that materializes a task with the last input element, returning the type's default for an empty stream unless configured to fault.
     /// </summary>
     /// <typeparam name="TIn">The input element type.</typeparam>
     public sealed class LastOrDefault<TIn> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<TIn>>

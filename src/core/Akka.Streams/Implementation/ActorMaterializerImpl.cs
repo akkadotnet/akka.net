@@ -233,7 +233,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Gets whether shutdown has been requested for this materializer.
+        /// Gets whether the materializer has been shut down or its supervisor has stopped.
         /// </summary>
         public override bool IsShutdown => _haveShutDown.Value;
 
@@ -438,7 +438,7 @@ namespace Akka.Streams.Implementation
             => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
         /// <summary>
-        /// Materializes a graph while registering its subflow interpreter shell.
+        /// Materializes a graph and supplies the shell-registration callback used when its effective attributes have no async boundary.
         /// </summary>
         /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
         /// <param name="runnable">The closed graph to materialize.</param>
@@ -447,7 +447,7 @@ namespace Akka.Streams.Implementation
             => _delegateMaterializer.Materialize(runnable, _registerShell);
 
         /// <summary>
-        /// Materializes a graph with the supplied initial attributes and registers its subflow shell.
+        /// Materializes a graph with the supplied initial attributes and supplies the shell-registration callback when effective attributes have no async boundary.
         /// </summary>
         /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
         /// <param name="runnable">The closed graph to materialize.</param>
@@ -482,7 +482,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// Actor-system extension that provides a counter for generated flow names.
+    /// Actor-system extension that exposes an atomic counter.
     /// </summary>
     public class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
     {
@@ -490,12 +490,12 @@ namespace Akka.Streams.Implementation
         /// Gets or creates this extension for the actor system.
         /// </summary>
         /// <param name="system">The actor system that owns the extension.</param>
-        /// <returns>The system's flow-name counter extension.</returns>
+        /// <returns>The actor system's counter extension.</returns>
         public static FlowNameCounter Instance(ActorSystem system)
             => system.WithExtension<FlowNameCounter, FlowNameCounter>();
 
         /// <summary>
-        /// Gets the counter used to assign flow-name sequence numbers.
+        /// Gets the counter exposed by this extension.
         /// </summary>
         public readonly AtomicCounterLong Counter = new(0);
 
@@ -608,7 +608,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Creates local actor properties for the stream supervisor.
         /// </summary>
-        /// <param name="settings">The materializer settings shared with stream actors.</param>
+        /// <param name="settings">The materializer settings stored on the supervisor.</param>
         /// <param name="haveShutdown">The shutdown flag updated when the supervisor stops.</param>
         /// <returns>Local actor properties for creating the supervisor.</returns>
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
@@ -623,7 +623,7 @@ namespace Akka.Streams.Implementation
         private static readonly EnumerableActorName ActorName = new EnumerableActorNameImpl("StreamSupervisor", new AtomicCounterLong(0L));
 
         /// <summary>
-        /// Gets the materializer settings passed to child stream actors.
+        /// Gets the materializer settings stored by this supervisor.
         /// </summary>
         public readonly ActorMaterializerSettings Settings;
         /// <summary>
@@ -634,7 +634,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Creates a stream supervisor with the supplied settings and shutdown state.
         /// </summary>
-        /// <param name="settings">The settings passed to materialized stream actors.</param>
+        /// <param name="settings">The settings stored by this supervisor.</param>
         /// <param name="haveShutdown">The shared flag set when this supervisor stops.</param>
         /// If this changes you must also change StreamSupervisor.Props as well!
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)

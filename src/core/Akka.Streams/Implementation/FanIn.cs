@@ -40,11 +40,11 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// Gets the state ready when all marked inputs have pending elements and completed when any marked input is depleted.
+        /// Gets a state ready when the tracked marked-pending count equals the marked count, and completed when the tracked marked-depleted count is greater than zero.
         /// </summary>
         public readonly TransferState AllOfMarkedInputs;
         /// <summary>
-        /// Gets the state ready when any marked input has a pending element and completed when all marked inputs are depleted.
+        /// Gets a state ready when the tracked marked-pending count is greater than zero, and completed when the tracked marked-depleted count equals the marked count and the marked-pending count is zero.
         /// </summary>
         public readonly TransferState AnyOfMarkedInputs;
         /// <summary>
@@ -149,10 +149,10 @@ namespace Akka.Streams.Implementation
         public bool IsAllCompleted => _inputCount == _completedCounter;
 
         /// <summary>
-        /// Creates a transfer state for an input that is ready while any marked input has data and completes when this input is depleted, canceled, or completed without pending data.
+        /// Creates a state ready when the tracked marked-pending count is positive and completed when this input's depleted or canceled bit is clear, or its pending bit is set while its completed bit is clear.
         /// </summary>
-        /// <param name="id">The input whose depletion and completion affect the state.</param>
-        /// <returns>A state that observes this input and aggregate marked-input availability.</returns>
+        /// <param name="id">The input whose state bits are checked by the completion predicate.</param>
+        /// <returns>A state using the marked-pending counter for readiness and this input's bit checks for completion.</returns>
         public TransferState InputsAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -161,10 +161,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Creates a transfer state that is ready when this input is pending or depleted and never completes.
+        /// Creates a transfer state that is ready when this input's pending or depleted bit is clear and never completes.
         /// </summary>
-        /// <param name="id">The input whose pending and depleted state is observed.</param>
-        /// <returns>A state that becomes ready for a pending element or depletion.</returns>
+        /// <param name="id">The input whose pending and depleted bits are checked.</param>
+        /// <returns>A state that becomes ready when either bit is clear.</returns>
         public TransferState InputsOrCompleteAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -173,7 +173,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels all upstream inputs once.
+        /// Sets the all-input cancellation guard and calls <see cref="Cancel(int)"/> once for each input index.
         /// </summary>
         public void Cancel()
         {
@@ -186,7 +186,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels one upstream input and removes it from the marked-input set.
+        /// If the canceled-state bit is set, calls the buffer's Cancel method, sets the bit, and calls <see cref="UnmarkInput(int)"/>; when the bit is clear, it does nothing.
         /// </summary>
         /// <param name="input">The input index to cancel.</param>
         public void Cancel(int input)
@@ -218,9 +218,9 @@ namespace Akka.Streams.Implementation
         public virtual void OnCompleteWhenNoInput() { }
 
         /// <summary>
-        /// Adds an input to the set considered by marked-input transfer states.
+        /// When the marked-state bit is set, increments tracking counters for clear depleted and pending bits, sets the marked bit again, and increments the marked count.
         /// </summary>
-        /// <param name="input">The input index to include.</param>
+        /// <param name="input">The input index whose marked bit and counters are updated.</param>
         public void MarkInput(int input)
         {
             if (!IsMarked(input))
@@ -236,9 +236,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Removes an input from the set considered by marked-input transfer states.
+        /// When the marked-state bit is clear, decrements tracking counters for clear depleted and pending bits, clears the marked bit, and decrements the marked count.
         /// </summary>
-        /// <param name="input">The input index to exclude.</param>
+        /// <param name="input">The input index whose marked bit and counters are updated.</param>
         public void UnmarkInput(int input)
         {
             if (IsMarked(input))
@@ -254,7 +254,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Includes every input in marked-input readiness calculations.
+        /// Calls <see cref="MarkInput(int)"/> for every input index.
         /// </summary>
         public void MarkAllInputs()
         {
@@ -263,7 +263,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Excludes every input from marked-input readiness calculations.
+        /// Calls <see cref="UnmarkInput(int)"/> for every input index.
         /// </summary>
         public void UnmarkAllInputs()
         {
@@ -272,10 +272,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Finds the next marked input that has a pending element, starting at the preferred index.
+        /// Searches from the preferred index for an input whose marked and pending bits are both clear.
         /// </summary>
-        /// <exception cref="IllegalStateException">No marked input has a pending element.</exception>
-        /// <returns>The index of the next input eligible for dequeue.</returns>
+        /// <exception cref="IllegalStateException">No input has both bits clear.</exception>
+        /// <returns>The first input index found by the bit checks.</returns>
         public int IdToDequeue()
         {
             var id = _preferredId;
@@ -292,13 +292,13 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Removes a buffered element from the specified input and updates its pending/depleted state.
+        /// Attempts to dequeue from an input, proceeding only when its depleted bit is set and its pending bit is clear, then updates tracked state.
         /// </summary>
         /// <param name="id">The input index from which to remove an element.</param>
         /// <exception cref="ArgumentException">
-        /// The selected input is depleted or has no pending element.
+        /// The depleted bit is clear, or the pending bit is set.
         /// </exception>
-        /// <returns>The next buffered element from that input.</returns>
+        /// <returns>The element returned by the input buffer.</returns>
         public object Dequeue(int id)
         {
             if (IsDepleted(id))
@@ -329,16 +329,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Dequeues from the next eligible marked input, then advances the preferred input index.
+        /// Finds an input with marked and pending bits clear, advances the preferred index past it, and attempts to dequeue from it.
         /// </summary>
-        /// <returns>The next element from an eligible marked input.</returns>
+        /// <returns>The element returned by the selected input buffer.</returns>
         public object DequeueAndYield() => DequeueAndYield(IdToDequeue());
 
         /// <summary>
-        /// Dequeues from a specified input and sets the next preferred index after it.
+        /// Sets the preferred index after the specified input, then attempts to dequeue from it.
         /// </summary>
-        /// <param name="id">The input index to dequeue from.</param>
-        /// <returns>The next buffered element from that input.</returns>
+        /// <param name="id">The input index passed to the dequeue checks.</param>
+        /// <returns>The element returned by that input buffer.</returns>
         public object DequeueAndYield(int id)
         {
             _preferredId = (id + 1) % _inputCount;
@@ -346,10 +346,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Dequeues from the next eligible marked input, beginning the search at the preferred index.
+        /// Sets the preferred index, searches for clear marked and pending bits, then attempts to dequeue from the selected input.
         /// </summary>
-        /// <param name="preferred">The index to use as the start of the next search.</param>
-        /// <returns>The next buffered element from the selected input.</returns>
+        /// <param name="preferred">The index from which the bit-check search starts.</param>
+        /// <returns>The element returned by the selected input buffer.</returns>
         public object DequeuePreferring(int preferred)
         {
             _preferredId = preferred;
@@ -544,7 +544,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// Actor base class that merges indexed upstream inputs and emits their elements downstream.
+    /// Base actor for indexed upstream inputs and a downstream output; a transfer phase determines how elements are emitted.
     /// </summary>
     /// <typeparam name="T">The type of elements accepted from and emitted to the stream.</typeparam>
     public abstract class FanIn<T> : ActorBase, IPump

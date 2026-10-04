@@ -53,7 +53,7 @@ namespace Akka.Streams.Implementation
         private int _preferredId;
 
         /// <summary>
-        /// Creates one output manager for each downstream subscription.
+        /// Creates one output manager for each configured output.
         /// </summary>
         /// <param name="outputCount">The number of outputs.</param>
         /// <param name="impl">The actor that receives output subscription messages.</param>
@@ -171,10 +171,10 @@ namespace Akka.Streams.Implementation
         public bool IsCancelled(int output) => _cancelled[output];
 
         /// <summary>
-        /// Gets whether the indexed output received an error.
+        /// Gets whether the indexed output was marked errored by <see cref="Error(int, Exception)"/>.
         /// </summary>
         /// <param name="output">The output index to inspect.</param>
-        /// <returns><see langword="true"/> if an error was sent to the output.</returns>
+        /// <returns><see langword="true"/> if the output was marked errored.</returns>
         public bool IsErrored(int output) => _errored[output];
 
         /// <summary>
@@ -206,9 +206,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Sends the failure to every output that has not already terminated.
+        /// Calls <see cref="Error(int, Exception)"/> for each output that has not already terminated.
         /// </summary>
-        /// <param name="e">The failure to send downstream.</param>
+        /// <param name="e">The failure passed to each eligible output manager.</param>
         public void Cancel(Exception e)
         {
             if (!_bunchCancelled)
@@ -220,10 +220,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Sends a failure to one output unless it has already terminated.
+        /// Passes a failure to one output manager and marks it errored if that call returns.
         /// </summary>
         /// <param name="output">The output index to fail.</param>
-        /// <param name="e">The failure to send downstream.</param>
+        /// <param name="e">The failure passed to the output manager.</param>
         public void Error(int output, Exception e)
         {
             if (!_errored[output] && !_cancelled[output] && !_completed[output])
@@ -295,10 +295,10 @@ namespace Akka.Streams.Implementation
         public void UnmarkCancelledOutputs(bool enabled) => _unmarkCancelled = enabled;
 
         /// <summary>
-        /// Finds the next marked output with demand, starting at the preferred index.
+        /// Checks the preferred output for marked demand; if it is ineligible, advances once and throws when the new index differs from the preferred index. With one output, an ineligible index wraps to itself and the search repeats.
         /// </summary>
-        /// <exception cref="ArgumentException">No marked output has demand.</exception>
-        /// <returns>The index of the next eligible output.</returns>
+        /// <exception cref="ArgumentException">The preferred output is ineligible and advancing the index changes it, regardless of whether the new index is eligible.</exception>
+        /// <returns>The preferred index when that output is marked and has demand.</returns>
         public int IdToEnqueue()
         {
             var id = _preferredId;
@@ -380,7 +380,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Hook called when a downstream output cancels.
+        /// No-op method invoked when a downstream output cancels.
         /// </summary>
         /// <param name="output">The output index that canceled.</param>
         public void OnCancel(int output)
@@ -616,9 +616,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels the input, fails outputs, and runs the pump to complete its failure phase.
+        /// Cancels the input, passes the failure to unterminated output managers, and runs the current pump phase.
         /// </summary>
-        /// <param name="e">The failure to signal downstream.</param>
+        /// <param name="e">The failure passed to the output managers.</param>
        protected void Fail(Exception e)
         {
             if (_settings.IsDebugLogging)
@@ -728,15 +728,14 @@ namespace Akka.Streams.Implementation
     /// TODO Find out where this class will be used and check if the type parameter fit
     /// since we need to cast messages into a tuple and therefore maybe need additional type parameters
     /// </summary>
-    /// <typeparam name="T">The element type of the tuple accepted from upstream.</typeparam>
+    /// <typeparam name="T">The type of each item in the two-element tuple accepted from upstream.</typeparam>
     internal sealed class Unzip<T> : FanOut<T>
     {
         /// <summary>
-        /// Creates an unzip actor that splits two-element tuples across two outputs.
+        /// Creates an unzip actor that splits two-element tuples across two outputs. Its transfer action throws <see cref="ArgumentException"/> if an input is not a <see cref="ValueTuple{T1,T2}"/>.
         /// </summary>
         /// <param name="settings">Materializer settings used to configure the input buffer.</param>
         /// <param name="outputCount">The number of outputs; this actor requires two.</param>
-        /// <exception cref="ArgumentException">The input element is not a <see cref="ValueTuple{T1,T2}"/>.</exception>
         /// If this gets changed you must change <see cref="Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
