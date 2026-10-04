@@ -16,14 +16,14 @@ using Akka.Util.Internal;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// TBD
+    /// Schedules tasks through an actor cell so asynchronous actor work is serialized with that actor's mailbox.
     /// </summary>
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the message whose actor handler started the currently scheduled asynchronous operation.
         /// </summary>
         public object CurrentMessage { get; private set; }
         
@@ -59,7 +59,7 @@ namespace Akka.Dispatch
         }
         
         /// <summary>
-        /// TBD
+        /// Reports the scheduler's concurrency limit, which is one task at a time.
         /// </summary>
         public override int MaximumConcurrencyLevel
         {
@@ -67,18 +67,18 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Scheduled tasks are not exposed for debugger enumeration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>null</c>, indicating that scheduled tasks are not available for enumeration.</returns>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             return null;
         }
 
         /// <summary>
-        /// TBD
+        /// Executes a task inline when already running for this actor, or queues it through the actor cell.
         /// </summary>
-        /// <param name="task">TBD</param>
+        /// <param name="task">The task to execute or schedule.</param>
         protected override void QueueTask(Task task)
         {
             if ((task.CreationOptions & TaskCreationOptions.LongRunning) == TaskCreationOptions.LongRunning)
@@ -109,20 +109,20 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to run a task using this scheduler's execution rules.
         /// </summary>
-        /// <param name="task">TBD</param>
+        /// <param name="task">The task to execute.</param>
         internal void ExecuteTask(Task task)
         {
             TryExecuteTask(task);
         }
 
         /// <summary>
-        /// TBD
+        /// Does not execute tasks inline through the base TaskScheduler callback; QueueTask handles eligible inline execution.
         /// </summary>
-        /// <param name="task">TBD</param>
-        /// <param name="taskWasPreviouslyQueued">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="task">The task for which inline execution was requested.</param>
+        /// <param name="taskWasPreviouslyQueued">Whether the task was already queued.</param>
+        /// <returns>Always <c>false</c>.</returns>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             // Prevent inline execution, it will execute inline anyway in QueueTask if we
@@ -131,9 +131,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Runs an action as actor-scheduled asynchronous work, suspending the actor mailbox until it completes.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">The synchronous action to run.</param>
         public static void RunTask(Action action)
         {
             RunTask(() =>
@@ -144,9 +144,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Runs an asynchronous operation as actor-scheduled work and resumes the mailbox when it completes.
         /// </summary>
-        /// <param name="asyncAction">TBD</param>
+        /// <param name="asyncAction">The asynchronous operation to run.</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if this method is called outside an actor context.
         /// </exception>
