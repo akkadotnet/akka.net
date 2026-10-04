@@ -11,16 +11,16 @@ using Akka.Util;
 namespace Akka.Streams.Util
 {
     /// <summary>
-    /// TBD
+    /// Utility methods for object values.
     /// </summary>
     public static class ObjectExtensions
     {
         /// <summary>
-        /// TBD
+        /// Checks whether a value equals the default value of its type.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">Type of the value being compared.</typeparam>
+        /// <param name="obj">Value to compare with <see langword="default"/>.</param>
+        /// <returns><see langword="true"/> when <paramref name="obj"/> equals the default value of <typeparamref name="T"/>; otherwise, <see langword="false"/>.</returns>
         public static bool IsDefaultForType<T>(this T obj) => EqualityComparer<T>.Default.Equals(obj, default(T));
     }
 }

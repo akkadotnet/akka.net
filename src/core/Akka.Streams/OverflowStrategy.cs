@@ -88,7 +88,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Exception raised when a stream buffer exceeds its capacity under an overflow strategy that fails the stream.
     /// </summary>
     [Serializable]
     public class BufferOverflowException : Exception
