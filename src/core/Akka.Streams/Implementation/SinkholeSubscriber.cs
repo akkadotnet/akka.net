@@ -15,7 +15,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements accepted and discarded by this subscriber.</typeparam>
     [InternalApi]
     public sealed class SinkholeSubscriber<TIn> : ISubscriber<TIn>
     {
@@ -23,18 +23,18 @@ namespace Akka.Streams.Implementation
         private bool _running;
 
         /// <summary>
-        /// TBD
+        /// Creates a subscriber that drains its subscription and completes a task when the publisher terminates.
         /// </summary>
-        /// <param name="whenCompleted">TBD</param>
+        /// <param name="whenCompleted">The task completion source completed when the subscription terminates.</param>
         public SinkholeSubscriber(TaskCompletionSource<NotUsed> whenCompleted)
         {
             _whenCompleted = whenCompleted;
         }
 
         /// <summary>
-        /// TBD
+        /// Requests all elements from the first subscription and cancels any subsequent subscription.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription supplied by the publisher.</param>
         public void OnSubscribe(ISubscription subscription)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -48,9 +48,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the task with the publisher's failure.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure reported by the publisher.</param>
         public void OnError(Exception cause)
         {
             ReactiveStreamsCompliance.RequireNonNullException(cause);
@@ -58,14 +58,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the task when the publisher completes normally.
         /// </summary>
         public void OnComplete() => _whenCompleted.TrySetResult(NotUsed.Instance);
 
         /// <summary>
-        /// TBD
+        /// Validates and discards an element delivered by the publisher.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element delivered by the publisher.</param>
         public void OnNext(TIn element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
     }
 }

@@ -309,9 +309,9 @@ namespace Akka.Streams.Implementation.StreamRef
             }
 
             /// <summary>
-            /// TBD
+            /// Records the first sender as the stream partner and rejects messages from any other sender.
             /// </summary>
-            /// <exception cref="InvalidPartnerActorException"> Thrown when <paramref name="partner"/> is invalid</exception>
+            /// <exception cref="InvalidPartnerActorException">Thrown when <paramref name="partner"/> is not the established partner.</exception>
             private void ObserveAndValidateSender(IActorRef partner, string failureMessage)
             {
                 Debug.Assert(_stageActor != null, nameof(_stageActor) + " != null");
