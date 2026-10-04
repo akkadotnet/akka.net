@@ -104,10 +104,10 @@ namespace Akka.Actor
         FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs);
 
         /// <summary>
-        /// Actor factory with create-only semantics: will create an actor as
+        /// Actor factory with create-only semantics: creates an actor as
         /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different
-        /// in case of remote supervision). If <paramref name="systemService"/> is true, deployment is
-        /// bypassed (local-only). If a value for<paramref name="deploy"/> is passed in, it should be
+        /// in case of remote supervision). System-service status may constrain placement (for example, requiring local creation);
+        /// deployment lookup is controlled independently by <paramref name="lookupDeploy"/>. If a value for <paramref name="deploy"/> is passed in, it should be
         /// regarded as taking precedence over the nominally applicable settings,
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
@@ -116,19 +116,19 @@ namespace Akka.Actor
         /// <param name="props">The actor configuration, including any deployment and router settings.</param>
         /// <param name="supervisor">The actor responsible for supervising the new actor.</param>
         /// <param name="path">The path assigned to the actor.</param>
-        /// <param name="systemService">Whether this actor is a system service that must be created locally without deployment lookup.</param>
+        /// <param name="systemService">Whether this is a system service, which can constrain provider placement behavior.</param>
         /// <param name="deploy">Deployment settings that take precedence over the values in <paramref name="props"/> before configuration lookup.</param>
         /// <param name="lookupDeploy">Whether deployment settings should be looked up for the actor path.</param>
         /// <param name="async">Whether actor initialization should be asynchronous where supported.</param>
         /// <returns>The created actor reference.</returns>
         IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
-        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        /// <summary>Gets the actor reference for a specified path. A missing valid local path may resolve to an empty local reference; invalid or foreign paths resolve to dead letters.</summary>
         /// <param name="path">The serialized actor path to parse and resolve.</param>
-        /// <returns>The actor reference at that path, or dead letters when the path cannot be resolved.</returns>
+        /// <returns>The actor reference at that path, an empty local reference for a missing valid local path, or dead letters for an invalid or foreign path.</returns>
         IActorRef ResolveActorRef(string path);
 
-        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        /// <summary>Gets the actor reference for a path. A valid local path with no actor may resolve to an empty local reference.</summary>
         /// <param name="actorPath">The actor path to resolve.</param>
         /// <returns>The actor reference at that path, or an empty reference when no actor exists there.</returns>
         IActorRef ResolveActorRef(ActorPath actorPath);
@@ -508,10 +508,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Actor factory with create-only semantics: will create an actor as
+        /// Actor factory with create-only semantics: creates an actor as
         /// described by <paramref name="props" /> with the given <paramref name="supervisor" /> and <paramref name="path" /> (may be different
-        /// in case of remote supervision). If <paramref name="systemService" /> is true, deployment is
-        /// bypassed (local-only). If a value for<paramref name="deploy" /> is passed in, it should be
+        /// in case of remote supervision). System-service status may constrain placement (for example, requiring local creation);
+        /// deployment lookup is controlled independently by <paramref name="lookupDeploy" />. If a value for <paramref name="deploy" /> is passed in, it should be
         /// regarded as taking precedence over the nominally applicable settings,
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
@@ -520,7 +520,7 @@ namespace Akka.Actor
         /// <param name="props">The actor configuration, including any deployment and router settings.</param>
         /// <param name="supervisor">The actor responsible for supervising the new actor.</param>
         /// <param name="path">The path assigned to the actor.</param>
-        /// <param name="systemService">Whether this actor is a system service that must be created locally without deployment lookup.</param>
+        /// <param name="systemService">Whether this is a system service, which can constrain provider placement behavior.</param>
         /// <param name="deploy">Deployment settings that take precedence over the values in <paramref name="props"/> before configuration lookup.</param>
         /// <param name="lookupDeploy">Whether deployment settings should be looked up for the actor path.</param>
         /// <param name="async">Whether actor initialization should be asynchronous where supported.</param>

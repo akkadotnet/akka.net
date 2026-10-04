@@ -40,7 +40,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Starts watching an actor and delivers the supplied message when it stops.
+        /// Starts watching an actor and delivers the supplied message when it stops. If the actor is already being watched,
+        /// this call leaves the existing watch registration and its notification message unchanged.
         /// </summary>
         /// <param name="subject">The actor to monitor.</param>
         /// <param name="message">The message to deliver to this actor after the watched actor terminates.</param>

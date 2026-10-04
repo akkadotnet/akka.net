@@ -81,7 +81,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// Records a restart attempt and checks whether the strategy's retry limit permits it.
         /// </summary>
-        /// <param name="maxNrOfRetries">The maximum number of retries, or a nonpositive value for no count limit.</param>
+        /// <param name="maxNrOfRetries">The maximum number of retries; a negative value removes the count limit, while zero permits no retries.</param>
         /// <param name="withinTimeMilliseconds">The retry window in milliseconds, or a nonpositive value for no time window.</param>
         /// <returns><c>true</c> if another restart is permitted; otherwise, <c>false</c>.</returns>
         public bool RequestRestartPermission(int maxNrOfRetries, int withinTimeMilliseconds)

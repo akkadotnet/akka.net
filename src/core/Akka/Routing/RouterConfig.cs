@@ -433,7 +433,7 @@ namespace Akka.Routing
         /// Initializes a new instance of the <see cref="FromConfig" /> class.
         /// </summary>
         /// <param name="resizer">The routee resizer, or <c>null</c> to use a fixed routee count.</param>
-        /// <param name="supervisorStrategy">The strategy used to supervise the router head and its routees.</param>
+        /// <param name="supervisorStrategy">The strategy used by the router pool actor to supervise its routees.</param>
         /// <param name="routerDispatcher">The dispatcher used by the router head.</param>
         public FromConfig(Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher)
             : base(0, resizer, supervisorStrategy, routerDispatcher, false)
@@ -487,9 +487,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Setting the supervisor strategy to be used for the "head" Router actor
+        /// Sets the supervisor strategy used by the router pool actor to supervise its routees.
         /// </summary>
-        /// <param name="strategy">The supervisor strategy to use for the router head.</param>
+        /// <param name="strategy">The supervisor strategy to use for the routees.</param>
         /// <returns>A copy of this configuration with the supplied strategy.</returns>
         public FromConfig WithSupervisorStrategy(SupervisorStrategy strategy)
         {

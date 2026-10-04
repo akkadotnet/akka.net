@@ -46,7 +46,7 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// The root guardian supervises itself.
+        /// The root guardian's parent reference resolves to the root guardian itself.
         /// </summary>
         public override IInternalActorRef Parent { get { return this; } }
 
