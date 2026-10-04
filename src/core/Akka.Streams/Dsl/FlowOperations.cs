@@ -875,6 +875,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
         /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` or has more than `maxNumber` elements</para>
+        /// A single element whose weight exceeds <paramref name="maxWeight"/> can still be emitted in its own group.
         /// <para>Completes when upstream completes(emits last group)</para>
         /// <para>Cancels when downstream completes</para>
         /// </summary>
@@ -882,7 +883,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut">The flow output element type contained in each group.</typeparam>
         /// <typeparam name="TMat">The flow materialized value type.</typeparam>
         /// <param name="flow">The flow whose output elements are grouped by weight and time.</param>
-        /// <param name="maxWeight">The maximum total element weight buffered in a group.</param>
+        /// <param name="maxWeight">The group weight threshold; a single element heavier than this threshold is emitted in its own group.</param>
         /// <param name="maxNumber">The maximum number of elements buffered in a group.</param>
         /// <param name="costFn">Returns the weight charged for each flow output element.</param>
         /// <param name="interval">The maximum time to wait before emitting a non-empty group.</param>
@@ -1229,7 +1230,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut2">The element type emitted by the stage.</typeparam>
         /// <typeparam name="TMat">The flow materialized value type.</typeparam>
         /// <param name="flow">The flow to transform.</param>
-        /// <param name="stageFactory">Creates the legacy stage applied to each flow output.</param>
+        /// <param name="stageFactory">Creates the legacy stage used to process flow outputs when this operation is materialized.</param>
         [Obsolete("Use Via(GraphStage) instead. [1.1.2]")]
         public static Flow<TIn, TOut2, TMat> Transform<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<IStage<TOut1, TOut2>> stageFactory)
         {
@@ -1686,15 +1687,17 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when upstream completes or fails if timeout elapses between two emitted elements
+        /// Completes when upstream completes or fails if the timeout elapses before the first element or between processed elements.
         /// </para>
         /// Cancels when downstream cancels
+        /// The initial timeout interval starts when the stage is materialized, so the flow can fail before its first element;
+        /// each processed element starts a new interval.
         /// </summary>
         /// <typeparam name="TIn">The flow input element type.</typeparam>
         /// <typeparam name="TOut">The flow output element type.</typeparam>
         /// <typeparam name="TMat">The flow materialized value type.</typeparam>
-        /// <param name="flow">The flow monitored for inactivity between output elements.</param>
-        /// <param name="timeout">The maximum interval allowed between processed elements before failing.</param>
+        /// <param name="flow">The flow monitored for inactivity, starting at materialization and resetting for each element.</param>
+        /// <param name="timeout">The interval allowed from stage start or the previous element before failing.</param>
         public static Flow<TIn, TOut, TMat> IdleTimeout<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan timeout)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.IdleTimeout(flow, timeout);
@@ -1704,6 +1707,8 @@ namespace Akka.Streams.Dsl
         /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
         /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
         /// so the resolution of the check is one period (equals to timeout value).
+        /// The initial interval starts when the stage is materialized, so the flow can fail before an element is emitted if no downstream
+        /// demand arrives; after each emission, a new interval waits for the next downstream demand.
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
@@ -1716,8 +1721,8 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">The flow input element type.</typeparam>
         /// <typeparam name="TOut">The flow output element type.</typeparam>
         /// <typeparam name="TMat">The flow materialized value type.</typeparam>
-        /// <param name="flow">The flow monitored for downstream backpressure.</param>
-        /// <param name="timeout">The maximum time allowed between an emitted output element and subsequent downstream demand.</param>
+        /// <param name="flow">The flow monitored for an interval without downstream demand.</param>
+        /// <param name="timeout">The interval allowed without demand, beginning at stage start and resetting after each emission.</param>
         public static Flow<TIn, TOut, TMat> BackpressureTimeout<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan timeout)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.BackpressureTimeout(flow, timeout);

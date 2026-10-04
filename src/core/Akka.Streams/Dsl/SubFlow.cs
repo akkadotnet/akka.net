@@ -36,6 +36,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat3">The value type returned by <paramref name="combine"/>.</typeparam>
         /// <param name="flow">The flow stage applied to each subflow.</param>
         /// <param name="combine">Combines the enclosing stream's and connected flow's materialized values, in that order.</param>
+        /// <remarks>The current built-in implementation throws <see cref="NotImplementedException"/> when this method is called.</remarks>
         public abstract IFlow<T2, TMat3> ViaMaterialized<T2, TMat2, TMat3>(IGraph<FlowShape<TOut, T2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine);
 
         /// <summary>
@@ -43,6 +44,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TMat2">The mapped materialized value type.</typeparam>
         /// <param name="mapFunc">Maps the enclosing stream's materialized value to a new value.</param>
+        /// <remarks>The current built-in implementation throws <see cref="NotImplementedException"/> when this method is called.</remarks>
         public abstract IFlow<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc);
 
         /// <summary>
@@ -52,6 +54,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat2">The sink materialized value type returned by this method.</typeparam>
         /// <param name="sink">The sink attached to each subflow.</param>
         /// <param name="materializer">The materializer used to run the connected subflows.</param>
+        /// <remarks>The current built-in implementation throws <see cref="NotImplementedException"/> when this method is called.</remarks>
         public abstract TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer);
 
         /// <summary>
