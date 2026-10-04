@@ -30,16 +30,16 @@ using Directive = Akka.Streams.Supervision.Directive;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Internal contract for sink modules that create their runtime subscriber or virtual publisher and materialized value.
     /// </summary>
     internal interface ISinkModule
     {
         /// <summary>
-        /// TBD
+        /// The sink's graph shape.
         /// </summary>
         Shape Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the sink's runtime consumer and returns its materialized value through <paramref name="materializer"/>.
         /// </summary>
         object Create(MaterializationContext context, out object materializer);
     }
@@ -47,43 +47,43 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements consumed by the sink.</typeparam>
+    /// <typeparam name="TMat">The type of the value produced when the sink is materialized.</typeparam>
     [InternalApi]
     public abstract class SinkModule<TIn, TMat> : AtomicModule, ISinkModule
     {
         private readonly SinkShape<TIn> _shape;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink module with the supplied shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
+        /// <param name="shape">The inlet shape consumed by this sink.</param>
         protected SinkModule(SinkShape<TIn> shape)
         {
             _shape = shape;
         }
 
         /// <summary>
-        /// TBD
+        /// The sink's inlet shape.
         /// </summary>
         public override Shape Shape => _shape;
 
         /// <summary>
-        /// TBD
+        /// The label used by <see cref="ToString"/>.
         /// </summary>
         protected virtual string Label => GetType().Name;
 
         /// <summary>
-        /// TBD
+        /// Returns the module label and its hash code.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A diagnostic representation of this module.</returns>
         public sealed override string ToString() => $"{Label} [{GetHashCode()}%08x]";
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with a replacement inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the new module.</param>
+        /// <returns>A sink module with the requested shape.</returns>
         protected abstract SinkModule<TIn, TMat> NewInstance(SinkShape<TIn> shape);
 
         /// <summary>
@@ -93,9 +93,9 @@ namespace Akka.Streams.Implementation
         /// union devolves into; unfortunately we do not have union types at our
         /// disposal at this point.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to create runtime components for this sink.</param>
+        /// <param name="materializer">Receives the value materialized by the sink.</param>
+        /// <returns>The subscriber or virtual publisher that consumes the incoming stream.</returns>
         public abstract object Create(MaterializationContext context, out TMat materializer);
 
         object ISinkModule.Create(MaterializationContext context, out object materializer)
@@ -106,11 +106,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// A sink module's shape cannot be changed; wrap the sink in a graph to adapt its shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The requested shape.</param>
+        /// <exception cref="NotSupportedException">The requested shape differs from this sink's shape.</exception>
+        /// <returns>This module when <paramref name="shape"/> equals its existing shape.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if (Equals(_shape, shape))
@@ -121,17 +121,17 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a carbon copy with a carbon-copied inlet.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new sink module with the copied shape.</returns>
         public override IModule CarbonCopy()
             => NewInstance(new SinkShape<TIn>(Inlet.Create<TIn>(_shape.Inlet.CarbonCopy())));
 
         /// <summary>
-        /// TBD
+        /// Returns this sink's shape when the supplied attributes do not change its name; otherwise creates a named inlet.
         /// </summary>
-        /// <param name="attrs">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attrs">The attributes used to determine the inlet name.</param>
+        /// <returns>The existing or amended sink shape.</returns>
         protected SinkShape<TIn> AmendShape(Attributes attrs)
         {
             var thisN = Attributes.GetNameOrDefault(null);
@@ -151,15 +151,15 @@ namespace Akka.Streams.Implementation
     /// elements to fill the internal buffers it will assert back-pressure until
     /// a subscriber connects and creates demand for elements to be emitted.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements published to subscribers of the materialized publisher.</typeparam>
     [InternalApi]
     internal sealed class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
         /// <summary>
-        /// TBD
+        /// Creates a publisher sink module.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="attributes">The attributes applied to the sink.</param>
+        /// <param name="shape">The sink's inlet shape.</param>
         public PublisherSink(Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
@@ -167,23 +167,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this sink.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a sink module with the supplied attributes and an inlet amended to reflect its name.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A sink module using the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new PublisherSink<TIn>(attributes, AmendShape(attributes));
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with the supplied inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the copy.</param>
+        /// <returns>A new publisher sink module.</returns>
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
             => new PublisherSink<TIn>(Attributes, shape);
 
@@ -192,9 +192,9 @@ namespace Akka.Streams.Implementation
         /// not a Subscriber: a VirtualPublisher is used in order to avoid the immediate
         /// subscription a VirtualProcessor would perform (and it also saves overhead).
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context.</param>
+        /// <param name="materializer">Receives the publisher exposed by this sink.</param>
+        /// <returns>A virtual processor that publishes elements when a subscriber connects.</returns>
         public override object Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var processor = new VirtualProcessor<TIn>();
@@ -206,18 +206,18 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements published to downstream subscribers.</typeparam>
+    /// <typeparam name="TStreamBuffer">The buffer implementation used by the fanout processor.</typeparam>
     internal sealed class FanoutPublisherSink<TIn, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : SinkModule<TIn, IPublisher<TIn>> where TStreamBuffer : IStreamBuffer<TIn>
     {
         private readonly Action _onTerminated;
 
         /// <summary>
-        /// TBD
+        /// Creates a fanout publisher sink.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="onTerminated">TBD</param>
+        /// <param name="attributes">The attributes applied to the sink.</param>
+        /// <param name="shape">The sink's inlet shape.</param>
+        /// <param name="onTerminated">An optional callback invoked when the fanout processor terminates.</param>
         public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape, Action onTerminated = null) : base(shape)
         {
             Attributes = attributes;
@@ -225,32 +225,32 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this sink.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a sink module with the supplied attributes and an inlet amended to reflect its name.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A sink module using the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new FanoutPublisherSink<TIn, TStreamBuffer>(attributes, AmendShape(attributes), _onTerminated);
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with the supplied inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the copy.</param>
+        /// <returns>A new fanout publisher sink module.</returns>
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
             => new FanoutPublisherSink<TIn, TStreamBuffer>(Attributes, shape, _onTerminated);
 
         /// <summary>
-        /// TBD
+        /// Creates an actor-backed fanout publisher and exposes its processor as the materialized publisher.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context.</param>
+        /// <param name="materializer">Receives the publisher exposed by this sink.</param>
+        /// <returns>The actor processor that publishes incoming elements to connected subscribers.</returns>
         public override object Create(MaterializationContext context, out IPublisher<TIn> materializer)
         {
             var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
@@ -269,18 +269,18 @@ namespace Akka.Streams.Implementation
     /// 
     /// Attaches a subscriber to this stream.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements consumed by the supplied subscriber.</typeparam>
     [InternalApi]
     public sealed class SubscriberSink<TIn> : SinkModule<TIn, NotUsed>
     {
         private readonly ISubscriber<TIn> _subscriber;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink module that attaches the supplied subscriber.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="subscriber">The subscriber to attach to the incoming stream.</param>
+        /// <param name="attributes">The attributes applied to the sink.</param>
+        /// <param name="shape">The sink's inlet shape.</param>
         public SubscriberSink(ISubscriber<TIn> subscriber, Attributes attributes, SinkShape<TIn> shape) : base(shape)
         {
             Attributes = attributes;
@@ -288,32 +288,32 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this sink.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a sink module with the supplied attributes and an inlet amended to reflect its name.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A sink module using the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new SubscriberSink<TIn>(_subscriber, attributes, AmendShape(attributes));
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with the supplied inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the copy.</param>
+        /// <returns>A new subscriber sink module.</returns>
         protected override SinkModule<TIn, NotUsed> NewInstance(SinkShape<TIn> shape)
             => new SubscriberSink<TIn>(_subscriber, Attributes, shape);
 
         /// <summary>
-        /// TBD
+        /// Returns the supplied subscriber as the sink's runtime consumer and materializes <see cref="NotUsed"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context.</param>
+        /// <param name="materializer">Receives <see cref="NotUsed"/>.</param>
+        /// <returns>The subscriber attached to the incoming stream.</returns>
         public override object Create(MaterializationContext context, out NotUsed materializer)
         {
             materializer = NotUsed.Instance;
@@ -326,15 +326,15 @@ namespace Akka.Streams.Implementation
     /// 
     /// A sink that immediately cancels its upstream upon materialization.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements discarded by this sink.</typeparam>
     [InternalApi]
     public sealed class CancelSink<T> : SinkModule<T, NotUsed>
     {
         /// <summary>
-        /// TBD
+        /// Creates a sink that cancels its upstream when materialized.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="attributes">The attributes applied to the sink.</param>
+        /// <param name="shape">The sink's inlet shape.</param>
         public CancelSink(Attributes attributes, SinkShape<T> shape)
             : base(shape)
         {
@@ -342,24 +342,24 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this sink.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with the supplied inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the copy.</param>
+        /// <returns>A new cancelling sink module.</returns>
         protected override SinkModule<T, NotUsed> NewInstance(SinkShape<T> shape)
             => new CancelSink<T>(Attributes, shape);
 
         /// <summary>
-        /// TBD
+        /// Creates a cancelling subscriber and materializes <see cref="NotUsed"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context.</param>
+        /// <param name="materializer">Receives <see cref="NotUsed"/>.</param>
+        /// <returns>A subscriber that cancels its subscription.</returns>
         public override object Create(MaterializationContext context, out NotUsed materializer)
         {
             materializer = NotUsed.Instance;
@@ -367,10 +367,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a sink module with the supplied attributes and an inlet amended to reflect its name.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A sink module using the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new CancelSink<T>(attributes, AmendShape(attributes));
     }
@@ -381,7 +381,7 @@ namespace Akka.Streams.Implementation
     /// Creates and wraps an actor into <see cref="ISubscriber{T}"/> from the given <see cref="Props"/>,
     /// which should be <see cref="Props"/> for an <see cref="ActorSubscriber"/>.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements consumed by the actor subscriber.</typeparam>
     [InternalApi]
     public sealed class ActorSubscriberSink<TIn> : SinkModule<TIn, IActorRef>
     {
@@ -389,11 +389,11 @@ namespace Akka.Streams.Implementation
         private readonly Attributes _attributes;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink module that creates an actor and adapts it to a subscriber.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="props">The actor properties used to create the subscriber actor.</param>
+        /// <param name="attributes">The attributes applied to the sink.</param>
+        /// <param name="shape">The sink's inlet shape.</param>
         public ActorSubscriberSink(Props props, Attributes attributes, SinkShape<TIn> shape)
             : base(shape)
         {
@@ -402,32 +402,32 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this sink.
         /// </summary>
         public override Attributes Attributes => _attributes;
 
         /// <summary>
-        /// TBD
+        /// Returns a sink module with the supplied attributes and an inlet amended to reflect its name.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A sink module using the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new ActorSubscriberSink<TIn>(_props, attributes, AmendShape(attributes));
 
         /// <summary>
-        /// TBD
+        /// Creates this sink module with the supplied inlet shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The inlet shape for the copy.</param>
+        /// <returns>A new actor subscriber sink module.</returns>
         protected override SinkModule<TIn, IActorRef> NewInstance(SinkShape<TIn> shape)
             => new ActorSubscriberSink<TIn>(_props, _attributes, shape);
 
         /// <summary>
-        /// TBD
+        /// Creates an actor subscriber and materializes the reference to the actor created for it.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context used to create the actor.</param>
+        /// <param name="materializer">Receives the actor reference created for the subscriber.</param>
+        /// <returns>An actor subscriber that forwards stream elements to the created actor.</returns>
         public override object Create(MaterializationContext context, out IActorRef materializer)
         {
             var subscriberRef = ActorMaterializerHelper.Downcast(context.Materializer).ActorOf(context, _props);
@@ -439,7 +439,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements consumed by this stage.</typeparam>
     [InternalApi]
     public sealed class LastOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
@@ -486,12 +486,12 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements for the sink.
         /// </summary>
         public readonly Inlet<T> In = new("LastOrDefault.in");
 
         /// <summary>
-        /// TBD
+        /// Creates a sink stage with an inlet named for the last-or-default operation.
         /// </summary>
         public LastOrDefaultStage()
         {
@@ -499,15 +499,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The sink shape containing <see cref="In"/>.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic and the task that completes with the final element, or <c>default(T)</c> if the
+        /// upstream completes without elements. An upstream failure faults the task.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited by the stage.</param>
+        /// <returns>The stage logic and its last-element task.</returns>
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -519,7 +520,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements consumed by this stage.</typeparam>
     [InternalApi]
     public sealed class FirstOrDefaultStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<T>>
     {
@@ -571,12 +572,12 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements for the sink.
         /// </summary>
         public readonly Inlet<T> In = new("FirstOrDefault.in");
 
         /// <summary>
-        /// TBD
+        /// Creates a sink stage with an inlet named for the first-or-default operation.
         /// </summary>
         public FirstOrDefaultStage()
         {
@@ -584,15 +585,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The sink shape containing <see cref="In"/>.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic and the task that completes with the first element, or <c>default(T)</c> if the
+        /// upstream completes without elements. An upstream failure faults the task.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited by the stage.</param>
+        /// <returns>The stage logic and its first-element task.</returns>
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -604,7 +606,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements collected by this stage.</typeparam>
     [InternalApi]
     public sealed class SeqStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<IImmutableList<T>>>
     {
@@ -657,7 +659,7 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Creates a sink stage that collects all upstream elements into an immutable list.
         /// </summary>
         public SeqStage()
         {
@@ -665,25 +667,26 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this sequence sink.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.SeqSink;
 
         /// <summary>
-        /// TBD
+        /// The sink shape containing <see cref="In"/>.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements for the sink.
         /// </summary>
         public readonly Inlet<T> In = new("Seq.in");
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that accumulates upstream elements and completes its task with the immutable list when
+        /// the upstream completes. An upstream failure faults the task.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited by the stage.</param>
+        /// <returns>The stage logic and its collected-list task.</returns>
         public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -692,16 +695,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>SeqStage</c>.</returns>
         public override string ToString() => "SeqStage";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements made available through the sink queue.</typeparam>
     #nullable enable
     [InternalApi]
     public sealed class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
@@ -840,12 +843,12 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements for the queue sink.
         /// </summary>
         public readonly Inlet<T> In = new("QueueSink.in");
 
         /// <summary>
-        /// TBD
+        /// Creates a queue sink stage with an inlet named for the queue sink.
         /// </summary>
         public QueueSink()
         {
@@ -853,21 +856,24 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this queue sink.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.QueueSink;
 
         /// <summary>
-        /// TBD
+        /// The sink shape containing <see cref="In"/>.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic and an <see cref="ISinkQueue{T}"/>. The queue returns available elements through
+        /// successful <see cref="Option{T}"/> results, completes with <see cref="Option{T}.None"/> at upstream
+        /// completion, and faults a pull task when the upstream fails or the stage detaches. Only one pull may be
+        /// outstanding at a time.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes used to select the input buffer size.</param>
+        /// <exception cref="ArgumentException">The configured maximum input buffer size is not positive.</exception>
+        /// <returns>The stage logic and its sink queue.</returns>
         public override ILogicAndMaterializedValue<ISinkQueue<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -880,9 +886,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>QueueSink</c>.</returns>
         public override string ToString() => "QueueSink";
     }
     #nullable restore
@@ -890,8 +896,8 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements consumed by the lazily selected sink.</typeparam>
+    /// <typeparam name="TMat">The type of the selected sink's materialized value.</typeparam>
     internal sealed class LazySink<TIn, TMat> : GraphStageWithMaterializedValue<SinkShape<TIn>, Task<Option<TMat>>>
     {
         #region Logic
@@ -1067,9 +1073,9 @@ namespace Akka.Streams.Implementation
         private readonly Func<TIn, Task<Sink<TIn, TMat>>> _sinkFactory;
 
         /// <summary>
-        /// TBD
+        /// Creates a lazy sink whose factory is invoked asynchronously after the first upstream element arrives.
         /// </summary>
-        /// <param name="sinkFactory">TBD</param>
+        /// <param name="sinkFactory">Creates the sink to materialize after receiving the first element.</param>
         public LazySink(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory)
         {
             _sinkFactory = sinkFactory;
@@ -1077,25 +1083,27 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this lazy sink.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazySink;
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements before the selected sink is materialized.
         /// </summary>
         public Inlet<TIn> In { get; } = new("lazySink.in");
 
         /// <summary>
-        /// TBD
+        /// The sink shape containing <see cref="In"/>.
         /// </summary>
         public override SinkShape<TIn> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic and a task that yields <see cref="Option{T}.None"/> if the upstream completes
+        /// without an element, or the selected sink's materialized value after the first element selects a sink. An
+        /// upstream failure faults the task.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited by the stage.</param>
+        /// <returns>The stage logic and its optional materialized-value task.</returns>
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var completion = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();
@@ -1104,9 +1112,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>LazySink</c>.</returns>
         public override string ToString() => "LazySink";
     }
 
