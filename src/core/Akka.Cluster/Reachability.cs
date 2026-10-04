@@ -29,38 +29,38 @@ namespace Akka.Cluster
     internal class Reachability
     {
         /// <summary>
-        ///     TBD
+        ///     Status of a subject as observed by cluster members.
         /// </summary>
         public enum ReachabilityStatus
         {
             /// <summary>
-            ///     TBD
+            ///     No observer currently records this subject as unreachable or terminated.
             /// </summary>
             Reachable,
 
             /// <summary>
-            ///     TBD
+            ///     At least one observer records this subject as unreachable.
             /// </summary>
             Unreachable,
 
             /// <summary>
-            ///     TBD
+            ///     At least one observer records this subject as terminated; this status takes precedence over unreachable.
             /// </summary>
             Terminated
         }
 
         /// <summary>
-        ///     TBD
+        ///     An empty table with no observer versions or reachability records.
         /// </summary>
         public static readonly Reachability Empty = new(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
         private readonly Lazy<Cache> _cache;
 
         /// <summary>
-        ///     TBD
+        ///     Creates a reachability table from observer records and their version counters.
         /// </summary>
-        /// <param name="records">TBD</param>
-        /// <param name="versions">TBD</param>
+        /// <param name="records">The observer-subject status records.</param>
+        /// <param name="versions">The latest version counter for each observer.</param>
         public Reachability(ImmutableList<Record> records, ImmutableDictionary<UniqueAddress, long> versions)
         {
             _cache = new Lazy<Cache>(() => new Cache(records));
@@ -69,17 +69,17 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     The observer-subject reachability records.
         /// </summary>
         public ImmutableList<Record> Records { get; }
 
         /// <summary>
-        ///     TBD
+        ///     The latest record version for each observer.
         /// </summary>
         public ImmutableDictionary<UniqueAddress, long> Versions { get; }
 
         /// <summary>
-        ///     TBD
+        ///     Whether there are no records; in this state every subject is considered reachable.
         /// </summary>
         public bool IsAllReachable => Records.IsEmpty;
 
@@ -89,12 +89,12 @@ namespace Akka.Cluster
         public ImmutableHashSet<UniqueAddress> AllUnreachable => _cache.Value.AllUnreachable;
 
         /// <summary>
-        ///     TBD
+        ///     Subjects that at least one observer considers unreachable or terminated.
         /// </summary>
         public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated => _cache.Value.AllUnreachableOrTerminated;
 
         /// <summary>
-        ///     TBD
+        ///     For each unreachable subject, the observers that report it as unreachable.
         /// </summary>
         public ImmutableDictionary<UniqueAddress, ImmutableHashSet<UniqueAddress>> ObserversGroupedByUnreachable
         {
@@ -112,7 +112,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     The observers represented by the current records.
         /// </summary>
         public ImmutableHashSet<UniqueAddress> AllObservers => Records.Select(i => i.Observer).ToImmutableHashSet();
 
@@ -123,33 +123,33 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Records that this observer considers unreachable.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The node reporting the observation.</param>
+        /// <param name="subject">The node observed as unreachable.</param>
+        /// <returns>The table with this observer's record updated, or the current table if the record is already unreachable or terminal.</returns>
         public Reachability Unreachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Unreachable);
         }
 
         /// <summary>
-        ///     TBD
+        ///     Records that this observer considers the subject reachable.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The node reporting the observation.</param>
+        /// <param name="subject">The node observed as reachable.</param>
+        /// <returns>A table with the observer's reachable observation applied, or the current table when no record change is needed.</returns>
         public Reachability Reachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Reachable);
         }
 
         /// <summary>
-        ///     TBD
+        ///     Records that this observer considers the subject terminated.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The node reporting the observation.</param>
+        /// <param name="subject">The node observed as terminated.</param>
+        /// <returns>The table with this observer's terminated observation applied, or the current table if the subject is already terminal.</returns>
         public Reachability Terminated(UniqueAddress observer, UniqueAddress subject)
         {
             return Change(observer, subject, ReachabilityStatus.Terminated);
@@ -198,11 +198,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Merges observer rows from another table, keeping only observers and subjects in <paramref name="allowed"/>.
         /// </summary>
-        /// <param name="allowed">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="allowed">The node identities permitted to remain as observers or subjects.</param>
+        /// <param name="other">The reachability table to merge with this one.</param>
+        /// <returns>A new table containing the selected observer rows and version counters.</returns>
         public Reachability Merge(IImmutableSet<UniqueAddress> allowed, Reachability other)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Record>();
@@ -242,10 +242,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Removes every supplied node from observer rows, subject records, and version counters.
         /// </summary>
-        /// <param name="nodes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="nodes">The nodes to remove as observers and subjects.</param>
+        /// <returns>A table without records or version counters for the supplied nodes.</returns>
         public Reachability Remove(IEnumerable<UniqueAddress> nodes)
         {
             var nodesSet = nodes.ToImmutableHashSet();
@@ -255,10 +255,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Removes records and version counters for the supplied observers while retaining them as subjects where present.
         /// </summary>
-        /// <param name="nodes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="nodes">The observers whose rows and version counters should be removed.</param>
+        /// <returns>The current table if no observers are supplied; otherwise, a table with those observer rows removed.</returns>
         public Reachability RemoveObservers(ImmutableHashSet<UniqueAddress> nodes)
         {
             if (nodes.Count == 0)
@@ -277,11 +277,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Returns this observer's status for a subject, defaulting to reachable when no record exists.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The node whose observation is queried.</param>
+        /// <param name="subject">The node whose observed status is queried.</param>
+        /// <returns>The status this observer records for the subject, or <see cref="ReachabilityStatus.Reachable"/> if no record exists.</returns>
         public ReachabilityStatus Status(UniqueAddress observer, UniqueAddress subject)
         {
             var observerRows = ObserverRows(observer);
@@ -294,10 +294,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Returns the aggregate status of a subject across all observers, with terminated taking precedence over unreachable.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node whose aggregate status is queried.</param>
+        /// <returns>The aggregate status across observers: terminated if any observer reports termination, unreachable if any reports unreachable, otherwise reachable.</returns>
         public ReachabilityStatus Status(UniqueAddress node)
         {
             if (_cache.Value.AllTerminated.Contains(node)) return ReachabilityStatus.Terminated;
@@ -306,31 +306,31 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Checks whether a node is not in the aggregate unreachable or terminated sets.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node to check.</param>
+        /// <returns><c>true</c> if the aggregate status is <see cref="ReachabilityStatus.Reachable"/>; otherwise, <c>false</c>.</returns>
         public bool IsReachable(UniqueAddress node)
         {
             return IsAllReachable || !AllUnreachableOrTerminated.Contains(node);
         }
 
         /// <summary>
-        ///     TBD
+        ///     Checks whether one observer's record for a subject is reachable.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The node whose observation is checked.</param>
+        /// <param name="subject">The node whose observed status is checked.</param>
+        /// <returns><c>true</c> if this observer's status for the subject is <see cref="ReachabilityStatus.Reachable"/>; otherwise, <c>false</c>.</returns>
         public bool IsReachable(UniqueAddress observer, UniqueAddress subject)
         {
             return Status(observer, subject) == ReachabilityStatus.Reachable;
         }
 
         /// <summary>
-        ///     TBD
+        ///     Returns the subjects this observer currently records as unreachable.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The observer whose unreachable subjects are requested.</param>
+        /// <returns>The subjects this observer records as unreachable, or an empty set if it has no records.</returns>
         public ImmutableHashSet<UniqueAddress> AllUnreachableFrom(UniqueAddress observer)
         {
             var observerRows = ObserverRows(observer);
@@ -341,10 +341,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Returns the reachability records reported by this observer.
         /// </summary>
-        /// <param name="observer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="observer">The observer whose records are requested.</param>
+        /// <returns>The records reported by this observer, or an empty list if it has no records.</returns>
         public ImmutableList<Record> RecordsFrom(UniqueAddress observer)
         {
             var rows = ObserverRows(observer);
@@ -388,17 +388,17 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     One observer's versioned status observation of a subject node.
         /// </summary>
         public sealed class Record
         {
             /// <summary>
-            ///     TBD
+            ///     Creates a record for one observer's status observation of a subject.
             /// </summary>
-            /// <param name="observer">TBD</param>
-            /// <param name="subject">TBD</param>
-            /// <param name="status">TBD</param>
-            /// <param name="version">TBD</param>
+            /// <param name="observer">The node that made the observation.</param>
+            /// <param name="subject">The node whose status was observed.</param>
+            /// <param name="status">The status reported by the observer.</param>
+            /// <param name="version">The observer's record version.</param>
             public Record(UniqueAddress observer, UniqueAddress subject, ReachabilityStatus status, long version)
             {
                 Observer = observer;
@@ -408,22 +408,22 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            ///     TBD
+            ///     The node that made this observation.
             /// </summary>
             public UniqueAddress Observer { get; }
 
             /// <summary>
-            ///     TBD
+            ///     The node whose status was observed.
             /// </summary>
             public UniqueAddress Subject { get; }
 
             /// <summary>
-            ///     TBD
+            ///     The status reported by the observer.
             /// </summary>
             public ReachabilityStatus Status { get; }
 
             /// <summary>
-            ///     TBD
+            ///     The version assigned by the observer to this record.
             /// </summary>
             public long Version { get; }
 
@@ -453,14 +453,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        ///     TBD
+        ///     Lazily derived lookup maps and aggregate status sets for a reachability table.
         /// </summary>
         private class Cache
         {
             /// <summary>
-            ///     TBD
+            ///     Builds cached observer rows and aggregate subject-status sets from the records.
             /// </summary>
-            /// <param name="records">TBD</param>
+            /// <param name="records">The records to index and aggregate.</param>
             public Cache(ImmutableList<Record> records)
             {
                 if (records.IsEmpty)
@@ -500,7 +500,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            ///     TBD
+            ///     The records grouped by observer and then by subject.
             /// </summary>
             public ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>> ObserverRowMap
             {
@@ -518,7 +518,7 @@ namespace Akka.Cluster
             public ImmutableHashSet<UniqueAddress> AllUnreachable { get; }
 
             /// <summary>
-            ///     TBD
+            ///     Subjects observed as either unreachable or terminated.
             /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachableOrTerminated { get; }
         }

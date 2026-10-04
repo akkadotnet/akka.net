@@ -39,11 +39,11 @@ namespace Akka.Cluster
     public class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
     {
         /// <summary>
-        /// TBD
+        /// Creates the remote actor reference provider and installs cluster configuration fallbacks.
         /// </summary>
-        /// <param name="systemName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="eventStream">TBD</param>
+        /// <param name="systemName">The actor-system name.</param>
+        /// <param name="settings">The actor-system settings to configure.</param>
+        /// <param name="eventStream">The event stream used by the provider.</param>
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)
         {
@@ -53,9 +53,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the remote provider, then loads the cluster extension.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system being initialized.</param>
         public override void Init(ActorSystemImpl system)
         {
             //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
@@ -66,10 +66,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the cluster-aware remote watcher after ensuring the cluster extension is loaded.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the remote watcher.</param>
+        /// <returns>The system actor reference for a <see cref="ClusterRemoteWatcher"/>.</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread

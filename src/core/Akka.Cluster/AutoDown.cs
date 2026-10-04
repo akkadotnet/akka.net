@@ -28,30 +28,30 @@ namespace Akka.Cluster
     internal sealed class AutoDown : AutoDownBase
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for the legacy automatic-downing actor.
         /// </summary>
-        /// <param name="autoDownUnreachableAfter">TBD</param>
-        /// <param name="cluster"></param>
-        /// <returns>TBD</returns>
+        /// <param name="autoDownUnreachableAfter">How long a member must remain unreachable before it is considered for downing.</param>
+        /// <param name="cluster">The cluster instance whose membership and leader state are observed.</param>
+        /// <returns>Properties for creating an <see cref="AutoDown"/> actor.</returns>
         public static Props Props(TimeSpan autoDownUnreachableAfter, Cluster cluster)
         {
             return Actor.Props.Create(() => new AutoDown(autoDownUnreachableAfter, cluster));
         }
 
         /// <summary>
-        /// TBD
+        /// Message sent to the actor when an unreachable member's configured delay expires.
         /// </summary>
         public sealed class UnreachableTimeout
         {
             /// <summary>
-            /// TBD
+            /// The unique identity of the member whose unreachable timeout expired.
             /// </summary>
             public UniqueAddress Node { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates a timeout message for the specified member.
             /// </summary>
-            /// <param name="node">TBD</param>
+            /// <param name="node">The member whose timeout expired.</param>
             public UnreachableTimeout(UniqueAddress node)
             {
                 Node = node;
@@ -85,7 +85,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The address of the local cluster node.
         /// </summary>
         public override Address SelfAddress
         {
@@ -93,7 +93,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The scheduler used to arrange unreachable-member timeouts.
         /// </summary>
         public override IScheduler Scheduler
         {
@@ -101,7 +101,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Subscribes to cluster events before starting timeout processing.
         /// </summary>
         protected override void PreStart()
         {
@@ -110,7 +110,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Unsubscribes from cluster events and cancels pending timeout tasks.
         /// </summary>
         protected override void PostStop()
         {
@@ -119,9 +119,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Down the specified cluster address through the cluster API.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="node">The address of the node to down.</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown when a non-leader tries to down the specified <paramref name="node"/>.
         /// </exception>
@@ -134,7 +134,7 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// TBD
+    /// Tracks unreachable cluster members and asks the leader to down them after the configured delay.
     /// </summary>
     internal abstract class AutoDownBase : UntypedActor
     {
@@ -146,23 +146,23 @@ namespace Akka.Cluster
         private ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
 
         /// <summary>
-        /// TBD
+        /// Whether this actor currently considers the local node the cluster leader.
         /// </summary>
         protected bool _leader = false;
 
         readonly TimeSpan _autoDownUnreachableAfter;
 
         /// <summary>
-        /// TBD
+        /// Creates the testable automatic-downing logic with the configured unreachable delay.
         /// </summary>
-        /// <param name="autoDownUnreachableAfter">TBD</param>
+        /// <param name="autoDownUnreachableAfter">How long a member must remain unreachable before it is considered for downing.</param>
         protected AutoDownBase(TimeSpan autoDownUnreachableAfter)
         {
             _autoDownUnreachableAfter = autoDownUnreachableAfter;
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels timeout tasks that are still scheduled when the actor stops.
         /// </summary>
         protected override void PostStop()
         {
@@ -170,25 +170,25 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The address of the node whose leadership and cluster events are being processed.
         /// </summary>
         public abstract Address SelfAddress { get; }
 
         /// <summary>
-        /// TBD
+        /// The scheduler used to schedule unreachable-member timeouts.
         /// </summary>
         public abstract IScheduler Scheduler { get; }
 
         /// <summary>
-        /// TBD
+        /// Requests that the current leader down the specified address.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="node">The address of the member to down.</param>
         public abstract void Down(Address node);
 
         /// <summary>
-        /// TBD
+        /// Processes cluster state, reachability changes, leadership changes, and expired unreachable timers.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The cluster event or timeout message to process.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -284,12 +284,12 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The configured margin before shards or singletons from a downed or removed partition are created in a surviving partition.
         /// </summary>
         public TimeSpan DownRemovalMargin => _cluster.Settings.DownRemovalMargin;
 
         /// <summary>
-        /// TBD
+        /// Returns the auto-downing actor properties, requiring the legacy auto-down delay setting.
         /// </summary>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown when the <c>akka.cluster.auto-down-unreachable-after</c> configuration setting is not set.
@@ -309,4 +309,3 @@ namespace Akka.Cluster
         }
     }
 }
-
