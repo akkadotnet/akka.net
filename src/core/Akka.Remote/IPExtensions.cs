@@ -20,12 +20,12 @@ namespace Akka.Remote
     internal static class IpExtensions
     {
         /// <summary>
-        /// TBD
+        /// Reads a field by name using reflection, including non-public instance and static fields.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="instance">TBD</param>
-        /// <param name="fieldName">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">The type that declares the field.</param>
+        /// <param name="instance">The object from which to read the field value.</param>
+        /// <param name="fieldName">The field's name.</param>
+        /// <returns>The value of the field on <paramref name="instance"/>.</returns>
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {
             BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -35,10 +35,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Converts an IPv6 address to an IPv4 address using its final 32 bits, leaving IPv4 addresses unchanged.
         /// </summary>
-        /// <param name="ipa">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ipa">The IP address to map.</param>
+        /// <returns>The corresponding IPv4 address.</returns>
         public static IPAddress MapToIPv4(this IPAddress ipa)
         {
             ushort[] m_Numbers = GetInstanceField(typeof(IPAddress), ipa, "m_Numbers") as ushort[];
@@ -62,10 +62,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Maps an IPv4 address to its IPv4-mapped IPv6 representation, leaving IPv6 addresses unchanged.
         /// </summary>
-        /// <param name="ipa">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ipa">The IP address to map.</param>
+        /// <returns>The corresponding IPv4-mapped IPv6 address.</returns>
         public static IPAddress MapToIPv6(this IPAddress ipa)
         {
             if (ipa.AddressFamily == AddressFamily.InterNetworkV6)
@@ -82,4 +82,3 @@ namespace Akka.Remote
         }
     }
 }
-
