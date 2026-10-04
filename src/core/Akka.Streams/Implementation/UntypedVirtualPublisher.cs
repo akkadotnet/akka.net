@@ -11,19 +11,19 @@ using Akka.Streams.Implementation;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Publisher facade whose backing publisher can be registered after this object has been exposed to a module.
     /// </summary>
     internal interface IUntypedVirtualPublisher
     {
         /// <summary>
-        /// TBD
+        /// Subscribes to the publisher currently registered with this facade.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to connect.</param>
         void Subscribe(IUntypedSubscriber subscriber);
         /// <summary>
-        /// TBD
+        /// Registers the publisher that will receive subscribers of this facade.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher to register.</param>
         void RegisterPublisher(IUntypedPublisher publisher);
         /// <summary>
         /// Registers an <see cref="ErrorPublisher{T}"/> of this publisher's element type, failing with
@@ -34,46 +34,46 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Base adapter for exposing a typed virtual publisher through an untyped module boundary.
     /// </summary>
     internal abstract class UntypedVirtualPublisher : IUntypedVirtualPublisher
     {
         /// <summary>
-        /// TBD
+        /// Subscribes to the registered publisher.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to connect.</param>
         public abstract void Subscribe(IUntypedSubscriber subscriber);
         /// <summary>
-        /// TBD
+        /// Registers the publisher to which this virtual publisher forwards subscribers.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher to register.</param>
         public abstract void RegisterPublisher(IUntypedPublisher publisher);
 
         /// <inheritdoc/>
         public abstract void RegisterErrorPublisher(Exception cause);
 
         /// <summary>
-        /// TBD
+        /// Gets the wrapped virtual publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The original typed virtual publisher.</returns>
         public abstract object Unwrap();
 
         /// <summary>
-        /// TBD
+        /// Wraps a typed virtual publisher for an untyped module boundary.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="publisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The publisher's element type.</typeparam>
+        /// <param name="publisher">The publisher to wrap.</param>
+        /// <returns>An adapter that preserves its element type.</returns>
         public static UntypedVirtualPublisher FromTyped<T>(VirtualPublisher<T> publisher)
         {
             return new UntypedVirtualPublisherImpl<T>(publisher);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the wrapped typed publisher for adapters, or passes through a non-adapter implementation.
         /// </summary>
-        /// <param name="untypedPublisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="untypedPublisher">The publisher to unwrap when it is an adapter.</param>
+        /// <returns>The wrapped publisher, or <paramref name="untypedPublisher"/> unchanged.</returns>
         public static object ToTyped(IUntypedVirtualPublisher untypedPublisher)
         {
             if (untypedPublisher is UntypedVirtualPublisher publisher)
@@ -82,11 +82,11 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Converts an untyped virtual publisher to the requested element type.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="untypedPublisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The expected element type.</typeparam>
+        /// <param name="untypedPublisher">The publisher to unwrap and cast.</param>
+        /// <returns>The publisher cast to <see cref="VirtualPublisher{T}"/>.</returns>
         public static VirtualPublisher<T> ToTyped<T>(IUntypedVirtualPublisher untypedPublisher)
         {
             return (VirtualPublisher<T>) ToTyped(untypedPublisher);
@@ -94,35 +94,35 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Adapter that forwards subscriptions and publisher registration to a typed virtual publisher.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The publisher's element type.</typeparam>
     internal sealed class UntypedVirtualPublisherImpl<T> : UntypedVirtualPublisher
     {
         private readonly VirtualPublisher<T> _publisher;
 
         /// <summary>
-        /// TBD
+        /// Wraps the supplied virtual publisher.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The virtual publisher to wrap.</param>
         public UntypedVirtualPublisherImpl(VirtualPublisher<T> publisher)
         {
             _publisher = publisher;
         }
 
         /// <summary>
-        /// TBD
+        /// Converts the subscriber to the publisher's element type and subscribes it.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to connect.</param>
         public override void Subscribe(IUntypedSubscriber subscriber)
         {
             _publisher.Subscribe(UntypedSubscriber.ToTyped<T>(subscriber));
         }
 
         /// <summary>
-        /// TBD
+        /// Converts and registers the typed publisher with the wrapped virtual publisher.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher to register.</param>
         public override void RegisterPublisher(IUntypedPublisher publisher)
         {
             _publisher.RegisterPublisher(UntypedPublisher.ToTyped<T>(publisher));
@@ -132,15 +132,15 @@ namespace Akka.Streams
         public override void RegisterErrorPublisher(Exception cause) => ((IUntypedVirtualPublisher)_publisher).RegisterErrorPublisher(cause);
 
         /// <summary>
-        /// TBD
+        /// Returns the wrapped publisher for a typed module boundary.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The original virtual publisher.</returns>
         public override object Unwrap() => _publisher;
 
         /// <summary>
-        /// TBD
+        /// Returns a string representation of the wrapped publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The wrapped publisher's string representation.</returns>
         public override string ToString() => _publisher.ToString();
     }
 }

@@ -11,32 +11,32 @@ using Reactive.Streams;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Publisher abstraction used where stream modules pass publishers without a compile-time element type.
     /// </summary>
     public interface IUntypedPublisher
     {
         /// <summary>
-        /// TBD
+        /// Subscribes the untyped subscriber to this publisher.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber that receives this publisher's signals.</param>
         void Subscribe(IUntypedSubscriber subscriber);
     }
 
     /// <summary>
-    /// TBD
+    /// Base adapter for exposing a typed Reactive Streams publisher through an untyped module boundary.
     /// </summary>
     internal abstract class UntypedPublisher : IUntypedPublisher
     {
         /// <summary>
-        /// TBD
+        /// Subscribes the untyped subscriber to the wrapped publisher.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber that receives the publisher's signals.</param>
         public abstract void Subscribe(IUntypedSubscriber subscriber);
 
         /// <summary>
-        /// TBD
+        /// Gets the wrapped typed publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The original typed publisher object.</returns>
         public abstract object Unwrap();
 
         /// <summary>
@@ -53,21 +53,21 @@ namespace Akka.Streams
         public abstract void SubscribeCancellingSubscriber();
 
         /// <summary>
-        /// TBD
+        /// Wraps a typed publisher so it can pass through an untyped stream-module boundary.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="publisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The publisher's element type.</typeparam>
+        /// <param name="publisher">The publisher to wrap.</param>
+        /// <returns>An adapter retaining the publisher's element type for subscription.</returns>
         public static UntypedPublisher FromTyped<T>(IPublisher<T> publisher)
         {
             return new UntypedPublisherImpl<T>(publisher);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the original publisher when the supplied wrapper is an adapter, or the argument unchanged otherwise.
         /// </summary>
-        /// <param name="untypedPublisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="untypedPublisher">The publisher to unwrap when it is an adapter.</param>
+        /// <returns>The wrapped typed publisher, or <paramref name="untypedPublisher"/> unchanged.</returns>
         public static object ToTyped(IUntypedPublisher untypedPublisher)
         {
             if (untypedPublisher is UntypedPublisher publisher)
@@ -76,11 +76,11 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Converts an untyped publisher to a publisher with the requested element type.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="untypedPublisher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The expected element type.</typeparam>
+        /// <param name="untypedPublisher">The publisher to unwrap and cast.</param>
+        /// <returns>The publisher cast to <see cref="IPublisher{T}"/>.</returns>
         public static IPublisher<T> ToTyped<T>(IUntypedPublisher untypedPublisher)
         {
             return (IPublisher<T>) ToTyped(untypedPublisher);
@@ -88,35 +88,35 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Adapter that forwards subscriptions to a typed publisher.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The publisher's element type.</typeparam>
     internal sealed class UntypedPublisherImpl<T> : UntypedPublisher
     {
         private readonly IPublisher<T> _publisher;
 
         /// <summary>
-        /// TBD
+        /// Wraps the supplied typed publisher.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher to wrap.</param>
         public UntypedPublisherImpl(IPublisher<T> publisher)
         {
             _publisher = publisher;
         }
 
         /// <summary>
-        /// TBD
+        /// Converts the untyped subscriber to the publisher's element type and subscribes it.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to connect to the wrapped publisher.</param>
         public override void Subscribe(IUntypedSubscriber subscriber)
         {
             _publisher.Subscribe(UntypedSubscriber.ToTyped<T>(subscriber));
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the wrapped publisher for a typed module boundary.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The original publisher.</returns>
         public override object Unwrap()
         {
             return _publisher;
@@ -129,9 +129,9 @@ namespace Akka.Streams
         public override void SubscribeCancellingSubscriber() => _publisher.Subscribe(new CancellingSubscriber<T>());
 
         /// <summary>
-        /// TBD
+        /// Returns a string representation of the wrapped publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The wrapped publisher's string representation.</returns>
         public override string ToString()
         {
             return _publisher.ToString();

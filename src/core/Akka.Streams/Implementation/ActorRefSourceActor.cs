@@ -14,21 +14,21 @@ using Akka.Streams.Actors;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Actor publisher that accepts elements as actor messages and emits them according to downstream demand.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements emitted by the publisher.</typeparam>
     internal class ActorRefSourceActor<T> : Actors.ActorPublisher<T>
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a source actor using the materializer's maximum fixed buffer size.
         /// </summary>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
-        /// <param name="settings">TBD</param>
+        /// <param name="bufferSize">The requested buffer capacity; non-positive values disable buffering.</param>
+        /// <param name="overflowStrategy">The policy used when the buffer is full. Backpressure is unsupported.</param>
+        /// <param name="settings">Materializer settings used to constrain fixed-size buffer allocation.</param>
         /// <exception cref="NotSupportedException">
         /// This exception is thrown when the specified <paramref name="overflowStrategy"/> is <see cref="Akka.Streams.OverflowStrategy.Backpressure"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Actor properties for creating the source actor.</returns>
         public static Props Props(int bufferSize, OverflowStrategy overflowStrategy, ActorMaterializerSettings settings)
         {
             if (overflowStrategy == OverflowStrategy.Backpressure)
@@ -39,25 +39,25 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Buffer used for elements received without downstream demand; null when buffering is disabled.
         /// </summary>
         protected readonly IBuffer<T>? Buffer;
 
         /// <summary>
-        /// TBD
+        /// Gets the configured capacity of the buffer, or a non-positive value when buffering is disabled.
         /// </summary>
         public readonly int BufferSize;
         /// <summary>
-        /// TBD
+        /// Gets the policy applied when an incoming element cannot fit in the buffer.
         /// </summary>
         public readonly OverflowStrategy OverflowStrategy;
 
         /// <summary>
-        /// TBD
+        /// Creates a source actor with the specified buffering behavior.
         /// </summary>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
-        /// <param name="maxFixedBufferSize">TBD</param>
+        /// <param name="bufferSize">The requested buffer capacity; non-positive values disable buffering.</param>
+        /// <param name="overflowStrategy">The policy used when the buffer is full.</param>
+        /// <param name="maxFixedBufferSize">The upper bound used when creating a fixed-size buffer.</param>
         /// If this changes you must also change <see cref="ActorRefSourceActor{T}.Props"/> as well!
         public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy, int maxFixedBufferSize)
         {
@@ -67,23 +67,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor logger used for dropped-element and overflow diagnostics.
         /// </summary>
         protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Handles built-in publisher messages and treats messages of type <typeparamref name="T"/> as elements.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to process.</param>
+        /// <returns><see langword="true"/> when a built-in message or element was handled.</returns>
         protected override bool Receive(object message)
             => DefaultReceive(message) || RequestElement(message) || (message is T message1 && ReceiveElement(message1));
 
         /// <summary>
-        /// TBD
+        /// Handles cancellation and terminal-status messages shared by source actor implementations.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to inspect.</param>
+        /// <returns><see langword="true"/> when the message was handled; otherwise <see langword="false"/>.</returns>
         protected bool DefaultReceive(object message)
         {
             if (message is Actors.Cancel)
@@ -103,10 +103,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Emits buffered elements when downstream demand arrives.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to inspect.</param>
+        /// <returns><see langword="true"/> for a request message, whether or not elements were buffered.</returns>
         protected virtual bool RequestElement(object message)
         {
             if (message is Request)
@@ -123,10 +123,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Emits an element immediately when demand is available; otherwise buffers or drops it according to policy.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The element received by the actor.</param>
+        /// <returns><see langword="true"/> when the active publisher handled the element; otherwise <see langword="false"/>.</returns>
         protected virtual bool ReceiveElement(T message)
         {
             if (IsActive)
