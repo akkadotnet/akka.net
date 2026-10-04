@@ -22,10 +22,10 @@ namespace Akka.Util.Internal
         private readonly TimeSpan _callTimeout;
 
         /// <summary>
-        /// TBD
+        /// Creates an atomic state with the specified call timeout and initial counter value.
         /// </summary>
-        /// <param name="callTimeout">TBD</param>
-        /// <param name="startingCount">TBD</param>
+        /// <param name="callTimeout">The maximum duration allowed for a call protected by this state.</param>
+        /// <param name="startingCount">The initial value of the state counter.</param>
         protected AtomicState(TimeSpan callTimeout, long startingCount)
             : base(startingCount)
         {
@@ -51,9 +51,9 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Notifies the listeners of the transition event via a 
+        /// Invokes the registered transition listeners asynchronously.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes after the listeners have been invoked.</returns>
         protected async Task NotifyTransitionListeners()
         {
             if (!HasListeners) return;
@@ -307,23 +307,23 @@ namespace Akka.Util.Internal
     public interface IAtomicState
     {
         /// <summary>
-        /// TBD
+        /// Registers a callback to invoke when this state is entered.
         /// </summary>
-        /// <param name="listener">TBD</param>
+        /// <param name="listener">The callback to invoke on state entry.</param>
         void AddListener(Action listener);
         /// <summary>
-        /// TBD
+        /// Gets whether at least one state-entry callback has been registered.
         /// </summary>
         bool HasListeners { get; }
         /// <summary>
-        /// TBD
+        /// Invokes an asynchronous operation through this state so its result or failure can be recorded.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="body">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The result type of the operation.</typeparam>
+        /// <param name="body">The asynchronous operation to invoke.</param>
+        /// <returns>A task that completes with the operation's result or failure.</returns>
         Task<T> Invoke<T>(Func<Task<T>> body);
         /// <summary>
-        /// TBD
+        /// Enters this state and notifies its registered listeners.
         /// </summary>
         void Enter();
     }
