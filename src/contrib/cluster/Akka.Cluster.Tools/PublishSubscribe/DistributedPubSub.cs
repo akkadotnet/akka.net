@@ -18,15 +18,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     public interface IDistributedPubSubMessage { }
 
     /// <summary>
-    /// TBD
+    /// Extension provider that creates the distributed publish-subscribe extension for an actor system.
     /// </summary>
     public sealed class DistributedPubSubExtensionProvider : ExtensionIdProvider<DistributedPubSub>
     {
         /// <summary>
-        /// TBD
+        /// Creates the distributed publish-subscribe extension.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system that owns the extension.</param>
+        /// <returns>The initialized distributed publish-subscribe extension.</returns>
         public override DistributedPubSub CreateExtension(ExtendedActorSystem system)
         {
             return new DistributedPubSub(system);
@@ -45,28 +45,28 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly IActorRef _mediatorRef;
 
         /// <summary>
-        /// TBD
+        /// Gets the distributed publish-subscribe extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system whose extension should be retrieved.</param>
+        /// <returns>The distributed publish-subscribe extension for the actor system.</returns>
         public static DistributedPubSub Get(ActorSystem system)
         {
             return system.WithExtension<DistributedPubSub, DistributedPubSubExtensionProvider>();
         }
 
         /// <summary>
-        /// TBD
+        /// Loads the default distributed publish-subscribe configuration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Default HOCON configuration from the embedded reference resource.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<DistributedPubSub>("Akka.Cluster.Tools.PublishSubscribe.reference.conf");
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes settings, cluster membership integration, and the mediator actor.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">Actor system where the mediator is configured and started.</param>
         public DistributedPubSub(ExtendedActorSystem system)
         {
             _system = system;
