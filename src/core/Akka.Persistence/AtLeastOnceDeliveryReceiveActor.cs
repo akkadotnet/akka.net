@@ -92,10 +92,10 @@ namespace Akka.Persistence
         public int UnconfirmedCount => _atLeastOnceDeliverySemantic.UnconfirmedCount;
 
         /// <summary>
-        /// TBD
+        /// Cancels scheduled redelivery when the actor is about to restart.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">Cause of the actor restart.</param>
+        /// <param name="message">Message being processed when the actor failed.</param>
         public override void AroundPreRestart(Exception cause, object message)
         {
             _atLeastOnceDeliverySemantic.Cancel();
@@ -103,7 +103,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels scheduled redelivery when the actor stops.
         /// </summary>
         public override void AroundPostStop()
         {
@@ -112,7 +112,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Resumes delivery processing after journal replay completes.
         /// </summary>
         protected override void OnReplaySuccess()
         {
@@ -121,11 +121,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Consumes redelivery tick messages and passes other messages to the base actor receive handler.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">Actor receive handler for the message.</param>
+        /// <param name="message">Message received by the actor.</param>
+        /// <returns>true because the base receive handler processes messages not consumed as redelivery ticks.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             return _atLeastOnceDeliverySemantic.AroundReceive(receive, message) || base.AroundReceive(receive, message);
@@ -146,8 +146,8 @@ namespace Akka.Persistence
         /// During recovery this method will not send out the message, but it will be sent later if no matching 
         /// <see cref="ConfirmDelivery" /> was performed.
         /// </summary>
-        /// <param name="destination">TBD</param>
-        /// <param name="deliveryMessageMapper">TBD</param>
+        /// <param name="destination">Actor path to which the message will be delivered.</param>
+        /// <param name="deliveryMessageMapper">Function that creates the message to send from its delivery identifier.</param>
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
         /// </exception>
@@ -171,8 +171,8 @@ namespace Akka.Persistence
         /// During recovery this method will not send out the message, but it will be sent later if no matching 
         /// <see cref="ConfirmDelivery" /> was performed.
         /// </summary>
-        /// <param name="destination">TBD</param>
-        /// <param name="deliveryMessageMapper">TBD</param>
+        /// <param name="destination">Actor selection identifying the destination actor.</param>
+        /// <param name="deliveryMessageMapper">Function that creates the message to send from its delivery identifier.</param>
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
         /// </exception>
@@ -192,7 +192,7 @@ namespace Akka.Persistence
         /// Call this method when a message has been confirmed by the destination,
         /// or to abort re-sending.
         /// </summary>
-        /// <param name="deliveryId">TBD</param>
+        /// <param name="deliveryId">Identifier of the delivery being confirmed.</param>
         /// <returns>True the first time the <paramref name="deliveryId"/> is confirmed, false for duplicate confirmations.</returns>
         public bool ConfirmDelivery(long deliveryId)
         {
@@ -211,7 +211,7 @@ namespace Akka.Persistence
         /// It is easiest to include the bytes of the <see cref="AtLeastOnceDeliverySnapshot"/>
         /// as a blob in your custom snapshot.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Snapshot containing the current delivery identifier and all unconfirmed deliveries.</returns>
         public AtLeastOnceDeliverySnapshot GetDeliverySnapshot()
         {
             return _atLeastOnceDeliverySemantic.GetDeliverySnapshot();
@@ -221,7 +221,7 @@ namespace Akka.Persistence
         /// If snapshot from <see cref="GetDeliverySnapshot" /> was saved it will be received during recovery
         /// phase in a <see cref="SnapshotOffer" /> message and should be set with this method.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="snapshot">Delivery state snapshot to restore.</param>
         public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _atLeastOnceDeliverySemantic.SetDeliverySnapshot(snapshot);

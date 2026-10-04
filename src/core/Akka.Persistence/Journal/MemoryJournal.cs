@@ -341,23 +341,23 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Response containing persistent actor identifiers returned by a current persistence IDs query.
         /// </summary>
         [Serializable]
         public sealed class CurrentPersistenceIds : IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Distinct persistence identifiers found in journal entries from the supplied zero-based offset onward.
             /// </summary>
             public readonly IEnumerable<string> AllPersistenceIds;
 
             public readonly int HighestOrderingNumber;
 
             /// <summary>
-            /// TBD
+            /// Initializes a query response with its identifiers and the next exclusive ordering offset.
             /// </summary>
-            /// <param name="allPersistenceIds">TBD</param>
-            /// <param name="highestOrderingNumber">TBD</param>
+            /// <param name="allPersistenceIds">Persistence identifiers returned by the query.</param>
+            /// <param name="highestOrderingNumber">The next exclusive ordering offset for a subsequent query.</param>
             public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, int highestOrderingNumber)
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();

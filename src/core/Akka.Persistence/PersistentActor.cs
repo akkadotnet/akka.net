@@ -49,7 +49,7 @@ namespace Akka.Persistence
     public sealed class Recovery
     {
         /// <summary>
-        /// TBD
+        /// Recovers from the latest available snapshot and replays events through the latest sequence number.
         /// </summary>
         public static Recovery Default { get; } = new(SnapshotSelectionCriteria.Latest);
 
@@ -116,7 +116,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Exception thrown when persistent actor recovery exceeds its configured timeout.
     /// </summary>
     public sealed class RecoveryTimedOutException : AkkaException
     {
@@ -190,7 +190,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplyToStrategy"/> class.
         /// </summary>
-        /// <param name="response">TBD</param>
+        /// <param name="response">Message sent to the sender when a message cannot be stashed.</param>
         public ReplyToStrategy(object response)
         {
             Response = response;
@@ -213,15 +213,15 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Configures the internal stash to throw when it cannot stash a message.
     /// </summary>
     public sealed class ThrowExceptionConfigurator : IStashOverflowStrategyConfigurator
     {
         /// <summary>
-        /// TBD
+        /// Creates the throw-on-overflow stash strategy.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">Actor system configuration used by the persistence extension.</param>
+        /// <returns>The singleton <see cref="ThrowOverflowExceptionStrategy"/> strategy.</returns>
         public IStashOverflowStrategy Create(Config config)
         {
             return ThrowOverflowExceptionStrategy.Instance;
@@ -229,15 +229,15 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Configures the internal stash to discard messages that do not fit.
     /// </summary>
     public sealed class DiscardConfigurator : IStashOverflowStrategyConfigurator
     {
         /// <summary>
-        /// TBD
+        /// Creates the discard-on-overflow stash strategy.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">Actor system configuration used by the persistence extension.</param>
+        /// <returns>The singleton <see cref="DiscardToDeadLetterStrategy"/> strategy.</returns>
         public IStashOverflowStrategy Create(Config config)
         {
             return DiscardToDeadLetterStrategy.Instance;
@@ -282,15 +282,15 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Handles an incoming command.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Command received by the actor.</param>
         protected abstract void OnCommand(object message);
 
         /// <summary>
-        /// TBD
+        /// Handles a message delivered during recovery.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Snapshot, persistent event, or recovery completion message.</param>
         protected abstract void OnRecover(object message);
 
         /// <summary>
@@ -315,13 +315,13 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the untyped actor context for this persistent actor.
         /// </summary>
         protected new static IUntypedActorContext Context => (IUntypedActorContext)ActorBase.Context;
     }
 
     /// <summary>
-    /// TBD
+    /// Persistent actor that configures recovery and command handling with registered message handlers.
     /// </summary>
     public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
@@ -422,11 +422,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers an action handler for recovered messages of type <typeparamref name="T"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
+        /// <typeparam name="T">Type of recovered message to handle.</typeparam>
+        /// <param name="handler">Action invoked for each matching recovered message.</param>
+        /// <param name="shouldHandle">Optional predicate that must return true for the handler to run.</param>
         protected void Recover<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
             // A predicate-less, always-handling registration for object must be the last handler added -
@@ -471,22 +471,22 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for recovered messages of type <typeparamref name="T"/> when the predicate accepts them.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldHandle">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="T">Type of recovered message to handle.</typeparam>
+        /// <param name="shouldHandle">Predicate that determines whether the handler accepts the message.</param>
+        /// <param name="handler">Action invoked for an accepted recovered message.</param>
         protected void Recover<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
             Recover(handler, shouldHandle);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers an action handler for recovered messages of the specified type.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="handler">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
+        /// <param name="messageType">Type of recovered message to handle.</param>
+        /// <param name="handler">Action invoked for each matching recovered message.</param>
+        /// <param name="shouldHandle">Optional predicate that must return true for the handler to run.</param>
         protected void Recover(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
             // Same rationale as the generic Recover<T>(Action<T>, ...) overload above.
@@ -504,40 +504,40 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for recovered messages of the specified type when the predicate accepts them.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <param name="messageType">Type of recovered message to handle.</param>
+        /// <param name="shouldHandle">Predicate that determines whether the handler accepts the message.</param>
+        /// <param name="handler">Action invoked for an accepted recovered message.</param>
         protected void Recover(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
             Recover(messageType, handler, shouldHandle);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler that returns whether it handled recovered messages of type <typeparamref name="T"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="T">Type of recovered message to handle.</typeparam>
+        /// <param name="handler">Handler invoked for recovered messages; return true when the message is handled.</param>
         protected void Recover<T>(Func<T, bool> handler)
         {
             AddGenericReceiveHandler(null, handler, isRecover: true);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler that returns whether it handled recovered messages of the specified type.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <param name="messageType">Type of recovered message to handle.</param>
+        /// <param name="handler">Handler invoked for matching recovered messages; return true when a message is handled.</param>
         protected void Recover(Type messageType, Func<object, bool> handler)
         {
             AddTypedReceiveHandler(messageType, null, handler, isRecover: true);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for any recovered message.
         /// </summary>
-        /// <param name="handler">TBD</param>
+        /// <param name="handler">Action invoked for recovered messages not handled by earlier registered handlers.</param>
         protected void RecoverAny(Action<object> handler)
         {
             EnsureMayConfigureRecoverHandlers();
@@ -638,11 +638,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for incoming commands of type <typeparamref name="T"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
+        /// <typeparam name="T">Type of command to handle.</typeparam>
+        /// <param name="handler">Action invoked for each matching command.</param>
+        /// <param name="shouldHandle">Optional predicate that must return true for the handler to run.</param>
         protected void Command<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
@@ -663,22 +663,22 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for commands of type <typeparamref name="T"/> when the predicate accepts them.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldHandle">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="T">Type of command to handle.</typeparam>
+        /// <param name="shouldHandle">Predicate that determines whether the handler accepts the command.</param>
+        /// <param name="handler">Action invoked for an accepted command.</param>
         protected void Command<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
             Command(handler, shouldHandle);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for incoming commands of the specified type.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="handler">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
+        /// <param name="messageType">Type of command to handle.</param>
+        /// <param name="handler">Action invoked for each matching command.</param>
+        /// <param name="shouldHandle">Optional predicate that must return true for the handler to run.</param>
         protected void Command(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
@@ -698,21 +698,21 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for commands of the specified type when the predicate accepts them.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="shouldHandle">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <param name="messageType">Type of command to handle.</param>
+        /// <param name="shouldHandle">Predicate that determines whether the handler accepts the command.</param>
+        /// <param name="handler">Action invoked for an accepted command.</param>
         protected void Command(Type messageType, Predicate<object> shouldHandle, Action<object> handler)
         {
             Command(messageType, handler, shouldHandle);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for commands of type <typeparamref name="T"/> that reports whether it handled each command.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="T">Type of command to handle.</typeparam>
+        /// <param name="handler">Handler invoked for matching commands; return true when a command is handled.</param>
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
@@ -721,10 +721,10 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for commands of the specified type that reports whether it handled each command.
         /// </summary>
-        /// <param name="messageType">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <param name="messageType">Type of command to handle.</param>
+        /// <param name="handler">Handler invoked for matching commands; return true when a command is handled.</param>
         protected void Command(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
@@ -732,9 +732,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a handler for incoming commands of any type.
         /// </summary>
-        /// <param name="handler">TBD</param>
+        /// <param name="handler">Action invoked for commands not handled by earlier registered handlers.</param>
         protected void Command(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
@@ -742,9 +742,9 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a catch-all handler for incoming commands.
         /// </summary>
-        /// <param name="handler">TBD</param>
+        /// <param name="handler">Action invoked for each command not handled by an earlier registered handler.</param>
         protected void CommandAny(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();

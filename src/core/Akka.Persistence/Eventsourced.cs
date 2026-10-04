@@ -155,7 +155,7 @@ namespace Akka.Persistence
         private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new();
 
         /// <summary>
-        /// TBD
+        /// Persistence extension used to resolve journal and snapshot store plugins and persistence settings.
         /// </summary>
         protected PersistenceExtension Extension { get; }
 
@@ -179,7 +179,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Logging adapter used by this persistent actor.
         /// </summary>
         protected virtual ILoggingAdapter Log { get; }
 
@@ -198,12 +198,12 @@ namespace Akka.Persistence
         public virtual Recovery Recovery => Recovery.Default;
 
         /// <summary>
-        /// TBD
+        /// Overflow strategy used when the internal persistence stash reaches its capacity.
         /// </summary>
         public virtual IStashOverflowStrategy InternalStashOverflowStrategy => Extension.DefaultInternalStashOverflowStrategy;
 
         /// <summary>
-        /// TBD
+        /// User stash wrapped to account for messages held in the internal persistence stash.
         /// </summary>
         public IStash Stash
         {
@@ -212,24 +212,24 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Configuration path of the journal plugin used by this persistent actor.
         /// </summary>
         public string JournalPluginId { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Configuration path of the snapshot store plugin used by this persistent actor.
         /// </summary>
         public string SnapshotPluginId { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Actor reference of the journal plugin used by this persistent actor.
         /// </summary>
         public IActorRef Journal => _journal ??= Extension.JournalFor(JournalPluginId);
 
         internal IActorRef RecoveryPermitter => _recoveryPermitter ??= Extension.RecoveryPermitterFor(JournalPluginId);
         
         /// <summary>
-        /// TBD
+        /// Actor reference of the snapshot store plugin used by this persistent actor.
         /// </summary>
         public IActorRef SnapshotStore => _snapshotStore ??= Extension.SnapshotStoreFor(SnapshotPluginId);
 
@@ -263,9 +263,9 @@ namespace Akka.Persistence
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistenceId">Identifier of the persistent actor whose snapshot should be loaded.</param>
+        /// <param name="criteria">Criteria used to select a snapshot.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery.</param>
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             SnapshotStore.Tell(new LoadSnapshot(persistenceId, criteria, toSequenceNr));
@@ -277,7 +277,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
         /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="snapshot">State object to save as a snapshot.</param>
         public void SaveSnapshot(object snapshot)
         {
             SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr, Context.System.Scheduler.Now.UtcDateTime), snapshot));
@@ -289,7 +289,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="sequenceNr">Sequence number of the snapshot to delete.</param>
         public void DeleteSnapshot(long sequenceNr)
         {
             SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr, DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc))));
@@ -301,7 +301,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
-        /// <param name="criteria">TBD</param>
+        /// <param name="criteria">Criteria used to select snapshots to delete.</param>
         public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
         {
             SnapshotStore.Tell(new DeleteSnapshots(SnapshotterId, criteria));
@@ -318,16 +318,16 @@ namespace Akka.Persistence
         /// If there is a problem with recovering the state of the actor from the journal, the error
         /// will be logged and the actor will be stopped.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">Snapshot, persistent event, or recovery completion message delivered during recovery.</param>
+        /// <returns>true if the message was handled; otherwise, false.</returns>
         protected abstract bool ReceiveRecover(object message);
 
         /// <summary>
         /// Command handler. Typically validates commands against current state - possibly by communicating with other actors.
         /// On successful validation, one or more events are derived from command and persisted.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">Command received by the persistent actor.</param>
+        /// <returns>true if the command was handled; otherwise, false.</returns>
         protected abstract bool ReceiveCommand(object message);
 
         /// <summary>
@@ -353,9 +353,9 @@ namespace Akka.Persistence
         /// is probably unavailable. It is better to stop the actor and after a back-off timeout start
         /// it again.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="event">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="TEvent">Type of the event to persist.</typeparam>
+        /// <param name="event">Event to persist.</param>
+        /// <param name="handler">Callback invoked with the event after it has been persisted.</param>
         public void Persist<TEvent>(TEvent @event, Action<TEvent> handler)
         {
             if (IsRecovering)
@@ -395,9 +395,9 @@ namespace Akka.Persistence
         /// This is equivalent of multiple calls of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> calls
         /// with the same handler, except that events are persisted atomically with this method.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="TEvent">Type of the events to persist.</typeparam>
+        /// <param name="events">Events to persist, in order.</param>
+        /// <param name="handler">Callback invoked for each event after it has been persisted.</param>
         public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
             if (IsRecovering)
@@ -569,9 +569,9 @@ namespace Akka.Persistence
         /// is probably unavailable. It is better to stop the actor and after a back-off timeout start
         /// it again.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="event">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="TEvent">Type of the event to persist.</typeparam>
+        /// <param name="event">Event to persist.</param>
+        /// <param name="handler">Callback invoked with the event after it has been persisted.</param>
         public void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
         {
             if (IsRecovering)
@@ -609,9 +609,9 @@ namespace Akka.Persistence
         /// This is equivalent of multiple calls of <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls
         /// with the same handler, except that events are persisted atomically with this method.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="events">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="TEvent">Type of the events to persist.</typeparam>
+        /// <param name="events">Events to persist, in order.</param>
+        /// <param name="handler">Callback invoked for each event after it has been persisted.</param>
         public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
             if (IsRecovering)
@@ -773,9 +773,9 @@ namespace Akka.Persistence
         /// If persistence of an earlier event fails, the persistent actor will stop, and the
         /// <paramref name="handler"/> will not be run.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
+        /// <typeparam name="TEvent">Type of the value passed to the deferred handler.</typeparam>
+        /// <param name="evt">Value passed to the handler after earlier pending handlers complete.</param>
+        /// <param name="handler">Callback to invoke after all earlier pending handlers have run.</param>
         public void DeferAsync<TEvent>(TEvent evt, Action<TEvent> handler)
         {
             if (IsRecovering)
@@ -942,9 +942,9 @@ namespace Akka.Persistence
         /// Note that the event may or may not have been saved, depending on the type of
         /// failure.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="event">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="cause">Cause of the persistence failure.</param>
+        /// <param name="event">Event involved in the failed persistence operation.</param>
+        /// <param name="sequenceNr">Sequence number assigned to the event.</param>
         protected virtual void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
             Log.Error(cause, "Failed to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}].",
@@ -957,9 +957,9 @@ namespace Akka.Persistence
         /// The callback handler that was passed to the <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/>
         /// method will not be invoked.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="event">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="cause">Cause reported by the journal for rejecting the event.</param>
+        /// <param name="event">Event rejected by the journal.</param>
+        /// <param name="sequenceNr">Sequence number assigned to the event.</param>
         protected virtual void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
             Log.Error(cause, "Rejected to persist event type [{0}] with sequence number [{1}] for persistenceId [{2}] due to [{3}].",

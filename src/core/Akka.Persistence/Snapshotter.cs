@@ -28,9 +28,9 @@ namespace Akka.Persistence
         /// Instructs the snapshot store to load the specified snapshot and send it via an
         /// <see cref="SnapshotOffer"/> to the running <see cref="PersistentActor"/>.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistenceId">Identifier of the persistent actor whose snapshot should be loaded.</param>
+        /// <param name="criteria">Criteria used to select a snapshot.</param>
+        /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery.</param>
         void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr);
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the success or failure of this
         /// via an <see cref="SaveSnapshotSuccess"/> or <see cref="SaveSnapshotFailure"/> message.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="snapshot">State object to save as a snapshot.</param>
         void SaveSnapshot(object snapshot);
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotSuccess"/> or <see cref="DeleteSnapshotFailure"/> message.
         /// </summary>
-        /// <param name="sequenceNr">TBD</param>
+        /// <param name="sequenceNr">Sequence number of the snapshot to delete.</param>
         void DeleteSnapshot(long sequenceNr);
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace Akka.Persistence
         /// The <see cref="PersistentActor"/> will be notified about the status of the deletion
         /// via an <see cref="DeleteSnapshotsSuccess"/> or <see cref="DeleteSnapshotsFailure"/> message.
         /// </summary>
-        /// <param name="criteria">TBD</param>
+        /// <param name="criteria">Criteria used to select snapshots to delete.</param>
         void DeleteSnapshots(SnapshotSelectionCriteria criteria);
     }
 }

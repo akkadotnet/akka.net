@@ -45,8 +45,8 @@ namespace Akka.Persistence.Journal
         /// Return the manifest (type hint) that will be provided in the <see cref="IReadEventAdapter.FromJournal"/> method.
         /// Use empty string if not needed.
         /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="evt">Application event for which to provide a manifest.</param>
+        /// <returns>Manifest (type hint) to pass to <see cref="IReadEventAdapter.FromJournal"/>, or an empty string when no manifest is needed.</returns>
         string Manifest(object evt);
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
-    /// TBD
+    /// Combines multiple read adapters by concatenating the event sequences they produce.
     /// </summary>
     [Serializable]
     public sealed class CombinedReadEventAdapter : IEventAdapter
@@ -183,47 +183,47 @@ namespace Akka.Persistence.Journal
                 "CombinedReadEventAdapter must not be used when writing (creating manifests) events!");
 
         /// <summary>
-        /// TBD
+        /// Read adapters applied in order when converting journal events.
         /// </summary>
         public IEnumerable<IEventAdapter> Adapters { get; }
 
         /// <summary>
-        /// TBD
+        /// Initializes a combined read adapter.
         /// </summary>
-        /// <param name="adapters">TBD</param>
+        /// <param name="adapters">Adapters to apply in order.</param>
         public CombinedReadEventAdapter(IEnumerable<IEventAdapter> adapters)
         {
             Adapters = adapters.ToArray();
         }
 
         /// <summary>
-        /// TBD
+        /// Writing is unsupported by a read-only combined adapter.
         /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="evt">Event for which a manifest was requested.</param>
+        /// <exception cref="IllegalStateException">Thrown because a combined read adapter cannot write events.</exception>
+        /// <returns>This method throws <see cref="IllegalStateException"/>.</returns>
         public string Manifest(object evt)
         {
             throw OnlyReadSideException;
         }
 
         /// <summary>
-        /// TBD
+        /// Writing is unsupported by a read-only combined adapter.
         /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="evt">Event to adapt for journal storage.</param>
+        /// <exception cref="IllegalStateException">Thrown because a combined read adapter cannot write events.</exception>
+        /// <returns>This method throws <see cref="IllegalStateException"/>.</returns>
         public object ToJournal(object evt)
         {
             throw OnlyReadSideException;
         }
 
         /// <summary>
-        /// TBD
+        /// Applies each read adapter to a journal event and concatenates the resulting event sequences.
         /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="evt">Journal event to adapt.</param>
+        /// <param name="manifest">Manifest associated with the journal event, or an empty string when none was stored.</param>
+        /// <returns>The concatenated sequence of events produced by the adapters.</returns>
         public IEventSequence FromJournal(object evt, string manifest)
         {
             return EventSequence.Create(Adapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
@@ -259,12 +259,12 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
-    /// TBD
+    /// Event adapter collection that returns the identity adapter for every event type.
     /// </summary>
     internal class IdentityEventAdapters : EventAdapters
     {
         /// <summary>
-        /// TBD
+        /// Singleton event adapter collection that uses identity adaptation.
         /// </summary>
         public static readonly EventAdapters Instance = new IdentityEventAdapters();
 
@@ -273,10 +273,10 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the identity adapter for every event type.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">Event type to adapt.</param>
+        /// <returns>The singleton identity adapter.</returns>
         public override IEventAdapter Get(Type type)
         {
             return IdentityEventAdapter.Instance;
@@ -284,7 +284,7 @@ namespace Akka.Persistence.Journal
     }
 
     /// <summary>
-    /// TBD
+    /// Resolves event adapters for event types using the configured adapter bindings.
     /// </summary>
     public class EventAdapters
     {
@@ -295,9 +295,9 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// Initializes a new instance of the <see cref="EventAdapters"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system used to instantiate configured adapters.</param>
+        /// <param name="config">Configuration containing event adapter definitions and bindings.</param>
+        /// <returns>Event adapters configured for the actor system.</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
         {
             var adapters = ConfigToMap(config, "event-adapters");
@@ -383,9 +383,9 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// Initializes a new instance of the <see cref="EventAdapters"/> class.
         /// </summary>
-        /// <param name="map">TBD</param>
-        /// <param name="bindings">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="map">Cache of adapters resolved for event types.</param>
+        /// <param name="bindings">Configured event type bindings ordered from most specific to least specific.</param>
+        /// <param name="log">Logger used by adapter resolution.</param>
         protected EventAdapters(ConcurrentDictionary<Type, IEventAdapter> map, IEnumerable<KeyValuePair<Type, IEventAdapter>> bindings, ILoggingAdapter log)
         {
             _map = map;
@@ -394,20 +394,20 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the event adapter configured for type <typeparamref name="T"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">Event type to adapt.</typeparam>
+        /// <returns>The adapter configured for <typeparamref name="T"/>, or the identity adapter when no binding matches.</returns>
         public IEventAdapter Get<T>()
         {
             return Get(typeof(T));
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the most specific configured event adapter for an event type.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">Event type to adapt.</param>
+        /// <returns>The most specific matching adapter, or the identity adapter when no binding matches.</returns>
         public virtual IEventAdapter Get(Type type)
         {
             if (_map.TryGetValue(type, out IEventAdapter adapter))

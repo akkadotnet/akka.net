@@ -21,7 +21,7 @@ namespace Akka.Persistence.Journal
         private readonly EventAdapters _eventAdapters;
 
         /// <summary>
-        /// TBD
+        /// Initializes the journal base and loads the event adapters registered for this journal plugin.
         /// </summary>
         protected WriteJournalBase()
         {
