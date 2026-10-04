@@ -24,26 +24,26 @@ namespace Akka.Streams.Dsl.Internal
     using Fusing = Implementation.Fusing;
 
     /// <summary>
-    /// TBD
+    /// Contains internal extension methods that build stream-processing flows from stages.
     /// </summary>
     internal static class InternalFlowOperations
     {
         /// <summary>
-        /// TBD
+        /// Creates a mapping function that returns its input value unchanged.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <returns>A function that returns its input value as an object.</returns>
         internal static Func<T, object> Identity<T>() => arg => arg;
 
         /// <summary>
-        /// TBD
+        /// Appends a symbolic stage operation to a flow.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="op">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The type of elements emitted by the appended operation.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="op">The symbolic stage operation to append to the flow.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         internal static IFlow<TOut2, TMat> AndThen<TOut2, TOut, TMat>(this IFlow<TOut, TMat> flow,
             SymbolicStage<TOut, TOut2> op)
         {
@@ -65,13 +65,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Completes when upstream completes or upstream failed with exception pf can handle
         /// </para>
-        /// Cancels when downstream cancels 
+        /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="partialFunc">The function invoked with a failure; it returns a recovery element, or no value when it cannot handle the failure.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Recover<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, Option<TOut>> partialFunc)
         {
@@ -96,13 +96,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
         /// </para>
-        /// Cancels when downstream cancels 
+        /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="partialFunc">The function invoked with a failure to provide an alternative source graph for recovery.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static IFlow<TOut, TMat> RecoverWith<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
@@ -128,15 +128,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Completes when upstream completes or upstream failed with exception <paramref name="partialFunc"/> can handle
         /// </para>
-        /// Cancels when downstream cancels 
+        /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
         /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
         /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> RecoverWithRetries<TOut, TMat>(this IFlow<TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
@@ -146,7 +146,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// While similar to <see cref="Recover{TOut,TMat}"/> this stage can be used to transform an error signal to a different one without logging
         /// it as an error in the process. So in that sense it is NOT exactly equivalent to Recover(e => throw e2) since Recover
-        /// would log the e2 error. 
+        /// would log the e2 error.
         /// <para>
         /// Since the underlying failure signal onError arrives out-of-band, it might jump over existing elements.
         /// This stage can recover the failure signal, but not the skipped elements, which will be dropped.
@@ -161,7 +161,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>
         /// Completes when upstream completes or upstream failed with exception returned by the <paramref name="selector"/>
         /// </para>
-        /// Cancels when downstream cancels 
+        /// Cancels when downstream cancels
         /// </summary>
         /// <param name="flow">The upstream stage</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
@@ -218,7 +218,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Transform each input element into a sequence of output elements that is
         /// then flattened into the output stream.
-        /// 
+        ///
         /// The returned sequence MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
         /// <para>
@@ -248,10 +248,10 @@ namespace Akka.Streams.Dsl.Internal
         /// which is enabled by creating the transformation function <paramref name="mapConcaterFactory"/> a new for every materialization —
         /// the returned function will typically close over mutable objects to store state between
         /// invocations. For the stateless variant see <see cref="SelectMany{TIn,TOut,TMat}"/>.
-        /// 
+        ///
         /// The returned Enumerable MUST NOT contain null values,
         /// as they are illegal as stream elements - according to the Reactive Streams specification.
-        /// 
+        ///
         /// <para>
         /// Emits when the mapping function returns an element or there are still remaining elements
         /// from the previously calculated collection
@@ -281,11 +281,11 @@ namespace Akka.Streams.Dsl.Internal
         /// that shall run in parallel is given as the first argument to <see cref="SelectAsync{TIn,TOut,TMat}"/>.
         /// These tasks may complete in any order, but the elements that
         /// are emitted downstream are in the same order as received from upstream.
-        /// 
+        ///
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
         /// with failure and the supervision decision is <see cref="Supervision.Directive.Stop"/>
         /// the stream will be completed with failure.
-        /// 
+        ///
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
         /// with failure and the supervision decision is <see cref="Supervision.Directive.Resume"/> or
         /// <see cref="Supervision.Directive.Restart"/> the element is dropped and the stream continues.
@@ -317,11 +317,11 @@ namespace Akka.Streams.Dsl.Internal
         /// downstream may run in parallel and each processed element will be emitted dowstream
         /// as soon as it is ready, i.e. it is possible that the elements are not emitted downstream
         /// in the same order as received from upstream.
-        /// 
+        ///
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
         /// with failure and the supervision decision is <see cref="Supervision.Directive.Stop"/>
         /// the stream will be completed with failure.
-        /// 
+        ///
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the<see cref="Task"/> is completed
         /// with failure and the supervision decision is <see cref="Supervision.Directive.Resume"/> or
         /// <see cref="Supervision.Directive.Restart"/> the element is dropped and the stream continues.
@@ -386,7 +386,7 @@ namespace Akka.Streams.Dsl.Internal
         /// returns false for the first time, including the first failed element iff inclusive is true
         /// Due to input buffering some elements may have been requested from upstream publishers
         /// that will then not be processed downstream of this step.
-        /// 
+        ///
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is false for
         /// the first stream element.
         /// <para>
@@ -421,11 +421,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="predicate">The predicate evaluated for each element by this operation.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> SkipWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
             return flow.Via(new Fusing.SkipWhile<T>(predicate));
@@ -444,12 +444,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="collector">The function that produces an output element from an input element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.4.51")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
@@ -469,13 +469,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="isDefined">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="isDefined">The predicate that selects input elements for which the collector is applied.</param>
+        /// <param name="collector">The function that maps each selected input element to an output element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(
             this IFlow<TIn, TMat> flow,
             Func<TIn, bool> isDefined,
@@ -497,12 +497,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of elements in each group or window.</param>
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<IEnumerable<T>, TMat> Grouped<T, TMat>(this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.Grouped<T>(n));
@@ -512,11 +512,11 @@ namespace Akka.Streams.Dsl.Internal
         /// Ensure stream boundedness by limiting the number of elements from upstream.
         /// If the number of incoming elements exceeds <paramref name="max"/>, it will signal
         /// upstream failure <see cref="StreamLimitReachedException"/> downstream.
-        /// 
+        ///
         /// Due to input buffering some elements may have been
         /// requested from upstream publishers that will then not be processed downstream
         /// of this step.
-        /// 
+        ///
         /// The stream will be completed without producing any elements if <paramref name="max"/> is zero
         /// or negative.
         /// <para>
@@ -531,11 +531,11 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="max">The maximum number of elements allowed before the flow completes.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Limit<T, TMat>(this IFlow<T, TMat> flow, long max)
         {
             return LimitWeighted(flow, max, _ => 1L);
@@ -546,11 +546,11 @@ namespace Akka.Streams.Dsl.Internal
         /// using a cost function. Exactly how many elements will be allowed to travel downstream depends on the
         /// evaluated cost of each element. If the accumulated cost exceeds <paramref name="max"/>, it will signal
         /// upstream failure <see cref="StreamLimitReachedException"/> downstream.
-        /// 
+        ///
         /// Due to input buffering some elements may have been
         /// requested from upstream publishers that will then not be processed downstream
         /// of this step.
-        /// 
+        ///
         /// The stream will be completed without producing any elements if <paramref name="max"/> is zero
         /// or negative.
         /// <para>
@@ -565,12 +565,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="Take{T,TMat}"/>
         /// <seealso cref="TakeWithin{T,TMat}"/>
         /// <seealso cref="TakeWhile{T,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="costFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="max">The maximum accumulated cost allowed before the flow fails.</param>
+        /// <param name="costFunc">The function that calculates the cost of an element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> LimitWeighted<T, TMat>(this IFlow<T, TMat> flow, long max, Func<T, long> costFunc)
         {
             return flow.Via(new Fusing.LimitWeighted<T>(max, costFunc));
@@ -579,7 +579,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Apply a sliding window over the stream and return the windows as groups of elements, with the last group
         /// possibly smaller than requested due to end-of-stream.
-        /// 
+        ///
         /// <paramref name="n"/> must be positive, otherwise IllegalArgumentException is thrown.
         /// <paramref name="step"/> must be positive, otherwise IllegalArgumentException is thrown.
         /// <para>
@@ -591,13 +591,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <param name="step">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of elements in each group or window.</param>
+        /// <param name="step">The number of elements by which each sliding window advances.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<IEnumerable<T>, TMat> Sliding<T, TMat>(this IFlow<T, TMat> flow, int n, int step = 1)
         {
             return flow.Via(new Fusing.Sliding<T>(n, step));
@@ -608,7 +608,7 @@ namespace Akka.Streams.Dsl.Internal
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>,
         /// emitting the next current value.
-        /// 
+        ///
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
         /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
@@ -621,13 +621,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="scan">The function that updates the accumulator with each input element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Scan<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> scan)
         {
@@ -639,11 +639,11 @@ namespace Akka.Streams.Dsl.Internal
         /// emits its current value which starts at <paramref name="zero"/> and then
         /// applies the current and next value to the given function <paramref name="scan"/>
         /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
-        /// 
+        ///
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
         /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
-        /// 
+        ///
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
         /// <see cref="Supervision.Directive.Resume"/> current value starts at the previous
         /// current value, or zero when it doesn't have one, and the stream will continue.
@@ -656,13 +656,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="scan">The function that updates the accumulator with each input element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> ScanAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, Task<TOut>> scan)
         {
@@ -673,7 +673,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Similar to <see cref="Scan{TIn,TOut,TMat}"/> but only emits its result when the upstream completes,
         /// after which it also completes. Applies the given function <paramref name="fold"/> towards its current and next value,
         /// yielding the next current value.
-        /// 
+        ///
         /// If the function <paramref name="fold"/> throws an exception and the supervision decision is
         /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
@@ -686,13 +686,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">The function that updates the accumulator with each input element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Aggregate<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, TOut> fold)
         {
@@ -703,7 +703,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but with an asynchronous function.
         /// Applies the given function towards its current and next value,
         /// yielding the next current value.
-        /// 
+        ///
         /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
         /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
@@ -715,16 +715,16 @@ namespace Akka.Streams.Dsl.Internal
         /// Completes when upstream completes
         /// </para>
         /// Cancels when downstream cancels
-        /// 
+        ///
         /// <seealso cref="Aggregate{TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">The function that updates the accumulator with each input element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> AggregateAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, TOut zero,
             Func<TOut, TIn, Task<TOut>> fold)
         {
@@ -734,7 +734,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Similar to <see cref="Aggregate{TIn,TOut,TMat}"/> but uses first element as zero element.
         /// Applies the given function <paramref name="reduce"/> towards its current and next value,
-        /// yielding the next current value. 
+        /// yielding the next current value.
         /// <para>
         /// Emits when upstream completes
         /// </para>
@@ -744,11 +744,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="reduce">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="reduce">The function that combines two input elements into the next accumulated value.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TIn, TMat> Sum<TIn, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TIn, TIn> reduce)
         {
             return flow.Via(new Fusing.Sum<TIn>(reduce));
@@ -757,12 +757,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Intersperses stream with provided element, similar to how <see cref="string.Join(string,string[])"/>
         /// injects a separator between a collection's elements.
-        /// 
+        ///
         /// Additionally can inject start and end marker elements to stream.
-        /// 
+        ///
         /// In case you want to only prepend or only append an element (yet still use the intercept feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details).
         /// <para>
         /// Emits when upstream emits (or before with the <paramref name="start"/> element if provided)
         /// </para>
@@ -772,14 +772,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="start">TBD</param>
-        /// <param name="inject">TBD</param>
-        /// <param name="end">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="start">The element emitted before the first input element.</param>
+        /// <param name="inject">The element emitted between consecutive input elements.</param>
+        /// <param name="end">The element emitted after the last input element.</param>
         /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Intersperse<T, TMat>(this IFlow<T, TMat> flow, T start, T inject, T end)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(start);
@@ -792,12 +792,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Intersperses stream with provided element, similar to how <see cref="string.Join(string,string[])"/>
         /// injects a separator between a collection's elements.
-        /// 
+        ///
         /// Additionally can inject start and end marker elements to stream.
-        /// 
+        ///
         /// In case you want to only prepend or only append an element (yet still use the intercept feature
         /// to inject a separator between elements, you may want to use the following pattern instead of the 3-argument
-        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details). 
+        /// version of intersperse (See <see cref="Concat{TIn,TOut}"/> for semantics details).
         /// <para>
         /// Emits when upstream emits (or before with the <paramref name="inject"/> element if provided)
         /// </para>
@@ -821,7 +821,7 @@ namespace Akka.Streams.Dsl.Internal
         /// Empty groups will not be emitted if no elements are received from upstream.
         /// The last group before end-of-stream will contain the buffered elements
         /// since the previously emitted group.
-        /// 
+        ///
         /// <paramref name="n"/> must be positive, and <paramref name="timeout"/> must be greater than 0 seconds, otherwise
         /// <see cref="ArgumentException"/> is thrown.
         /// <para>
@@ -833,13 +833,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream completes
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of elements in each group or window.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n, TimeSpan timeout) => 
             flow.Via(new Fusing.GroupedWeightedWithin<T>(long.MaxValue, n, _ => 0L, timeout)
                 .WithAttributes(DefaultAttributes.GroupedWithin));
@@ -851,7 +851,7 @@ namespace Akka.Streams.Dsl.Internal
         /// The last group before end-of-stream will contain the buffered elements
         /// since the previously emitted group.
         /// <para>
-        /// <paramref name="maxWeight" /> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// <paramref name="maxWeight" /> must be positive, and <paramref name="interval"/> must be greater than 0 seconds,
         /// otherwise ArgumentException is thrown.
         /// </para>
         /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
@@ -859,13 +859,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>Completes when upstream completes(emits last group)</para>
         /// <para>Cancels when downstream completes</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="maxWeight">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="costFn">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="maxWeight">The maximum accumulated element weight for a group.</param>
+        /// <param name="interval">The maximum time interval before a group is emitted.</param>
+        /// <param name="costFn">The function that calculates the weight of an element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, TimeSpan interval, Func<TOut, long> costFn) =>
             flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, int.MaxValue, costFn, interval));
 
@@ -876,25 +876,25 @@ namespace Akka.Streams.Dsl.Internal
         /// The last group before end-of-stream will contain the buffered elements
         /// since the previously emitted group.
         /// <para>
-        /// <paramref name="maxWeight" /> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// <paramref name="maxWeight" /> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds,
         /// otherwise ArgumentException is thrown.
         /// </para>
         /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
         /// <para>
-        /// Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` 
+        /// Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight`
         /// or has more than `maxNumber` elements
         /// </para>
         /// <para>Completes when upstream completes(emits last group)</para>
         /// <para>Cancels when downstream completes</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="maxWeight">TBD</param>
-        /// <param name="maxNumber">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="costFn">TBD</param>
-        /// <returns>TBD</returns>        
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="maxWeight">The maximum accumulated element weight for a group.</param>
+        /// <param name="maxNumber">The maximum number of elements in a group.</param>
+        /// <param name="interval">The maximum time interval before a group is emitted.</param>
+        /// <param name="costFn">The function that calculates the weight of an element.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
             flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, maxNumber, costFn, interval));
 
@@ -903,9 +903,9 @@ namespace Akka.Streams.Dsl.Internal
         /// in internal buffer while waiting for next element to be emitted. Depending on the defined
         /// <see cref="DelayOverflowStrategy"/> it might drop elements or backpressure the upstream if
         /// there is no space available in the buffer.
-        /// 
+        ///
         /// Delay precision is 10ms to avoid unnecessary timer scheduling cycles
-        /// 
+        ///
         /// Internal buffer has default capacity 16. You can set buffer size by calling <see cref="Attributes.CreateInputBuffer"/>
         /// <para>
         /// Emits when there is a pending element in the buffer and configured time for this element elapsed
@@ -920,12 +920,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="of">Time to shift all messages.</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Delay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan of,
             DelayOverflowStrategy? strategy = null)
         {
@@ -944,11 +944,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of initial elements to skip or take.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Skip<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
             return flow.Via(new Fusing.Skip<T>(n));
@@ -965,11 +965,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="duration">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="duration">The duration that controls how long the operation skips or accepts elements.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> SkipWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
         {
             return flow.Via(new Fusing.SkipWithin<T>(duration).WithAttributes(Attributes.CreateName("skipWithin")));
@@ -980,7 +980,7 @@ namespace Akka.Streams.Dsl.Internal
         /// number of elements. Due to input buffering some elements may have been
         /// requested from upstream publishers that will then not be processed downstream
         /// of this step.
-        /// 
+        ///
         /// The stream will be completed without producing any elements if <paramref name="n"/> is zero
         /// or negative.
         /// <para>
@@ -992,11 +992,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when the defined number of elements has been taken or downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of initial elements to skip or take.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Take<T, TMat>(this IFlow<T, TMat> flow, long n)
         {
             return flow.Via(new Fusing.Take<T>(n));
@@ -1007,7 +1007,7 @@ namespace Akka.Streams.Dsl.Internal
         /// duration. Due to input buffering some elements may have been
         /// requested from upstream publishers that will then not be processed downstream
         /// of this step.
-        /// 
+        ///
         /// Note that this can be combined with <see cref="Take{T,TMat}"/> to limit the number of elements
         /// within the duration.
         /// <para>
@@ -1019,11 +1019,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels or timer fires
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="duration">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="duration">The duration that controls how long the operation skips or accepts elements.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> TakeWithin<T, TMat>(this IFlow<T, TMat> flow, TimeSpan duration)
         {
             return flow.Via(new Fusing.TakeWithin<T>(duration).WithAttributes(Attributes.CreateName("takeWithin")));
@@ -1033,10 +1033,10 @@ namespace Akka.Streams.Dsl.Internal
         /// Allows a faster upstream to progress independently of a slower subscriber by conflating elements into a summary
         /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
         /// upstream publisher is faster.
-        /// 
+        ///
         /// This version of conflate allows to derive a seed from the first element and change the aggregated type to
         /// be different than the input type. See <see cref="Conflate{T,TMat}"/> for a simpler version that does not change types.
-        /// 
+        ///
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
@@ -1048,13 +1048,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TSeed">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param> 
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TSeed">The type of the initial state created for an input element.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="seed">Provides the first state for a conflated value using the first unconsumed element as a start</param>
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed,
             Func<TSeed, T, TSeed> aggregate)
         {
@@ -1065,10 +1065,10 @@ namespace Akka.Streams.Dsl.Internal
         /// Allows a faster upstream to progress independently of a slower subscriber by conflating elements into a summary
         /// until the subscriber is ready to accept them. For example a conflate step might average incoming numbers if the
         /// upstream publisher is faster.
-        /// 
+        ///
         /// This version of conflate does not change the output type of the stream. See <see cref="ConflateWithSeed{T,TMat,TSeed}"/>
         /// for a more flexible version that can take a seed function and transform elements while rolling up.
-        /// 
+        ///
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
         /// duplicate elements.
         /// <para>
@@ -1080,11 +1080,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="aggregate">Takes the currently aggregated value and the current pending element to produce a new aggregate</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Conflate<T, TMat>(this IFlow<T, TMat> flow, Func<T, T, T> aggregate)
         {
             return ConflateWithSeed(flow, o => o, aggregate);
@@ -1108,14 +1108,14 @@ namespace Akka.Streams.Dsl.Internal
         ///
         /// See also <seealso cref="ConflateWithSeed{TOut,TMat,TSeed}"/>, <seealso cref="BatchWeighted{TOut,TOut2,TMat}"/>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TOut2">The type of elements emitted by the appended operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="max">maximum number of elements to batch before backpressuring upstream (must be positive non-zero)</param>
         /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
         /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut2, TMat> Batch<TOut, TOut2, TMat>(this IFlow<TOut, TMat> flow, long max,
             Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
         {
@@ -1145,15 +1145,15 @@ namespace Akka.Streams.Dsl.Internal
         ///
         /// See also <seealso cref="ConflateWithSeed{TOut,TMat,TSeed}"/>, <seealso cref="Batch{TOut,TOut2,TMat}"/>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TOut2">The type of elements emitted by the appended operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="max">maximum weight of elements to batch before backpressuring upstream (must be positive non-zero)</param>
         /// <param name="costFunction">a function to compute a single element weight</param>
         /// <param name="seed">Provides the first state for a batched value using the first unconsumed element as a start</param>
         /// <param name="aggregate">Takes the currently batched value and the current pending element to produce a new aggregate</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut2, TMat> BatchWeighted<TOut, TOut2, TMat>(this IFlow<TOut, TMat> flow, long max, Func<TOut, long> costFunction,
             Func<TOut, TOut2> seed, Func<TOut2, TOut, TOut2> aggregate)
         {
@@ -1164,11 +1164,11 @@ namespace Akka.Streams.Dsl.Internal
         /// Allows a faster downstream to progress independently of a slower publisher by extrapolating elements from an older
         /// element until new element comes from the upstream. For example an expand step might repeat the last element for
         /// the subscriber until it receives an update from upstream.
-        /// 
+        ///
         /// This element will never "drop" upstream elements as all elements go through at least one extrapolation step.
         /// This means that if the upstream is actually faster than the upstream it will be backpressured by the downstream
         /// subscriber.
-        /// 
+        ///
         /// Expand does not support <see cref="Supervision.Directive.Restart"/> and <see cref="Supervision.Directive.Resume"/>.
         /// Exceptions from the <paramref name="extrapolate"/> function will complete the stream with failure.
         /// <para>
@@ -1180,12 +1180,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="extrapolate">Takes the current extrapolation state to produce an output element and the next extrapolation state.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Expand<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerator<TOut>> extrapolate)
         {
@@ -1208,12 +1208,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="size">The size of the buffer in element count</param>
         /// <param name="strategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Buffer<T, TMat>(this IFlow<T, TMat> flow, int size, OverflowStrategy strategy)
         {
             return flow.Via(new Fusing.Buffer<T>(size, strategy));
@@ -1224,12 +1224,12 @@ namespace Akka.Streams.Dsl.Internal
         /// This operator makes it possible to extend the <see cref="Flow"/> API when there is no specialized
         /// operator that performs the transformation.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="stageFactory">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="stageFactory">The factory that creates the transformation stage.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
 #pragma warning disable CS0618 // Type or member is obsolete
             Func<IStage<TIn, TOut>> stageFactory)
@@ -1252,11 +1252,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels or substream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="n">The number of initial elements to skip or take.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<(IImmutableList<T>, Source<T, NotUsed>), TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
@@ -1270,26 +1270,26 @@ namespace Akka.Streams.Dsl.Internal
         /// a new substream is opened and subsequently fed with all elements belonging to
         /// that key.
         /// <para>
-        /// WARNING: If <paramref name="allowClosedSubstreamRecreation"/> is set to false (default behavior) the operator 
-        /// keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this 
+        /// WARNING: If <paramref name="allowClosedSubstreamRecreation"/> is set to false (default behavior) the operator
+        /// keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this
         /// can cause memory issues. Elements belonging to those keys are drained directly and not send to the substream.
         /// </para>
         /// <para>
-        /// Note: If <paramref name="allowClosedSubstreamRecreation"/> is set to true substream completion and incoming 
-        /// elements are subject to race-conditions. If elements arrive for a stream that is in the process of closing 
+        /// Note: If <paramref name="allowClosedSubstreamRecreation"/> is set to true substream completion and incoming
+        /// elements are subject to race-conditions. If elements arrive for a stream that is in the process of closing
         /// these elements might get lost.
         /// </para>
         /// <para>
-        /// The object returned from this method is not a normal <see cref="Source"/> or <see cref="Flow"/>, it is a 
-        /// <see cref="SubFlow{TOut, TMat, TClosed}"/>. This means that after this operator 
-        /// all transformations are applied to all encountered substreams in the same fashion. 
+        /// The object returned from this method is not a normal <see cref="Source"/> or <see cref="Flow"/>, it is a
+        /// <see cref="SubFlow{TOut, TMat, TClosed}"/>. This means that after this operator
+        /// all transformations are applied to all encountered substreams in the same fashion.
         /// Substream mode is exited either by closing the substream (i.e. connecting it to a <see cref="Sink"/>)
         /// or by merging the substreams back together; see the <c>To</c> and <c>MergeBack</c> methods
         /// on <see cref="SubFlow{TOut, TMat, TClosed}"/> for more information.
         /// </para>
         /// <para>
-        /// It is important to note that the substreams also propagate back-pressure as any other stream, which means 
-        /// that blocking one substream will block the <c>GroupBy</c> operator itself —and thereby all substreams— once all 
+        /// It is important to note that the substreams also propagate back-pressure as any other stream, which means
+        /// that blocking one substream will block the <c>GroupBy</c> operator itself —and thereby all substreams— once all
         /// internal or explicit buffers are filled.
         /// </para>
         /// <para>
@@ -1309,16 +1309,16 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>**Completes when** upstream completes</para>
         /// <para>**Cancels when** downstream cancels and all substreams cancel</para>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TKey">The type of the key used to partition elements into subflows.</typeparam>
+        /// <typeparam name="TClosed">The materialized type returned by the callback that builds each subflow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
         /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
         /// <param name="groupingFunc">Computes the key for each element</param>
-        /// <param name="toFunc">TBD</param>
+        /// <param name="toFunc">The function that defines how the generated substreams are consumed and returns the resulting materialized value.</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
-        /// <returns>TBD</returns>
+        /// <returns>The subflow configured by this operation.</returns>
         public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
             this IFlow<T, TMat> flow,
             int maxSubstreams,
@@ -1339,12 +1339,12 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// This operation demultiplexes the incoming stream into separate output streams, one for each element key. 
-        /// The key is computed for each element using the given function. When a new key is encountered for the first 
+        /// This operation demultiplexes the incoming stream into separate output streams, one for each element key.
+        /// The key is computed for each element using the given function. When a new key is encountered for the first
         /// time a new substream is opened and subsequently fed with all elements belonging to that key.
         /// <para>
-        /// WARNING: The operator keeps track of all keys of streams that have already been closed. If you expect an 
-        /// infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly 
+        /// WARNING: The operator keeps track of all keys of streams that have already been closed. If you expect an
+        /// infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly
         /// and not send to the substream.
         /// </para>
         /// See also <seealso cref="GroupBy{T, TMat, TKey, TClosed}(IFlow{T, TMat}, int, Func{T, TKey}, Func{IFlow{Source{T, NotUsed}, TMat}, Sink{Source{T, NotUsed}, Task{Done}}, TClosed}, bool)"/>
@@ -1365,11 +1365,11 @@ namespace Akka.Streams.Dsl.Internal
             Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc) => GroupBy(flow, maxSubstreams, groupingFunc, toFunc, allowClosedSubstreamRecreation: false);
 
         /// <summary>
-        /// TBD
+        /// Applies a flow to each keyed substream and merges the resulting substreams back into the parent flow.
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TKey">TBD</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TKey">The type of the key used to partition elements into subflows.</typeparam>
         internal sealed class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
@@ -1378,9 +1378,9 @@ namespace Akka.Streams.Dsl.Internal
             private readonly bool _allowClosedSubstreamRecreation;
 
             /// <summary>
-            /// TBD
+            /// Creates a merge-back operation for a keyed flow.
             /// </summary>
-            /// <param name="self">TBD</param>
+            /// <param name="self">The flow whose substreams are merged after the inner flow is applied.</param>
             /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
             /// <param name="groupingFunc">Computes the key for each element</param>
             /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
@@ -1393,12 +1393,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// TBD
+            /// Applies the supplied flow to each keyed substream and merges the results.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="flow">TBD</param>
-            /// <param name="breadth">TBD</param>
-            /// <returns>TBD</returns>
+            /// <typeparam name="T">The element type processed by this operation.</typeparam>
+            /// <param name="flow">The flow to transform.</param>
+            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <returns>A flow with the documented processing operation applied.</returns>
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(new Fusing.GroupBy<TOut, TKey>(_maxSubstreams, _groupingFunc, _allowClosedSubstreamRecreation))
@@ -1413,38 +1413,38 @@ namespace Akka.Streams.Dsl.Internal
         /// the current element if the given predicate returns true for it. This means
         /// that for the following series of predicate values, three substreams will
         /// be produced with lengths 1, 2, and 3:
-        /// 
+        ///
         /// {{{
         /// false,             // element goes into first substream
         /// true, false,       // elements go into second substream
         /// true, false, false // elements go into third substream
         /// }}}
-        /// 
+        ///
         /// In case the * first * element of the stream matches the predicate, the first
         /// substream emitted by splitWhen will start from that element. For example:
-        /// 
+        ///
         /// {{{
         /// true, false, false // first substream starts from the split-by element
         /// true, false        // subsequent substreams operate the same way
         /// }}}
-        /// 
+        ///
         /// The object returned from this method is not a normal <see cref="Source{TOut,TMat}"/> or <see cref="Flow{TIn,TOut,TMat}"/>,
         /// it is a <see cref="SubFlow{TOut,TMat,TClosed}"/>. This means that after this combinator all transformations
         /// are applied to all encountered substreams in the same fashion. Substream mode
         /// is exited either by closing the substream (i.e. connecting it to a <see cref="Sink{TIn,TMat}"/>)
-        /// or by merging the substreams back together; see the <see cref="SubFlow{TOut,TMat,TClosed}.To{TMat2}"/> and 
+        /// or by merging the substreams back together; see the <see cref="SubFlow{TOut,TMat,TClosed}.To{TMat2}"/> and
         /// <see cref="SubFlow{TOut,TMat,TClosed}.MergeSubstreams"/> methods
         /// on <see cref="SubFlow{TOut,TMat,TClosed}"/> for more information.
-        /// 
+        ///
         /// It is important to note that the substreams also propagate back-pressure as
         /// any other stream, which means that blocking one substream will block the <see cref="SplitWhen{T,TMat,TClosed}"/>
         /// operator itself—and thereby all substreams—once all internal or
         /// explicit buffers are filled.
-        /// 
+        ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
         /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
-        /// 
+        ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
         /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
@@ -1460,14 +1460,14 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitAfter{T,TMat,TVal}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="substreamCancelStrategy">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="toFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TClosed">The materialized type returned by the callback that builds each subflow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="substreamCancelStrategy">The policy for handling cancellation of a substream.</param>
+        /// <param name="predicate">The predicate evaluated for each element by this operation.</param>
+        /// <param name="toFunc">The function that constructs the resulting subflow from its inner flow and source sink.</param>
+        /// <returns>The subflow configured by this operation.</returns>
         public static SubFlow<T, TMat, TClosed> SplitWhen<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
             Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
@@ -1484,10 +1484,10 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Applies a flow to each substream created before matching elements and merges the results.
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
         internal sealed class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
@@ -1495,11 +1495,11 @@ namespace Akka.Streams.Dsl.Internal
             private readonly SubstreamCancelStrategy _substreamCancelStrategy;
 
             /// <summary>
-            /// TBD
+            /// Creates a merge-back operation for streams split before matching elements.
             /// </summary>
-            /// <param name="self">TBD</param>
-            /// <param name="predicate">TBD</param>
-            /// <param name="substreamCancelStrategy">TBD</param>
+            /// <param name="self">The flow whose substreams are merged after the inner flow is applied.</param>
+            /// <param name="predicate">The predicate evaluated for each element by this operation.</param>
+            /// <param name="substreamCancelStrategy">The policy for handling cancellation of a substream.</param>
             public SplitWhenMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
             {
                 _self = self;
@@ -1508,12 +1508,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// TBD
+            /// Applies the supplied flow to each split substream and merges the results.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="flow">TBD</param>
-            /// <param name="breadth">TBD</param>
-            /// <returns>TBD</returns>
+            /// <typeparam name="T">The element type processed by this operation.</typeparam>
+            /// <param name="flow">The flow to transform.</param>
+            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <returns>A flow with the documented processing operation applied.</returns>
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
@@ -1565,14 +1565,14 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels and substreams cancel
         /// </summary>
         /// <seealso cref="SplitWhen{T,TMat,TVal}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="substreamCancelStrategy">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="toFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TClosed">The materialized type returned by the callback that builds each subflow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="substreamCancelStrategy">The policy for handling cancellation of a substream.</param>
+        /// <param name="predicate">The predicate evaluated for each element by this operation.</param>
+        /// <param name="toFunc">The function that constructs the resulting subflow from its inner flow and source sink.</param>
+        /// <returns>The subflow configured by this operation.</returns>
         public static SubFlow<T, TMat, TClosed> SplitAfter<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
             Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
@@ -1589,10 +1589,10 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Applies a flow to each substream created after matching elements and merges the results.
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
         internal sealed class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
@@ -1600,11 +1600,11 @@ namespace Akka.Streams.Dsl.Internal
             private readonly SubstreamCancelStrategy _substreamCancelStrategy;
 
             /// <summary>
-            /// TBD
+            /// Creates a merge-back operation for streams split after matching elements.
             /// </summary>
-            /// <param name="self">TBD</param>
-            /// <param name="predicate">TBD</param>
-            /// <param name="substreamCancelStrategy">TBD</param>
+            /// <param name="self">The flow whose substreams are merged after the inner flow is applied.</param>
+            /// <param name="predicate">The predicate evaluated for each element by this operation.</param>
+            /// <param name="substreamCancelStrategy">The policy for handling cancellation of a substream.</param>
             public SplitAfterMergeBack(IFlow<TOut, TMat> self, Func<TOut, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
             {
                 _self = self;
@@ -1613,12 +1613,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// TBD
+            /// Applies the supplied flow to each split substream and merges the results.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="flow">TBD</param>
-            /// <param name="breadth">TBD</param>
-            /// <returns>TBD</returns>
+            /// <typeparam name="T">The element type processed by this operation.</typeparam>
+            /// <param name="flow">The flow to transform.</param>
+            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <returns>A flow with the documented processing operation applied.</returns>
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
@@ -1640,12 +1640,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="flatten">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="flatten">The function that converts each input element into a source graph to flatten.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> ConcatMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
@@ -1665,13 +1665,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="breadth">TBD</param>
-        /// <param name="flatten">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+        /// <param name="flatten">The function that converts each input element into a source graph to flatten.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> MergeMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int breadth,
             Func<TIn, IGraph<SourceShape<TOut>, TMat>> flatten)
         {
@@ -1690,11 +1690,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> InitialTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
         {
             return flow.Via(new Initial<T>(timeout));
@@ -1712,11 +1712,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> CompletionTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
         {
             return flow.Via(new Completion<T>(timeout));
@@ -1724,7 +1724,7 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
-        /// with a <see cref="TimeoutException"/>. 
+        /// with a <see cref="TimeoutException"/>.
         /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
         /// <para>
         /// Emits when upstream emits an element
@@ -1735,11 +1735,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> IdleTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
         {
             return flow.Via(new Idle<T>(timeout));
@@ -1758,11 +1758,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> BackpressureTimeout<T, TMat>(this IFlow<T, TMat> flow, TimeSpan timeout)
         {
             return flow.Via(new BackpressureTimeout<T>(timeout));
@@ -1771,10 +1771,10 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Injects additional elements if the upstream does not emit for a configured amount of time. In other words, this
         /// stage attempts to maintains a base rate of emitted elements towards the downstream.
-        /// 
+        ///
         /// If the downstream backpressures then no element is injected until downstream demand arrives. Injected elements
         /// do not accumulate during this period.
-        /// 
+        ///
         /// Upstream elements are always preferred over injected elements.
         /// <para>
         /// Emits when upstream emits an element or if the upstream was idle for the configured period
@@ -1785,13 +1785,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="injectElement">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TIn2">The type of elements accepted from the additional input.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="timeout">The time interval that controls this operation.</param>
+        /// <param name="injectElement">The function that creates an element to inject when the upstream is idle.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<TIn2, TMat> KeepAlive<TIn, TIn2, TMat>(this IFlow<TIn, TMat> flow, TimeSpan timeout,
             Func<TIn2> injectElement) where TIn : TIn2
         {
@@ -1801,13 +1801,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Sends elements downstream with speed limited to <paramref name="elements"/>/<paramref name="per"/>. In other words, this stage set the maximum rate
         /// for emitting messages. This combinator works for streams where all elements have the same cost or length.
-        /// 
+        ///
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be "spared" for later use up to bucket capacity
         /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as number of elements. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens.
-        /// 
+        ///
         /// Parameter <paramref name="mode"/> manages behaviour when upstream is faster than throttle rate:
         /// <para/> - <see cref="ThrottleMode.Shaping"/> makes pauses before emitting messages to meet throttle rate
         /// <para/> - <see cref="ThrottleMode.Enforcing"/> fails with exception when upstream is faster than throttle rate. Enforcing
@@ -1821,13 +1821,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="elements">TBD</param>
-        /// <param name="per">TBD</param>
-        /// <param name="maximumBurst">TBD</param>
-        /// <param name="mode">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="elements">The maximum number of elements emitted during each time period.</param>
+        /// <param name="per">The time interval over which the configured element rate applies.</param>
+        /// <param name="maximumBurst">The maximum burst of elements or cost that may be emitted at once.</param>
+        /// <param name="mode">The throttling mode that controls behavior when the rate limit is reached.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when one of the following conditions is met.
         /// <ul>
@@ -1837,7 +1837,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="elements"/>.</li>
         /// </ul>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int elements, TimeSpan per,
             int maximumBurst, ThrottleMode mode)
         {
@@ -1856,14 +1856,14 @@ namespace Akka.Streams.Dsl.Internal
         /// calculating for each element individually by calling <paramref name="calculateCost"/> function.
         /// This combinator works for streams when elements have different cost(length).
         /// Streams of <c>ReadOnlyMemory&lt;byte&gt;</c> for example.
-        /// 
+        ///
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity
         /// to allow some burstiness. Whenever stream wants to send an element, it takes as many
         /// tokens from the bucket as element cost. If there isn't any, throttle waits until the
         /// bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
         /// to their cost minus available tokens, meeting the target rate.
-        /// 
+        ///
         /// Parameter <paramref name="mode"/> manages behaviour when upstream is faster than throttle rate:
         /// <para/> - <see cref="ThrottleMode.Shaping"/> makes pauses before emitting messages to meet throttle rate
         /// <para/> - <see cref="ThrottleMode.Enforcing"/> fails with exception when upstream is faster than throttle rate. Enforcing
@@ -1877,14 +1877,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="cost">TBD</param>
-        /// <param name="per">TBD</param>
-        /// <param name="maximumBurst">TBD</param>
-        /// <param name="calculateCost">TBD</param>
-        /// <param name="mode">TBD</param>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="cost">The cost assigned to each element for throttling.</param>
+        /// <param name="per">The time interval over which the configured element rate applies.</param>
+        /// <param name="maximumBurst">The maximum burst of elements or cost that may be emitted at once.</param>
+        /// <param name="calculateCost">The function that calculates the cost of each element.</param>
+        /// <param name="mode">The throttling mode that controls behavior when the rate limit is reached.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when one of the following conditions is met.
         /// <ul>
@@ -1894,7 +1894,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <li>The <see cref="TimeSpan.Ticks"/> in the specified <paramref name="per"/> is less than the specified <paramref name="cost"/>.</li>
         /// </ul>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
@@ -1920,10 +1920,10 @@ namespace Akka.Streams.Dsl.Internal
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> Detach<T, TMat>(this IFlow<T, TMat> flow)
         {
             return flow.Via(new Fusing.Detacher<T>());
@@ -1940,11 +1940,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="delay">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="delay">The initial delay before the first element is emitted.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat> InitialDelay<T, TMat>(this IFlow<T, TMat> flow, TimeSpan delay)
         {
             return flow.Via(new DelayInitial<T>(delay));
@@ -1952,7 +1952,7 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// Logs elements flowing through the stream as well as completion and erroring.
-        /// 
+        ///
         /// By default element and completion signals are logged on debug level, and errors are logged on Error level.
         /// This can be adjusted according to your needs by providing a custom <see cref="Attributes.LogLevels"/> attribute on the given Flow.
         /// <para>
@@ -1988,12 +1988,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of elements from the first input.</typeparam>
+        /// <typeparam name="T2">The type of elements from the second input.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The additional source graph combined with this flow.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<(T1, T2), TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat> other)
         {
@@ -2023,14 +2023,14 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="T3">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of elements from the first input.</typeparam>
+        /// <typeparam name="T2">The type of elements from the second input.</typeparam>
+        /// <typeparam name="T3">The type of values produced by the combining function.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The additional source graph combined with this flow.</param>
+        /// <param name="combine">The function applied to a pair of elements, one from each input.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T3, TMat> ZipWith<T1, T2, T3, TMat>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
@@ -2052,7 +2052,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Combine the elements of current flow into a stream of tuples consisting
         /// of all elements paired with their index. Indices start at 0.
-        /// 
+        ///
         /// <para/>
         /// Emits when upstream emits an element and is paired with their index
         /// <para/>
@@ -2075,9 +2075,9 @@ namespace Akka.Streams.Dsl.Internal
         /// Interleave is a deterministic merge of the given <see cref="Source{TOut,TMat}"/> with elements of this <see cref="IFlow{TOut,TMat}"/>.
         /// It first emits <paramref name="segmentSize"/> number of elements from this flow to downstream, then - same amount for <paramref name="graph"/>
         /// source, then repeat process.
-        ///  
+        ///
         /// After one of upstreams is complete than all the rest elements will be emitted from the second one
-        /// 
+        ///
         /// If it gets error from one of upstreams - stream completes with failure.
         /// <para>
         /// Emits when element is available from the currently consumed upstream
@@ -2094,13 +2094,13 @@ namespace Akka.Streams.Dsl.Internal
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="graph">TBD</param>
-        /// <param name="segmentSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of elements from the first input.</typeparam>
+        /// <typeparam name="T2">The type of elements from the second input.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="graph">The additional source graph to combine with this flow.</param>
+        /// <param name="segmentSize">The number of elements to take from one input before switching to the other.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T2, TMat> Interleave<T1, T2, TMat>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
         {
@@ -2121,16 +2121,16 @@ namespace Akka.Streams.Dsl.Internal
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="graph">TBD</param>
-        /// <param name="segmentSize">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of elements from the first input.</typeparam>
+        /// <typeparam name="T2">The type of elements from the second input.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <typeparam name="TMat3">The type of the combined materialized value.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="graph">The additional source graph to combine with this flow.</param>
+        /// <param name="segmentSize">The number of elements to take from one input before switching to the other.</param>
+        /// <param name="combine">The function that combines the materialized values of the input graphs.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T2, TMat3> InterleaveMaterialized<T1, T2, TMat, TMat2, TMat3>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
         {
@@ -2162,13 +2162,13 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="eagerComplete">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The additional source graph combined with this flow.</param>
+        /// <param name="eagerComplete">Whether completion of either input should complete the merged flow immediately.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> Merge<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             IGraph<SourceShape<TOut>, TMat> other, bool eagerComplete = false) where TIn : TOut
         {
@@ -2178,22 +2178,22 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Merge the given <see cref="Source{TOut,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, taking elements as they arrive from input streams,
         /// picking randomly when several elements ready.
-        /// 
+        ///
         /// @see <see cref="Merge{TIn,TOut,TMat}"/>
-        /// 
+        ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <param name="eagerComplete">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <typeparam name="TMat3">The type of the combined materialized value.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
+        /// <param name="combine">The function that combines the materialized values of the input graphs.</param>
+        /// <param name="eagerComplete">Whether completion of either input should complete the merged flow immediately.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat3> MergeMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this IFlow<TIn, TMat> flow,
             IGraph<SourceShape<TOut>, TMat2> that, Func<TMat, TMat2, TMat3> combine, bool eagerComplete = false)
             where TIn : TOut
@@ -2228,12 +2228,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="orderFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The source graph whose ordered elements are merged with this flow.</param>
+        /// <param name="orderFunc">The function that compares elements from the two inputs.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
             Func<T, T, int> orderFunc)
         {
@@ -2255,11 +2255,11 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The source graph whose ordered elements are merged with this flow.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other)
             where T : IComparable<T>
         {
@@ -2281,12 +2281,12 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="comparer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="other">The source graph whose ordered elements are merged with this flow.</param>
+        /// <param name="comparer">The comparer used to order elements from both inputs.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T, TMat> MergeSorted<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> other,
             IComparer<T> comparer)
         {
@@ -2308,10 +2308,10 @@ namespace Akka.Streams.Dsl.Internal
         /// Concatenate the given <see cref="Source{TOut,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that once this
         /// Flow’s input is exhausted and all result elements have been generated,
         /// the Source’s elements will be produced.
-        /// 
+        ///
         /// Note that the <see cref="Source{TOut,TMat}"/> is materialized together with this <see cref="IFlow{TOut,TMat}"/> and just kept
         /// from producing elements by asserting back-pressure until its time comes.
-        /// 
+        ///
         /// If this <see cref="IFlow{TOut,TMat}"/> gets upstream error - no elements from the given <see cref="Source{TOut,TMat}"/> will be pulled.
         /// <para>
         /// Emits when element is available from current stream or from the given <see cref="Source{TOut,TMat}"/> when current is completed
@@ -2329,12 +2329,12 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Builds a graph that concatenates the current input with the supplied source.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="other">The additional source graph combined with this flow.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         internal static IGraph<FlowShape<T, T>, TMat> ConcatGraph<T, TMat>(
             IGraph<SourceShape<T>, TMat> other)
         {
@@ -2365,12 +2365,12 @@ namespace Akka.Streams.Dsl.Internal
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The type of elements accepted by the flow.</typeparam>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> Prepend<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             IGraph<SourceShape<TOut>, TMat> that) where TIn : TOut
         {
@@ -2411,11 +2411,11 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
         ///                    by from this stream.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="secondary">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="secondary">The source graph used if the primary flow completes without emitting an element.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T, TMat> OrElse<T, TMat>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat> secondary)
             => flow.Via(OrElseGraph(secondary));
 
@@ -2451,23 +2451,23 @@ namespace Akka.Streams.Dsl.Internal
         /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
         ///                    by from this stream.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="secondary">TBD</param>
-        /// <param name="materializedFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <typeparam name="TMat3">The type of the combined materialized value.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="secondary">The source graph used if the primary flow completes without emitting an element.</param>
+        /// <param name="materializedFunction">The function that combines the materialized values of the flow and additional graph.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this IFlow<T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
             => flow.ViaMaterialized(OrElseGraph(secondary), materializedFunction);
 
         /// <summary>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
-        /// 
+        ///
         /// @see <seealso cref="InternalFlowOperations.AlsoTo{TOut,TMat}(IFlow{TOut, TMat}, IGraph{SinkShape{TOut}, TMat}, bool)"/>
-        /// 
+        ///
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
@@ -2481,21 +2481,21 @@ namespace Akka.Streams.Dsl.Internal
         /// <summary>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
-        /// 
+        ///
         /// Emits when element is available and demand exists both from the Sink and the downstream.
-        /// 
+        ///
         /// Backpressures when downstream or Sink backpressures
-        /// 
+        ///
         /// Completes when upstream completes
-        /// 
+        ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
         /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
-        /// <returns>TBD</returns>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> AlsoTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, bool propagateFailure)
         {
             return flow.Via(AlsoToGraph(that, propagateFailure));
@@ -2539,11 +2539,11 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that) =>
             flow.Via(WireTapGraph(that));
 
@@ -2558,23 +2558,23 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
-        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements
         /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
-        /// 
+        ///
         /// <para>@see <seealso cref="DivertTo{TOut,TMat}"/></para>
-        /// 
+        ///
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="when">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <typeparam name="TMat3">The type of the combined materialized value.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
+        /// <param name="when">The predicate that selects elements to divert to the attached sink.</param>
+        /// <param name="materializerFunction">The function that combines the materialized values of the flow and attached graph.</param>
+        /// <returns>A graph that connects the current input to the supplied source.</returns>
         public static IFlow<TOut, TMat3> DivertToMaterialized<TOut, TMat, TMat2, TMat3>(
             this IFlow<TOut, TMat> flow,
             IGraph<SinkShape<TOut>, TMat2> that,
@@ -2582,19 +2582,19 @@ namespace Akka.Streams.Dsl.Internal
             Func<TMat, TMat2, TMat3> materializerFunction) => flow.ViaMaterialized(DivertToGraph(that, when), materializerFunction);
 
         /// <summary>
-        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements
         /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
-        /// 
+        ///
         /// <para>Emits when an element is available from the input and the chosen output has demand</para>
         /// <para>Backpressures when the currently chosen output back-pressures</para>
         /// <para>Completes when upstream completes and no output is pending</para>
         /// <para>Cancels when when all downstreams cancel</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="when">TBD</param>
+        /// <typeparam name="TOut">The type of elements emitted by the flow.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="that">The sink graph attached to receive elements from this flow.</param>
+        /// <param name="when">The predicate that selects elements to divert to the attached sink.</param>
         public static IFlow<TOut, TMat> DivertTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
             flow.Via(DivertToGraph(that, when));
 
@@ -2617,12 +2617,12 @@ namespace Akka.Streams.Dsl.Internal
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         ///</summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="materializerFunction">The function that combines the materialized values of the flow and attached graph.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
             flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
 
@@ -2632,12 +2632,12 @@ namespace Akka.Streams.Dsl.Internal
         /// event, and may therefor affect performance.
         /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type processed by this operation.</typeparam>
+        /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
+        /// <typeparam name="TMat2">The type of the materialized value of the additional graph.</typeparam>
+        /// <param name="flow">The flow to transform.</param>
+        /// <param name="combine">The function that combines the materialized values of the input graphs.</param>
+        /// <returns>A flow with the documented processing operation applied.</returns>
         public static IFlow<T, TMat2> Monitor<T, TMat, TMat2>(this IFlow<T, TMat> flow,
             Func<TMat, IFlowMonitor, TMat2> combine)
         {
@@ -2646,11 +2646,11 @@ namespace Akka.Streams.Dsl.Internal
 
         /// <summary>
         /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
-        /// 
-        /// '''Emits when''' upstream emits 
-        /// '''Backpressures when''' downstream backpressures 
-        /// '''Completes when''' upstream completes 
-        /// '''Fails when''' the watched actor terminates 
+        ///
+        /// '''Emits when''' upstream emits
+        /// '''Backpressures when''' downstream backpressures
+        /// '''Completes when''' upstream completes
+        /// '''Fails when''' the watched actor terminates
         /// '''Cancels when''' downstream cancels
         /// </summary>
         public static IFlow<T, TMat> Watch<T, TMat>(this IFlow<T, TMat> flow, IActorRef actorRef) => flow.Via(new Fusing.Watch<T>(actorRef));
