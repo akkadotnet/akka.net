@@ -60,7 +60,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// Creates a new <see cref="Register"/> request for a given <paramref name="shardRegion"/>.
             /// </summary>
-            /// <param name="shardRegion">TBD</param>
+            /// <param name="shardRegion">The region actor registering with the coordinator.</param>
             public Register(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -108,7 +108,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// Creates a new <see cref="RegisterProxy"/> request for a given <paramref name="shardRegionProxy"/>.
             /// </summary>
-            /// <param name="shardRegionProxy">TBD</param>
+            /// <param name="shardRegionProxy">The proxy actor registering with the coordinator.</param>
             public RegisterProxy(IActorRef shardRegionProxy)
             {
                 ShardRegionProxy = shardRegionProxy;
@@ -148,14 +148,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class RegisterAck : ICoordinatorMessage, IEquatable<RegisterAck>
         {
             /// <summary>
-            /// TBD
+            /// Gets the coordinator actor reference returned in the registration acknowledgement.
             /// </summary>
             public readonly IActorRef Coordinator;
 
             /// <summary>
-            /// TBD
+            /// Creates a successful registration acknowledgement containing the coordinator reference.
             /// </summary>
-            /// <param name="coordinator">TBD</param>
+            /// <param name="coordinator">The coordinator actor that accepted the registration.</param>
             public RegisterAck(IActorRef coordinator)
             {
                 Coordinator = coordinator;
@@ -198,14 +198,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class GetShardHome : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<GetShardHome>
         {
             /// <summary>
-            /// TBD
+            /// Gets the shard id whose responsible region is requested.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a request for the coordinator to resolve a shard's responsible region.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the shard to resolve.</param>
             public GetShardHome(ShardId shard)
             {
                 Shard = shard;
@@ -246,19 +246,19 @@ namespace Akka.Cluster.Sharding
         internal sealed class ShardHome : ICoordinatorMessage, IEquatable<ShardHome>
         {
             /// <summary>
-            /// TBD
+            /// Gets the shard id associated with this region reference.
             /// </summary>
             public readonly ShardId Shard;
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the region responsible for the shard.
             /// </summary>
             public readonly IActorRef Ref;
 
             /// <summary>
-            /// TBD
+            /// Creates a shard-home reply containing the shard id and its responsible region.
             /// </summary>
-            /// <param name="shard">TBD</param>
-            /// <param name="ref">TBD</param>
+            /// <param name="shard">The id of the shard.</param>
+            /// <param name="ref">The actor reference of the region responsible for the shard.</param>
             public ShardHome(ShardId shard, IActorRef @ref)
             {
                 Shard = shard;
@@ -306,14 +306,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class HostShard : ICoordinatorMessage, IEquatable<HostShard>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard the coordinator has asked this region to host.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a request for a region to host the specified shard.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the shard to host.</param>
             public HostShard(ShardId shard)
             {
                 Shard = shard;
@@ -354,14 +354,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class ShardStarted : ICoordinatorMessage, IEquatable<ShardStarted>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard that has started in a region.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a notification that the requested shard has started.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the started shard.</param>
             public ShardStarted(ShardId shard)
             {
                 Shard = shard;
@@ -407,14 +407,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class BeginHandOff : ICoordinatorMessage, IEquatable<BeginHandOff>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard whose handoff is being prepared.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a notification asking regions to stop routing to the shard before handoff.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the shard entering handoff.</param>
             public BeginHandOff(ShardId shard)
             {
                 Shard = shard;
@@ -456,14 +456,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class BeginHandOffAck : ICoordinatorCommand, IEquatable<BeginHandOffAck>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard for which a region acknowledged <see cref="BeginHandOff"/>.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates an acknowledgement that a region has received the begin-handoff request.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the shard entering handoff.</param>
             public BeginHandOffAck(ShardId shard)
             {
                 Shard = shard;
@@ -507,14 +507,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class HandOff : ICoordinatorMessage, IEquatable<HandOff>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard whose entities should be stopped for handoff.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a request for the responsible region to stop entities in a shard for handoff.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the shard to hand off.</param>
             public HandOff(ShardId shard)
             {
                 Shard = shard;
@@ -555,14 +555,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class ShardStopped : ICoordinatorCommand, IEquatable<ShardStopped>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard whose handoff has completed.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates a notification that the shard's entities have stopped for handoff.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the stopped shard.</param>
             public ShardStopped(ShardId shard)
             {
                 Shard = shard;
@@ -604,14 +604,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class RegionStopped : ICoordinatorCommand, IEquatable<RegionStopped>
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the shard region that stopped.
             /// </summary>
             public IActorRef ShardRegion { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates a notification that a shard region actor has stopped.
             /// </summary>
-            /// <param name="shardRegion">TBD</param>
+            /// <param name="shardRegion">The actor reference of the stopped region.</param>
             public RegionStopped(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -653,14 +653,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class GracefulShutdownRequest : ICoordinatorCommand, IDeadLetterSuppression, IEquatable<GracefulShutdownRequest>
         {
             /// <summary>
-            /// TBD
+            /// Gets the region requesting graceful handoff of its hosted shards.
             /// </summary>
             public readonly IActorRef ShardRegion;
 
             /// <summary>
-            /// TBD
+            /// Creates a request for the coordinator to hand off all shards hosted by a region.
             /// </summary>
-            /// <param name="shardRegion">TBD</param>
+            /// <param name="shardRegion">The region actor requesting graceful shutdown.</param>
             public GracefulShutdownRequest(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -700,20 +700,20 @@ namespace Akka.Cluster.Sharding
         public interface IDomainEvent : IClusterShardingSerializable { }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording that a shard region registered with the coordinator.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionRegistered : IDomainEvent, IEquatable<ShardRegionRegistered>
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the registered shard region.
             /// </summary>
             public readonly IActorRef Region;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording shard-region registration.
             /// </summary>
-            /// <param name="region">TBD</param>
+            /// <param name="region">The actor reference of the registered region.</param>
             public ShardRegionRegistered(IActorRef region)
             {
                 Region = region;
@@ -748,20 +748,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording registration of a proxy-only shard region.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionProxyRegistered : IDomainEvent, IEquatable<ShardRegionProxyRegistered>
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the registered shard-region proxy.
             /// </summary>
             public readonly IActorRef RegionProxy;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording shard-region proxy registration.
             /// </summary>
-            /// <param name="regionProxy">TBD</param>
+            /// <param name="regionProxy">The actor reference of the registered proxy.</param>
             public ShardRegionProxyRegistered(IActorRef regionProxy)
             {
                 RegionProxy = regionProxy;
@@ -796,20 +796,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording that a registered shard region terminated.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionTerminated : IDomainEvent, IEquatable<ShardRegionTerminated>
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the terminated shard region.
             /// </summary>
             public readonly IActorRef Region;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording shard-region termination.
             /// </summary>
-            /// <param name="region">TBD</param>
+            /// <param name="region">The actor reference of the terminated region.</param>
             public ShardRegionTerminated(IActorRef region)
             {
                 Region = region;
@@ -844,20 +844,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording that a registered shard-region proxy terminated.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionProxyTerminated : IDomainEvent, IEquatable<ShardRegionProxyTerminated>
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the terminated proxy.
             /// </summary>
             public readonly IActorRef RegionProxy;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording shard-region proxy termination.
             /// </summary>
-            /// <param name="regionProxy">TBD</param>
+            /// <param name="regionProxy">The actor reference of the terminated proxy.</param>
             public ShardRegionProxyTerminated(IActorRef regionProxy)
             {
                 RegionProxy = regionProxy;
@@ -892,25 +892,25 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording allocation of a shard to a region.
         /// </summary>
         [Serializable]
         public sealed class ShardHomeAllocated : IDomainEvent, IEquatable<ShardHomeAllocated>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the allocated shard.
             /// </summary>
             public readonly ShardId Shard;
             /// <summary>
-            /// TBD
+            /// Gets the region responsible for the allocated shard.
             /// </summary>
             public readonly IActorRef Region;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording the region assignment for a shard.
             /// </summary>
-            /// <param name="shard">TBD</param>
-            /// <param name="region">TBD</param>
+            /// <param name="shard">The id of the allocated shard.</param>
+            /// <param name="region">The actor reference of the region assigned to the shard.</param>
             public ShardHomeAllocated(ShardId shard, IActorRef region)
             {
                 Shard = shard;
@@ -952,20 +952,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent event recording removal of a shard's region assignment.
         /// </summary>
         [Serializable]
         public sealed class ShardHomeDeallocated : IDomainEvent, IEquatable<ShardHomeDeallocated>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard whose allocation was removed.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// TBD
+            /// Creates an event recording shard deallocation.
             /// </summary>
-            /// <param name="shard">TBD</param>
+            /// <param name="shard">The id of the deallocated shard.</param>
             public ShardHomeDeallocated(ShardId shard)
             {
                 Shard = shard;
@@ -1000,7 +1000,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Singleton persistence event marking coordinator initialization.
         /// </summary>
         [Serializable]
         public sealed class ShardCoordinatorInitialized : IDomainEvent, IEquatable<ShardCoordinatorInitialized>
@@ -1039,13 +1039,13 @@ namespace Akka.Cluster.Sharding
 
 
         /// <summary>
-        /// TBD
+        /// Internal signal that the coordinator's backing state has finished initialization.
         /// </summary>
         [Serializable]
         internal sealed class StateInitialized
         {
             /// <summary>
-            /// TBD
+            /// The singleton signal that the coordinator's backing state is initialized.
             /// </summary>
             public static readonly StateInitialized Instance = new();
 
@@ -1060,7 +1060,7 @@ namespace Akka.Cluster.Sharding
         internal sealed class CoordinatorState : IClusterShardingSerializable, IEquatable<CoordinatorState>
         {
             /// <summary>
-            /// TBD
+            /// Empty coordinator state with no registered regions, proxies, or shard allocations.
             /// </summary>
             public static readonly CoordinatorState Empty = new();
 
@@ -1074,11 +1074,11 @@ namespace Akka.Cluster.Sharding
             /// </summary>
             public readonly IImmutableDictionary<IActorRef, IImmutableList<ShardId>> Regions;
             /// <summary>
-            /// TBD
+            /// Registered region proxies that can route messages but do not host shards.
             /// </summary>
             public readonly IImmutableSet<IActorRef> RegionProxies;
             /// <summary>
-            /// TBD
+            /// Shard ids remembered after their former region terminated or their allocation was removed.
             /// </summary>
             public readonly IImmutableSet<ShardId> UnallocatedShards;
 
@@ -1093,13 +1093,13 @@ namespace Akka.Cluster.Sharding
             { }
 
             /// <summary>
-            /// TBD
+            /// Creates coordinator state from its shard allocations, registered regions and proxies, and remembered unallocated shards.
             /// </summary>
-            /// <param name="shards">TBD</param>
-            /// <param name="regions">TBD</param>
-            /// <param name="regionProxies">TBD</param>
-            /// <param name="unallocatedShards">TBD</param>
-            /// <param name="rememberEntities">TBD</param>
+            /// <param name="shards">A map from allocated shard ids to their hosting regions.</param>
+            /// <param name="regions">A map from registered regions to their allocated shard ids.</param>
+            /// <param name="regionProxies">The registered proxy-only regions.</param>
+            /// <param name="unallocatedShards">Remembered shard ids that currently have no hosting region.</param>
+            /// <param name="rememberEntities">Whether shard ids are retained for later reallocation when their region terminates.</param>
             public CoordinatorState(
                 IImmutableDictionary<ShardId, IActorRef> shards,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions,
@@ -1144,11 +1144,11 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <summary>
-            /// TBD
+            /// Applies a recognized coordinator domain event and returns the resulting immutable state.
             /// </summary>
-            /// <param name="e">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
-            /// <returns>TBD</returns>
+            /// <param name="e">The coordinator event to apply.</param>
+            /// <exception cref="ArgumentException">An event conflicts with the current state, such as registering an existing region or allocating an already allocated shard.</exception>
+            /// <returns>The state after applying the event; events that require no state change return the current state.</returns>
             public CoordinatorState Updated(IDomainEvent e)
             {
                 switch (e)
@@ -1217,14 +1217,14 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <summary>
-            /// TBD
+            /// Returns coordinator state with the specified components replaced and all other components retained.
             /// </summary>
-            /// <param name="shards">TBD</param>
-            /// <param name="regions">TBD</param>
-            /// <param name="regionProxies">TBD</param>
-            /// <param name="unallocatedShards">TBD</param>
-            /// <param name="rememberEntities">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="shards">Replacement map from allocated shard ids to hosting regions, or <see langword="null"/> to retain the current map.</param>
+            /// <param name="regions">Replacement map from registered regions to their shard ids, or <see langword="null"/> to retain the current map.</param>
+            /// <param name="regionProxies">Replacement set of registered proxies, or <see langword="null"/> to retain the current set.</param>
+            /// <param name="unallocatedShards">Replacement set of remembered, currently unallocated shard ids, or <see langword="null"/> to retain the current set.</param>
+            /// <param name="rememberEntities">Replacement remembered-entities flag, or <see langword="null"/> to retain the current value.</param>
+            /// <returns>This instance if no replacement values are supplied; otherwise a new coordinator state with the requested values.</returns>
             public CoordinatorState Copy(
                 IImmutableDictionary<ShardId, IActorRef> shards = null,
                 IImmutableDictionary<IActorRef, IImmutableList<ShardId>> regions = null,
