@@ -36,10 +36,10 @@ namespace Akka.Cluster.Sharding
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
     /// in the mailbox will be dropped. To support graceful passivation without losing such
     /// messages the entity actor can send this <see cref="Passivate"/> message to its parent <see cref="ShardRegion"/>.
-    /// The specified wrapped <see cref="StopMessage"/> will be sent back to the entity, which is
-    /// then supposed to stop itself. Incoming messages will be buffered by the <see cref="ShardRegion"/>
-    /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
-    /// are thereafter delivered to a new incarnation of the entity.
+    /// If the shard starts passivation in response to this command, it sends the specified wrapped
+    /// <see cref="StopMessage"/> to the entity, which is then expected to stop itself. The shard region
+    /// buffers incoming messages between the start of passivation and entity termination, then delivers
+    /// those buffered messages to a new entity incarnation.
     ///
     /// <see cref="PoisonPill.Instance"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding
     public sealed class Passivate : IShardRegionCommand
     {
         /// <summary>
-        /// Creates a passivation command containing the message that the shard region should send back to the entity.
+        /// Creates a passivation command containing the stop message that the shard sends if it starts passivation.
         /// </summary>
         /// <param name="stopMessage">The message to send to the entity to request that it stops.</param>
         public Passivate(object stopMessage)
@@ -56,7 +56,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Gets the message sent to the entity after the shard region starts passivation.
+        /// Gets the message the shard sends to the entity if it starts passivation.
         /// </summary>
         public object StopMessage { get; }
     }
@@ -64,15 +64,16 @@ namespace Akka.Cluster.Sharding
     internal sealed record SupervisorStopDirectivePassivation(IActorRef Child, string Reason, Exception LastCause) : IShardRegionCommand;
     
     /// <summary>
-    /// Send this message to the <see cref="ShardRegion"/> actor to handoff all shards that are hosted by
-    /// the <see cref="ShardRegion"/> and then the <see cref="ShardRegion"/> actor will be stopped. You can <see cref="ICanWatch.Watch"/>
-    /// it to know when it is completed.
+    /// Send this message to a <see cref="ShardRegion"/> to request handoff of its hosted shards and then
+    /// stop the region. The region stops after its shards and buffered messages are drained, but its
+    /// graceful-shutdown timeout can stop it while some shards or buffered messages remain. You can
+    /// <see cref="ICanWatch.Watch"/> the region to observe termination.
     /// </summary>
     [Serializable]
     public sealed class GracefulShutdown : IShardRegionCommand
     {
         /// <summary>
-        /// Singleton message requesting that the shard region hand off its hosted shards and then stop itself.
+        /// Singleton message requesting graceful shard handoff followed by region shutdown.
         /// </summary>
         public static readonly GracefulShutdown Instance = new();
 

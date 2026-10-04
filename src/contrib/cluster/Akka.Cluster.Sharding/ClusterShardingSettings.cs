@@ -65,7 +65,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly int KeepNrOfBatches;
         /// <summary>
-        /// The shard-count difference required by the legacy least-shard strategy before it selects shards for rebalance.
+        /// The shard-count difference that the legacy least-shard strategy must exceed before it selects shards for rebalance.
         /// </summary>
         public readonly int LeastShardAllocationRebalanceThreshold;
         /// <summary>
@@ -95,12 +95,12 @@ namespace Akka.Cluster.Sharding
         /// <param name="bufferSize">The maximum number of messages a shard region buffers while resolving shard locations.</param>
         /// <param name="handOffTimeout">The timeout for shard handoff.</param>
         /// <param name="shardStartTimeout">The time allowed for a region to acknowledge hosting a shard.</param>
-        /// <param name="shardFailureBackoff">The delay before a shard is restarted after a remembered-state write failure.</param>
+        /// <param name="shardFailureBackoff">The delay before a shard is restarted after it terminates outside handoff when remembered entities are enabled.</param>
         /// <param name="entityRestartBackoff">The delay before restarting a remembered entity that stopped without passivating, if no message for it arrives first.</param>
         /// <param name="rebalanceInterval">The interval between checks for shards to rebalance.</param>
         /// <param name="snapshotAfter">The number of persisted events after which sharding state snapshotting is attempted.</param>
         /// <param name="keepNrOfBatches">Keep this number of old persistent batches</param>
-        /// <param name="leastShardAllocationRebalanceThreshold">The minimum eligible shard-count difference required by the legacy least-shard strategy.</param>
+        /// <param name="leastShardAllocationRebalanceThreshold">The eligible shard-count difference that the legacy strategy must exceed before selecting shards.</param>
         /// <param name="leastShardAllocationMaxSimultaneousRebalance">The maximum number of concurrent shard rebalances allowed by the legacy strategy.</param>
         /// <param name="waitingForStateTimeout">The timeout for reading initial distributed sharding state and shard state.</param>
         /// <param name="updatingStateTimeout">The timeout for updating distributed sharding state and writing remembered-entity state.</param>
@@ -565,7 +565,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Returns a copy configured to host shard regions only on nodes with the specified cluster role.
         /// </summary>
-        /// <param name="role">The required cluster role, or <see langword="null"/> to allow any role.</param>
+        /// <param name="role">The required cluster role, or <see langword="null"/> to retain the current role.</param>
         /// <returns>A copy of these settings with the specified role.</returns>
         public ClusterShardingSettings WithRole(string role)
         {

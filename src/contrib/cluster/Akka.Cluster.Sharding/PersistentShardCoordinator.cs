@@ -213,7 +213,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Saves a snapshot when due, then persists a coordinator event and invokes its handler after persistence.
+        /// Requests a snapshot when due, then persists a coordinator event and invokes its handler after persistence.
         /// </summary>
         /// <typeparam name="TEvent">The coordinator domain-event type being persisted.</typeparam>
         /// <param name="e">The event to persist.</param>

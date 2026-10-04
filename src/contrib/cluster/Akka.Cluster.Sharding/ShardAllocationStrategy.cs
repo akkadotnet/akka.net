@@ -148,7 +148,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Creates the legacy least-shard allocation strategy with the supplied rebalance threshold and concurrency limit.
         /// </summary>
-        /// <param name="rebalanceThreshold">The minimum difference in eligible shard counts required before this strategy selects shards for rebalancing.</param>
+        /// <param name="rebalanceThreshold">The eligible shard-count difference that must be exceeded before this strategy selects shards for rebalancing.</param>
         /// <param name="maxSimultaneousRebalance">The maximum number of shards this strategy permits to be in rebalance at once.</param>
         public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance)
         {
@@ -157,7 +157,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Selects shards for another rebalance round when the eligible shard-count difference reaches the configured threshold.
+        /// Selects shards for another rebalance round when the eligible shard-count difference exceeds the configured threshold.
         /// </summary>
         /// <param name="currentShardAllocations">The shard regions and the shard ids currently allocated to each region.</param>
         /// <param name="rebalanceInProgress">Shard ids already being moved; these are excluded from selection and count toward the concurrency limit.</param>

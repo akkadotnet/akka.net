@@ -348,20 +348,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// <see cref="ShardRegion"/> replies with this message for <see cref="HostShard"/> requests which lead to it hosting the shard
+        /// Shard-region acknowledgement that it accepted hosting a shard and initiated its startup.
         /// </summary>
         [Serializable]
         internal sealed class ShardStarted : ICoordinatorMessage, IEquatable<ShardStarted>
         {
             /// <summary>
-            /// Gets the id of the shard that has started in a region.
+            /// Gets the id of the shard whose hosting was acknowledged.
             /// </summary>
             public readonly ShardId Shard;
 
             /// <summary>
-            /// Creates a notification that the requested shard has started.
+            /// Creates an acknowledgement that the region initiated startup of the requested shard.
             /// </summary>
-            /// <param name="shard">The id of the started shard.</param>
+            /// <param name="shard">The id of the shard whose hosting was accepted.</param>
             public ShardStarted(ShardId shard)
             {
                 Shard = shard;
@@ -700,7 +700,7 @@ namespace Akka.Cluster.Sharding
         public interface IDomainEvent : IClusterShardingSerializable { }
 
         /// <summary>
-        /// Persistent event recording that a shard region registered with the coordinator.
+        /// Coordinator state-change event recording shard-region registration. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionRegistered : IDomainEvent, IEquatable<ShardRegionRegistered>
@@ -748,7 +748,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Persistent event recording registration of a proxy-only shard region.
+        /// Coordinator state-change event recording registration of a proxy-only shard region. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionProxyRegistered : IDomainEvent, IEquatable<ShardRegionProxyRegistered>
@@ -796,7 +796,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Persistent event recording that a registered shard region terminated.
+        /// Coordinator state-change event recording termination of a registered shard region. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionTerminated : IDomainEvent, IEquatable<ShardRegionTerminated>
@@ -844,7 +844,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Persistent event recording that a registered shard-region proxy terminated.
+        /// Coordinator state-change event recording termination of a registered shard-region proxy. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardRegionProxyTerminated : IDomainEvent, IEquatable<ShardRegionProxyTerminated>
@@ -892,7 +892,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Persistent event recording allocation of a shard to a region.
+        /// Coordinator state-change event recording allocation of a shard to a region. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardHomeAllocated : IDomainEvent, IEquatable<ShardHomeAllocated>
@@ -952,7 +952,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Persistent event recording removal of a shard's region assignment.
+        /// Coordinator state-change event recording removal of a shard's region assignment. Persistence-backed coordinators journal this event; the distributed-data coordinator applies it to replicated state.
         /// </summary>
         [Serializable]
         public sealed class ShardHomeDeallocated : IDomainEvent, IEquatable<ShardHomeDeallocated>

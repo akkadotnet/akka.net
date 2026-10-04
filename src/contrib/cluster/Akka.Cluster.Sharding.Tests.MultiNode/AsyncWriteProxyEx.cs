@@ -209,7 +209,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
-        /// <returns>A task that completes when the store reports replay completion or failure.</returns>
+        /// <returns>A task that completes when replay succeeds and faults when the store reports failure or the local inactivity timeout elapses.</returns>
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
             if (_store == null)
