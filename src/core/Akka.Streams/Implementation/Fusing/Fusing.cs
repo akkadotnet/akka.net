@@ -23,22 +23,22 @@ using Transform = Akka.Streams.Implementation.StreamLayout.Transform;
 namespace Akka.Streams.Implementation.Fusing
 {
     /// <summary>
-    /// TBD
+    /// Provides the graph normalization, stage fusion, and diagnostic helpers used by stream materialization.
     /// </summary>
     internal static class Fusing
     {
         /// <summary>
-        /// TBD
+        /// Gets whether diagnostic logging for graph fusing is enabled.
         /// </summary>
         public static readonly bool IsDebug = false;
 
         /// <summary>
         /// Fuse everything that is not forbidden via AsyncBoundary attribute.
         /// </summary>
-        /// <typeparam name="TShape">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="graph">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
+        /// <typeparam name="TMat">The type of the value produced when the graph is materialized.</typeparam>
+        /// <param name="graph">The graph whose fusable stages are combined.</param>
+        /// <returns>A graph whose stages are fused unless an asynchronous boundary prevents fusion.</returns>
         public static Streams.Fusing.FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph)
             where TShape : Shape
         {
@@ -96,7 +96,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Return the <see cref="StructuralInfoModule"/> for this Graph without any fusing
         /// </summary>
-        /// <typeparam name="TShape">TBD</typeparam>
+        /// <typeparam name="TShape">The type of the graph's input and output ports.</typeparam>
         /// <typeparam name="TMat"></typeparam>
         /// <param name="graph"></param>
         /// <param name="attributes"></param>
@@ -549,8 +549,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Figure out the dispatcher setting of a module.
         /// </summary>
-        /// <param name="module">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="module">The module whose dispatcher attribute is read.</param>
+        /// <returns>The dispatcher attribute of the module or its copied module and original module attributes.</returns>
         internal static ActorAttributes.Dispatcher GetDispatcher(IModule module)
         {
             CopiedModule copied;
@@ -563,10 +563,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Writes an indented diagnostic message when fusing diagnostics are enabled by the caller.
         /// </summary>
-        /// <param name="indent">TBD</param>
-        /// <param name="msg">TBD</param>
+        /// <param name="indent">The number of indentation levels, each two spaces wide.</param>
+        /// <param name="msg">The diagnostic message to write.</param>
         internal static void Log(int indent, string msg) => Console.WriteLine("{0}{1}", string.Empty.PadLeft(indent*2), msg);
     }
 
@@ -631,17 +631,17 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new();
 
         /// <summary>
-        /// TBD
+        /// Starts a new scope for collecting materialized-value source modules.
         /// </summary>
         public void EnterMaterializationContext() => _materializedSources.AddFirst(new LinkedList<CopiedModule>());
 
         /// <summary>
-        /// TBD
+        /// Ends the current materialization scope and returns the source modules collected in it.
         /// </summary>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the stack of materialized value sources is empty.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The collected materialized-value source modules in the scope that was ended.</returns>
         public IImmutableList<CopiedModule> ExitMaterializationContext()
         {
             if (_materializedSources.Count == 0) throw new ArgumentException("ExitMaterializationContext with empty stack");
@@ -651,9 +651,9 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a copied module as a source of a materialized value in the current scope.
         /// </summary>
-        /// <param name="module">TBD</param>
+        /// <param name="module">The copied module that produces a materialized value.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the stack of materialized value sources is empty.
         /// </exception>
@@ -664,9 +664,9 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a structural information module from the normalized graph data.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A structural module containing the graph shape, ports, owners, materialized values, and attributes.</returns>
         public StructuralInfoModule ToInfo<TShape>(TShape shape, IList<(IModule, IMaterializedValueNode)> materializedValues ,Attributes attributes = null) where TShape : Shape
         {
             attributes = attributes ?? Attributes.None;
@@ -682,11 +682,11 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Replaces a module in the normalized module set and its fusable group.
         /// </summary>
-        /// <param name="oldModule">TBD</param>
-        /// <param name="newModule">TBD</param>
-        /// <param name="localGroup">TBD</param>
+        /// <param name="oldModule">The module to remove.</param>
+        /// <param name="newModule">The replacement module to add.</param>
+        /// <param name="localGroup">The fusable group whose membership is updated.</param>
         public void Replace(IModule oldModule, IModule newModule, ISet<IModule> localGroup)
         {
             Modules.Remove(oldModule);
@@ -725,8 +725,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// Register the outlets of the given Shape as sources for internal connections within imported 
         /// (and not dissolved) GraphModules. See also the comment in addModule where this is partially undone.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="indent">TBD</param>
+        /// <param name="shape">The shape whose outlets are registered as internal connection sources.</param>
+        /// <param name="indent">The indentation level used for optional diagnostic output.</param>
         public void RegisterInternals(Shape shape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"registerInternals({string.Join(",", shape.Outlets.Select(Hash))}");
@@ -754,8 +754,8 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Create and return a new grouping (i.e. an AsyncBoundary-delimited context)
         /// </summary>
-        /// <param name="indent">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="indent">The indentation level used for optional diagnostic output.</param>
+        /// <returns>The newly created group of modules.</returns>
         public ISet<IModule> CreateGroup(int indent)
         {
             var group = new HashSet<IModule>();
@@ -767,12 +767,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Add a module to the given group, performing normalization (i.e. giving it a unique port identity).
         /// </summary>
-        /// <param name="module">TBD</param>
-        /// <param name="group">TBD</param>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <param name="indent">TBD</param>
-        /// <param name="oldShape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="module">The module to add and normalize.</param>
+        /// <param name="group">The fusable group to which the normalized module is added.</param>
+        /// <param name="inheritedAttributes">Attributes inherited by the module copy.</param>
+        /// <param name="indent">The indentation level used for optional diagnostic output.</param>
+        /// <param name="oldShape">The original shape to use when the module has already been copied.</param>
+        /// <returns>An atomic module representing the normalized module.</returns>
         public Atomic AddModule(IModule module, ISet<IModule> group, Attributes inheritedAttributes, int indent, Shape oldShape = null)
         {
             var copy = oldShape == null
@@ -834,10 +834,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Record a wiring between two copied ports, using (and reducing) the port mappings.
         /// </summary>
-        /// <param name="outPort">TBD</param>
-        /// <param name="inPort">TBD</param>
-        /// <param name="indent">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="outPort">The output port to connect.</param>
+        /// <param name="inPort">The input port to connect.</param>
+        /// <param name="indent">The indentation level used for optional diagnostic output.</param>
+        /// <exception cref="ArgumentException">Thrown when either port has no normalized port mapping.</exception>
         public void Wire(OutPort outPort, InPort inPort, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"wiring {outPort} ({Hash(outPort)}) -> {inPort} ({Hash(inPort)})");
@@ -852,10 +852,10 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Replace all mappings for a given shape with its new (copied) form.
         /// </summary>
-        /// <param name="oldShape">TBD</param>
-        /// <param name="newShape">TBD</param>
-        /// <param name="indent">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="oldShape">The shape whose port mappings are being replaced.</param>
+        /// <param name="newShape">The replacement shape whose ports receive the mappings.</param>
+        /// <param name="indent">The indentation level used for optional diagnostic output.</param>
+        /// <exception cref="ArgumentException">Thrown when a port in the old shape has no normalized mapping.</exception>
         public void Rewire(Shape oldShape, Shape newShape, int indent)
         {
             if (Fusing.IsDebug) Fusing.Log(indent, $"rewiring {PrintShape(oldShape)} -> {PrintShape(newShape)}");
@@ -886,15 +886,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Transform original into copied Inlets.
         /// </summary>
-        /// <param name="old">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="old">The original inlets to translate.</param>
+        /// <returns>The corresponding copied inlets.</returns>
         public ImmutableArray<Inlet> NewInlets(IEnumerable<Inlet> old) => old.Select(i => (Inlet)NewInputs[i].First.Value).ToImmutableArray();
 
         /// <summary>
         /// Transform original into copied Outlets.
         /// </summary>
-        /// <param name="old">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="old">The original outlets to translate.</param>
+        /// <returns>The corresponding copied outlets.</returns>
         public ImmutableArray<Outlet> NewOutlets(IEnumerable<Outlet> old) => old.Select(o => (Outlet)NewOutputs[o].First.Value).ToImmutableArray();
 
         private bool IsCopiedModuleWithGraphStageAndMaterializedValue(IModule module)
@@ -943,7 +943,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Writes the current port mappings and structural module information to the console for diagnostics.
         /// </summary>
         internal void Dump()
         {
@@ -955,10 +955,10 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Converts an object's hash code to a hexadecimal string for diagnostic output.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">The object whose hash code is formatted.</param>
+        /// <returns>The object's hash code in lowercase hexadecimal notation.</returns>
         internal string Hash(object obj) => obj.GetHashCode().ToString("x");
 
         private string PrintShape(Shape shape) =>
