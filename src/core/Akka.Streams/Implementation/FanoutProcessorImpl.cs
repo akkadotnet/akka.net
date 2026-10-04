@@ -146,7 +146,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Shuts down the exposed publisher and invokes the configured callback after subscriber management finishes.
         /// </summary>
-        /// <param name="isCompleted">Whether shutdown follows successful completion.</param>
+        /// <param name="isCompleted"><see langword="true"/> when output completes normally; <see langword="false"/> when shutdown follows removal of the last subscription, including cancellation or draining after completion.</param>
         protected override void Shutdown(bool isCompleted)
         {
             ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher.NormalShutdownReason);

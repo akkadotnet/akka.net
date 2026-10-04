@@ -200,7 +200,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Called when the spi.Publisher/Processor is ready to be shut down.
         /// </summary>
-        /// <param name="isCompleted"><see langword="true"/> when output is completing normally; <see langword="false"/> when shutdown follows cancellation.</param>
+        /// <param name="isCompleted"><see langword="true"/> when output completes normally; <see langword="false"/> when shutdown follows removal of the last subscription, including cancellation or draining after completion.</param>
         protected abstract void Shutdown(bool isCompleted);
 
         /// <summary>

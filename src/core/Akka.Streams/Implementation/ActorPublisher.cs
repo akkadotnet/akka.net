@@ -128,7 +128,7 @@ namespace Akka.Streams.Implementation
     public interface IActorPublisher : IUntypedPublisher
     {
         /// <summary>
-        /// Shuts down the publisher and signals pending subscribers according to the shutdown reason.
+        /// Shuts down the publisher and completes or fails pending subscribers according to the reason, unless a specification-violation reason suppresses terminal signals.
         /// </summary>
         /// <param name="reason">The failure to signal, or <see langword="null"/> to complete pending subscribers successfully. A specification-violation reason suppresses terminal signals.</param>
         void Shutdown(Exception reason);
@@ -233,7 +233,7 @@ namespace Akka.Streams.Implementation
         IEnumerable<IUntypedSubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers().Select(UntypedSubscriber.FromTyped);
 
         /// <summary>
-        /// Shuts down this publisher and signals subscribers that have not yet been registered.
+        /// Shuts down this publisher and completes or fails pending subscribers according to the reason, unless a specification-violation reason suppresses terminal signals.
         /// </summary>
         /// <param name="reason">The failure sent to pending subscribers, or <see langword="null"/> to complete them successfully. A specification-violation reason suppresses terminal signals.</param>
         public void Shutdown(Exception reason)

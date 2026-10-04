@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Cancels the registered subscriber without sending it a terminal signal; pending exposed subscribers are completed by publisher shutdown.
+        /// Marks the output canceled without sending a terminal signal to its registered subscriber; shutting down the exposed publisher completes pending subscribers.
         /// </summary>
         public virtual void Cancel()
         {
@@ -640,7 +640,7 @@ namespace Akka.Streams.Implementation
         /// Subclass may override <see cref="ActiveReceive"/>
         /// </summary>
         /// <param name="message">The actor message to route to the active receive handler.</param>
-        /// <returns><see langword="true"/> when the message is buffered for later delivery or processed by the active handler; otherwise the configured unhandled behavior applies.</returns>
+        /// <returns><see langword="true"/> for every message passed to the exposure adapter. When publisher exposure replays buffered messages, messages rejected by the active handler are sent to the configured unhandled behavior.</returns>
         protected sealed override bool Receive(object message) => _receive.Apply(message);
 
         /// <summary>
