@@ -1840,15 +1840,14 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The output element type sent both downstream and to the attached sink.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The attached sink materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are also sent to the attached sink.</param>
+        /// <param name="that">The sink that receives a copy of each output element.</param>
+        /// <param name="materializerFunction">Combines the flow and sink materialized values, in that order.</param>
         public static Flow<TIn, TOut, TMat3> AlsoToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(
             this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializerFunction)
@@ -1865,16 +1864,15 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The output element type sent both downstream and to the attached sink.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The attached sink materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are also sent to the attached sink.</param>
+        /// <param name="that">The sink that receives a copy of each output element.</param>
+        /// <param name="materializerFunction">Combines the flow and sink materialized values, in that order.</param>
         /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat3> AlsoToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(
             this Flow<TIn, TOut, TMat> flow, 
             IGraph<SinkShape<TOut>, TMat2> that,
@@ -1896,12 +1894,11 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The output element type sent both downstream and to the attached sink.</typeparam>
+        /// <typeparam name="TMat">The shared materialized value type of the flow and sink graph.</typeparam>
+        /// <param name="flow">The flow whose output elements are also sent to the attached sink.</param>
+        /// <param name="that">The sink that receives a copy of each output element.</param>
         public static Flow<TIn, TOut, TMat> AlsoTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that, false);
@@ -1919,13 +1916,12 @@ namespace Akka.Streams.Dsl
         /// 
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The output element type sent both downstream and to the attached sink.</typeparam>
+        /// <typeparam name="TMat">The shared materialized value type of the flow and sink graph.</typeparam>
+        /// <param name="flow">The flow whose output elements are also sent to the attached sink.</param>
+        /// <param name="that">The sink that receives a copy of each output element.</param>
         /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> AlsoTo<TIn, TOut, TMat>(
             this Flow<TIn, TOut, TMat> flow,
             IGraph<SinkShape<TOut>, TMat> that,
@@ -1968,16 +1964,15 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="when">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The diverted sink materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The flow whose selected output elements are diverted.</param>
+        /// <param name="that">The sink that receives elements selected by <paramref name="when"/>.</param>
+        /// <param name="when">Selects elements sent to the sink; nonmatching elements continue downstream.</param>
+        /// <param name="materializerFunction">Combines the flow and sink materialized values, in that order.</param>
         public static Flow<TIn, TOut, TMat3> DivertToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(
             this Flow<TIn, TOut, TMat> flow,
             IGraph<SinkShape<TOut>, TMat2> that,
@@ -1993,12 +1988,12 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes and no output is pending</para>
         /// <para>Cancels when when all downstreams cancel</para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="when">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The shared materialized value type of the flow and sink graph.</typeparam>
+        /// <param name="flow">The flow whose selected output elements are diverted.</param>
+        /// <param name="that">The sink that receives elements selected by <paramref name="when"/>.</param>
+        /// <param name="when">Selects elements sent to the sink; nonmatching elements continue downstream.</param>
         public static Flow<TIn, TOut, TMat> DivertTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
             (Flow<TIn, TOut, TMat>)InternalFlowOperations.DivertTo(flow, that, when);
 
@@ -2011,13 +2006,12 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         ///</summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="materializerFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type returned by <paramref name="materializerFunction"/>.</typeparam>
+        /// <param name="flow">The flow whose termination is observed.</param>
+        /// <param name="materializerFunction">Combines the flow materialized value with a task that completes when the flow terminates.</param>
         public static Flow<TIn, TOut, TMat2> WatchTermination<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) =>
             (Flow<TIn, TOut, TMat2>)InternalFlowOperations.WatchTermination(flow, materializerFunction);
 
@@ -2027,13 +2021,12 @@ namespace Akka.Streams.Dsl
         /// event, and may therefor affect performance.
         /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type observed by the monitor.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="flow">The flow whose events are monitored.</param>
+        /// <param name="combine">Combines the flow materialized value and monitor, in that order.</param>
         public static Flow<TIn, TOut, TMat2> Monitor<TIn, TOut, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow,
             Func<TMat, IFlowMonitor, TMat2> combine)
         {
@@ -2052,11 +2045,10 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow separated from downstream demand by a one-element buffer.</param>
         public static Flow<TIn, TOut, TMat> Detach<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Detach(flow);
@@ -2073,12 +2065,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="delay">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose initial output element is delayed.</param>
+        /// <param name="delay">The duration to wait before allowing the initial output element to pass.</param>
         public static Flow<TIn, TOut, TMat> InitialDelay<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TimeSpan delay)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.InitialDelay(flow, delay);
@@ -2125,13 +2116,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="T1">The current flow output element type.</typeparam>
+        /// <typeparam name="T2">The element type emitted by <paramref name="other"/> and used in the output tuple.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to zip.</param>
+        /// <param name="other">The second input to zip.</param>
         public static Flow<TIn, (T1, T2), TMat> Zip<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
             return (Flow<TIn, (T1, T2), TMat>)InternalFlowOperations.Zip(flow, other);
@@ -2149,15 +2139,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="T3">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="T1">The current flow output element type.</typeparam>
+        /// <typeparam name="T2">The element type emitted by <paramref name="other"/>.</typeparam>
+        /// <typeparam name="T3">The element type returned by <paramref name="combine"/>.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to zip.</param>
+        /// <param name="other">The second input to zip.</param>
+        /// <param name="combine">Combines one corresponding element from each input into an output element.</param>
         public static Flow<TIn, T3, TMat> ZipWith<TIn, T1, T2, T3, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, Func<T1, T2, T3> combine)
         {
             return (Flow<TIn, T3, TMat>)InternalFlowOperations.ZipWith(flow, other, combine);
@@ -2186,14 +2175,13 @@ namespace Akka.Streams.Dsl
         /// Source(List(1, 2, 3)).Interleave(List(4, 5, 6, 7), 2) // 1, 2, 4, 5, 3, 6, 7
         /// </code>
         /// </example>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="segmentSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="T1">The current flow output element type.</typeparam>
+        /// <typeparam name="T2">The common output element type.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input in the interleave sequence.</param>
+        /// <param name="other">The second input in the interleave sequence.</param>
+        /// <param name="segmentSize">The number of elements taken from each input before switching.</param>
         public static Flow<TIn, T2, TMat> Interleave<TIn, T1, T2, TMat>(this Flow<TIn, T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other, int segmentSize) where T1 : T2
         {
             return (Flow<TIn, T2, TMat>)InternalFlowOperations.Interleave(flow, other, segmentSize);
@@ -2213,17 +2201,16 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="graph">TBD</param>
-        /// <param name="segmentSize">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="T1">The current flow output element type.</typeparam>
+        /// <typeparam name="T2">The common output element type.</typeparam>
+        /// <typeparam name="TMat">This flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The other source's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The first input in the interleave sequence.</param>
+        /// <param name="graph">The second input in the interleave sequence.</param>
+        /// <param name="segmentSize">The number of elements taken from each input before switching.</param>
+        /// <param name="combine">Combines the flow and source materialized values, in that order.</param>
         public static Flow<TIn, T2, TMat3> InterleaveMaterialized<TIn, T1, T2, TMat, TMat2, TMat3>(this Flow<TIn, T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat2> graph, int segmentSize, Func<TMat, TMat2, TMat3> combine) where T1 : T2
         {
@@ -2242,14 +2229,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="eagerComplete">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output element type.</typeparam>
+        /// <typeparam name="TOut2">The common output element type.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to merge.</param>
+        /// <param name="other">The second input to merge.</param>
+        /// <param name="eagerComplete">When true, complete when either input completes; otherwise wait for both inputs to complete.</param>
         public static Flow<TIn, TOut2, TMat> Merge<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, IGraph<SourceShape<TOut2>, TMat> other, bool eagerComplete = false) where TOut1 : TOut2
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Merge(flow, other, eagerComplete);
@@ -2264,16 +2250,15 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output element type.</typeparam>
+        /// <typeparam name="TOut2">The common output element type.</typeparam>
+        /// <typeparam name="TMat">This flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The other source's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The first input to merge.</param>
+        /// <param name="that">The second input to merge.</param>
+        /// <param name="combine">Combines the flow and source materialized values, in that order.</param>
         public static Flow<TIn, TOut2, TMat3> MergeMaterialized<TIn, TOut1, TOut2, TMat, TMat2, TMat3>(this Flow<TIn, TOut1, TMat> flow,
             IGraph<SourceShape<TOut2>, TMat2> that, Func<TMat, TMat2, TMat3> combine)
             where TOut1 : TOut2
@@ -2296,13 +2281,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="orderFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The element type emitted by both inputs.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to merge in comparator order.</param>
+        /// <param name="other">The second input to merge in comparator order.</param>
+        /// <param name="orderFunc">Compares the available head elements and selects which is emitted next.</param>
         public static Flow<TIn, TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, Func<TOut, TOut, int> orderFunc)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, orderFunc);
@@ -2323,12 +2307,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The element type emitted by both inputs.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to merge in natural comparison order.</param>
+        /// <param name="other">The second input to merge in natural comparison order.</param>
         public static Flow<TIn,TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
             where TOut : IComparable<TOut>
         {
@@ -2350,13 +2333,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <param name="comparer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The element type emitted by both inputs.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The first input to merge in comparator order.</param>
+        /// <param name="other">The second input to merge in comparator order.</param>
+        /// <param name="comparer">Compares available head elements and selects which is emitted next.</param>
         public static Flow<TIn, TOut, TMat> MergeSorted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other, IComparer<TOut> comparer)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.MergeSorted(flow, other, comparer);
@@ -2380,12 +2362,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The element type emitted by this flow and the appended source.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The flow whose output elements are emitted first.</param>
+        /// <param name="other">The source emitted after this flow's upstream completes.</param>
         public static Flow<TIn, TOut, TMat> Concat<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SourceShape<TOut>, TMat> other)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Concat(flow, other);
@@ -2409,13 +2390,12 @@ namespace Akka.Streams.Dsl
         ///
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">This flow's output element type.</typeparam>
+        /// <typeparam name="TOut2">The common output type emitted downstream.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from this flow.</typeparam>
+        /// <param name="flow">The flow whose output follows the prepended source.</param>
+        /// <param name="that">The source emitted before this flow's output.</param>
         public static Flow<TIn, TOut2, TMat> Prepend<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow,
             IGraph<SourceShape<TOut2>, TMat> that) where TOut1 : TOut2
         {
@@ -2445,11 +2425,10 @@ namespace Akka.Streams.Dsl
         /// '''Cancels when''' downstream cancels and additionally the alternative is cancelled as soon as an element passes
         ///                    by from this stream.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="secondary">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The flow input and output element type.</typeparam>
+        /// <typeparam name="TMat">The materialized value type preserved from the primary flow.</typeparam>
+        /// <param name="flow">The primary flow, whose output takes precedence if it emits an element.</param>
+        /// <param name="secondary">The fallback source used if the primary flow completes without emitting an element.</param>
         public static Flow<T, T, TMat> OrElse<T, TMat>(this Flow<T, T, TMat> flow, IGraph<SourceShape<T>, TMat> secondary)
             => (Flow<T, T, TMat>) InternalFlowOperations.OrElse(flow, secondary);
 
@@ -2464,14 +2443,13 @@ namespace Akka.Streams.Dsl
         /// 
         /// <seealso cref="OrElse{T,TMat}"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="secondary">TBD</param>
-        /// <param name="materializedFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The flow input and output element type.</typeparam>
+        /// <typeparam name="TMat">The primary flow materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The fallback source materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The combined materialized value type.</typeparam>
+        /// <param name="flow">The primary flow, whose output takes precedence if it emits an element.</param>
+        /// <param name="secondary">The fallback source used if the primary flow completes without emitting an element.</param>
+        /// <param name="materializedFunction">Combines the primary flow and fallback source materialized values, in that order.</param>
         public static Flow<T, T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this Flow<T, T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
             => (Flow<T, T, TMat3>)InternalFlowOperations.OrElseMaterialized(flow, secondary, materializedFunction);
 
