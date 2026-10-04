@@ -28,7 +28,7 @@ namespace Akka.Persistence.Journal
         public sealed class TargetLocation
         {
             /// <summary>
-            /// TBD
+            /// Initializes the remote target location.
             /// </summary>
             /// <param name="address">Address of the actor system hosting the target plugin.</param>
             public TargetLocation(Address address)
@@ -373,7 +373,7 @@ namespace Akka.Persistence.Journal
     public class PersistencePluginProxyExtension : ExtensionIdProvider<PersistencePluginProxyExtension>, IExtension
     {
         /// <summary>
-        /// TBD
+        /// Initializes the proxy extension for an actor system.
         /// </summary>
         /// <param name="system">Actor system whose persistence plugins should be initialized.</param>
         public PersistencePluginProxyExtension(ActorSystem system)
