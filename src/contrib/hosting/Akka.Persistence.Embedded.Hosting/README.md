@@ -99,3 +99,7 @@ explicitly, the plugin keeps your value.
 
 `Microsoft.Data.Sqlite` ships the SQLite native library (`libe_sqlite3.so`, `libe_sqlite3.dylib`, `e_sqlite3.dll`). A Native AOT
 publish copies it next to the executable; ship it with the app.
+
+## Writing your own plugin
+
+See "Making Your Persistence Plugin Native AOT Ready" in `docs/articles/persistence/custom-persistence-provider.md`.
