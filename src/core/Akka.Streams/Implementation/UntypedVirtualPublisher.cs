@@ -16,7 +16,7 @@ namespace Akka.Streams
     internal interface IUntypedVirtualPublisher
     {
         /// <summary>
-        /// Subscribes to the publisher currently registered with this facade.
+        /// Connects the subscriber when a publisher is available, including when registration occurs later.
         /// </summary>
         /// <param name="subscriber">The subscriber to connect.</param>
         void Subscribe(IUntypedSubscriber subscriber);
@@ -39,7 +39,7 @@ namespace Akka.Streams
     internal abstract class UntypedVirtualPublisher : IUntypedVirtualPublisher
     {
         /// <summary>
-        /// Subscribes to the registered publisher.
+        /// Connects the subscriber when a publisher is available, including when registration occurs later.
         /// </summary>
         /// <param name="subscriber">The subscriber to connect.</param>
         public abstract void Subscribe(IUntypedSubscriber subscriber);

@@ -21,38 +21,38 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Marker message that wakes an actor after a subscriber has been queued for registration.
     /// </summary>
     [Serializable]
     internal sealed class SubscribePending
     {
         /// <summary>
-        /// TBD
+        /// Gets the shared wake-up message.
         /// </summary>
         public static readonly SubscribePending Instance = new();
         private SubscribePending() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Carries a subscriber's request count to the actor that implements the publisher.
     /// </summary>
     [Serializable]
     internal sealed class RequestMore : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Gets the subscription whose demand changed.
         /// </summary>
         public readonly IActorSubscription Subscription;
         /// <summary>
-        /// TBD
+        /// Gets the number of elements requested by the subscriber.
         /// </summary>
         public readonly long Demand;
 
         /// <summary>
-        /// TBD
+        /// Creates a request message for the implementing actor.
         /// </summary>
-        /// <param name="subscription">TBD</param>
-        /// <param name="demand">TBD</param>
+        /// <param name="subscription">The subscription that issued the request.</param>
+        /// <param name="demand">The requested element count.</param>
         public RequestMore(IActorSubscription subscription, long demand)
         {
             Subscription = subscription;
@@ -61,20 +61,20 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Carries a subscriber cancellation to the actor that implements the publisher.
     /// </summary>
     [Serializable]
     internal sealed class Cancel : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Gets the canceled subscription.
         /// </summary>
         public readonly IActorSubscription Subscription;
 
         /// <summary>
-        /// TBD
+        /// Creates a cancellation message for the implementing actor.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription that was canceled.</param>
         public Cancel(IActorSubscription subscription)
         {
             Subscription = subscription;
@@ -82,20 +82,20 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Supplies the actor publisher implementation to its Reactive Streams wrapper.
     /// </summary>
     [Serializable]
     internal sealed class ExposedPublisher : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Gets the actor publisher implementation being exposed.
         /// </summary>
         public readonly IActorPublisher Publisher;
 
         /// <summary>
-        /// TBD
+        /// Creates a message that exposes the actor publisher implementation.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher implementation to expose.</param>
         public ExposedPublisher(IActorPublisher publisher)
         {
             Publisher = publisher;
@@ -103,7 +103,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Exception used when a publisher is shut down with a normal shutdown reason.
     /// </summary>
     [Serializable]
     public class NormalShutdownException : IllegalStateException
@@ -123,33 +123,33 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Contract for an actor-backed publisher that can shut down and drain pending subscribers.
     /// </summary>
     public interface IActorPublisher : IUntypedPublisher
     {
         /// <summary>
-        /// TBD
+        /// Shuts down the publisher and rejects subscription attempts that are still pending.
         /// </summary>
-        /// <param name="reason">TBD</param>
+        /// <param name="reason">The failure to signal to pending subscribers, or null for successful completion.</param>
         void Shutdown(Exception reason);
         /// <summary>
-        /// TBD
+        /// Removes and returns the subscribers currently awaiting registration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The subscribers pending at the time of the call.</returns>
         IEnumerable<IUntypedSubscriber> TakePendingSubscribers();
     }
 
     /// <summary>
-    /// TBD
+    /// Provides the standard reason used when a publisher is shut down normally.
     /// </summary>
     public static class ActorPublisher
     {
         /// <summary>
-        /// TBD
+        /// Gets the message used by <see cref="NormalShutdownReason"/>.
         /// </summary>
         public const string NormalShutdownReasonMessage = "Cannot subscribe to shut-down Publisher";
         /// <summary>
-        /// TBD
+        /// Gets the shared exception used to reject subscriptions after normal shutdown.
         /// </summary>
         public static readonly NormalShutdownException NormalShutdownReason = new(NormalShutdownReasonMessage);
     }
@@ -160,12 +160,12 @@ namespace Akka.Streams.Implementation
     /// When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
     /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TOut">The type of elements emitted by the publisher.</typeparam>
     [InternalApi]
     public class ActorPublisher<TOut> : IActorPublisher, IPublisher<TOut>
     {
         /// <summary>
-        /// TBD
+        /// Gets the actor that implements this publisher.
         /// </summary>
         protected readonly IActorRef Impl;
 
@@ -180,24 +180,24 @@ namespace Akka.Streams.Implementation
         private volatile Exception _shutdownReason;
 
         /// <summary>
-        /// TBD
+        /// Gets the message sent to the implementation actor to drain queued subscription attempts.
         /// </summary>
         protected virtual object WakeUpMessage => SubscribePending.Instance;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher wrapper around its implementing actor.
         /// </summary>
-        /// <param name="impl">TBD</param>
+        /// <param name="impl">The actor that handles subscription, request, and cancellation messages.</param>
         public ActorPublisher(IActorRef impl)
         {
             Impl = impl;
         }
 
         /// <summary>
-        /// TBD
+        /// Queues a subscriber for actor-side registration, or immediately rejects it after shutdown.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="subscriber">The subscriber to register.</param>
+        /// <exception cref="ArgumentNullException">The subscriber is null.</exception>
         public void Subscribe(ISubscriber<TOut> subscriber)
         {
             if (subscriber == null) throw new ArgumentNullException(nameof(subscriber));
@@ -221,9 +221,9 @@ namespace Akka.Streams.Implementation
         void IUntypedPublisher.Subscribe(IUntypedSubscriber subscriber) => Subscribe(UntypedSubscriber.ToTyped<TOut>(subscriber));
 
         /// <summary>
-        /// TBD
+        /// Atomically removes the subscribers currently waiting for actor-side registration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The subscribers removed from the pending queue.</returns>
         public IEnumerable<ISubscriber<TOut>> TakePendingSubscribers()
         {
             var pending = _pendingSubscribers.GetAndSet(ImmutableList<ISubscriber<TOut>>.Empty);
@@ -233,9 +233,9 @@ namespace Akka.Streams.Implementation
         IEnumerable<IUntypedSubscriber> IActorPublisher.TakePendingSubscribers() => TakePendingSubscribers().Select(UntypedSubscriber.FromTyped);
 
         /// <summary>
-        /// TBD
+        /// Shuts down this publisher and rejects subscribers that have not yet been registered.
         /// </summary>
-        /// <param name="reason">TBD</param>
+        /// <param name="reason">The failure sent to pending subscribers, or null to complete them successfully.</param>
         public void Shutdown(Exception reason)
         {
             _shutdownReason = reason;
@@ -274,23 +274,23 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Subscription type that receives requests and cancellation through actor messages.
     /// </summary>
     public interface IActorSubscription : ISubscription
     {
     }
 
     /// <summary>
-    /// TBD
+    /// Creates actor subscriptions for typed or untyped subscribers.
     /// </summary>
     public static class ActorSubscription
     {
         /// <summary>
-        /// TBD
+        /// Creates an actor subscription for an untyped subscriber using its element type.
         /// </summary>
-        /// <param name="implementor">TBD</param>
-        /// <param name="subscriber">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="implementor">The actor that handles requests and cancellation.</param>
+        /// <param name="subscriber">The untyped subscriber attached to the subscription.</param>
+        /// <returns>An actor subscription with the subscriber's element type.</returns>
         internal static IActorSubscription Create(IActorRef implementor, IUntypedSubscriber subscriber)
         {
             if (subscriber is UntypedSubscriber untyped)
@@ -305,36 +305,36 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor subscription for a typed subscriber.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="implementor">TBD</param>
-        /// <param name="subscriber">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="implementor">The actor that handles requests and cancellation.</param>
+        /// <param name="subscriber">The subscriber attached to the subscription.</param>
+        /// <returns>The actor subscription.</returns>
         public static IActorSubscription Create<T>(IActorRef implementor, ISubscriber<T> subscriber)
             => new ActorSubscription<T>(implementor, subscriber);
     }
 
     /// <summary>
-    /// TBD
+    /// Actor-backed Reactive Streams subscription for elements of type <typeparamref name="T"/>.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The subscriber's element type.</typeparam>
     public class ActorSubscription<T> : IActorSubscription
     {
         /// <summary>
-        /// TBD
+        /// Gets the actor that receives subscription messages.
         /// </summary>
         public readonly IActorRef Implementor;
         /// <summary>
-        /// TBD
+        /// Gets the subscriber associated with this subscription.
         /// </summary>
         public readonly ISubscriber<T> Subscriber;
 
         /// <summary>
-        /// TBD
+        /// Creates an actor subscription for the supplied subscriber.
         /// </summary>
-        /// <param name="implementor">TBD</param>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="implementor">The actor that handles requests and cancellation.</param>
+        /// <param name="subscriber">The subscriber attached to the subscription.</param>
         public ActorSubscription(IActorRef implementor, ISubscriber<T> subscriber)
         {
             Implementor = implementor;
@@ -342,28 +342,28 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request message to the implementing actor.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The requested element count.</param>
         public void Request(long n) => Implementor.Tell(new RequestMore(this, n));
 
         /// <summary>
-        /// TBD
+        /// Sends a cancellation message to the implementing actor.
         /// </summary>
         public void Cancel() => Implementor.Tell(new Cancel(this));
     }
 
     /// <summary>
-    /// TBD
+    /// Actor subscription that also tracks active state, outstanding demand, and the subscriber's buffer cursor.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The element type delivered to the subscriber.</typeparam>
     public class ActorSubscriptionWithCursor<TIn> : ActorSubscription<TIn>, ISubscriptionWithCursor<TIn>
     {
         /// <summary>
-        /// TBD
+        /// Creates an active subscription with its reader cursor and demand initialized to zero.
         /// </summary>
-        /// <param name="implementor">TBD</param>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="implementor">The actor that handles requests and cancellation.</param>
+        /// <param name="subscriber">The subscriber receiving elements.</param>
         public ActorSubscriptionWithCursor(IActorRef implementor, ISubscriber<TIn> subscriber) : base(implementor, subscriber)
         {
             IsActive = true;
@@ -374,9 +374,9 @@ namespace Akka.Streams.Implementation
         ISubscriber<TIn> ISubscriptionWithCursor<TIn>.Subscriber => Subscriber;
 
         /// <summary>
-        /// TBD
+        /// Delivers an untyped element after casting it to the subscriber's element type.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to cast and deliver.</param>
         public void Dispatch(object element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, (TIn)element);
 
         bool ISubscriptionWithCursor<TIn>.IsActive
@@ -386,12 +386,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether this subscription remains active.
         /// </summary>
         public bool IsActive { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the read position of this subscriber in the shared buffer.
         /// </summary>
         public long Cursor { get; private set; }
 
@@ -402,14 +402,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of requested elements not yet delivered.
         /// </summary>
         public long TotalDemand { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Delivers a typed element to the subscriber.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to deliver.</param>
         public void Dispatch(TIn element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
 
         long ICursor.Cursor

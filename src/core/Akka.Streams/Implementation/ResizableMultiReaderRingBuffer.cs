@@ -103,7 +103,7 @@ namespace Akka.Streams.Implementation
     public class RetainingMultiReaderBuffer<T> : IStreamBuffer<T>
     {
         /// <summary>
-        /// Gets the reader collection used to retain entries until they have been read.
+        /// Gets the reader collection used for cursor accounting and diagnostics.
         /// </summary>
         protected readonly ICursors Cursors;
 
@@ -376,9 +376,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Removes a reader and releases entries that no remaining reader needs.
+        /// Updates retained entries after a reader has been removed from the cursor collection.
         /// </summary>
-        /// <param name="cursor">The reader that was removed.</param>
+        /// <param name="cursor">The cursor of the reader that was removed.</param>
         public void OnCursorRemoved(ICursor cursor)
         {
             if (cursor.Cursor == _readIndex) // if this cursor is the last one it must be at readIx

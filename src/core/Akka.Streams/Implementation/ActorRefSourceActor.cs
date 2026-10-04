@@ -123,7 +123,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Emits an element immediately when demand is available; otherwise buffers or drops it according to policy.
+        /// Emits an element when demand is available; otherwise buffers, drops it, or fails the publisher according to the overflow policy.
         /// </summary>
         /// <param name="message">The element received by the actor.</param>
         /// <returns><see langword="true"/> when the active publisher handled the element; otherwise <see langword="false"/>.</returns>

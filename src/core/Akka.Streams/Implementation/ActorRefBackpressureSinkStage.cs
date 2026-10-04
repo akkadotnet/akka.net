@@ -147,8 +147,8 @@ namespace Akka.Streams.Implementation
         /// <param name="actorRef">The actor that receives initialization, elements, and terminal notifications.</param>
         /// <param name="onInitMessage">The message sent to the actor when the stage starts.</param>
         /// <param name="ackMessage">The message type that acknowledges one sent element.</param>
-        /// <param name="onCompleteMessage">The message sent after upstream completes and all buffered elements have been acknowledged.</param>
-        /// <param name="onFailureMessage">Creates the message sent when upstream fails or the stage stops abruptly.</param>
+        /// <param name="onCompleteMessage">The message sent after upstream completes and all buffered elements have been sent.</param>
+        /// <param name="onFailureMessage">Creates the message used when upstream fails or the stage stops abruptly; abrupt termination sends it to the stage actor itself.</param>
         public ActorRefBackpressureSinkStage(IActorRef actorRef, object onInitMessage, object ackMessage,
             object onCompleteMessage, Func<Exception, object> onFailureMessage)
         {

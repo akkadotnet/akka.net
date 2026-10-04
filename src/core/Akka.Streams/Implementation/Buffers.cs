@@ -52,9 +52,9 @@ namespace Akka.Streams.Implementation
         T Dequeue();
 
         /// <summary>
-        /// Returns the oldest element without removing it, or the default value when empty.
+        /// Returns the oldest element without removing it; behavior when empty depends on the implementation.
         /// </summary>
-        /// <returns>The oldest element, or <see langword="default"/> when the buffer is empty.</returns>
+        /// <returns>The oldest buffered element.</returns>
         T? Peek();
         /// <summary>
         /// Removes all elements from the buffer.
@@ -154,11 +154,11 @@ namespace Akka.Streams.Implementation
     internal abstract class FixedSizeBuffer<T> : IBuffer<T>
     {
         /// <summary>
-        /// Gets the absolute index of the next element to read.
+        /// Gets the logical read position, which may be rebased during index maintenance.
         /// </summary>
         protected long ReadIndex;
         /// <summary>
-        /// Gets the absolute index at which the next element is written.
+        /// Gets the logical write position, which may be rebased during index maintenance.
         /// </summary>
         protected long WriteIndex;
 
