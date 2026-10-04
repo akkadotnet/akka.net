@@ -14,24 +14,24 @@ using Akka.Pattern;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Determines how the replay filter handles events that may indicate overlapping journal writers.
     /// </summary>
     public enum ReplayFilterMode
     {
         /// <summary>
-        /// TBD
+        /// Logs and fails recovery when replayed events have invalid ordering or come from an older writer.
         /// </summary>
         Fail,
         /// <summary>
-        /// TBD
+        /// Logs invalid replay ordering or old-writer events and continues replaying them.
         /// </summary>
         Warn,
         /// <summary>
-        /// TBD
+        /// Logs and discards events identified as coming from an older or overlapping writer.
         /// </summary>
         RepairByDiscardOld,
         /// <summary>
-        /// TBD
+        /// Disables replay filtering; this value cannot be used to create a <see cref="ReplayFilter"/> actor.
         /// </summary>
         Disabled
     }
@@ -49,13 +49,13 @@ namespace Akka.Persistence.Journal
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Initializes a replay filter for a persistent actor.
         /// </summary>
-        /// <param name="persistentActor">TBD</param>
-        /// <param name="mode">TBD</param>
-        /// <param name="windowSize">TBD</param>
-        /// <param name="maxOldWriters">TBD</param>
-        /// <param name="debugEnabled">TBD</param>
+        /// <param name="persistentActor">Persistent actor to which accepted replay messages are forwarded.</param>
+        /// <param name="mode">Action to take when replayed events have invalid ordering or writer identity.</param>
+        /// <param name="windowSize">Number of replay messages buffered while checking writer order.</param>
+        /// <param name="maxOldWriters">Maximum number of previous writer identifiers tracked.</param>
+        /// <param name="debugEnabled">Whether replay messages and completion are logged at debug level.</param>
         public ReplayFilter(IActorRef persistentActor, ReplayFilterMode mode, int windowSize, int maxOldWriters, bool debugEnabled)
         {
             PersistentActor = persistentActor;
@@ -66,13 +66,13 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a replay filter.
         /// </summary>
-        /// <param name="persistentActor">TBD</param>
-        /// <param name="mode">TBD</param>
-        /// <param name="windowSize">TBD</param>
-        /// <param name="maxOldWriters">TBD</param>
-        /// <param name="debugEnabled">TBD</param>
+        /// <param name="persistentActor">Persistent actor to which accepted replay messages are forwarded.</param>
+        /// <param name="mode">Action to take when replayed events have invalid ordering or writer identity.</param>
+        /// <param name="windowSize">Number of replay messages buffered while checking writer order.</param>
+        /// <param name="maxOldWriters">Maximum number of previous writer identifiers tracked.</param>
+        /// <param name="debugEnabled">Whether replay messages and completion are logged at debug level.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown for a number of reasons. These include:
         /// <ul>
@@ -81,7 +81,7 @@ namespace Akka.Persistence.Journal
         /// <li>The specified <paramref name="mode"/> is <see cref="ReplayFilterMode.Disabled"/>.</li>
         /// </ul>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Actor properties for the replay filter.</returns>
         public static Props Props(IActorRef persistentActor, ReplayFilterMode mode, int windowSize, int maxOldWriters, bool debugEnabled)
         {
             if (windowSize <= 0)
@@ -94,41 +94,41 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Persistent actor to which accepted replay messages are forwarded.
         /// </summary>
         public IActorRef PersistentActor { get; }
 
         /// <summary>
-        /// TBD
+        /// Action taken when replayed events have invalid ordering or writer identity.
         /// </summary>
         public ReplayFilterMode Mode { get; }
 
         /// <summary>
-        /// TBD
+        /// Number of replay messages buffered while checking writer order.
         /// </summary>
         public int WindowSize { get; }
 
         /// <summary>
-        /// TBD
+        /// Maximum number of previous writer identifiers tracked.
         /// </summary>
         public int MaxOldWriters { get; }
 
         /// <summary>
-        /// TBD
+        /// Whether replay messages and completion are logged at debug level.
         /// </summary>
         public bool DebugEnabled { get; }
 
         /// <summary>
-        /// TBD
+        /// Validates replayed messages and forwards them to the persistent actor.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Message received by the replay filter.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the <see cref="Mode"/> is set to <see cref="ReplayFilterMode.Disabled"/>.
         /// </exception>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when either the replayed event is in the wrong order or from an old writer.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>true if the message was a replay or recovery completion message and was handled; otherwise, false.</returns>
         protected override bool Receive(object message)
         {
             if (message is ReplayedMessage value)
