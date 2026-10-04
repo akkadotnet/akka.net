@@ -82,7 +82,7 @@ namespace Akka.Persistence.Embedded.Query.Internal
     }
 
     /// <summary>A half-open range [From, Until) of orderings that did not show up.</summary>
-    internal sealed class NumericRangeEntry
+    internal readonly struct NumericRangeEntry
     {
         public NumericRangeEntry(long from, long until)
         {
