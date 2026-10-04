@@ -38,12 +38,9 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     #region Messages
 
     /// <summary>
-    /// The message will be delivered to one recipient with a matching path, if any such
-    /// exists. If several entries match the path the message will be delivered
-    /// to one random destination. The sender of the message can specify that local
-    /// affinity is preferred, i.e. the message is sent to an actor in the same local actor
-    /// system as the used receptionist actor, if any such exists, otherwise random to any other
-    /// matching entry.
+    /// Requests delivery through the receptionist to recipients registered under a matching path.
+    /// The receptionist applies its configured routing logic to the matching entries. Local affinity
+    /// can prefer an entry in the receptionist's actor system when one is available.
     /// </summary>
     [Serializable]
     public sealed class Send: IClusterClientProtocolMessage, IEquatable<Send>
@@ -62,9 +59,9 @@ public sealed class ClusterClient : ActorBase, IWithTimers
         public bool LocalAffinity { get; }
 
         /// <summary>
-        /// Creates a request to send a message to one matching cluster recipient.
+        /// Creates a request to send a message to recipients registered under a matching cluster path.
         /// </summary>
-        /// <param name="path">Actor path used to find matching recipients.</param>
+        /// <param name="path">Actor path used by the receptionist to find matching registrations.</param>
         /// <param name="message">Message to deliver.</param>
         /// <param name="localAffinity">If <see langword="true"/>, prefer a matching recipient in the receptionist's local actor system.</param>
         public Send(string path, object message, bool localAffinity = false)

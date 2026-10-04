@@ -209,8 +209,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton role.
         /// </summary>
-        /// <param name="role">The cluster role whose members may host the singleton, or null/empty to allow any member.</param>
-        /// <returns>A copy of these settings with the specified role.</returns>
+        /// <param name="role">The cluster role whose members may host the singleton; null or empty leaves the current role unchanged.</param>
+        /// <returns>A copy of these settings with the role changed when a nonempty role is supplied.</returns>
         public ClusterSingletonManagerSettings WithRole(string role)
         {
             return Copy(role: RoleOption(role));
@@ -239,8 +239,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton lease settings.
         /// </summary>
-        /// <param name="leaseSettings">The lease settings used to acquire a lease before starting the singleton, or null to clear the lease settings.</param>
-        /// <returns>A copy of these settings with the specified lease settings.</returns>
+        /// <param name="leaseSettings">The lease settings used to acquire a lease before starting the singleton; null leaves the current lease settings unchanged.</param>
+        /// <returns>A copy of these settings with the lease settings changed when non-null settings are supplied.</returns>
         public ClusterSingletonManagerSettings WithLeaseSettings(LeaseUsageSettings leaseSettings)
         {
             return Copy(leaseSettings: leaseSettings);

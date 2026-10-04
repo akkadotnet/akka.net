@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// the default configuration `akka.cluster.singleton-proxy`.
         /// </summary>
         /// <param name="config">The configuration section containing the singleton proxy settings.</param>
-        /// <param name="considerAppVersion">Whether member application versions are considered when selecting the singleton host.</param>
+        /// <param name="considerAppVersion">Compatibility setting retained in the settings; the proxy does not use it when selecting a member.</param>
         /// <returns>The settings read from <paramref name="config"/>.</returns>
         public static ClusterSingletonProxySettings Create(Config config, bool considerAppVersion)
         {

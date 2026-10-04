@@ -118,8 +118,8 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Returns a copy with the receptionist role changed.
         /// </summary>
-        /// <param name="role">Role on which the receptionist should run; null or empty allows all members.</param>
-        /// <returns>A copy of these settings with the supplied role.</returns>
+        /// <param name="role">Role on which the receptionist should run; null leaves the current role unchanged, while empty clears the role restriction.</param>
+        /// <returns>A copy of these settings with the role changed according to <paramref name="role"/>.</returns>
         public ClusterReceptionistSettings WithRole(string role)
         {
             return Copy(role: role);

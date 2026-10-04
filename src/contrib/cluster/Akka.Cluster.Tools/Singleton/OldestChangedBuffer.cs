@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// Initial view of eligible members ordered by age, together with whether this node can safely become oldest.
+        /// Initial view of role-matching members with assigned up-numbers at or below this node's up-number cutoff, together with whether this node can safely become oldest.
         /// </summary>
         [Serializable]
         public sealed class InitialOldestState
@@ -60,7 +60,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// Creates the initial oldest-member state sent to the singleton manager.
             /// </summary>
-            /// <param name="oldest">The eligible member addresses up to and including this node in age order.</param>
+            /// <param name="oldest">Role-matching member addresses with assigned up-numbers at or below this node's cutoff, in age order. This node may be absent if it is not in the snapshot.</param>
             /// <param name="safeToBeOldest">Whether the node may become oldest without waiting for an older or equally old member to be removed.</param>
             public InitialOldestState(ImmutableList<UniqueAddress> oldest, bool safeToBeOldest)
             {

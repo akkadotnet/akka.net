@@ -14,7 +14,7 @@ using System.Linq;
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
     /// <summary>
-    /// Registers an actor with the distributed publish-subscribe mediator under its path.
+    /// Requests registration of a locally scoped actor with the distributed publish-subscribe mediator under its path.
     /// </summary>
     [Serializable]
     public sealed class Put : IEquatable<Put>
@@ -25,9 +25,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public IActorRef Ref { get; }
 
         /// <summary>
-        /// Creates a registration message for an actor.
+        /// Creates a registration request for a locally scoped actor.
         /// </summary>
-        /// <param name="ref">Actor reference to register.</param>
+        /// <param name="ref">Locally scoped actor reference to register.</param>
         public Put(IActorRef @ref)
         {
             Ref = @ref;
@@ -314,8 +314,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public Unsubscribe Unsubscribe { get; }
 
         /// <summary>
-        /// Publishes a message to subscribers of a topic.
+        /// Creates an acknowledgement for the specified unsubscription request.
         /// </summary>
+        /// <param name="unsubscribe">The unsubscription request being acknowledged.</param>
         public UnsubscribeAck(Unsubscribe unsubscribe)
         {
             Unsubscribe = unsubscribe;
@@ -363,7 +364,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// </summary>
         public object Message { get; }
         /// <summary>
-        /// Whether to send the publication to one subscriber in each group and every ungrouped subscriber.
+        /// Whether to route the publication separately within each subscriber group instead of to ordinary topic subscribers.
         /// </summary>
         public bool SendOneMessageToEachGroup { get; }
 
@@ -372,7 +373,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// </summary>
         /// <param name="topic">Topic whose subscribers receive the message.</param>
         /// <param name="message">Message to publish.</param>
-        /// <param name="sendOneMessageToEachGroup">If <see langword="true"/>, deliver to one subscriber in each group and every ungrouped subscriber; otherwise deliver to every subscriber.</param>
+        /// <param name="sendOneMessageToEachGroup">If <see langword="true"/>, route to each matching subscriber group using the configured routing logic; otherwise use the ordinary topic-subscriber path.</param>
         public Publish(string topic, object message, bool sendOneMessageToEachGroup = false)
         {
             Topic = topic;
@@ -447,7 +448,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     public sealed record PublishSucceeded(PublishWithAck Message): IPublishResponse, IDeadLetterSuppression;
 
     /// <summary>
-    /// Sends a message to one actor registered at a matching path.
+    /// Requests delivery to registrations matching the path using the mediator's configured routing logic.
     /// </summary>
     [Serializable]
     public sealed class Send : IDistributedPubSubMessage, IEquatable<Send>, IWrappedMessage
@@ -466,9 +467,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public bool LocalAffinity { get; }
 
         /// <summary>
-        /// Creates a request to send a message to one matching registered actor.
+        /// Creates a request to send a message to registrations matching the path.
         /// </summary>
-        /// <param name="path">Actor path used to select matching registered actors.</param>
+        /// <param name="path">Actor path used by the mediator to select matching registrations.</param>
         /// <param name="message">Message to deliver.</param>
         /// <param name="localAffinity">If <see langword="true"/>, prefer a recipient local to the mediator when one matches.</param>
         public Send(string path, object message, bool localAffinity = false)
