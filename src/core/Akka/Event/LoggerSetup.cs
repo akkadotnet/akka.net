@@ -31,6 +31,11 @@ namespace Akka.Event;
 /// <c>akka.loggers = []</c>.
 /// </para>
 /// <para>
+/// With dynamic type loading off, an <c>akka.loggers</c> entry that names a type registered here
+/// (type name and assembly both match) counts as resolved, because this setup already started it. A library
+/// can therefore keep naming its logger in default HOCON and register the same type in code.
+/// </para>
+/// <para>
 /// <see cref="Formatter"/> is the same kind of AOT-safe escape hatch for <c>akka.logger-formatter</c> -
 /// useful for a third-party formatter, such as Akka.Logger.Serilog's <c>SerilogLogMessageFormatter</c>,
 /// that HOCON can no longer resolve by type name with dynamic type loading off.
