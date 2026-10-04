@@ -95,7 +95,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Persist FSM State and FSM State Data
         /// </summary>
-        /// <param name="nextState">TBD</param>
+        /// <param name="nextState">State descriptor to apply after its domain events and state change have been persisted.</param>
         protected override void ApplyState(State<TState, TData, TEvent> nextState)
         {
             var eventsToPersist = new List<object>();
@@ -263,14 +263,14 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// Initializes a new instance of the <see cref="State{TS, TE, TD}"/>
             /// </summary>
-            /// <param name="stateName">TBD</param>
-            /// <param name="stateData">TBD</param>
-            /// <param name="timeout">TBD</param>
-            /// <param name="stopReason">TBD</param>
-            /// <param name="replies">TBD</param>
-            /// <param name="domainEvents">TBD</param>
-            /// <param name="afterTransitionDo"></param>
-            /// <param name="notifies">TBD</param>
+            /// <param name="stateName">Name of the state after the transition.</param>
+            /// <param name="stateData">State data associated with the next state.</param>
+            /// <param name="timeout">Timeout for the next state, or null to use its default timeout.</param>
+            /// <param name="stopReason">Reason to terminate the FSM, or null to keep it running.</param>
+            /// <param name="replies">Messages to send to the sender of the current event after the transition.</param>
+            /// <param name="domainEvents">Domain events to persist for the transition.</param>
+            /// <param name="afterTransitionDo">Action to invoke with the resulting state data after persistence succeeds.</param>
+            /// <param name="notifies">Whether listeners are notified when the state changes.</param>
             public State(
                 TS stateName,
                 TD stateData,
@@ -292,42 +292,42 @@ namespace Akka.Persistence.Fsm
             }
 
             /// <summary>
-            /// TBD
+            /// Name of this FSM state.
             /// </summary>
             public TS StateName { get; }
 
             /// <summary>
-            /// TBD
+            /// Data associated with this FSM state.
             /// </summary>
             public TD StateData { get; }
 
             /// <summary>
-            /// TBD
+            /// Timeout configured for this state transition, if any.
             /// </summary>
             public TimeSpan? Timeout { get; }
 
             /// <summary>
-            /// TBD
+            /// Reason for stopping the FSM, or null when it continues running.
             /// </summary>
             public FSMBase.Reason StopReason { get; }
 
             /// <summary>
-            /// TBD
+            /// Replies to send to the sender of the event that caused the transition.
             /// </summary>
             public IReadOnlyList<object> Replies { get; protected set; }
 
             /// <summary>
-            /// TBD
+            /// Domain events to persist before applying this state transition.
             /// </summary>
             public IReadOnlyList<TE> DomainEvents { get; }
 
             /// <summary>
-            /// TBD
+            /// Action invoked with the resulting state data after persistence succeeds.
             /// </summary>
             public Action<TD> AfterTransitionDo { get; }
 
             /// <summary>
-            /// TBD
+            /// Whether state transition listeners are notified for this descriptor.
             /// </summary>
             internal bool Notifies { get; }
 
@@ -357,8 +357,8 @@ namespace Akka.Persistence.Fsm
             /// next state. This timeout overrides any default timeout set for the next state.
             /// <remarks>Use <see cref="TimeSpan.MaxValue"/> to cancel a timeout.</remarks>
             /// </summary>
-            /// <param name="timeout">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="timeout">Timeout for the next state; <see cref="TimeSpan.MaxValue"/> cancels its timeout.</param>
+            /// <returns>A copy of this state descriptor with the specified timeout.</returns>
             public State<TS, TD, TE> ForMax(TimeSpan timeout)
             {
                 if (timeout <= TimeSpan.MaxValue)
@@ -369,8 +369,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// Send reply to sender of the current message, if available.
             /// </summary>
-            /// <param name="replyValue">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="replyValue">Message to send to the sender of the current event.</param>
+            /// <returns>A copy of this state descriptor with the reply added.</returns>
             public State<TS, TD, TE> Replying(object replyValue)
             {
                 var newReplies = new List<object>(Replies.Count + 1);
@@ -383,8 +383,8 @@ namespace Akka.Persistence.Fsm
             /// Modify state transition descriptor with new state data. The data will be set
             /// when transitioning to the new state.
             /// </summary>
-            /// <param name="nextStateData">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="nextStateData">State data to use after the transition.</param>
+            /// <returns>A copy of this state descriptor with the specified state data.</returns>
             [Obsolete("Internal API easily to be confused with regular FSM's using. " +
                 "Use regular events (`Applying`). " +
                 "Internally, `copy` can be used instead.")]
@@ -396,8 +396,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// INTERNAL API.
             /// </summary>
-            /// <param name="reason">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="reason">Reason for terminating the FSM.</param>
+            /// <returns>A copy of this state descriptor with the specified stop reason.</returns>
             internal State<TS, TD, TE> WithStopReason(FSMBase.Reason reason)
             {
                 return Copy(stopReason: reason);
@@ -414,8 +414,8 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// Specify domain events to be applied when transitioning to the new state.
             /// </summary>
-            /// <param name="events">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="events">Domain events to persist for the transition.</param>
+            /// <returns>A copy of this state descriptor with the specified events.</returns>
             public State<TS, TD, TE> Applying(params TE[] events)
             {
                 var newDomainEvents = new List<TE>(DomainEvents.Count + events.Length);
@@ -427,17 +427,17 @@ namespace Akka.Persistence.Fsm
             /// <summary>
             /// Register a handler to be triggered after the state has been persisted successfully
             /// </summary>
-            /// <param name="handler">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="handler">Action to invoke with the resulting state data after persistence succeeds.</param>
+            /// <returns>A copy of this state descriptor with the specified action.</returns>
             public State<TS, TD, TE> AndThen(Action<TD> handler)
             {
                 return Copy(afterTransitionDo: handler);
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a string representation of this state descriptor.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A string representation containing the state name, data, timeout, stop reason, and notification setting.</returns>
             public override string ToString()
             {
                 return $"State<TS, TD, TE><StateName: {StateName}, StateData: {StateData}, Timeout: {Timeout}, StopReason: {StopReason}, Notifies: {Notifies}>";
