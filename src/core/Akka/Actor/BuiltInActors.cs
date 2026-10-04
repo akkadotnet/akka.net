@@ -22,7 +22,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>TBD</returns>
+        /// <returns>Always <c>true</c>; this actor accepts every user message.</returns>
         protected override bool Receive(object message)
         {
             return true;
@@ -35,10 +35,10 @@ namespace Akka.Actor
     public class GuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         /// <summary>
-        /// TBD
+        /// Handles guardian control messages and routes other messages to dead letters.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message sent to the guardian.</param>
+        /// <returns>Always <c>true</c>; unknown messages are published as dead letters.</returns>
         protected override bool Receive(object message)
         {
             if (message is Terminated)
@@ -51,7 +51,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Runs when the guardian starts. It is intentionally empty so a restart does not discard its children.
         /// </summary>
         protected override void PreStart()
         {
@@ -70,9 +70,9 @@ namespace Akka.Actor
         private readonly HashSet<IActorRef> _terminationHooks;
 
         /// <summary>
-        /// TBD
+        /// Creates the root system guardian, which coordinates shutdown with the user guardian and registered termination hooks.
         /// </summary>
-        /// <param name="userGuardian">TBD</param>
+        /// <param name="userGuardian">The user guardian whose termination begins system-guardian shutdown.</param>
         public SystemGuardianActor(IActorRef userGuardian)
         {
             _userGuardian = userGuardian;
@@ -82,8 +82,8 @@ namespace Akka.Actor
         /// <summary>
         /// Processor for messages that are sent to the root system guardian
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message sent to the system guardian.</param>
+        /// <returns>Always <c>true</c>; unsupported messages are published as dead letters.</returns>
         protected override bool Receive(object message)
         {
             var terminated = message as Terminated;
@@ -167,10 +167,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Leaves the guardian's children intact when the guardian restarts.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="reason">The exception that caused the restart.</param>
+        /// <param name="message">The message being processed when the exception occurred.</param>
         protected override void PreRestart(Exception reason, object message)
         {
             //Guardian MUST NOT lose its children during restart
@@ -219,11 +219,11 @@ namespace Akka.Actor
         private readonly EventStream _eventStream;
 
         /// <summary>
-        /// TBD
+        /// Creates the dead-letters reference for the specified path and event stream.
         /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="eventStream">TBD</param>
+        /// <param name="provider">The actor reference provider that owns this reference.</param>
+        /// <param name="path">The actor path represented by this reference.</param>
+        /// <param name="eventStream">The event stream to which dead letters are published.</param>
         public DeadLetterActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
             : base(provider, path, eventStream)
         {
@@ -231,10 +231,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Replies to identify requests and publishes other unhandled messages as dead letters.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to handle or publish as a dead letter.</param>
+        /// <param name="sender">The actor that sent the message.</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -256,11 +256,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Handles watch requests for the dead-letters reference before delegating other supported controls to the base implementation.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to handle.</param>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <returns><c>true</c> if the watch request or a base-supported control message was handled or suppressed; otherwise, <c>false</c>.</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
             if (message is Watch w)
@@ -275,4 +275,3 @@ namespace Akka.Actor
         }
     }
 }
-
