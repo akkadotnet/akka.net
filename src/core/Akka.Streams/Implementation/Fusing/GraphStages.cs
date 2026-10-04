@@ -203,7 +203,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Creates the logic that forwards each element unchanged.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
-        /// <returns>The stage logic that copies input elements to the outlet.</returns>
+        /// <returns>The stage logic that forwards input elements unchanged to the outlet.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
@@ -405,7 +405,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Gets the current stream state, including the most recently received element when present.
+        /// Gets the latest stream state, wrapping values assignable to <typeparamref name="T"/> as received elements; broad element types such as <c>object</c> can also match state markers.
         /// </summary>
         public FlowMonitor.IStreamState State
         {

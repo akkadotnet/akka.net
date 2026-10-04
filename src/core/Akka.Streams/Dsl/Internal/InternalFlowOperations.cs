@@ -1837,7 +1837,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
         /// <param name="flow">The flow to transform.</param>
         /// <param name="cost">The configured allowed cost per <paramref name="per"/> interval; <paramref name="calculateCost"/> supplies each element’s individual cost.</param>
-        /// <param name="per">The time interval over which the configured element rate applies.</param>
+        /// <param name="per">The time interval over which the configured cost rate applies.</param>
         /// <param name="maximumBurst">The maximum burst of elements or cost that may be emitted at once.</param>
         /// <param name="calculateCost">The function that calculates the cost of each element.</param>
         /// <param name="mode">The throttling mode that controls behavior when the rate limit is reached.</param>
@@ -2546,7 +2546,7 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         ///<summary>
-        /// Materializes a task that completes successfully when upstream completes or downstream is cancelled without failure.
+        /// Combines the flow materialized value with a task that completes successfully when upstream completes or downstream is cancelled without failure.
         /// The task faults with an upstream or downstream failure cause, or if the stage terminates abruptly.
         ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
@@ -2556,15 +2556,13 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>
         /// <typeparam name="TMat2">The type returned by combining the original flow value with the termination task.</typeparam>
         /// <param name="flow">The flow to transform.</param>
-        /// <param name="materializerFunction">The function that combines the materialized values of the flow and attached graph.</param>
+        /// <param name="materializerFunction">The function that combines the flow materialized value with the termination task.</param>
         public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
             flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
 
         /// <summary>
-        /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated
-        /// by the monitor unchanged. Note that the monitor inserts a memory barrier every time it processes an
-        /// event, and may therefor affect performance.
-        /// The <paramref name="combine"/> function is used to combine the <see cref="IFlowMonitor"/> with this flow's materialized value.
+        /// Combines the flow materialized value with an <see cref="IFlowMonitor"/> to produce this operation's materialized value.
+        /// The monitor exposes flow events unchanged and inserts a memory barrier when processing each event, which may affect performance.
         /// </summary>
         /// <typeparam name="T">The element type processed by this operation.</typeparam>
         /// <typeparam name="TMat">The type of the materialized value of the original flow.</typeparam>

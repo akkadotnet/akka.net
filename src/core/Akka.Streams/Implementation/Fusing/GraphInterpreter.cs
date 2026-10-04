@@ -245,7 +245,7 @@ namespace Akka.Streams.Implementation.Fusing
             public int InOwnerId { get; }
 
             /// <summary>
-            /// The logic instance that owns the input side of this connection.
+            /// The logic that owns the input side of this connection, or null when that side is a graph boundary.
             /// </summary>
             public GraphStageLogic InOwner { get; }
 
@@ -255,7 +255,7 @@ namespace Akka.Streams.Implementation.Fusing
             public int OutOwnerId { get; }
 
             /// <summary>
-            /// The logic instance that owns the output side of this connection.
+            /// The logic that owns the output side of this connection, or null when that side is a graph boundary.
             /// </summary>
             public GraphStageLogic OutOwner { get; }
 
@@ -344,7 +344,7 @@ namespace Akka.Streams.Implementation.Fusing
         public const int Boundary = -1;
 
         /// <summary>
-        /// Port-state bit indicating the input side is ready to receive an element.
+        /// Port-state bit indicating the input side is ready for a pull.
         /// </summary>
         public const int InReady = 1;
         /// <summary>
@@ -692,10 +692,10 @@ namespace Akka.Streams.Implementation.Fusing
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
-        /// Executes pending events until the supplied limit is met. If events remain, <see cref="IsSuspended"/> returns true.
+        /// Dequeues and processes pending connection events up to the supplied limit. If queued events remain, <see cref="IsSuspended"/> returns true.
         /// </summary>
         /// <param name="eventLimit">The maximum number of connection events to process.</param>
-        /// <returns>The remaining event limit after processing, or zero when the limit is exhausted.</returns>
+        /// <returns>The unused dequeue budget after processing queued events.</returns>
         public int Execute(int eventLimit)
         {
             if (IsDebug)
@@ -1026,7 +1026,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Finalizes a stage after a callback if all of its connections have completed.
+        /// Finalizes a stage after a callback if its connections have completed and it is not retained by the keep-going flag.
         /// </summary>
         /// <param name="logic">The stage logic whose callback has just run.</param>
         internal void AfterStageHasRun(GraphStageLogic logic)
@@ -1039,7 +1039,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Returns whether all connections owned by the stage have completed.
+        /// Returns whether the stage shutdown counter is zero, which requires all connections to close and the keep-going flag to be clear.
         /// </summary>
         /// <param name="stage">The stage logic to check.</param>
         /// <returns><c>true</c> when the stage has completed; otherwise <c>false</c>.</returns>
@@ -1086,7 +1086,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Records the first eligible push for prioritized startup processing; otherwise queues the connection.
+        /// Records the first eligible push for immediate processing during <see cref="Execute"/>; otherwise queues the connection.
         /// </summary>
         /// <param name="connection">The connection with a pending push.</param>
         internal void ChasePush(Connection connection)
@@ -1101,7 +1101,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// Records the first eligible pull for prioritized startup processing; otherwise queues the connection.
+        /// Records the first eligible pull for immediate processing during <see cref="Execute"/>; otherwise queues the connection.
         /// </summary>
         /// <param name="connection">The connection with a pending pull.</param>
         internal void ChasePull(Connection connection)
