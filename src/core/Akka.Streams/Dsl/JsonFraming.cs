@@ -43,8 +43,8 @@ namespace Akka.Streams.Dsl
         /// (and does not impact the emitting frame) to the JSON object's internal formatting.
         /// 
         /// </summary>
-        /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
-        /// <returns>A flow that emits each parsed JSON object as a separate byte sequence.</returns>
+        /// <param name="maximumObjectLength">The maximum number of bytes scanned while locating an object, including leading separators and whitespace. If the limit is reached, this flow fails the stream.</param>
+        /// <returns>A flow that frames object-shaped byte sequences by scanning JSON delimiters; it does not validate the complete JSON syntax.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
         {
             return Flow.Create<ReadOnlySequence<byte>>().Via(new Scanner(maximumObjectLength));
@@ -105,9 +105,9 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumObjectLength;
 
             /// <summary>
-            /// Creates a framing stage that scans for JSON objects up to the specified maximum length.
+            /// Creates a framing stage that scans for object-shaped byte sequences up to the specified byte limit.
             /// </summary>
-            /// <param name="maximumObjectLength">The maximum number of bytes allowed in one JSON object.</param>
+            /// <param name="maximumObjectLength">The maximum number of bytes scanned while locating an object, including leading separators and whitespace.</param>
             public Scanner(int maximumObjectLength)
             {
                 _maximumObjectLength = maximumObjectLength;

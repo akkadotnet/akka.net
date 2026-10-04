@@ -66,7 +66,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
-        /// <returns>A flow that emits frames whose size is read from the configured length field.</returns>
+        /// <returns>A flow that emits frames whose total size is derived from the decoded length field, its offset, and its width.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {

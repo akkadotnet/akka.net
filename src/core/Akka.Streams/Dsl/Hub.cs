@@ -439,7 +439,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Creates a merge hub with a bounded buffer for each producer.
         /// </summary>
-        /// <param name="perProducerBufferSize">The number of elements buffered per producer before demand is replenished.</param>
+        /// <param name="perProducerBufferSize">The initial demand and buffer capacity allocated to each producer. The hub replenishes demand in increments of half this value, rounded up.</param>
         /// <exception cref="ArgumentOutOfRangeException">
         /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/>is less than or equal to zero.
         /// </exception>

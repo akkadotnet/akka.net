@@ -524,12 +524,11 @@ namespace Akka.Streams.Dsl
             => FromGraph(GraphDsl.Create(sink, source, combine, (_, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
 
         /// <summary>
-        /// Creates a real <see cref="Flow"/> upon receiving the first element. Internal <see cref="Flow"/> will not be created
-        /// if there are no elements, because of completion, cancellation, or error.
+        /// Creates a real <see cref="Flow"/> upon receiving the first element. If upstream completes normally or downstream cancels before an element arrives,
+        /// the internal <see cref="Flow"/> is not created and the materialized task completes with no value. An upstream failure before creation faults the task.
         /// <para>
-        /// The materialized value of the <see cref="Flow"/> is a <see cref="Task{TMat}"/> that is completed with `TMat` when the internal
-        /// flow gets materialized or with `default` when there where no elements. If the flow materialization (including
-        /// the call of the `flowFactory`) fails then the future is completed with a failure.
+        /// The materialized value is a task that completes with the created flow's materialized value after successful materialization,
+        /// with <see cref="Option{T}.None"/> if upstream completes normally or downstream cancels before the first element, or with a failure if flow creation or upstream processing fails.
         /// </para>
         /// <para>Emits when the internal flow is successfully created and it emits</para>
         /// <para>Cancels when downstream cancels</para>
@@ -538,7 +537,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TOut">The flow's output element type.</typeparam>
         /// <typeparam name="TMat">The created flow's materialized value type.</typeparam>
         /// <param name="flowFactory">Asynchronously creates the flow after the first input arrives.</param>
-        /// <returns>A flow whose materialized task contains an option with the created flow's materialized value, or no value if no flow was created.</returns>
+        /// <returns>A flow whose materialized task contains the created flow's materialized value, or no value if upstream completes normally or downstream cancels before creation; a failure faults the task.</returns>
         public static Flow<TIn, TOut, Task<Option<TMat>>> LazyInitAsync<TIn, TOut, TMat>(Func<Task<Flow<TIn, TOut, TMat>>> flowFactory) =>
             FromGraph(new LazyFlow<TIn, TOut, TMat>(_ => flowFactory()));
     }
