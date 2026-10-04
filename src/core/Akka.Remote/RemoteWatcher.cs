@@ -40,13 +40,13 @@ namespace Akka.Remote
     public class RemoteWatcher : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         /// <summary>
-        /// TBD
+        /// Creates actor props for a watcher that monitors remote addresses using heartbeats and a failure detector.
         /// </summary>
-        /// <param name="failureDetector">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="unreachableReaperInterval">TBD</param>
-        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="failureDetector">Registry used to track heartbeat health for remote addresses.</param>
+        /// <param name="heartbeatInterval">Interval between heartbeat messages sent to watched nodes.</param>
+        /// <param name="unreachableReaperInterval">Interval between checks for unreachable watched nodes.</param>
+        /// <param name="heartbeatExpectedResponseAfter">Delay before recording an expected first heartbeat for a newly watched node.</param>
+        /// <returns>Props that create a locally deployed remote watcher on the internal dispatcher.</returns>
         public static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -59,7 +59,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Base message carrying a watch or unwatch operation for a remote actor.
         /// </summary>
         public abstract class WatchCommand
         {
@@ -67,10 +67,10 @@ namespace Akka.Remote
             readonly IInternalActorRef _watcher;
 
             /// <summary>
-            /// TBD
+            /// Creates a watch command for a watchee and its watcher.
             /// </summary>
-            /// <param name="watchee">TBD</param>
-            /// <param name="watcher">TBD</param>
+            /// <param name="watchee">The actor whose termination is being watched.</param>
+            /// <param name="watcher">The actor that requested the watch.</param>
             protected WatchCommand(IInternalActorRef watchee, IInternalActorRef watcher)
             {
                 _watchee = watchee;
@@ -78,26 +78,26 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the actor whose termination is being watched.
             /// </summary>
             public IInternalActorRef Watchee => _watchee;
 
             /// <summary>
-            /// TBD
+            /// Gets the actor that requested the watch.
             /// </summary>
             public IInternalActorRef Watcher => _watcher;
         }
 
         /// <summary>
-        /// TBD
+        /// Requests that the remote watcher monitor an actor on another node.
         /// </summary>
         public sealed class WatchRemote : WatchCommand
         {
             /// <summary>
-            /// TBD
+            /// Creates a remote watch request.
             /// </summary>
-            /// <param name="watchee">TBD</param>
-            /// <param name="watcher">TBD</param>
+            /// <param name="watchee">The remote actor to watch.</param>
+            /// <param name="watcher">The actor that requested the watch.</param>
             public WatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
@@ -105,15 +105,15 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Requests that the remote watcher stop monitoring an actor on another node.
         /// </summary>
         public sealed class UnwatchRemote : WatchCommand
         {
             /// <summary>
-            /// TBD
+            /// Creates a remote unwatch request.
             /// </summary>
-            /// <param name="watchee">TBD</param>
-            /// <param name="watcher">TBD</param>
+            /// <param name="watchee">The remote actor to stop watching.</param>
+            /// <param name="watcher">The actor that requested the unwatch.</param>
             public UnwatchRemote(IInternalActorRef watchee, IInternalActorRef watcher)
                 : base(watchee, watcher)
             {
@@ -121,7 +121,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Heartbeat request sent to a remote watcher to verify that its actor system is responsive.
         /// </summary>
         public sealed class Heartbeat : IPriorityMessage
         {
@@ -130,29 +130,29 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the singleton heartbeat request instance.
             /// </summary>
             public static Heartbeat Instance { get; } = new();
         }
 
         /// <summary>
-        /// TBD
+        /// Heartbeat reply containing the sender actor system's UID.
         /// </summary>
         public class HeartbeatRsp : IPriorityMessage
         {
             readonly long _addressUid;
 
             /// <summary>
-            /// TBD
+            /// Creates a heartbeat reply for an actor system UID.
             /// </summary>
-            /// <param name="addressUid">TBD</param>
+            /// <param name="addressUid">The UID of the actor system sending the reply.</param>
             public HeartbeatRsp(long addressUid)
             {
                 _addressUid = addressUid;
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the UID announced by the actor system that sent the reply.
             /// </summary>
             public long AddressUid
             {
@@ -162,49 +162,49 @@ namespace Akka.Remote
 
         // sent to self only
         /// <summary>
-        /// TBD
+        /// Timer message used by the remote watcher to send scheduled heartbeats to watched nodes.
         /// </summary>
         public class HeartbeatTick
         {
             private HeartbeatTick() { }
 
             /// <summary>
-            /// TBD
+            /// Gets the singleton heartbeat timer message.
             /// </summary>
             public static HeartbeatTick Instance { get; } = new();
         }
 
         /// <summary>
-        /// TBD
+        /// Timer message used to check watched nodes for failure-detector timeouts.
         /// </summary>
         public class ReapUnreachableTick
         {
             private ReapUnreachableTick() { }
 
             /// <summary>
-            /// TBD
+            /// Gets the singleton unreachable-node reaper timer message.
             /// </summary>
             public static ReapUnreachableTick Instance { get; } = new();
         }
 
         /// <summary>
-        /// TBD
+        /// Timer message that records the first expected heartbeat for a watched node.
         /// </summary>
         public sealed class ExpectedFirstHeartbeat
         {
             readonly Address _from;
 
             /// <summary>
-            /// TBD
+            /// Creates a message identifying the node whose first heartbeat is expected.
             /// </summary>
-            /// <param name="from">TBD</param>
+            /// <param name="from">The address of the watched node.</param>
             public ExpectedFirstHeartbeat(Address @from)
             {
                 _from = @from;
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the address of the node whose first heartbeat is expected.
             /// </summary>
             public Address From
             {
@@ -214,7 +214,7 @@ namespace Akka.Remote
 
         // test purpose
         /// <summary>
-        /// TBD
+        /// Test snapshot of the remote watcher's watched actors and nodes.
         /// </summary>
         public sealed class Stats
         {
@@ -240,16 +240,16 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets an empty watcher statistics snapshot.
             /// </summary>
             public static Stats Empty = Counts(0, 0);
 
             /// <summary>
-            /// TBD
+            /// Creates statistics containing only the number of watched actor pairs and remote nodes.
             /// </summary>
-            /// <param name="watching">TBD</param>
-            /// <param name="watchingNodes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="watching">The number of watched actor-watcher pairs.</param>
+            /// <param name="watchingNodes">The number of distinct remote node addresses being watched.</param>
+            /// <returns>A statistics snapshot with empty reference and address sets.</returns>
             public static Stats Counts(int watching, int watchingNodes)
             {
                 return new Stats(watching, watchingNodes);
@@ -261,20 +261,20 @@ namespace Akka.Remote
             readonly ImmutableHashSet<Address> _watchingAddresses;
 
             /// <summary>
-            /// TBD
+            /// Creates statistics containing watched actor and node counts with empty detail sets.
             /// </summary>
-            /// <param name="watching">TBD</param>
-            /// <param name="watchingNodes">TBD</param>
+            /// <param name="watching">The number of watched actor-watcher pairs.</param>
+            /// <param name="watchingNodes">The number of distinct remote node addresses being watched.</param>
             public Stats(int watching, int watchingNodes) : this(watching, watchingNodes, 
                 ImmutableHashSet<(IActorRef, IActorRef)>.Empty, ImmutableHashSet<Address>.Empty) { }
 
             /// <summary>
-            /// TBD
+            /// Creates a complete snapshot of watched actor pairs and remote node addresses.
             /// </summary>
-            /// <param name="watching">TBD</param>
-            /// <param name="watchingNodes">TBD</param>
-            /// <param name="watchingRefs">TBD</param>
-            /// <param name="watchingAddresses">TBD</param>
+            /// <param name="watching">The number of watched actor-watcher pairs.</param>
+            /// <param name="watchingNodes">The number of distinct remote node addresses being watched.</param>
+            /// <param name="watchingRefs">Pairs of watched actors and their watchers.</param>
+            /// <param name="watchingAddresses">Addresses of the watched remote nodes.</param>
             public Stats(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
                 _watching = watching;
@@ -284,22 +284,22 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the number of watched actor-watcher pairs.
             /// </summary>
             public int Watching => _watching;
 
             /// <summary>
-            /// TBD
+            /// Gets the number of distinct remote node addresses being watched.
             /// </summary>
             public int WatchingNodes => _watchingNodes;
 
             /// <summary>
-            /// TBD
+            /// Gets pairs of watched actors and their watchers.
             /// </summary>
             public ImmutableHashSet<(IActorRef, IActorRef)> WatchingRefs => _watchingRefs;
 
             /// <summary>
-            /// TBD
+            /// Gets the addresses of remote nodes being watched.
             /// </summary>
             public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
@@ -322,13 +322,13 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Creates a statistics snapshot with updated counts and optional detail sets.
             /// </summary>
-            /// <param name="watching">TBD</param>
-            /// <param name="watchingNodes">TBD</param>
-            /// <param name="watchingRefs">TBD</param>
-            /// <param name="watchingAddresses">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="watching">The updated number of watched actor-watcher pairs.</param>
+            /// <param name="watchingNodes">The updated number of distinct watched node addresses.</param>
+            /// <param name="watchingRefs">Replacement watched actor pairs, or <c>null</c> to retain the current set.</param>
+            /// <param name="watchingAddresses">Replacement watched node addresses, or <c>null</c> to retain the current set.</param>
+            /// <returns>A new statistics snapshot.</returns>
             public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
             {
                 return new Stats(watching, watchingNodes, watchingRefs ?? WatchingRefs, watchingAddresses ?? WatchingAddresses);
@@ -336,12 +336,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a remote watcher that tracks remote watches and detects unreachable nodes with heartbeats.
         /// </summary>
-        /// <param name="failureDetector">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="unreachableReaperInterval">TBD</param>
-        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
+        /// <param name="failureDetector">Registry used to track heartbeat health for remote addresses.</param>
+        /// <param name="heartbeatInterval">Interval between heartbeat messages sent to watched nodes.</param>
+        /// <param name="unreachableReaperInterval">Interval between checks for unreachable watched nodes.</param>
+        /// <param name="heartbeatExpectedResponseAfter">Delay before recording an expected first heartbeat for a newly watched node.</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown when the actor system does not have a <see cref="RemoteActorRefProvider"/> enabled in the configuration.
         /// </exception>
@@ -379,11 +379,11 @@ namespace Akka.Remote
         protected readonly Dictionary<Address, HashSet<IInternalActorRef>> WatcheeByNodes = new();
 
         /// <summary>
-        /// TBD
+        /// Gets the addresses for which the watcher currently tracks remote actors.
         /// </summary>
         protected ICollection<Address> WatchingNodes => WatcheeByNodes.Keys;
         /// <summary>
-        /// TBD
+        /// Gets addresses that the failure detector has marked unreachable.
         /// </summary>
         protected HashSet<Address> Unreachable { get; } = new();
 
@@ -393,7 +393,7 @@ namespace Akka.Remote
         private readonly ICancelable _failureDetectorReaperCancelable;
 
         /// <summary>
-        /// TBD
+        /// Cancels the heartbeat and unreachable-node timers when the watcher stops.
         /// </summary>
         protected override void PostStop()
         {
@@ -403,9 +403,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Processes heartbeat, remote watch, termination, and test statistics messages.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message received by the remote watcher.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -502,30 +502,30 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes that all actors on a remote address have terminated due to an unreachable node.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the unreachable remote node.</param>
         protected virtual void PublishAddressTerminated(Address address)
         {
             AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(address));
         }
 
         /// <summary>
-        /// TBD
+        /// Quarantines the remote address and UID through the remote actor reference provider.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="addressUid">TBD</param>
+        /// <param name="address">The remote system address to quarantine.</param>
+        /// <param name="addressUid">The remote system UID, if it has been confirmed.</param>
         protected virtual void Quarantine(Address address, long? addressUid)
         {
             _remoteProvider.Quarantine(address, addressUid);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a watcher for a remote actor and subscribes to that actor's termination.
         /// </summary>
-        /// <param name="watchee">TBD</param>
-        /// <param name="watcher">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <param name="watchee">The actor whose termination is being watched.</param>
+        /// <param name="watcher">The actor that requested the watch.</param>
+        /// <exception cref="InvalidOperationException">The remote watcher cannot itself be registered as the watcher.</exception>
         protected void AddWatching(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             // TODO: replace with Code Contracts assertion
@@ -543,9 +543,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a remote actor to the set of actors watched at its address, resetting prior unreachable state when needed.
         /// </summary>
-        /// <param name="watchee">TBD</param>
+        /// <param name="watchee">The actor whose remote address should be monitored.</param>
         protected virtual void WatchNode(IInternalActorRef watchee)
         {
             var watcheeAddress = watchee.Path.Address;
@@ -564,11 +564,11 @@ namespace Akka.Remote
 
 
         /// <summary>
-        /// TBD
+        /// Removes one watcher and ends the self-watch when no watchers remain for the actor.
         /// </summary>
-        /// <param name="watchee">TBD</param>
-        /// <param name="watcher">TBD</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <param name="watchee">The actor whose watch is being removed.</param>
+        /// <param name="watcher">The actor that requested the unwatch.</param>
+        /// <exception cref="InvalidOperationException">The remote watcher cannot itself be registered as the watcher.</exception>
         protected void RemoveWatch(IInternalActorRef watchee, IInternalActorRef watcher)
         {
             if (watcher.Equals(Self)) throw new InvalidOperationException("Watcher cannot be the RemoteWatcher!");
@@ -587,9 +587,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a terminated actor and its watchers from the remote watch state.
         /// </summary>
-        /// <param name="watchee">TBD</param>
+        /// <param name="watchee">The terminated actor to remove.</param>
         protected void RemoveWatchee(IInternalActorRef watchee)
         {
             var watcheeAddress = watchee.Path.Address;
@@ -607,9 +607,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Stops monitoring an address after its last watched actor is removed.
         /// </summary>
-        /// <param name="watcheeAddress">TBD</param>
+        /// <param name="watcheeAddress">The remote address no longer being watched.</param>
         protected void UnwatchNode(Address watcheeAddress)
         {
             WatcheeByNodes.Remove(watcheeAddress);
