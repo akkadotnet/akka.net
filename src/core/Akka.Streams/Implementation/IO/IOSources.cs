@@ -81,7 +81,7 @@ namespace Akka.Streams.Implementation.IO
         /// Materializes the file publisher and returns its Reactive Streams publisher.
         /// </summary>
         /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
-        /// <param name="task">Receives the task completed with the number of bytes read or an I/O failure.</param>
+        /// <param name="task">Receives the publisher's stop-time <see cref="IOResult"/> with the number of bytes read; a read error is signaled to the stream and does not guarantee a failed result.</param>
         /// <returns>The publisher that emits chunks read from the file.</returns>
         public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {
@@ -148,7 +148,7 @@ namespace Akka.Streams.Implementation.IO
         /// Creates the input stream and materializes a publisher that reads it.
         /// </summary>
         /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
-        /// <param name="task">Receives the task completed with the number of bytes read or the creation/read failure.</param>
+        /// <param name="task">Receives the publisher's stop-time <see cref="IOResult"/> with the number of bytes read. A failure while creating the stream faults the task; read failures are signaled to the stream and do not guarantee a failed result.</param>
         /// <returns>The publisher that emits chunks read from the created stream, or an error publisher if stream creation fails.</returns>
         public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {

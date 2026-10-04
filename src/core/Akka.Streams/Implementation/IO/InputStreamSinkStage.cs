@@ -228,7 +228,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// Creates a sink stage that materializes a read-only stream backed by its upstream.
         /// </summary>
-        /// <param name="readTimeout">The maximum time a blocking read waits for new data.</param>
+        /// <param name="readTimeout">The maximum time to wait for stage initialization and the first queued message read by the adapter. Reads needing additional chunks after a partial chunk may block without this timeout.</param>
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
@@ -340,7 +340,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="sharedBuffer">The queue containing initialization, data, and termination messages.</param>
         /// <param name="sendToStage">The callback used to acknowledge consumed data and request closure.</param>
-        /// <param name="readTimeout">The maximum time to wait for queued data.</param>
+        /// <param name="readTimeout">The maximum time to wait for stage initialization and the first queued message read by the adapter. Reads needing additional chunks after a partial chunk may block without this timeout.</param>
         public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer,
             IStageWithCallback sendToStage, TimeSpan readTimeout)
         {
@@ -372,7 +372,7 @@ namespace Akka.Streams.Implementation.IO
         /// Reads one byte from the upstream stream, blocking until data arrives or the stream terminates.
         /// </summary>
         /// <exception cref="IllegalStateException">Thrown when the adapter receives messages before initialization.</exception>
-        /// <exception cref="IOException">Thrown when the timed wait for initialization or the next queued message exceeds the configured timeout.</exception>
+        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout. Fetching additional chunks within the same read may block without this timeout.</exception>
         /// <returns>The next byte as an unsigned value from 0 through 255, or -1 when the upstream has completed.</returns>
         public sealed override int ReadByte()
         {
@@ -388,7 +388,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="count">The maximum number of bytes to read.</param>
         /// <exception cref="ArgumentException">Thrown when the buffer is empty, the offset is negative, the count is not positive, or the requested range extends past the buffer.</exception>
         /// <exception cref="IllegalStateException">Thrown when the adapter receives messages before initialization.</exception>
-        /// <exception cref="IOException">Thrown when the timed wait for initialization or the next queued message exceeds the configured timeout.</exception>
+        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout. Fetching additional chunks within the same read may block without this timeout.</exception>
         /// <returns>The number of bytes read, or zero when the upstream has completed.</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {

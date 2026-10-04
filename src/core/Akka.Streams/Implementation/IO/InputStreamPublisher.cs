@@ -25,7 +25,7 @@ namespace Akka.Streams.Implementation.IO
         /// Creates actor properties for a publisher that reads an input stream in byte chunks.
         /// </summary>
         /// <param name="inputstream">The stream to read.</param>
-        /// <param name="completionSource">The promise completed with the number of bytes read or an I/O failure.</param>
+        /// <param name="completionSource">The promise completed with a stop-time <see cref="IOResult"/>; a read error is signaled to subscribers and does not guarantee a failed result.</param>
         /// <param name="chunkSize">The number of bytes requested for each read.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="chunkSize"/> is less than or equal to zero.
@@ -55,7 +55,7 @@ namespace Akka.Streams.Implementation.IO
         /// Creates a publisher actor that reads an input stream and emits byte chunks.
         /// </summary>
         /// <param name="inputstream">The stream to read.</param>
-        /// <param name="completionSource">The promise completed with the number of bytes read or an I/O failure.</param>
+        /// <param name="completionSource">The promise completed with a stop-time <see cref="IOResult"/>; a read error is signaled to subscribers and does not guarantee a failed result.</param>
         /// <param name="chunkSize">The number of bytes requested for each read.</param>
         /// If this gets changed you must change <see cref="InputStreamPublisher.Props"/> as well!
         public InputStreamPublisher(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
