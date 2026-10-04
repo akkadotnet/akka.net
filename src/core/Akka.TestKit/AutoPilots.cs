@@ -55,18 +55,18 @@ namespace Akka.TestKit
     public sealed class NoAutoPilot : AutoPilot
     {
         /// <summary>
-        /// TBD
+        /// The shared no-op autopilot instance.
         /// </summary>
         public static NoAutoPilot Instance = new();
 
         private NoAutoPilot() { }
 
         /// <summary>
-        /// TBD
+        /// Does not act on the message and returns this no-op autopilot.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <param name="message">The message received by the test actor.</param>
+        /// <returns>This no-op autopilot.</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return this;
@@ -80,7 +80,7 @@ namespace Akka.TestKit
     public sealed class KeepRunning : AutoPilot
     {
         /// <summary>
-        /// TBD
+        /// The shared sentinel instance used to stop autopilot handling.
         /// </summary>
         public static KeepRunning Instance = new();
 
@@ -102,11 +102,11 @@ namespace Akka.TestKit
     }
 
     /// <summary>
-    /// TBD
+    /// Delegate that receives a test actor message and chooses the autopilot for the next message.
     /// </summary>
-    /// <param name="sender">TBD</param>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="sender">The actor that sent the message.</param>
+    /// <param name="message">The message received by the test actor.</param>
+    /// <returns>The autopilot to use for the next message.</returns>
     public delegate AutoPilot AutoPilotDelegate(IActorRef sender, object message);
 
     /// <summary>
@@ -124,20 +124,20 @@ namespace Akka.TestKit
         private readonly AutoPilotDelegate _autoPilotDelegate;
 
         /// <summary>
-        /// TBD
+        /// Creates an autopilot that delegates each received message to <paramref name="autoPilotDelegate"/>.
         /// </summary>
-        /// <param name="autoPilotDelegate">TBD</param>
+        /// <param name="autoPilotDelegate">The delegate that handles each received message and selects the next autopilot.</param>
         public DelegateAutoPilot(AutoPilotDelegate autoPilotDelegate)
         {
             _autoPilotDelegate = autoPilotDelegate;
         }
 
         /// <summary>
-        /// TBD
+        /// Passes the message and sender to the configured delegate.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="sender">The actor that sent the message.</param>
+        /// <param name="message">The message received by the test actor.</param>
+        /// <returns>The autopilot returned by the delegate for the next message.</returns>
         public override AutoPilot Run(IActorRef sender, object message)
         {
             return _autoPilotDelegate(sender,message);

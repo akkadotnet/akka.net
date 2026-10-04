@@ -75,12 +75,11 @@
         /// 
         /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
-        /// <param name="collection">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="collection">The sequence to enumerate repeatedly.</param>
+        /// <returns>An enumerator that restarts the sequence after reaching its end.</returns>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {
             return new ContinuousEnumerator<T>(collection.GetEnumerator());
         }
     }
 }
-
