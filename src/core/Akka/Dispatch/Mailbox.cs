@@ -34,44 +34,44 @@ namespace Akka.Dispatch
         {
             // primary status
             /// <summary>
-            /// TBD
+            /// Primary status indicating that the mailbox is open.
             /// </summary>
             public const int Open = 0; // _status is not initialized in AbstractMailbox, so default must be zero!
 
             /// <summary>
-            /// TBD
+            /// Primary status indicating that the mailbox is closed.
             /// </summary>
             public const int Closed = 1;
 
             // secondary status
             /// <summary>
-            /// TBD
+            /// Status bit indicating that the dispatcher has scheduled the mailbox.
             /// </summary>
             public const int Scheduled = 2;
 
             // shifted by 2 - the suspend count
             /// <summary>
-            /// TBD
+            /// Mask for the low status bits that identify open, closed, or already-scheduled state.
             /// </summary>
             public const int ShouldScheduleMask = 3;
 
             /// <summary>
-            /// TBD
+            /// Mask used to determine whether the mailbox may process a message while accounting for the scheduled bit.
             /// </summary>
             public const int ShouldNotProcessMask = ~2;
 
             /// <summary>
-            /// TBD
+            /// Mask that selects the suspension-count portion of the mailbox status.
             /// </summary>
             public const int SuspendMask = ~3;
 
             /// <summary>
-            /// TBD
+            /// Increment applied to the status for each suspension.
             /// </summary>
             public const int SuspendUnit = 4;
 
             /// <summary>
-            /// TBD
+            /// Bit mask that excludes the suspension increment bit from the status.
             /// </summary>
             public const int SuspendAwaitTask = ~4;
         }
@@ -120,22 +120,22 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to remove the next user-message envelope from this mailbox's message queue.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="msg">When this method returns <c>true</c>, contains the dequeued envelope; otherwise, the default envelope.</param>
+        /// <returns><c>true</c> if an envelope was dequeued; otherwise, <c>false</c>.</returns>
         internal bool TryDequeue(out Envelope msg)
         {
             return MessageQueue.TryDequeue(out msg);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the user-message queue contains any messages.
         /// </summary>
         internal bool HasMessages => MessageQueue.HasMessages;
 
         /// <summary>
-        /// TBD
+        /// Gets the number of user messages currently in the queue.
         /// </summary>
         internal int NumberOfMessages => MessageQueue.Count;
 
@@ -154,11 +154,11 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Atomically replaces the system-message queue if it still matches the supplied current queue.
         /// </summary>
-        /// <param name="old">TBD</param>
-        /// <param name="newQueue">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="old">The expected current system-message queue.</param>
+        /// <param name="newQueue">The replacement system-message queue.</param>
+        /// <returns><c>true</c> if the current queue matched <paramref name="old"/> and was replaced; otherwise, <c>false</c>.</returns>
         internal bool SystemQueuePut(LatestFirstSystemMessageList old, LatestFirstSystemMessageList newQueue)
         {
             // Note: calling .head is not actually existing on the bytecode level as the parameters _old and _new
@@ -169,11 +169,11 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the mailbox can be scheduled, using queue-state hints before checking the queues themselves.
         /// </summary>
-        /// <param name="hasMessageHint">TBD</param>
-        /// <param name="hasSystemMessageHint">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="hasMessageHint">Whether the caller has observed a queued user message.</param>
+        /// <param name="hasSystemMessageHint">Whether the caller has observed a queued system message.</param>
+        /// <returns><c>false</c> for a closed mailbox; for a suspended mailbox, <c>true</c> only when a system message is hinted or queued; otherwise, whether either kind of message is hinted or queued.</returns>
         internal bool CanBeScheduledForExecution(bool hasMessageHint, bool hasSystemMessageHint)
         {
             var currentStatus = CurrentStatus();
@@ -198,14 +198,14 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Attaches an ActorCell to the Mailbox.
         /// </summary>
-        /// <param name="actorCell">TBD</param>
+        /// <param name="actorCell">The actor cell that owns and processes this mailbox.</param>
         public virtual void SetActor(ActorCell actorCell)
         {
             _actor = actorCell;
         }
 
         /// <summary>
-        /// TBD
+        /// Reads the current mailbox status using a volatile read.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int CurrentStatus()
@@ -214,7 +214,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the current mailbox status permits processing a user message.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool ShouldProcessMessage()
@@ -558,10 +558,10 @@ namespace Akka.Dispatch
 
         /// <summary>
         /// Prints a message tosStandard out if the Compile symbol "MAILBOXDEBUG" has been set.
-        /// If the symbol is not set all invocations to this method will be removed by the compiler.
+        /// If the symbol is not set, calls to this method are omitted by the compiler.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="args">TBD</param>
+        /// <param name="message">The message text or composite format string to print.</param>
+        /// <param name="args">The values used to format <paramref name="message"/> when any are supplied.</param>
         [Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
