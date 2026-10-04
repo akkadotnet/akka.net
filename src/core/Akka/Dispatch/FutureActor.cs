@@ -40,7 +40,7 @@ namespace Akka.Dispatch
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> after the message completes the future and the actor is stopped.</returns>
         protected override bool Receive(object message)
         {
             //if there is no listening actor asking,
@@ -54,4 +54,3 @@ namespace Akka.Dispatch
         }
     }
 }
-

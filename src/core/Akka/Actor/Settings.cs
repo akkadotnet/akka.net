@@ -436,7 +436,7 @@ namespace Akka.Actor
         public bool LogDeadLettersDuringShutdown { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets how long logging of dead letters is suspended after reaching the configured logging limit.
         /// </summary>
         public TimeSpan LogDeadLettersSuspendDuration { get; }
 
@@ -488,7 +488,7 @@ namespace Akka.Actor
         public bool DebugTimerScheduler { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether FSM state transitions are logged for debugging.
         /// </summary>
         public bool FsmDebugEvent { get; private set; }
 
@@ -503,7 +503,7 @@ namespace Akka.Actor
         public string SchedulerClass { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets how long the scheduler waits for scheduled tasks to stop during shutdown.
         /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
 
