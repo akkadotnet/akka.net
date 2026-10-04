@@ -1360,11 +1360,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// Applies the supplied flow to each keyed substream and merges the results.
+            /// Applies a flow to every grouped substream and merges the resulting streams.
             /// </summary>
-            /// <typeparam name="T">The element type processed by this operation.</typeparam>
-            /// <param name="flow">The flow to transform.</param>
-            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <typeparam name="T">The element type emitted by the applied flow.</typeparam>
+            /// <param name="flow">The flow applied to each grouped substream.</param>
+            /// <param name="breadth">The maximum number of resulting substreams processed concurrently.</param>
+            /// <returns>The merged flow, retaining the enclosing flow's materialized value.</returns>
                 public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(new Fusing.GroupBy<TOut, TKey>(_maxSubstreams, _groupingFunc, _allowClosedSubstreamRecreation))
@@ -1474,11 +1475,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// Applies the supplied flow to each split substream and merges the results.
+            /// Applies a flow to every split substream and merges the resulting streams.
             /// </summary>
-            /// <typeparam name="T">The element type processed by this operation.</typeparam>
-            /// <param name="flow">The flow to transform.</param>
-            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <typeparam name="T">The element type emitted by the applied flow.</typeparam>
+            /// <param name="flow">The flow applied to each split substream.</param>
+            /// <param name="breadth">The maximum number of resulting substreams processed concurrently.</param>
+            /// <returns>The merged flow, retaining the enclosing flow's materialized value.</returns>
                 public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.When(_predicate, _substreamCancelStrategy))
@@ -1578,11 +1580,12 @@ namespace Akka.Streams.Dsl.Internal
             }
 
             /// <summary>
-            /// Applies the supplied flow to each split substream and merges the results.
+            /// Applies a flow to every split substream and merges the resulting streams.
             /// </summary>
-            /// <typeparam name="T">The element type processed by this operation.</typeparam>
-            /// <param name="flow">The flow to transform.</param>
-            /// <param name="breadth">The maximum number of substreams consumed concurrently.</param>
+            /// <typeparam name="T">The element type emitted by the applied flow.</typeparam>
+            /// <param name="flow">The flow applied to each split substream.</param>
+            /// <param name="breadth">The maximum number of resulting substreams processed concurrently.</param>
+            /// <returns>The merged flow, retaining the enclosing flow's materialized value.</returns>
                 public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
                 return _self.Via(Fusing.Split.After(_predicate, _substreamCancelStrategy))
