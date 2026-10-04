@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Event;
@@ -75,6 +76,18 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
+        /// <summary>
+        /// Per-attempt budget for the reads inside the AwaitAssertAsync loops below. A fresh
+        /// probe per attempt keeps a late reply from a timed-out attempt out of the next
+        /// attempt's queue, where it would be read as the answer to a different request.
+        /// </summary>
+        private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// Poll interval for the AwaitAssertAsync loops.
+        /// </summary>
+        private static readonly TimeSpan AttemptInterval = TimeSpan.FromMilliseconds(200);
+
         private int _afterCounter = 0;
 
         private readonly RoleName _first;
@@ -109,15 +122,15 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
 
         [MultiNodeFact()]
-        public void ReplicatorSpecTests()
+        public async Task ReplicatorSpecTests()
         {
             Cluster_CRDT_should_work_in_single_node_cluster();
             Cluster_CRDT_should_merge_the_update_with_existing_value();
             Cluster_CRDT_should_reply_with_ModifyFailure_if_exception_is_thrown_by_modify_function();
             Cluster_CRDT_should_replicate_values_to_new_node();
             Cluster_CRDT_should_work_in_2_node_cluster();
-            Cluster_CRDT_should_be_replicated_after_successful_update();
-            Cluster_CRDT_should_converge_after_partition();
+            await Cluster_CRDT_should_be_replicated_after_successful_update();
+            await Cluster_CRDT_should_converge_after_partition();
             Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable();
             Cluster_CRDT_should_converge_after_many_concurrent_updates();
             Cluster_CRDT_should_read_repair_happens_before_GetSuccess();
@@ -289,7 +302,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Get(KeyB, _readTwo));
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(42UL);
-                });
+                }, TimeSpan.FromSeconds(10));
             }, _first, _second);
 
             EnterBarrier("update-42");
@@ -306,7 +319,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Get(KeyB, _readAll));
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(44UL);
-                });
+                }, TimeSpan.FromSeconds(10));
             }, _first, _second);
 
             EnterBarrier("update-44");
@@ -323,165 +336,172 @@ namespace Akka.DistributedData.Tests.MultiNode
                     _replicator.Tell(Dsl.Get(KeyB, _readMajority));
                     var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyB)).Get(KeyB);
                     c.Value.ShouldBe(46UL);
-                });
+                }, TimeSpan.FromSeconds(10));
             }, _first, _second);
 
             EnterBarrierAfterTestStep();
         }
 
-        public void Cluster_CRDT_should_be_replicated_after_successful_update()
+        public async Task Cluster_CRDT_should_be_replicated_after_successful_update()
         {
             var changedProbe = CreateTestProbe();
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 _replicator.Tell(Dsl.Subscribe(KeyC, changedProbe.Ref));
+                return Task.CompletedTask;
             }, _first, _second);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 30)));
-                ExpectMsg(new UpdateSuccess(KeyC, null));
-                changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30UL);
+                await ExpectMsgAsync(new UpdateSuccess(KeyC, null));
+                (await changedProbe.ExpectMsgAsync<Changed>(c => Equals(c.Key, KeyC))).Get(KeyC).Value.ShouldBe(30UL);
 
                 _replicator.Tell(Dsl.Update(KeyY, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 30)));
-                ExpectMsg(new UpdateSuccess(KeyY, null));
+                await ExpectMsgAsync(new UpdateSuccess(KeyY, null));
 
                 _replicator.Tell(Dsl.Update(KeyZ, GCounter.Empty, _writeMajority, x => x.Increment(_cluster, 30)));
-                ExpectMsg(new UpdateSuccess(KeyZ, null));
+                await ExpectMsgAsync(new UpdateSuccess(KeyZ, null));
             }, _first);
 
-            EnterBarrier("update-c30");
+            await EnterBarrierAsync("update-c30");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                var c30 = ExpectMsg<GetSuccess>(c => Equals(c.Key, KeyC)).Get(KeyC);
+                var c30 = (await ExpectMsgAsync<GetSuccess>(c => Equals(c.Key, KeyC))).Get(KeyC);
                 c30.Value.ShouldBe(30UL);
-                changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(30UL);
+                (await changedProbe.ExpectMsgAsync<Changed>(c => Equals(c.Key, KeyC))).Get(KeyC).Value.ShouldBe(30UL);
 
                 // replicate with gossip after WriteLocal
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
-                ExpectMsg(new UpdateSuccess(KeyC, null));
-                changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31UL);
+                await ExpectMsgAsync(new UpdateSuccess(KeyC, null));
+                (await changedProbe.ExpectMsgAsync<Changed>(c => Equals(c.Key, KeyC))).Get(KeyC).Value.ShouldBe(31UL);
 
                 _replicator.Tell(Dsl.Delete(KeyY, WriteLocal.Instance, 777));
-                ExpectMsg(new DeleteSuccess(KeyY, 777));
+                await ExpectMsgAsync(new DeleteSuccess(KeyY, 777));
 
                 _replicator.Tell(Dsl.Get(KeyZ, _readMajority));
-                ExpectMsg<GetSuccess>(c => Equals(c.Key, KeyZ)).Get(KeyZ).Value.ShouldBe(30UL);
+                (await ExpectMsgAsync<GetSuccess>(c => Equals(c.Key, KeyZ))).Get(KeyZ).Value.ShouldBe(30UL);
             }, _second);
 
-            EnterBarrier("update-c31");
+            await EnterBarrierAsync("update-c31");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // KeyC and deleted KeyY should be replicated via gossip to the other node
-                Within(TimeSpan.FromSeconds(5), () =>
+                await AwaitAssertAsync(async () =>
                 {
-                    AwaitAssert(() =>
-                    {
-                        _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                        var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC)).Get(KeyC);
-                        c.Value.ShouldBe(31UL);
+                    // Fresh probe per attempt - see the note on AttemptTimeout.
+                    var probe = CreateTestProbe();
+                    _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance), probe.Ref);
+                    var c = (await probe.ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, KeyC), AttemptTimeout)).Get(KeyC);
+                    c.Value.ShouldBe(31UL);
 
-                        _replicator.Tell(Dsl.Get(KeyY, ReadLocal.Instance));
-                        ExpectMsg(new DataDeleted(KeyY));
-                    });
-                });
-                changedProbe.ExpectMsg<Changed>(c => Equals(c.Key, KeyC)).Get(KeyC).Value.ShouldBe(31UL);
+                    _replicator.Tell(Dsl.Get(KeyY, ReadLocal.Instance), probe.Ref);
+                    await probe.ExpectMsgAsync(new DataDeleted(KeyY), AttemptTimeout);
+                }, TimeSpan.FromSeconds(5), AttemptInterval);
+                (await changedProbe.ExpectMsgAsync<Changed>(c => Equals(c.Key, KeyC))).Get(KeyC).Value.ShouldBe(31UL);
             }, _first);
 
-            EnterBarrier("verified-c31");
+            await EnterBarrierAsync("verified-c31");
 
             // and also for concurrent updates
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                var c31 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC)).Get(KeyC);
+                var c31 = (await ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, KeyC))).Get(KeyC);
                 c31.Value.ShouldBe(31UL);
 
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
-                ExpectMsg(new UpdateSuccess(KeyC, null));
+                await ExpectMsgAsync(new UpdateSuccess(KeyC, null));
 
-                Within(TimeSpan.FromSeconds(5), () =>
+                await AwaitAssertAsync(async () =>
                 {
-                    AwaitAssert(() =>
-                    {
-                        _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance));
-                        var c = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyC), TimeSpan.FromMilliseconds(300)).Get(KeyC);
-                        c.Value.ShouldBe(33UL);
-                    }, interval: TimeSpan.FromMilliseconds(300));
-                });
+                    // Fresh probe per attempt. The old 300 ms ExpectMsg on the shared TestActor
+                    // left a stray GetSuccess(KeyC) in its queue after one late reply, which
+                    // broke the KeyD expectations in the next step.
+                    var probe = CreateTestProbe();
+                    _replicator.Tell(Dsl.Get(KeyC, ReadLocal.Instance), probe.Ref);
+                    var c = (await probe.ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, KeyC), AttemptTimeout)).Get(KeyC);
+                    c.Value.ShouldBe(33UL);
+                }, TimeSpan.FromSeconds(5), AttemptInterval);
             }, _first, _second);
 
-            EnterBarrierAfterTestStep();
+            await EnterBarrierAfterTestStepAsync();
         }
 
-        public void Cluster_CRDT_should_converge_after_partition()
+        public async Task Cluster_CRDT_should_converge_after_partition()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 40)));
-                ExpectMsg(new UpdateSuccess(KeyD, null));
+                await ExpectMsgAsync(new UpdateSuccess(KeyD, null));
 
-                TestConductor.Blackhole(_first, _second, ThrottleTransportAdapter.Direction.Both)
-                    .Wait(TimeSpan.FromSeconds(10));
+                await TestConductor.Blackhole(_first, _second, ThrottleTransportAdapter.Direction.Both);
             }, _first);
 
-            EnterBarrier("blackhole-first-second");
+            await EnterBarrierAsync("blackhole-first-second");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Get(KeyD, ReadLocal.Instance));
-                var c40 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyD)).Get(KeyD);
+                var c40 = (await ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, KeyD))).Get(KeyD);
                 c40.Value.ShouldBe(40UL);
 
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty.Increment(_cluster, 1), _writeTwo, x => x.Increment(_cluster, 1)));
-                ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
+                await ExpectMsgAsync(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
                 _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, _writeTwo, x => x.Increment(_cluster, 1)));
-                ExpectMsg(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
+                await ExpectMsgAsync(new UpdateTimeout(KeyD, null), _timeOut.Add(TimeSpan.FromSeconds(1)));
             }, _first, _second);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 for (ulong i = 1; i <= 30UL; i++)
                 {
                     var n = i;
                     var keydn = new GCounterKey("D" + n);
                     _replicator.Tell(Dsl.Update(keydn, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, n)));
-                    ExpectMsg(new UpdateSuccess(keydn, null));
+                    await ExpectMsgAsync(new UpdateSuccess(keydn, null));
                 }
             }, _first);
 
-            EnterBarrier("updates-during-partion");
+            await EnterBarrierAsync("updates-during-partion");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.PassThrough(_first, _second, ThrottleTransportAdapter.Direction.Both)
-                    .Wait(TimeSpan.FromSeconds(5));
+                await TestConductor.PassThrough(_first, _second, ThrottleTransportAdapter.Direction.Both);
             }, _first);
 
-            EnterBarrier("passThrough-first-second");
+            await EnterBarrierAsync("passThrough-first-second");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _replicator.Tell(Dsl.Get(KeyD, _readTwo));
-                var c44 = ExpectMsg<GetSuccess>(g => Equals(g.Key, KeyD)).Get(KeyD);
+                var c44 = (await ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, KeyD))).Get(KeyD);
                 c44.Value.ShouldBe(44UL);
 
-                Within(TimeSpan.FromSeconds(10), () =>
-                    AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
+                {
+                    // Fresh probe per attempt. The old loop read 30 replies from the shared
+                    // TestActor with a 50 ms bound each; one late reply shifted every later
+                    // read onto the previous request's reply until the window closed. Send
+                    // all 30 reads first, then take the replies in order (one sender, one
+                    // receiver, local delivery: FIFO).
+                    var probe = CreateTestProbe();
+                    for (ulong i = 1; i <= 30UL; i++)
+                        _replicator.Tell(Dsl.Get(new GCounterKey("D" + i), ReadLocal.Instance), probe.Ref);
+
+                    for (ulong i = 1; i <= 30UL; i++)
                     {
-                        for (ulong i = 1; i <= 30UL; i++)
-                        {
-                            var keydn = new GCounterKey("D" + i);
-                            _replicator.Tell(Dsl.Get(keydn, ReadLocal.Instance));
-                            ExpectMsg<GetSuccess>(g => Equals(g.Key, keydn), TimeSpan.FromMilliseconds(50)).Get(keydn).Value.ShouldBe(i);
-                        }
-                    }));
+                        var keydn = new GCounterKey("D" + i);
+                        var reply = await probe.ExpectMsgAsync<GetSuccess>(g => Equals(g.Key, keydn), AttemptTimeout);
+                        reply.Get(keydn).Value.ShouldBe(i);
+                    }
+                }, TimeSpan.FromSeconds(10), AttemptInterval);
             }, _first, _second);
 
-            EnterBarrierAfterTestStep();
+            await EnterBarrierAfterTestStepAsync();
         }
 
         public void Cluster_CRDT_should_support_majority_quorum_write_and_read_with_3_nodes_with_1_unreachable()
@@ -793,6 +813,12 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             _afterCounter++;
             EnterBarrier("after-" + _afterCounter);
+        }
+
+        private async Task EnterBarrierAfterTestStepAsync()
+        {
+            _afterCounter++;
+            await EnterBarrierAsync("after-" + _afterCounter);
         }
 
         private void Join(RoleName from, RoleName to)
