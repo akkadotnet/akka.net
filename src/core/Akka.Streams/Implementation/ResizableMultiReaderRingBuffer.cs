@@ -15,7 +15,7 @@ using Akka.Streams.Util;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Signals that a cursor has no unread value in the buffer.
     /// </summary>
     [Serializable]
     public class NothingToReadException : Exception
@@ -41,23 +41,23 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Provides the set of readers tracked by a multi-reader stream buffer.
     /// </summary>
     public interface ICursors
     {
         /// <summary>
-        /// TBD
+        /// Gets the cursors currently registered with the buffer.
         /// </summary>
         IEnumerable<ICursor> Cursors { get; }
     }
 
     /// <summary>
-    /// TBD
+    /// Tracks a reader's position in a multi-reader buffer.
     /// </summary>
     public interface ICursor
     {
         /// <summary>
-        /// TBD
+        /// Gets or sets the next buffer position this reader will consume.
         /// </summary>
         long Cursor { get; set; }
     }
@@ -94,16 +94,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the distinct buffer's size and number of readers.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A diagnostic representation of the buffer state.</returns>
         public override string ToString() => $"DistinctRetainingMultiReaderBuffer(size={Length}, cursors={Cursors.Cursors.Count()})";
     }
 
     public class RetainingMultiReaderBuffer<T> : IStreamBuffer<T>
     {
         /// <summary>
-        /// TBD
+        /// Gets the reader collection used to retain entries until they have been read.
         /// </summary>
         protected readonly ICursors Cursors;
 
@@ -136,8 +136,8 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Returns the number of elements that the buffer currently contains for the given cursor.
         /// </summary>
-        /// <param name="cursor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cursor">The reader whose unread values are counted.</param>
+        /// <returns>The number of retained values from that cursor's position to the end.</returns>
         public long Count(ICursor cursor) => Length - cursor.Cursor;
 
         public long AvailableData
@@ -198,9 +198,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the retaining buffer's size and number of readers.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A diagnostic representation of the buffer state.</returns>
         public override string ToString() => $"RetainingMultiReaderBuffer(size={Length}, cursors={Cursors.Cursors.Count()})";
     }
 
@@ -210,7 +210,7 @@ namespace Akka.Streams.Implementation
     /// Contrary to many other ring buffer implementations this one does not automatically overwrite the oldest
     /// elements, rather, if full, the buffer tries to grow and rejects further writes if max capacity is reached.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the ring buffer.</typeparam>
     [InternalApi]
     public class ResizableMultiReaderRingBuffer<T> : IStreamBuffer<T>
     {
@@ -235,12 +235,12 @@ namespace Akka.Streams.Implementation
         private long Mask => long.MaxValue >> (63 - LengthBit);
 
         /// <summary>
-        /// TBD
+        /// Creates a ring buffer whose capacity grows from <paramref name="initialSize"/> up to <paramref name="maxSize"/>.
         /// </summary>
-        /// <param name="initialSize">TBD</param>
-        /// <param name="maxSize">TBD</param>
-        /// <param name="cursors">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="initialSize">Initial capacity, which must be a positive power of two no greater than <paramref name="maxSize"/>.</param>
+        /// <param name="maxSize">Maximum capacity, which must be a power of two less than half <see cref="int.MaxValue"/>.</param>
+        /// <param name="cursors">The readers whose positions determine which values can be discarded.</param>
+        /// <exception cref="ArgumentException">Either size violates its power-of-two or range requirement.</exception>
         public ResizableMultiReaderRingBuffer(long initialSize, long maxSize, ICursors cursors)
         {
             Cursors = cursors;
@@ -256,12 +256,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the readers whose positions are tracked during buffer growth and cleanup.
         /// </summary>
         protected readonly ICursors Cursors;
 
         /// <summary>
-        /// TBD
+        /// Gets the current backing array.
         /// </summary>
         protected T[] UnderlyingArray => _array;
 
@@ -273,12 +273,12 @@ namespace Akka.Streams.Implementation
         public long AvailableData => Length;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains no unread values.
         /// </summary>
         public bool IsEmpty => Length == 0;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains at least one unread value.
         /// </summary>
         public bool NonEmpty => !IsEmpty;
 
@@ -295,22 +295,22 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Returns the number of elements that the buffer currently contains for the given cursor.
         /// </summary>
-        /// <param name="cursor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cursor">The reader whose unread values are counted.</param>
+        /// <returns>The number of values written after that cursor's position.</returns>
         public long Count(ICursor cursor) => _writeIndex - cursor.Cursor;
 
         /// <summary>
         /// Initializes the given Cursor to the oldest buffer entry that is still available.
         /// </summary>
-        /// <param name="cursor">TBD</param>
+        /// <param name="cursor">The reader to initialize at the oldest retained position.</param>
         public void InitCursor(ICursor cursor) => cursor.Cursor = _readIndex;
 
         /// <summary>
         /// Tries to write the given value into the buffer thereby potentially growing the backing array.
         /// Returns true if the write was successful and false if the buffer is full and cannot grow anymore.
         /// </summary> 
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">The value to append.</param>
+        /// <returns><see langword="true"/> if stored; <see langword="false"/> if the buffer has reached its maximum capacity.</returns>
         public bool Write(T value)
         {
             if (Length < _array.Length)
@@ -357,9 +357,9 @@ namespace Akka.Streams.Implementation
         /// If there are no more data to be read (i.e. the cursor is already
         /// at writeIx) the method throws <see cref="NothingToReadException"/>!
         /// </summary>
-        /// <param name="cursor">TBD</param>
-        /// <exception cref="NothingToReadException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="cursor">The reader whose next value is read and whose cursor advances.</param>
+        /// <exception cref="NothingToReadException">The cursor has reached the current write position.</exception>
+        /// <returns>The next value for that cursor.</returns>
         public T Read(ICursor cursor)
         {
             var c = cursor.Cursor;
@@ -376,9 +376,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a reader and releases entries that no remaining reader needs.
         /// </summary>
-        /// <param name="cursor">TBD</param>
+        /// <param name="cursor">The reader that was removed.</param>
         public void OnCursorRemoved(ICursor cursor)
         {
             if (cursor.Cursor == _readIndex) // if this cursor is the last one it must be at readIx
@@ -404,9 +404,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the buffer size and current read/write indexes for diagnostics.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A diagnostic representation of the buffer state.</returns>
         public override string ToString() => $"ResizableMultiReaderRingBuffer(size={Length}, writeIx={_writeIndex}, readIx={_readIndex}, cursors={Cursors.Cursors.Count()})";
     }
 }

@@ -16,84 +16,84 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
     internal interface IBuffer<T>
     {
         /// <summary>
-        /// TBD
+        /// Gets the maximum number of elements the buffer can hold.
         /// </summary>
         int Capacity { get; }
         /// <summary>
-        /// TBD
+        /// Gets the number of elements currently held in the buffer.
         /// </summary>
         int Used { get; }
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer has reached its capacity.
         /// </summary>
         bool IsFull { get; }
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains no elements.
         /// </summary>
         bool IsEmpty { get; }
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains at least one element.
         /// </summary>
         bool NonEmpty { get; }
 
         /// <summary>
-        /// TBD
+        /// Appends an element to the buffer.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to append.</param>
         void Enqueue(T element);
         /// <summary>
-        /// TBD
+        /// Removes and returns the oldest element.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The oldest buffered element.</returns>
         T Dequeue();
 
         /// <summary>
-        /// TBD
+        /// Returns the oldest element without removing it, or the default value when empty.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The oldest element, or <see langword="default"/> when the buffer is empty.</returns>
         T? Peek();
         /// <summary>
-        /// TBD
+        /// Removes all elements from the buffer.
         /// </summary>
         void Clear();
         /// <summary>
-        /// TBD
+        /// Removes the oldest element.
         /// </summary>
         void DropHead();
         /// <summary>
-        /// TBD
+        /// Removes the newest element.
         /// </summary>
         void DropTail();
     }
 
     /// <summary>
-    /// TBD
+    /// Selects and creates an implementation of <see cref="IBuffer{T}"/> for the requested capacity.
     /// </summary>
     internal static class Buffer
     {
         private const int FixedQueueSize = 128;
 
         /// <summary>
-        /// TBD
+        /// Creates a buffer using the materializer's fixed-buffer allocation limit.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="size">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
+        /// <param name="size">The buffer capacity.</param>
+        /// <param name="settings">Materializer settings that determine the fixed-buffer size limit.</param>
+        /// <returns>A fixed-size or dynamically backed buffer for the requested capacity.</returns>
         public static IBuffer<T> Create<T>(int size, ActorMaterializerSettings settings) 
             => Create<T>(size, settings.MaxFixedBufferSize);
 
         /// <summary>
-        /// TBD
+        /// Creates a buffer using the materializer's fixed-buffer allocation limit when available.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="size">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
+        /// <param name="size">The buffer capacity.</param>
+        /// <param name="materializer">The materializer whose settings provide the size limit.</param>
+        /// <returns>A buffer implementation selected for the requested capacity.</returns>
         public static IBuffer<T> Create<T>(int size, IMaterializer materializer)
         {
             var m = materializer as ActorMaterializer;
@@ -101,12 +101,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a fixed-size buffer for smaller capacities and a bounded queue for larger capacities.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="size">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
+        /// <param name="size">The requested capacity.</param>
+        /// <param name="max">The configured fixed-buffer allocation threshold.</param>
+        /// <returns>The selected buffer implementation.</returns>
         public static IBuffer<T> Create<T>(int size, int max)
         {
             if (size < FixedQueueSize || size < max)
@@ -117,7 +117,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Creates array-backed fixed-size buffers, using a specialized implementation for power-of-two capacities.
     /// </summary>
     internal static class FixedSizeBuffer 
     {
@@ -130,12 +130,12 @@ namespace Akka.Streams.Implementation
         /// 
         /// Returns a specialized instance for power-of-two sized buffers.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="size">TBD</param>
+        /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
+        /// <param name="size">The positive buffer capacity.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="size"/> is less than 1.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>An array-backed buffer implementation for the requested capacity.</returns>
         [InternalApi]
         public static FixedSizeBuffer<T> Create<T>(int size)
         {
@@ -148,26 +148,26 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Base array-backed buffer that tracks read and write positions without enforcing queue bounds.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
     internal abstract class FixedSizeBuffer<T> : IBuffer<T>
     {
         /// <summary>
-        /// TBD
+        /// Gets the absolute index of the next element to read.
         /// </summary>
         protected long ReadIndex;
         /// <summary>
-        /// TBD
+        /// Gets the absolute index at which the next element is written.
         /// </summary>
         protected long WriteIndex;
 
         private readonly T?[] _buffer;
 
         /// <summary>
-        /// TBD
+        /// Creates a fixed-size buffer with the given capacity.
         /// </summary>
-        /// <param name="capacity">TBD</param>
+        /// <param name="capacity">The number of elements the buffer can hold.</param>
         protected FixedSizeBuffer(int capacity)
         {
             Capacity = capacity;
@@ -175,23 +175,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of elements the buffer can hold.
         /// </summary>
         public int Capacity { get; }
         /// <summary>
-        /// TBD
+        /// Gets the number of elements currently held in the buffer.
         /// </summary>
         public int Used => (int)(WriteIndex - ReadIndex);
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer is full.
         /// </summary>
         public bool IsFull => Used == Capacity;
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer is empty.
         /// </summary>
         public bool IsEmpty => Used == 0;
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains any elements.
         /// </summary>
         public bool NonEmpty => Used != 0;
 
@@ -199,17 +199,17 @@ namespace Akka.Streams.Implementation
 
         // for the maintenance parameter see dropHead
         /// <summary>
-        /// TBD
+        /// Converts a logical index to an array offset, optionally performing index maintenance.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <param name="maintenance">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The logical buffer index.</param>
+        /// <param name="maintenance">Whether index counters may be rebased as part of offset calculation.</param>
+        /// <returns>The backing array offset for the index.</returns>
         protected abstract int ToOffset(long index, bool maintenance);
 
         /// <summary>
-        /// TBD
+        /// Appends an element at the write position and advances that position.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to append.</param>
         public void Enqueue(T element)
         {
             Put(WriteIndex, element, false);
@@ -217,19 +217,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Stores an element at the specified logical index.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <param name="element">TBD</param>
-        /// <param name="maintenance">TBD</param>
+        /// <param name="index">The logical buffer index.</param>
+        /// <param name="element">The value to store, or the default value to clear the slot.</param>
+        /// <param name="maintenance">Whether offset calculation may rebase the index counters.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Put(long index, T? element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
         /// <summary>
-        /// TBD
+        /// Reads a non-null element from the specified logical index.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The logical buffer index.</param>
+        /// <returns>The element stored at that index.</returns>
         public T Get(long index)
         {
             var elem = _buffer[ToOffset(index, false)];
@@ -239,15 +239,15 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the oldest buffered element without removing it.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The oldest buffered element.</returns>
         public T Peek() => Get(ReadIndex);
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the oldest buffered element.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The removed element.</returns>
         public T Dequeue()
         {
             var result = Get(ReadIndex);
@@ -256,7 +256,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Clears all slots and resets the read and write positions.
         /// </summary>
         public void Clear()
         {
@@ -266,7 +266,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the oldest element and clears its array slot.
         /// </summary>
         public void DropHead()
         {
@@ -277,7 +277,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the newest element and clears its array slot.
         /// </summary>
         public void DropTail()
         {
@@ -287,25 +287,25 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Fixed-size buffer that maps logical indexes with modulo arithmetic and periodically rebases large counters.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
     internal class ModuloFixedSizeBuffer<T> : FixedSizeBuffer<T>
     {
         /// <summary>
-        /// TBD
+        /// Creates a modulo-indexed buffer.
         /// </summary>
-        /// <param name="size">TBD</param>
+        /// <param name="size">The positive buffer capacity.</param>
         public ModuloFixedSizeBuffer(int size) : base(size)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Converts a logical index to an offset using modulo arithmetic.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <param name="maintenance">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The logical buffer index.</param>
+        /// <param name="maintenance">Whether large read/write counters may be rebased.</param>
+        /// <returns>The index modulo the buffer capacity.</returns>
         protected override int ToOffset(long index, bool maintenance)
         {
             if (maintenance && ReadIndex > int.MaxValue)
@@ -323,35 +323,35 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Fixed-size buffer that maps logical indexes with a bit mask.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
     internal class PowerOfTwoFixedSizeBuffer<T> : FixedSizeBuffer<T> 
     {
         private readonly int _mask;
 
         /// <summary>
-        /// TBD
+        /// Creates a power-of-two-capacity buffer.
         /// </summary>
-        /// <param name="size">TBD</param>
+        /// <param name="size">The buffer capacity, which must be a power of two.</param>
         public PowerOfTwoFixedSizeBuffer(int size) : base(size)
         {
             _mask = Capacity - 1;
         }
 
         /// <summary>
-        /// TBD
+        /// Converts a logical index to an offset using the capacity mask.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <param name="maintenance">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The logical buffer index.</param>
+        /// <param name="maintenance">Unused by the power-of-two implementation.</param>
+        /// <returns>The index masked to the range of the backing array.</returns>
         protected override int ToOffset(long index, bool maintenance) => (int)index & _mask;
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of values stored in the buffer.</typeparam>
     internal sealed class BoundedBuffer<T> : IBuffer<T>
     {
         #region internal classes
@@ -464,9 +464,9 @@ namespace Akka.Streams.Implementation
         private IBuffer<T> _q;
 
         /// <summary>
-        /// TBD
+        /// Creates a bounded FIFO buffer with the specified capacity.
         /// </summary>
-        /// <param name="capacity">TBD</param>
+        /// <param name="capacity">The maximum number of elements the buffer can hold.</param>
         public BoundedBuffer(int capacity)
         {
             Capacity = capacity;
@@ -474,60 +474,60 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum number of elements the buffer can hold.
         /// </summary>
         public int Capacity { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of elements currently held in the buffer.
         /// </summary>
         public int Used => _q.Used;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer has reached its capacity.
         /// </summary>
         public bool IsFull => _q.IsFull;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains no elements.
         /// </summary>
         public bool IsEmpty => _q.IsEmpty;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the buffer contains at least one element.
         /// </summary>
         public bool NonEmpty => _q.NonEmpty;
 
         /// <summary>
-        /// TBD
+        /// Appends an element to the buffer.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to append.</param>
         public void Enqueue(T element) => _q.Enqueue(element);
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the oldest element.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The oldest buffered element.</returns>
         public T Dequeue() => _q.Dequeue();
 
         /// <summary>
-        /// TBD
+        /// Returns the oldest element without removing it, or the default value when empty.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The oldest element, or <see langword="default"/> when the buffer is empty.</returns>
         public T? Peek() => _q.Peek();
 
         /// <summary>
-        /// TBD
+        /// Removes all elements from the buffer.
         /// </summary>
         public void Clear() => _q.Clear();
 
         /// <summary>
-        /// TBD
+        /// Removes the oldest element.
         /// </summary>
         public void DropHead() => _q.DropHead();
 
         /// <summary>
-        /// TBD
+        /// Removes the newest element.
         /// </summary>
         public void DropTail() => _q.DropTail();
     }
