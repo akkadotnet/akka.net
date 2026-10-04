@@ -33,7 +33,7 @@ public class InternalTestActorRef : LocalActorRef
     /// <summary>INTERNAL
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A unique actor name with the test-ref prefix.</returns>
     public static string CreateUniqueName()
     {
         var number = UniqueNameNumber.GetAndIncrement();
@@ -53,14 +53,14 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Creates the actor cell used by the test actor reference.
     /// </summary>
-    /// <param name="system">TBD</param>
-    /// <param name="self">TBD</param>
-    /// <param name="props">TBD</param>
-    /// <param name="dispatcher">TBD</param>
-    /// <param name="supervisor">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="system">The actor system that owns the actor.</param>
+    /// <param name="self">The actor reference represented by the cell.</param>
+    /// <param name="props">The properties used to create the actor.</param>
+    /// <param name="dispatcher">The dispatcher used to execute the actor.</param>
+    /// <param name="supervisor">The parent actor that supervises the actor.</param>
+    /// <returns>A test actor cell for the supplied actor configuration.</returns>
     protected override ActorCell NewActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher,
         IInternalActorRef supervisor)
     {
@@ -68,9 +68,9 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Gets this reference's cell as a <see cref="TestActorCell"/>.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The cell used by this test actor reference.</returns>
     protected TestActorCell GetTestActorCell()
     {
         return (TestActorCell)Cell;
@@ -101,9 +101,9 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Gets the actor instance managed by this reference.
     /// </summary>
-    /// <exception cref="IllegalActorStateException">TBD</exception>
+    /// <exception cref="IllegalActorStateException">Thrown if the actor reference has terminated.</exception>
     public object UnderlyingActor
     {
         get
@@ -147,9 +147,9 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Returns this reference's test actor path in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A string containing this actor's path.</returns>
     public override string ToString()
     {
         return "TestActor[" + Path + "]";
@@ -159,12 +159,12 @@ public class InternalTestActorRef : LocalActorRef
     /// INTERNAL
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <param name="system">TBD</param>
-    /// <param name="props">TBD</param>
-    /// <param name="supervisor">TBD</param>
-    /// <param name="name">TBD</param>
-    /// <exception cref="IllegalStateException">TBD</exception>
-    /// <returns>TBD</returns>
+    /// <param name="system">The actor system that owns the actor.</param>
+    /// <param name="props">The properties used to create the actor.</param>
+    /// <param name="supervisor">The supervising actor, or null to use the system guardian.</param>
+    /// <param name="name">The actor name, or null to generate a unique name.</param>
+    /// <exception cref="IllegalStateException">Thrown if the selected supervisor is an unstarted top-level actor.</exception>
+    /// <returns>A started test actor reference that uses the calling-thread dispatcher when no dispatcher is specified.</returns>
     public static InternalTestActorRef Create(ActorSystem system, Props props, IActorRef? supervisor = null, string? name = null)
     {
         if (name == null)
@@ -215,29 +215,29 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Actor cell that supports direct test message injection and observes completion of async message handling.
     /// </summary>
     protected class TestActorCell : ActorCell
     {
         private TestActorTaskScheduler? _taskScheduler;
             
         /// <summary>
-        /// TBD
+        /// Initializes the test actor cell.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="parent">TBD</param>
+        /// <param name="system">The actor system that owns the cell.</param>
+        /// <param name="self">The actor reference represented by the cell.</param>
+        /// <param name="props">The properties used to create the actor.</param>
+        /// <param name="dispatcher">The dispatcher used to execute the actor.</param>
+        /// <param name="parent">The parent actor that supervises the actor.</param>
         public TestActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
             : base(system, self, props, dispatcher, parent)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Handles the internal request used to retrieve the actor instance; delegates other auto-received messages to the base cell.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The system message envelope to handle.</param>
         protected internal override void AutoReceiveMessage(Envelope envelope)
         {
             if (envelope.Message is InternalGetActor)
@@ -272,7 +272,7 @@ public class InternalTestActorRef : LocalActorRef
         /// <summary>
         /// This is only intended to be called from TestKit's TestActorRef
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The message and sender to deliver to the actor.</param>
         public Task ReceiveMessageForTestAsync(Envelope envelope)
         {
             var tcs = new TaskCompletionSource<Done>();
@@ -282,9 +282,9 @@ public class InternalTestActorRef : LocalActorRef
         }
         
         /// <summary>
-        /// TBD
+        /// Invokes an asynchronous delegate while this cell is the current actor context.
         /// </summary>
-        /// <param name="actionAsync">TBD</param>
+        /// <param name="actionAsync">The asynchronous delegate to invoke.</param>
         public Task UseThreadContextAsync(Func<Task> actionAsync)
         {
             var tmp = InternalCurrentActorCellKeeper.Current;
@@ -312,7 +312,7 @@ public class InternalTestActorRef : LocalActorRef
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor instance managed by the base cell.
         /// </summary>
         public new object? Actor => base.Actor;
     }
@@ -336,12 +336,12 @@ public class InternalTestActorRef : LocalActorRef
     }
 
     /// <summary>
-    /// TBD
+    /// Internal request message used to retrieve the underlying actor instance from its cell.
     /// </summary>
     public class InternalGetActor : IAutoReceivedMessage, IPossiblyHarmful
     {
         /// <summary>
-        /// TBD
+        /// The shared actor retrieval request instance.
         /// </summary>
         public static readonly InternalGetActor Instance = new();
         private InternalGetActor() { }
