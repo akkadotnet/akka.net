@@ -18,7 +18,7 @@ using Akka.TestKit.Internal;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Methods for receiving, asserting on, and draining messages from the test actor's queue.
     /// </summary>
     public abstract partial class TestKitBase
     {
@@ -478,12 +478,12 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
-        /// <param name="filter">TBD</param>
-        /// <param name="msgs">TBD</param>
+        /// <typeparam name="T">The type of values returned by the filter.</typeparam>
+        /// <param name="max">The maximum total wait duration before returning collected messages.</param>
+        /// <param name="filter">Maps each received message to a result, or returns null to stop without consuming that message.</param>
+        /// <param name="msgs">The maximum number of accepted messages to receive.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The values returned by <paramref name="filter"/> for accepted messages.</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             [AutoDilate] TimeSpan? max,
             Func<object, T> filter, 
@@ -518,13 +518,13 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
-        /// <param name="idle">TBD</param>
-        /// <param name="filter">TBD</param>
-        /// <param name="msgs">TBD</param>
+        /// <typeparam name="T">The type of values returned by the filter.</typeparam>
+        /// <param name="max">The maximum total wait duration before returning collected messages.</param>
+        /// <param name="idle">The maximum wait for another message after the previous one, or null to disable the idle limit.</param>
+        /// <param name="filter">Maps each received message to a result, or returns null to stop without consuming that message.</param>
+        /// <param name="msgs">The maximum number of accepted messages to receive.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The values returned by <paramref name="filter"/> for accepted messages.</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             [AutoDilate] TimeSpan? max,
             TimeSpan? idle,
@@ -561,13 +561,13 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="filter">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="idle">TBD</param>
-        /// <param name="msgs">TBD</param>
+        /// <typeparam name="T">The type of values returned by the filter.</typeparam>
+        /// <param name="filter">Maps each received message to a result, or returns null to stop without consuming that message.</param>
+        /// <param name="max">The maximum total wait duration, or null to use the current test timeout.</param>
+        /// <param name="idle">The maximum wait for another message after the previous one, or null to disable the idle limit.</param>
+        /// <param name="msgs">The maximum number of accepted messages to receive.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The values returned by <paramref name="filter"/> for accepted messages.</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             Func<object, T> filter,
             [AutoDilate] TimeSpan? max = null,
@@ -653,14 +653,14 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldContinue">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="idle">TBD</param>
-        /// <param name="msgs">TBD</param>
-        /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
+        /// <typeparam name="T">The type of messages evaluated by the predicate.</typeparam>
+        /// <param name="shouldContinue">The predicate that accepts messages while receiving should continue.</param>
+        /// <param name="max">The maximum total wait duration, or null to use the current test timeout.</param>
+        /// <param name="idle">The maximum wait for another message after the previous one, or null to disable the idle limit.</param>
+        /// <param name="msgs">The maximum number of accepted messages to receive.</param>
+        /// <param name="shouldIgnoreOtherMessageTypes">Whether messages not assignable to <typeparamref name="T"/> are left out while receiving or stop the operation.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received messages accepted by <paramref name="shouldContinue"/>.</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             Predicate<T> shouldContinue, 
             [AutoDilate] TimeSpan? max = null,
