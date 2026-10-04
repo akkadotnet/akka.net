@@ -1,0 +1,81 @@
+{
+  "base": "d70c03ed8308d64c6eab77f8390e2ec34e634aeb",
+  "persistenceAuthorHead": "18d487d576431e35bc4d89fca1ba2d0bc2db1716",
+  "checks": {
+    "sourceEquivalence": {
+      "files": 25,
+      "violations": [],
+      "controls": 6
+    },
+    "placeholderCensus": {
+      "before": 545,
+      "after": 0,
+      "blocks": 288
+    },
+    "buildWarningsAsErrors": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "apiApprovals": {
+      "passed": 33,
+      "failed": 0
+    },
+    "packageTests": {
+      "passed": 306,
+      "failed": 0,
+      "existingSkips": 3,
+      "testedDocsRevision": "869e975b9bab50db89d5ae19c292086bcef30cf6",
+      "laterRevisions": "XML-only semantic repairs; unchanged executable tokens validated."
+    },
+    "compilerXml": {
+      "beforeMembers": 771,
+      "afterMembers": 771,
+      "added": [],
+      "removed": [],
+      "TBD": 0
+    },
+    "assemblyConsumerSymbols": [
+      "ISnapshotter.LoadSnapshot parameter docs visible",
+      "SnapshotStore.ReceivePluginInternal protected docs visible"
+    ],
+    "editorTooltips": "Not exercised; Roslyn symbol documentation and rendered DocFX were checked.",
+    "docfxScopedMetadata": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "docfxScopedBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "docfxFullMetadata": {
+      "baselineWarnings": 576,
+      "candidateWarnings": 576,
+      "introducedWarnings": 0,
+      "status": "baseline failure unchanged"
+    },
+    "docfxFullBuild": {
+      "warnings": 0,
+      "errors": 0
+    },
+    "slopwatch": {
+      "errors": 0,
+      "warnings": 1,
+      "introduced": 0,
+      "unchangedFinding": "SW003 PersistencePluginProxy.cs:168; no suppression or baseline edits."
+    },
+    "semanticReview": {
+      "model": "gpt-6-sol",
+      "allSelectedBlocksInspected": true,
+      "findingsResolved": true
+    },
+    "incrementalTests": {
+      "selectedProjects": 14,
+      "status": "pass",
+      "passed": 1492,
+      "skipped": 8,
+      "failed": 0,
+      "total": 1500,
+      "testedDocsRevision": "18d487d576431e35bc4d89fca1ba2d0bc2db1716"
+    }
+  }
+}

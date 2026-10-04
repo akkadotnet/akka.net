@@ -1,0 +1,31 @@
+{
+  "baseline": "4fa203eb101b82ca34ab3f440ea1785e24976096",
+  "branch": "dev",
+  "trackedOnly": true,
+  "csharp": {
+    "files": 377,
+    "blocks": 6298,
+    "occurrences": 14369
+  },
+  "templates": {
+    "files": 5,
+    "blocks": 66,
+    "occurrences": 121
+  },
+  "categories": {
+    "partial-documentation-needs-review": 1297,
+    "placeholder-only-needs-contract-review": 3725,
+    "inheritance-candidate-unverified": 905,
+    "generated-or-template": 371
+  },
+  "syntaxVisibility": {
+    "externally-visible-syntax": 4435,
+    "nonpublic-syntax": 1863
+  },
+  "other": {
+    "shfbProjectPlaceholders": 17,
+    "guidanceMentions": 2,
+    "sourceNonXmlTbdLines": 0
+  },
+  "classificationStatus": "Mechanical triage only. Contract correctness, implicit interface inheritance, InternalApi annotations, partial-type duplicates and package intent require review."
+}
