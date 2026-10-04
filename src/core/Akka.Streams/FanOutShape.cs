@@ -13,43 +13,43 @@ using System.Linq;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Base class for shapes with one inlet and a dynamically registered set of outlets.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the single inlet.</typeparam>
     public abstract class FanOutShape<TIn> : Shape
     {
         #region internal classes
 
         /// <summary>
-        /// TBD
+        /// Supplies the inlet, initially registered outlets, and naming prefix used to construct a fan-out shape.
         /// </summary>
         public interface IInit
         {
             /// <summary>
-            /// TBD
+            /// The inlet for the constructed shape.
             /// </summary>
             Inlet<TIn> Inlet { get; }
             /// <summary>
-            /// TBD
+            /// Outlets supplied for reuse while constructing the shape.
             /// </summary>
             IEnumerable<Outlet> Outlets { get; }
             /// <summary>
-            /// TBD
+            /// The prefix used to name newly created ports.
             /// </summary>
             string Name { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a fan-out shape by creating a named inlet and using the name as its port prefix.
         /// </summary>
         [Serializable]
         public sealed class InitName : IInit
         {
             /// <summary>
-            /// TBD
+            /// Creates initialization data that names a fan-out shape and its inlet.
             /// </summary>
-            /// <param name="name">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="name">The non-empty name used as the prefix for the generated inlet.</param>
+            /// <exception cref="ArgumentNullException">The name is <see langword="null"/> or empty.</exception>
             public InitName(string name)
             {
                 if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
@@ -60,31 +60,31 @@ namespace Akka.Streams
             }
 
             /// <summary>
-            /// TBD
+            /// The inlet created from the initialization name.
             /// </summary>
             public Inlet<TIn> Inlet { get; }
             /// <summary>
-            /// TBD
+            /// An empty sequence, since no existing outlets are supplied by name initialization.
             /// </summary>
             public IEnumerable<Outlet> Outlets { get; }
             /// <summary>
-            /// TBD
+            /// The name used as the port prefix.
             /// </summary>
             public string Name { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a fan-out shape with an existing inlet and a sequence of outlets to register.
         /// </summary>
         [Serializable]
         public sealed class InitPorts : IInit
         {
             /// <summary>
-            /// TBD
+            /// Creates initialization data from an existing inlet and outlets.
             /// </summary>
-            /// <param name="inlet">TBD</param>
-            /// <param name="outlets">TBD</param>
-            /// <exception cref="ArgumentNullException">TBD</exception>
+            /// <param name="inlet">The inlet to use for the shape.</param>
+            /// <param name="outlets">The outlets to register for reuse while constructing the shape.</param>
+            /// <exception cref="ArgumentNullException">The inlet or outlets sequence is <see langword="null"/>.</exception>
             public InitPorts(Inlet<TIn> inlet, IEnumerable<Outlet> outlets)
             {
                 Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet));
@@ -93,15 +93,15 @@ namespace Akka.Streams
             }
 
             /// <summary>
-            /// TBD
+            /// The supplied inlet.
             /// </summary>
             public Inlet<TIn> Inlet { get; }
             /// <summary>
-            /// TBD
+            /// The supplied outlets.
             /// </summary>
             public IEnumerable<Outlet> Outlets { get; }
             /// <summary>
-            /// TBD
+            /// The default name prefix <c>FanOut</c> used for any newly created ports.
             /// </summary>
             public string Name { get; }
         }
@@ -113,11 +113,11 @@ namespace Akka.Streams
         private readonly IEnumerator<Outlet> _registered;
 
         /// <summary>
-        /// TBD
+        /// Initializes the shape's inlet, available outlets, and port-name prefix.
         /// </summary>
-        /// <param name="inlet">TBD</param>
-        /// <param name="registered">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="inlet">The inlet exposed by the shape.</param>
+        /// <param name="registered">Outlets available for reuse in the order they are registered.</param>
+        /// <param name="name">The prefix used to name any new outlets.</param>
         protected FanOutShape(Inlet<TIn> inlet, IEnumerable<Outlet> registered, string name)
         {
             In = inlet;
@@ -128,38 +128,38 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes this shape from the inlet, outlets, and name in the supplied data.
         /// </summary>
-        /// <param name="init">TBD</param>
+        /// <param name="init">The port and naming data used to initialize this shape.</param>
         protected FanOutShape(IInit init) : this(init.Inlet, init.Outlets, init.Name) { }
 
         /// <summary>
-        /// TBD
+        /// The typed inlet exposed by this fan-out shape.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// The outlets registered with this shape, in construction order.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets => _outlets;
 
         /// <summary>
-        /// TBD
+        /// The single inlet exposed by this fan-out shape.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Constructs the concrete fan-out shape using replacement port initialization data.
         /// </summary>
-        /// <param name="init">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="init">The port and naming data for the constructed shape.</param>
+        /// <returns>A concrete fan-out shape initialized with <paramref name="init"/>.</returns>
         protected abstract FanOutShape<TIn> Construct(IInit init);
 
         /// <summary>
-        /// TBD
+        /// Creates an outlet using the next registered outlet when available, or a new outlet named from this shape's prefix.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The suffix used when creating a new outlet.</param>
+        /// <returns>The registered or newly created outlet, added to this shape's outlet list.</returns>
         protected Outlet<T> NewOutlet<T>(string name)
         {
             var p = _registered.MoveNext() ? (Outlet<T>)_registered.Current : new Outlet<T>($"{_name}.{name}");
@@ -168,19 +168,20 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this shape with carbon-copied ports.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A concrete fan-out shape with copied ports.</returns>
         public override Shape DeepCopy()
             => Construct(new InitPorts((Inlet<TIn>) In.CarbonCopy(), _outlets.Select(o => o.CarbonCopy())));
 
         /// <summary>
-        /// TBD
+        /// Creates this shape's concrete type using replacement ports after validating their counts.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">The replacement inlet, which must match this shape's inlet count and type.</param>
+        /// <param name="outlets">The replacement outlets, which must match this shape's outlet count and types.</param>
+        /// <exception cref="ArgumentException">The replacement inlet or outlet count does not match this shape.</exception>
+        /// <exception cref="InvalidCastException">A replacement port is not compatible with this shape's generic port type.</exception>
+        /// <returns>A concrete fan-out shape using the replacement ports.</returns>
         public sealed override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Length != 1) throw new ArgumentException(
@@ -193,19 +194,19 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// A fan-out shape with one inlet and a fixed number of outlets that all emit the same element type.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the inlet.</typeparam>
+    /// <typeparam name="TOut">The element type emitted by each outlet.</typeparam>
     public class UniformFanOutShape<TIn, TOut> : FanOutShape<TIn>
     {
         private readonly int _n;
 
         /// <summary>
-        /// TBD
+        /// Creates a shape with <paramref name="n"/> outlets using the supplied initialization data.
         /// </summary>
-        /// <param name="n">TBD</param>
-        /// <param name="init">TBD</param>
+        /// <param name="n">The number of outlets to create.</param>
+        /// <param name="init">The inlet, any outlets to reuse, and the name prefix for new outlets.</param>
         public UniformFanOutShape(int n, IInit init) : base(init)
         {
             _n = n;
@@ -213,29 +214,29 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a shape with <paramref name="n"/> outlets and the default name prefix.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The number of outlets to create.</param>
         public UniformFanOutShape(int n) : this(n, new InitName("UniformFanOut"))
         {
             
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a shape with <paramref name="n"/> outlets and the supplied name prefix.
         /// </summary>
-        /// <param name="n">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="n">The number of outlets to create.</param>
+        /// <param name="name">The prefix used to name the inlet and newly created outlets.</param>
         public UniformFanOutShape(int n, string name) : this(n, new InitName(name))
         {
             
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a shape using the supplied inlet and outlet ports.
         /// </summary>
-        /// <param name="inlet">TBD</param>
-        /// <param name="outlets">TBD</param>
+        /// <param name="inlet">The inlet exposed by the shape.</param>
+        /// <param name="outlets">The outlet ports used by the shape.</param>
         public UniformFanOutShape(Inlet<TIn> inlet, params Outlet<TOut>[] outlets)
             : this(outlets.Length, new InitPorts(inlet, outlets))
         {
@@ -243,22 +244,22 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// The outlet ports, in their construction order.
         /// </summary>
         public IImmutableList<Outlet<TOut>> Outs { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets an outlet by its zero-based index.
         /// </summary>
-        /// <param name="n">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="n">The zero-based outlet index.</param>
+        /// <returns>The outlet at index <paramref name="n"/>.</returns>
         public Outlet<TOut> Out(int n) => Outs[n];
 
         /// <summary>
-        /// TBD
+        /// Creates a uniform fan-out shape of this type from replacement port data.
         /// </summary>
-        /// <param name="init">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="init">The inlet, replacement outlets, and name prefix.</param>
+        /// <returns>A uniform fan-out shape with the same outlet count and replacement ports.</returns>
         protected override FanOutShape<TIn> Construct(IInit init) => new UniformFanOutShape<TIn, TOut>(_n, init);
     }
 }
