@@ -29,8 +29,8 @@ namespace Akka.Streams.Stage
     /// therefore you do not have to add any additional thread safety or memory
     /// visibility constructs to access the state from the callback methods.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public interface IStage<in TIn, out TOut> { }
 
@@ -86,24 +86,24 @@ namespace Akka.Streams.Stage
     /// <seealso cref="DetachedStage{TIn,TOut}"/>
     /// <seealso cref="StatefulStage{TIn,TOut}"/>
     /// <seealso cref="PushStage{TIn,TOut}"/>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushPullStage<TIn, TOut> : AbstractStage<TIn, TOut, ISyncDirective, ISyncDirective, IContext<TOut>> { }
 
     /// <summary>
     /// <see cref="PushStage{TIn,TOut}"/> is a <see cref="PushPullStage{TIn,TOut}"/> that always perform transitive pull by calling <see cref="IContext.Pull"/> from <see cref="OnPull"/>.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class PushStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
         /// <summary>
         /// Always pulls from upstream.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context for this stage callback.</param>
+        /// <returns>The upstream directive requesting another element.</returns>
         public sealed override ISyncDirective OnPull(IContext<TOut> context) => context.Pull();
     }
 
@@ -129,13 +129,13 @@ namespace Akka.Streams.Stage
     /// 
     /// @see <see cref="PushPullStage{TIn,TOut}"/>
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class DetachedStage<TIn, TOut> : AbstractStage<TIn, TOut, IUpstreamDirective, IDownstreamDirective, IDetachedContext<TOut>>
     {
         /// <summary>
-        /// TBD
+        /// Identifies a detached stage, which may hold upstream or downstream events between callbacks.
         /// </summary>
         protected internal override bool IsDetached => true;
     }
@@ -144,68 +144,68 @@ namespace Akka.Streams.Stage
     /// The behavior of <see cref="StatefulStage{TIn,TOut}"/> is defined by these two methods, which
     /// has the same semantics as corresponding methods in <see cref="PushPullStage{TIn,TOut}"/>.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     public abstract class StageState<TIn, TOut>
     {
         /// <summary>
-        /// TBD
+        /// Handles an upstream element in this state.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The context used to push, pull, or terminate during this callback.</param>
+        /// <returns>The synchronous directive describing the operation performed.</returns>
         public abstract ISyncDirective OnPush(TIn element, IContext<TOut> context);
 
         /// <summary>
-        /// TBD
+        /// Handles downstream demand; the default behavior requests another upstream element.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to request an upstream element.</param>
+        /// <returns>The synchronous directive returned by <see cref="IContext.Pull"/>.</returns>
         public virtual ISyncDirective OnPull(IContext<TOut> context) => context.Pull();
     }
 
     /// <summary>
-    /// TBD
+    /// Provides internal directives used by <see cref="StatefulStage{TIn,TOut}"/> to finish, change state, or remain in the current state.
     /// </summary>
     public static class StatefulStage
     {
         #region Internal API
 
         /// <summary>
-        /// TBD
+        /// Marker for actions to perform after a state finishes emitting elements.
         /// </summary>
         internal interface IAndThen { }
 
         /// <summary>
-        /// TBD
+        /// Marker for finishing the stage after the current emission.
         /// </summary>
         [Serializable]
         internal sealed class Finish : IAndThen
         {
             /// <summary>
-            /// TBD
+            /// The singleton finish directive.
             /// </summary>
             public static readonly Finish Instance = new();
             private Finish() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Marker for changing to another stage state after the current emission.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+        /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
         [Serializable]
         internal sealed class Become<TIn, TOut> : IAndThen
         {
             /// <summary>
-            /// TBD
+            /// The state to use after the current emission.
             /// </summary>
             public readonly StageState<TIn, TOut> State;
 
             /// <summary>
-            /// TBD
+            /// Creates a directive to change to the supplied state after the current emission.
             /// </summary>
-            /// <param name="state">TBD</param>
+            /// <param name="state">The state to activate after the current emission.</param>
             public Become(StageState<TIn, TOut> state)
             {
                 State = state;
@@ -213,13 +213,13 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Marker for keeping the current stage state after the current emission.
         /// </summary>
         [Serializable]
         internal sealed class Stay : IAndThen
         {
             /// <summary>
-            /// TBD
+            /// The singleton stay directive.
             /// </summary>
             public static readonly Stay Instance = new();
             private Stay() { }
@@ -239,8 +239,8 @@ namespace Akka.Streams.Stage
     /// 
     /// Use <see cref="TerminationEmit"/> to push final elements from <see cref="OnUpstreamFinish"/> or <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure"/>.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.0]")]
     public abstract class StatefulStage<TIn, TOut> : PushPullStage<TIn, TOut>
     {
@@ -248,9 +248,9 @@ namespace Akka.Streams.Stage
         private StageState<TIn, TOut> _current;
 
         /// <summary>
-        /// TBD
+        /// Initializes the stage with its initial behavior.
         /// </summary>
-        /// <param name="current">TBD</param>
+        /// <param name="current">The initial state used before <see cref="Initial"/> is applied.</param>
         protected StatefulStage(StageState<TIn, TOut> current)
         {
             _current = current;
@@ -271,7 +271,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Change the behavior to another <see cref="StageState{TIn,TOut}"/>.
         /// </summary>
-        /// <param name="state">TBD</param>
+        /// <param name="state">The state to activate for subsequent callbacks.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="state"/> is undefined.
         /// </exception>
@@ -281,23 +281,23 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Invokes current state.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The context used by the current state.</param>
+        /// <returns>The directive returned by the current state's push callback.</returns>
         public sealed override ISyncDirective OnPush(TIn element, IContext<TOut> context) => _current.OnPush(element, context);
 
         /// <summary>
         /// Invokes current state.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used by the current state.</param>
+        /// <returns>The directive returned by the current state's pull callback.</returns>
         public sealed override ISyncDirective OnPull(IContext<TOut> context) => _current.OnPull(context);
 
         /// <summary>
-        /// TBD
+        /// Finishes immediately when not emitting, or absorbs upstream termination while remaining elements are emitted.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to finish or absorb termination.</param>
+        /// <returns>The termination directive selected for the current state.</returns>
         public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
         {
             return _isEmitting
@@ -309,22 +309,22 @@ namespace Akka.Streams.Stage
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
         /// element downstream.
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="enumerator">The elements to emit in order.</param>
+        /// <param name="context">The context used to emit elements and request more input.</param>
+        /// <returns>The directive that starts or continues emission.</returns>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, _current);
 
         /// <summary>
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
         /// element downstream and after that change behavior.
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <param name="nextState">TBD</param>
+        /// <param name="enumerator">The elements to emit in order.</param>
+        /// <param name="context">The context used to emit elements and request more input.</param>
+        /// <param name="nextState">The state to activate after all elements are emitted.</param>
         /// <exception cref="IllegalStateException">
-        /// This exception is thrown when either currently in the emitting state or the specified <paramref name="enumerator"/> is empty.
+        /// This exception is thrown when this stage is already emitting.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The directive that starts emission, or pulls upstream when the enumerator is empty.</returns>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context, StageState<TIn, TOut> nextState)
         {
             if (_isEmitting) throw new IllegalStateException("Already in emitting state");
@@ -352,12 +352,9 @@ namespace Akka.Streams.Stage
         /// <see cref="AbstractStage{TIn,TOut}.OnUpstreamFailure"/> the failure will be absorbed and the stream will be completed
         /// successfully.
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <exception cref="IllegalStateException">
-        /// This exception is thrown when the specified <paramref name="enumerator"/> is empty.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="enumerator">The final elements to emit in order.</param>
+        /// <param name="context">The context used to absorb termination and emit the final elements.</param>
+        /// <returns>The directive that starts or continues final emission, or finishes if no elements remain.</returns>
         public ISyncDirective TerminationEmit(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if (!enumerator.MoveNext())
@@ -375,12 +372,12 @@ namespace Akka.Streams.Stage
         /// Can be used from <see cref="StageState{TIn,TOut}.OnPush"/> or <see cref="StageState{TIn,TOut}.OnPull"/> to push more than one
         /// element downstream and after that finish (complete downstream, cancel upstreams).
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="enumerator">The elements to emit in order before finishing.</param>
+        /// <param name="context">The context used to emit elements and finish the stage.</param>
         /// <exception cref="IllegalStateException">
-        /// This exception is thrown when either currently in the emitting state or the specified <paramref name="enumerator"/> is empty.
+        /// This exception is thrown when this stage is already emitting.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The directive that starts emission or finishes after the final element.</returns>
         public ISyncDirective EmitAndFinish(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if(_isEmitting)
@@ -435,10 +432,10 @@ namespace Akka.Streams.Stage
     }
 
     /// <summary>
-    /// TBD
+    /// Internal state used while a <see cref="StatefulStage{TIn,TOut}"/> emits multiple elements.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     internal sealed class EmittingState<TIn, TOut> : StageState<TIn, TOut>
     {
         private readonly IEnumerator<TOut> _enumerator;
@@ -446,11 +443,11 @@ namespace Akka.Streams.Stage
         private readonly StatefulStage.IAndThen _andThen;
 
         /// <summary>
-        /// TBD
+        /// Creates an emitting state from an enumerator and a callback for downstream demand.
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <param name="andThen">TBD</param>
-        /// <param name="onPull">TBD</param>
+        /// <param name="enumerator">The remaining elements to emit.</param>
+        /// <param name="andThen">The action to apply after emission completes.</param>
+        /// <param name="onPull">The callback invoked when downstream requests another element.</param>
         public EmittingState(IEnumerator<TOut> enumerator, StatefulStage.IAndThen andThen, Func<IContext<TOut>, ISyncDirective> onPull)
         {
             _enumerator = enumerator;
@@ -459,36 +456,36 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// This implementation does not provide a downstream-pull callback.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context for the downstream-pull callback.</param>
+        /// <exception cref="NotImplementedException">This internal state has no pull implementation.</exception>
+        /// <returns>No directive; this method always throws.</returns>
         public override ISyncDirective OnPull(IContext<TOut> context)
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// TBD
+        /// This internal emitting state does not accept upstream elements.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The context for the upstream-push callback.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when currently in the emitting state.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>No directive; this method always throws.</returns>
         public override ISyncDirective OnPush(TIn element, IContext<TOut> context)
         {
             throw new IllegalStateException("OnPush is not allowed in emitting state");
         }
 
         /// <summary>
-        /// TBD
+        /// This implementation does not provide a copy operation for the enumerator.
         /// </summary>
-        /// <param name="enumerator">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="enumerator">The enumerator to copy into a new state.</param>
+        /// <exception cref="NotImplementedException">This internal state has no copy implementation.</exception>
+        /// <returns>No state; this method always throws.</returns>
         public StageState<TIn, TOut> Copy(IEnumerator<TOut> enumerator)
         {
             throw new NotImplementedException();
