@@ -174,11 +174,11 @@ namespace Akka.Cluster
         internal static class Timestamp
         {
             /// <summary>
-            /// TBD
+            /// The initial timestamp used when a node has no entry in the vector clock.
             /// </summary>
             public static readonly long Zero = 0L;
             /// <summary>
-            /// TBD
+            /// Sentinel timestamp used when comparing a node absent from one clock.
             /// </summary>
             public static readonly long EndMarker = long.MinValue;
         }
@@ -206,7 +206,7 @@ namespace Akka.Cluster
             Concurrent,
             //TODO: Ideally this would be private, change to override of compare?
             /// <summary>
-            /// TBD
+            /// Requests a complete comparison rather than stopping once a particular ordering is established.
             /// </summary>
             FullOrder
         }
@@ -435,7 +435,7 @@ namespace Akka.Cluster
         /// </ol>
         /// </summary>
         /// <param name="that">The vector clock used to compare against.</param>
-        /// <returns>TBD</returns>
+        /// <returns>The relation of this clock to <paramref name="that"/>: before, after, same, or concurrent.</returns>
         public Ordering CompareTo(VectorClock that)
         {
             return CompareOnlyTo(that, Ordering.FullOrder);
@@ -483,4 +483,3 @@ namespace Akka.Cluster
         }
     }
 }
-

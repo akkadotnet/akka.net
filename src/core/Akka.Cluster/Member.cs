@@ -25,34 +25,34 @@ namespace Akka.Cluster
     public class Member : IComparable<Member>, IComparable
     {
         /// <summary>
-        /// TBD
+        /// Creates a member in the Joining status with the supplied identity, roles, and application version.
         /// </summary>
-        /// <param name="uniqueAddress">TBD</param>
-        /// <param name="roles">TBD</param>
+        /// <param name="uniqueAddress">The address and incarnation identifier of the member.</param>
+        /// <param name="roles">The roles assigned to the member.</param>
         /// <param name="appVersion">Application version</param>
-        /// <returns>TBD</returns>
+        /// <returns>A member in the Joining status with no assigned up number.</returns>
         internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles, appVersion);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a removed-status member tombstone for the specified node.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The unique address of the removed node.</param>
+        /// <returns>A removed member with no roles and the zero application version.</returns>
         internal static Member Removed(UniqueAddress node)
         {
             return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>(), Util.AppVersion.Zero);
         }
 
         /// <summary>
-        /// TBD
+        /// The address and incarnation identifier of this member.
         /// </summary>
         public UniqueAddress UniqueAddress { get; }
 
         /// <summary>
-        /// TBD
+        /// The member's cluster up number, or <see cref="int.MaxValue"/> for internal joining or removed entries.
         /// </summary>
         internal int UpNumber { get; }
 
@@ -184,7 +184,7 @@ namespace Akka.Cluster
         /// Creates a copy of this member with the status provided.
         /// </summary>
         /// <param name="status">The new status of this member.</param>
-        /// <exception cref="InvalidOperationException">TBD</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the requested status transition is not allowed.</exception>
         /// <returns>A new copy of this member with the provided status.</returns>
         public Member Copy(MemberStatus status)
         {
@@ -525,10 +525,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Compares this unique address to another by address, then by incarnation identifier when addresses match.
         /// </summary>
-        /// <param name="uniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="uniqueAddress">The unique address to compare with.</param>
+        /// <returns>A value less than zero, zero, or greater than zero according to the comparison order.</returns>
         public int CompareTo(UniqueAddress uniqueAddress) => CompareTo(uniqueAddress, Address.Comparer);
 
         int IComparable.CompareTo(object obj)
@@ -576,4 +576,3 @@ namespace Akka.Cluster
         #endregion
     }
 }
-

@@ -13,18 +13,18 @@ using Akka.Configuration;
 namespace Akka.Cluster
 {
     /// <summary>
-    /// TBD
+    /// Internal helpers for cluster collection and configuration operations.
     /// </summary>
     static class Utils
     {
         //TODO: Tests
         /// <summary>
-        /// TBD
+        /// Returns the smallest element according to the supplied comparer.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="source">TBD</param>
-        /// <param name="comparer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="source">The sequence to inspect.</param>
+        /// <param name="comparer">The comparer used to order elements.</param>
+        /// <returns>The first element with the smallest compared value.</returns>
         public static T Min<T>(this IEnumerable<T> source,
             IComparer<T> comparer)
         {
@@ -48,13 +48,13 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the source element whose selected key compares greatest using the default key comparer.
         /// </summary>
-        /// <typeparam name="TSource">TBD</typeparam>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <param name="source">TBD</param>
-        /// <param name="selector">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TSource">The source element type.</typeparam>
+        /// <typeparam name="TKey">The key type produced by the selector.</typeparam>
+        /// <param name="source">The sequence to inspect.</param>
+        /// <param name="selector">A function that selects a key from each element.</param>
+        /// <returns>The first source element whose selected key is greatest.</returns>
         public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> selector)
         {
@@ -63,14 +63,14 @@ namespace Akka.Cluster
 
         //TODO: Test
         /// <summary>
-        /// TBD
+        /// Returns the source element whose selected key compares greatest using the supplied comparer.
         /// </summary>
-        /// <typeparam name="TSource">TBD</typeparam>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <param name="source">TBD</param>
-        /// <param name="selector">TBD</param>
-        /// <param name="comparer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TSource">The source element type.</typeparam>
+        /// <typeparam name="TKey">The key type produced by the selector.</typeparam>
+        /// <param name="source">The sequence to inspect.</param>
+        /// <param name="selector">A function that selects a key from each element.</param>
+        /// <param name="comparer">The comparer used to order selected keys.</param>
+        /// <returns>The first source element whose selected key is greatest.</returns>
         public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> selector, IComparer<TKey> comparer)
         {
@@ -101,11 +101,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Reads an optional time span, treating the configured values <c>off</c>, <c>false</c>, and <c>no</c> as disabled.
         /// </summary>
-        /// <param name="this">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="this">The configuration containing the setting.</param>
+        /// <param name="key">The path of the time-span setting.</param>
+        /// <returns><c>null</c> when the value is disabled or absent; otherwise, the parsed time span.</returns>
         public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
         {
             TimeSpan? ret = null;
@@ -118,12 +118,12 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Splits a sorted set into elements for which the predicate returns true and false.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="this">TBD</param>
-        /// <param name="partitioner">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="this">The sorted set to partition.</param>
+        /// <param name="partitioner">The predicate that selects the first result set.</param>
+        /// <returns>A pair containing matching elements first and nonmatching elements second.</returns>
         public static (ImmutableSortedSet<T>, ImmutableSortedSet<T>) Partition<T>(this ImmutableSortedSet<T> @this,
             Func<T, bool> partitioner)
         {
@@ -139,4 +139,3 @@ namespace Akka.Cluster
         }
     }
 }
-
