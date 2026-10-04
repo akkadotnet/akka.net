@@ -78,11 +78,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Handles control messages that can be answered without a live actor, and publishes other messages as dead letters.
+        /// Handles supported control messages and suppressed messages without a live actor.
         /// </summary>
         /// <param name="message">The message to handle.</param>
         /// <param name="sender">The sender that should receive an identity response, when applicable.</param>
-        /// <returns><c>true</c> if the message was handled; otherwise, <c>false</c> so the caller can publish it as a dead letter.</returns>
+        /// <returns><c>true</c> if the message was handled or suppressed; otherwise, <c>false</c>. <see cref="TellInternal"/> publishes an unhandled user message as a dead letter, while <see cref="SendSystemMessage"/> ignores an unhandled system message.</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             if (message is Watch watch)

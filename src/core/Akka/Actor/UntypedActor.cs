@@ -17,10 +17,11 @@ namespace Akka.Actor
     public abstract class UntypedActor : ActorBase
     {
         /// <summary>
-        /// Routes every message to <see cref="OnReceive"/> and treats it as handled.
+        /// Routes every message to <see cref="OnReceive"/> and reports it as handled.
+        /// Derived actors that need to report unhandled messages must call <see cref="ActorBase.Unhandled"/> themselves.
         /// </summary>
         /// <param name="message">The message received by the actor.</param>
-        /// <returns>Always <c>true</c>, because <see cref="OnReceive"/> handles dispatch and unhandled-message reporting.</returns>
+        /// <returns>Always <c>true</c>, regardless of whether <see cref="OnReceive"/> processes the message.</returns>
         protected sealed override bool Receive(object message)
         {
             OnReceive(message);

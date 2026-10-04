@@ -280,16 +280,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Preserves the actor's self reference while its context is being cleared during actor shutdown.
+        /// Sets the fallback value returned by <see cref="Self"/> after the actor context has been cleared.
         /// </summary>
-        /// <param name="self">The actor reference to expose as <see cref="Self"/> after clearing.</param>
+        /// <param name="self">The fallback actor reference, usually dead letters.</param>
         internal void Clear(IActorRef self)
         {
             _clearedSelf = self;
         }
 
         /// <summary>
-        /// Clears the self reference preserved by <see cref="Clear"/>.
+        /// Removes the fallback reference so <see cref="Self"/> again reads from the active actor context.
         /// </summary>
         internal void Unclear()
         {
