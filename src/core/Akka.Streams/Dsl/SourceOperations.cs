@@ -1485,12 +1485,14 @@ namespace Akka.Streams.Dsl
         /// If the time between two processed elements exceed the provided timeout, the stream is failed
         /// with a <see cref="TimeoutException"/>. 
         /// The timeout is checked periodically, so the resolution of the check is one period (equals to timeout value).
+        /// The initial timeout interval starts when the stage is materialized, so the stream can fail before its first element;
+        /// each processed element starts a new interval.
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when upstream completes or fails if timeout elapses between two emitted elements
+        /// Completes when upstream completes or fails if the timeout elapses before the first element or between processed elements.
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
@@ -1507,12 +1509,14 @@ namespace Akka.Streams.Dsl
         /// If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
         /// the stream is failed with a <see cref="TimeoutException"/>. The timeout is checked periodically,
         /// so the resolution of the check is one period (equals to timeout value).
+        /// The initial interval starts when the stage is materialized, so it can fail before an element is emitted if no downstream
+        /// demand arrives; after each emission, a new interval waits for the next downstream demand.
         /// <para>
         /// Emits when upstream emits an element
         /// </para>
         /// Backpressures when downstream backpressures
         /// <para>
-        /// Completes when upstream completes or fails if timeout elapses between element emission and downstream demand.
+        /// Completes when upstream completes or fails if the timeout elapses while waiting for initial or subsequent downstream demand.
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
