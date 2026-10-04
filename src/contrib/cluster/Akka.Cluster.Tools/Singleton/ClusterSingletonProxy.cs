@@ -40,12 +40,12 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonProxy : ReceiveActor, IWithTimers
     {
         /// <summary>
-        /// TBD
+        /// Internal timer message that causes the proxy to retry identifying the singleton.
         /// </summary>
         internal sealed class TryToIdentifySingleton : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// The singleton identification retry timer message.
             /// </summary>
             public static TryToIdentifySingleton Instance { get; } = new();
             private TryToIdentifySingleton() { }
@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tools.Singleton
         internal sealed class IdentifySingletonTimeOutTick : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// The timer message used to publish a missing-singleton identification timeout.
             /// </summary>
             public static IdentifySingletonTimeOutTick Instance { get; } = new();
             private IdentifySingletonTimeOutTick() { }
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default HOCON configuration for cluster singleton managers and proxies.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSingletonManager>("Akka.Cluster.Tools.Singleton.reference.conf");
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// which ends with the name you defined in `actorOf` when creating the <see cref="ClusterSingletonManager"/>.
         /// </param>
         /// <param name="settings">Cluster singleton proxy settings.</param>
-        /// <returns>TBD</returns>
+        /// <returns>Props for creating a local proxy that routes messages to the configured cluster singleton.</returns>
         public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings))
@@ -130,10 +130,10 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _isIdentifying;
 
         /// <summary>
-        /// TBD
+        /// Creates a proxy that tracks eligible cluster members and routes messages to the singleton on the oldest member.
         /// </summary>
-        /// <param name="singletonManagerPath">TBD</param>
-        /// <param name="settings">TBD</param>
+        /// <param name="singletonManagerPath">The actor path of the singleton manager, without the singleton child name.</param>
+        /// <param name="settings">The settings that identify the singleton and control member selection, retries, and buffering.</param>
         public ClusterSingletonProxy(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
             _settings = settings;
@@ -231,7 +231,7 @@ namespace Akka.Cluster.Tools.Singleton
         private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Subscribes to cluster membership events and starts the singleton identification timeout when the proxy starts.
         /// </summary>
         protected override void PreStart()
         {
@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels identification timers and unsubscribes from cluster membership events when the proxy stops.
         /// </summary>
         protected override void PostStop()
         {

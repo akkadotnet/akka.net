@@ -129,7 +129,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// When set to false, singleton instance will always be created on oldest member.
         /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
         /// </param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="singletonName"/> is null, empty, or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="removalMargin"/> is negative or <paramref name="handOverRetryInterval"/> is zero or negative.</exception>
         public ClusterSingletonManagerSettings(
             string singletonName,
             string role,
@@ -168,7 +169,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// When set to false, singleton instance will always be created on oldest member.
         /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
         /// </param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="singletonName"/> is null, empty, or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="removalMargin"/> is negative or <paramref name="handOverRetryInterval"/> is zero or negative.</exception>
         public ClusterSingletonManagerSettings(
             string singletonName,
             string role,
@@ -197,8 +199,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton name.
         /// </summary>
-        /// <param name="singletonName">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="singletonName">The actor name to use for the child singleton actor.</param>
+        /// <returns>A copy of these settings with the specified singleton actor name.</returns>
         public ClusterSingletonManagerSettings WithSingletonName(string singletonName)
         {
             return Copy(singletonName: singletonName);
@@ -207,8 +209,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton role.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="role">The cluster role whose members may host the singleton, or null/empty to allow any member.</param>
+        /// <returns>A copy of these settings with the specified role.</returns>
         public ClusterSingletonManagerSettings WithRole(string role)
         {
             return Copy(role: RoleOption(role));
@@ -217,8 +219,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton removal margin.
         /// </summary>
-        /// <param name="removalMargin">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removalMargin">The delay after removal of an old member before creating the singleton on the surviving oldest member.</param>
+        /// <returns>A copy of these settings with the specified removal margin.</returns>
         public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
         {
             return Copy(removalMargin: removalMargin);
@@ -227,8 +229,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton removal margin hand-over retry interval.
         /// </summary>
-        /// <param name="handOverRetryInterval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handOverRetryInterval">The interval between retries while requesting hand-over from the previous oldest member.</param>
+        /// <returns>A copy of these settings with the specified hand-over retry interval.</returns>
         public ClusterSingletonManagerSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval)
         {
             return Copy(handOverRetryInterval: handOverRetryInterval);
@@ -237,8 +239,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Create a singleton manager with specified singleton lease settings.
         /// </summary>
-        /// <param name="leaseSettings">TBD</param>
-        /// <returns></returns>
+        /// <param name="leaseSettings">The lease settings used to acquire a lease before starting the singleton, or null to clear the lease settings.</param>
+        /// <returns>A copy of these settings with the specified lease settings.</returns>
         public ClusterSingletonManagerSettings WithLeaseSettings(LeaseUsageSettings leaseSettings)
         {
             return Copy(leaseSettings: leaseSettings);
