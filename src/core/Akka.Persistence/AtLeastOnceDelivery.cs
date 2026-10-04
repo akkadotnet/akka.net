@@ -55,7 +55,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="AtLeastOnceDeliveryActor"/> class.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">At-least-once delivery settings to use.</param>
         protected AtLeastOnceDeliveryActor(PersistenceSettings.AtLeastOnceDeliverySettings settings)
         {
             _atLeastOnceDeliverySemantic = new AtLeastOnceDeliverySemantic(Context, settings);
@@ -140,11 +140,11 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Processes delivery confirmations and warnings before passing the message to the actor receive handler.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">Actor receive handler for the message.</param>
+        /// <param name="message">Message received by the actor.</param>
+        /// <returns>true if the delivery semantic handled the message or the actor receive handler handled it; otherwise, false.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             return _atLeastOnceDeliverySemantic.AroundReceive(receive, message) || base.AroundReceive(receive, message);
@@ -165,8 +165,8 @@ namespace Akka.Persistence
         /// During recovery this method will not send out the message, but it will be sent later if no matching 
         /// <see cref="ConfirmDelivery" /> was performed.
         /// </summary>
-        /// <param name="destination">TBD</param>
-        /// <param name="deliveryMessageMapper">TBD</param>
+        /// <param name="destination">Actor path to which the message will be delivered.</param>
+        /// <param name="deliveryMessageMapper">Function that creates the message to send from its delivery identifier.</param>
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
         /// </exception>
@@ -190,12 +190,12 @@ namespace Akka.Persistence
         /// During recovery this method will not send out the message, but it will be sent later if no matching 
         /// <see cref="ConfirmDelivery" /> was performed.
         /// </summary>
-        /// <param name="destination">TBD</param>
-        /// <param name="deliveryMessageMapper">TBD</param>
+        /// <param name="destination">Actor selection identifying the destination actor.</param>
+        /// <param name="deliveryMessageMapper">Function that creates the message to send from its delivery identifier.</param>
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount" /> is greater than or equal to <see cref="MaxUnconfirmedMessages" />.
         /// </exception>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Thrown when <paramref name="destination"/> contains a wildcard path.</exception>
         public void Deliver(ActorSelection destination, Func<long, object> deliveryMessageMapper)
         {
             var isWildcardSelection = destination.PathString.Contains('*');
@@ -211,7 +211,7 @@ namespace Akka.Persistence
         /// Call this method when a message has been confirmed by the destination,
         /// or to abort re-sending.
         /// </summary>
-        /// <param name="deliveryId">TBD</param>
+        /// <param name="deliveryId">Identifier of the delivery being confirmed.</param>
         /// <returns>True the first time the <paramref name="deliveryId"/> is confirmed, false for duplicate confirmations.</returns>
         public bool ConfirmDelivery(long deliveryId)
         {
@@ -230,7 +230,7 @@ namespace Akka.Persistence
         /// It is easiest to include the bytes of the <see cref="AtLeastOnceDeliverySnapshot"/>
         /// as a blob in your custom snapshot.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Snapshot containing the current delivery identifier and all unconfirmed deliveries.</returns>
         public AtLeastOnceDeliverySnapshot GetDeliverySnapshot()
         {
             return _atLeastOnceDeliverySemantic.GetDeliverySnapshot();
@@ -240,7 +240,7 @@ namespace Akka.Persistence
         /// If snapshot from <see cref="GetDeliverySnapshot" /> was saved it will be received during recovery
         /// phase in a <see cref="SnapshotOffer" /> message and should be set with this method.
         /// </summary>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="snapshot">Delivery state snapshot to restore.</param>
         public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _atLeastOnceDeliverySemantic.SetDeliverySnapshot(snapshot);
