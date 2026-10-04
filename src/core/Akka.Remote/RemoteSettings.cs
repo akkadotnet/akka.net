@@ -88,52 +88,52 @@ namespace Akka.Remote
         public static readonly string AkkaScheme = "akka";
 
         /// <summary>
-        /// TBD
+        /// Gets the HOCON configuration used to construct these remoting settings.
         /// </summary>
         public Config Config { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets actor selection paths allowed while untrusted mode is enabled.
         /// </summary>
         public HashSet<string> TrustedSelectionPaths { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets whether incoming messages are subject to untrusted-mode filtering.
         /// </summary>
         public bool UntrustedMode { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets whether sent remote messages are logged.
         /// </summary>
         public bool LogSend { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets whether received remote messages are logged.
         /// </summary>
         public bool LogReceive { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the endpoint writer buffer size above which a warning is logged.
         /// </summary>
         public int LogBufferSizeExceeding { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the log level used for remoting lifecycle events.
         /// </summary>
         public string RemoteLifecycleEventsLogLevel { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the dispatcher ID used by remoting actors when configured.
         /// </summary>
         public string Dispatcher { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the timeout for graceful remoting shutdown.
         /// </summary>
         public TimeSpan ShutdownTimeout { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets how long endpoint writers wait to flush messages during shutdown.
         /// </summary>
         public TimeSpan FlushWait { get; set; }
 
@@ -147,7 +147,7 @@ namespace Akka.Remote
         public IList<string> TransportNames { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the configuration for classic transport adapters.
         /// </summary>
         public IDictionary<string, string> Adapters { get; set; }
 
@@ -158,72 +158,72 @@ namespace Akka.Remote
         /// </summary>
         public TransportSettings[] Transports { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the backoff interval used when retrying transport operations.
         /// </summary>
         public TimeSpan BackoffPeriod { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets how long a failed remote address remains gated before another connection attempt is allowed.
         /// </summary>
         public TimeSpan RetryGateClosedFor { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets whether an inbound connection may also be used for outbound writes when no writable endpoint exists.
         /// </summary>
         public bool UsePassiveConnections { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the maximum number of unacknowledged system messages retained for an endpoint.
         /// </summary>
         public int SysMsgBufferSize { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the maximum number of buffered system messages sent in one resend attempt.
         /// </summary>
         public int SysResendLimit { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the interval between retries for unacknowledged system messages.
         /// </summary>
         public TimeSpan SysResendTimeout { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the period allowed to deliver pending system messages before the association is abandoned.
         /// </summary>
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets how long an endpoint may remain without system-message activity before it is quarantined.
         /// </summary>
         public TimeSpan QuarantineSilentSystemTimeout { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the timeout used to decide when to send a standalone acknowledgement for system messages.
         /// </summary>
         public TimeSpan SysMsgAckTimeout { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets how long quarantine markers are retained before they are pruned; <c>null</c> disables pruning.
         /// </summary>
         public TimeSpan? QuarantineDuration { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets how long remoting startup waits for its transport to become available.
         /// </summary>
         public TimeSpan StartupTimeout { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the timeout for transport management command acknowledgements.
         /// </summary>
         public TimeSpan CommandAckTimeout { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the configuration for the failure detector used by remote death watch.
         /// </summary>
         public Config WatchFailureDetectorConfig { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the configured failure detector implementation class name for remote death watch.
         /// </summary>
         public string WatchFailureDetectorImplementationClass { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the interval at which the remote watcher sends heartbeats.
         /// </summary>
         public TimeSpan WatchHeartBeatInterval { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets how often the remote watcher checks for unreachable nodes.
         /// </summary>
         public TimeSpan WatchUnreachableReaperInterval { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the expected response delay used by the remote watch failure detector.
         /// </summary>
         public TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
 
@@ -233,10 +233,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Applies the configured remoting dispatcher to actor properties when one is set.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="props">The actor properties to configure.</param>
+        /// <returns>The properties with the configured dispatcher, or the original properties when no dispatcher is configured.</returns>
         public Props ConfigureDispatcher(Props props)
         {
             return String.IsNullOrEmpty(Dispatcher) 
@@ -245,14 +245,14 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Configuration for one enabled classic remoting transport.
         /// </summary>
         public class TransportSettings
         {
             /// <summary>
-            /// TBD
+            /// Creates transport settings from a transport configuration block.
             /// </summary>
-            /// <param name="config">TBD</param>
+            /// <param name="config">The HOCON configuration for the transport and its adapters.</param>
             public TransportSettings(Config config)
             {
                 if (config.IsNullOrEmpty())
@@ -264,17 +264,17 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets or sets the HOCON configuration for this transport.
             /// </summary>
             public Config Config { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Gets or sets the configured adapter names for this transport.
             /// </summary>
             public IList<string> Adapters { get; set; }
 
             /// <summary>
-            /// TBD
+            /// Gets or sets the fully qualified type name of the transport implementation.
             /// </summary>
             public string TransportClass { get; set; }
         }
