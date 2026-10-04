@@ -30,7 +30,7 @@ namespace Akka.Streams.Dsl
     public static class MergeHub
     {
         /// <summary>
-        /// TBD
+        /// Internal signal used by MergeHub to tell a producer that the hub is closed.
         /// </summary>
         internal const int Cancel = -1;
 
@@ -46,9 +46,9 @@ namespace Akka.Streams.Dsl
         /// elements). Completed <see cref="Sink{TIn,TMat}"/>s are simply removed. Once the <see cref="Source{TOut,TMat}"/> is cancelled, the Hub is considered closed
         /// and any new producers using the <see cref="Sink{TIn,TMat}"/> will be cancelled.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The type of elements merged by the hub.</typeparam>
         /// <param name="perProducerBufferSize">Buffer space used per producer. Default value is 16.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A source that emits merged elements and materializes to a sink for adding producers.</returns>
         public static Source<T, Sink<T, NotUsed>> Source<T>(int perProducerBufferSize)
             => Dsl.Source.FromGraph(new MergeHub<T>(perProducerBufferSize));
 
@@ -64,12 +64,12 @@ namespace Akka.Streams.Dsl
         /// elements). Completed <see cref="Sink{TIn,TMat}"/>s are simply removed. Once the <see cref="Source{TOut,TMat}"/> is cancelled, the Hub is considered closed
         /// and any new producers using the <see cref="Sink{TIn,TMat}"/> will be cancelled.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements merged by the hub.</typeparam>
+        /// <returns>A source that emits merged elements and materializes to a sink for adding producers, using a per-producer buffer size of 16.</returns>
         public static Source<T, Sink<T, NotUsed>> Source<T>() => Source<T>(16);
 
         /// <summary>
-        /// TBD
+        /// Wraps a failure from one of the MergeHub producer sinks.
         /// </summary>
         public sealed class ProducerFailed : Exception
         {
@@ -437,9 +437,9 @@ namespace Akka.Streams.Dsl
         private readonly int _perProducerBufferSize;
 
         /// <summary>
-        /// TBD
+        /// Creates a merge hub with a bounded buffer for each producer.
         /// </summary>
-        /// <param name="perProducerBufferSize">TBD</param>
+        /// <param name="perProducerBufferSize">The number of elements buffered per producer before demand is replenished.</param>
         /// <exception cref="ArgumentOutOfRangeException">
         /// This exception is thrown when the specified <paramref name="perProducerBufferSize"/>is less than or equal to zero.
         /// </exception>
@@ -459,20 +459,20 @@ namespace Akka.Streams.Dsl
         private int DemandThreshold { get; }
 
         /// <summary>
-        /// TBD
+        /// The output port that emits elements from registered producers.
         /// </summary>
         public Outlet<T> Out { get; } = new("MergeHub.out");
 
         /// <summary>
-        /// TBD
+        /// The source port of this merge hub.
         /// </summary>
         public override SourceShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the hub logic and its materialized producer sink.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited from the enclosing graph.</param>
+        /// <returns>The hub logic and a sink that registers producers with this hub.</returns>
         public override ILogicAndMaterializedValue<Sink<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var idCounter = new AtomicCounterLong();
@@ -508,13 +508,13 @@ namespace Akka.Streams.Dsl
         /// materializations of the <see cref="Source{TOut,TMat}"/> will see the same (failure or completion) state. <see cref="Source{TOut,TMat}"/>s that are
         /// cancelled are simply removed from the dynamic set of consumers.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The type of elements broadcast to consumers.</typeparam>
         /// <param name="bufferSize">
         /// Buffer size used by the producer. Gives an upper bound on how "far" from each other two
         /// concurrent consumers can be in terms of element. If this buffer is full, the producer
         /// is backpressured. Must be a power of two and less than 4096.
         /// </param>
-        /// <returns>TBD</returns>
+        /// <returns>A sink that broadcasts incoming elements and materializes to a source for adding consumers.</returns>
         public static Sink<T, Source<T, NotUsed>> Sink<T>(int bufferSize)
             => Dsl.Sink.FromGraph(new BroadcastHub<T>(bufferSize));
 
@@ -565,8 +565,8 @@ namespace Akka.Streams.Dsl
         /// materializations of the <see cref="Source{TOut,TMat}"/> will see the same (failure or completion) state. <see cref="Source{TOut,TMat}"/>s that are
         /// cancelled are simply removed from the dynamic set of consumers.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements broadcast to consumers.</typeparam>
+        /// <returns>A sink that broadcasts incoming elements and materializes to a source for adding consumers, using a buffer size of 256.</returns>
         public static Sink<T, Source<T, NotUsed>> Sink<T>() => Sink<T>(256);
     }
 
@@ -931,7 +931,7 @@ namespace Akka.Streams.Dsl
             /// Send a wakeup signal to all the Consumers at a certain wheel index. Note, this needs the actual index,
             /// which is offset modulo (bufferSize + 1).
             /// </summary>
-            /// <param name="index">TBD</param>
+            /// <param name="index">The consumer-wheel slot whose waiting consumers should be notified.</param>
             private void WakeupIndex(int index)
             {
                 var consumers = _consumerWheel[index];
@@ -1222,15 +1222,15 @@ namespace Akka.Streams.Dsl
         private Inlet<T> In { get; } = new("BroadcastHub.in");
 
         /// <summary>
-        /// TBD
+        /// The sink shape that accepts elements to broadcast to consumers.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the broadcast hub logic and its materialized consumer source.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited from the enclosing graph.</param>
+        /// <returns>The hub logic and a source that attaches consumers to this hub.</returns>
         public override ILogicAndMaterializedValue<Source<T, NotUsed>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var idCounter = new AtomicCounterLong();
