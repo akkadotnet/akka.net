@@ -46,7 +46,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="partialFunc">Maps a failure to a recovery value or replacement source.</param>
+        /// <param name="partialFunc">Maps a failure to an optional recovery value; return <see cref="Option{T}.None"/> to emit no recovery element.</param>
         public static SubFlow<Option<TOut>, TMat, TClosed> Recover<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Func<Exception, Option<TOut>> partialFunc)
         {
             return (SubFlow<Option<TOut>, TMat, TClosed>)InternalFlowOperations.Recover(flow, partialFunc);
@@ -76,7 +76,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="partialFunc">Maps a failure to a recovery value or replacement source.</param>
+        /// <param name="partialFunc">Maps a failure to a replacement source graph to materialize.</param>
         [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static SubFlow<TOut, TMat, TClosed> RecoverWith<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
@@ -173,7 +173,8 @@ namespace Akka.Streams.Dsl
         /// This is a simplified version of <seealso cref="WireTap{T}"/> that takes only a simple procedure.
         /// Elements will be passed into this "side channel" delegate, and any of its results will be ignored.
         /// <para>
-        /// If the wire-tap operation is slow (it backpressures), elements that would've been sent to it will be dropped instead.
+        /// If the wire-tap operation is slow (it backpressures), the stage retains at most the latest pending tap element;
+        /// a newer element replaces the previous pending one.
         /// </para>
         /// <para>
         /// This operation is useful for inspecting the passed through element, usually by means of side-effecting
@@ -190,6 +191,7 @@ namespace Akka.Streams.Dsl
         /// <para>Backpressures when downstream backpressures</para>
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="TOut">The element type carried by the subflow.</typeparam>
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
@@ -305,7 +307,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
         /// <param name="parallelism">The maximum number of mapping tasks running at the same time.</param>
-        /// <param name="asyncMapper">Maps each input element to a task whose result is emitted downstream.</param>
+        /// <param name="asyncMapper">Maps each input element to a task. A successful, non-null result is emitted downstream; task failures, thrown exceptions, and null results follow the configured supervision strategy.</param>
         public static SubFlow<TOut, TMat, TClosed> SelectAsync<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
@@ -347,7 +349,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
         /// <param name="parallelism">The maximum number of mapping tasks running at the same time.</param>
-        /// <param name="asyncMapper">Maps each input element to a task whose result is emitted downstream.</param>
+        /// <param name="asyncMapper">Maps each input element to a task. A successful, non-null result is emitted downstream; task failures, thrown exceptions, and null results follow the configured supervision strategy.</param>
         public static SubFlow<TOut, TMat, TClosed> SelectAsyncUnordered<TIn, TOut, TMat, TClosed>(this SubFlow<TIn, TMat, TClosed> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
@@ -1452,9 +1454,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="elements">The maximum number of elements emitted per throttle interval.</param>
+        /// <param name="elements">The token refill rate, in elements per <paramref name="per"/> interval.</param>
         /// <param name="per">The time period over which the configured throttle amount applies.</param>
-        /// <param name="maximumBurst">The maximum burst of elements permitted by the throttle.</param>
+        /// <param name="maximumBurst">The token bucket capacity, measured in elements; accumulated tokens allow bursts above the nominal rate.</param>
         /// <param name="mode">The throttle mode that determines how excess demand is handled.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="elements"/> is less than or equal zero, 
         /// or <paramref name="per"/> timeout is equal <see cref="TimeSpan.Zero"/> 
@@ -1494,9 +1496,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="cost">The maximum element cost allowed per throttle interval.</param>
+        /// <param name="cost">The token refill rate, in cost units per <paramref name="per"/> interval.</param>
         /// <param name="per">The time period over which the configured throttle amount applies.</param>
-        /// <param name="maximumBurst">The maximum burst of elements permitted by the throttle.</param>
+        /// <param name="maximumBurst">The token bucket capacity in cost units. Shaping can delay an element whose cost exceeds this capacity.</param>
         /// <param name="calculateCost">Calculates the cost of each element for the throttle.</param>
         /// <param name="mode">The throttle mode that determines how excess demand is handled.</param>
         public static SubFlow<TOut, TMat, TClosed> Throttle<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, int cost, TimeSpan per, int maximumBurst, Func<TOut, int> calculateCost, ThrottleMode mode)
@@ -1512,6 +1514,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="TOut">The element type carried by the subflow.</typeparam>
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
@@ -1536,6 +1539,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="TOut">The element type carried by the subflow.</typeparam>
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
@@ -1607,9 +1611,9 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, as a wire tap, meaning that elements that pass
         /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
-        /// elements that would've been sent to it will be dropped instead.
+        /// the stage retains at most the latest pending tap element; a newer element replaces the previous pending one.
         /// </para>
-        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat,TClosed}(SubFlow{TOut, TMat, TClosed}, IGraph{SinkShape{TOut}, TMat})"/> which does backpressure instead of dropping elements.</para>
+        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat,TClosed}(SubFlow{TOut, TMat, TClosed}, IGraph{SinkShape{TOut}, TMat})"/> which backpressures instead of replacing a pending tap element.</para>
         /// <para>Emits when element is available and demand exists from the downstream; the element will also be sent to the wire-tap Sink if there is demand.</para>
         /// <para>Backpressures when downstream backpressures</para>
         /// <para>Completes when upstream completes</para>
@@ -1626,6 +1630,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="TOut">The element type carried by the subflow.</typeparam>
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
@@ -1661,13 +1666,13 @@ namespace Akka.Streams.Dsl
             (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.DivertTo(flow, that, when);
 
         ///<summary>
-        /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
-        /// The task completes with success when received complete message from upstream or cancel
-        /// from downstream. It fails with the same error when received error message from
-        /// downstream.
+        /// Materializes to <see cref="Task{Done}"/> that completes on stream termination.
+        /// The task completes with success when the stream completes normally or is canceled downstream; it faults
+        /// with the stream termination failure when the stream fails.
         ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         ///</summary>
         /// <typeparam name="TOut">The element type carried by the subflow.</typeparam>
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
@@ -1700,7 +1705,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Delays the initial element by the specified duration.
+        /// Waits for the specified initial delay before pulling from upstream; elements then pass through without a per-element delay.
         /// <para>
         /// Emits when upstream emits an element if the initial delay is already elapsed
         /// </para>
@@ -1714,7 +1719,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="delay">The delay applied to the stream elements.</param>
+        /// <param name="delay">The duration to wait before the stage begins pulling and passing elements.</param>
         public static SubFlow<TOut, TMat, TClosed> InitialDelay<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, TimeSpan delay)
         {
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.InitialDelay(flow, delay);
@@ -1841,6 +1846,7 @@ namespace Akka.Streams.Dsl
         ///
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="T1">The element type emitted by the subflow.</typeparam>
         /// <typeparam name="T2">The element type emitted by the other source.</typeparam>
@@ -1876,7 +1882,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
         /// <param name="other">The source graph to combine with this subflow.</param>
-        /// <param name="eagerComplete">If <c>true</c>, completes when either input completes; otherwise waits for all inputs.</param>
+        /// <param name="eagerComplete">If <c>true</c>, stops the other input when one completes and completes after pending elements drain; otherwise waits for both inputs.</param>
         public static SubFlow<TOut2, TMat, TClosed> Merge<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, IGraph<SourceShape<TOut2>, TMat> other, bool eagerComplete = false) where TOut1 : TOut2
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Merge(flow, other, eagerComplete);
@@ -1891,6 +1897,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// <para>The current built-in <c>SubFlowImpl</c> delegates this materialized-value operation through <c>ViaMaterialized</c>, which throws <see cref="NotImplementedException"/>. Other <see cref="SubFlow{TOut,TMat,TClosed}"/> implementations may support it.</para>
         /// </summary>
         /// <typeparam name="TOut1">The element type emitted by the input subflow.</typeparam>
         /// <typeparam name="TOut2">The element type produced by the operation.</typeparam>
@@ -2037,7 +2044,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">The materialized value type retained by the subflow.</typeparam>
         /// <typeparam name="TClosed">The type returned when this subflow is connected to a sink.</typeparam>
         /// <param name="flow">The subflow to extend with this operation.</param>
-        /// <param name="that">The sink graph attached to this subflow.</param>
+        /// <param name="that">The source graph prepended to this subflow.</param>
         public static SubFlow<TOut2, TMat, TClosed> Prepend<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow,
             IGraph<SourceShape<TOut2>, TMat> that) where TOut1 : TOut2
         {

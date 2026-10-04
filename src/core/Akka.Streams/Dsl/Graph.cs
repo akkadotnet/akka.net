@@ -131,7 +131,7 @@ namespace Akka.Streams.Dsl
         /// Initializes a new instance of the <see cref="Merge{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">The number of input ports to merge.</param>
-        /// <param name="eagerComplete">If <c>true</c>, completes after any input completes; otherwise waits for all inputs.</param>
+        /// <param name="eagerComplete">If <c>true</c>, stops the other inputs when one completes and completes after pending elements drain; otherwise waits for all inputs.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="inputPorts"/> is less than one.
         /// </exception>
@@ -205,7 +205,7 @@ namespace Akka.Streams.Dsl
         /// Initializes a new instance of the <see cref="Merge{T}"/> class.
         /// </summary>
         /// <param name="inputPorts">The number of input ports to merge.</param>
-        /// <param name="eagerComplete">If <c>true</c>, completes after any input completes; otherwise waits for all inputs.</param>
+        /// <param name="eagerComplete">If <c>true</c>, stops the other inputs when one completes and completes after pending elements drain; otherwise waits for all inputs.</param>
         public Merge(int inputPorts, bool eagerComplete = false) : base(inputPorts, eagerComplete)
         {
         }
@@ -1331,7 +1331,7 @@ namespace Akka.Streams.Dsl
         /// Initializes a new instance of the <see cref="Balance{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">The number of output ports to create.</param>
-        /// <param name="waitForAllDownstreams">If <c>true</c>, waits for each output to request an element before pulling upstream.</param>
+        /// <param name="waitForAllDownstreams">If <c>true</c>, waits for each active output to request an element before pulling upstream. An output canceled before its first request no longer blocks the initial pull.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="outputPorts"/> is less than one.
         /// </exception>
@@ -1903,7 +1903,7 @@ namespace Akka.Streams.Dsl
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.OrElse;
 
         /// <summary>
-        /// Gets the primary input, which is preferred until it emits its first element or completes.
+        /// Gets the preferred input. Its first element commits the stage to this input and cancels the secondary input; if it completes without an element, the secondary input is selected.
         /// </summary>
         public Inlet<T> Primary { get; }   = new("OrElse.primary");
 

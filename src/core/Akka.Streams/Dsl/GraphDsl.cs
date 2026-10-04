@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
             /// Connects an outlet to an inlet in the graph being built.
             /// </summary>
             /// <typeparam name="T1">The element type emitted by the outlet.</typeparam>
-            /// <typeparam name="T2">The inlet element type, which must accept values of <typeparamref name="T1"/>.</typeparam>
+            /// <typeparam name="T2">The inlet element type; this method constrains <c>T2 : T1</c>.</typeparam>
             /// <param name="from">The outlet that supplies elements.</param>
             /// <param name="to">The inlet that receives elements.</param>
             internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T2 : T1
@@ -211,7 +211,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Starts a connection from the outlet of the specified fan-in shape.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the fan-in inlets.</typeparam>
+            /// <typeparam name="TIn">The element type of the fan-in inlets.</typeparam>
             /// <typeparam name="TOut">The element type emitted by the fan-in outlet.</typeparam>
             /// <param name="fanIn">The fan-in shape whose outlet starts the connection.</param>
             /// <returns>Operations for connecting this outlet to another port or stage.</returns>
@@ -222,7 +222,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Starts a connection from the first currently unconnected outlet of a fan-out shape.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the fan-out inlet.</typeparam>
+            /// <typeparam name="TIn">The element type of the fan-out inlet.</typeparam>
             /// <typeparam name="TOut">The element type emitted by its outlets.</typeparam>
             /// <param name="fanOut">The fan-out shape whose first free outlet starts the connection.</param>
             /// <returns>Operations for connecting this outlet to another port or stage.</returns>
@@ -234,7 +234,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Selects the specified inlet as the destination of a connection.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the inlet.</typeparam>
+            /// <typeparam name="TIn">The inlet element type.</typeparam>
             /// <param name="inlet">The inlet to which elements will be connected.</param>
             /// <returns>Operations for connecting an outlet to this inlet.</returns>
             public ReverseOps<TIn, T> To<TIn>(Inlet<TIn> inlet)
@@ -244,7 +244,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Selects the inlet of the specified sink shape as the destination of a connection.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the sink.</typeparam>
+            /// <typeparam name="TIn">The sink inlet element type.</typeparam>
             /// <param name="sink">The sink shape whose inlet receives elements.</param>
             /// <returns>Operations for connecting an outlet to this inlet.</returns>
             public ReverseOps<TIn, T> To<TIn>(SinkShape<TIn> sink)
@@ -254,7 +254,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Imports a sink graph and selects its copied inlet as the destination.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the sink.</typeparam>
+            /// <typeparam name="TIn">The sink inlet element type.</typeparam>
             /// <typeparam name="TMat">The sink graph materialized value type.</typeparam>
             /// <param name="sink">The sink graph to add to this builder.</param>
             /// <returns>Operations for connecting an outlet to the imported inlet.</returns>
@@ -288,7 +288,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Selects the inlet of the specified fan-out shape as the destination.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the fan-out inlet.</typeparam>
+            /// <typeparam name="TIn">The fan-out inlet element type.</typeparam>
             /// <typeparam name="TOut">The element type emitted by the fan-out outlets.</typeparam>
             /// <param name="fanOut">The fan-out shape whose inlet receives elements.</param>
             /// <returns>Operations for connecting an outlet to this inlet.</returns>
@@ -297,12 +297,13 @@ namespace Akka.Streams.Dsl
                 return new ReverseOps<TIn, T>(this, fanOut.In);
             }
             /// <summary>
-            /// Selects the first currently unconnected inlet of a fan-in shape as the destination.
+            /// Selects the first unconnected indexed inlet of a fan-in shape as the destination. Extra ports such as
+            /// the separate <c>MergePreferred.Preferred</c> inlet must be connected explicitly.
             /// </summary>
-            /// <typeparam name="TIn">The element type accepted by the fan-in inlets.</typeparam>
+            /// <typeparam name="TIn">The fan-in inlet element type.</typeparam>
             /// <typeparam name="TOut">The element type emitted by the fan-in outlet.</typeparam>
-            /// <param name="fanOut">The fan-in shape whose first free inlet receives elements.</param>
-            /// <returns>Operations for connecting an outlet to this inlet.</returns>
+            /// <param name="fanOut">The fan-in shape whose first free indexed inlet receives elements.</param>
+            /// <returns>Operations for connecting an outlet to the selected indexed inlet.</returns>
             public ReverseOps<TIn, T> To<TIn, TOut>(UniformFanInShape<TIn, TOut> fanOut)
             {
                 return new ReverseOps<TIn, T>(this, FindIn(this, fanOut, 0));
@@ -392,7 +393,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Finds the first unconnected inlet at or after the supplied index on a fan-in junction.
+        /// Finds the first unconnected indexed inlet at or after the supplied index on a fan-in junction. Extra ports
+        /// such as the separate <c>MergePreferred.Preferred</c> inlet are not addressable through this helper and must
+        /// be connected explicitly. On such shapes, an index beyond the indexed ports can fail during lookup.
         /// </summary>
         /// <typeparam name="TIn">The element type accepted by the fan-in inlets.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the fan-in outlet.</typeparam>
@@ -400,8 +403,7 @@ namespace Akka.Streams.Dsl
         /// <param name="builder">The builder whose existing connections determine which inlet is free.</param>
         /// <param name="junction">The fan-in junction to inspect.</param>
         /// <param name="n">The first inlet index to inspect.</param>
-        /// <exception cref="ArgumentException">No unconnected inlet exists at or after <paramref name="n"/>.</exception>
-        /// <returns>The first inlet at or after <paramref name="n"/> that has no upstream connection.</returns>
+        /// <returns>The first indexed inlet at or after <paramref name="n"/> that has no upstream connection.</returns>
         internal static Inlet<TIn> FindIn<TIn, TOut, T>(Builder<T> builder, UniformFanInShape<TIn, TOut> junction, int n)
         {
             var count = junction.Inlets.Count();
@@ -424,7 +426,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to an inlet.
         /// </summary>
-        /// <typeparam name="TIn">The inlet's accepted element type, which must accept <typeparamref name="TOut"/>.</typeparam>
+        /// <typeparam name="TIn">The inlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current outlet and its graph builder.</param>
@@ -440,7 +442,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to a sink shape's inlet.
         /// </summary>
-        /// <typeparam name="TIn">The sink inlet's accepted element type, which must accept <typeparamref name="TOut"/>.</typeparam>
+        /// <typeparam name="TIn">The sink inlet type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current outlet and its graph builder.</param>
@@ -457,7 +459,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to a flow shape's inlet.
         /// </summary>
-        /// <typeparam name="TIn">The flow inlet's accepted element type, which must accept <typeparamref name="TOut"/>.</typeparam>
+        /// <typeparam name="TIn">The flow inlet type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current outlet and its graph builder.</param>
@@ -474,7 +476,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to an imported sink graph's copied inlet.
         /// </summary>
-        /// <typeparam name="TIn">The sink inlet's accepted element type, which must accept <typeparamref name="TOut"/>.</typeparam>
+        /// <typeparam name="TIn">The sink inlet type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <typeparam name="TMat2">The imported sink graph's materialized value type, which this operation does not retain.</typeparam>
@@ -490,14 +492,15 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Connects the current outlet to the first unconnected inlet of a fan-in junction.
+        /// Connects the current outlet to the first unconnected indexed inlet of a fan-in junction. Extra ports such as
+        /// the separate <c>MergePreferred.Preferred</c> inlet must be connected explicitly.
         /// </summary>
-        /// <typeparam name="TIn">The fan-in inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The fan-in inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the fan-in outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current outlet and its graph builder.</param>
-        /// <param name="junction">The fan-in junction whose first free inlet receives elements.</param>
+        /// <param name="junction">The fan-in junction whose first free indexed inlet receives elements.</param>
         /// <returns>The graph builder after adding the connection.</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
             where TIn : TOut1
@@ -511,7 +514,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to the inlet of a fan-out junction.
         /// </summary>
-        /// <typeparam name="TIn">The fan-out inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The fan-out inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the fan-out outlets.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
@@ -543,7 +546,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet through a flow shape and continues from its outlet.
         /// </summary>
-        /// <typeparam name="TIn">The flow inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The flow inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the flow outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
@@ -561,7 +564,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Imports a flow graph, connects the current outlet to its copied inlet, and continues from its copied outlet.
         /// </summary>
-        /// <typeparam name="TIn">The flow inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The flow inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the flow outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
@@ -578,9 +581,10 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Connects the current outlet to the first free fan-in inlet and continues from the fan-in outlet.
+        /// Connects the current outlet to the first free indexed fan-in inlet and continues from the fan-in outlet.
+        /// The separate <c>MergePreferred.Preferred</c> inlet must be connected explicitly.
         /// </summary>
-        /// <typeparam name="TIn">The fan-in inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The fan-in inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the fan-in outlet.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
@@ -597,7 +601,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the current outlet to a fan-out inlet and continues from its first free outlet.
         /// </summary>
-        /// <typeparam name="TIn">The fan-out inlet element type, which must accept <typeparamref name="TOut1"/>.</typeparam>
+        /// <typeparam name="TIn">The fan-out inlet type; this method constrains <c>TIn : TOut1</c>.</typeparam>
         /// <typeparam name="TOut1">The element type emitted by the current outlet.</typeparam>
         /// <typeparam name="TOut2">The element type emitted by the fan-out outlets.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
@@ -621,7 +625,7 @@ namespace Akka.Streams.Dsl
         /// Connects an outlet to the current inlet.
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
-        /// <typeparam name="TOut">The outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut">The outlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="outlet">The outlet to connect.</param>
@@ -638,7 +642,7 @@ namespace Akka.Streams.Dsl
         /// Connects a source shape's outlet to the current inlet.
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
-        /// <typeparam name="TOut">The source outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut">The source outlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="source">The source shape whose outlet supplies elements.</param>
@@ -655,7 +659,7 @@ namespace Akka.Streams.Dsl
         /// Imports a source graph and connects its copied outlet to the current inlet.
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
-        /// <typeparam name="TOut">The source outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut">The source outlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="source">The source graph to import; its materialized value is discarded.</param>
@@ -673,7 +677,7 @@ namespace Akka.Streams.Dsl
         /// Connects a flow shape's outlet to the current inlet.
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
-        /// <typeparam name="TOut">The flow outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut">The flow outlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="flow">The flow shape whose outlet supplies elements.</param>
@@ -687,14 +691,15 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Connects a fan-in junction's outlet to the current inlet and selects the first free fan-in inlet.
+        /// Connects a fan-in junction's outlet to the current inlet and returns the builder. Its lookup uses indexed
+        /// inlets; the separate <c>MergePreferred.Preferred</c> inlet must be connected explicitly.
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
-        /// <typeparam name="TOut">The fan-in outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut">The fan-in outlet element type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="junction">The fan-in junction whose outlet connects to the current inlet.</param>
-        /// <returns>Reverse operations targeting the first unconnected fan-in inlet.</returns>
+        /// <returns>The graph builder after connecting the fan-in outlet to the current inlet.</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
             where TIn : TOut
         {
@@ -715,7 +720,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
         /// <typeparam name="TOut1">The fan-out inlet element type.</typeparam>
-        /// <typeparam name="TOut2">The fan-out outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut2">The fan-out outlet element type; this method constrains <c>TIn : TOut2</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="junction">The fan-out junction whose first unconnected outlet supplies elements.</param>
@@ -744,7 +749,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
         /// <typeparam name="TOut1">The flow inlet element type.</typeparam>
-        /// <typeparam name="TOut2">The flow outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut2">The flow outlet element type; this method constrains <c>TIn : TOut2</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="flow">The flow shape to connect.</param>
@@ -762,7 +767,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="TIn">The current inlet element type.</typeparam>
         /// <typeparam name="TOut1">The flow inlet element type.</typeparam>
-        /// <typeparam name="TOut2">The flow outlet element type, which must be assignable to <typeparamref name="TIn"/>.</typeparam>
+        /// <typeparam name="TOut2">The flow outlet element type; this method constrains <c>TIn : TOut2</c>.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="flow">The flow graph to import; its materialized value is discarded.</param>
@@ -777,14 +782,15 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Connects the fan-in outlet to the current inlet and uses the first free fan-in inlet as the next target.
+        /// Connects the fan-in outlet to the current inlet and uses the first free indexed fan-in inlet as the next
+        /// target. The separate <c>MergePreferred.Preferred</c> inlet must be connected explicitly.
         /// </summary>
-        /// <typeparam name="TIn">The fan-in inlet element type, which must accept the current inlet type.</typeparam>
+        /// <typeparam name="TIn">The fan-in inlet type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The fan-in outlet element type.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
         /// <param name="junction">The fan-in junction to connect.</param>
-        /// <returns>Reverse operations targeting the first unconnected fan-in inlet.</returns>
+        /// <returns>Reverse operations targeting the first unconnected indexed fan-in inlet.</returns>
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
             where TIn : TOut
         {
@@ -795,7 +801,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Connects the fan-out outlet to the current inlet and selects the fan-out inlet as the next target.
         /// </summary>
-        /// <typeparam name="TIn">The fan-out inlet element type, which must accept the current inlet type.</typeparam>
+        /// <typeparam name="TIn">The fan-out inlet type; this method constrains <c>TIn : TOut</c>.</typeparam>
         /// <typeparam name="TOut">The fan-out outlet element type.</typeparam>
         /// <typeparam name="TMat">The graph builder's materialized value type.</typeparam>
         /// <param name="ops">The current inlet and its graph builder.</param>
