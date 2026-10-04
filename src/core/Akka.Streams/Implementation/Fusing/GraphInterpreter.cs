@@ -694,7 +694,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Dequeues and processes pending connection events up to the supplied limit. If queued events remain, <see cref="IsSuspended"/> returns true.
         /// </summary>
-        /// <param name="eventLimit">The maximum number of connection events to process.</param>
+        /// <param name="eventLimit">The maximum number of queued connection events to dequeue during this execution.</param>
         /// <returns>The unused dequeue budget after processing queued events.</returns>
         public int Execute(int eventLimit)
         {
