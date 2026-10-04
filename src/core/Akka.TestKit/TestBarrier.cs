@@ -31,11 +31,11 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// TBD 
+        /// Creates a barrier with the specified number of participants and default wait timeout.
         /// </summary>
-        /// <param name="testKit">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <param name="defaultTimeout">TBD</param>
+        /// <param name="testKit">The test kit used to dilate timeout values.</param>
+        /// <param name="count">The number of participants that must wait at the barrier.</param>
+        /// <param name="defaultTimeout">The default timeout for waits, or null to use the test kit default.</param>
         public TestBarrier(TestKitBase testKit, int count, [AutoDilate] TimeSpan? defaultTimeout=null)
         {
             _testKit = testKit;
@@ -45,7 +45,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Signals arrival at the barrier and waits using the configured default timeout.
         /// </summary>
         public void Await()
         {
@@ -53,16 +53,16 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Signals arrival at the barrier and waits until all participants arrive or the timeout elapses.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum wait duration before timeout dilation.</param>
         public void Await([AutoDilate] TimeSpan timeout)
         {
             _barrier.SignalAndWait(_testKit.Dilated(timeout));
         }
 
         /// <summary>
-        /// TBD
+        /// Resets the barrier phase by removing and re-adding all configured participants.
         /// </summary>
         public void Reset()
         {
