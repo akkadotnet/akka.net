@@ -49,24 +49,24 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     public sealed class Send: IClusterClientProtocolMessage, IEquatable<Send>
     {
         /// <summary>
-        /// TBD
+        /// Actor path used to find a matching recipient in the cluster.
         /// </summary>
         public string Path { get; }
         /// <summary>
-        /// TBD
+        /// Message forwarded to the selected recipient.
         /// </summary>
         public object Message { get; }
         /// <summary>
-        /// TBD
+        /// Whether to prefer a matching recipient in the receptionist's local actor system.
         /// </summary>
         public bool LocalAffinity { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a request to send a message to one matching cluster recipient.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="localAffinity">TBD</param>
+        /// <param name="path">Actor path used to find matching recipients.</param>
+        /// <param name="message">Message to deliver.</param>
+        /// <param name="localAffinity">If <see langword="true"/>, prefer a matching recipient in the receptionist's local actor system.</param>
         public Send(string path, object message, bool localAffinity = false)
         {
             Path = path;
@@ -105,19 +105,19 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     public sealed class SendToAll: IClusterClientProtocolMessage, IEquatable<SendToAll>
     {
         /// <summary>
-        /// TBD
+        /// Actor path used to find matching recipients in the cluster.
         /// </summary>
         public string Path { get; }
         /// <summary>
-        /// TBD
+        /// Message forwarded to all matching recipients.
         /// </summary>
         public object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a request to send a message to every matching cluster recipient.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="path">Actor path used to find matching recipients.</param>
+        /// <param name="message">Message to deliver.</param>
         public SendToAll(string path, object message)
         {
             Path = path;
@@ -153,19 +153,19 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     public sealed class Publish: IClusterClientProtocolMessage, IEquatable<Publish>
     {
         /// <summary>
-        /// TBD
+        /// Topic to which the message is published.
         /// </summary>
         public string Topic { get; }
         /// <summary>
-        /// TBD
+        /// Message published to subscribers of the topic.
         /// </summary>
         public object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a request to publish a message to a cluster topic.
         /// </summary>
-        /// <param name="topic">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="topic">Topic to publish to.</param>
+        /// <param name="message">Message to publish.</param>
         public Publish(string topic, object message)
         {
             Topic = topic;
@@ -194,13 +194,13 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     }
 
     /// <summary>
-    /// TBD
+    /// Internal tick used to refresh the contact points from cluster receptionists.
     /// </summary>
     [Serializable]
     internal sealed class RefreshContactsTick: IClusterClientProtocolMessage, IEquatable<RefreshContactsTick>
     {
         /// <summary>
-        /// TBD
+        /// Singleton refresh-contact tick message.
         /// </summary>
         public static RefreshContactsTick Instance { get; } = new();
         private RefreshContactsTick() { }
@@ -216,13 +216,13 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     }
 
     /// <summary>
-    /// TBD
+    /// Internal tick used to check whether the selected receptionist is still responsive.
     /// </summary>
     [Serializable]
     internal sealed class HeartbeatTick: IClusterClientProtocolMessage, IEquatable<HeartbeatTick>
     {
         /// <summary>
-        /// TBD
+        /// Singleton heartbeat tick message.
         /// </summary>
         public static HeartbeatTick Instance { get; } = new();
         private HeartbeatTick() { }
@@ -238,13 +238,13 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     }
 
     /// <summary>
-    /// TBD
+    /// Internal tick that stops the client when it cannot reconnect before its configured deadline.
     /// </summary>
     [Serializable]
     internal sealed class ReconnectTimeout: IClusterClientProtocolMessage, IEquatable<ReconnectTimeout>
     {
         /// <summary>
-        /// TBD
+        /// Singleton reconnect-timeout message.
         /// </summary>
         public static ReconnectTimeout Instance { get; } = new();
         private ReconnectTimeout() { }
@@ -264,11 +264,11 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     /// <summary>
     /// Factory method for <see cref="ClusterClient"/> <see cref="Actor.Props"/>.
     /// </summary>
-    /// <param name="settings">TBD</param>
+    /// <param name="settings">Settings that configure receptionist contact points, buffering, and reconnect behavior.</param>
     /// <exception cref="ArgumentNullException">
     /// This exception is thrown when the specified <paramref name="settings"/> is undefined.
     /// </exception>
-    /// <returns>TBD</returns>
+    /// <returns>Props that create a local cluster client, using contact-point discovery when enabled.</returns>
     public static Props Props(ClusterClientSettings settings)
     {
         if (settings == null)
@@ -391,10 +391,10 @@ public sealed class ClusterClient : ActorBase, IWithTimers
     }
 
     /// <summary>
-    /// TBD
+    /// Handles messages while the client is establishing a receptionist connection.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">Message delivered to the client actor.</param>
+    /// <returns><see langword="true"/> when the message is handled; otherwise <see langword="false"/>.</returns>
     protected override bool Receive(object message)
     {
         return Establishing(message);
@@ -664,7 +664,7 @@ public sealed class ClusterClient : ActorBase, IWithTimers
 public interface IContactPointChange
 {
     /// <summary>
-    /// TBD
+    /// Actor path for a receptionist contact point that was added or removed.
     /// </summary>
     ActorPath ContactPoint { get; }
 }
@@ -676,16 +676,16 @@ public interface IContactPointChange
 public sealed class ContactPointAdded : IContactPointChange
 {
     /// <summary>
-    /// TBD
+    /// Creates a notification that a receptionist contact point was added.
     /// </summary>
-    /// <param name="contactPoint">TBD</param>
+    /// <param name="contactPoint">Actor path of the added contact point.</param>
     public ContactPointAdded(ActorPath contactPoint)
     {
         ContactPoint = contactPoint;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor path of the added contact point.
     /// </summary>
     public ActorPath ContactPoint { get; }
 }
@@ -697,22 +697,22 @@ public sealed class ContactPointAdded : IContactPointChange
 public sealed class ContactPointRemoved : IContactPointChange
 {
     /// <summary>
-    /// TBD
+    /// Creates a notification that a receptionist contact point was removed.
     /// </summary>
-    /// <param name="contactPoint">TBD</param>
+    /// <param name="contactPoint">Actor path of the removed contact point.</param>
     public ContactPointRemoved(ActorPath contactPoint)
     {
         ContactPoint = contactPoint;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor path of the removed contact point.
     /// </summary>
     public ActorPath ContactPoint { get; }
 }
 
 /// <summary>
-/// TBD
+/// Marker interface for messages that subscribe to cluster client contact point changes.
 /// </summary>
 public interface ISubscribeContactPoints
 {
@@ -729,14 +729,14 @@ public interface ISubscribeContactPoints
 public sealed class SubscribeContactPoints : ISubscribeContactPoints
 {
     /// <summary>
-    /// TBD
+    /// Singleton instance of the subscribe request.
     /// </summary>
     public static readonly SubscribeContactPoints Instance = new();
     private SubscribeContactPoints() { }
 }
 
 /// <summary>
-/// TBD
+/// Marker interface for a request to unsubscribe from contact point change events.
 /// </summary>
 public interface IUnsubscribeContactPoints
 {
@@ -748,14 +748,14 @@ public interface IUnsubscribeContactPoints
 public sealed class UnsubscribeContactPoints : IUnsubscribeContactPoints
 {
     /// <summary>
-    /// TBD
+    /// Singleton instance of the unsubscribe request.
     /// </summary>
     public static readonly UnsubscribeContactPoints Instance = new();
     private UnsubscribeContactPoints() { }
 }
 
 /// <summary>
-/// TBD
+/// Marker interface for a request to retrieve the contact points known to a cluster client.
 /// </summary>
 public interface IGetContactPoints
 {
@@ -780,9 +780,9 @@ public sealed class GetContactPoints : IGetContactPoints
 public sealed class ContactPoints
 {
     /// <summary>
-    /// TBD
+    /// Creates a reply containing the contact points currently known to the client.
     /// </summary>
-    /// <param name="contactPoints">TBD</param>
+    /// <param name="contactPoints">Actor paths of the contact points known to the client.</param>
     public ContactPoints(IImmutableSet<ActorPath> contactPoints)
     {
         ContactPointsList = contactPoints;
