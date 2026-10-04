@@ -1639,10 +1639,11 @@ namespace Akka.Streams.Implementation
         }
         
         /// <summary>
-        /// TBD
+        /// Connects the processor's downstream subscriber to its upstream publisher. The first subscriber is accepted;
+        /// subsequent subscribers are rejected according to Reactive Streams subscriber rules.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <exception cref="Exception">TBD</exception>
+        /// <param name="subscriber">The downstream subscriber to connect.</param>
+        /// <exception cref="ArgumentNullException">The subscriber is <c>null</c>.</exception>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             void Rec(ISubscriber<T> sub)
@@ -1696,10 +1697,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Supplies the processor's upstream subscription and connects it to a previously registered downstream
+        /// subscriber when possible. A null subscription is reported to the downstream side and then rejected.
         /// </summary>
-        /// <param name="subscription">TBD</param>
-        /// <exception cref="Exception">TBD</exception>
+        /// <param name="subscription">The upstream subscription.</param>
+        /// <exception cref="ArgumentNullException">The subscription is <c>null</c>.</exception>
         public void OnSubscribe(ISubscription subscription)
         {
             void Rec(object obj)
@@ -1817,10 +1819,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Signals a terminal failure to the connected subscriber, or retains the failure until the processor's
+        /// publisher side is connected. Calls made after termination or during an incompatible state are ignored.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <exception cref="Exception">TBD</exception>
+        /// <param name="cause">The failure to signal.</param>
+        /// <exception cref="ArgumentNullException">The cause is <c>null</c>; the null failure is also reported through the processor when possible.</exception>
         public void OnError(Exception cause)
         {
             /*
@@ -1887,7 +1890,8 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the processor's downstream side, immediately when connected or after the pending connection is
+        /// established. Completion received in an incompatible or already terminated state is ignored.
         /// </summary>
         public void OnComplete()
         {
@@ -1930,11 +1934,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards an element to the connected downstream subscriber. The processor does not buffer elements while
+        /// its downstream connection is being established.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <exception cref="Exception">TBD</exception>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="element">The element to forward.</param>
+        /// <exception cref="ArgumentNullException">The element is <c>null</c>.</exception>
+        /// <exception cref="IllegalStateException">The subscriber violates Reactive Streams rules, such as by throwing from a signal callback or receiving an element without demand.</exception>
         public void OnNext(T element)
         {
             if (element == null)
@@ -2186,9 +2191,10 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Registers the sole downstream subscriber, or connects it immediately if the publisher has already been
+        /// registered. The publisher does not retain the subscriber after connecting them.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to connect.</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
@@ -2217,9 +2223,9 @@ namespace Akka.Streams.Implementation
             => Subscribe(UntypedSubscriber.ToTyped<T>(subscriber));
 
         /// <summary>
-        /// TBD
+        /// Registers the publisher using the typed adapter for this virtual publisher's element type.
         /// </summary>
-        /// <param name="publisher">TBD</param>
+        /// <param name="publisher">The publisher to register.</param>
         public void RegisterPublisher(IUntypedPublisher publisher)
             => RegisterPublisher(UntypedPublisher.ToTyped<T>(publisher));
 
@@ -2227,10 +2233,11 @@ namespace Akka.Streams.Implementation
             => RegisterPublisher(new ErrorPublisher<T>(cause, string.Empty));
 
         /// <summary>
-        /// TBD
+        /// Registers the publisher and connects it to a pending subscriber, if present. Registration is valid only
+        /// once; an already occupied virtual publisher is an internal materialization error.
         /// </summary>
-        /// <param name="publisher">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="publisher">The publisher to register.</param>
+        /// <exception cref="IllegalStateException">A publisher or subscriber has already been registered.</exception>
         public void RegisterPublisher(IPublisher<T> publisher)
         {
             if(VirtualProcessor<T>.IsDebug)
@@ -2261,12 +2268,12 @@ namespace Akka.Streams.Implementation
     public abstract class MaterializerSession
     {
         /// <summary>
-        /// TBD
+        /// Enables optional diagnostic output from materialization sessions when compiled with the <c>DEBUG</c> symbol.
         /// </summary>
         public static readonly bool IsDebug = false;
 
         /// <summary>
-        /// TBD
+        /// Carries the cause used to fail intermediate subscribers during best-effort cleanup after materialization fails.
         /// </summary>
         public class MaterializationPanicException : Exception
         {
@@ -2291,11 +2298,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The module graph being materialized by this session.
         /// </summary>
         protected readonly IModule TopLevel;
         /// <summary>
-        /// TBD
+        /// Attributes applied above the top-level module during materialization.
         /// </summary>
         protected readonly Attributes InitialAttributes;
 
@@ -2317,10 +2324,10 @@ namespace Akka.Streams.Implementation
         private readonly LinkedList<IModule> _moduleStack = new();
 
         /// <summary>
-        /// TBD
+        /// Creates a session for the supplied top-level module and initial attributes.
         /// </summary>
-        /// <param name="topLevel">TBD</param>
-        /// <param name="initialAttributes">TBD</param>
+        /// <param name="topLevel">The module graph to materialize.</param>
+        /// <param name="initialAttributes">The attributes applied to the top-level module.</param>
         protected MaterializerSession(IModule topLevel, Attributes initialAttributes)
         {
             TopLevel = topLevel;
@@ -2342,7 +2349,7 @@ namespace Akka.Streams.Implementation
         /// of the same module.
         /// We don't store the enclosing CopiedModule itself as state since we don't use it anywhere else than exit and enter
         /// </summary>
-        /// <param name="enclosing">TBD</param>
+        /// <param name="enclosing">The copied module whose internal graph is entered as a new materialization scope.</param>
         protected void EnterScope(CopiedModule enclosing)
         {
             if(IsDebug)
@@ -2359,7 +2366,7 @@ namespace Akka.Streams.Implementation
         /// leading to port identity collisions)
         /// We don't store the enclosing CopiedModule itself as state since we don't use it anywhere else than exit and enter
         /// </summary>
-        /// <param name="enclosing">TBD</param>
+        /// <param name="enclosing">The copied module whose exposed ports are mapped back into the enclosing scope.</param>
         protected void ExitScope(CopiedModule enclosing)
         {
             var scopeSubscribers = Subscribers;
@@ -2389,10 +2396,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Materializes the top-level graph and returns its computed materialized value. Empty graphs and graphs with
+        /// unconnected exposed ports cannot be materialized.
         /// </summary>
-        /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="InvalidOperationException">The top-level module is empty or has unconnected exposed ports.</exception>
+        /// <returns>The materialized value computed by the top-level module.</returns>
         public object Materialize()
         {
             if(IsDebug)
@@ -2465,17 +2473,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Combines attributes inherited from a parent module with those declared by the current module. Subclasses may
+        /// override this policy.
         /// </summary>
-        /// <param name="parent">TBD</param>
-        /// <param name="current">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="parent">The effective attributes inherited from the parent.</param>
+        /// <param name="current">The attributes declared by the current module.</param>
+        /// <returns>The effective attributes for the current module.</returns>
         protected virtual Attributes MergeAttributes(Attributes parent, Attributes current) => parent.And(current);
 
         /// <summary>
-        /// TBD
+        /// Registers a source to receive the result of its materialized-value computation when that computation is
+        /// resolved during materialization.
         /// </summary>
-        /// <param name="materializedSource">TBD</param>
+        /// <param name="materializedSource">The source to complete with its computed value.</param>
         protected void RegisterSource(IMaterializedValueSource materializedSource)
         {
             if (IsDebug) Console.WriteLine($"Registering source {materializedSource}");
@@ -2488,11 +2498,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Materializes child modules, wires their ports, resolves the module's materialized-value computation, and
+        /// completes sources waiting for that computation.
         /// </summary>
-        /// <param name="module">TBD</param>
-        /// <param name="effectiveAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="module">The module graph to materialize.</param>
+        /// <param name="effectiveAttributes">The effective attributes inherited by this module.</param>
+        /// <returns>The value produced by the module's materialized-value computation.</returns>
         protected object MaterializeModule(IModule module, Attributes effectiveAttributes)
         {
             var materializedValues = new Dictionary<IModule, object>();
@@ -2543,21 +2554,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Materializes a composite module by recursively materializing its child modules. Subclasses can customize this
+        /// behavior for composite module types.
         /// </summary>
-        /// <param name="composite">TBD</param>
-        /// <param name="effectiveAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="composite">The composite module to materialize.</param>
+        /// <param name="effectiveAttributes">The effective attributes inherited by the composite.</param>
+        /// <returns>The value produced by the composite's materialized-value computation.</returns>
         protected virtual object MaterializeComposite(IModule composite, Attributes effectiveAttributes)
             => MaterializeModule(composite, effectiveAttributes);
 
         /// <summary>
-        /// TBD
+        /// Materializes an atomic module. Implementations create the runtime stage and record its materialized value in
+        /// <paramref name="materializedValues"/>.
         /// </summary>
-        /// <param name="atomic">TBD</param>
-        /// <param name="effectiveAttributes">TBD</param>
-        /// <param name="materializedValues">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="atomic">The atomic module to materialize.</param>
+        /// <param name="effectiveAttributes">The effective attributes for the module.</param>
+        /// <param name="materializedValues">The values materialized for modules in the containing graph.</param>
+        /// <returns>The value created for the atomic module.</returns>
         protected abstract object MaterializeAtomic(AtomicModule atomic, Attributes effectiveAttributes,
             IDictionary<IModule, object> materializedValues);
 
@@ -2601,10 +2614,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Records the subscriber for an inlet in the current scope and connects it if its upstream publisher has
+        /// already been registered.
         /// </summary>
-        /// <param name="inPort">TBD</param>
-        /// <param name="subscriberOrVirtual">TBD</param>
+        /// <param name="inPort">The inlet receiving the subscriber.</param>
+        /// <param name="subscriberOrVirtual">The subscriber or virtual publisher waiting for its publisher.</param>
         protected void AssignPort(InPort inPort, object subscriberOrVirtual)
         {
             Subscribers[inPort] = subscriberOrVirtual;
@@ -2617,10 +2631,11 @@ namespace Akka.Streams.Implementation
 
 
         /// <summary>
-        /// TBD
+        /// Records the publisher for an outlet in the current scope and connects it if its downstream subscriber has
+        /// already been registered.
         /// </summary>
-        /// <param name="outPort">TBD</param>
-        /// <param name="publisher">TBD</param>
+        /// <param name="outPort">The outlet providing the publisher.</param>
+        /// <param name="publisher">The publisher assigned to the outlet.</param>
         protected void AssignPort(OutPort outPort, IUntypedPublisher publisher)
         {
             Publishers[outPort] = publisher;
@@ -2684,17 +2699,17 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Internal contract for atomic modules that create an untyped processor together with its materialized value.
     /// </summary>
     internal interface IProcessorModule
     {
         /// <summary>
-        /// TBD
+        /// The inlet exposed by the processor module.
         /// </summary>
         Inlet In { get; }
         
         /// <summary>
-        /// TBD
+        /// The outlet exposed by the processor module.
         /// </summary>
         Outlet Out { get; }
 
@@ -2707,19 +2722,20 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements accepted by the processor.</typeparam>
+    /// <typeparam name="TOut">The type of elements emitted by the processor.</typeparam>
+    /// <typeparam name="TMat">The type of the processor's materialized value.</typeparam>
     [InternalApi]
     public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
         private readonly Func<(IProcessor<TIn, TOut>, TMat)> _createProcessor;
 
         /// <summary>
-        /// TBD
+        /// Creates a processor module with the supplied processor factory and attributes. The factory is invoked when
+        /// the module is materialized.
         /// </summary>
-        /// <param name="createProcessor">TBD</param>
-        /// <param name="attributes">TBD</param>
+        /// <param name="createProcessor">A factory that creates the processor and its materialized value.</param>
+        /// <param name="attributes">Attributes for this module, or <see langword="null"/> to use the processor defaults.</param>
         public ProcessorModule(Func<(IProcessor<TIn, TOut>, TMat)> createProcessor, Attributes attributes = null)
         {
             _createProcessor = createProcessor;
@@ -2728,26 +2744,26 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The inlet through which the processor receives elements.
         /// </summary>
         public Inlet In { get; } = new Inlet<TIn>("ProcessorModule.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet through which the processor emits elements.
         /// </summary>
         public Outlet Out { get; } = new Outlet<TOut>("ProcessorModule.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape formed by this module's inlet and outlet.
         /// </summary>
         public override Shape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns this module for its existing flow shape; processor modules cannot be assigned another shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The shape requested for the replacement.</param>
+        /// <exception cref="NotSupportedException">The requested shape is not equal to this module's shape.</exception>
+        /// <returns>This module.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if(shape != Shape)
@@ -2756,27 +2772,27 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a carbon copy of this module with the same attributes and processor factory.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new processor module with the same configuration.</returns>
         public override IModule CarbonCopy() => WithAttributes(Attributes);
 
         /// <summary>
-        /// TBD
+        /// The attributes applied to this processor module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a processor module that uses the supplied attributes and the same processor factory.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply to the new module.</param>
+        /// <returns>A new processor module.</returns>
         public override IModule WithAttributes(Attributes attributes) => new ProcessorModule<TIn, TOut, TMat>(_createProcessor, attributes);
 
         /// <summary>
-        /// TBD
+        /// Invokes the processor factory and returns the processor and its materialized value.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The created processor and materialized value.</returns>
         public (object, object) CreateProcessor()
         {
             var result = _createProcessor();
