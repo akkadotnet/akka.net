@@ -24,7 +24,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TOut">The type of elements offered to and emitted by the queue source.</typeparam>
     #nullable enable
     [InternalApi]
     public sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
@@ -32,21 +32,21 @@ namespace Akka.Streams.Implementation
         #region internal classes
 
         /// <summary>
-        /// TBD
+        /// Marker interface for messages submitted to the queue source's stage logic.
         /// </summary>
         public interface IInput { }
 
         /// <summary>
-        /// TBD
+        /// Represents an element offer and the task that receives its queue offer result.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The type of the offered element.</typeparam>
         internal sealed class Offer<T> : IInput
         {
             /// <summary>
-            /// TBD
+            /// Creates an element offer with its completion source.
             /// </summary>
-            /// <param name="element">TBD</param>
-            /// <param name="completionSource">TBD</param>
+            /// <param name="element">The element being offered.</param>
+            /// <param name="completionSource">Completes with the result of the offer.</param>
             public Offer(T element, TaskCompletionSource<IQueueOfferResult> completionSource)
             {
                 Element = element;
@@ -54,23 +54,23 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// The element being offered.
             /// </summary>
             public T Element { get; }
 
             /// <summary>
-            /// TBD
+            /// Completes with the result of the offer.
             /// </summary>
             public TaskCompletionSource<IQueueOfferResult> CompletionSource { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// Represents a request to complete the queue source after accepted elements have been emitted.
         /// </summary>
         internal sealed class Completion : IInput
         {
             /// <summary>
-            /// TBD
+            /// The singleton completion request.
             /// </summary>
             public static Completion Instance { get; } = new();
 
@@ -80,21 +80,21 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Represents a request to fail the queue source.
         /// </summary>
         internal sealed class Failure : IInput
         {
             /// <summary>
-            /// TBD
+            /// Creates a failure request.
             /// </summary>
-            /// <param name="ex">TBD</param>
+            /// <param name="ex">The failure to signal.</param>
             public Failure(Exception ex)
             {
                 Ex = ex;
             }
 
             /// <summary>
-            /// TBD
+            /// The failure to signal.
             /// </summary>
             public Exception Ex { get; }
         }
@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Exposes the queue stage's offer and completion operations to the materialized stream API.
         /// </summary>
         public sealed class Materialized : ISourceQueueWithComplete<TOut>
         {
@@ -370,10 +370,10 @@ namespace Akka.Streams.Implementation
             private readonly TaskCompletionSource<object> _completion;
 
             /// <summary>
-            /// TBD
+            /// Creates the materialized queue operations backed by stage callbacks and a completion task.
             /// </summary>
-            /// <param name="invokeLogic">TBD</param>
-            /// <param name="completion">TBD</param>
+            /// <param name="invokeLogic">Sends queue inputs to the stage logic.</param>
+            /// <param name="completion">Completes when the stream completes, fails, or detaches.</param>
             public Materialized(Action<IInput> invokeLogic, TaskCompletionSource<object> completion)
             {
                 _invokeLogic = invokeLogic;
@@ -381,10 +381,10 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Offers an element to the queue without a cancellation token.
             /// </summary>
-            /// <param name="element">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="element">The element to offer.</param>
+            /// <returns>A task that completes with an enqueue, drop, closed-queue, or failure result; the task may also fault if an offer cannot be accepted.</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
                 => OfferAsync(element, CancellationToken.None);
 
@@ -413,20 +413,20 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Returns the task that completes when the queue source terminates. It succeeds after normal completion or downstream cancellation and faults if the source fails or detaches.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>The queue source's termination task.</returns>
             public Task WatchCompletionAsync() => _completion.Task;
 
             /// <summary>
-            /// TBD
+            /// Requests normal completion after queued and pending offers have been handled.
             /// </summary>
             public void Complete() => _invokeLogic(Completion.Instance);
 
             /// <summary>
-            /// TBD
+            /// Requests failure of the queue source with the supplied exception.
             /// </summary>
-            /// <param name="ex">TBD</param>
+            /// <param name="ex">The failure to signal.</param>
             public void Fail(Exception ex) => _invokeLogic(new Failure(ex));
         }
 
@@ -434,10 +434,10 @@ namespace Akka.Streams.Implementation
         private readonly OverflowStrategy _overflowStrategy;
 
         /// <summary>
-        /// TBD
+        /// Creates a queue source with the specified buffer capacity and overflow policy.
         /// </summary>
-        /// <param name="maxBuffer">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
+        /// <param name="maxBuffer">The maximum number of elements buffered when positive; zero disables the element buffer.</param>
+        /// <param name="overflowStrategy">The policy used when the buffer is full.</param>
         public QueueSource(int maxBuffer, OverflowStrategy overflowStrategy)
         {
             _maxBuffer = maxBuffer;
@@ -446,20 +446,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits offered elements.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("queueSource.out");
 
         /// <summary>
-        /// TBD
+        /// The source shape containing <see cref="Out"/>.
         /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic and a materialized queue for offering elements and observing source termination.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited by the stage.</param>
+        /// <returns>The stage logic and its source queue.</returns>
         public override ILogicAndMaterializedValue<ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var completion = TaskEx.NonBlockingTaskCompletionSource<object>();
@@ -579,11 +579,12 @@ namespace Akka.Streams.Implementation
 
 
         /// <summary>
-        /// TBD
+        /// Creates a source that opens a resource, reads elements on demand, and closes the resource when reading ends
+        /// or the stream stops.
         /// </summary>
-        /// <param name="create">TBD</param>
-        /// <param name="readData">TBD</param>
-        /// <param name="close">TBD</param>
+        /// <param name="create">Opens and returns the resource used for reading.</param>
+        /// <param name="readData">Reads the next element, or returns <see cref="Option{T}.None"/> when the resource is exhausted.</param>
+        /// <param name="close">Closes a resource opened by <paramref name="create"/>.</param>
         public UnfoldResourceSource(Func<TSource> create, Func<TSource, Option<TOut>> readData, Action<TSource> close)
         {
             _create = create;
@@ -594,39 +595,40 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this resource source.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.UnfoldResourceSource;
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits values read from the resource.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("UnfoldResourceSource.out");
 
         /// <summary>
-        /// TBD
+        /// The source shape containing <see cref="Out"/>.
         /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that opens the resource at startup, reads on demand, and applies the inherited
+        /// supervision strategy to read failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes used to select the supervision strategy.</param>
+        /// <returns>The stage logic for this source.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this source.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>UnfoldResourceSource</c>.</returns>
         public override string ToString() => "UnfoldResourceSource";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TSource">TBD</typeparam>
+    /// <typeparam name="TOut">The type of elements read from the resource.</typeparam>
+    /// <typeparam name="TSource">The type representing the asynchronously opened resource.</typeparam>
     [InternalApi]
     public sealed class UnfoldResourceSourceAsync<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
@@ -809,11 +811,12 @@ namespace Akka.Streams.Implementation
         private readonly Func<TSource, Task> _close;
 
         /// <summary>
-        /// TBD
+        /// Creates a source that asynchronously opens a resource, reads elements on demand, and closes the resource
+        /// when reading ends or the stream stops.
         /// </summary>
-        /// <param name="create">TBD</param>
-        /// <param name="readData">TBD</param>
-        /// <param name="close">TBD</param>
+        /// <param name="create">Asynchronously opens and returns the resource used for reading.</param>
+        /// <param name="readData">Asynchronously reads the next element, or returns <see cref="Option{T}.None"/> when exhausted.</param>
+        /// <param name="close">Asynchronously closes a resource opened by <paramref name="create"/>.</param>
         public UnfoldResourceSourceAsync(Func<Task<TSource>> create, Func<TSource, Task<Option<TOut>>> readData, Func<TSource, Task> close)
         {
             _create = create;
@@ -824,31 +827,32 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this asynchronous resource source.
         /// </summary>
         protected override Attributes InitialAttributes => DefaultAttributes.UnfoldResourceSourceAsync;
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits values read from the resource.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("UnfoldResourceSourceAsync.out");
 
         /// <summary>
-        /// TBD
+        /// The source shape containing <see cref="Out"/>.
         /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that opens and reads the resource asynchronously, applying the inherited supervision
+        /// strategy to asynchronous read failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes used to select the supervision strategy.</param>
+        /// <returns>The stage logic for this source.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this source.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns><c>UnfoldResourceSourceAsync</c>.</returns>
         public override string ToString() => "UnfoldResourceSourceAsync";
     }
 
@@ -929,22 +933,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits elements from the lazily created source.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("LazySource.out");
 
         /// <summary>
-        /// TBD
+        /// The source shape containing <see cref="Out"/>.
         /// </summary>
         public override SourceShape<TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for this lazy source.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazySource;
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that invokes the source factory on the first downstream pull and completes the
+        /// materialized task with the created source's materialized value.
         /// </summary>
         public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
