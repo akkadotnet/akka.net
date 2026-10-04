@@ -252,19 +252,19 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// Result of a replicator read, carrying the current data envelope.
+    /// Result of a replicator read, carrying the local data envelope when the key has a local value.
     /// </summary>
     [Serializable]
     internal sealed class ReadResult : IReplicatorMessage, IEquatable<ReadResult>, IDeadLetterSuppression
     {
         /// <summary>
-        /// Current replicated data and pruning metadata returned by the read.
+        /// Replicated data and pruning metadata returned by the read, or <see langword="null"/> when the key has no local value.
         /// </summary>
         public DataEnvelope Envelope { get; }
         /// <summary>
         /// Creates a read result.
         /// </summary>
-        /// <param name="envelope">Current data and pruning state for the requested key.</param>
+        /// <param name="envelope">Data and pruning state for the requested key, or <see langword="null"/> when no local value exists.</param>
         public ReadResult(DataEnvelope envelope)
         {
             Envelope = envelope;
@@ -490,7 +490,7 @@ namespace Akka.DistributedData.Internal
         /// Merges replicated data into this envelope after applying its pruning metadata.
         /// </summary>
         /// <param name="otherData">Replicated data or delta to merge.</param>
-        /// <returns>A new envelope containing the merged data and this envelope metadata.</returns>
+        /// <returns>A new envelope containing the merged data and this envelope metadata, or <see cref="DeletedEnvelope"/> when <paramref name="otherData"/> is deleted data.</returns>
         /// <exception cref="ArgumentException">The incoming value is a delta but the current data does not support delta merging.</exception>
         internal DataEnvelope Merge(IReplicatedData otherData)
         {
@@ -520,7 +520,7 @@ namespace Akka.DistributedData.Internal
             return acc;
         });
         /// <summary>
-        /// Adds a node address to each tracked pruning state.
+        /// Adds a node address to initialized pruning states that do not belong to that address and have not already recorded it.
         /// </summary>
         /// <param name="node">Address observed by the pruning process.</param>
         /// <returns>A new envelope if any pruning state changes; otherwise, this instance.</returns>

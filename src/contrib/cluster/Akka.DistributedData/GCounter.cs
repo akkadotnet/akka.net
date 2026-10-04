@@ -101,7 +101,7 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="node">The cluster node whose component is incremented.</param>
         /// <param name="n">The non-negative amount to add to that node's component.</param>
-        /// <returns>A counter with the node component increased, or this instance when <paramref name="n"/> is zero.</returns>
+        /// <returns>A counter whose node component is the <see cref="ulong"/> sum of its previous value and <paramref name="n"/>, which can wrap on overflow, or this instance when <paramref name="n"/> is zero.</returns>
         public GCounter Increment(UniqueAddress node, ulong n = 1)
         {
             if (n == 0) return this;
