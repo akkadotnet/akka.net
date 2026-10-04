@@ -1299,7 +1299,7 @@ namespace Akka.Cluster.Sharding
         private sealed class RebalanceTick
         {
             /// <summary>
-            /// TBD
+            /// Singleton tick that asks the coordinator to evaluate shard rebalancing.
             /// </summary>
             public static readonly RebalanceTick Instance = new();
 
@@ -1312,19 +1312,19 @@ namespace Akka.Cluster.Sharding
         private sealed class RebalanceDone
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard processed by the rebalance worker.
             /// </summary>
             public readonly ShardId Shard;
             /// <summary>
-            /// TBD
+            /// Gets whether the handoff worker signaled successful completion; <see langword="false"/> indicates timeout.
             /// </summary>
             public readonly bool Ok;
 
             /// <summary>
-            /// TBD
+            /// Creates a result message reporting completion status for a shard handoff.
             /// </summary>
-            /// <param name="shard">TBD</param>
-            /// <param name="ok">TBD</param>
+            /// <param name="shard">The id of the shard processed by the worker.</param>
+            /// <param name="ok">Whether the worker signaled successful handoff completion.</param>
             public RebalanceDone(ShardId shard, bool ok)
             {
                 Shard = shard;
@@ -1339,19 +1339,19 @@ namespace Akka.Cluster.Sharding
         private sealed class ResendShardHost
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard for which the coordinator is retrying the host request.
             /// </summary>
             public readonly ShardId Shard;
             /// <summary>
-            /// TBD
+            /// Gets the region currently recorded as responsible for the shard.
             /// </summary>
             public readonly IActorRef Region;
 
             /// <summary>
-            /// TBD
+            /// Creates a retry message for a shard-host request that has not been acknowledged.
             /// </summary>
-            /// <param name="shard">TBD</param>
-            /// <param name="region">TBD</param>
+            /// <param name="shard">The id of the shard to request again.</param>
+            /// <param name="region">The region expected to host the shard.</param>
             public ResendShardHost(ShardId shard, IActorRef region)
             {
                 Shard = shard;
@@ -1360,20 +1360,20 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Internal message deferring a region-termination update until the cluster-removal margin has elapsed.
         /// </summary>
         [Serializable]
         private sealed class DelayedShardRegionTerminated
         {
             /// <summary>
-            /// TBD
+            /// Gets the actor reference of the region whose termination is being applied.
             /// </summary>
             public readonly IActorRef Region;
 
             /// <summary>
-            /// TBD
+            /// Creates a delayed termination message for a shard region.
             /// </summary>
-            /// <param name="region">TBD</param>
+            /// <param name="region">The actor reference of the terminated region.</param>
             public DelayedShardRegionTerminated(IActorRef region)
             {
                 Region = region;
@@ -1387,24 +1387,24 @@ namespace Akka.Cluster.Sharding
         private sealed class AllocateShardResult
         {
             /// <summary>
-            /// TBD
+            /// Gets the shard id for the completed asynchronous allocation request.
             /// </summary>
             public readonly ShardId Shard;
             /// <summary>
-            /// TBD
+            /// Gets the selected region, or <see langword="null"/> when allocation failed.
             /// </summary>
             public readonly IActorRef ShardRegion;
             /// <summary>
-            /// TBD
+            /// Gets the actor that requested the shard's location.
             /// </summary>
             public readonly IActorRef GetShardHomeSender;
 
             /// <summary>
-            /// TBD
+            /// Creates a message carrying the result of an allocation-strategy request.
             /// </summary>
-            /// <param name="shard">TBD</param>
-            /// <param name="shardRegion">TBD</param>
-            /// <param name="getShardHomeSender">TBD</param>
+            /// <param name="shard">The id of the shard being allocated.</param>
+            /// <param name="shardRegion">The selected region, or <see langword="null"/> if the allocation operation failed.</param>
+            /// <param name="getShardHomeSender">The actor that requested the shard's location.</param>
             public AllocateShardResult(ShardId shard, IActorRef shardRegion, IActorRef getShardHomeSender)
             {
                 Shard = shard;
@@ -1423,14 +1423,14 @@ namespace Akka.Cluster.Sharding
         private sealed class RebalanceResult
         {
             /// <summary>
-            /// TBD
+            /// Gets the shard ids selected by the allocation strategy for rebalance.
             /// </summary>
             public readonly IImmutableSet<ShardId> Shards;
 
             /// <summary>
-            /// TBD
+            /// Creates a message carrying the result of a rebalance-strategy request.
             /// </summary>
-            /// <param name="shards">TBD</param>
+            /// <param name="shards">The shard ids selected for this rebalance round.</param>
             public RebalanceResult(IImmutableSet<ShardId> shards)
             {
                 Shards = shards;
@@ -1463,15 +1463,15 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <summary>
-            /// TBD
+            /// Creates local actor properties for a worker that coordinates a shard handoff.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="shard">TBD</param>
-            /// <param name="shardRegionFrom">TBD</param>
-            /// <param name="handOffTimeout">TBD</param>
-            /// <param name="regions">TBD</param>
-            /// <param name="isRebalance">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="typeName">The entity type name used in worker logs.</param>
+            /// <param name="shard">The shard id to hand off.</param>
+            /// <param name="shardRegionFrom">The region currently hosting the shard.</param>
+            /// <param name="handOffTimeout">The timeout for the handoff operation.</param>
+            /// <param name="regions">The registered regions and proxies that must acknowledge before handoff proceeds.</param>
+            /// <param name="isRebalance"><see langword="true"/> when the handoff is part of rebalancing; <see langword="false"/> when it is for region shutdown.</param>
+            /// <returns>Actor properties for the handoff worker.</returns>
             public static Props Props(
                 string typeName,
                 string shard,
@@ -1493,14 +1493,14 @@ namespace Akka.Cluster.Sharding
             public ITimerScheduler Timers { get; set; } = null!;
 
             /// <summary>
-            /// TBD
+            /// Creates a worker that asks regions to stop routing to a shard, then asks its current region to stop the shard.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="shard">TBD</param>
-            /// <param name="shardRegionFrom">TBD</param>
-            /// <param name="handOffTimeout">TBD</param>
-            /// <param name="regions">TBD</param>
-            /// <param name="isRebalance">TBD</param>
+            /// <param name="typeName">The entity type name used in worker logs.</param>
+            /// <param name="shard">The shard id to hand off.</param>
+            /// <param name="shardRegionFrom">The region currently hosting the shard.</param>
+            /// <param name="handOffTimeout">The timeout for the handoff operation.</param>
+            /// <param name="regions">The registered regions and proxies that must acknowledge before handoff proceeds.</param>
+            /// <param name="isRebalance"><see langword="true"/> when the handoff is part of rebalancing; <see langword="false"/> when it is for region shutdown.</param>
             public RebalanceWorker(
                 string typeName,
                 string shard,
@@ -1533,10 +1533,10 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <summary>
-            /// TBD
+            /// Handles acknowledgements and region termination during the handoff phases, and reports timeout when a phase exceeds its deadline.
             /// </summary>
-            /// <param name="message">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="message">A begin-handoff acknowledgement, region-termination notification, or handoff timeout.</param>
+            /// <returns><c>true</c> when the message is handled in the current phase; otherwise <c>false</c>.</returns>
             protected override bool Receive(object message)
             {
                 switch (message)
