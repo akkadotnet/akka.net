@@ -29,8 +29,8 @@ namespace Akka.Streams
         /// logging and failure reporting both during materialization and while the
         /// stream is running.
         /// </summary>
-        /// <param name="namePrefix">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="namePrefix">The prefix used when deriving names for stream processing entities.</param>
+        /// <returns>A materializer that uses <paramref name="namePrefix"/> when naming stream processing entities.</returns>
         IMaterializer WithNamePrefix(string namePrefix);
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace Akka.Streams
         /// Interface for stages that need timer services for their functionality. Schedules a
         /// single task with the given delay.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
+        /// <param name="delay">The time to wait before scheduling the action.</param>
+        /// <param name="action">The action to schedule.</param>
         /// <returns>
         /// A <see cref="ICancelable"/> that allows cancelling the timer. Cancelling is best effort, 
         /// if the event has been already enqueued it will not have an effect.
@@ -71,9 +71,9 @@ namespace Akka.Streams
         /// Interface for stages that need timer services for their functionality. Schedules a
         /// repeated task with the given interval between invocations.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
+        /// <param name="initialDelay">The time to wait before the first invocation.</param>
+        /// <param name="interval">The time between subsequent invocations.</param>
+        /// <param name="action">The action to schedule repeatedly.</param>
         /// <returns>
         /// A <see cref="ICancelable"/> that allows cancelling the timer. Cancelling is best effort, 
         /// if the event has been already enqueued it will not have an effect.
@@ -90,12 +90,12 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// A materializer implementation that throws <see cref="NotSupportedException"/> for every operation.
     /// </summary>
     public sealed class NoMaterializer : IMaterializer
     {
         /// <summary>
-        /// TBD
+        /// The shared <see cref="NoMaterializer"/> instance.
         /// </summary>
         public static readonly IMaterializer Instance = new NoMaterializer();
         private NoMaterializer() { }
@@ -190,24 +190,24 @@ namespace Akka.Streams
     public readonly struct MaterializationContext
     {
         /// <summary>
-        /// TBD
+        /// The materializer used to materialize the stage that owns this context.
         /// </summary>
         public readonly IMaterializer Materializer;
         /// <summary>
-        /// TBD
+        /// The attributes effective for the stage being materialized.
         /// </summary>
         public readonly Attributes EffectiveAttributes;
         /// <summary>
-        /// TBD
+        /// The name assigned to the stage being materialized.
         /// </summary>
         public readonly string StageName;
 
         /// <summary>
-        /// TBD
+        /// Creates a context containing the materializer, effective attributes, and name for a stage.
         /// </summary>
-        /// <param name="materializer">TBD</param>
-        /// <param name="effectiveAttributes">TBD</param>
-        /// <param name="stageName">TBD</param>
+        /// <param name="materializer">The materializer used for this materialization.</param>
+        /// <param name="effectiveAttributes">The attributes effective for the stage.</param>
+        /// <param name="stageName">The name assigned to the stage.</param>
         public MaterializationContext(IMaterializer materializer, Attributes effectiveAttributes, string stageName)
         {
             Materializer = materializer;
