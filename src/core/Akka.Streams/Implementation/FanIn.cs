@@ -209,7 +209,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Called by the completion handler's <c>!IsPending(input)</c> branch, or when a dequeue leaves the input buffer depleted.
         /// </summary>
-        /// <param name="input">The depleted input index.</param>
+        /// <param name="input">The input index passed by the completion or dequeue handler.</param>
         public virtual void OnDepleted(int input) { }
 
         /// <summary>
@@ -669,7 +669,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Sets the pump phase to completed, passes the failure to the downstream output manager, and runs the pump.
         /// </summary>
-        /// <param name="cause">The failure to signal downstream.</param>
+        /// <param name="cause">The failure passed to <c>PrimaryOutputs.Error</c>.</param>
         protected void Fail(Exception cause)
         {
             if (Settings.IsDebugLogging)

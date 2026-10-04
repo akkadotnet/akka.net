@@ -146,10 +146,10 @@ namespace Akka.Streams.Implementation
         public readonly SubReceive SubReceive;
 
         /// <summary>
-        /// Gets whether the indexed output has demand available.
+        /// Gets whether the indexed output's pending flag is set.
         /// </summary>
         /// <param name="output">The output index to inspect.</param>
-        /// <returns><see langword="true"/> if demand is available.</returns>
+        /// <returns><see langword="true"/> when the pending flag is set.</returns>
         public bool IsPending(int output) => _pending[output];
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace Akka.Streams.Implementation
         public bool IsErrored(int output) => _errored[output];
 
         /// <summary>
-        /// Completes every output that has not already terminated.
+        /// If the bunch has not already ended, calls <see cref="Complete(int)"/> for every configured output index.
         /// </summary>
         public void Complete()
         {
@@ -188,7 +188,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Completes one output unless it has already completed, failed, or been canceled.
+        /// For an output that is not completed, failed, or canceled, calls its manager's <c>Complete</c> method, then marks and unmarks the output if that call returns.
         /// </summary>
         /// <param name="output">The output index to complete.</param>
         public void Complete(int output)
@@ -202,7 +202,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// If this bunch has not already been canceled, calls <see cref="Error(int, Exception)"/> for every configured output index.
+        /// If the bunch has not already ended, calls <see cref="Error(int, Exception)"/> for every configured output index.
         /// </summary>
         /// <param name="e">The failure passed to <see cref="Error(int, Exception)"/> for each configured output index.</param>
         public void Cancel(Exception e)
@@ -384,19 +384,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Creates a transfer state that is ready on demand and completes when the output terminates.
+        /// Creates a transfer state whose ready predicate reads the output's pending flag and whose complete predicate is true when the output is canceled, completed, or errored.
         /// </summary>
         /// <param name="id">The output index to observe.</param>
-        /// <returns>A state that observes demand and output termination.</returns>
+        /// <returns>A state ready when the pending flag is set and complete when the canceled, completed, or errored flag is set.</returns>
         public TransferState DemandAvailableFor(int id) =>
             new LambdaTransferState(isReady: () => _pending[id],
                 isCompleted: () => _cancelled[id] || _completed[id] || _errored[id]);
 
         /// <summary>
-        /// Creates a transfer state that is ready on demand or cancellation and never completes.
+        /// Creates a transfer state that is ready when the output's pending or canceled flag is set and whose complete predicate is always false.
         /// </summary>
         /// <param name="id">The output index to observe.</param>
-        /// <returns>A state that becomes ready when demand or cancellation is available.</returns>
+        /// <returns>A state ready when the pending or canceled flag is set and whose complete predicate is always false.</returns>
         public TransferState DemandOrCancelAvailableFor(int id)
             => new LambdaTransferState(isReady: () => _pending[id] || _cancelled[id], isCompleted: () => false);
     }
@@ -614,7 +614,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Calls input cancellation and the output bunch's <c>Cancel</c> method, then pumps the current phase.
         /// </summary>
-        /// <param name="e">The failure passed to the output managers.</param>
+        /// <param name="e">The failure passed to <c>OutputBunch.Cancel</c>.</param>
        protected void Fail(Exception e)
         {
             if (_settings.IsDebugLogging)
@@ -692,7 +692,7 @@ namespace Akka.Streams.Implementation
         public void PumpFailed(Exception e) => Fail(e);
 
         /// <summary>
-        /// Cancels the input, completes every output, and stops the actor when transfer ends.
+        /// Calls input cancellation and <c>OutputBunch.Complete()</c>, then stops the actor.
         /// </summary>
         public void PumpFinished()
         {
