@@ -1184,7 +1184,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Completes the materialized sink on cancellation, or records one pending cancel until materialization. The cause is not propagated as a stage failure.
         /// </summary>
         /// <param name="cause">The cause carried by the cancellation command.</param>
-        /// <exception cref="IllegalStateException">Thrown if a conflicting command is already pending before materialization; cancellation may replace a pending pull.</exception>
+        /// <exception cref="IllegalStateException">Thrown if a cancel command is already pending before materialization. A pending pull may be replaced by this cancellation.</exception>
         public void CancelSubstream(Exception cause) => DispatchCommand(new SubSink.CancelScheduledBeforeMaterialization(cause));
 
         private void DispatchCommand(SubSink.CommandScheduledBeforeMaterialization newState)

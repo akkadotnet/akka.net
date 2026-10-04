@@ -109,7 +109,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Creates stage logic that applies the mapping function under the inherited supervision strategy.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that emits the mapped output for each input element.</returns>
+        /// <returns>Logic that emits an output when mapping succeeds and handles mapping failures according to supervision.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -2435,7 +2435,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// Creates batching logic that applies the inherited supervision strategy to aggregation failures.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
-        /// <returns>The logic that accumulates elements and emits a batch when downstream demand arrives, an element exceeds the remaining cost budget, or upstream completes.</returns>
+        /// <returns>Logic that separates batches when an element exceeds the remaining cost budget and emits an available aggregate on downstream demand, including after upstream completion.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -4514,7 +4514,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         /// <summary>
         /// Creates the stage logic and a task for the selected flow's materialized value.
-        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally or downstream cancels before selection, and faults if upstream or flow creation fails.
+        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally or downstream cancels before selection starts, and faults if upstream or flow creation fails while the task is unresolved.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
         /// <returns>The stage logic and a task containing the optional materialized value of the selected flow.</returns>
