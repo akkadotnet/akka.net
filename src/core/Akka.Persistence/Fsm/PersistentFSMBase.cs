@@ -125,8 +125,8 @@ namespace Akka.Persistence.Fsm
         /// Produces a state descriptor that stops the FSM with the specified reason and state data.
         /// </summary>
         /// <param name="reason">The reason to report when stopping.</param>
-        /// <param name="stateData">The state data to retain in the stop descriptor.</param>
-        /// <returns>A descriptor for stopping while retaining the current state name and the supplied data.</returns>
+        /// <param name="stateData">The state data to retain in the stop descriptor, unless it equals <c>default(TData)</c>.</param>
+        /// <returns>A descriptor for stopping while retaining the current state name and using the supplied data, or the current data when the supplied value is <c>default(TData)</c>.</returns>
         public State<TState, TData, TEvent> Stop(FSMBase.Reason reason, TData stateData)
         {
             return Stay().Copy(stateData: stateData, stopReason: reason);

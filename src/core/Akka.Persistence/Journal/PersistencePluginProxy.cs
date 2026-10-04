@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// Proxy that forwards persistence plugin requests to a journal or snapshot store on another actor system.
+    /// Proxy that forwards persistence plugin requests to a journal or snapshot store on a local or remote actor system.
     /// </summary>
     public class PersistencePluginProxy : ActorBase, IWithUnboundedStash, IWithTimers
     {
@@ -62,7 +62,7 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// Initializes the configured default journal and snapshot store plugins for the actor system.
+        /// Initializes the configured default journal and, when no custom snapshot plugin is configured, the default snapshot store.
         /// </summary>
         /// <param name="system">Actor system whose persistence plugins should be initialized.</param>
         public static void Start(ActorSystem system)

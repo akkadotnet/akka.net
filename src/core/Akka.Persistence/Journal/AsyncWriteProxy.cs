@@ -327,7 +327,7 @@ namespace Akka.Persistence.Journal
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
-        /// <returns>A task containing write failures returned by the target actor.</returns>
+        /// <returns>A task containing one result per atomic write, with exceptions for rejected writes; <c>null</c> indicates that all writes succeeded.</returns>
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(
             IEnumerable<AtomicWrite> messages,
             CancellationToken cancellationToken)

@@ -95,7 +95,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Persist FSM State and FSM State Data
         /// </summary>
-        /// <param name="nextState">State descriptor to apply after its domain events and state change have been persisted.</param>
+        /// <param name="nextState">State descriptor to apply. Its domain events and, when requested by the descriptor, a state-change event are persisted first; when there are no events to persist, the state is applied immediately and <c>AfterTransitionDo</c> is not invoked.</param>
         protected override void ApplyState(State<TState, TData, TEvent> nextState)
         {
             var eventsToPersist = new List<object>();
@@ -267,10 +267,10 @@ namespace Akka.Persistence.Fsm
             /// <param name="stateData">State data associated with the next state.</param>
             /// <param name="timeout">Timeout for the next state, or null to use its default timeout.</param>
             /// <param name="stopReason">Reason to terminate the FSM, or null to keep it running.</param>
-            /// <param name="replies">Messages to send to the sender of the current event after the transition.</param>
+            /// <param name="replies">Messages sent to the sender of the current event as the transition is applied, before the current state is updated.</param>
             /// <param name="domainEvents">Domain events to persist for the transition.</param>
-            /// <param name="afterTransitionDo">Action to invoke with the resulting state data after persistence succeeds.</param>
-            /// <param name="notifies">Whether listeners are notified when the state changes.</param>
+            /// <param name="afterTransitionDo">Action to invoke with the resulting state data after persistence succeeds; it is not invoked when the state applies immediately without persistence.</param>
+            /// <param name="notifies">Whether listeners should also be notified when the state name stays the same; a changed state name notifies listeners regardless.</param>
             public State(
                 TS stateName,
                 TD stateData,
@@ -327,7 +327,7 @@ namespace Akka.Persistence.Fsm
             public Action<TD> AfterTransitionDo { get; }
 
             /// <summary>
-            /// Whether state transition listeners are notified for this descriptor.
+            /// Whether listeners should also be notified when the state name stays the same; a changed state name notifies listeners regardless.
             /// </summary>
             internal bool Notifies { get; }
 
@@ -380,11 +380,10 @@ namespace Akka.Persistence.Fsm
             }
 
             /// <summary>
-            /// Modify state transition descriptor with new state data. The data will be set
-            /// when transitioning to the new state.
+            /// Modify the state descriptor with new state data. A value equal to <c>default(TD)</c> retains the current state data.
             /// </summary>
-            /// <param name="nextStateData">State data to use after the transition.</param>
-            /// <returns>A copy of this state descriptor with the specified state data.</returns>
+            /// <param name="nextStateData">State data to use after the transition, unless it equals <c>default(TD)</c>.</param>
+            /// <returns>A copy of this state descriptor with the supplied state data, or the existing state data when the supplied value is <c>default(TD)</c>.</returns>
             [Obsolete("Internal API easily to be confused with regular FSM's using. " +
                 "Use regular events (`Applying`). " +
                 "Internally, `copy` can be used instead.")]

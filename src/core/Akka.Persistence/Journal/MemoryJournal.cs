@@ -347,17 +347,17 @@ namespace Akka.Persistence.Journal
         public sealed class CurrentPersistenceIds : IDeadLetterSuppression
         {
             /// <summary>
-            /// Distinct persistence identifiers found in journal entries after the supplied offset.
+            /// Distinct persistence identifiers found in journal entries from the supplied zero-based offset onward.
             /// </summary>
             public readonly IEnumerable<string> AllPersistenceIds;
 
             public readonly int HighestOrderingNumber;
 
             /// <summary>
-            /// Initializes a query response with its identifiers and highest ordering position.
+            /// Initializes a query response with its identifiers and the next exclusive ordering offset.
             /// </summary>
             /// <param name="allPersistenceIds">Persistence identifiers returned by the query.</param>
-            /// <param name="highestOrderingNumber">Next exclusive ordering offset for a subsequent query.</param>
+            /// <param name="highestOrderingNumber">The next exclusive ordering offset for a subsequent query.</param>
             public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, int highestOrderingNumber)
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
