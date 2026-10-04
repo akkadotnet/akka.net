@@ -18,7 +18,7 @@ namespace Akka.Streams.Extra
     public static class TimedSourceDsl
     {
         /// <summary>
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
+        /// Measures time from the first element until the measured stream receives upstream completion or failure.
         /// </summary>
         /// <typeparam name="TIn">The element type of the source and input to the measured operations.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the measured operations.</typeparam>
@@ -26,7 +26,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="source">The source whose elements pass through the measured operations.</param>
         /// <param name="measuredOps">The source transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback that receives elapsed time when the measured stream terminates.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
         /// <returns>The transformed source with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(this Source<TIn, TMat> source,
             Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
@@ -63,7 +63,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="flow">The flow whose output passes through the measured operations.</param>
         /// <param name="measuredOps">The flow transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback that receives elapsed time when the measured stream terminates.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
         /// <returns>The transformed flow with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         public static Flow<TIn, TOut2, TMat2> Timed<TIn, TOut, TOut2, TMat, TMat2>(this Flow<TIn, TOut, TMat> flow,
             Func<Flow<TIn, TOut, TMat>, Flow<TIn, TOut2, TMat2>> measuredOps, Action<TimeSpan> onComplete)

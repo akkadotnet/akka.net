@@ -84,26 +84,26 @@ namespace Akka.Streams.Stage
         /// cancel of upstreams and complete of downstreams.
         /// </summary>
         /// <param name="element">The final element to send downstream before completing.</param>
-        /// <returns>A downstream directive representing the push and finish operation.</returns>
+        /// <returns>The operation is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective PushAndFinish(object element);
 
         /// <summary>
         /// Push one element to downstreams.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>A downstream directive representing the push operation.</returns>
+        /// <returns>The push is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective Push(object element);
         
         /// <summary>
         /// Request for more elements from upstreams.
         /// </summary>
-        /// <returns>An upstream directive requesting another element.</returns>
+        /// <returns>The pull is requested immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IUpstreamDirective Pull();
         
         /// <summary>
         /// Cancel upstreams and complete downstreams successfully.
         /// </summary>
-        /// <returns>A directive representing successful completion and upstream cancellation.</returns>
+        /// <returns>Completion is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         FreeDirective Finish();
         
         FreeDirective Finish(Exception cause);
@@ -112,14 +112,14 @@ namespace Akka.Streams.Stage
         /// Cancel upstreams and complete downstreams with failure.
         /// </summary>
         /// <param name="cause">The exception used to fail the stage and its downstreams.</param>
-        /// <returns>A directive representing stage failure.</returns>
+        /// <returns>Failure is applied immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         FreeDirective Fail(Exception cause);
         
         /// <summary>
         /// Puts the stage in a finishing state so that
         /// final elements can be pushed from onPull.
         /// </summary>
-        /// <returns>A termination directive indicating that termination has been absorbed.</returns>
+        /// <returns>Termination is absorbed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         ITerminationDirective AbsorbTermination();
     }
 
@@ -134,14 +134,14 @@ namespace Akka.Streams.Stage
         /// cancel of upstreams and complete of downstreams.
         /// </summary>
         /// <param name="element">The final element to send downstream before completing.</param>
-        /// <returns>A downstream directive representing the push and finish operation.</returns>
+        /// <returns>The operation is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective PushAndFinish(TOut element);
         
         /// <summary>
         /// Push one element to downstreams.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>A downstream directive representing the push operation.</returns>
+        /// <returns>The push is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective Push(TOut element);
     }
 
@@ -173,30 +173,30 @@ namespace Akka.Streams.Stage
         /// Sends an element downstream and requests another element upstream, releasing both held events.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>A directive representing the push and pull operation.</returns>
+        /// <returns>The push and pull are performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         FreeDirective PushAndPull(object element);
 
         /// <summary>
-        /// Holds the current upstream event and pauses until the stage receives an external event.
+        /// Holds the current upstream event without requesting another element.
         /// </summary>
-        /// <returns>An upstream directive representing the held upstream event.</returns>
+        /// <returns>The upstream event is held immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IUpstreamDirective HoldUpstream();
         /// <summary>
         /// Holds the current upstream event while sending an element downstream.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>An upstream directive representing the held event and push.</returns>
+        /// <returns>The push is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IUpstreamDirective HoldUpstreamAndPush(object element);
 
         /// <summary>
-        /// Holds downstream demand and pauses until the stage receives an external event.
+        /// Holds the current downstream demand without requesting an output action.
         /// </summary>
-        /// <returns>A downstream directive representing the held demand.</returns>
+        /// <returns>The downstream demand is held immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective HoldDownstream();
         /// <summary>
         /// Holds downstream demand while requesting another element upstream.
         /// </summary>
-        /// <returns>A downstream directive representing the held demand and pull.</returns>
+        /// <returns>The pull is requested immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IDownstreamDirective HoldDownstreamAndPull();
     }
 
@@ -210,13 +210,13 @@ namespace Akka.Streams.Stage
         /// Sends a typed element downstream and requests another element upstream, releasing both held events.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>A directive representing the push and pull operation.</returns>
+        /// <returns>The push and pull are performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         FreeDirective PushAndPull(TOut element);
         /// <summary>
         /// Holds the current upstream event while sending a typed element downstream.
         /// </summary>
         /// <param name="element">The element to send downstream.</param>
-        /// <returns>An upstream directive representing the held event and push.</returns>
+        /// <returns>The push is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         IUpstreamDirective HoldUpstreamAndPush(TOut element);
     }
 

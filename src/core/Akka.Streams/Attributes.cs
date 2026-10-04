@@ -435,7 +435,7 @@ namespace Akka.Streams
         /// <summary>
         /// Creates attributes that mark an asynchronous boundary.
         /// </summary>
-        /// Attributes containing an asynchronous-boundary marker.
+        /// <returns>Attributes containing an asynchronous-boundary marker.</returns>
         public static Attributes CreateAsyncBoundary() => new(AsyncBoundary.Instance);
 
         ///<summary>
@@ -460,7 +460,7 @@ namespace Akka.Streams
         /// </summary>
         /// <param name="module">The module whose name attributes are extracted.</param>
         /// <param name="defaultIfNotFound">The value returned when no name attribute is present.</param>
-        /// <returns>The concatenated name attributes, or <paramref name="defaultIfNotFound"/> when none are present.</returns>
+        /// <returns>The concatenated name attributes, or <paramref name="defaultIfNotFound"/> when a name is missing from a non-empty attribute list. An empty attribute list returns <see langword="null"/>.</returns>
         public static string ExtractName(IModule module, string defaultIfNotFound)
         {
             return module is CopiedModule copy

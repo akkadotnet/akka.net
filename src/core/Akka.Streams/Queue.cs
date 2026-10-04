@@ -34,7 +34,7 @@ namespace Akka.Streams
         /// you need to wait for last offer call task completion.</para>
         /// </summary>
         /// <param name="element">element to send to a stream</param>
-        /// <returns>A task that completes with an <see cref="IQueueOfferResult"/> when the offer is handled, including a <see cref="QueueOfferResult.Failure"/> result when enqueueing fails; it faults if the offer is rejected by the queue's rules.</returns>
+        /// <returns>A task that completes with an <see cref="IQueueOfferResult"/> when the offer is handled, including a <see cref="QueueOfferResult.Failure"/> result when enqueueing fails. It can fault when the offer violates the queue's rules or when the stage detaches.</returns>
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>

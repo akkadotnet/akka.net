@@ -25,7 +25,7 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures elapsed time from the first source element until the measured stream terminates and reports it for each materialization.
+        /// Measures elapsed time from the first source element until the measured stream receives upstream completion or failure, then reports it.
         /// </summary>
         /// <typeparam name="TIn">The element type of the source and input to the measured operations.</typeparam>
         /// <typeparam name="TOut">The element type emitted by the measured operations.</typeparam>
@@ -33,7 +33,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="source">The source whose elements pass through the measured operations.</param>
         /// <param name="measuredOps">The source transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback that receives elapsed time when the measured stream completes or fails.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
         /// <returns>The transformed source with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         [InternalApi]
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
@@ -49,7 +49,7 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures elapsed time from the first flow output element until the measured stream terminates and reports it for each materialization.
+        /// Measures elapsed time from the first flow output element until the measured stream receives upstream completion or failure, then reports it.
         /// </summary>
         /// <typeparam name="TIn">The input element type of the flow.</typeparam>
         /// <typeparam name="TOut">The output element type of the flow before applying <paramref name="measuredOps"/>.</typeparam>
@@ -58,7 +58,7 @@ namespace Akka.Streams.Extra
         /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
         /// <param name="flow">The flow whose output passes through the measured operations.</param>
         /// <param name="measuredOps">The flow transformation whose elapsed processing time is measured.</param>
-        /// <param name="onComplete">The callback that receives elapsed time when the measured stream completes or fails.</param>
+        /// <param name="onComplete">The callback invoked when the measured stream receives upstream completion or failure.</param>
         /// <returns>The transformed flow with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         public static Flow<TIn, TOut2, TMat2> Timed<TIn, TOut, TOut2, TMat, TMat2>(Flow<TIn, TOut, TMat> flow, Func<Flow<TIn, TOut, TMat>, Flow<TIn, TOut2, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
@@ -109,7 +109,7 @@ namespace Akka.Streams.Extra
     internal static class Timed
     {
         /// <summary>
-        /// Holds a stopwatch shared by the start and stop stages of one materialization.
+        /// Holds the stopwatch shared by a graph's start and stop stages. The context is created while the graph is assembled, so reusing that graph also reuses this stopwatch.
         /// </summary>
         internal sealed class TimedFlowContext
         {
@@ -235,7 +235,7 @@ namespace Akka.Streams.Extra
             private readonly Action<TimeSpan> _onComplete;
 
             /// <summary>
-            /// Creates a stage that reports the elapsed time from the supplied context when the stream terminates.
+            /// Creates a stage that reports the elapsed time from the supplied context on upstream completion or failure.
             /// </summary>
             /// <param name="timedContext">The timer context shared with the stage that starts measurement.</param>
             /// <param name="onComplete">The callback that receives the elapsed time.</param>

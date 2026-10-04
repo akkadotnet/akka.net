@@ -1122,11 +1122,11 @@ namespace Akka.Streams.Stage
         public static readonly Action DoNothing = () => { };
 
         /// <summary>
-        /// Output handler that terminates the state upon receiving completion if the
-        /// given condition holds at that time. The stage fails upon receiving a failure.
+        /// Output handler that applies the downstream cancellation cause to the stage when the
+        /// given condition holds. A failure cause fails the stage; other causes terminate it accordingly.
         /// </summary>
         /// <param name="predicate">The condition evaluated when downstream cancels.</param>
-        /// <returns>An output handler that completes the stage only when <paramref name="predicate"/> returns true.</returns>
+        /// <returns>An output handler that calls <see cref="GraphStageLogic.CancelStage(Exception)"/> when <paramref name="predicate"/> returns true.</returns>
         public static OutHandler ConditionalTerminateOutput(Func<bool> predicate) =>
             new ConditionalTerminateOutput(predicate);
 

@@ -206,7 +206,7 @@ namespace Akka.Streams
         /// <summary>
         /// Schedules a single action after the specified delay.
         /// </summary>
-        /// <param name="delay">The time to wait before scheduling the action.</param>
+        /// <param name="delay">The time to wait before the action runs.</param>
         /// <param name="action">The action to schedule.</param>
         /// <returns>A handle that can be used to cancel the scheduled action.</returns>
         public abstract ICancelable ScheduleOnce(TimeSpan delay, Action action);
@@ -221,10 +221,10 @@ namespace Akka.Streams
         public abstract ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
 
         /// <summary>
-        /// Resolves the materializer settings that apply after the supplied attributes override configured defaults.
+        /// Resolves the materializer settings, applying input-buffer, dispatcher, and supervision attributes where supplied.
         /// </summary>
-        /// <param name="attributes">The attributes whose settings take precedence where specified.</param>
-        /// <returns>The effective settings for the supplied attributes.</returns>
+        /// <param name="attributes">The attributes that may override input-buffer, dispatcher, and supervision settings.</param>
+        /// <returns>The effective settings after applying those supported attributes.</returns>
         public abstract ActorMaterializerSettings EffectiveSettings(Attributes attributes);
 
         /// <summary>
@@ -563,7 +563,7 @@ namespace Akka.Streams
         /// stream topology by using <see cref="ActorAttributes.Dispatcher"/>.
         /// </summary>
         /// <param name="dispatcher">The dispatcher identifier to use for stream execution.</param>
-        /// <returns>Settings with the specified default dispatcher.</returns>
+        /// <returns>Settings with the supplied default dispatcher, or the current dispatcher when <paramref name="dispatcher"/> is <see langword="null"/>.</returns>
         public ActorMaterializerSettings WithDispatcher(string dispatcher)
         {
             if (dispatcher == Dispatcher) return this;
@@ -657,7 +657,7 @@ namespace Akka.Streams
         /// deadline, configured by <see cref="StreamSubscriptionTimeoutSettings"/>.
         /// </summary>
         /// <param name="settings">The subscription-timeout settings to use.</param>
-        /// <returns>Settings with the specified subscription-timeout behavior.</returns>
+        /// <returns>Settings with the supplied subscription-timeout behavior, or the current setting when <paramref name="settings"/> is <see langword="null"/>.</returns>
         public ActorMaterializerSettings WithSubscriptionTimeoutSettings(StreamSubscriptionTimeoutSettings settings)
         {
             if (Equals(settings, SubscriptionTimeoutSettings))

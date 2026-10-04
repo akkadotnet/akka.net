@@ -336,13 +336,13 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// Forwards an element to the actor as an <see cref="OnNext"/> message.
+        /// Forwards an element to the actor as an <see cref="OnNext(T)"/> message.
         /// </summary>
         /// <param name="element">The element delivered by the stream.</param>
         public void OnNext(T element) => OnNext((object)element);
 
         /// <summary>
-        /// Forwards a non-null element to the actor as an <see cref="OnNext"/> message.
+        /// Forwards a non-null element to the actor as an <see cref="OnNext(object)"/> message.
         /// </summary>
         /// <param name="element">The element delivered by the stream.</param>
         /// <exception cref="ArgumentNullException">

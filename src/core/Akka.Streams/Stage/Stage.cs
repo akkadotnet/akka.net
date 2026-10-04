@@ -311,7 +311,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enumerator">The elements to emit in order.</param>
         /// <param name="context">The context used to emit elements and request more input.</param>
-        /// <returns>The directive that starts or continues emission.</returns>
+        /// <returns>Emission is started or continued immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context) => Emit(enumerator, context, _current);
 
         /// <summary>
@@ -324,7 +324,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when this stage is already emitting.
         /// </exception>
-        /// <returns>The directive that starts emission, or pulls upstream when the enumerator is empty.</returns>
+        /// <returns>Emission or the pull is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         public ISyncDirective Emit(IEnumerator<TOut> enumerator, IContext<TOut> context, StageState<TIn, TOut> nextState)
         {
             if (_isEmitting) throw new IllegalStateException("Already in emitting state");
@@ -354,7 +354,7 @@ namespace Akka.Streams.Stage
         /// </summary>
         /// <param name="enumerator">The final elements to emit in order.</param>
         /// <param name="context">The context used to absorb termination and emit the final elements.</param>
-        /// <returns>The directive that starts or continues final emission, or finishes if no elements remain.</returns>
+        /// <returns>Emission or completion is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         public ISyncDirective TerminationEmit(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if (!enumerator.MoveNext())
@@ -377,7 +377,7 @@ namespace Akka.Streams.Stage
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when this stage is already emitting.
         /// </exception>
-        /// <returns>The directive that starts emission or finishes after the final element.</returns>
+        /// <returns>Emission or completion is performed immediately; the current legacy context implementation returns <see langword="null"/>.</returns>
         public ISyncDirective EmitAndFinish(IEnumerator<TOut> enumerator, IContext<TOut> context)
         {
             if(_isEmitting)
