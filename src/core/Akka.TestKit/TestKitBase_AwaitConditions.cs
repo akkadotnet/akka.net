@@ -15,7 +15,7 @@ using Nito.AsyncEx.Synchronous;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Methods for polling conditions until they pass or a timeout expires.
     /// </summary>
     public abstract partial class TestKitBase
     {
@@ -191,7 +191,7 @@ namespace Akka.TestKit
         /// if the condition is fulfilled. Between calls the thread sleeps. If undefined, 100 ms is used
         /// </param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the condition becomes true within <paramref name="max"/>; otherwise, <c>false</c>.</returns>
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)
         {
             return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, cancellationToken)
@@ -233,7 +233,7 @@ namespace Akka.TestKit
         /// <param name="fail">Action that is called when the timeout expired. 
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the condition becomes true; otherwise, <c>false</c> after <paramref name="fail"/> is invoked.</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, CancellationToken cancellationToken = default)
         {
             return InternalAwaitCondition(conditionIsFulfilled, max, interval, fail, null, cancellationToken);
@@ -269,7 +269,7 @@ namespace Akka.TestKit
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
         /// <param name="logger">If a <see cref="ILoggingAdapter"/> is specified, debug messages will be logged using it. If <c>null</c> nothing will be logged</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the condition becomes true; otherwise, <c>false</c> after <paramref name="fail"/> is invoked.</returns>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger, CancellationToken cancellationToken = default)
         {
             return InternalAwaitConditionAsync(() => Task.FromResult(conditionIsFulfilled()), max, interval, fail, logger, cancellationToken)

@@ -477,9 +477,9 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
-        /// <param name="duration">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="duration">The duration to return when there is no enclosing `within` block.</param>
+        /// <exception cref="InvalidOperationException">Thrown if the current `within` end time is invalid.</exception>
+        /// <returns>The remaining time in the innermost `within` block, or <paramref name="duration"/> when outside one.</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
             // Check AsyncLocal first (async context takes precedence for proper timeout propagation)
@@ -525,8 +525,8 @@ namespace Akka.TestKit
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
         /// i.e. the config value "akka.test.timefactor"
         /// </summary>
-        /// <param name="duration">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="duration">The duration to scale by the configured test time factor.</param>
+        /// <returns>The scaled duration.</returns>
         public TimeSpan Dilated([AutoDilate] TimeSpan duration)
         {
             if (duration < TimeSpan.Zero)
@@ -539,8 +539,8 @@ namespace Akka.TestKit
         /// If <paramref name="timeout"/> is defined it is returned; otherwise
         /// the config value "akka.test.single-expect-default" is returned.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">An optional timeout value.</param>
+        /// <returns>The specified timeout, or the configured single-expect default when null.</returns>
         public TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
         {
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
@@ -553,7 +553,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="TimeoutException">Thrown when shutdown exceeds the timeout and <paramref name="verifySystemShutdown"/> is true.</exception>
         public virtual void Shutdown(
             TimeSpan? duration = null,
             bool verifySystemShutdown = false)
@@ -567,7 +567,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="TimeoutException">Thrown when shutdown exceeds the timeout and <paramref name="verifySystemShutdown"/> is true.</exception>
         protected virtual void Shutdown(
             ActorSystem system,
             TimeSpan? duration = null,
@@ -773,7 +773,7 @@ namespace Akka.TestKit
         /// <para>The default test actor can be retrieved from the <see cref="TestActor"/> property</para>
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
-        /// <returns>TBD</returns>
+        /// <returns>The actor reference for the named test actor.</returns>
         public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_testState.System, name);
@@ -834,7 +834,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="system">For multi-actor system tests, you can specify which system the node is for.</param>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A new probe attached to the specified actor system.</returns>
         public virtual TestProbe CreateTestProbe(ActorSystem system, string name = null)
         {
             return new TestProbe(system, _assertions, name);
@@ -859,8 +859,8 @@ namespace Akka.TestKit
         /// It always uses a timeout when waiting.
         /// Timeouts will always throw an exception. The default timeout is 5 seconds.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="count">The number of participants that must arrive at the barrier.</param>
+        /// <returns>A barrier configured with the test kit's default timeout.</returns>
         public TestBarrier CreateTestBarrier(int count)
         {
             return new TestBarrier(this, count, _testState.TestKitSettings.DefaultTimeout);
