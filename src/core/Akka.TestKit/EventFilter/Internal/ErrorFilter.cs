@@ -22,22 +22,22 @@ public class ErrorFilter : EventFilterBase
     private readonly bool _recurseInnerExceptions;
 
     /// <summary>
-    /// TBD
+    /// Creates a filter for error events without requiring a particular exception type.
     /// </summary>
-    /// <param name="messageMatcher">TBD</param>
-    /// <param name="sourceMatcher">TBD</param>
+    /// <param name="messageMatcher">Matches the event or exception message, or null to match any message.</param>
+    /// <param name="sourceMatcher">Matches the event source, or null to match any source.</param>
     public ErrorFilter(IStringMatcher? messageMatcher = null, IStringMatcher? sourceMatcher = null)
         : this(null, messageMatcher, sourceMatcher, false)
     {
     }
 
     /// <summary>
-    /// TBD
+    /// Creates a filter for error events, optionally matching the cause type, messages, and source.
     /// </summary>
-    /// <param name="exceptionType">TBD</param>
-    /// <param name="messageMatcher">TBD</param>
-    /// <param name="sourceMatcher">TBD</param>
-    /// <param name="recurseInnerExceptions">TBD</param>
+    /// <param name="exceptionType">The required cause type, or null to match errors without a required type.</param>
+    /// <param name="messageMatcher">Matches the event or cause message, or null to match any message.</param>
+    /// <param name="sourceMatcher">Matches the event source, or null to match any source.</param>
+    /// <param name="recurseInnerExceptions">Whether to search inner exceptions when matching the cause type or message.</param>
     /// <exception cref="ArgumentException">
     /// This exception is thrown when the specified <paramref name="exceptionType"/> does not implement <see cref="Exception"/>.
     /// </exception>
@@ -51,10 +51,10 @@ public class ErrorFilter : EventFilterBase
     }
 
     /// <summary>
-    /// TBD
+    /// Matches error events whose cause type and message satisfy the configured criteria.
     /// </summary>
-    /// <param name="evt">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="evt">The log event to inspect.</param>
+    /// <returns><c>true</c> if the event is a matching error; otherwise, <c>false</c>.</returns>
     protected override bool IsMatch(LogEvent evt)
     {
         if(evt is Error error)
@@ -103,7 +103,7 @@ public class ErrorFilter : EventFilterBase
     }
 
     /// <summary>
-    /// TBD
+    /// Gets a diagnostic label that includes the required cause type when one is configured.
     /// </summary>
     protected override string FilterDescriptiveName
     {
