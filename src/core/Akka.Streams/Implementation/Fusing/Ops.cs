@@ -4514,7 +4514,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         /// <summary>
         /// Creates the stage logic and a task for the selected flow's materialized value.
-        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally or downstream cancels before selection starts, and faults if upstream or flow creation fails while the task is unresolved.
+        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally before selection starts or downstream cancels before the selected flow is materialized, and faults if upstream or flow creation fails while the task is unresolved.
         /// </summary>
         /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
         /// <returns>The stage logic and a task containing the optional materialized value of the selected flow.</returns>
