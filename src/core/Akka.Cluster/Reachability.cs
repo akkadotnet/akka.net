@@ -29,7 +29,7 @@ namespace Akka.Cluster
     internal class Reachability
     {
         /// <summary>
-    ///     Reachability observations indexed by observer and subject. Observer records are versioned so merges can retain the newer row.
+        ///     Status of a subject as observed by cluster members.
         /// </summary>
         public enum ReachabilityStatus
         {

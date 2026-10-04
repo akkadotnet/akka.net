@@ -52,7 +52,7 @@ namespace Akka.Cluster
         public UniqueAddress UniqueAddress { get; }
 
         /// <summary>
-        /// The member's cluster up number, or <see cref="int.MaxValue"/> for internal joining or removed entries.
+        /// The member's cluster up number. Members created by <see cref="Create(UniqueAddress, ImmutableHashSet{string}, AppVersion)"/> and <see cref="Removed(UniqueAddress)"/> use <see cref="int.MaxValue"/>; a member copied to Removed retains its existing up number.
         /// </summary>
         internal int UpNumber { get; }
 

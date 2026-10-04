@@ -406,9 +406,9 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterGroup : Group
     {
         /// <summary>
-        /// Creates a cluster router group that delegates routee selection to the supplied local group.
+        /// Creates a cluster router group that selects routee paths from cluster settings and uses the local group to create router behavior.
         /// </summary>
-        /// <param name="local">The local group configuration used for routee selection and router behavior.</param>
+        /// <param name="local">The local group configuration used to create the router behavior.</param>
         /// <param name="settings">The cluster-wide routee paths and placement settings.</param>
         public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
             : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : Enumerable.Empty<string>(), local.RouterDispatcher)
@@ -423,7 +423,7 @@ namespace Akka.Cluster.Routing
         public ClusterRouterGroupSettings Settings { get; }
 
         /// <summary>
-        /// The local group configuration delegated to for routee selection and router behavior.
+        /// The local group configuration used to create the router behavior.
         /// </summary>
         public Group Local { get; }
 

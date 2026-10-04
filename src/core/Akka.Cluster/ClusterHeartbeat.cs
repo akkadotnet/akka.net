@@ -364,14 +364,14 @@ namespace Akka.Cluster
         private class HeartbeatTick { }
 
         /// <summary>
-        /// Message used to verify initial contact with a heartbeat receiver.
+        /// Delayed message that triggers failure detector initialization for a heartbeat receiver.
         /// </summary>
         internal sealed class ExpectedFirstHeartbeat
         {
             /// <summary>
-            /// Creates a message requesting an initial heartbeat check for a receiver.
+            /// Creates a message that triggers the initial failure detector heartbeat for a receiver.
             /// </summary>
-            /// <param name="from">The unique address of the receiver expected to respond.</param>
+            /// <param name="from">The unique address of the heartbeat receiver.</param>
             public ExpectedFirstHeartbeat(UniqueAddress from)
             {
                 From = from;

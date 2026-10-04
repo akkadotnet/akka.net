@@ -54,7 +54,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// The configured delay between marking a node down and removing it from the cluster.
+        /// The configured margin before shards or singletons from a downed or removed partition are created in a surviving partition.
         /// </summary>
         public TimeSpan DownRemovalMargin => _cluster.Settings.DownRemovalMargin;
 

@@ -194,7 +194,7 @@ namespace Akka.Cluster
         public TimeSpan GossipInterval { get; }
 
         /// <summary>
-        /// The maximum age of a gossip state before it is treated as expired.
+        /// The configured time to live for gossip messages.
         /// </summary>
         public TimeSpan GossipTimeToLive { get; }
 
@@ -213,7 +213,7 @@ namespace Akka.Cluster
         public TimeSpan PruneGossipTombstonesAfter { get; }
 
         /// <summary>
-        /// The interval at which the cluster reaps nodes that remain unreachable.
+        /// The interval at which the cluster checks the failure detector and updates local reachability observations for members.
         /// </summary>
         public TimeSpan UnreachableNodesReaperInterval { get; }
 
