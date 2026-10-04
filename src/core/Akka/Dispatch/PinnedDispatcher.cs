@@ -13,9 +13,7 @@ using Akka.Dispatch.MessageQueues;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Used to create instances of the <see cref="PinnedDispatcher"/>. 
-    /// 
-    /// Each actor created using the pinned dispatcher gets its own unique thread.
+    /// Creates a new <see cref="PinnedDispatcher"/> for each request. Each dispatcher is bound to one actor and uses its own single-thread executor.
     /// <remarks>
     /// Always returns a new instance.
     /// </remarks>
@@ -25,10 +23,10 @@ namespace Akka.Dispatch
         private readonly ExecutorServiceConfigurator _executorServiceConfigurator;
 
         /// <summary>
-        /// TBD
+        /// Creates a configurator for a pinned dispatcher using a single-thread executor.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The configuration containing the pinned dispatcher settings.</param>
+        /// <param name="prerequisites">The actor-system services required by the dispatcher.</param>
         public PinnedDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
@@ -39,9 +37,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new pinned dispatcher from the configured identifier and scheduling settings.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A dispatcher instance dedicated to one actor.</returns>
         public override MessageDispatcher Dispatcher()
         {
             if (Config.IsNullOrEmpty())
@@ -64,14 +62,14 @@ namespace Akka.Dispatch
     public sealed class PinnedDispatcher : Dispatcher
     {
         /// <summary>
-        /// TBD
+        /// Creates a pinned dispatcher with its dispatcher and executor settings.
         /// </summary>
-        /// <param name="configurator">TBD</param>
-        /// <param name="id">TBD</param>
-        /// <param name="throughput">TBD</param>
-        /// <param name="throughputDeadlineTime">TBD</param>
-        /// <param name="executorServiceFactory">TBD</param>
-        /// <param name="shutdownTimeout">TBD</param>
+        /// <param name="configurator">The configurator that created this dispatcher.</param>
+        /// <param name="id">The dispatcher identifier.</param>
+        /// <param name="throughput">The maximum number of messages processed in one mailbox run.</param>
+        /// <param name="throughputDeadlineTime">The optional time budget, in ticks, for processing one mailbox run.</param>
+        /// <param name="executorServiceFactory">The factory for the single-thread executor used by this dispatcher.</param>
+        /// <param name="shutdownTimeout">The time to wait for executor shutdown.</param>
         public PinnedDispatcher(MessageDispatcherConfigurator configurator, 
             string id, int throughput, long? throughputDeadlineTime, 
             ExecutorServiceFactory executorServiceFactory, 
@@ -82,9 +80,9 @@ namespace Akka.Dispatch
         private volatile ActorCell _owner;
 
         /// <summary>
-        /// TBD
+        /// Registers the dispatcher owner, rejecting registration by a different actor cell.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor cell to register with this dispatcher.</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the registering <paramref name="actor"/> is not the <see cref="_owner">owner</see>.
         /// </exception>
@@ -97,9 +95,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Unregisters an actor cell and clears the dispatcher owner reference.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The actor cell being unregistered.</param>
         internal override void Unregister(ActorCell actor)
         {
             base.Unregister(actor);
