@@ -25,16 +25,16 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
+        /// Measures elapsed time from the first source element until the measured stream terminates and reports it for each materialization.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="source">TBD</param>
-        /// <param name="measuredOps">TBD</param>
-        /// <param name="onComplete">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The element type of the source and input to the measured operations.</typeparam>
+        /// <typeparam name="TOut">The element type emitted by the measured operations.</typeparam>
+        /// <typeparam name="TMat">The source's materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
+        /// <param name="source">The source whose elements pass through the measured operations.</param>
+        /// <param name="measuredOps">The source transformation whose elapsed processing time is measured.</param>
+        /// <param name="onComplete">The callback that receives elapsed time when the measured stream completes or fails.</param>
+        /// <returns>The transformed source with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         [InternalApi]
         public static Source<TOut, TMat2> Timed<TIn, TOut, TMat, TMat2>(Source<TIn, TMat> source, Func<Source<TIn, TMat>, Source<TOut, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
@@ -49,17 +49,17 @@ namespace Akka.Streams.Extra
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Measures time from receiving the first element and completion events - one for each subscriber of this <see cref="IFlow{TOut,TMat}"/>.
+        /// Measures elapsed time from the first flow output element until the measured stream terminates and reports it for each materialization.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="measuredOps">TBD</param>
-        /// <param name="onComplete">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type of the flow.</typeparam>
+        /// <typeparam name="TOut">The output element type of the flow before applying <paramref name="measuredOps"/>.</typeparam>
+        /// <typeparam name="TOut2">The output element type produced by the measured operations.</typeparam>
+        /// <typeparam name="TMat">The flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type returned by the measured operations.</typeparam>
+        /// <param name="flow">The flow whose output passes through the measured operations.</param>
+        /// <param name="measuredOps">The flow transformation whose elapsed processing time is measured.</param>
+        /// <param name="onComplete">The callback that receives elapsed time when the measured stream completes or fails.</param>
+        /// <returns>The transformed flow with the materialized value returned by <paramref name="measuredOps"/>.</returns>
         public static Flow<TIn, TOut2, TMat2> Timed<TIn, TOut, TOut2, TMat, TMat2>(Flow<TIn, TOut, TMat> flow, Func<Flow<TIn, TOut, TMat>, Flow<TIn, TOut2, TMat2>> measuredOps, Action<TimeSpan> onComplete)
         {
             // todo is there any other way to provide this for Flow, without duplicating impl?
@@ -85,12 +85,12 @@ namespace Akka.Streams.Extra
         /// 
         /// Measures rolling interval between immediately subsequent `matching(o: O)` elements.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="matching">TBD</param>
-        /// <param name="onInterval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The element type of the flow.</typeparam>
+        /// <typeparam name="TMat">The flow's materialized value type.</typeparam>
+        /// <param name="flow">The flow whose matching elements are timed.</param>
+        /// <param name="matching">Selects the elements used to measure consecutive intervals.</param>
+        /// <param name="onInterval">The callback that receives each interval after the first matching element.</param>
+        /// <returns>The flow with its element and materialized value types preserved.</returns>
         [InternalApi]
         public static IFlow<TIn, TMat> TimedIntervalBetween<TIn, TMat>(IFlow<TIn, TMat> flow, Func<TIn, bool> matching, Action<TimeSpan> onInterval)
         {
@@ -104,26 +104,26 @@ namespace Akka.Streams.Extra
     }
 
     /// <summary>
-    /// TBD
+    /// Implements elapsed-time measurement stages used by the timed stream operations.
     /// </summary>
     internal static class Timed
     {
         /// <summary>
-        /// TBD
+        /// Holds a stopwatch shared by the start and stop stages of one materialization.
         /// </summary>
         internal sealed class TimedFlowContext
         {
             private readonly Stopwatch _stopwatch = new();
 
             /// <summary>
-            /// TBD
+            /// Starts measuring elapsed time.
             /// </summary>
             public void Start() => _stopwatch.Start();
 
             /// <summary>
-            /// TBD
+            /// Stops measuring elapsed time and returns the accumulated duration.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>The elapsed time recorded by this context's stopwatch.</returns>
             public TimeSpan Stop()
             {
                 _stopwatch.Stop();
@@ -132,9 +132,9 @@ namespace Akka.Streams.Extra
         }
 
         /// <summary>
-        /// TBD
+        /// Starts the shared timer when the first element passes through the stage.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The element type passed through the stage.</typeparam>
         internal sealed class StartTimed<T> : SimpleLinearGraphStage<T>
         {
             #region Loigc 
@@ -170,26 +170,26 @@ namespace Akka.Streams.Extra
             private readonly TimedFlowContext _timedContext;
 
             /// <summary>
-            /// TBD
+            /// Creates a stage that starts the supplied timer context when it receives its first element.
             /// </summary>
-            /// <param name="timedContext">TBD</param>
+            /// <param name="timedContext">The timer context shared with the stage that reports termination.</param>
             public StartTimed(TimedFlowContext timedContext)
             {
                 _timedContext = timedContext;
             }
 
             /// <summary>
-            /// TBD
+            /// Creates the pass-through logic for this timer-start stage.
             /// </summary>
-            /// <param name="inheritedAttributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="inheritedAttributes">Attributes inherited during materialization.</param>
+            /// <returns>The stage logic that starts the timer on the first element.</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
         /// <summary>
-        /// TBD
+        /// Reports the shared timer's elapsed time when the stream completes or fails, while passing elements through.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The element type passed through the stage.</typeparam>
         internal sealed class StopTime<T> : SimpleLinearGraphStage<T>
         {
             #region Loigc 
@@ -235,10 +235,10 @@ namespace Akka.Streams.Extra
             private readonly Action<TimeSpan> _onComplete;
 
             /// <summary>
-            /// TBD
+            /// Creates a stage that reports the elapsed time from the supplied context when the stream terminates.
             /// </summary>
-            /// <param name="timedContext">TBD</param>
-            /// <param name="onComplete">TBD</param>
+            /// <param name="timedContext">The timer context shared with the stage that starts measurement.</param>
+            /// <param name="onComplete">The callback that receives the elapsed time.</param>
             public StopTime(TimedFlowContext timedContext, Action<TimeSpan> onComplete)
             {
                 _timedContext = timedContext;
@@ -246,17 +246,17 @@ namespace Akka.Streams.Extra
             }
 
             /// <summary>
-            /// TBD
+            /// Creates the pass-through logic for this timer-stop stage.
             /// </summary>
-            /// <param name="inheritedAttributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="inheritedAttributes">Attributes inherited during materialization.</param>
+            /// <returns>The stage logic that reports the elapsed time on termination.</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
         /// <summary>
-        /// TBD
+        /// Reports elapsed intervals between consecutive elements selected by a predicate.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The element type passed through the stage.</typeparam>
         internal sealed class TimedInterval<T> : SimpleLinearGraphStage<T>
         {
             #region Loigc 
@@ -306,10 +306,10 @@ namespace Akka.Streams.Extra
             private readonly Action<TimeSpan> _onInterval;
 
             /// <summary>
-            /// TBD
+            /// Creates a stage that measures intervals between matching elements.
             /// </summary>
-            /// <param name="matching">TBD</param>
-            /// <param name="onInterval">TBD</param>
+            /// <param name="matching">Selects the elements included in interval measurements.</param>
+            /// <param name="onInterval">The callback that receives each interval after the first match.</param>
             public TimedInterval(Func<T, bool> matching, Action<TimeSpan> onInterval)
             {
                 _matching = matching;
@@ -317,10 +317,10 @@ namespace Akka.Streams.Extra
             }
 
             /// <summary>
-            /// TBD
+            /// Creates the pass-through logic for this interval-measurement stage.
             /// </summary>
-            /// <param name="inheritedAttributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="inheritedAttributes">Attributes inherited during materialization.</param>
+            /// <returns>The stage logic that measures intervals between matching elements.</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
     }
