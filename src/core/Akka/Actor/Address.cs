@@ -62,12 +62,12 @@ public sealed class Address : IEquatable<Address>, IComparable<Address>, ICompar
     private string? _toString;
 
     /// <summary>
-    /// TBD
+    /// Creates an address from its protocol, actor system name, and optional host and port.
     /// </summary>
-    /// <param name="protocol">TBD</param>
-    /// <param name="system">TBD</param>
-    /// <param name="host">TBD</param>
-    /// <param name="port">TBD</param>
+    /// <param name="protocol">The transport or address protocol, such as <c>akka</c>.</param>
+    /// <param name="system">The actor system name.</param>
+    /// <param name="host">The host name or IP address, or <c>null</c> for a local address.</param>
+    /// <param name="port">The port number, or <c>null</c> when the address has no port.</param>
     public Address(string protocol, string system, string? host = null, int? port = null)
     {
         Protocol = protocol;
@@ -78,22 +78,22 @@ public sealed class Address : IEquatable<Address>, IComparable<Address>, ICompar
     }
 
     /// <summary>
-    /// TBD
+    /// The lower-cased host name or IP address, or <c>null</c> for a local address.
     /// </summary>
     public string? Host { get; }
 
     /// <summary>
-    /// TBD
+    /// The transport port, or <c>null</c> when no port is specified.
     /// </summary>
     public int? Port { get; }
 
     /// <summary>
-    /// TBD
+    /// The actor system name associated with this address.
     /// </summary>
     public string System { get; }
 
     /// <summary>
-    /// TBD
+    /// The protocol used to identify the address.
     /// </summary>
     public string Protocol { get; }
 
@@ -251,9 +251,9 @@ public sealed class Address : IEquatable<Address>, IComparable<Address>, ICompar
     }
 
     /// <summary>
-    /// TBD
+    /// Returns this address without its protocol prefix.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The address suffix beginning with the actor system name.</returns>
     public string HostPort()
     {
         return ToString().Substring(Protocol.Length + 3);
@@ -447,19 +447,19 @@ public sealed class Address : IEquatable<Address>, IComparable<Address>, ICompar
     public sealed class AddressSurrogate : ISurrogate
     {
         /// <summary>
-        /// TBD
+        /// The protocol used to identify the serialized address.
         /// </summary>
         public string Protocol { get; set; } = string.Empty;
         /// <summary>
-        /// TBD
+        /// The actor system name associated with the serialized address.
         /// </summary>
         public string System { get; set; } = string.Empty;
         /// <summary>
-        /// TBD
+        /// The host name or IP address, or <c>null</c> for a local address.
         /// </summary>
         public string? Host { get; set; }
         /// <summary>
-        /// TBD
+        /// The port number, or <c>null</c> when the serialized address has no port.
         /// </summary>
         public int? Port { get; set; }
         /// <summary>
@@ -503,10 +503,10 @@ public static class RelativeActorPath
 {
 
     /// <summary>
-    /// TBD
+    /// Extracts path elements from a relative or absolute actor path string.
     /// </summary>
-    /// <param name="addr">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="addr">A URI-relative actor path, such as <c>child</c> or <c>/user/child</c>.</param>
+    /// <returns>The non-empty path elements when the string is a relative URI; otherwise, <c>null</c>.</returns>
     public static IEnumerable<string>? Unapply(string addr)
     {
         try
