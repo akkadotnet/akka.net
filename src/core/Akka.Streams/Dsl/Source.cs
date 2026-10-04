@@ -33,26 +33,26 @@ namespace Akka.Streams.Dsl
     /// an "atomic" source, e.g. from a collection or a file. Materialization turns a Source into
     /// a Reactive Streams <see cref="IPublisher{T}"/> (at least conceptually).
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TOut">The type of elements emitted by the source.</typeparam>
+    /// <typeparam name="TMat">The type of value produced when the source is materialized.</typeparam>
     public sealed class Source<TOut, TMat> : IFlow<TOut, TMat>, IGraph<SourceShape<TOut>, TMat>
     {
         /// <summary>
-        /// TBD
+        /// Creates a source from its graph module.
         /// </summary>
-        /// <param name="module">TBD</param>
+        /// <param name="module">The module containing the source shape and materialized value.</param>
         public Source(IModule module)
         {
             Module = module;
         }
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits this source's elements.
         /// </summary>
         public SourceShape<TOut> Shape => (SourceShape<TOut>)Module.Shape;
 
         /// <summary>
-        /// TBD
+        /// The graph module containing this source's stages and materialized value.
         /// </summary>
         public IModule Module { get; }
 
@@ -60,20 +60,20 @@ namespace Akka.Streams.Dsl
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>,
         /// concatenating the processing steps of both.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="sink">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The sink's materialized value type.</typeparam>
+        /// <param name="sink">The sink connected to this source.</param>
+        /// <returns>A runnable graph that keeps this source's materialized value and ignores the sink's value.</returns>
         public IRunnableGraph<TMat> To<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink) => ToMaterialized(sink, Keep.Left);
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>,
         /// concatenating the processing steps of both.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="sink">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The sink's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The result type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="sink">The sink connected to this source.</param>
+        /// <param name="combine">Combines this source's and the sink's materialized values, in that order.</param>
+        /// <returns>A runnable graph that materializes to the combined value.</returns>
         public IRunnableGraph<TMat3> ToMaterialized<TMat2, TMat3>(IGraph<SinkShape<TOut>, TMat2> sink, Func<TMat, TMat2, TMat3> combine)
         {
             var sinkCopy = sink.Module.CarbonCopy();
@@ -95,11 +95,11 @@ namespace Akka.Streams.Dsl
         /// It is recommended to use the internally optimized <see cref="Keep.Left{TLeft,TRight}"/> and <see cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="that">TBD</param>
-        /// <param name="materializedFunction">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The appended source's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The result type returned by <paramref name="materializedFunction"/>.</typeparam>
+        /// <param name="that">The source concatenated after this source.</param>
+        /// <param name="materializedFunction">Combines this source's and the appended source's materialized values.</param>
+        /// <returns>A source that emits the appended source after this source completes successfully.</returns>
         public Source<TOut, TMat3> ConcatMaterialized<TMat2, TMat3>(IGraph<SourceShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializedFunction)
             => ViaMaterialized(InternalFlowOperations.ConcatGraph(that), materializedFunction);
@@ -137,8 +137,8 @@ namespace Akka.Streams.Dsl
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to add to those already attached to this source.</param>
+        /// <returns>This source with the added attributes.</returns>
         public Source<TOut, TMat> AddAttributes(Attributes attributes)
             => WithAttributes(Module.Attributes.And(attributes));
 
@@ -150,8 +150,8 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Add a name attribute to this Source.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The source name.</param>
+        /// <returns>This source with the name attribute.</returns>
         public Source<TOut, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
         /// <summary>
@@ -162,7 +162,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Put an asynchronous boundary around this Source.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This source with an asynchronous boundary.</returns>
         public Source<TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         /// <summary>
@@ -221,12 +221,12 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The element type emitted by the appended flow.</typeparam>
+        /// <typeparam name="TMat2">The flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The result type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="flow">The flow connected to this source's outlet.</param>
+        /// <param name="combine">Combines this source's and the flow's materialized values.</param>
+        /// <returns>A source that applies the flow and materializes to the combined value.</returns>
         public Source<TOut2, TMat3> ViaMaterialized<TOut2, TMat2, TMat3>(IGraph<FlowShape<TOut, TOut2>, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             if (flow.Module == GraphStages.Identity<TOut2>().Module)
@@ -260,10 +260,10 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other flow’s value), use
         /// <see cref="ViaMaterialized{T2,TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T2">The element type emitted by the appended flow.</typeparam>
+        /// <typeparam name="TMat2">The flow's materialized value type.</typeparam>
+        /// <param name="flow">The flow connected to this source's outlet.</param>
+        /// <returns>A source that applies the flow and keeps this source's materialized value.</returns>
         public Source<T2, TMat> Via<T2, TMat2>(IGraph<FlowShape<TOut, T2>, TMat2> flow)
             => ViaMaterialized(flow, Keep.Left);
 
@@ -276,9 +276,9 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Transform only the materialized value of this Source, leaving all other properties as they were.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="mapFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The replacement materialized value type.</typeparam>
+        /// <param name="mapFunc">Maps this source's materialized value to the replacement value.</param>
+        /// <returns>A source with the same stages and the mapped materialized value.</returns>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new(Module.TransformMaterializedValue(mapFunc));
 
@@ -310,10 +310,9 @@ namespace Akka.Streams.Dsl
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
         /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="sink">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The sink's materialized value type.</typeparam>
+        /// <param name="sink">The sink connected to this source.</param>
+        /// <param name="materializer">The materializer used to run the graph.</param>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
             => ToMaterialized(sink, Keep.Right).Run(materializer);
         
@@ -321,10 +320,9 @@ namespace Akka.Streams.Dsl
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
         /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="sink">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The sink's materialized value type.</typeparam>
+        /// <param name="sink">The sink connected to this source.</param>
+        /// <param name="materializer">The actor system whose materializer runs the graph.</param>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, ActorSystem materializer)
             => ToMaterialized(sink, Keep.Right).Run(materializer);
 
@@ -336,11 +334,10 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The type of the aggregate value.</typeparam>
+        /// <param name="zero">The initial aggregate value.</param>
+        /// <param name="aggregate">Combines the current aggregate value with each source element.</param>
+        /// <param name="materializer">The materializer used to run the source.</param>
         public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
         
@@ -352,11 +349,10 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The type of the aggregate value.</typeparam>
+        /// <param name="zero">The initial aggregate value.</param>
+        /// <param name="aggregate">Combines the current aggregate value with each source element.</param>
+        /// <param name="materializer">The actor system whose materializer runs the source.</param>
         public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, ActorSystem materializer)
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
@@ -368,11 +364,10 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The type of the aggregate value.</typeparam>
+        /// <param name="zero">The initial aggregate value.</param>
+        /// <param name="aggregate">Asynchronously combines the current aggregate value with each source element.</param>
+        /// <param name="materializer">The materializer used to run the source.</param>
         public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, IMaterializer materializer)
             => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
         
@@ -384,11 +379,10 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut2">The type of the aggregate value.</typeparam>
+        /// <param name="zero">The initial aggregate value.</param>
+        /// <param name="aggregate">Asynchronously combines the current aggregate value with each source element.</param>
+        /// <param name="materializer">The actor system whose materializer runs the source.</param>
         public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, ActorSystem materializer)
             => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
 
@@ -400,9 +394,8 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <param name="reduce">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reduce">Combines the previous reduction result with the next source element.</param>
+        /// <param name="materializer">The materializer used to run the source.</param>
         public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
             => RunWith(Sink.Sum(reduce), materializer);
         
@@ -414,9 +407,8 @@ namespace Akka.Streams.Dsl
         /// function evaluation when the input stream ends, or completed with Failure
         /// if there is a failure signaled in the stream.
         /// </summary>
-        /// <param name="reduce">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reduce">Combines the previous reduction result with the next source element.</param>
+        /// <param name="materializer">The actor system whose materializer runs the source.</param>
         public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, ActorSystem materializer)
             => RunWith(Sink.Sum(reduce), materializer);
 
@@ -428,9 +420,8 @@ namespace Akka.Streams.Dsl
         /// normal end of the stream, or completed with Failure if there is a failure signaled in
         /// the stream.
         /// </summary>
-        /// <param name="action">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="action">The action invoked for each source element.</param>
+        /// <param name="materializer">The materializer used to run the source.</param>
         public Task RunForeach(Action<TOut> action, IMaterializer materializer)
             => RunWith(Sink.ForEach(action), materializer);
         
@@ -441,9 +432,8 @@ namespace Akka.Streams.Dsl
         /// normal end of the stream, or completed with Failure if there is a failure signaled in
         /// the stream.
         /// </summary>
-        /// <param name="action">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="action">The action invoked for each source element.</param>
+        /// <param name="materializer">The actor system whose materializer runs the source.</param>
         public Task RunForeach(Action<TOut> action, ActorSystem materializer)
             => RunWith(Sink.ForEach(action), materializer);
 
