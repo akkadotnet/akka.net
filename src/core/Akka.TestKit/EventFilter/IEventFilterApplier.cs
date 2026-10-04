@@ -14,7 +14,7 @@ namespace Akka.TestKit;
 
 // ReSharper disable once InconsistentNaming
 /// <summary>
-/// TBD
+/// Applies an event filter while an action runs and checks the number of matching events.
 /// </summary>
 public interface IEventFilterApplier
 {
@@ -300,7 +300,7 @@ public interface IEventFilterApplier
     /// </code>
     /// </example>
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A handle that can be disposed to restore logging for the muted events.</returns>
     IUnmutableFilter Mute();
 
     /// <summary>
