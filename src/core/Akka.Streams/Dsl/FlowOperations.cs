@@ -43,12 +43,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose failure may be recovered.</param>
+        /// <param name="partialFunc">Maps a handled failure to a final output element; return <see cref="Option{TOut}.None"/> to propagate the original failure.</param>
         public static Flow<TIn, TOut, TMat> Recover<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Option<TOut>> partialFunc)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Recover(flow, partialFunc);
@@ -74,12 +73,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="partialFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose failures may be recovered with another source.</param>
+        /// <param name="partialFunc">Selects an alternative source for a handled failure.</param>
         [Obsolete("Use RecoverWithRetries instead. [1.1.2]")]
         public static Flow<TIn, TOut, TMat> RecoverWith<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc)
@@ -107,14 +105,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The output element type of the original and alternative sources.</typeparam>
+        /// <typeparam name="TMat">The flow and alternative source materialized value type.</typeparam>
+        /// <param name="flow">The flow whose failures may be recovered with another source.</param>
         /// <param name="partialFunc">Receives the failure cause and returns the new Source to be materialized if any</param>
         /// <param name="attempts">Maximum number of retries or -1 to retry indefinitely</param>
         /// <exception cref="ArgumentException">if <paramref name="attempts"/> is a negative number other than -1</exception>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> RecoverWithRetries<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow,
             Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunc, int attempts)
         {
@@ -141,7 +138,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <param name="flow">TBD</param>
+        /// <param name="flow">The flow whose upstream failures are transformed.</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static Flow<TIn, TOut, TMat> SelectError<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -165,13 +162,12 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type entering the flow.</typeparam>
+        /// <typeparam name="TIn">The current flow output type and mapper input type.</typeparam>
+        /// <typeparam name="TOut">The element type returned by <paramref name="mapper"/>.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are mapped.</param>
+        /// <param name="mapper">Maps each flow output element to a new output element.</param>
         public static Flow<T, TOut, TMat> Select<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.Select(flow, mapper);
@@ -199,12 +195,11 @@ namespace Akka.Streams.Dsl
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type observed by the action.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements pass through the wire tap.</param>
+        /// <param name="action">Performs a side effect for each output element that reaches the tap.</param>
         public static Flow<TIn, TOut, TMat> WireTap<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Action<TOut> action) =>
             (Flow<TIn, TOut, TMat>)InternalFlowOperations.WireTap(flow, action);
 
@@ -229,13 +224,12 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcater">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type entering the flow.</typeparam>
+        /// <typeparam name="TIn">The current flow output type and mapping-function input type.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the mapping function.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are expanded.</param>
+        /// <param name="mapConcater">Maps each output element to a sequence that is emitted in order.</param>
         public static Flow<T, TOut, TMat> SelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, Func<TIn, IEnumerable<TOut>> mapConcater)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
@@ -269,13 +263,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// See also <see cref="SelectMany{T,TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcaterFactory">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type entering the flow.</typeparam>
+        /// <typeparam name="TIn">The current flow output type and mapping-function input type.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the stateful mapping function.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are expanded.</param>
+        /// <param name="mapConcaterFactory">Creates the mapping function for each materialization.</param>
         public static Flow<T, TOut, TMat> StatefulSelectMany<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
@@ -453,13 +446,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type entering the flow.</typeparam>
+        /// <typeparam name="TOut1">The current output type and collector input type.</typeparam>
+        /// <typeparam name="TOut2">The type returned by the collector for matching elements.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are collected and filtered.</param>
+        /// <param name="collector">Maps each output element to an emitted value; null results are filtered out.</param>
         [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, Func<TOut1, TOut2> collector)
         {
@@ -479,14 +471,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="isDefined">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type entering the flow.</typeparam>
+        /// <typeparam name="TOut1">The current output type and predicate/collector input type.</typeparam>
+        /// <typeparam name="TOut2">The type returned by the collector for elements accepted by the predicate.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are collected and filtered.</param>
+        /// <param name="isDefined">Selects output elements for which <paramref name="collector"/> is invoked.</param>
+        /// <param name="collector">Maps each selected output element to an emitted value.</param>
         public static Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(
             this Flow<TIn, TOut1, TMat> flow,
             Func<TOut1, bool> isDefined,
@@ -508,13 +499,12 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type grouped into each sequence.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are grouped.</param>
+        /// <param name="n">The maximum number of elements in each group.</param>
         /// <exception cref="ArgumentException">Thrown, if <paramref name="n"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
         public static Flow<TIn, IEnumerable<TOut>, TMat> Grouped<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n)
         {
             return (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.Grouped(flow, n);
@@ -543,12 +533,11 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{TIn,TOut,TMat}"/>
         /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
         /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow to limit.</param>
+        /// <param name="max">The maximum cumulative number of output elements allowed through the stage.</param>
         public static Flow<TIn, TOut, TMat> Limit<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max)
         {
             return LimitWeighted(flow, max, _ => 1L);
@@ -581,13 +570,12 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="Take{TIn,TOut,TMat}"/>
         /// <seealso cref="TakeWithin{TIn,TOut,TMat}"/>
         /// <seealso cref="TakeWhile{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="costFunc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow to limit by cumulative output cost.</param>
+        /// <param name="max">The maximum cumulative cost allowed through the stage.</param>
+        /// <param name="costFunc">Returns the cost charged for each flow output element.</param>
         public static Flow<TIn, TOut, TMat> LimitWeighted<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, long max, Func<TOut, long> costFunc)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.LimitWeighted(flow, max, costFunc);
@@ -608,14 +596,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="n">TBD</param>
-        /// <param name="step">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output element type contained in each window.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are divided into sliding windows.</param>
+        /// <param name="n">The maximum number of elements in a window.</param>
+        /// <param name="step">The number of elements by which each successive window advances.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="n"/> or <paramref name="step"/> is less than or equal zero.</exception>
-        /// <returns>TBD</returns>
         public static Flow<TIn, IEnumerable<TOut>, TMat> Sliding<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, int n, int step = 1)
         {
             return (Flow<TIn, IEnumerable<TOut>, TMat>)InternalFlowOperations.Sliding(flow, n, step);
@@ -642,14 +629,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output type consumed by the scan.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and emitted element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are scanned.</param>
+        /// <param name="zero">The initial accumulator value emitted before processing output elements.</param>
+        /// <param name="scan">Combines the current accumulator with each flow output to produce the next accumulator.</param>
         public static Flow<TIn, TOut2, TMat> Scan<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> scan)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Scan(flow, zero, scan);
@@ -680,14 +666,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="scan">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output type consumed by the asynchronous scan.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and emitted element type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are scanned asynchronously.</param>
+        /// <param name="zero">The initial accumulator value emitted before processing output elements.</param>
+        /// <param name="scan">Asynchronously combines the current accumulator with each flow output.</param>
         public static Flow<TIn, TOut2, TMat> ScanAsync<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, Task<TOut2>> scan)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.ScanAsync(flow, zero, scan);
@@ -713,14 +698,13 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output type consumed by the fold.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and final result type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are folded.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">Combines the current accumulator with each flow output to produce the next accumulator.</param>
         public static Flow<TIn, TOut2, TMat> Aggregate<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero, Func<TOut2, TOut1, TOut2> fold)
         {
             return (Flow<TIn, TOut2, TMat>)InternalFlowOperations.Aggregate(flow, zero, fold);
@@ -748,14 +732,13 @@ namespace Akka.Streams.Dsl
         /// 
         /// <seealso cref="Aggregate{TIn,TOut1,TOut2,TMat}"/>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="zero">TBD</param>
-        /// <param name="fold">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut1">The current flow output type consumed by the asynchronous fold.</typeparam>
+        /// <typeparam name="TOut2">The accumulator and final result type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are folded asynchronously.</param>
+        /// <param name="zero">The initial accumulator value.</param>
+        /// <param name="fold">Asynchronously combines the current accumulator with each flow output.</param>
         public static Flow<TIn, TOut2, TMat> AggregateAsync<TIn, TOut1, TOut2, TMat>(this Flow<TIn, TOut1, TMat> flow, TOut2 zero,
             Func<TOut2, TOut1, Task<TOut2>> fold)
         {
@@ -782,12 +765,11 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="reduce">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output and reduction result type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are reduced.</param>
+        /// <param name="reduce">Combines the current result with the next flow output.</param>
         public static Flow<TIn, TOut, TMat> Sum<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Func<TOut, TOut, TOut> reduce)
         {
             return (Flow<TIn, TOut, TMat>) InternalFlowOperations.Sum(flow, reduce);
@@ -811,15 +793,14 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="start">TBD</param>
-        /// <param name="inject">TBD</param>
-        /// <param name="end">TBD</param>
+        /// <typeparam name="TIn">The flow input element type.</typeparam>
+        /// <typeparam name="TOut">The flow output and separator type.</typeparam>
+        /// <typeparam name="TMat">The flow materialized value type.</typeparam>
+        /// <param name="flow">The flow whose output elements are interspersed.</param>
+        /// <param name="start">The element emitted before the flow's output elements.</param>
+        /// <param name="inject">The element inserted between consecutive flow output elements.</param>
+        /// <param name="end">The element emitted after upstream completion.</param>
         /// <exception cref="ArgumentNullException">Thrown when any of the <paramref name="start"/>, <paramref name="inject"/> or <paramref name="end"/> is undefined.</exception>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> Intersperse<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, TOut start, TOut inject, TOut end)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Intersperse(flow, start, inject, end);
