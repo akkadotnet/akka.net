@@ -191,7 +191,7 @@ namespace Akka.TestKit
         /// if the condition is fulfilled. Between calls the thread sleeps. If undefined, 100 ms is used
         /// </param>
         /// <param name="cancellationToken"></param>
-        /// <returns><c>true</c> if the condition becomes true within <paramref name="max"/>; otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if a condition check succeeds; <c>false</c> if a failed check observes timeout or cancellation. Cancellation during the delay may throw.</returns>
         public bool AwaitConditionNoThrow(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval = null, CancellationToken cancellationToken = default)
         {
             return AwaitConditionNoThrowAsync(conditionIsFulfilled, max, interval, cancellationToken)

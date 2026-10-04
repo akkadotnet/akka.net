@@ -36,7 +36,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Advances virtual wall-clock time and runs scheduled work whose due time is at or before the new time.
+        /// Advances virtual time and processes the work captured as due by the new time, in due-time order. Work scheduled by a callback for a time already reached waits for a later advance; callback exceptions propagate and interrupt this advance.
         /// </summary>
         /// <param name="offset">The amount of time to add to the scheduler's current time.</param>
         public void Advance(TimeSpan offset)
@@ -68,7 +68,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Advances virtual wall-clock time to the specified instant and runs work that is due by then.
+        /// Advances virtual time to the specified instant and processes the work captured as due by then, in due-time order. Work scheduled by a callback for a time already reached waits for a later advance; callback exceptions propagate and interrupt this advance.
         /// </summary>
         /// <param name="when">The target virtual time, which must not precede the current time.</param>
         /// <exception cref="InvalidOperationException">
@@ -116,7 +116,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Schedules a message to be sent after the specified delay, unless canceled before virtual time reaches its due time.
+        /// Schedules a message after the specified delay; the cancellation handle is checked before delivery when due work is processed.
         /// </summary>
         /// <param name="delay">The time from the current virtual time until delivery.</param>
         /// <param name="receiver">The recipient of the message.</param>
@@ -129,7 +129,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Schedules a message to be sent first after <paramref name="initialDelay"/> and again at each interval when virtual time advances.
+        /// Schedules a message after <paramref name="initialDelay"/> and once per advance when due, then reschedules it from the current virtual time using <paramref name="interval"/>.
         /// </summary>
         /// <param name="initialDelay">The delay before the first delivery.</param>
         /// <param name="interval">The delay between subsequent deliveries.</param>
@@ -143,7 +143,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Schedules a message to be sent repeatedly unless canceled before a due time.
+        /// Schedules a message after <paramref name="initialDelay"/> and once per advance when due, then reschedules it from the current virtual time using <paramref name="interval"/> unless canceled before delivery.
         /// </summary>
         /// <param name="initialDelay">The delay before the first delivery.</param>
         /// <param name="interval">The delay between subsequent deliveries.</param>
@@ -179,7 +179,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Schedules an action to run first after <paramref name="initialDelay"/> and again at each interval when virtual time advances.
+        /// Schedules an action after <paramref name="initialDelay"/> and once per advance when due, then reschedules it from the current virtual time using <paramref name="interval"/>.
         /// </summary>
         /// <param name="initialDelay">The delay before the first execution.</param>
         /// <param name="interval">The delay between subsequent executions.</param>
@@ -191,7 +191,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// Schedules an action to run repeatedly when virtual time advances to each due time.
+        /// Schedules an action after <paramref name="initialDelay"/> and once per advance when due, then reschedules it from the current virtual time using <paramref name="interval"/>.
         /// </summary>
         /// <param name="initialDelay">The delay before the first execution.</param>
         /// <param name="interval">The delay between subsequent executions.</param>

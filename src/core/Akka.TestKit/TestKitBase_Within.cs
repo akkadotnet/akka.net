@@ -27,7 +27,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="max">The maximum duration allowed for the action.</param>
         /// <param name="action">The synchronous action to execute within the time bound.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         public void Within(
             [AutoDilate] TimeSpan max,
@@ -84,7 +84,7 @@ namespace Akka.TestKit
         /// <param name="max">The maximum duration allowed for the action.</param>
         /// <param name="action">The synchronous action to execute within the time bounds.</param>
         /// <param name="hint">Additional context to include if the duration assertion fails.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         public void Within(
             TimeSpan min,
@@ -144,7 +144,7 @@ namespace Akka.TestKit
         /// <typeparam name="T">The value returned by the function.</typeparam>
         /// <param name="max">The maximum duration allowed for the function.</param>
         /// <param name="function">The synchronous function to execute within the time bound.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The value returned by <paramref name="function"/>.</returns>
         public T Within<T>(
@@ -173,7 +173,7 @@ namespace Akka.TestKit
         /// <typeparam name="T">The value returned by the asynchronous function.</typeparam>
         /// <param name="max">The maximum duration allowed for the function.</param>
         /// <param name="function">The asynchronous function to execute within the time bound.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>A task that completes with the value returned by <paramref name="function"/>.</returns>
         public Task<T> WithinAsync<T>(
@@ -203,7 +203,7 @@ namespace Akka.TestKit
         /// <param name="max">The maximum duration allowed for the function.</param>
         /// <param name="function">The synchronous function to execute within the time bounds.</param>
         /// <param name="hint">Additional context to include if the duration assertion fails.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The value returned by <paramref name="function"/>.</returns>
         public T Within<T>(
@@ -245,7 +245,7 @@ namespace Akka.TestKit
         /// <param name="max">The maximum duration allowed for the function.</param>
         /// <param name="function">The asynchronous function to execute within the time bounds.</param>
         /// <param name="hint">Additional context to include if the duration assertion fails.</param>
-        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, or null to use the default tolerance.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration, unless the block most recently completed with <see cref="ExpectNoMsg(CancellationToken)"/> (when the elapsed-time check is skipped); null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>A task that completes with the value returned by <paramref name="function"/>.</returns>
         public async Task<T> WithinAsync<T>(

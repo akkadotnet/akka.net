@@ -80,7 +80,7 @@ namespace Akka.TestKit
     public sealed class KeepRunning : AutoPilot
     {
         /// <summary>
-        /// The shared sentinel instance used to stop autopilot handling.
+        /// The shared sentinel instance used to keep the current autopilot active.
         /// </summary>
         public static KeepRunning Instance = new();
 

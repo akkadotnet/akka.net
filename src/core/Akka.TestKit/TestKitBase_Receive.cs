@@ -658,7 +658,7 @@ namespace Akka.TestKit
         /// <param name="max">The maximum total wait duration, or null to use the current test timeout.</param>
         /// <param name="idle">The maximum wait for another message after the previous one, or null to disable the idle limit.</param>
         /// <param name="msgs">The maximum number of accepted messages to receive.</param>
-        /// <param name="shouldIgnoreOtherMessageTypes">Whether messages not assignable to <typeparamref name="T"/> are left out while receiving or stop the operation.</param>
+        /// <param name="shouldIgnoreOtherMessageTypes">When <c>true</c>, messages not assignable to <typeparamref name="T"/> are dequeued and omitted from the result; when <c>false</c>, the first such message remains queued and stops receipt.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The received messages accepted by <paramref name="shouldContinue"/>.</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(

@@ -76,7 +76,7 @@ namespace Akka.MultiNode.TestAdapter.Xunit2.Tests.Internal.Utils
         /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
         /// <param name="collection">The sequence to enumerate repeatedly.</param>
-        /// <returns>An enumerator that restarts the sequence after reaching its end.</returns>
+        /// <returns>An enumerator that resets the wrapped enumerator at the end; repeated iteration requires it to support <see cref="IEnumerator.Reset"/>.</returns>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {
             return new ContinuousEnumerator<T>(collection.GetEnumerator());
