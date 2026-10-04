@@ -97,7 +97,7 @@ namespace Akka.Dispatch
         /// <param name="floor">The lower bound for the result.</param>
         /// <param name="scalar">The multiplier applied to <see cref="Environment.ProcessorCount"/> before conversion to an integer.</param>
         /// <param name="ceiling">The upper bound for the result.</param>
-        /// <returns>The processor count multiplied by <paramref name="scalar"/>, converted to an integer and clamped between <paramref name="floor"/> and <paramref name="ceiling"/>.</returns>
+        /// <returns>The processor count multiplied by <paramref name="scalar"/> and converted to an integer, then bounded by the supplied floor and ceiling. When <paramref name="floor"/> is greater than <paramref name="ceiling"/>, the result is <paramref name="ceiling"/>.</returns>
         public static int ScaledPoolSize(int floor, double scalar, int ceiling)
         {
             return Math.Min(Math.Max((int) (Environment.ProcessorCount*scalar), floor), ceiling);

@@ -105,7 +105,7 @@ namespace Akka.Actor
         /// Looks up deployment settings for an actor path beneath the <c>/user</c> guardian.
         /// </summary>
         /// <param name="path">The actor path whose deployment configuration is requested.</param>
-        /// <returns>The matching deployment settings, or <see cref="Deploy.None"/> for paths outside the user hierarchy or with no match.</returns>
+        /// <returns>The matching deployment settings; this overload returns <see cref="Deploy.None"/> when its path checks reject the path, and may return <c>null</c> when no deployment matches.</returns>
         public Deploy Lookup(ActorPath path)
         {
             var rawElements = path.Elements;
@@ -122,7 +122,7 @@ namespace Akka.Actor
         /// Looks up deployment settings for a sequence of actor path elements.
         /// </summary>
         /// <param name="path">The actor path elements to match against configured deployment paths.</param>
-        /// <returns>The matching deployment settings, or <see cref="Deploy.None"/> when no configured path matches.</returns>
+        /// <returns>The matching deployment settings, or <c>null</c> when no configured path matches.</returns>
         public Deploy Lookup(IEnumerable<string> path)
         {
             return _deployments.Value.Find(path);

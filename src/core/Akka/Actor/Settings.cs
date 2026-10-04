@@ -503,7 +503,7 @@ namespace Akka.Actor
         public string SchedulerClass { get; private set; }
 
         /// <summary>
-        /// Gets how long the scheduler waits for scheduled tasks to stop during shutdown.
+        /// Gets the timeout for waiting for the scheduler worker to stop during shutdown.
         /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
 

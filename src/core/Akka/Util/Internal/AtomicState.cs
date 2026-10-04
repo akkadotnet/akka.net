@@ -24,7 +24,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Creates an atomic state with the specified call timeout and initial counter value.
         /// </summary>
-        /// <param name="callTimeout">The maximum duration allowed for a call protected by this state.</param>
+        /// <param name="callTimeout">The timeout for waiting on a protected call; expiration signals cancellation to the supplied token, but work that ignores the token may continue.</param>
         /// <param name="startingCount">The initial value of the state counter.</param>
         protected AtomicState(TimeSpan callTimeout, long startingCount)
             : base(startingCount)
@@ -316,11 +316,11 @@ namespace Akka.Util.Internal
         /// </summary>
         bool HasListeners { get; }
         /// <summary>
-        /// Invokes an asynchronous operation through this state so its result or failure can be recorded.
+        /// Applies this state’s invocation policy, which may invoke the operation or reject it without invoking the body.
         /// </summary>
         /// <typeparam name="T">The result type of the operation.</typeparam>
         /// <param name="body">The asynchronous operation to invoke.</param>
-        /// <returns>A task that completes with the operation's result or failure.</returns>
+        /// <returns>A task that completes with the operation's result or with an exception produced by this state.</returns>
         Task<T> Invoke<T>(Func<Task<T>> body);
         /// <summary>
         /// Enters this state and notifies its registered listeners.
