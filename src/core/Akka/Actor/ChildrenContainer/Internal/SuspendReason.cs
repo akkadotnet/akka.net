@@ -10,13 +10,13 @@ using System;
 namespace Akka.Actor.Internal
 {
     /// <summary>
-    /// TBD
+    /// Identifies why an actor cell is suspended while it processes lifecycle or user requests.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     public abstract class SuspendReason
     {
         /// <summary>
-        /// TBD
+        /// Marks a suspension that waits for child actors to complete creation.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         // ReSharper disable once InconsistentNaming
@@ -26,7 +26,7 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a suspension requested while an actor is being created.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         public class Creation : SuspendReason, IWaitingForChildren
@@ -35,52 +35,51 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a suspension while an actor is being recreated after failure.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         public class Recreation : SuspendReason, IWaitingForChildren
         {
 
             /// <summary>
-            /// TBD
+            /// Creates a recreation suspension reason with the triggering failure.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The exception that caused the actor to be recreated.</param>
             public Recreation(Exception cause)
             {
                 Cause = cause;
             }
 
             /// <summary>
-            /// TBD
+            /// The exception that caused the actor to be recreated.
             /// </summary>
             public Exception Cause { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a suspension while an actor is terminating.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         public class Termination : SuspendReason
         {
             private Termination() { }
             /// <summary>
-            /// TBD
+            /// The shared termination suspension reason.
             /// </summary>
             public static Termination Instance { get; } = new();
         }
 
         /// <summary>
-        /// TBD
+        /// Marks a suspension requested explicitly by a user or parent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         public class UserRequest : SuspendReason
         {
             private UserRequest() { }
             /// <summary>
-            /// TBD
+            /// The shared user-request suspension reason.
             /// </summary>
             public static UserRequest Instance { get; } = new();
         }
     }
 }
-
