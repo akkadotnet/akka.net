@@ -905,12 +905,12 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// The empty module singleton, with a closed shape and no materialized value.
     /// </summary>
     public sealed class EmptyModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Gets the singleton empty module.
         /// </summary>
         public static readonly EmptyModule Instance = new();
 
@@ -919,31 +919,31 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the closed shape, which exposes no ports.
         /// </summary>
         public override Shape Shape => ClosedShape.Instance;
 
         /// <summary>
-        /// TBD
+        /// Gets <c>false</c> because the empty module is not an atomic stage.
         /// </summary>
         public override bool IsAtomic => false;
 
         /// <summary>
-        /// TBD
+        /// Gets <c>false</c> because the empty module cannot be materialized as a runnable graph.
         /// </summary>
         public override bool IsRunnable => false;
 
         /// <summary>
-        /// TBD
+        /// Gets the marker indicating that this module has no materialized value.
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation => StreamLayout.Ignore.Instance;
 
         /// <summary>
-        /// TBD
+        /// Replaces the shape if the supplied shape is closed.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The shape to use.</param>
+        /// <exception cref="NotSupportedException">The supplied shape is not a <see cref="ClosedShape"/>.</exception>
+        /// <returns>This module.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if (shape is ClosedShape)
@@ -953,22 +953,22 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Composes the empty module with another module using left-value retention.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The module to compose with the empty module.</param>
+        /// <returns>The composition with the materialized value behavior defined for an empty left module.</returns>
         public override IModule Compose(IModule other) => Compose<object,object,object>(other, Keep.Left);
 
         /// <summary>
-        /// TBD
+        /// Composes the empty module with another module using a supported materialized-value combiner.
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="T3">TBD</typeparam>
-        /// <param name="other">TBD</param>
-        /// <param name="matFunc">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The materialized value type of the empty module.</typeparam>
+        /// <typeparam name="T2">The materialized value type of <paramref name="other"/>.</typeparam>
+        /// <typeparam name="T3">The type returned by <paramref name="matFunc"/>.</typeparam>
+        /// <param name="other">The module to compose with the empty module.</param>
+        /// <param name="matFunc">Combines the empty module's and other module's values; only left and right retention are supported.</param>
+        /// <exception cref="NotSupportedException">The combiner is neither <see cref="Keep.Left{TLeft,TRight}"/> nor <see cref="Keep.Right{TLeft,TRight}"/>.</exception>
+        /// <returns>The other module or a composite that retains any observable materialization side effect.</returns>
         public override IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
             if (Keep.IsRight(matFunc))
@@ -992,33 +992,33 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns this module because the empty module has no nested structure to wrap.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This module.</returns>
         public override IModule Nest() => this;
 
         /// <summary>
-        /// TBD
+        /// Gets an empty list because this module contains no submodules.
         /// </summary>
         public override ImmutableArray<IModule> SubModules { get; } = ImmutableArray<IModule>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Returns this singleton because copying the empty layout requires no new module.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This module.</returns>
         public override IModule CarbonCopy() => this;
 
         /// <summary>
-        /// TBD
+        /// Gets the empty attribute set.
         /// </summary>
         public override Attributes Attributes => Attributes.None;
 
         /// <summary>
-        /// TBD
+        /// Throws because the empty module cannot carry attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes that cannot be applied.</param>
+        /// <exception cref="NotSupportedException">The empty module does not support attributes.</exception>
+        /// <returns>This method does not return.</returns>
         public override IModule WithAttributes(Attributes attributes)
         {
             throw new NotSupportedException("EmptyModule cannot carry attributes");
@@ -1026,16 +1026,16 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// A module that represents a copied graph module while retaining a reference to the original module.
     /// </summary>
     public sealed class CopiedModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Creates a module copy with its exposed shape, attributes, and original module.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="copyOf">TBD</param>
+        /// <param name="shape">The copied shape exposed by this module.</param>
+        /// <param name="attributes">The attributes applied to the copy.</param>
+        /// <param name="copyOf">The module represented by this copy.</param>
         public CopiedModule(Shape shape, Attributes attributes, IModule copyOf)
         {
             Shape = shape;
@@ -1045,42 +1045,42 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the original module as the copied module's sole submodule.
         /// </summary>
         public override ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the attributes applied to this copy.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the original module represented by this copy.
         /// </summary>
         public IModule CopyOf { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the shape exposed by this copy.
         /// </summary>
         public override Shape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets <c>true</c> because this module represents a copy of another module.
         /// </summary>
         public override bool IsCopied => true;
 
         /// <summary>
-        /// TBD
+        /// Gets the materialized-value node that refers to the original module.
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation
             => new StreamLayout.Atomic(CopyOf);
 
         /// <summary>
-        /// TBD
+        /// Replaces the shape when the new shape has the same ports.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The shape to expose.</param>
+        /// <exception cref="ArgumentException">The supplied shape does not have the same ports.</exception>
+        /// <returns>This module when the shape reference is unchanged, or a composite module with the replacement shape.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if (!ReferenceEquals(shape, Shape))
@@ -1093,16 +1093,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copy with a carbon-copied shape and the same original module.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new copied module.</returns>
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, CopyOf);
 
         /// <summary>
-        /// TBD
+        /// Returns this module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>This module if the attributes reference is unchanged; otherwise, a copied module with the new attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
         {
             if (!ReferenceEquals(attributes, Attributes))
@@ -1115,19 +1115,19 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// A module composed of submodules, exposed ports, connections, and materialized-value computation.
     /// </summary>
     public sealed class CompositeModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Creates a composite module from its layout and materialized-value computation.
         /// </summary>
-        /// <param name="subModules">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="downstreams">TBD</param>
-        /// <param name="upstreams">TBD</param>
-        /// <param name="materializedValueComputation">TBD</param>
-        /// <param name="attributes">TBD</param>
+        /// <param name="subModules">The modules contained by this composition.</param>
+        /// <param name="shape">The ports exposed by the composition.</param>
+        /// <param name="downstreams">Connections from outlets to inlets.</param>
+        /// <param name="upstreams">The inverse inlet-to-outlet connection map.</param>
+        /// <param name="materializedValueComputation">The computation that produces the composite materialized value.</param>
+        /// <param name="attributes">Attributes applied to the composite.</param>
         public CompositeModule(ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
@@ -1144,41 +1144,41 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the upstream outlet for each connected inlet.
         /// </summary>
         public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the downstream inlet for each connected outlet.
         /// </summary>
         public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the ports exposed by this composition.
         /// </summary>
         public override Shape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the attributes applied to this composition.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the contained modules in composition order.
         /// </summary>
         public override ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the computation that produces this composite's materialized value.
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
         /// <summary>
-        /// TBD
+        /// Replaces the exposed shape when it has the same ports.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The shape to expose.</param>
+        /// <exception cref="ArgumentException">The supplied shape does not have the same ports.</exception>
+        /// <returns>This module when the shape reference is unchanged; otherwise, a composite with the replacement shape.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if (!ReferenceEquals(shape, Shape))
@@ -1194,25 +1194,25 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copied module representing this composite.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copied module with a copied shape and this composite as its original.</returns>
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         /// <summary>
-        /// TBD
+        /// Returns this composition with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A new composite module with the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new CompositeModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes);
 
         /// <summary>
-        /// TBD
+        /// Creates a composite module around one module using the supplied exposed shape.
         /// </summary>
-        /// <param name="module">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="module">The module to contain.</param>
+        /// <param name="shape">The shape exposed by the composite.</param>
+        /// <returns>A composite with empty connection maps and an atomic materialized-value node for <paramref name="module"/>.</returns>
         public static CompositeModule Create(Module module, Shape shape)
         {
             return new CompositeModule(
@@ -1248,17 +1248,17 @@ namespace Akka.Streams.Implementation
     public sealed class StructuralInfoModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Creates a structural view of the modules, port ownership, connections, and materialized values in a fused graph.
         /// </summary>
-        /// <param name="subModules">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="downstreams">TBD</param>
-        /// <param name="upstreams">TBD</param>
-        /// <param name="inOwners">TBD</param>
-        /// <param name="outOwners">TBD</param>
-        /// <param name="materializedValues">TBD</param>
-        /// <param name="materializedValueComputation">TBD</param>
-        /// <param name="attributes">TBD</param>
+        /// <param name="subModules">The modules represented in the structural view.</param>
+        /// <param name="shape">The ports exposed by this view.</param>
+        /// <param name="downstreams">Connections from outlets to inlets.</param>
+        /// <param name="upstreams">The inverse inlet-to-outlet connection map.</param>
+        /// <param name="inOwners">The module that owns each inlet.</param>
+        /// <param name="outOwners">The module that owns each outlet.</param>
+        /// <param name="materializedValues">The materialized-value node associated with each module.</param>
+        /// <param name="materializedValueComputation">The computation for the whole view's materialized value.</param>
+        /// <param name="attributes">Attributes applied to the structural view.</param>
         public StructuralInfoModule(ImmutableArray<IModule> subModules,
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
@@ -1282,57 +1282,57 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the materialized-value computation for the whole structural view.
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
         
         /// <summary>
-        /// TBD
+        /// Gets the downstream inlet for each connected outlet.
         /// </summary>
         public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the upstream outlet for each connected inlet.
         /// </summary>
         public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets <c>false</c> because this is structural metadata, not a fused executable module.
         /// </summary>
         public override bool IsFused { get; } = false;
 
         /// <summary>
-        /// TBD
+        /// Gets the exposed shape of the structural view.
         /// </summary>
         public override Shape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the modules represented in this structural view.
         /// </summary>
         public override ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the attributes applied to this structural view.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the module that owns each inlet.
         /// </summary>
         public IImmutableDictionary<InPort, IModule> InOwners { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the module that owns each outlet.
         /// </summary>
         public IImmutableDictionary<OutPort, IModule> OutOwners { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the materialized-value node associated with each module.
         /// </summary>
         public IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> MaterializedValues { get; }
 
         /// <summary>
-        /// TBD
+        /// Replaces the exposed shape when it has the same ports.
         /// </summary>
         public override IModule ReplaceShape(Shape shape)
         {
@@ -1348,12 +1348,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copied module representing this structural view.
         /// </summary>
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         /// <summary>
-        /// TBD
+        /// Returns this structural view with the supplied attributes.
         /// </summary>
         public override IModule WithAttributes(Attributes attributes)
         {
@@ -1363,20 +1363,20 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// A module whose contained stages and connections have been fused for execution.
     /// </summary>
     public sealed class FusedModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Creates a fused module with its structural layout and materialized-value computation.
         /// </summary>
-        /// <param name="subModules">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="downstreams">TBD</param>
-        /// <param name="upstreams">TBD</param>
-        /// <param name="materializedValueComputation">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="info">TBD</param>
+        /// <param name="subModules">The modules represented by the fused module.</param>
+        /// <param name="shape">The ports exposed by the fused module.</param>
+        /// <param name="downstreams">Connections from outlets to inlets.</param>
+        /// <param name="upstreams">The inverse inlet-to-outlet connection map.</param>
+        /// <param name="materializedValueComputation">The computation for the fused module's materialized value.</param>
+        /// <param name="attributes">Attributes applied to the fused module.</param>
+        /// <param name="info">The structural information used to inspect the fused layout.</param>
         public FusedModule(
             ImmutableArray<IModule> subModules,
             Shape shape,
@@ -1397,51 +1397,51 @@ namespace Akka.Streams.Implementation
 
 
         /// <summary>
-        /// TBD
+        /// Gets the structural information associated with this fused module.
         /// </summary>
         public StructuralInfoModule Info { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets <c>true</c> because this module represents a fused layout.
         /// </summary>
         public override bool IsFused => true;
 
         /// <summary>
-        /// TBD
+        /// Gets the downstream inlet for each connected outlet.
         /// </summary>
         public override IImmutableDictionary<OutPort, InPort> Downstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the upstream outlet for each connected inlet.
         /// </summary>
         public override IImmutableDictionary<InPort, OutPort> Upstreams { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the materialized-value computation for this fused module.
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the ports exposed by the fused module.
         /// </summary>
         public override Shape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the modules represented in the fused layout.
         /// </summary>
         public override ImmutableArray<IModule> SubModules { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the attributes applied to this fused module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Replaces the exposed shape when it has the same ports and shape structure.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The shape to expose.</param>
+        /// <exception cref="ArgumentException">The supplied shape does not match the existing ports and shape structure.</exception>
+        /// <returns>This module when the shape reference is unchanged; otherwise, a fused module with the replacement shape.</returns>
         public override IModule ReplaceShape(Shape shape)
         {
             if (!ReferenceEquals(shape, Shape))
@@ -1456,16 +1456,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copied module representing this fused module.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copied module with a copied shape and this fused module as its original.</returns>
         public override IModule CarbonCopy() => new CopiedModule(Shape.DeepCopy(), Attributes, this);
 
         /// <summary>
-        /// TBD
+        /// Returns this fused module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A new fused module with the supplied attributes.</returns>
         public override IModule WithAttributes(Attributes attributes)
             =>
                 new FusedModule(SubModules, Shape, Downstreams, Upstreams, MaterializedValueComputation, attributes,
@@ -1491,15 +1491,15 @@ namespace Akka.Streams.Implementation
     public abstract class AtomicModule : Module
     {
         /// <summary>
-        /// TBD
+        /// Gets an empty list because atomic modules contain no child modules.
         /// </summary>
         public sealed override ImmutableArray<IModule> SubModules => ImmutableArray<IModule>.Empty;
         /// <summary>
-        /// TBD
+        /// Gets the empty downstream map inherited from the base module.
         /// </summary>
         public sealed override IImmutableDictionary<OutPort, InPort> Downstreams => base.Downstreams;
         /// <summary>
-        /// TBD
+        /// Gets the empty upstream map inherited from the base module.
         /// </summary>
         public sealed override IImmutableDictionary<InPort, OutPort> Upstreams => base.Upstreams;
     }
