@@ -22,11 +22,11 @@ using Debug = System.Diagnostics.Debug;
 namespace Akka.Streams.Implementation.Fusing
 {
     /// <summary>
-    /// TBD
+    /// Flattens a stream of source graphs by materializing and merging up to the configured breadth concurrently.
     /// </summary>
-    /// <typeparam name="TGraph">TBD</typeparam>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TGraph">The source graph type accepted as input.</typeparam>
+    /// <typeparam name="T">The element type emitted by each source graph.</typeparam>
+    /// <typeparam name="TMat">The materialized value type of each source graph.</typeparam>
     #nullable enable
     internal sealed class FlattenMerge<TGraph, T, TMat> : GraphStage<FlowShape<TGraph, T>> where TGraph : IGraph<SourceShape<T>, TMat>
     {
@@ -146,9 +146,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _breadth;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that merges elements from at most <paramref name="breadth"/> materialized sources at once.
         /// </summary>
-        /// <param name="breadth">TBD</param>
+        /// <param name="breadth">The maximum number of concurrently active sources.</param>
         public FlattenMerge(int breadth)
         {
             _breadth = breadth;
@@ -158,26 +158,26 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the flatten-merge stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The flow shape that accepts source graphs and emits their elements.
         /// </summary>
         public override FlowShape<TGraph, T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that materializes incoming sources with the enclosing attributes.
         /// </summary>
-        /// <param name="enclosingAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="enclosingAttributes">Attributes inherited from the enclosing graph.</param>
+        /// <returns>The logic that merges elements from active source substreams.</returns>
         protected override GraphStageLogic CreateLogic(Attributes enclosingAttributes) => new Logic(this, enclosingAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns a diagnostic representation of this stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The stage name and configured breadth.</returns>
         public override string ToString() => $"FlattenMerge({_breadth})";
     }
     #nullable restore
@@ -185,7 +185,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements in the input stream and emitted tail source.</typeparam>
     internal sealed class PrefixAndTail<T> : GraphStage<FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)>>
     {
         #region internal classes
@@ -327,9 +327,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Outlet<(IImmutableList<T>, Source<T, NotUsed>)> _out = new("PrefixAndTail.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits up to the first <paramref name="count"/> elements and a source for the remaining stream.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The number of elements to include in the prefix; non-positive values produce an empty prefix.</param>
         public PrefixAndTail(int count)
         {
             _count = count;
@@ -338,34 +338,34 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the prefix-and-tail stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.PrefixAndTail;
 
         /// <summary>
-        /// TBD
+        /// The flow shape that emits the prefix together with a source for the remaining elements.
         /// </summary>
         public override FlowShape<T, (IImmutableList<T>, Source<T, NotUsed>)> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the prefix collector and tail substream logic.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that collects the prefix and exposes the remaining input as a source.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns a diagnostic representation of this stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The stage name and configured prefix count.</returns>
         public override string ToString() => $"PrefixAndTail({_count})";
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="TKey">TBD</typeparam>
+    /// <typeparam name="T">The type of elements partitioned among substreams.</typeparam>
+    /// <typeparam name="TKey">The type of key used to select a substream.</typeparam>
     internal sealed class GroupBy<T, TKey> : GraphStage<FlowShape<T, Source<T, NotUsed>>>
     {
         #region Logic 
@@ -638,9 +638,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly bool _allowClosedSubstreamRecreation;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that routes each element to a substream selected by its key.
         /// </summary>
-        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+        /// <param name="maxSubstreams">The maximum number of distinct keys supported; if exceeded, the exception is handled by the configured supervision strategy. Use -1 for no limit.</param>
         /// <param name="keyFor">Computes the key for each element</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         public GroupBy(int maxSubstreams, Func<T, TKey> keyFor, bool allowClosedSubstreamRecreation = false)
@@ -657,27 +657,27 @@ namespace Akka.Streams.Implementation.Fusing
         private Outlet<Source<T, NotUsed>> Out { get; } = new("GroupBy.out");
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the group-by stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.GroupBy;
 
         /// <summary>
-        /// TBD
+        /// The flow shape that emits one source for each encountered key.
         /// </summary>
         public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that groups elements using the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that creates and feeds keyed substreams.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns the stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string "GroupBy".</returns>
         public override string ToString() => "GroupBy";
     }
 
@@ -687,44 +687,44 @@ namespace Akka.Streams.Implementation.Fusing
     internal static class Split
     {
         /// <summary>
-        /// TBD
+        /// Specifies whether a matching element starts a new substream or ends the current one.
         /// </summary>
         internal enum SplitDecision
         {
             /// <summary>
-            /// TBD
+            /// Starts a new substream with the element that matched the predicate.
             /// </summary>
             SplitBefore,
             /// <summary>
-            /// TBD
+            /// Ends the current substream with the element that matched the predicate.
             /// </summary>
             SplitAfter
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a flow that starts a new substream before each element matching the predicate.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="p">TBD</param>
-        /// <param name="substreamCancelStrategy">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements in the input and substreams.</typeparam>
+        /// <param name="p">The predicate that selects boundaries and whose matching element begins the next substream.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
+        /// <returns>A graph that emits a source for each segment delimited by matching elements.</returns>
         public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> When<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitBefore, p, substreamCancelStrategy);
 
 
         /// <summary>
-        /// TBD
+        /// Creates a flow that ends the current substream with each element matching the predicate.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="p">TBD</param>
-        /// <param name="substreamCancelStrategy">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements in the input and substreams.</typeparam>
+        /// <param name="p">The predicate that selects the final element of each segment.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
+        /// <returns>A graph that emits a source for each segment ending in a matching element.</returns>
         public static IGraph<FlowShape<T, Source<T, NotUsed>>, NotUsed> After<T>(Func<T, bool> p, SubstreamCancelStrategy substreamCancelStrategy) => new Split<T>(SplitDecision.SplitAfter, p, substreamCancelStrategy);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements in the input and emitted substreams.</typeparam>
     internal sealed class Split<T> : GraphStage<FlowShape<T, Source<T, NotUsed>>>
     {
         #region internal classes
@@ -963,11 +963,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly bool _propagateSubstreamCancel;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that splits the input into substreams at matching elements.
         /// </summary>
-        /// <param name="decision">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="substreamCancelStrategy">TBD</param>
+        /// <param name="decision">Whether a matching element starts the next substream or ends the current substream.</param>
+        /// <param name="predicate">The predicate that identifies substream boundaries.</param>
+        /// <param name="substreamCancelStrategy">Whether cancellation of a substream is propagated upstream or the remaining input is drained.</param>
         public Split(Split.SplitDecision decision, Func<T, bool> predicate, SubstreamCancelStrategy substreamCancelStrategy)
         {
             _decision = decision;
@@ -978,21 +978,21 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The flow shape that emits a source for each split segment.
         /// </summary>
         public override FlowShape<T, Source<T, NotUsed>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that detects boundaries and manages each substream.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that emits and feeds split substreams.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string "Split".</returns>
         public override string ToString() => "Split";
     }
 
@@ -1151,10 +1151,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Action<IActorSubscriberMessage> _externalCallback;
 
         /// <summary>
-        /// TBD
+        /// Creates a source stage that forwards downstream demand and cancellation to a callback.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="externalCallback">TBD</param>
+        /// <param name="name">The name used for the stage and its port.</param>
+        /// <param name="externalCallback">The callback that receives substream pull and cancellation commands.</param>
         public SubSink(string name, Action<IActorSubscriberMessage> externalCallback)
         {
             _name = name;
@@ -1165,22 +1165,22 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The stage name derived from the constructor argument.
         /// </summary>
         protected override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The sink shape that receives substream elements.
         /// </summary>
         public override SinkShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Requests one element from the materialized substream, or records the request until materialization.
         /// </summary>
         public void PullSubstream() => DispatchCommand(SubSink.RequestOneScheduledBeforeMaterialization.Instance);
 
         /// <summary>
-        /// TBD
+        /// Cancels the materialized substream with the supplied cause, or records cancellation until materialization.
         /// </summary>
         public void CancelSubstream(Exception cause) => DispatchCommand(new SubSink.CancelScheduledBeforeMaterialization(cause));
 
@@ -1204,23 +1204,23 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that emits callback messages as stream signals.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic for the substream source.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the configured stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The name supplied to the constructor.</returns>
         public override string ToString() => _name;
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements emitted by the substream source.</typeparam>
     internal sealed class SubSource<T> : GraphStage<SourceShape<T>>
     {
         #region internal classes 
@@ -1294,10 +1294,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly AtomicReference<object> _status = new();
 
         /// <summary>
-        /// TBD
+        /// Creates a source stage that forwards downstream demand and cancellation to a callback.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="externalCallback">TBD</param>
+        /// <param name="name">The name used for the stage and its port.</param>
+        /// <param name="externalCallback">The callback that receives substream pull and cancellation commands.</param>
         public SubSource(string name, Action<SubSink.ICommand> externalCallback)
         {
             _name = name;
@@ -1308,25 +1308,25 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The source shape that emits substream elements.
         /// </summary>
         public override SourceShape<T> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage name derived from the constructor argument.
         /// </summary>
         protected override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The callback used to deliver pull and cancellation commands to the substream owner.
         /// </summary>
         internal Action<SubSink.ICommand> ExternalCallback { get; }
 
         /// <summary>
-        /// TBD
+        /// Sends an element to the materialized substream source.
         /// </summary>
-        /// <param name="elem">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="elem">The element to send.</param>
+        /// <exception cref="IllegalStateException">Thrown when the source has not been materialized.</exception>
         public void PushSubstream(T elem)
         {
             var s = _status.Value;
@@ -1338,7 +1338,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the substream, recording completion if the source is not yet materialized.
         /// </summary>
         public void CompleteSubstream()
         {
@@ -1352,9 +1352,9 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Fails the substream, recording the failure if the source is not yet materialized.
         /// </summary>
-        /// <param name="ex">TBD</param>
+        /// <param name="ex">The failure cause.</param>
         public void FailSubstream(Exception ex)
         {
             var s = _status.Value;
@@ -1368,23 +1368,23 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Fails a source that has not been materialized before its subscription timeout.
         /// </summary>
-        /// <param name="d">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="d">The timeout duration included in the failure message.</param>
+        /// <returns><c>true</c> if the timeout failure was recorded before materialization.</returns>
         public bool Timeout(TimeSpan d) => _status.CompareAndSet(null, new OnError(new SubscriptionTimeoutException($"Substream Source has not been materialized in {d}")));
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that emits callback messages as stream signals.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic for the substream source.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// TBD
+        /// Returns the configured stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The name supplied to the constructor.</returns>
         public override string ToString() => _name;
     }
 }
