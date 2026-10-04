@@ -58,9 +58,9 @@ namespace Akka.Streams.Implementation
         private byte _lastInput = 0;
 
         /// <summary>
-        /// Creates a parser that emits JSON objects up to the configured byte length.
+        /// Creates a parser that frames object-shaped byte sequences up to a configured scan limit.
         /// </summary>
-        /// <param name="maximumObjectLength">The maximum number of buffered bytes scanned for one object.</param>
+        /// <param name="maximumObjectLength">The scan limit; parsing throws when scanning reaches this number of bytes.</param>
         public JsonObjectParser(int maximumObjectLength = int.MaxValue)
         {
             _maximumObjectLength = maximumObjectLength;
@@ -90,11 +90,12 @@ namespace Akka.Streams.Implementation
         public bool IsEmpty => _buffer.IsEmpty;
 
         /// <summary>
-        /// Attempt to locate next complete JSON object in buffered data and returns it if found.
-        /// May throw a <see cref="Framing.FramingException"/> if the contained JSON is invalid or max object size is exceeded.
+        /// Finds the next complete object-shaped byte sequence in buffered data, if one is available.
+        /// This scans object framing but does not validate the full JSON syntax. A <see cref="Framing.FramingException"/>
+        /// is thrown for invalid framing or when scanning reaches the configured byte limit.
         /// </summary>
-        /// <exception cref="Framing.FramingException">Thrown when buffered input is invalid or exceeds the configured object length.</exception>
-        /// <returns>The next complete JSON object, or <see cref="Option{T}.None"/> when no complete object is available.</returns>
+        /// <exception cref="Framing.FramingException">Thrown when buffered framing is invalid or scanning reaches the configured byte limit.</exception>
+        /// <returns>The next complete object-shaped byte sequence, or <see cref="Option{T}.None"/> when no complete sequence is available.</returns>
         public Option<ReadOnlySequence<byte>> Poll()
         {
             var foundObject = SeekObject();

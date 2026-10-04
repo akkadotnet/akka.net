@@ -148,7 +148,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// The promise whose successful result is emitted to subscribers.
+        /// The promise whose nondefault successful result can be emitted to subscribers.
         /// </summary>
         public readonly TaskCompletionSource<T> Promise;
         /// <summary>
@@ -159,7 +159,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Creates a publisher backed by a promise.
         /// </summary>
-        /// <param name="promise">The promise whose result or failure is signaled to subscribers.</param>
+        /// <param name="promise">The promise whose nondefault result or failure is signaled to subscribers; a default result completes without an element.</param>
         /// <param name="name">The diagnostic name of the publisher.</param>
         public MaybePublisher(TaskCompletionSource<T> promise, string name)
         {
@@ -168,7 +168,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Subscribes the consumer and signals a promised result when requested, or the promise failure.
+        /// Subscribes the consumer, emitting a nondefault successful result after demand, completing without an element for a default result, or reporting the promise failure.
         /// </summary>
         /// <param name="subscriber">The subscriber to notify.</param>
         public void Subscribe(ISubscriber<T> subscriber)

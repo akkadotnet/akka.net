@@ -29,11 +29,11 @@ namespace Akka.Streams.Implementation.IO
         /// Creates actor properties for a publisher that reads a file in byte chunks.
         /// </summary>
         /// <param name="f">The file to read.</param>
-        /// <param name="completionPromise">The promise completed with the read result.</param>
+        /// <param name="completionPromise">The promise completed with an <see cref="IOResult"/> when the publisher actor stops.</param>
         /// <param name="chunkSize">The number of bytes requested for each file read.</param>
         /// <param name="startPosition">The byte position at which reading starts.</param>
-        /// <param name="initialBuffer">The initial number of chunks requested by the stage.</param>
-        /// <param name="maxBuffer">The maximum number of chunks to read ahead.</param>
+        /// <param name="initialBuffer">The initial input-buffer setting checked against <paramref name="maxBuffer"/>; it is not passed to the publisher actor.</param>
+        /// <param name="maxBuffer">The read-ahead threshold; the publisher can buffer one chunk beyond this value.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when one of the following conditions is met.
         /// 
@@ -82,10 +82,10 @@ namespace Akka.Streams.Implementation.IO
         /// Creates a publisher actor that reads a file and emits byte chunks.
         /// </summary>
         /// <param name="f">The file to read.</param>
-        /// <param name="completionPromise">The promise completed with the number of bytes read or an I/O failure.</param>
+        /// <param name="completionPromise">The promise completed with an <see cref="IOResult"/> when the publisher actor stops.</param>
         /// <param name="chunkSize">The number of bytes requested for each file read.</param>
         /// <param name="startPosition">The byte position at which reading starts.</param>
-        /// <param name="maxBuffer">The maximum number of chunks to read ahead.</param>
+        /// <param name="maxBuffer">The read-ahead threshold; the publisher can buffer one chunk beyond this value.</param>
         /// If this changes you must also change <see cref="FilePublisher.Props"/> as well!
         public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, long startPosition, int maxBuffer)
         {
