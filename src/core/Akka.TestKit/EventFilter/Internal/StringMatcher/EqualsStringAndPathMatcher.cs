@@ -20,10 +20,10 @@ public class EqualsStringAndPathMatcher : IStringMatcher
     private readonly bool _canBeRelative;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher for an exact string or, optionally, an actor path without its address.
     /// </summary>
-    /// <param name="path">TBD</param>
-    /// <param name="canBeRelative">TBD</param>
+    /// <param name="path">The string or addressless actor path to match.</param>
+    /// <param name="canBeRelative">Whether a full actor path may also match by its addressless path.</param>
     public EqualsStringAndPathMatcher(string path, bool canBeRelative=true)
     {
         _path = path;
@@ -31,10 +31,10 @@ public class EqualsStringAndPathMatcher : IStringMatcher
     }
 
     /// <summary>
-    /// TBD
+    /// Checks an exact string match and optionally compares parsed actor paths without their addresses.
     /// </summary>
-    /// <param name="path">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="path">The string to compare.</param>
+    /// <returns><c>true</c> if the string matches the configured value or accepted addressless path; otherwise, <c>false</c>.</returns>
     public bool IsMatch(string path)
     {
         if (String.Equals(_path, path, StringComparison.OrdinalIgnoreCase)) return true;
@@ -46,9 +46,9 @@ public class EqualsStringAndPathMatcher : IStringMatcher
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the configured path criterion in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description of the path match.</returns>
     public override string ToString()
     {
         return "== \"" + _path + "\"";

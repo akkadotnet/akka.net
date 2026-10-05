@@ -14,7 +14,7 @@ using Nito.AsyncEx.Synchronous;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Message expectations that also verify the sender of each received message.
     /// </summary>
     public abstract partial class TestKitBase
     {
@@ -26,12 +26,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="sender">TBD</param>
-        /// <param name="duration">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="sender">The actor reference expected to have sent the message.</param>
+        /// <param name="duration">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message from <paramref name="sender"/>.</returns>
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             [AutoDilate] TimeSpan? duration = null,
@@ -71,13 +71,13 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="sender">The actor reference expected to have sent the message.</param>
+        /// <param name="message">The expected message value.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified against <paramref name="message"/> and <paramref name="sender"/>.</returns>
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             T message,
@@ -121,13 +121,13 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="sender">TBD</param>
-        /// <param name="isMessage">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="sender">The actor reference expected to have sent the message.</param>
+        /// <param name="isMessage">The predicate that must accept the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified by <paramref name="isMessage"/> and <paramref name="sender"/>.</returns>
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             Predicate<T> isMessage,
@@ -172,13 +172,13 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="isSender">TBD</param>
-        /// <param name="isMessage">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="isSender">The predicate that must accept the received message's sender.</param>
+        /// <param name="isMessage">The predicate that must accept the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after both predicates accept it.</returns>
         public T ExpectMsgFrom<T>(
             Predicate<IActorRef> isSender, 
             Predicate<T> isMessage,
@@ -240,13 +240,13 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="sender">TBD</param>
-        /// <param name="assertMessage">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="sender">The actor reference expected to have sent the message.</param>
+        /// <param name="assertMessage">The action that performs assertions on the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified against <paramref name="sender"/> and <paramref name="assertMessage"/> completes.</returns>
         public T ExpectMsgFrom<T>(
             IActorRef sender,
             Action<T> assertMessage,
@@ -287,13 +287,13 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="assertSender">TBD</param>
-        /// <param name="assertMessage">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="assertSender">The action that performs assertions on the sender.</param>
+        /// <param name="assertMessage">The action that performs assertions on the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after both assertion actions complete.</returns>
         public T ExpectMsgFrom<T>(
             Action<IActorRef> assertSender, 
             Action<T> assertMessage,

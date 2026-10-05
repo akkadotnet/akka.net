@@ -17,7 +17,7 @@ using Akka.TestKit.Internal.StringMatcher;
 namespace Akka.TestKit;
 
 /// <summary>
-/// TBD
+/// Creates event filters for assertions and temporary muting of expected log events during tests.
 /// </summary>
 public partial class EventFilterFactory
 {
@@ -26,9 +26,9 @@ public partial class EventFilterFactory
     private readonly ActorSystem _system;
 
     /// <summary>
-    /// TBD
+    /// Creates a factory that applies event filters using the test kit's actor system.
     /// </summary>
-    /// <param name="testkit">TBD</param>
+    /// <param name="testkit">The test kit that owns the actor system and executes filter assertions.</param>
     public EventFilterFactory(TestKitBase testkit)
     {
         _testkit = testkit;
@@ -36,10 +36,10 @@ public partial class EventFilterFactory
     }
         
     /// <summary>
-    /// TBD
+    /// Creates a factory that applies event filters using the specified actor system.
     /// </summary>
-    /// <param name="testkit">TBD</param>
-    /// <param name="system">TBD</param>
+    /// <param name="testkit">The test kit that executes filter assertions.</param>
+    /// <param name="system">The actor system whose event stream receives the filters.</param>
     public EventFilterFactory(TestKitBase testkit, ActorSystem system)
     {
         _testkit = testkit;
@@ -47,11 +47,11 @@ public partial class EventFilterFactory
     }
 
     /// <summary>
-    /// TBD
+    /// Creates a factory that appends new filters to the supplied filter chain.
     /// </summary>
-    /// <param name="testkit">TBD</param>
-    /// <param name="actorSystem">TBD</param>
-    /// <param name="filters">TBD</param>
+    /// <param name="testkit">The test kit that executes filter assertions.</param>
+    /// <param name="actorSystem">The actor system whose event stream receives the filters.</param>
+    /// <param name="filters">The filters already in the chain.</param>
     public EventFilterFactory(TestKitBase testkit, ActorSystem actorSystem, IReadOnlyList<EventFilterBase> filters)
         : this(testkit, actorSystem)
     {
@@ -168,7 +168,7 @@ public partial class EventFilterFactory
     /// which the <paramref name="predicate"/> function returns <c>true</c>.
     /// </summary>
     /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
-    /// <returns>TBD</returns>
+    /// <returns>An applier that can assert on or mute matching custom events.</returns>
     public IEventFilterApplier Custom(Predicate<LogEvent> predicate)
     {
         var filter = new CustomEventFilter(predicate);
@@ -180,9 +180,9 @@ public partial class EventFilterFactory
     /// Create a custom event filter. The filter will affect those events for
     /// which the <paramref name="predicate"/> function returns <c>true</c>.
     /// </summary>
-    /// <typeparam name="TLogEvent">TBD</typeparam>
+    /// <typeparam name="TLogEvent">The log-event subtype accepted by the predicate.</typeparam>
     /// <param name="predicate">This function must return <c>true</c> for events that should be filtered.</param>
-    /// <returns>TBD</returns>
+    /// <returns>An applier that can assert on or mute matching events of type <typeparamref name="TLogEvent"/>.</returns>
     public IEventFilterApplier Custom<TLogEvent>(Predicate<TLogEvent> predicate) where TLogEvent : LogEvent
     {
         var filter = new CustomEventFilter(logEvent => logEvent is TLogEvent @event && predicate(@event));
@@ -254,7 +254,7 @@ public partial class EventFilterFactory
     /// <summary>
     /// Creates a filter that catches dead letters
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>An applier that matches all dead-letter warning events.</returns>
     public IEventFilterApplier DeadLetter()
     {
         var filter = new DeadLettersFilter(null, null);
@@ -264,9 +264,9 @@ public partial class EventFilterFactory
     /// <summary>
     /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
     /// </summary>
-    /// <typeparam name="TMessage">TBD</typeparam>
-    /// <param name="source">TBD</param>
-    /// <returns>TBD</returns>
+    /// <typeparam name="TMessage">The type of dead-letter message to match.</typeparam>
+    /// <param name="source">An optional log source to match.</param>
+    /// <returns>An applier that matches dead letters whose wrapped message is a <typeparamref name="TMessage"/>.</returns>
     public IEventFilterApplier DeadLetter<TMessage>(string? source = null)
     {
         return DeadLetter(deadLetter => deadLetter.Message is TMessage, source);
@@ -275,10 +275,10 @@ public partial class EventFilterFactory
     /// <summary>
     /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
     /// </summary>
-    /// <typeparam name="TMessage">TBD</typeparam>
-    /// <param name="isMatch">TBD</param>
-    /// <param name="source">TBD</param>
-    /// <returns>TBD</returns>
+    /// <typeparam name="TMessage">The type of dead-letter message to test.</typeparam>
+    /// <param name="isMatch">A predicate that must accept the wrapped message for the dead letter to match.</param>
+    /// <param name="source">An optional log source to match.</param>
+    /// <returns>An applier that matches dead letters whose wrapped message has the requested type and passes the predicate.</returns>
     public IEventFilterApplier DeadLetter<TMessage>(Func<TMessage, bool> isMatch, string? source = null)
     {
         return DeadLetter(deadLetter => deadLetter.Message is TMessage message && isMatch(message), source);
@@ -287,9 +287,9 @@ public partial class EventFilterFactory
     /// <summary>
     /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
     /// </summary>
-    /// <param name="type">TBD</param>
-    /// <param name="source">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="type">The type that the wrapped message must be assignable to.</param>
+    /// <param name="source">An optional log source to match.</param>
+    /// <returns>An applier that matches dead letters whose wrapped message is an instance of <paramref name="type"/>.</returns>
     public IEventFilterApplier DeadLetter(Type type, string? source = null)
     {
         return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message), source);
@@ -298,10 +298,10 @@ public partial class EventFilterFactory
     /// <summary>
     /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
     /// </summary>
-    /// <param name="type">TBD</param>
-    /// <param name="isMatch">TBD</param>
-    /// <param name="source">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="type">The type that the wrapped message must be assignable to.</param>
+    /// <param name="isMatch">An additional predicate that must accept the wrapped message.</param>
+    /// <param name="source">An optional log source to match.</param>
+    /// <returns>An applier that matches dead letters whose wrapped message has the requested type and passes the predicate.</returns>
     public IEventFilterApplier DeadLetter(Type type, Func<object, bool> isMatch, string? source = null)
     {
         return DeadLetter(deadLetter => type.IsInstanceOfType(deadLetter.Message) && isMatch(deadLetter.Message), source);
@@ -315,12 +315,12 @@ public partial class EventFilterFactory
     }
 
     /// <summary>
-    /// TBD
+    /// Creates the message matcher selected by the exact, prefix, and substring filter arguments.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <param name="start">TBD</param>
-    /// <param name="contains">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">An exact message to match, or null to use another matcher.</param>
+    /// <param name="start">A required message prefix, or null if no prefix is specified.</param>
+    /// <param name="contains">A required message substring, or null if no substring is specified.</param>
+    /// <returns>The exact matcher if <paramref name="message"/> is specified; otherwise the prefix, substring, or match-all matcher.</returns>
     protected static IStringMatcher CreateMessageMatcher(string? message, string? start, string? contains)
     {
         if(message != null) return new EqualsString(message);
@@ -330,11 +330,11 @@ public partial class EventFilterFactory
     }
 
     /// <summary>
-    /// TBD
+    /// Combines the current filter chain with a new filter and creates its assertion applier.
     /// </summary>
-    /// <param name="filter">TBD</param>
-    /// <param name="system">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="filter">The filter to append to the current chain.</param>
+    /// <param name="system">The actor system whose event stream the applier will use.</param>
+    /// <returns>An applier for the combined filter chain.</returns>
     protected IEventFilterApplier CreateApplier(EventFilterBase filter, ActorSystem system)
     {
         EventFilterBase[] allFilters;   //This will contain _filters + filter

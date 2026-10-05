@@ -18,28 +18,28 @@ public class EqualsString : IStringMatcher
     private readonly string _s;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher that compares strings without regard to case.
     /// </summary>
-    /// <param name="s">TBD</param>
+    /// <param name="s">The string to match.</param>
     public EqualsString(string s)
     {
         _s = s;
     }
 
     /// <summary>
-    /// TBD
+    /// Checks whether the string equals the configured value, ignoring case.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to compare.</param>
+    /// <returns><c>true</c> if the strings are equal; otherwise, <c>false</c>.</returns>
     public bool IsMatch(string s)
     {
         return String.Equals(_s, s, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the equality criterion in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description of the exact string match.</returns>
     public override string ToString()
     {
         return "== \"" + _s + "\"";

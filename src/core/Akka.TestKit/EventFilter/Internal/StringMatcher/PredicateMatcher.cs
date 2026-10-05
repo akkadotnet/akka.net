@@ -19,10 +19,10 @@ public class PredicateMatcher : IStringMatcher
     private readonly string _hint;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher that delegates string checks to a predicate.
     /// </summary>
-    /// <param name="predicate">TBD</param>
-    /// <param name="hint">TBD</param>
+    /// <param name="predicate">The predicate that decides whether a string matches.</param>
+    /// <param name="hint">Optional text included in the diagnostic description.</param>
     public PredicateMatcher(Predicate<string> predicate, string hint="")
     {
         _predicate = predicate;
@@ -30,19 +30,19 @@ public class PredicateMatcher : IStringMatcher
     }
 
     /// <summary>
-    /// TBD
+    /// Evaluates the configured predicate for the string.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns>The result of the predicate.</returns>
     public bool IsMatch(string s)
     {
         return _predicate(s);
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the predicate hint in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description containing the configured hint.</returns>
     public override string ToString()
     {
         return "matches predicate "+_hint;

@@ -25,12 +25,12 @@ namespace Akka.TestKit
         private readonly InternalTestActorRef _internalRef;
 
         /// <summary>
-        /// TBD
+        /// Creates a test actor reference with the specified actor system, properties, supervisor, and name.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="actorProps">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="system">The actor system that owns the test actor.</param>
+        /// <param name="actorProps">The properties used to create the actor.</param>
+        /// <param name="supervisor">The supervising actor, or null to use the system guardian.</param>
+        /// <param name="name">The actor name, or null to generate a unique name.</param>
         protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor=null, string name=null)
         {
             _internalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
@@ -69,7 +69,7 @@ namespace Akka.TestKit
         }
         
         /// <summary>
-        /// TBD
+        /// Gets the underlying actor reference.
         /// </summary>
         public IActorRef Ref
         {
@@ -77,7 +77,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the internal test actor reference used by this wrapper.
         /// </summary>
         protected InternalTestActorRef InternalRef
         {
@@ -85,7 +85,7 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the underlying actor instance for direct inspection in a test.
         /// </summary>
         public TActor UnderlyingActor
         {
@@ -239,10 +239,10 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Converts a test actor reference to its underlying actor reference.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The test actor reference to convert.</param>
+        /// <returns>The actor reference represented by <paramref name="actorRef"/>.</returns>
         public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
         {
             return actorRef._internalRef;
@@ -310,19 +310,19 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying test actor reference.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The system message to send.</param>
+        /// <param name="sender">The sender argument from the actor-reference contract; this implementation does not use it.</param>
         public void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             _internalRef.SendSystemMessage(message);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying test actor reference.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to send.</param>
         public void SendSystemMessage(ISystemMessage message)
         {
             _internalRef.SendSystemMessage(message);

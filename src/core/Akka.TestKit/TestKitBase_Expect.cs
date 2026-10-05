@@ -19,7 +19,7 @@ using Akka.Util;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Message expectation and assertion helpers for the test actor's receive queue.
     /// </summary>
     public abstract partial class TestKitBase
     {
@@ -30,11 +30,11 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="duration">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="duration">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message, cast to <typeparamref name="T"/>.</returns>
         public T ExpectMsg<T>(
             [AutoDilate] TimeSpan? duration = null,
             string hint = null,
@@ -60,12 +60,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="message">The expected message value.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified against <paramref name="message"/>.</returns>
         public T ExpectMsg<T>(
             T message,
             [AutoDilate] TimeSpan? timeout = null,
@@ -100,12 +100,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="isMessage">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="isMessage">The predicate that must accept the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified by <paramref name="isMessage"/>.</returns>
         public T ExpectMsg<T>(
             Predicate<T> isMessage,
             [AutoDilate] TimeSpan? timeout = null,
@@ -144,12 +144,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="assert">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="assert">The action that performs assertions on the received message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after <paramref name="assert"/> completes.</returns>
         public T ExpectMsg<T>(
             Action<T> assert,
             [AutoDilate] TimeSpan? timeout = null,
@@ -180,12 +180,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="isMessageAndSender">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="isMessageAndSender">The predicate that must accept the received message and its sender.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified by <paramref name="isMessageAndSender"/>.</returns>
         public T ExpectMsg<T>(
             Func<T, IActorRef, bool> isMessageAndSender, 
             [AutoDilate] TimeSpan? timeout = null,
@@ -227,12 +227,12 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="assertMessageAndSender">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="assertMessageAndSender">The action that asserts on the received message and its sender.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after <paramref name="assertMessageAndSender"/> completes.</returns>
         public T ExpectMsg<T>(
             Action<T, IActorRef> assertMessageAndSender, 
             [AutoDilate] TimeSpan? timeout = null,
@@ -262,13 +262,13 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="expected">TBD</param>
-        /// <param name="comparer">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <typeparam name="T">The expected message type.</typeparam>
+        /// <param name="expected">The expected message value.</param>
+        /// <param name="comparer">The function that determines whether expected and received values are equal.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received message after it is verified with <paramref name="comparer"/>.</returns>
         public T ExpectMsg<T>(
             T expected,
             Func<T, T, bool> comparer,
@@ -303,11 +303,11 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        /// <param name="target">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="hint">TBD</param>
+        /// <param name="target">The actor reference expected in the received <see cref="Terminated"/> message.</param>
+        /// <param name="timeout">The maximum wait duration, or null to use the current test timeout.</param>
+        /// <param name="hint">Additional context to include in an assertion failure.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The received termination notification for <paramref name="target"/>.</returns>
         public Terminated ExpectTerminated(
             IActorRef target,
             [AutoDilate] TimeSpan? timeout = null,
@@ -472,7 +472,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Assert that no message is received for the specified time.
         /// </summary>
-        /// <param name="duration">TBD</param>
+        /// <param name="duration">The period during which no message is expected.</param>
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg([AutoDilate] TimeSpan duration, CancellationToken cancellationToken = default)
         {
@@ -488,7 +488,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Assert that no message is received for the specified time in milliseconds.
         /// </summary>
-        /// <param name="milliseconds">TBD</param>
+        /// <param name="milliseconds">The period during which no message is expected, in milliseconds.</param>
         /// <param name="cancellationToken"></param>
         public void ExpectNoMsg(int milliseconds, CancellationToken cancellationToken = default)
         {

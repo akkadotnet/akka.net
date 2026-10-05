@@ -13,7 +13,7 @@ using Xunit.Sdk;
 namespace Akka.TestKit.Xunit2.Internals
 {
     /// <summary>
-    /// TBD
+    /// An xUnit assertion exception that formats unequal expected and actual values for Akka.TestKit assertions.
     /// </summary>
     [Serializable]
     public class AkkaEqualException : XunitException
