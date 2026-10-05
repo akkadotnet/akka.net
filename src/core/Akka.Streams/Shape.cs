@@ -25,7 +25,7 @@ namespace Akka.Streams
     public abstract class InPort
     {
         /// <summary>
-        /// TBD
+        /// Module-local identifier used to index this input port.
         /// </summary>
         internal int Id = -1;
     }
@@ -39,7 +39,7 @@ namespace Akka.Streams
     public abstract class OutPort 
     {
         /// <summary>
-        /// TBD
+        /// Module-local identifier used to index this output port.
         /// </summary>
         internal int Id = -1;
     }
@@ -52,31 +52,29 @@ namespace Akka.Streams
     public abstract class Inlet : InPort
     {
         /// <summary>
-        /// TBD
+        /// Creates a typed inlet from an inlet. An inlet already of the requested type is returned; otherwise, a new inlet with the same name is created.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="inlet">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">Element type of the resulting inlet.</typeparam>
+        /// <param name="inlet">Inlet to convert.</param>
+        /// <returns>An inlet with the requested element type and the same name.</returns>
         public static Inlet<T> Create<T>(Inlet inlet) => inlet as Inlet<T> ?? new Inlet<T>(inlet.Name);
 
         /// <summary>
-        /// TBD
+        /// Creates an inlet with the specified name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="name"/> is undefined.
-        /// </exception>
+        /// <param name="name">Name assigned to the inlet.</param>
+        /// <exception cref="ArgumentException">The name is <see langword="null"/>.</exception>
         protected Inlet(string name) => Name = name ?? throw new ArgumentException("Inlet name must be defined");
 
         /// <summary>
-        /// TBD
+        /// Name assigned to this inlet.
         /// </summary>
         public readonly string Name;
 
         /// <summary>
-        /// TBD
+        /// Creates a carbon copy of this inlet.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new inlet of the same type and with the same name.</returns>
         public abstract Inlet CarbonCopy();
 
         /// <summary>
@@ -101,28 +99,28 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// A typed input port that accepts elements of type <typeparamref name="T"/>.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Element type accepted by the inlet.</typeparam>
     public sealed class Inlet<T> : Inlet
     {
         /// <summary>
-        /// TBD
+        /// Creates a typed inlet with the specified name.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">Name assigned to the inlet.</param>
         public Inlet(string name) : base(name) { }
 
         /// <summary>
-        /// TBD
+        /// Creates an inlet view with a different element type and the same name.
         /// </summary>
-        /// <typeparam name="TOther">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOther">Element type of the resulting inlet.</typeparam>
+        /// <returns>An inlet with element type <typeparamref name="TOther"/> and this inlet’s name.</returns>
         internal Inlet<TOther> As<TOther>() => Create<TOther>(this);
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this inlet.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new <see cref="Inlet{T}"/> with the same name.</returns>
         public override Inlet CarbonCopy() => new Inlet<T>(Name);
 
         internal override IUntypedSubscriber CreateBoundarySubscriber(IActorRef parent, GraphInterpreterShell shell, int id)
@@ -137,28 +135,28 @@ namespace Akka.Streams
     public abstract class Outlet : OutPort
     {
         /// <summary>
-        /// TBD
+        /// Creates a typed outlet from an outlet. An outlet already of the requested type is returned; otherwise, a new outlet with the same name is created.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="outlet">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">Element type of the resulting outlet.</typeparam>
+        /// <param name="outlet">Outlet to convert.</param>
+        /// <returns>An outlet with the requested element type and the same name.</returns>
         public static Outlet<T> Create<T>(Outlet outlet) => outlet as Outlet<T> ?? new Outlet<T>(outlet.Name);
 
         /// <summary>
-        /// TBD
+        /// Creates an outlet with the specified name.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">Name assigned to the outlet.</param>
         protected Outlet(string name) => Name = name;
 
         /// <summary>
-        /// TBD
+        /// Name assigned to this outlet.
         /// </summary>
         public readonly string Name;
 
         /// <summary>
-        /// TBD
+        /// Creates a carbon copy of this outlet.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new outlet of the same type and with the same name.</returns>
         public abstract Outlet CarbonCopy();
 
         // INTERNAL API. The three factories below build the types that need this port's element type.
@@ -210,27 +208,28 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// A typed output port that emits elements of type <typeparamref name="T"/>.
     /// </summary>
+    /// <typeparam name="T">Element type emitted by the outlet.</typeparam>
     public sealed class Outlet<T> : Outlet
     {
         /// <summary>
-        /// TBD
+        /// Creates a typed outlet with the specified name.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">Name assigned to the outlet.</param>
         public Outlet(string name) : base(name) { }
 
         /// <summary>
-        /// TBD
+        /// Creates an outlet view with a different element type and the same name.
         /// </summary>
-        /// <typeparam name="TOther">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOther">Element type of the resulting outlet.</typeparam>
+        /// <returns>An outlet with element type <typeparamref name="TOther"/> and this outlet’s name.</returns>
         internal Outlet<TOther> As<TOther>() => Create<TOther>(this);
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this outlet.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new <see cref="Outlet{T}"/> with the same name.</returns>
         public override Outlet CarbonCopy() => new Outlet<T>(Name);
 
         internal override IUntypedPublisher CreateBoundaryPublisher(IActorRef parent, GraphInterpreterShell shell, int id, out IActorPublisher actorPublisher)
@@ -266,27 +265,24 @@ namespace Akka.Streams
         public abstract ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
-        /// Create a copy of this Shape object, returning the same type as the
-        /// original; this constraint can unfortunately not be expressed in the
-        /// type system.
+        /// Creates a shape of the same kind with carbon copies of its ports.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A shape containing carbon copies of this shape’s ports.</returns>
         public abstract Shape DeepCopy();
 
         /// <summary>
-        /// Create a copy of this Shape object, returning the same type as the
-        /// original but containing the ports given within the passed-in Shape.
+        /// Creates a shape of the same kind from the supplied ports.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports for the copied shape.</param>
+        /// <param name="outlets">Output ports for the copied shape.</param>
+        /// <returns>A shape of this type containing the supplied ports.</returns>
         public abstract Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets);
 
         /// <summary>
-        /// Compare this to another shape and determine whether the set of ports is the same (ignoring their ordering).
+        /// Compares the input and output port sets without considering their order.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">Shape whose ports are compared with this shape.</param>
+        /// <returns><see langword="true"/> if both port sets contain the same ports; otherwise, <see langword="false"/>.</returns>
         public bool HasSamePortsAs(Shape shape)
         {
             var inlets = new HashSet<Inlet>(Inlets);
@@ -296,16 +292,16 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// Compare this to another shape and determine whether the arrangement of ports is the same (including their ordering).
+        /// Compares the inlet and outlet arrays using their equality implementations.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">Shape whose inlet and outlet arrays are compared with this shape.</param>
+        /// <returns><see langword="true"/> if both arrays compare equal; otherwise, <see langword="false"/>.</returns>
         public bool HasSamePortsAndShapeAs(Shape shape) => Inlets.Equals(shape.Inlets) && Outlets.Equals(shape.Outlets);
 
         /// <summary>
-        /// TBD
+        /// Creates a clone by calling <see cref="DeepCopy"/>.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The result of <see cref="DeepCopy"/> for this shape.</returns>
         public object Clone() => DeepCopy();
 
         
@@ -313,44 +309,40 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// This <see cref="Shape"/> is used for graphs that have neither open inputs nor open
-    /// outputs. Only such a <see cref="IGraph{TShape,TMaterializer}"/> can be materialized by a <see cref="IMaterializer"/>.
+    /// Shape for a graph with no inlets or outlets.
     /// </summary>
     public class ClosedShape : Shape
     {
         /// <summary>
-        /// TBD
+        /// The singleton closed shape.
         /// </summary>
         public static readonly ClosedShape Instance = new();
         
         private ClosedShape() { }
 
         /// <summary>
-        /// TBD
+        /// Gets an empty array because a closed shape has no input ports.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets => ImmutableArray<Inlet>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Gets an empty array because a closed shape has no output ports.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets => ImmutableArray<Outlet>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Returns this singleton shape.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This <see cref="ClosedShape"/> instance.</returns>
         public override Shape DeepCopy() => this;
 
         /// <summary>
-        /// TBD
+        /// Validates that no ports are supplied.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
-        /// or the size of the specified <paramref name="outlets"/> array is zero.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports; must be empty.</param>
+        /// <param name="outlets">Output ports; must be empty.</param>
+        /// <exception cref="ArgumentException">The supplied inlet or outlet array is not empty.</exception>
+        /// <returns>This <see cref="ClosedShape"/> instance.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Any())
@@ -371,10 +363,10 @@ namespace Akka.Streams
     public class AmorphousShape : Shape
     {
         /// <summary>
-        /// TBD
+        /// Creates a shape from untyped inlet and outlet collections.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
+        /// <param name="inlets">Input ports in shape order.</param>
+        /// <param name="outlets">Output ports in shape order.</param>
         public AmorphousShape(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             Inlets = inlets;
@@ -382,43 +374,43 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the input ports supplied to the constructor.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the output ports supplied to the constructor.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates an amorphous shape with carbon copies of its ports.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new shape with copied inlet and outlet ports.</returns>
         public override Shape DeepCopy()
             => new AmorphousShape(Inlets.Select(i => i.CarbonCopy()).ToImmutableArray(),Outlets.Select(o => o.CarbonCopy()).ToImmutableArray());
 
         /// <summary>
-        /// TBD
+        /// Creates an amorphous shape using the supplied ports.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports for the resulting shape.</param>
+        /// <param name="outlets">Output ports for the resulting shape.</param>
+        /// <returns>A new amorphous shape containing the supplied ports.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
             => new AmorphousShape(inlets, outlets);
     }
 
     /// <summary>
-    /// A Source <see cref="Shape"/> has exactly one output and no inputs, it models a source of data.
+    /// A source shape with one output port and no input ports.
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TOut">Element type emitted by the source.</typeparam>
     public sealed class SourceShape<TOut> : Shape
     {
         /// <summary>
-        /// TBD
+        /// Creates a source shape with the specified output.
         /// </summary>
-        /// <param name="outlet">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
+        /// <param name="outlet">Output port of the source shape.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="outlet"/> is <see langword="null"/>.</exception>
         public SourceShape(Outlet<TOut> outlet)
         {
             Outlet = outlet ?? throw new ArgumentNullException(nameof(outlet));
@@ -426,36 +418,34 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the output port of this source shape.
         /// </summary>
         public readonly Outlet<TOut> Outlet;
 
         /// <summary>
-        /// TBD
+        /// Gets an empty array because a source shape has no input ports.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets => ImmutableArray<Inlet>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Gets the output port as an untyped outlet array.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a source shape with a carbon copy of its output port.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new source shape with a copied output port.</returns>
         public override Shape DeepCopy() => new SourceShape<TOut>((Outlet<TOut>) Outlet.CarbonCopy());
 
         /// <summary>
-        /// TBD
+        /// Creates a source shape from exactly one output port and no input ports.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
-        /// or the size of the specified <paramref name="outlets"/> array is one.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports; must be empty.</param>
+        /// <param name="outlets">Output ports; must contain one <see cref="Outlet{TOut}"/>.</param>
+        /// <exception cref="ArgumentException">The number of supplied ports does not match a source shape.</exception>
+        /// <exception cref="ArgumentNullException">The output port is not an <see cref="Outlet{TOut}"/>.</exception>
+        /// <returns>A source shape using the supplied output port.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Length != 0)
@@ -485,36 +475,33 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Untyped access to the single input and output ports of a flow shape.
     /// </summary>
     public interface IFlowShape
     {
         /// <summary>
-        /// TBD
+        /// Gets the input port.
         /// </summary>
         Inlet Inlet { get; }
         /// <summary>
-        /// TBD
+        /// Gets the output port.
         /// </summary>
         Outlet Outlet { get; }
     }
 
     /// <summary>
-    /// A Flow <see cref="Shape"/> has exactly one input and one output, it looks from the
-    /// outside like a pipe (but it can be a complex topology of streams within of course).
+    /// A flow shape with one typed input and one typed output.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">Element type accepted by the input port.</typeparam>
+    /// <typeparam name="TOut">Element type emitted by the output port.</typeparam>
     public sealed class FlowShape<TIn, TOut> : Shape, IFlowShape
     {
         /// <summary>
-        /// TBD
+        /// Creates a flow shape from its input and output ports.
         /// </summary>
-        /// <param name="inlet">TBD</param>
-        /// <param name="outlet">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when either the specified <paramref name="inlet"/> or <paramref name="outlet"/> is undefined.
-        /// </exception>
+        /// <param name="inlet">Input port of the flow shape.</param>
+        /// <param name="outlet">Output port of the flow shape.</param>
+        /// <exception cref="ArgumentNullException">Either supplied port is <see langword="null"/>.</exception>
         public FlowShape(Inlet<TIn> inlet, Outlet<TOut> outlet)
         {
             Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "FlowShape expected non-null inlet");
@@ -528,42 +515,39 @@ namespace Akka.Streams
         Outlet IFlowShape.Outlet => Outlet;
 
         /// <summary>
-        /// TBD
+        /// Gets the typed input port.
         /// </summary>
         public Inlet<TIn> Inlet { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the typed output port.
         /// </summary>
         public Outlet<TOut> Outlet { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the input port as an untyped inlet array.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the output port as an untyped outlet array.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a flow shape with carbon copies of its input and output ports.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new flow shape with copied ports.</returns>
         public override Shape DeepCopy()
             => new FlowShape<TIn, TOut>((Inlet<TIn>) Inlet.CarbonCopy(), (Outlet<TOut>) Outlet.CarbonCopy());
 
         /// <summary>
-        /// TBD
+        /// Creates a flow shape from exactly one input and one output port.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is one
-        /// or the size of the specified <paramref name="outlets"/> array is one.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports; must contain one <see cref="Inlet{TIn}"/>.</param>
+        /// <param name="outlets">Output ports; must contain one <see cref="Outlet{TOut}"/>.</param>
+        /// <exception cref="ArgumentException">The number of supplied ports does not match a flow shape.</exception>
+        /// <returns>A flow shape using the supplied ports.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Length != 1)
@@ -576,23 +560,21 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// A Sink <see cref="Shape"/> has exactly one input and no outputs, it models a data sink.
+    /// A sink shape with one typed input and no output ports.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">Element type accepted by the input port.</typeparam>
     public sealed class SinkShape<TIn> : Shape
     {
         /// <summary>
-        /// TBD
+        /// Gets the input port of this sink shape.
         /// </summary>
         public readonly Inlet<TIn> Inlet;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink shape with the specified input port.
         /// </summary>
-        /// <param name="inlet">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="inlet"/> is undefined.
-        /// </exception>
+        /// <param name="inlet">Input port of the sink shape.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="inlet"/> is <see langword="null"/>.</exception>
         public SinkShape(Inlet<TIn> inlet)
         {
             Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet), "SinkShape expected non-null inlet");
@@ -600,31 +582,28 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the input port as an untyped inlet array.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets an empty array because a sink shape has no output ports.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets => ImmutableArray<Outlet>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink shape with a carbon copy of its input port.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new sink shape with a copied input port.</returns>
         public override Shape DeepCopy() => new SinkShape<TIn>((Inlet<TIn>) Inlet.CarbonCopy());
 
         /// <summary>
-        /// TBD
+        /// Creates a sink shape from exactly one input port and no output ports.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is zero
-        /// or the size of the specified <paramref name="outlets"/> array is one.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports; must contain one <see cref="Inlet{TIn}"/>.</param>
+        /// <param name="outlets">Output ports; must be empty.</param>
+        /// <exception cref="ArgumentException">The number of supplied ports does not match a sink shape.</exception>
+        /// <returns>A sink shape using the supplied input port.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (outlets.Length != 0)
@@ -653,42 +632,39 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// A bidirectional flow of elements that consequently has two inputs and two outputs.
+    /// A bidirectional shape with two typed input ports and two typed output ports.
     /// </summary>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
+    /// <typeparam name="TIn1">Element type accepted by the first input.</typeparam>
+    /// <typeparam name="TOut1">Element type emitted by the first output.</typeparam>
+    /// <typeparam name="TIn2">Element type accepted by the second input.</typeparam>
+    /// <typeparam name="TOut2">Element type emitted by the second output.</typeparam>
     public sealed class BidiShape<TIn1, TOut1, TIn2, TOut2> : Shape
     {
         /// <summary>
-        /// TBD
+        /// Gets the first input port.
         /// </summary>
         public readonly Inlet<TIn1> Inlet1;
         /// <summary>
-        /// TBD
+        /// Gets the second input port.
         /// </summary>
         public readonly Inlet<TIn2> Inlet2;
         /// <summary>
-        /// TBD
+        /// Gets the first output port.
         /// </summary>
         public readonly Outlet<TOut1> Outlet1;
         /// <summary>
-        /// TBD
+        /// Gets the second output port.
         /// </summary>
         public readonly Outlet<TOut2> Outlet2;
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional shape from two input and two output ports.
         /// </summary>
-        /// <param name="in1">TBD</param>
-        /// <param name="out1">TBD</param>
-        /// <param name="in2">TBD</param>
-        /// <param name="out2">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when either the specified <paramref name="in1"/>, <paramref name="out1"/>,
-        /// <paramref name="in2"/>, or <paramref name="out2"/> is undefined.
-        /// </exception>
+        /// <param name="in1">First input port.</param>
+        /// <param name="out1">First output port.</param>
+        /// <param name="in2">Second input port.</param>
+        /// <param name="out2">Second output port.</param>
+        /// <exception cref="ArgumentNullException">Any supplied port is <see langword="null"/>.</exception>
         public BidiShape(Inlet<TIn1> in1, Outlet<TOut1> out1, Inlet<TIn2> in2, Outlet<TOut2> out2)
         {
             Inlet1 = in1 ?? throw new ArgumentNullException(nameof(in1));
@@ -701,29 +677,29 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional shape from top and bottom flow shapes.
         /// </summary>
-        /// <param name="top">TBD</param>
-        /// <param name="bottom">TBD</param>
+        /// <param name="top">Flow shape used for the first input and output.</param>
+        /// <param name="bottom">Flow shape used for the second input and output.</param>
         public BidiShape(FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
             : this(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Gets both input ports in shape order.
         /// </summary>
         public override ImmutableArray<Inlet> Inlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets both output ports in shape order.
         /// </summary>
         public override ImmutableArray<Outlet> Outlets { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional shape with carbon copies of all four ports.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A new bidirectional shape with copied ports.</returns>
         public override Shape DeepCopy()
         {
             return new BidiShape<TIn1, TOut1, TIn2, TOut2>(
@@ -734,15 +710,12 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional shape from exactly two input and two output ports.
         /// </summary>
-        /// <param name="inlets">TBD</param>
-        /// <param name="outlets">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the size of the specified <paramref name="inlets"/> array is two
-        /// or the size of the specified <paramref name="outlets"/> array is two.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inlets">Input ports in shape order; must contain two ports of the corresponding types.</param>
+        /// <param name="outlets">Output ports in shape order; must contain two ports of the corresponding types.</param>
+        /// <exception cref="ArgumentException">Either array does not contain exactly two ports.</exception>
+        /// <returns>A bidirectional shape using the supplied ports.</returns>
         public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
         {
             if (inlets.Length != 2) throw new ArgumentException($"Proposed inlets [{string.Join(", ", inlets)}] don't fit BidiShape");
@@ -752,27 +725,27 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a shape with the first and second flows swapped.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A bidirectional shape whose input and output pairs are reversed.</returns>
         public Shape Reversed() => new BidiShape<TIn2, TOut2, TIn1, TOut1>(Inlet2, Outlet2, Inlet1, Outlet1);
     }
 
     /// <summary>
-    /// TBD
+    /// Factory methods for constructing bidirectional shapes.
     /// </summary>
     public static class BidiShape
     {
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional shape from top and bottom flow shapes.
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="top">TBD</param>
-        /// <param name="bottom">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn1">Input element type of the top flow.</typeparam>
+        /// <typeparam name="TOut1">Output element type of the top flow.</typeparam>
+        /// <typeparam name="TIn2">Input element type of the bottom flow.</typeparam>
+        /// <typeparam name="TOut2">Output element type of the bottom flow.</typeparam>
+        /// <param name="top">Flow shape used for the first input and output.</param>
+        /// <param name="bottom">Flow shape used for the second input and output.</param>
+        /// <returns>A bidirectional shape containing the ports of both flows.</returns>
         public static BidiShape<TIn1, TOut1, TIn2, TOut2> FromFlows<TIn1, TOut1, TIn2, TOut2>(
             FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
             => new(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);

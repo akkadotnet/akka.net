@@ -11,7 +11,7 @@ using System.Runtime.Serialization;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Exception raised when a stream stage exceeds its configured processing limit.
     /// </summary>
     public class StreamLimitReachedException : Exception
     {

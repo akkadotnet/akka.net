@@ -12,10 +12,10 @@ using Directive = Akka.Streams.Supervision.Directive;
 namespace Akka.Streams.Stage
 {
     /// <summary>
-    /// TBD
+    /// Runs a legacy push-pull stage by forwarding graph events to its callback methods.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     internal sealed class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -24,11 +24,11 @@ namespace Akka.Streams.Stage
         private readonly FlowShape<TIn, TOut> _shape;
 
         /// <summary>
-        /// TBD
+        /// Creates graph logic for the supplied flow shape, attributes, and legacy stage instance.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="stage">TBD</param>
+        /// <param name="shape">The inlet and outlet handled by this logic.</param>
+        /// <param name="attributes">The attributes associated with the stage.</param>
+        /// <param name="stage">The legacy stage whose callbacks handle graph events.</param>
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
@@ -61,7 +61,7 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// The legacy stage instance receiving events from this graph logic.
         /// </summary>
 #pragma warning disable CS0618 // Type or member is obsolete
         public AbstractStage<TIn, TOut> Stage { get; }
@@ -70,17 +70,17 @@ namespace Akka.Streams.Stage
         IMaterializer ILifecycleContext.Materializer => Materializer;
 
         /// <summary>
-        /// TBD
+        /// The attributes associated with the stage.
         /// </summary>
         public Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The context passed to the current stage's callbacks.
         /// </summary>
         public IDetachedContext<TOut> Context => this;
 
         /// <summary>
-        /// TBD
+        /// Pulls once before startup for a detached stage so its first upstream event can be held.
         /// </summary>
         protected internal override void BeforePreStart()
         {
@@ -90,17 +90,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Pushes an element of the stage output type to downstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation performs the push and returns <see langword="null"/>.</returns>
         public IDownstreamDirective Push(object element) => Push((TOut)element);
 
         /// <summary>
-        /// TBD
+        /// Pushes an element to downstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation performs the push and returns <see langword="null"/>.</returns>
         public IDownstreamDirective Push(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -108,9 +108,9 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Requests another element from upstream.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The legacy context implementation performs the pull and returns <see langword="null"/>.</returns>
         public IUpstreamDirective Pull()
         {
             Pull(_shape.Inlet);
@@ -118,9 +118,9 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels upstream and completes downstream successfully.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The legacy context implementation completes the stage and returns <see langword="null"/>.</returns>
         public FreeDirective Finish()
         {
             return Finish(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
@@ -133,17 +133,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Pushes one final output element and completes the stage.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The final output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes and completes the stage, then returns <see langword="null"/>.</returns>
         public IDownstreamDirective PushAndFinish(object element) => PushAndFinish((TOut) element);
 
         /// <summary>
-        /// TBD
+        /// Pushes one final output element and completes the stage.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The final output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes and completes the stage, then returns <see langword="null"/>.</returns>
         public IDownstreamDirective PushAndFinish(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -152,10 +152,10 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Fails the stage and its downstream with the supplied exception.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cause">The exception used to fail the stage.</param>
+        /// <returns>The legacy context implementation fails the stage and returns <see langword="null"/>.</returns>
         public FreeDirective Fail(Exception cause)
         {
             FailStage(cause);
@@ -163,17 +163,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether upstream has terminated.
         /// </summary>
         public bool IsFinishing => IsClosed(_shape.Inlet);
 
         /// <summary>
-        /// TBD
+        /// Absorbs upstream termination so final elements can be emitted when downstream demand arrives.
         /// </summary>
         /// <exception cref="NotSupportedException">
         /// This exception is thrown when the <see cref="FlowShape{TIn,TOut}.Outlet"/> is closed.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// A termination directive indicating that termination has been absorbed.
         public ITerminationDirective AbsorbTermination()
         {
             if (IsClosed(_shape.Outlet))
@@ -192,17 +192,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Pushes an output element and requests another element from upstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes and pulls, then returns <see langword="null"/>.</returns>
         public FreeDirective PushAndPull(object element) => PushAndPull((TOut) element);
 
         /// <summary>
-        /// TBD
+        /// Pushes an output element and requests another element from upstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes and pulls, then returns <see langword="null"/>.</returns>
         public FreeDirective PushAndPull(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -211,17 +211,17 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Holds the upstream event while pushing an element downstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes the element and returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstreamAndPush(object element) => HoldUpstreamAndPush((TOut) element);
 
         /// <summary>
-        /// TBD
+        /// Holds the upstream event while pushing an element downstream.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The output element to send downstream.</param>
+        /// <returns>The legacy context implementation pushes the element and returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstreamAndPush(TOut element)
         {
             Push(_shape.Outlet, element);
@@ -229,9 +229,9 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Holds downstream demand while requesting an element from upstream.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The legacy context implementation pulls upstream and returns <see langword="null"/>.</returns>
         public IDownstreamDirective HoldDownstreamAndPull()
         {
             Pull(_shape.Inlet);
@@ -239,39 +239,39 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether both an upstream event and downstream demand are being held.
         /// </summary>
         public bool IsHoldingBoth => IsHoldingUpstream && IsHoldingDownstream;
 
         /// <summary>
-        /// TBD
+        /// Indicates whether downstream demand is being held.
         /// </summary>
         public bool IsHoldingDownstream => IsAvailable(_shape.Outlet);
 
         /// <summary>
-        /// TBD
+        /// Indicates whether an upstream event is being held.
         /// </summary>
         public bool IsHoldingUpstream => !(IsClosed(_shape.Inlet) || HasBeenPulled(_shape.Inlet));
 
         /// <summary>
-        /// TBD
+        /// Holds the current downstream demand event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The legacy context implementation returns <see langword="null"/>.</returns>
         public IDownstreamDirective HoldDownstream() => null;
 
         /// <summary>
-        /// TBD
+        /// Holds the current upstream event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The legacy context implementation returns <see langword="null"/>.</returns>
         public IUpstreamDirective HoldUpstream() => null;
 
         /// <summary>
-        /// TBD
+        /// Invokes the stage's <see cref="AbstractStage{TIn,TOut}.PreStart"/> callback.
         /// </summary>
         public override void PreStart() => _currentStage.PreStart(Context);
 
         /// <summary>
-        /// TBD
+        /// Invokes the stage's <see cref="AbstractStage{TIn,TOut}.PostStop"/> callback.
         /// </summary>
         public override void PostStop() => _currentStage.PostStop();
 
@@ -307,32 +307,32 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a string identifying this graph logic and its current stage.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The logic name with the current stage representation.</returns>
         public override string ToString() => $"PushPullGraphLogic({_currentStage})";
     }
 
     /// <summary>
-    /// TBD
+    /// Adapts a legacy stage factory to a graph stage with a materialized value.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the inlet.</typeparam>
+    /// <typeparam name="TOut">The element type emitted by the outlet.</typeparam>
+    /// <typeparam name="TMat">The type of the materialized value produced by the factory.</typeparam>
     public class PushPullGraphStageWithMaterializedValue<TIn, TOut, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, TMat>
     {
         /// <summary>
-        /// TBD
+        /// A factory that creates a legacy stage and its materialized value from effective attributes.
         /// </summary>
 #pragma warning disable CS0618 // Type or member is obsolete
         public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
 #pragma warning restore CS0618 // Type or member is obsolete
 
         /// <summary>
-        /// TBD
+        /// Creates a graph stage from a factory and the stage's initial attributes.
         /// </summary>
-        /// <param name="factory">TBD</param>
-        /// <param name="stageAttributes">TBD</param>
+        /// <param name="factory">Creates a legacy stage and materialized value for a set of attributes.</param>
+        /// <param name="stageAttributes">The initial attributes applied to this graph stage.</param>
 #pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStageWithMaterializedValue(Func<Attributes, (IStage<TIn, TOut>, TMat)> factory, Attributes stageAttributes)
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -345,20 +345,20 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// The initial attributes applied to this stage's module.
         /// </summary>
         protected override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The flow shape containing this stage's inlet and outlet.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates legacy stage logic and its materialized value using the effective attributes.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes effective for this stage materialization.</param>
+        /// <returns>A graph logic wrapper for the legacy stage returned by the factory, together with the factory's materialized value.</returns>
         public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var stageAndMat = Factory(inheritedAttributes);
@@ -371,25 +371,25 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the name derived from this stage's initial attributes.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The stage name, or the default name when no name attribute is present.</returns>
         public sealed override string ToString() => InitialAttributes.GetNameOrDefault();
     }
 
     /// <summary>
-    /// TBD
+    /// Adapts a legacy stage factory that produces no materialized value to a graph stage.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the inlet.</typeparam>
+    /// <typeparam name="TOut">The element type emitted by the outlet.</typeparam>
     public class PushPullGraphStage<TIn, TOut> : PushPullGraphStageWithMaterializedValue<TIn, TOut, NotUsed>
     {
         /// <summary>
-        /// TBD
+        /// Creates a graph stage from a factory that produces a legacy stage.
         /// </summary>
-        /// <param name="factory">TBD</param>
-        /// <param name="stageAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="factory">Creates a legacy stage for the effective attributes.</param>
+        /// <param name="stageAttributes">The initial attributes applied to this graph stage.</param>
+        /// <returns>A graph stage whose materialized value is <see cref="NotUsed"/>.</returns>
 #pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => (factory(attributes), NotUsed.Instance), stageAttributes)
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -398,15 +398,15 @@ namespace Akka.Streams.Stage
     }
 
     /// <summary>
-    /// TBD
+    /// Base class for a legacy stream stage that processes input and output elements through callbacks.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut> : IStage<TIn, TOut>
     {
         /// <summary>
-        /// TBD
+        /// Indicates whether this stage separates adjacent one-bounded regions.
         /// </summary>
         protected internal virtual bool IsDetached => false;
         
@@ -417,7 +417,7 @@ namespace Akka.Streams.Stage
         /// Empty default implementation.
         /// </para>
         /// </summary>
-        /// <param name="context">TBD</param>
+        /// <param name="context">The lifecycle context for this stage.</param>
         public virtual void PreStart(ILifecycleContext context)
         {
         }
@@ -435,17 +435,17 @@ namespace Akka.Streams.Stage
         /// <see cref="IContext.Pull"/>.
         /// </para>
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The context used to push, pull, or terminate during this callback.</param>
+        /// <returns>The directive describing the operation performed.</returns>
         public abstract IDirective OnPush(TIn element, IContext context);
 
         /// <summary>
         /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
         /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to push, pull, or terminate during this callback.</param>
+        /// <returns>The directive describing the operation performed.</returns>
         public abstract IDirective OnPull(IContext context);
 
         /// <summary>
@@ -464,17 +464,17 @@ namespace Akka.Streams.Stage
         /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to finish or absorb upstream completion.</param>
+        /// <returns>The termination directive describing how completion is handled.</returns>
         public abstract ITerminationDirective OnUpstreamFinish(IContext context);
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="cause"></param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The context used to handle downstream cancellation.</param>
+        /// <param name="cause">The cancellation cause provided by downstream.</param>
+        /// <returns>The termination directive describing how cancellation is handled.</returns>
         public abstract ITerminationDirective OnDownstreamFinish(IContext context, Exception cause);
 
         /// <summary>
@@ -496,9 +496,9 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cause">The exception signaled by upstream.</param>
+        /// <param name="context">The context used to absorb the failure or terminate the stage.</param>
+        /// <returns>The termination directive describing how the failure is handled.</returns>
         public abstract ITerminationDirective OnUpstreamFailure(Exception cause, IContext context);
 
         // TODO need better wording here
@@ -521,8 +521,8 @@ namespace Akka.Streams.Stage
         /// <see cref="OnPull"/> when it is know how to recover from such exceptions.
         /// </para>
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cause">The exception thrown while processing an element.</param>
+        /// <returns>The supervision directive selected for the exception.</returns>
         public virtual Directive Decide(Exception cause) => Directive.Stop;
 
         /// <summary>
@@ -530,23 +530,23 @@ namespace Akka.Streams.Stage
         /// directive. By default it will return the same instance untouched, so you must override it
         /// if there are any state that should be cleared before restarting, e.g. by returning a new instance.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The stage instance used after a restart directive; the default returns this instance.</returns>
         public virtual IStage<TIn, TOut> Restart() => this;
     }
 
     /// <summary>
-    /// TBD
+    /// Base class for legacy stages with typed contexts and separate directive types for push and pull callbacks.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TPushDirective">TBD</typeparam>
-    /// <typeparam name="TPullDirective">TBD</typeparam>
-    /// <typeparam name="TContext">TBD</typeparam>
+    /// <typeparam name="TIn">The element type received from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted downstream.</typeparam>
+    /// <typeparam name="TPushDirective">The directive type returned by push callbacks.</typeparam>
+    /// <typeparam name="TPullDirective">The directive type returned by pull callbacks.</typeparam>
+    /// <typeparam name="TContext">The context type provided to the stage callbacks.</typeparam>
     [Obsolete("Please use GraphStage instead. [1.1.2]")]
     public abstract class AbstractStage<TIn, TOut, TPushDirective, TPullDirective, TContext> : AbstractStage<TIn, TOut> where TPushDirective : IDirective where TPullDirective : IDirective where TContext : IContext
     {
         /// <summary>
-        /// TBD
+        /// The context used for the typed stage callbacks.
         /// </summary>
         protected TContext Context;
 
@@ -563,9 +563,9 @@ namespace Akka.Streams.Stage
         /// <see cref="IContext.Pull"/>.
         /// </para>
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The typed context used by this callback.</param>
+        /// <returns>The push directive describing the operation performed.</returns>
         public abstract TPushDirective OnPush(TIn element, TContext context);
 
         /// <summary>
@@ -581,17 +581,17 @@ namespace Akka.Streams.Stage
         /// <see cref="IContext.Pull"/>.
         /// </para>
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element received from upstream.</param>
+        /// <param name="context">The untyped context forwarded to the typed callback.</param>
+        /// <returns>The directive returned by the typed push callback.</returns>
         public sealed override IDirective OnPush(TIn element, IContext context) => OnPush(element, (TContext) context);
 
         /// <summary>
         /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
         /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The typed context used by this callback.</param>
+        /// <returns>The pull directive describing the operation performed.</returns>
         public abstract TPullDirective OnPull(TContext context);
 
 
@@ -599,8 +599,8 @@ namespace Akka.Streams.Stage
         /// This method is called when there is demand from downstream, i.e. you are allowed to push one element
         /// downstreams with <see cref="IContext.Push"/>, or request elements from upstreams with <see cref="IContext.Pull"/>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The untyped context forwarded to the typed callback.</param>
+        /// <returns>The directive returned by the typed pull callback.</returns>
         public override IDirective OnPull(IContext context) => OnPull((TContext) context);
 
         /// <summary>
@@ -619,8 +619,8 @@ namespace Akka.Streams.Stage
         /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The untyped context forwarded to the typed callback.</param>
+        /// <returns>The termination directive returned by the typed completion callback.</returns>
         public sealed override ITerminationDirective OnUpstreamFinish(IContext context) => OnUpstreamFinish((TContext) context);
 
         /// <summary>
@@ -639,26 +639,26 @@ namespace Akka.Streams.Stage
         /// the last action by this stage was a "push".
         /// </para>
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The typed context used to handle upstream completion.</param>
+        /// <returns>The termination directive describing how completion is handled.</returns>
         public virtual ITerminationDirective OnUpstreamFinish(TContext context) => context.Finish();
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="cause"></param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The untyped context forwarded to the typed callback.</param>
+        /// <param name="cause">The cancellation cause provided by downstream.</param>
+        /// <returns>The termination directive returned by the typed cancellation callback.</returns>
         public sealed override ITerminationDirective OnDownstreamFinish(IContext context, Exception cause) => OnDownstreamFinish((TContext) context, cause);
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
         /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="cause"></param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The typed context used to handle downstream cancellation.</param>
+        /// <param name="cause">The cancellation cause provided by downstream.</param>
+        /// <returns>The termination directive describing how cancellation is handled.</returns>
         public virtual ITerminationDirective OnDownstreamFinish(TContext context, Exception cause) => context.Finish(cause);
 
         /// <summary>
@@ -680,9 +680,9 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cause">The exception signaled by upstream.</param>
+        /// <param name="context">The untyped context forwarded to the typed callback.</param>
+        /// <returns>The termination directive returned by the typed failure callback.</returns>
         public sealed override ITerminationDirective OnUpstreamFailure(Exception cause, IContext context) => OnUpstreamFailure(cause, (TContext) context);
 
         /// <summary>
@@ -704,9 +704,9 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cause">The exception signaled by upstream.</param>
+        /// <param name="context">The typed context used to handle the failure.</param>
+        /// <returns>The termination directive describing how the failure is handled.</returns>
         public virtual ITerminationDirective OnUpstreamFailure(Exception cause, TContext context) => context.Fail(cause);
     }
 }
