@@ -410,7 +410,7 @@ namespace Akka.IO
         /// <summary>
         /// Used in subclasses to start the common machinery above once a channel is connected.
         /// </summary>
-        protected void CompleteConnect(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        private void CompleteConnect(IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
             // Turn off Nagle's algorithm by default
             try
@@ -427,8 +427,6 @@ namespace Akka.IO
                 option.AfterConnect(Socket);
             }
 
-            _commander = commander;
-            Context.WatchWith(_commander, CommanderDied.Instance);
             commander.Tell(new Connected(Socket.RemoteEndPoint!, Socket.LocalEndPoint!));
 
             Context.SetReceiveTimeout(Settings.RegisterTimeout);
@@ -441,10 +439,11 @@ namespace Akka.IO
             _commander = commander;
             Context.WatchWith(commander, CommanderDied.Instance);
 
-            ITransportConnection transport;
+            Task ready;
             try
             {
-                transport = CreateTransport();
+                _transport = CreateTransport();
+                ready = _transport.InitializeAsync();
             }
             catch (Exception cause)
             {
@@ -452,8 +451,6 @@ namespace Akka.IO
                 return;
             }
 
-            _transport = transport;
-            var ready = (transport as ITransportConnectionLifecycle)?.Ready ?? Task.CompletedTask;
             if (ready.IsCompletedSuccessfully)
             {
                 CompleteConnect(commander, options);
@@ -493,11 +490,10 @@ namespace Akka.IO
         /// Starts the transport connection and monitors its read pump.
         /// Called after registration is complete.
         /// </summary>
-        protected void StartTransport(ITransportConnection transport)
+        private void StartTransport()
         {
-            _transport = transport;
-            if (transport is ITransportConnectionLifecycle lifecycle)
-                lifecycle.Start();
+            var transport = _transport ?? throw new InvalidOperationException("TCP transport was not initialized.");
+            transport.Start();
             _transportStarted = true;
             _cts = new CancellationTokenSource();
 
@@ -610,9 +606,8 @@ namespace Akka.IO
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
 
-                // Create and start the transport now that we have a handler
-                var transport = _transport ?? CreateTransport();
-                StartTransport(transport);
+                // Start the initialized transport now that we have a handler
+                StartTransport();
 
                 // Allow reading unless pull mode
                 if (!_pullMode)
