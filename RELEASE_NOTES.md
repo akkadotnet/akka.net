@@ -1,6 +1,17 @@
-#### 1.5.73 (unreleased) ####
+#### 1.5.73 October 5th, 2026 ####
 
-* Restore the Microsoft.Extensions minimums from before 1.5.72: 6.0 for `Akka` and `Akka.DependencyInjection`, and 9.0 for `Akka.Hosting.*`. The ranges still allow newer versions. Hosting permits OpenTelemetry SDK 1.12.0 or later while explicitly requiring `OpenTelemetry.Api` 1.15.3 or later, preserving the fix for [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j) without forcing Microsoft.Extensions 10.
+Akka.NET v1.5.73 restores the Microsoft.Extensions dependency ranges to their pre-1.5.72 width. 1.5.72 raised the minimum to 10.0 across core and Hosting during the Akka.Hosting import; this release rolls that back to keep applications on older Microsoft.Extensions versions working.
+
+**Dependencies**
+* Microsoft.Extensions minimums restored - `Akka` and `Akka.DependencyInjection` return to `[6.0.*,)` and all `Akka.Hosting.*` packages return to `[9.0.0,)`. The ranges still allow newer versions, so applications on the latest Microsoft.Extensions remain covered. Akka.Hosting continues to permit OpenTelemetry SDK 1.12.0 or later while explicitly requiring `OpenTelemetry.Api` 1.15.3 or later, which preserves the fix for [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j) without forcing Microsoft.Extensions 10.
+
+1 contributors since release 1.5.72
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 330 | 121 | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.73, [click here](https://github.com/akkadotnet/akka.net/milestone/156?closed=1).
 
 #### 1.5.72 October 3rd, 2026 ####
 
