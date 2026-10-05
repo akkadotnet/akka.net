@@ -3903,6 +3903,7 @@ namespace Akka.IO
             public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
             public bool PullMode { get; }
             public Akka.IO.TcpSettings? TcpSettings { get; set; }
+            public Akka.IO.TlsServerSettings? Tls { get; init; }
             public override string ToString() { }
         }
         public sealed class Bound : Akka.IO.Tcp.Event
@@ -3970,6 +3971,7 @@ namespace Akka.IO
             public System.Net.EndPoint RemoteAddress { get; }
             public Akka.IO.TcpSettings? TcpSettings { get; set; }
             public System.TimeSpan? Timeout { get; }
+            public Akka.IO.TlsClientSettings? Tls { get; init; }
             public override string ToString() { }
         }
         public sealed class Connected : Akka.IO.Tcp.Event
@@ -4171,6 +4173,32 @@ namespace Akka.IO
         public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.Task ShutdownAsync() { }
         public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
+    }
+    public delegate bool TlsCertificateValidationCallback(System.Security.Cryptography.X509Certificates.X509Certificate2? certificate, System.Security.Cryptography.X509Certificates.X509Chain? chain, string remotePeer, System.Net.Security.SslPolicyErrors errors, Akka.Event.ILoggingAdapter log);
+    public sealed class TlsClientSettings : System.IEquatable<Akka.IO.TlsClientSettings>
+    {
+        public TlsClientSettings(System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null) { }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2? Certificate { get; }
+        public Akka.IO.TlsCertificateValidationCallback? CustomValidator { get; init; }
+        public System.Security.Authentication.SslProtocols EnabledSslProtocols { get; init; }
+        public System.TimeSpan HandshakeTimeout { get; init; }
+        public bool RequireMutualAuthentication { get; init; }
+        public bool SuppressValidation { get; init; }
+        public string? TargetHost { get; init; }
+        public bool ValidateCertificateHostname { get; init; }
+        public System.Net.Security.SslClientAuthenticationOptions CreateAuthenticationOptions(string targetHost, string remotePeer, Akka.Event.ILoggingAdapter log) { }
+    }
+    public sealed class TlsServerSettings : System.IEquatable<Akka.IO.TlsServerSettings>
+    {
+        public TlsServerSettings(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate) { }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate { get; }
+        public Akka.IO.TlsCertificateValidationCallback? CustomValidator { get; init; }
+        public System.Security.Authentication.SslProtocols EnabledSslProtocols { get; init; }
+        public System.TimeSpan HandshakeTimeout { get; init; }
+        public bool RequireMutualAuthentication { get; init; }
+        public bool SuppressValidation { get; init; }
+        public bool ValidateCertificateHostname { get; init; }
+        public System.Net.Security.SslServerAuthenticationOptions CreateAuthenticationOptions(string remotePeer, Akka.Event.ILoggingAdapter log) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {

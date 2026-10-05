@@ -14,6 +14,8 @@ using Akka.Event;
 using Akka.Util.Internal;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace Akka.IO
 {
     /// <summary>
@@ -43,8 +45,8 @@ namespace Akka.IO
     {
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander; // forwarded destination for Connected
-        private Tcp.Bind _bind;
-        private Socket _socket;
+        private Tcp.Bind _bind = null!;
+        private Socket _socket = null!;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly int _acceptLimit;
         private SocketAsyncActorEventArgs[]? _acceptPool;
@@ -268,9 +270,11 @@ namespace Akka.IO
                     var accepted = saea.AcceptSocket!;
                     saea.AcceptSocket = null; // ready for re‑use
                     accepted.Blocking = true; // Transport's NetworkStream requires blocking mode
-                    var incomingConnection = Context.ActorOf(Props
-                        .Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
-                        .WithDeploy(Deploy.Local));
+                    var tlsSettings = _bind.Tls;
+                    var incomingProps = tlsSettings is null
+                        ? Props.Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
+                        : Props.Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode, tlsSettings);
+                    var incomingConnection = Context.ActorOf(incomingProps.WithDeploy(Deploy.Local));
 
                     // set up the watch for monitoring purposes
                     Context.WatchWith(incomingConnection, ConnectionTerminated.Instance);
@@ -311,6 +315,10 @@ namespace Akka.IO
         {
             try
             {
+                // Fail the bind command immediately for invalid TLS settings instead of starting a
+                // listener that would reject every accepted socket later.
+                _bind.Tls?.CreateAuthenticationOptions(_bind.LocalAddress.ToString()!, _log);
+
                 _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
                 {
                     Blocking = false
@@ -331,7 +339,7 @@ namespace Akka.IO
                 foreach (var saea in _acceptPool)
                     StartAccept(saea);
 
-                return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint));
+                return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint!));
             }
             catch (Exception ex)
             {
@@ -416,6 +424,6 @@ namespace Akka.IO
             }
         }
 
-        public ITimerScheduler Timers { get; set; }
+        public ITimerScheduler Timers { get; set; } = null!;
     }
 }

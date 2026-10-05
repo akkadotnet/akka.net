@@ -1,34 +1,30 @@
 ## Why
 
-Akka.Remote requires TLS support for production deployments. The current implementation relies on DotNetty's `TlsHandler`, which cannot be reused by the modern Akka.IO / future Artery TCP path. With `modernize-akka-io-tcp` introducing `IStreamProvider` and replacing `SocketAsyncEventArgs` with `Stream` + `Pipe`, TLS becomes a simple provider implementation: `TlsStreamProvider` wraps `SslStream` around `NetworkStream`, handshake happens inside `ConnectAsync`, and the TCP connection actor never knows it is encrypted. This was previously impossible because SAEA could not work with `SslStream`.
+Akka.IO TCP needs an opt-in TLS path that authenticates a peer before reporting a usable connection. This provides the foundation for encrypted Akka.Streams TCP and Artery TCP in later stages while keeping DotNetty's current TLS APIs independent.
 
 ## What Changes
 
-- Add `TlsStreamProvider : IStreamProvider` for client-side TLS (wraps `SslStream`, handshake inside `ConnectAsync`)
-- Add server-side TLS handshake in `TcpIncomingConnection` startup path (wrap accepted socket in `SslStream`, call `AuthenticateAsServerAsync` before entering `Connected` state)
-- Add `TlsSettings` configuration class that parses existing DotNetty TLS HOCON (`akka.remote.dot-netty.tcp.ssl.*`) into `SslClientAuthenticationOptions` / `SslServerAuthenticationOptions`
-- `enable-ssl = true` in HOCON selects `TlsStreamProvider` over `TcpStreamProvider`
-- All existing DotNetty TLS configuration keys continue to work without modification
+- Add caller-owned `TlsClientSettings` and `TlsServerSettings` to Akka.IO.
+- Add optional `Tls` init properties to `Tcp.Connect` and `Tcp.Bind` without changing their constructors.
+- Complete client and server handshakes asynchronously before sending `Tcp.Connected`; report outbound failures as `Tcp.CommandFailed` and stop failed inbound connection actors without blocking their listener.
+- Reuse the existing stream-based transport connection for authenticated `SslStream` instances, including TLS `close_notify` during orderly half-close.
 
 ### What does NOT change
 
-- The Akka.IO TCP actor messaging protocol (no new message types for TLS)
-- The actor hierarchy
-- The Stream + Pipe I/O internals (TLS is transparent — `SslStream` is just a `Stream`)
-- No BidiFlow or Akka.Streams-level TLS abstraction (YAGNI — TLS belongs at the socket abstraction level, not as a stream transformation)
+- Akka.IO commands without TLS settings retain their plaintext behavior.
+- DotNetty TLS implementation and configuration remain independent.
+- This stage does not add Akka.Streams APIs, Artery HOCON/setup wiring, QUIC, certificate loading helpers, hot reload, or plaintext fallback.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `tls-stream-provider`: TLS support via `IStreamProvider` abstraction at the Akka.IO level. Covers client-side `TlsStreamProvider`, server-side TLS handshake in `TcpIncomingConnection`, configuration parsing from existing HOCON, and certificate management (file-based, thumbprint/store-based, programmatic).
+- `tcp-tls`: Per-connection Akka.IO TLS settings and authenticated client/server TCP lifecycles.
 
 ### Modified Capabilities
 
 ## Impact
 
-- **Akka.IO** (`src/core/Akka/IO/`): New `TlsStreamProvider.cs`, `TlsSettings.cs`. Minor changes to `TcpIncomingConnection.cs` for server-side handshake. `TcpManager` or transport config selects provider based on `enable-ssl`.
-- **Akka.Remote** (`src/core/Akka.Remote/`): Transport configuration maps existing DotNetty TLS HOCON to new `TlsSettings`. `DotNettySslSetup` programmatic API needs equivalent.
-- **Configuration**: All `akka.remote.dot-netty.tcp.ssl.*` keys continue to work. No user config changes required.
-- **Dependencies**: `System.Net.Security` (built-in on netstandard2.1 / net6.0, no new NuGet packages)
-- **Test suites**: TLS integration tests (client/server with self-signed certs), mutual TLS tests, certificate validation tests, handshake timeout/failure tests
+- **Akka.IO** (`src/core/Akka/IO/`): TLS settings, additive command properties, pre-`Connected` handshakes and authenticated stream ownership.
+- **Documentation and tests**: document and verify the Akka.IO TLS command path, handshake failures/timeouts, cancellation and half-close behavior.
+- **Later stages**: Akka.Streams and Artery will consume these settings through their own explicit APIs. They will not depend on an `IStreamProvider` or DotNetty TLS types.

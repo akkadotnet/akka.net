@@ -1,45 +1,26 @@
-## 1. TlsSettings Configuration
+## 1. Akka.IO TCP TLS
 
-- [ ] 1.1 Create `TlsSettings` class in `src/core/Akka/IO/` that parses `akka.remote.dot-netty.tcp.ssl.*` HOCON into `SslClientAuthenticationOptions` and `SslServerAuthenticationOptions`
-- [ ] 1.2 Implement file-based certificate loading (`ssl.certificate.path` + `ssl.certificate.password`)
-- [ ] 1.3 Implement thumbprint-based certificate store lookup (`ssl.certificate.thumbprint` + `store-name` + `store-location`)
-- [ ] 1.4 Implement validation callback composition: chain validation, hostname validation, suppress-validation
-- [ ] 1.5 Implement `ssl.require-mutual-authentication` → `ClientCertificateRequired`
-- [ ] 1.6 Implement handshake timeout setting (default: 10 seconds)
+- [ ] 1.1 Add client/server TLS settings, certificate validation policy and fresh authentication-option factories.
+- [x] 1.2 Add optional TLS settings to `Tcp.Connect` and `Tcp.Bind` without changing existing constructors.
+- [x] 1.3 Authenticate outgoing and accepted connections asynchronously before `Tcp.Connected`; bound handshakes and cancel/dispose pending resources on actor stop.
+- [x] 1.4 Reuse the registered stream transport and send TLS `close_notify` before TCP FIN during graceful half-close.
+- [ ] 1.5 Verify successful and rejected handshakes, timeout/cancellation, listener availability, ownership, TLS 1.2/1.3 half-close and unchanged plaintext behavior.
+- [ ] 1.6 Complete warnings-as-errors build, API compatibility approval and focused Slopwatch review.
 
-## 2. TlsStreamProvider (Client-Side)
+## 2. TLS certificate-source and validation parity
 
-- [ ] 2.1 Create `TlsStreamProvider : IStreamProvider` in `src/core/Akka/IO/`
-- [ ] 2.2 Implement `ConnectAsync`: connect via `TcpStreamProvider` → wrap in `SslStream` → `AuthenticateAsClientAsync(SslClientAuthenticationOptions, ct)` → return authenticated stream
-- [ ] 2.3 Implement `Close`: dispose `SslStream`, delegate to `TcpStreamProvider.Close()`
-- [ ] 2.4 Handle handshake failure: dispose resources, propagate `AuthenticationException`
-- [ ] 2.5 Handle cancellation: dispose resources, propagate `OperationCanceledException`
+- [ ] 2.1 Add PKCS#12 file loading with password/key-storage settings and certificate-store lookup by store name, location and thumbprint.
+- [ ] 2.2 Add reusable chain, hostname, pin, subject, issuer, combine and chain-plus-custom validation helpers with documented composition order.
+- [ ] 2.3 Verify certificate ownership, RSA/ECDSA private-key access, all helper allow/deny cases and real certificate-source handshakes.
 
-## 3. Server-Side TLS Handshake
+## 3. Akka.Streams TCP TLS
 
-- [ ] 3.1 Modify `TcpIncomingConnection` to accept optional `TlsSettings` parameter
-- [ ] 3.2 When TLS enabled: wrap `NetworkStream` in `SslStream`, call `AuthenticateAsServerAsync` with timeout before entering `Connected` state
-- [ ] 3.3 Handle handshake timeout: dispose `SslStream`, stop actor
-- [ ] 3.4 Handle handshake failure: log error, dispose resources, stop actor without affecting `TcpListener`
-- [ ] 3.5 Modify `TcpListener` to pass `TlsSettings` to `TcpIncomingConnection` when TLS is configured
+- [ ] 3.1 Add explicit Streams bind/connect entry points and propagate settings into Akka.IO commands.
+- [ ] 3.2 Preserve materialized values, backpressure, cancellation and existing plaintext behavior.
+- [ ] 3.3 Verify TLS byte exchange, failures, half-close and accepted read-only connections.
 
-## 4. Transport Integration
+## 4. Artery TCP TLS
 
-- [ ] 4.1 Modify transport configuration to check `enable-ssl` flag and select `TlsStreamProvider` vs `TcpStreamProvider`
-- [ ] 4.2 Create `TlsSetup` class for programmatic TLS configuration via `ActorSystemSetup`
-- [ ] 4.3 Ensure `TlsSetup` overrides HOCON when both are provided
-- [ ] 4.4 Wire `TlsSettings` into `TcpManager` so it propagates to both outgoing and incoming connections
-
-## 5. Testing
-
-- [ ] 5.1 Create self-signed certificate generation utility for tests (following TurboMQTT `CreateSelfSignedCertificate` pattern)
-- [ ] 5.2 Test: client TLS handshake succeeds with valid certificate
-- [ ] 5.3 Test: client TLS handshake fails with invalid certificate
-- [ ] 5.4 Test: server TLS handshake succeeds
-- [ ] 5.5 Test: server TLS handshake timeout (client connects but never sends ClientHello)
-- [ ] 5.6 Test: mutual TLS (both client and server present certificates)
-- [ ] 5.7 Test: `suppress-validation = true` accepts self-signed certificates
-- [ ] 5.8 Test: hostname validation rejects mismatched certificates
-- [ ] 5.9 Test: end-to-end TLS remoting between two ActorSystems
-- [ ] 5.10 Test: existing DotNetty TLS HOCON configuration parses correctly into `TlsSettings`
-- [ ] 5.11 Test: `TlsSetup` programmatic configuration overrides HOCON
+- [ ] 4.1 Add Artery TLS HOCON and programmatic setup with documented precedence.
+- [ ] 4.2 Route control, ordinary and large-message channels through Streams TLS while retaining association and lane behavior.
+- [ ] 4.3 Verify actor communication, mutual TLS rejection, reconnect, quarantine and coordinated shutdown across two systems.

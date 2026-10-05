@@ -11,15 +11,18 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.IO
 {
     /// <summary>
-    /// Plaintext TCP implementation of <see cref="ITransportConnection"/>.
-    /// Owns two pipes (input + output) and two pump loops that bridge them to a NetworkStream.
+    /// TCP implementation of <see cref="ITransportConnection"/>.
+    /// Owns two pipes (input + output) and two pump loops that bridge them to a network stream,
+    /// which may be a plaintext <see cref="NetworkStream"/> or an authenticated TLS stream.
     /// </summary>
     public sealed class TcpTransportConnection : ITransportConnection
     {
@@ -28,6 +31,7 @@ namespace Akka.IO
         private readonly Pipe _inputPipe;
         private readonly Pipe _outputPipe;
         private readonly CancellationTokenSource _cts = new();
+        private bool _tlsWriteShutdown;
 
         /// <summary>
         /// Creates a transport connection from an already-connected socket.
@@ -101,6 +105,10 @@ namespace Akka.IO
             // Wait for write pump to finish flushing
             await WriteCompleted.ConfigureAwait(false);
 
+            // Send TLS close_notify before the TCP FIN. SslStream keeps its read side available,
+            // so ConfirmedClose continues to receive application data from the peer.
+            await ShutdownTlsWriteAsync().ConfigureAwait(false);
+
             // Half-close the socket (send FIN).
             // SocketException is expected if the peer already reset the connection.
             try
@@ -118,6 +126,16 @@ namespace Akka.IO
             // Wait for write pump to finish flushing
             await WriteCompleted.ConfigureAwait(false);
 
+            Exception? tlsShutdownFailure = null;
+            try
+            {
+                await ShutdownTlsWriteAsync().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                tlsShutdownFailure = e;
+            }
+
             // Cancel to unblock the read pump (which may be blocked on stream.ReadAsync)
             _cts.Cancel();
 
@@ -127,8 +145,26 @@ namespace Akka.IO
             catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected cancellation or I/O error during shutdown
 
             // Close the stream and socket
-            await _stream.DisposeAsync().ConfigureAwait(false);
-            _socket.Close();
+            try
+            {
+                await _stream.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _socket.Close();
+            }
+
+            if (tlsShutdownFailure is not null)
+                ExceptionDispatchInfo.Capture(tlsShutdownFailure).Throw();
+        }
+
+        private async Task ShutdownTlsWriteAsync()
+        {
+            if (_tlsWriteShutdown || _stream is not SslStream sslStream)
+                return;
+
+            await sslStream.ShutdownAsync().ConfigureAwait(false);
+            _tlsWriteShutdown = true;
         }
 
         public void Abort()

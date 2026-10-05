@@ -13,6 +13,7 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -197,6 +198,17 @@ namespace Akka.IO
             private HandlerDied() { }
         }
 
+        /// <summary>Result of an asynchronous TLS handshake sent through the actor mailbox.</summary>
+        protected sealed class TlsHandshakeCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public Exception? Failure { get; }
+
+            public TlsHandshakeCompleted(Exception? failure)
+            {
+                Failure = failure;
+            }
+        }
+
         #endregion
 
         #region Write command wrapper
@@ -222,6 +234,11 @@ namespace Akka.IO
 
         // Transport connection — owns pipes, pump loops, stream
         private ITransportConnection? _transport;
+
+        // The actor owns this stream from handshake start through pre-registration. Register
+        // transfers ownership to the transport; PostStop disposes it if that never happens.
+        private Stream? _authenticatedStream;
+        private CancellationTokenSource? _handshakeCancellation;
 
         // CTS for pipe read cancellation
         private CancellationTokenSource? _cts;
@@ -312,11 +329,17 @@ namespace Akka.IO
 
         protected override void PostStop()
         {
+            Exception? authenticatedStreamDisposalFailure = null;
+
             // Best-effort cleanup - cancel everything and close.
             // Do NOT synchronously wait for DisposeAsync — the pump tasks may be
             // blocked on stream I/O that can only be unblocked by closing the socket,
             // which would deadlock if we Wait() first.
             TryCancelCts();
+
+            _handshakeCancellation?.Cancel();
+            _handshakeCancellation?.Dispose();
+            _handshakeCancellation = null;
 
             if (_transport != null)
             {
@@ -356,8 +379,20 @@ namespace Akka.IO
             {
                 // Transport was never created (e.g. PoisonPill before Register).
                 // Close the socket directly since no transport owns it.
-                try { Socket.Close(); }
-                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+                try
+                {
+                    _authenticatedStream?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    authenticatedStreamDisposalFailure = e;
+                }
+                finally
+                {
+                    _authenticatedStream = null;
+                    try { Socket.Close(); }
+                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+                }
             }
 
             // Every owed write's bytes are already in the pipe (freed after the copy) -- only the
@@ -383,6 +418,9 @@ namespace Akka.IO
                 foreach (var sub in _closeInformation.NotificationsTo)
                     sub.Tell(_closeInformation.ClosedEvent);
             }
+
+            if (authenticatedStreamDisposalFailure is not null)
+                ExceptionDispatchInfo.Capture(authenticatedStreamDisposalFailure).Throw();
         }
 
         protected override void PostRestart(Exception reason)
@@ -425,6 +463,9 @@ namespace Akka.IO
         protected void StartTransport(ITransportConnection transport)
         {
             _transport = transport;
+            _authenticatedStream = null;
+            _handshakeCancellation?.Dispose();
+            _handshakeCancellation = null;
             _cts = new CancellationTokenSource();
 
             // Monitor the read pump for completion/errors
@@ -469,6 +510,50 @@ namespace Akka.IO
         /// For outgoing connections, wraps the connected socket (possibly with TLS).
         /// </summary>
         protected abstract ITransportConnection CreateTransport();
+
+        /// <summary>
+        /// Starts a TLS handshake away from the actor thread and reports its result through the
+        /// mailbox. The actor retains stream ownership until Register transfers it to the transport.
+        /// </summary>
+        protected void StartTlsHandshake(Stream stream, TimeSpan timeout, Func<CancellationToken, Task> authenticate)
+        {
+            _authenticatedStream = stream;
+            _handshakeCancellation = new CancellationTokenSource();
+            _handshakeCancellation.CancelAfter(timeout);
+            var cancellation = _handshakeCancellation;
+            var cancellationToken = cancellation.Token;
+            var self = Self;
+
+            _ = Task.Run(async () =>
+            {
+                Exception? failure = null;
+                try
+                {
+                    await authenticate(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    failure = cancellation.IsCancellationRequested && ex is OperationCanceledException
+                        ? new TimeoutException($"TLS handshake timed out after {timeout}.", ex)
+                        : ex;
+                }
+
+                self.Tell(new TlsHandshakeCompleted(failure), self);
+            });
+        }
+
+        /// <summary>Watches the outbound command owner while TLS authentication is pending.</summary>
+        protected void WatchCommanderForHandshake(IActorRef commander)
+        {
+            _commander = commander;
+            Context.WatchWith(commander, CommanderDied.Instance);
+        }
+
+        /// <summary>Returns whether a message signals that the command owner died.</summary>
+        protected static bool IsCommanderDied(object message) => message is CommanderDied;
+
+        /// <summary>Gets the authenticated stream for construction of the registered transport.</summary>
+        protected Stream? AuthenticatedStream => _authenticatedStream;
 
         /// <summary>
         /// Resolves the resume-writer threshold (in bytes) for this connection's input pipe, i.e.

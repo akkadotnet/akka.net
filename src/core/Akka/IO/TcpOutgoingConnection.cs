@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
@@ -83,7 +85,10 @@ namespace Akka.IO
                 minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
-            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(Settings, _connect.Options));
+            var outputPipeOptions = ResolveOutputPipeOptions(Settings, _connect.Options);
+            return AuthenticatedStream is { } authenticatedStream
+                ? new TcpTransportConnection(Socket, authenticatedStream, inputPipeOptions, outputPipeOptions)
+                : new TcpTransportConnection(Socket, inputPipeOptions, outputPipeOptions);
         }
 
         private void ReleaseConnectionSocketArgs()
@@ -214,7 +219,10 @@ namespace Akka.IO
 
                     ReleaseConnectionSocketArgs();
 
-                    CompleteConnect(_commander, _connect.Options);
+                    if (_connect.Tls is null)
+                        CompleteConnect(_commander, _connect.Options);
+                    else
+                        ReportConnectFailure(() => StartTlsAuthentication(_connect.Tls));
                 }
                 else
                     switch (remainingFinishConnectRetries)
@@ -254,6 +262,45 @@ namespace Akka.IO
 
         private void ScheduleConnectRetry()
             => Timers.StartSingleTimer(RetryConnectTimerKey, RetryConnect.Instance, TimeSpan.FromMilliseconds(1));
+
+        private void StartTlsAuthentication(TlsClientSettings settings)
+        {
+            WatchCommanderForHandshake(_commander);
+            Socket.Blocking = true;
+
+            var remotePeer = Socket.RemoteEndPoint?.ToString() ?? _connect.RemoteAddress.ToString()!;
+            var targetHost = settings.TargetHost ?? (_connect.RemoteAddress switch
+            {
+                DnsEndPoint dnsEndPoint => dnsEndPoint.Host,
+                IPEndPoint ipEndPoint => ipEndPoint.Address.ToString(),
+                _ => _connect.RemoteAddress.ToString()!
+            });
+            var options = settings.CreateAuthenticationOptions(targetHost, remotePeer, Log);
+            var stream = new SslStream(new NetworkStream(Socket, ownsSocket: false), leaveInnerStreamOpen: false);
+
+            Become(TlsAuthenticating);
+            StartTlsHandshake(stream, settings.HandshakeTimeout,
+                cancellationToken => stream.AuthenticateAsClientAsync(options, cancellationToken));
+        }
+
+        private void TlsAuthenticating()
+        {
+            Receive<TlsHandshakeCompleted>(result =>
+            {
+                if (result.Failure is not null)
+                {
+                    Stop(result.Failure);
+                    return;
+                }
+
+                CompleteConnect(_commander, _connect.Options);
+            });
+            Receive<object>(message =>
+            {
+                if (IsCommanderDied(message))
+                    Context.Stop(Self);
+            });
+        }
     }
 
     [InternalApi]
