@@ -11,6 +11,8 @@ Akka.NET v1.5.73 restores the Microsoft.Extensions dependency ranges to their pr
 | --- | --- | --- | --- |
 | 5 | 330 | 121 | Aaron Stannard |
 
+To see the full set of changes in Akka.NET v1.5.73, [click here](https://github.com/akkadotnet/akka.net/milestone/156?closed=1).
+
 #### 1.5.72 October 3rd, 2026 ####
 
 Akka.NET v1.5.72 backports a non-blocking Cluster extension startup, test-infrastructure hardening, a Cluster.Sharding hand-over fix, and a batch of de-flaked specs from `dev`.
