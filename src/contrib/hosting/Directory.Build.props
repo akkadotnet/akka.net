@@ -1,7 +1,0 @@
-<Project>
-  <Import Project="$(MSBuildThisFileDirectory)../../../Directory.Build.props" />
-  <PropertyGroup>
-    <!-- Hosting keeps its pre-import floor independently of core Akka's Microsoft.Extensions 6 range. -->
-    <MsExtVersion>$(MsExtHostingVersion)</MsExtVersion>
-  </PropertyGroup>
-</Project>

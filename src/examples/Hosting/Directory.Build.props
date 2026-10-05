@@ -1,6 +1,0 @@
-<Project>
-  <Import Project="$(MSBuildThisFileDirectory)../../../Directory.Build.props" />
-  <PropertyGroup>
-    <MsExtVersion>$(MsExtHostingVersion)</MsExtVersion>
-  </PropertyGroup>
-</Project>
