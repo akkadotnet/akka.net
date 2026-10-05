@@ -118,6 +118,9 @@ namespace Akka.Streams.Tests.IO
             private int _toRead;
             private byte[] _readBuffer = Array.Empty<byte>();
             private IActorRef _readTo = Context.System.DeadLetters;
+            #nullable enable
+            private IActorRef? _closeReplyTo;
+            #nullable restore
             private Tcp.CloseCommand _closeAfterWrite;
             
             public TestClient(IActorRef connection)
@@ -184,12 +187,13 @@ namespace Akka.Streams.Tests.IO
                         break;
                     
                     case Tcp.ConnectionClosed c:
-                        _readTo.Tell(c);
+                        (_closeReplyTo ?? _readTo).Tell(c);
                         if(!c.IsPeerClosed)
                             Context.Stop(Self);
                         break;
                     
                     case ClientClose c:
+                        _closeReplyTo = c.ReplyTo;
                         _readTo = c.ReplyTo;
                         if (!_writePending)
                             _connection.Tell(c.Cmd);
