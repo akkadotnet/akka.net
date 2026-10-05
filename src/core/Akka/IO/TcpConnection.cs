@@ -13,7 +13,6 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -198,12 +197,12 @@ namespace Akka.IO
             private HandlerDied() { }
         }
 
-        /// <summary>Result of an asynchronous TLS handshake sent through the actor mailbox.</summary>
-        protected sealed class TlsHandshakeCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        /// <summary>Result of asynchronous transport initialization sent through the actor mailbox.</summary>
+        private sealed class TransportInitializationCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public Exception? Failure { get; }
 
-            public TlsHandshakeCompleted(Exception? failure)
+            public TransportInitializationCompleted(Exception? failure)
             {
                 Failure = failure;
             }
@@ -234,11 +233,7 @@ namespace Akka.IO
 
         // Transport connection — owns pipes, pump loops, stream
         private ITransportConnection? _transport;
-
-        // The actor owns this stream from handshake start through pre-registration. Register
-        // transfers ownership to the transport; PostStop disposes it if that never happens.
-        private Stream? _authenticatedStream;
-        private CancellationTokenSource? _handshakeCancellation;
+        private bool _transportStarted;
 
         // CTS for pipe read cancellation
         private CancellationTokenSource? _cts;
@@ -329,24 +324,19 @@ namespace Akka.IO
 
         protected override void PostStop()
         {
-            Exception? authenticatedStreamDisposalFailure = null;
-
             // Best-effort cleanup - cancel everything and close.
             // Do NOT synchronously wait for DisposeAsync — the pump tasks may be
             // blocked on stream I/O that can only be unblocked by closing the socket,
             // which would deadlock if we Wait() first.
             TryCancelCts();
 
-            _handshakeCancellation?.Cancel();
-            _handshakeCancellation?.Dispose();
-            _handshakeCancellation = null;
-
             if (_transport != null)
             {
                 // Graceful close only when the close actually completed: ConfirmedClosed, or Closed
                 // after an upgrade. Anything else aborts below; CloseAsync could wait on a stuck write.
-                if (_closeInformation?.ClosedEvent is ConfirmedClosed ||
+                if (_transportStarted && (_closeInformation?.ClosedEvent is ConfirmedClosed ||
                     (_fullCloseCommander is not null && _closeInformation?.ClosedEvent is Closed))
+                )
                 {
                     // Only ShutdownAsync ran, so the socket is still open: close it without Abort's
                     // linger-0 RST. Fire-and-forget keeps PostStop non-blocking; the fault is observed below.
@@ -377,22 +367,13 @@ namespace Akka.IO
             }
             else
             {
-                // Transport was never created (e.g. PoisonPill before Register).
+                // Transport was never created (e.g. PoisonPill before TCP connect).
                 // Close the socket directly since no transport owns it.
                 try
                 {
-                    _authenticatedStream?.Dispose();
+                    Socket.Close();
                 }
-                catch (Exception e)
-                {
-                    authenticatedStreamDisposalFailure = e;
-                }
-                finally
-                {
-                    _authenticatedStream = null;
-                    try { Socket.Close(); }
-                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
-                }
+                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
             }
 
             // Every owed write's bytes are already in the pipe (freed after the copy) -- only the
@@ -419,8 +400,6 @@ namespace Akka.IO
                     sub.Tell(_closeInformation.ClosedEvent);
             }
 
-            if (authenticatedStreamDisposalFailure is not null)
-                ExceptionDispatchInfo.Capture(authenticatedStreamDisposalFailure).Throw();
         }
 
         protected override void PostRestart(Exception reason)
@@ -456,6 +435,60 @@ namespace Akka.IO
             Become(AwaitRegBehaviour);
         }
 
+        /// <summary>Creates and initializes a transport before notifying the connection owner.</summary>
+        protected void InitializeTransport(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        {
+            _commander = commander;
+            Context.WatchWith(commander, CommanderDied.Instance);
+
+            ITransportConnection transport;
+            try
+            {
+                transport = CreateTransport();
+            }
+            catch (Exception cause)
+            {
+                OnTransportInitializationFailed(cause);
+                return;
+            }
+
+            _transport = transport;
+            var ready = (transport as ITransportConnectionLifecycle)?.Ready ?? Task.CompletedTask;
+            if (ready.IsCompletedSuccessfully)
+            {
+                CompleteConnect(commander, options);
+                return;
+            }
+
+            Become(() => TransportInitializingBehaviour(commander, options));
+            var self = Self;
+            ready.PipeTo(self, self,
+                success: () => new TransportInitializationCompleted(failure: null),
+                failure: cause => new TransportInitializationCompleted(cause));
+        }
+
+        /// <summary>Handles a transport initialization failure in the owning actor.</summary>
+        protected virtual void OnTransportInitializationFailed(Exception cause)
+        {
+            Log.Warning(cause, "Could not initialize TCP transport for [{0}]", Socket.RemoteEndPoint);
+            Context.Stop(Self);
+        }
+
+        private void TransportInitializingBehaviour(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        {
+            Receive<TransportInitializationCompleted>(result =>
+            {
+                if (result.Failure is not null)
+                {
+                    OnTransportInitializationFailed(result.Failure);
+                    return;
+                }
+
+                CompleteConnect(commander, options);
+            });
+            Receive<CommanderDied>(_ => Context.Stop(Self));
+        }
+
         /// <summary>
         /// Starts the transport connection and monitors its read pump.
         /// Called after registration is complete.
@@ -463,9 +496,9 @@ namespace Akka.IO
         protected void StartTransport(ITransportConnection transport)
         {
             _transport = transport;
-            _authenticatedStream = null;
-            _handshakeCancellation?.Dispose();
-            _handshakeCancellation = null;
+            if (transport is ITransportConnectionLifecycle lifecycle)
+                lifecycle.Start();
+            _transportStarted = true;
             _cts = new CancellationTokenSource();
 
             // Monitor the read pump for completion/errors
@@ -510,50 +543,6 @@ namespace Akka.IO
         /// For outgoing connections, wraps the connected socket (possibly with TLS).
         /// </summary>
         protected abstract ITransportConnection CreateTransport();
-
-        /// <summary>
-        /// Starts a TLS handshake away from the actor thread and reports its result through the
-        /// mailbox. The actor retains stream ownership until Register transfers it to the transport.
-        /// </summary>
-        protected void StartTlsHandshake(Stream stream, TimeSpan timeout, Func<CancellationToken, Task> authenticate)
-        {
-            _authenticatedStream = stream;
-            _handshakeCancellation = new CancellationTokenSource();
-            _handshakeCancellation.CancelAfter(timeout);
-            var cancellation = _handshakeCancellation;
-            var cancellationToken = cancellation.Token;
-            var self = Self;
-
-            _ = Task.Run(async () =>
-            {
-                Exception? failure = null;
-                try
-                {
-                    await authenticate(cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    failure = cancellation.IsCancellationRequested && ex is OperationCanceledException
-                        ? new TimeoutException($"TLS handshake timed out after {timeout}.", ex)
-                        : ex;
-                }
-
-                self.Tell(new TlsHandshakeCompleted(failure), self);
-            });
-        }
-
-        /// <summary>Watches the outbound command owner while TLS authentication is pending.</summary>
-        protected void WatchCommanderForHandshake(IActorRef commander)
-        {
-            _commander = commander;
-            Context.WatchWith(commander, CommanderDied.Instance);
-        }
-
-        /// <summary>Returns whether a message signals that the command owner died.</summary>
-        protected static bool IsCommanderDied(object message) => message is CommanderDied;
-
-        /// <summary>Gets the authenticated stream for construction of the registered transport.</summary>
-        protected Stream? AuthenticatedStream => _authenticatedStream;
 
         /// <summary>
         /// Resolves the resume-writer threshold (in bytes) for this connection's input pipe, i.e.
@@ -622,7 +611,7 @@ namespace Akka.IO
                 Context.SetReceiveTimeout(null);
 
                 // Create and start the transport now that we have a handler
-                var transport = CreateTransport();
+                var transport = _transport ?? CreateTransport();
                 StartTransport(transport);
 
                 // Allow reading unless pull mode

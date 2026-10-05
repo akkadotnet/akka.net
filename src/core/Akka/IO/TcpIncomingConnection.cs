@@ -9,10 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
-using System.Net.Security;
 using System.Net.Sockets;
 using Akka.Actor;
-using Akka.Event;
 
 #nullable enable
 
@@ -25,7 +23,7 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-        private readonly Stream? _stream;
+        private ITransportConnection? _preparedTransport;
         private readonly TlsServerSettings? _tlsSettings;
 
         public TcpIncomingConnection(TcpSettings settings,
@@ -47,7 +45,7 @@ namespace Akka.IO
         {
             _bindHandler = bindHandler;
             _options = options;
-            _stream = stream;
+            _preparedTransport = CreateTcpTransport(stream);
             Context.Watch(bindHandler); // sign death pact
         }
 
@@ -68,6 +66,17 @@ namespace Akka.IO
 
         protected override ITransportConnection CreateTransport()
         {
+            if (_preparedTransport is { } preparedTransport)
+            {
+                _preparedTransport = null;
+                return preparedTransport;
+            }
+
+            return CreateTcpTransport(existingStream: null);
+        }
+
+        private ITransportConnection CreateTcpTransport(Stream? existingStream)
+        {
             var pipeBufferSize = ResolvePipeBufferSize(Settings, _options);
             var inputPipeOptions = new PipeOptions(
                 pauseWriterThreshold: pipeBufferSize * 2,
@@ -75,62 +84,14 @@ namespace Akka.IO
                 minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
-            if (_stream != null)
-            {
-                // Use the provided stream (for TLS or testing)
-                return new TcpTransportConnection(Socket, _stream, inputPipeOptions, ResolveOutputPipeOptions(Settings, _options));
-            }
-
-            if (AuthenticatedStream is { } authenticatedStream)
-                return new TcpTransportConnection(Socket, authenticatedStream, inputPipeOptions, ResolveOutputPipeOptions(Settings, _options));
-
-            // Default: plaintext TCP using the socket directly
-            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(Settings, _options));
+            return TcpTransportConnection.CreateForIncoming(Socket, existingStream, inputPipeOptions,
+                ResolveOutputPipeOptions(Settings, _options), _tlsSettings, Log);
         }
 
         protected override void PreStart()
         {
-            if (_tlsSettings is null)
-            {
-                CompleteConnect(_bindHandler, _options);
-                return;
-            }
-
-            StartTlsAuthentication(_tlsSettings);
+            InitializeTransport(_bindHandler, _options);
         }
 
-        private void StartTlsAuthentication(TlsServerSettings settings)
-        {
-            try
-            {
-                var remotePeer = Socket.RemoteEndPoint?.ToString() ?? "unknown remote peer";
-                var options = settings.CreateAuthenticationOptions(remotePeer, Log);
-                var stream = new SslStream(new NetworkStream(Socket, ownsSocket: false), leaveInnerStreamOpen: false);
-
-                Become(TlsAuthenticating);
-                StartTlsHandshake(stream, settings.HandshakeTimeout,
-                    cancellationToken => stream.AuthenticateAsServerAsync(options, cancellationToken));
-            }
-            catch (Exception e)
-            {
-                Log.Warning(e, "TLS handshake failed for incoming TCP connection from [{0}]", Socket.RemoteEndPoint);
-                Context.Stop(Self);
-            }
-        }
-
-        private void TlsAuthenticating()
-        {
-            Receive<TlsHandshakeCompleted>(result =>
-            {
-                if (result.Failure is not null)
-                {
-                    Log.Warning(result.Failure, "TLS handshake failed for incoming TCP connection from [{0}]", Socket.RemoteEndPoint);
-                    Context.Stop(Self);
-                    return;
-                }
-
-                CompleteConnect(_bindHandler, _options);
-            });
-        }
     }
 }

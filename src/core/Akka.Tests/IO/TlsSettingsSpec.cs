@@ -10,25 +10,21 @@ using System;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Akka.Event;
 using Akka.IO;
-using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.IO
 {
-    public class TlsSettingsSpec : AkkaSpec
+    public sealed class TlsSettingsSpec
     {
-        public TlsSettingsSpec(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [Fact(DisplayName = "Should_Create_Fresh_Options_And_Not_Select_Certificates_Without_Mutual_Authentication")]
         public void Should_Create_Fresh_Options_And_Not_Select_Certificates_Without_Mutual_Authentication()
         {
             using var certificate = CreateCertificate("localhost", server: false);
             var settings = new TlsClientSettings(certificate) { RequireMutualAuthentication = false };
-            var first = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log);
-            var second = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log);
+            var first = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance);
+            var second = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance);
 
             Assert.NotSame(first, second);
             Assert.Null(first.ClientCertificates);
@@ -42,7 +38,7 @@ namespace Akka.Tests.IO
             var settings = new TlsClientSettings();
 
             Assert.Throws<InvalidOperationException>(() =>
-                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log));
+                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance));
         }
 
         [Fact(DisplayName = "Should_Ignore_Chain_Errors_Independently_From_Hostname_Errors")]
@@ -55,18 +51,19 @@ namespace Akka.Tests.IO
                 SuppressValidation = true,
                 ValidateCertificateHostname = true
             };
-            var validation = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log)
+            var validation = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance)
                 .RemoteCertificateValidationCallback!;
 
-            Assert.True(validation(Sys, serverCertificate, null,
+            var sender = new object();
+            Assert.True(validation(sender, serverCertificate, null,
                 SslPolicyErrors.RemoteCertificateChainErrors));
-            Assert.False(validation(Sys, serverCertificate, null,
+            Assert.False(validation(sender, serverCertificate, null,
                 SslPolicyErrors.RemoteCertificateNameMismatch));
-            Assert.False(validation(Sys, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
+            Assert.False(validation(sender, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
 
             var hostnameDisabled = new TlsClientSettings { RequireMutualAuthentication = false, SuppressValidation = true }
-                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log).RemoteCertificateValidationCallback!;
-            Assert.True(hostnameDisabled(Sys, serverCertificate, null, SslPolicyErrors.RemoteCertificateNameMismatch));
+                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance).RemoteCertificateValidationCallback!;
+            Assert.True(hostnameDisabled(sender, serverCertificate, null, SslPolicyErrors.RemoteCertificateNameMismatch));
         }
 
         [Fact(DisplayName = "Should_Allow_Custom_Validation_To_Override_Built_In_Policy_But_Reject_Missing_Mutual_Certificate_First")]
@@ -82,12 +79,13 @@ namespace Akka.Tests.IO
                     return true;
                 }
             };
-            var validation = settings.CreateAuthenticationOptions("127.0.0.1:1234", Sys.Log)
+            var validation = settings.CreateAuthenticationOptions("127.0.0.1:1234", NoLogger.Instance)
                 .RemoteCertificateValidationCallback!;
 
-            Assert.False(validation(Sys, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
+            var sender = new object();
+            Assert.False(validation(sender, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
             Assert.Equal(0, customCalls);
-            Assert.True(validation(Sys, serverCertificate, null, SslPolicyErrors.RemoteCertificateChainErrors));
+            Assert.True(validation(sender, serverCertificate, null, SslPolicyErrors.RemoteCertificateChainErrors));
             Assert.Equal(1, customCalls);
         }
 
@@ -107,34 +105,28 @@ namespace Akka.Tests.IO
                     return errors == (SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch);
                 }
             }
-                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log)
+                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance)
                 .RemoteCertificateValidationCallback!;
 
-            Assert.True(validation(Sys, serverCertificate, null,
+            Assert.True(validation(new object(), serverCertificate, null,
                 SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch));
             Assert.Equal(1, customCalls);
         }
 
-        [Fact(DisplayName = "Should_Reject_Nonpositive_Handshake_Timeouts")]
-        public void Should_reject_nonpositive_handshake_timeouts()
-        {
-            var settings = new TlsClientSettings { RequireMutualAuthentication = false, HandshakeTimeout = TimeSpan.Zero };
-
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log));
-        }
-
-        [Fact(DisplayName = "Should_Reject_Handshake_Timeouts_Beyond_Cancellation_Timer_Range")]
-        public void Should_reject_handshake_timeouts_beyond_cancellation_timer_range()
+        [Theory(DisplayName = "Should_Reject_Invalid_Handshake_Timeouts")]
+        [InlineData(0L)]
+        [InlineData(-1L)]
+        [InlineData(4294967295L)]
+        public void Should_reject_invalid_handshake_timeouts(long milliseconds)
         {
             var settings = new TlsClientSettings
             {
                 RequireMutualAuthentication = false,
-                HandshakeTimeout = TimeSpan.FromMilliseconds(uint.MaxValue)
+                HandshakeTimeout = TimeSpan.FromMilliseconds(milliseconds)
             };
 
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", Sys.Log));
+                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance));
         }
 
         [Fact(DisplayName = "Should_Reject_Server_Certificates_Without_A_Private_Key")]
@@ -144,7 +136,7 @@ namespace Akka.Tests.IO
             using var publicCertificate = X509CertificateLoader.LoadCertificate(certificateWithKey.RawData);
             var settings = new TlsServerSettings(publicCertificate);
 
-            Assert.Throws<ArgumentException>(() => settings.CreateAuthenticationOptions("127.0.0.1:1234", Sys.Log));
+            Assert.Throws<ArgumentException>(() => settings.CreateAuthenticationOptions("127.0.0.1:1234", NoLogger.Instance));
         }
 
         private static X509Certificate2 CreateCertificate(string host, bool server)

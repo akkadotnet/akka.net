@@ -85,4 +85,15 @@ namespace Akka.IO
         /// </summary>
         Exception? ReadError { get; }
     }
+
+    /// <summary>
+    /// Optional lifecycle contract for transports that must become ready before a connection is announced
+    /// and whose I/O pumps should start only after the handler registers.
+    /// </summary>
+    internal interface ITransportConnectionLifecycle
+    {
+        Task Ready { get; }
+
+        void Start();
+    }
 }
