@@ -11,139 +11,139 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Defines a factory that creates a result value from a function mapping an input value to an output value.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="TIn">The input type accepted by the function passed to <see cref="Create"/>.</typeparam>
+    /// <typeparam name="TOut">The output type returned by the function passed to <see cref="Create"/>.</typeparam>
+    /// <typeparam name="T">The result type returned by <see cref="Create"/>.</typeparam>
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
     {
         /// <summary>
-        /// TBD
+        /// Creates a result value using the supplied mapping function.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps a value of type <typeparamref name="TIn"/> to a value of type <typeparamref name="TOut"/>.</param>
+        /// <returns>A value of type <typeparamref name="T"/> created using <paramref name="unzipper"/>.</returns>
         T Create(Func<TIn, TOut> unzipper);
     }
 
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1> : IUnzipWithCreator<TIn, (TOut0, TOut1), UnzipWith<TIn, TOut0, TOut1>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1> Create(Func<TIn, (TOut0, TOut1)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1>(unzipper);
         }
     }
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+    /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2), UnzipWith<TIn, TOut0, TOut1, TOut2>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1, TOut2> Create(Func<TIn, (TOut0, TOut1, TOut2)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2>(unzipper);
         }
     }
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
-    /// <typeparam name="TOut3">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+    /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+    /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3>(unzipper);
         }
     }
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
-    /// <typeparam name="TOut3">TBD</typeparam>
-    /// <typeparam name="TOut4">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+    /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+    /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+    /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>(unzipper);
         }
     }
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
-    /// <typeparam name="TOut3">TBD</typeparam>
-    /// <typeparam name="TOut4">TBD</typeparam>
-    /// <typeparam name="TOut5">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+    /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+    /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+    /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
+    /// <typeparam name="TOut5">The element type of output tuple item <c>Item6</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>(unzipper);
         }
     }
     /// <summary>
-    /// TBD
+    /// Base class for factories that create an unzip stage from a function returning a tuple of outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut0">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
-    /// <typeparam name="TOut3">TBD</typeparam>
-    /// <typeparam name="TOut4">TBD</typeparam>
-    /// <typeparam name="TOut5">TBD</typeparam>
-    /// <typeparam name="TOut6">TBD</typeparam>
+    /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+    /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+    /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+    /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+    /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+    /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
+    /// <typeparam name="TOut5">The element type of output tuple item <c>Item6</c>.</typeparam>
+    /// <typeparam name="TOut6">The element type of output tuple item <c>Item7</c>.</typeparam>
     public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage for a function that maps one input element to a tuple of outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <returns>An unzip stage whose outputs correspond to the tuple items.</returns>
         public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>(unzipper);
@@ -151,99 +151,99 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// Provides factories for unzip stages that split each input element into a tuple of output elements.
     /// </summary>
     public partial class UnzipWith 
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1> Apply<TIn, TOut0, TOut1>(Func<TIn, (TOut0, TOut1)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1> creator)
         {
             return creator.Create(unzipper);
         }	
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1, TOut2> Apply<TIn, TOut0, TOut1, TOut2>(Func<TIn, (TOut0, TOut1, TOut2)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2> creator)
         {
             return creator.Create(unzipper);
         }	
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TOut3">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+        /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Apply<TIn, TOut0, TOut1, TOut2, TOut3>(Func<TIn, (TOut0, TOut1, TOut2, TOut3)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> creator)
         {
             return creator.Create(unzipper);
         }	
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TOut3">TBD</typeparam>
-        /// <typeparam name="TOut4">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+        /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+        /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> creator)
         {
             return creator.Create(unzipper);
         }	
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TOut3">TBD</typeparam>
-        /// <typeparam name="TOut4">TBD</typeparam>
-        /// <typeparam name="TOut5">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+        /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+        /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
+        /// <typeparam name="TOut5">The element type of output tuple item <c>Item6</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> creator)
         {
             return creator.Create(unzipper);
         }	
         /// <summary>
-        /// TBD
+        /// Creates an unzip stage using the supplied tuple-producing function and creator.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut0">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TOut3">TBD</typeparam>
-        /// <typeparam name="TOut4">TBD</typeparam>
-        /// <typeparam name="TOut5">TBD</typeparam>
-        /// <typeparam name="TOut6">TBD</typeparam>
-        /// <param name="unzipper">TBD</param>
-        /// <param name="creator">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The input element type accepted by the splitter.</typeparam>
+        /// <typeparam name="TOut0">The element type of output tuple item <c>Item1</c>.</typeparam>
+        /// <typeparam name="TOut1">The element type of output tuple item <c>Item2</c>.</typeparam>
+        /// <typeparam name="TOut2">The element type of output tuple item <c>Item3</c>.</typeparam>
+        /// <typeparam name="TOut3">The element type of output tuple item <c>Item4</c>.</typeparam>
+        /// <typeparam name="TOut4">The element type of output tuple item <c>Item5</c>.</typeparam>
+        /// <typeparam name="TOut5">The element type of output tuple item <c>Item6</c>.</typeparam>
+        /// <typeparam name="TOut6">The element type of output tuple item <c>Item7</c>.</typeparam>
+        /// <param name="unzipper">A function that maps one input element to a tuple of output elements.</param>
+        /// <param name="creator">The factory that constructs the unzip stage.</param>
+        /// <returns>The stage created by <paramref name="creator"/> for <paramref name="unzipper"/>.</returns>
         public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> creator)
         {
             return creator.Create(unzipper);
@@ -251,11 +251,11 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1> : GraphStage<FanOutShape<TIn, T0, T1>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -325,9 +325,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1)> unzipper)
         {
             _unzipper = unzipper;
@@ -341,44 +341,44 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="T2">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
+    /// <typeparam name="T2">The element type emitted by output port <c>Out2</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1, T2> : GraphStage<FanOutShape<TIn, T0, T1, T2>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -469,9 +469,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1, T2)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1, T2)> unzipper)
         {
             _unzipper = unzipper;
@@ -486,49 +486,49 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out2</c> for tuple item <c>Item3</c>.
         /// </summary>
         public Outlet<T2> Out2 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1, T2> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="T2">TBD</typeparam>
-    /// <typeparam name="T3">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
+    /// <typeparam name="T2">The element type emitted by output port <c>Out2</c>.</typeparam>
+    /// <typeparam name="T3">The element type emitted by output port <c>Out3</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1, T2, T3> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -640,9 +640,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1, T2, T3)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1, T2, T3)> unzipper)
         {
             _unzipper = unzipper;
@@ -658,54 +658,54 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out2</c> for tuple item <c>Item3</c>.
         /// </summary>
         public Outlet<T2> Out2 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out3</c> for tuple item <c>Item4</c>.
         /// </summary>
         public Outlet<T3> Out3 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1, T2, T3> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="T2">TBD</typeparam>
-    /// <typeparam name="T3">TBD</typeparam>
-    /// <typeparam name="T4">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
+    /// <typeparam name="T2">The element type emitted by output port <c>Out2</c>.</typeparam>
+    /// <typeparam name="T3">The element type emitted by output port <c>Out3</c>.</typeparam>
+    /// <typeparam name="T4">The element type emitted by output port <c>Out4</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1, T2, T3, T4> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -838,9 +838,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1, T2, T3, T4)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4)> unzipper)
         {
             _unzipper = unzipper;
@@ -857,59 +857,59 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out2</c> for tuple item <c>Item3</c>.
         /// </summary>
         public Outlet<T2> Out2 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out3</c> for tuple item <c>Item4</c>.
         /// </summary>
         public Outlet<T3> Out3 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out4</c> for tuple item <c>Item5</c>.
         /// </summary>
         public Outlet<T4> Out4 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="T2">TBD</typeparam>
-    /// <typeparam name="T3">TBD</typeparam>
-    /// <typeparam name="T4">TBD</typeparam>
-    /// <typeparam name="T5">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
+    /// <typeparam name="T2">The element type emitted by output port <c>Out2</c>.</typeparam>
+    /// <typeparam name="T3">The element type emitted by output port <c>Out3</c>.</typeparam>
+    /// <typeparam name="T4">The element type emitted by output port <c>Out4</c>.</typeparam>
+    /// <typeparam name="T5">The element type emitted by output port <c>Out5</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -1063,9 +1063,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1, T2, T3, T4, T5)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4, T5)> unzipper)
         {
             _unzipper = unzipper;
@@ -1083,64 +1083,64 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out2</c> for tuple item <c>Item3</c>.
         /// </summary>
         public Outlet<T2> Out2 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out3</c> for tuple item <c>Item4</c>.
         /// </summary>
         public Outlet<T3> Out3 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out4</c> for tuple item <c>Item5</c>.
         /// </summary>
         public Outlet<T4> Out4 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out5</c> for tuple item <c>Item6</c>.
         /// </summary>
         public Outlet<T5> Out5 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4, T5> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Splits each input element into multiple output elements using a tuple-producing function.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="T2">TBD</typeparam>
-    /// <typeparam name="T3">TBD</typeparam>
-    /// <typeparam name="T4">TBD</typeparam>
-    /// <typeparam name="T5">TBD</typeparam>
-    /// <typeparam name="T6">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port and splitter function.</typeparam>
+    /// <typeparam name="T0">The element type emitted by output port <c>Out0</c>.</typeparam>
+    /// <typeparam name="T1">The element type emitted by output port <c>Out1</c>.</typeparam>
+    /// <typeparam name="T2">The element type emitted by output port <c>Out2</c>.</typeparam>
+    /// <typeparam name="T3">The element type emitted by output port <c>Out3</c>.</typeparam>
+    /// <typeparam name="T4">The element type emitted by output port <c>Out4</c>.</typeparam>
+    /// <typeparam name="T5">The element type emitted by output port <c>Out5</c>.</typeparam>
+    /// <typeparam name="T6">The element type emitted by output port <c>Out6</c>.</typeparam>
     public class UnzipWith<TIn, T0, T1, T2, T3, T4, T5, T6> : GraphStage<FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6>>
     {
         private sealed class UnzipWithStageLogic : InGraphStageLogic 
@@ -1315,9 +1315,9 @@ namespace Akka.Streams.Dsl
 
         private readonly Func<TIn, (T0, T1, T2, T3, T4, T5, T6)> _unzipper;
         /// <summary>
-        /// TBD
+        /// Creates a stage that applies <paramref name="unzipper"/> to each input and emits tuple items on separate outputs.
         /// </summary>
-        /// <param name="unzipper">TBD</param>
+        /// <param name="unzipper">A function that maps each input element to a tuple containing one value for each output.</param>
         public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4, T5, T6)> unzipper)
         {
             _unzipper = unzipper;
@@ -1336,52 +1336,52 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The input port that supplies elements to the splitter.
         /// </summary>
         public Inlet<TIn> In { get; }
 
         /// <summary>
-        /// TBD
+        /// Output port <c>Out0</c> for tuple item <c>Item1</c>.
         /// </summary>
         public Outlet<T0> Out0 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out1</c> for tuple item <c>Item2</c>.
         /// </summary>
         public Outlet<T1> Out1 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out2</c> for tuple item <c>Item3</c>.
         /// </summary>
         public Outlet<T2> Out2 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out3</c> for tuple item <c>Item4</c>.
         /// </summary>
         public Outlet<T3> Out3 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out4</c> for tuple item <c>Item5</c>.
         /// </summary>
         public Outlet<T4> Out4 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out5</c> for tuple item <c>Item6</c>.
         /// </summary>
         public Outlet<T5> Out5 { get; }
         /// <summary>
-        /// TBD
+        /// Output port <c>Out6</c> for tuple item <c>Item7</c>.
         /// </summary>
         public Outlet<T6> Out6 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
         /// <summary>
-        /// TBD
+        /// The stage's input and typed output ports.
         /// </summary>
         public sealed override FanOutShape<TIn, T0, T1, T2, T3, T4, T5, T6> Shape { get; }
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that applies the splitter and coordinates demand across its outputs.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new UnzipWithStageLogic(Shape, this);

@@ -12,130 +12,130 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Provides factories for stages that combine corresponding elements from multiple inputs.
     /// </summary>
     public partial class ZipWith
     {
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TOut}"/> specialized for 2 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TOut> Apply<TIn0, TIn1, TOut>(Func<TIn0, TIn1, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TOut}"/> specialized for 3 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TOut> Apply<TIn0, TIn1, TIn2, TOut>(Func<TIn0, TIn1, TIn2, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TOut}"/> specialized for 4 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TOut}"/> specialized for 5 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TIn4">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut}"/> specialized for 6 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TIn4">TBD</typeparam>
-        /// <typeparam name="TIn5">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+        /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut}"/> specialized for 7 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TIn4">TBD</typeparam>
-        /// <typeparam name="TIn5">TBD</typeparam>
-        /// <typeparam name="TIn6">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+        /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+        /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut}"/> specialized for 8 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TIn4">TBD</typeparam>
-        /// <typeparam name="TIn5">TBD</typeparam>
-        /// <typeparam name="TIn6">TBD</typeparam>
-        /// <typeparam name="TIn7">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+        /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+        /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+        /// <typeparam name="TIn7">The element type accepted by input <c>In7</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>(zipper);
         }
         /// <summary>
-        /// Create a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut}"/> specialized for 9 inputs.
         /// </summary>
-        /// <typeparam name="TIn0">TBD</typeparam>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TIn3">TBD</typeparam>
-        /// <typeparam name="TIn4">TBD</typeparam>
-        /// <typeparam name="TIn5">TBD</typeparam>
-        /// <typeparam name="TIn6">TBD</typeparam>
-        /// <typeparam name="TIn7">TBD</typeparam>
-        /// <typeparam name="TIn8">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+        /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+        /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+        /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+        /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+        /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+        /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+        /// <typeparam name="TIn7">The element type accepted by input <c>In7</c>.</typeparam>
+        /// <typeparam name="TIn8">The element type accepted by input <c>In8</c>.</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Apply<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> zipper)
         {
             return new ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>(zipper);
@@ -143,11 +143,11 @@ namespace Akka.Streams.Dsl
     }
     
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TOut> : GraphStage<FanInShape<TIn0, TIn1, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -210,9 +210,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TOut> zipper)
         {
             Zipper = zipper;
@@ -225,51 +225,51 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -343,9 +343,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TOut> zipper)
         {
             Zipper = zipper;
@@ -359,56 +359,56 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -493,9 +493,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TOut> zipper)
         {
             Zipper = zipper;
@@ -510,61 +510,61 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TIn4">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -660,9 +660,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> zipper)
         {
             Zipper = zipper;
@@ -678,66 +678,66 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In4</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn4> In4 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TIn4">TBD</typeparam>
-    /// <typeparam name="TIn5">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+    /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -844,9 +844,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> zipper)
         {
             Zipper = zipper;
@@ -863,71 +863,71 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In4</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn4> In4 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In5</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn5> In5 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TIn4">TBD</typeparam>
-    /// <typeparam name="TIn5">TBD</typeparam>
-    /// <typeparam name="TIn6">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+    /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+    /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -1045,9 +1045,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> zipper)
         {
             Zipper = zipper;
@@ -1065,76 +1065,76 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In4</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn4> In4 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In5</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn5> In5 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In6</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn6> In6 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TIn4">TBD</typeparam>
-    /// <typeparam name="TIn5">TBD</typeparam>
-    /// <typeparam name="TIn6">TBD</typeparam>
-    /// <typeparam name="TIn7">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+    /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+    /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+    /// <typeparam name="TIn7">The element type accepted by input <c>In7</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -1263,9 +1263,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> zipper)
         {
             Zipper = zipper;
@@ -1284,81 +1284,81 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In4</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn4> In4 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In5</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn5> In5 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In6</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn6> In6 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In7</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn7> In7 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
         }
     }
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
-    /// <typeparam name="TIn0">TBD</typeparam>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TIn3">TBD</typeparam>
-    /// <typeparam name="TIn4">TBD</typeparam>
-    /// <typeparam name="TIn5">TBD</typeparam>
-    /// <typeparam name="TIn6">TBD</typeparam>
-    /// <typeparam name="TIn7">TBD</typeparam>
-    /// <typeparam name="TIn8">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn0">The element type accepted by input <c>In0</c>.</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by input <c>In1</c>.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by input <c>In2</c>.</typeparam>
+    /// <typeparam name="TIn3">The element type accepted by input <c>In3</c>.</typeparam>
+    /// <typeparam name="TIn4">The element type accepted by input <c>In4</c>.</typeparam>
+    /// <typeparam name="TIn5">The element type accepted by input <c>In5</c>.</typeparam>
+    /// <typeparam name="TIn6">The element type accepted by input <c>In6</c>.</typeparam>
+    /// <typeparam name="TIn7">The element type accepted by input <c>In7</c>.</typeparam>
+    /// <typeparam name="TIn8">The element type accepted by input <c>In8</c>.</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> : GraphStage<FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -1498,9 +1498,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> zipper)
         {
             Zipper = zipper;
@@ -1520,67 +1520,67 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
         /// <summary>
-        /// TBD
+        /// Input port <c>In0</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn0> In0 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In1</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn1> In1 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In2</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn2> In2 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In3</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn3> In3 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In4</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn4> In4 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In5</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn5> In5 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In6</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn6> In6 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In7</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn7> In7 { get; }
         /// <summary>
-        /// TBD
+        /// Input port <c>In8</c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn8> In8 { get; }
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override FanInShape<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<TIn0, TIn1, TIn2, TIn3, TIn4, TIn5, TIn6, TIn7, TIn8, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);
