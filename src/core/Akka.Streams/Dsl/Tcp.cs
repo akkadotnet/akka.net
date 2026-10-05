@@ -21,15 +21,15 @@ using Akka.Streams.Implementation.IO;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Provides access to the Akka.Streams TCP extension.
     /// </summary>
     public class Tcp : ExtensionIdProvider<TcpExt>
     {
         /// <summary>
-        /// TBD
+        /// Creates the TCP extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system receiving the extension.</param>
+        /// <returns>A TCP extension instance.</returns>
         public override TcpExt CreateExtension(ExtendedActorSystem system) => new(system);
 
         /// <summary>
@@ -42,8 +42,8 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Initializes a new instance of the <see cref="ServerBinding"/> class.
             /// </summary>
-            /// <param name="localAddress">TBD</param>
-            /// <param name="unbindAction">TBD</param>
+            /// <param name="localAddress">The local endpoint on which the server is bound.</param>
+            /// <param name="unbindAction">An asynchronous operation that unbinds the server.</param>
             public ServerBinding(EndPoint localAddress, Func<Task> unbindAction)
             {
                 _unbindAction = unbindAction;
@@ -51,14 +51,14 @@ namespace Akka.Streams.Dsl
             }
 
             /// <summary>
-            /// TBD
+            /// The local endpoint used by the server binding.
             /// </summary>
             public readonly EndPoint LocalAddress;
 
             /// <summary>
-            /// TBD
+            /// Unbinds the server from its local endpoint.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A task that completes when unbinding finishes.</returns>
             public Task Unbind() => _unbindAction();
         }
 
@@ -70,9 +70,9 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
             /// </summary>
-            /// <param name="localAddress">TBD</param>
-            /// <param name="remoteAddress">TBD</param>
-            /// <param name="flow">TBD</param>
+            /// <param name="localAddress">The local endpoint for the accepted connection.</param>
+            /// <param name="remoteAddress">The remote endpoint that opened the connection.</param>
+            /// <param name="flow">The flow that sends and receives bytes for this connection.</param>
             public IncomingConnection(EndPoint localAddress, EndPoint remoteAddress, Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> flow)
             {
                 LocalAddress = localAddress;
@@ -81,17 +81,17 @@ namespace Akka.Streams.Dsl
             }
 
             /// <summary>
-            /// TBD
+            /// The local endpoint for the accepted connection.
             /// </summary>
             public readonly EndPoint LocalAddress;
 
             /// <summary>
-            /// TBD
+            /// The remote endpoint for the accepted connection.
             /// </summary>
             public readonly EndPoint RemoteAddress;
 
             /// <summary>
-            /// TBD
+            /// The bidirectional byte flow for the accepted connection.
             /// </summary>
             public readonly Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Flow;
 
@@ -101,10 +101,10 @@ namespace Akka.Streams.Dsl
             /// <para/>
             /// Convenience shortcut for: flow.join(handler).run().
             /// </summary>
-            /// <typeparam name="TMat">TBD</typeparam>
-            /// <param name="handler">TBD</param>
-            /// <param name="materializer">TBD</param>
-            /// <returns>TBD</returns>
+            /// <typeparam name="TMat">The handler flow's materialized value type.</typeparam>
+            /// <param name="handler">The flow that handles this connection's incoming and outgoing bytes.</param>
+            /// <param name="materializer">The materializer used to run the connected flow.</param>
+            /// <returns>The handler flow's materialized value.</returns>
             public TMat HandleWith<TMat>(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, TMat> handler, IMaterializer materializer)
                 => Flow.JoinMaterialized(handler, Keep.Right).Run(materializer);
         }
@@ -117,8 +117,8 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.
             /// </summary>
-            /// <param name="remoteAddress">TBD</param>
-            /// <param name="localAddress">TBD</param>
+            /// <param name="remoteAddress">The remote endpoint for the outgoing connection.</param>
+            /// <param name="localAddress">The optional local endpoint to bind for the connection.</param>
             public OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress)
             {
                 LocalAddress = localAddress;
@@ -126,19 +126,19 @@ namespace Akka.Streams.Dsl
             }
 
             /// <summary>
-            /// TBD
+            /// The local endpoint assigned to the established outgoing connection.
             /// </summary>
             public readonly EndPoint LocalAddress;
 
             /// <summary>
-            /// TBD
+            /// The remote endpoint for the outgoing connection.
             /// </summary>
             public readonly EndPoint RemoteAddress;
         }
     }
 
     /// <summary>
-    /// TBD
+    /// Actor-system extension that creates TCP stream sources and flows.
     /// </summary>
     public class TcpExt : IExtension
     {
@@ -147,7 +147,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpExt"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The extended actor system that owns the TCP manager.</param>
         [InternalApi]
         public TcpExt(ExtendedActorSystem system)
         {
@@ -156,7 +156,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The timeout used while shutting down a TCP server binding.
         /// </summary>
         protected readonly TimeSpan BindShutdownTimeout;
 
@@ -179,9 +179,9 @@ namespace Akka.Streams.Dsl
         /// independently whether the client is still attempting to write. This setting is recommended
         /// for servers, and therefore it is the default setting.
         /// </param>
-        /// <param name="idleTimeout">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="idleTimeout">Optional maximum idle interval for an accepted connection; when elapsed without traffic in either direction, the connection fails.</param>
+        /// <exception cref="ArgumentException">Thrown when the host resolves to no IP addresses.</exception>
+        /// <returns>A source of incoming connections that materializes to a task for the server binding.</returns>
         // TODO: this really needs to be an async method
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
@@ -204,7 +204,7 @@ namespace Akka.Streams.Dsl
         /// completes is the server ready to accept client connections.
         /// </summary>
         /// <param name="handler">A Flow that represents the server logic</param>
-        /// <param name="materializer">TBD</param>
+        /// <param name="materializer">The materializer used to run the handler flow for each accepted connection.</param>
         /// <param name="host">The host to listen on</param>
         /// <param name="port">The port to listen on</param>
         /// <param name="backlog">Controls the size of the connection backlog</param>
@@ -217,8 +217,8 @@ namespace Akka.Streams.Dsl
         /// independently whether the client is still attempting to write. This setting is recommended
         /// for servers, and therefore it is the default setting.
         /// </param>
-        /// <param name="idleTimeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="idleTimeout">Optional maximum idle interval for a connection; when elapsed without traffic in either direction, the flow fails.</param>
+        /// <returns>A task that completes with the server binding once the listener is bound.</returns>
         public Task<Tcp.ServerBinding> BindAndHandle(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> handler, IMaterializer materializer, string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
@@ -245,9 +245,9 @@ namespace Akka.Streams.Dsl
         /// If set to false, the connection will immediately closed once the client closes its write side,
         /// independently whether the server is still attempting to write.
         /// </param>
-        /// <param name="connectionTimeout">TBD</param>
-        /// <param name="idleTimeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="connectionTimeout">Optional maximum time allowed to establish the TCP connection.</param>
+        /// <param name="idleTimeout">Optional maximum interval without traffic in either direction before the flow fails.</param>
+        /// <returns>A byte flow whose materialized task completes, on connection, with the requested remote endpoint and the established local endpoint.</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
@@ -272,9 +272,9 @@ namespace Akka.Streams.Dsl
         /// for example using the <see cref="Framing"/> stages.
         /// </para>
         /// </summary>
-        /// <param name="host">TBD</param>
-        /// <param name="port">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="host">The remote host name or IP address.</param>
+        /// <param name="port">The remote TCP port.</param>
+        /// <returns>A byte flow whose materialized task completes, on connection, with the requested remote endpoint and the established local endpoint.</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
 
@@ -287,15 +287,15 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// Extension methods for accessing the TCP stream extension from an actor system.
     /// </summary>
     public static class TcpStreamExtensions
     {
         /// <summary>
-        /// TBD
+        /// Gets the TCP stream extension for the actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system whose TCP extension is requested.</param>
+        /// <returns>The TCP stream extension associated with <paramref name="system"/>.</returns>
         public static TcpExt TcpStream(this ActorSystem system) => system.WithExtension<TcpExt, Tcp>();
     }
 
