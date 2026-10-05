@@ -125,20 +125,13 @@ If the journal (data store) cannot support atomic writes of multiple events it s
 
 ##### Handling Failures
 
-If there are failures when storing any of the messages in the batch the returned `Task` must be completed with failure. The `Task` must only be completed with success when all messages in the batch have been confirmed to be stored successfully, i.e. they will be readable, and visible, in a subsequent replay. If there is uncertainty about if the messages were stored or not the `Task` must be completed with failure.
-
-Data store connection problems must be signaled by completing the `Task` with failure.
+Fault the task for a batch-level storage failure or when the outcome of any write is uncertain. Data store connection problems must be signaled by faulting the task, not as per-write rejections. A faulted task does not provide the per-write result list used for known rejections.
 
 ##### Handling `AtomicWrite` Result
 
-The journal can also signal that it rejects individual messages (`AtomicWrite`) by the returned `Task`.
+The returned `Task` distinguishes a batch-level failure from the outcome of each `AtomicWrite`. Complete the task successfully only when the journal knows the outcome of every input `AtomicWrite`. Return `null` when every write was stored, or a result list with exactly one entry for each input `AtomicWrite`, in input order. A `null` entry means that write was stored and will be visible in a later replay. An exception entry rejects that whole `AtomicWrite`; none of its events may appear in a later replay. A rejected write is a known per-write outcome, so it does not by itself fault the task. Other `AtomicWrite`s in the batch may have been stored: batching is for performance, and the batch as a whole is not atomic.
 
-* It is possible but not mandatory to reduce the number of allocations by returning null for the happy path, i.e. when no messages are rejected.
-* Otherwise the returned list must have as many elements as the input `messages`.
-* Each result element signals if the corresponding `AtomicWrite` is rejected or not, with an exception describing the problem.
-* Rejecting a message means it was not stored, i.e. it must not be included in a later replay.
-* Rejecting a message is typically done before attempting to store it, e.g. because of serialization error.
-* Data store connection problems must not be signaled as rejections.
+For example, if a batch contains five `AtomicWrite`s and the fifth is an unsupported multi-event write, the journal can store the first four and complete the task successfully with the result list `[null, null, null, null, new NotSupportedException(...)]`. The fifth `AtomicWrite` is rejected as a unit; the other four have successful results. Each `AtomicWrite` must still be stored atomically: all of its events or none of them.
 
 ##### Code Sample
 
@@ -149,6 +142,9 @@ The journal can also signal that it rejects individual messages (`AtomicWrite`) 
 SQLite code example:
 
 [!code-csharp[WriteMessagesAsync](../../../src/examples/Akka.Persistence.Custom/Journal/SqliteJournal.cs?name=WriteMessagesAsync "WriteMessagesAsync method implementation")]
+
+> [!NOTE]
+> This SQLite sample currently aggregates faulted insert tasks into per-write rejection entries. Treat it as a per-write result example only; a batch-level storage failure or uncertain outcome must fault the returned task.
 
 #### DeleteMessagesToAsync
 
