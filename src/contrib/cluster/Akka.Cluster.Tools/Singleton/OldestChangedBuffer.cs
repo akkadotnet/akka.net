@@ -35,14 +35,14 @@ namespace Akka.Cluster.Tools.Singleton
         public sealed class GetNext
         {
             /// <summary>
-            /// TBD
+            /// The singleton request to deliver the next queued oldest-member change.
             /// </summary>
             public static GetNext Instance { get; } = new();
             private GetNext() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Initial view of role-matching members with assigned up-numbers at or below this node's up-number cutoff, together with whether this node can safely become oldest.
         /// </summary>
         [Serializable]
         public sealed class InitialOldestState
@@ -53,15 +53,15 @@ namespace Akka.Cluster.Tools.Singleton
             public ImmutableList<UniqueAddress> Oldest { get; }
 
             /// <summary>
-            /// TBD
+            /// Whether there are no older or equally old members in a leaving, exiting, or down state.
             /// </summary>
             public bool SafeToBeOldest { get; }
 
             /// <summary>
-            /// TBD
+            /// Creates the initial oldest-member state sent to the singleton manager.
             /// </summary>
-            /// <param name="oldest">TBD</param>
-            /// <param name="safeToBeOldest">TBD</param>
+            /// <param name="oldest">Role-matching member addresses with assigned up-numbers at or below this node's cutoff, in age order. This node may be absent if it is not in the snapshot.</param>
+            /// <param name="safeToBeOldest">Whether the node may become oldest without waiting for an older or equally old member to be removed.</param>
             public InitialOldestState(ImmutableList<UniqueAddress> oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;

@@ -20,11 +20,11 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonProxySettings : INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Creates proxy settings from the actor system's `akka.cluster.singleton-proxy` configuration.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system whose configuration supplies the proxy settings.</param>
+        /// <exception cref="ConfigurationException">Thrown if the singleton proxy configuration is missing or empty.</exception>
+        /// <returns>The settings read from the actor system configuration.</returns>
         public static ClusterSingletonProxySettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
@@ -41,9 +41,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// Create settings from a configuration with the same layout as
         /// the default configuration `akka.cluster.singleton-proxy`.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="considerAppVersion">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">The configuration section containing the singleton proxy settings.</param>
+        /// <param name="considerAppVersion">Compatibility setting retained in the settings; the proxy does not use it when selecting a member.</param>
+        /// <returns>The settings read from <paramref name="config"/>.</returns>
         public static ClusterSingletonProxySettings Create(Config config, bool considerAppVersion)
         {
             if (config.IsNullOrEmpty())
