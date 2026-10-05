@@ -6,11 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
@@ -86,9 +84,8 @@ namespace Akka.IO
                 useSynchronizationContext: false);
 
             var outputPipeOptions = ResolveOutputPipeOptions(Settings, _connect.Options);
-            return AuthenticatedStream is { } authenticatedStream
-                ? new TcpTransportConnection(Socket, authenticatedStream, inputPipeOptions, outputPipeOptions)
-                : new TcpTransportConnection(Socket, inputPipeOptions, outputPipeOptions);
+            return TcpTransportConnection.CreateForOutgoing(Socket, _connect.RemoteAddress, inputPipeOptions,
+                outputPipeOptions, _connect.Tls, Log);
         }
 
         private void ReleaseConnectionSocketArgs()
@@ -219,20 +216,17 @@ namespace Akka.IO
 
                     ReleaseConnectionSocketArgs();
 
-                    if (_connect.Tls is null)
-                        CompleteConnect(_commander, _connect.Options);
-                    else
-                        ReportConnectFailure(() => StartTlsAuthentication(_connect.Tls));
+                    ReportConnectFailure(() => InitializeTransport(_commander, _connect.Options));
                 }
                 else
                     switch (remainingFinishConnectRetries)
                     {
                         case > 0:
-                        {
-                            ScheduleConnectRetry();
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args));
-                            break;
-                        }
+                            {
+                                ScheduleConnectRetry();
+                                Become(() => Connecting(remainingFinishConnectRetries - 1, args));
+                                break;
+                            }
                         default:
                             Log.Debug(
                                 "Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
@@ -263,43 +257,9 @@ namespace Akka.IO
         private void ScheduleConnectRetry()
             => Timers.StartSingleTimer(RetryConnectTimerKey, RetryConnect.Instance, TimeSpan.FromMilliseconds(1));
 
-        private void StartTlsAuthentication(TlsClientSettings settings)
+        protected override void OnTransportInitializationFailed(Exception cause)
         {
-            WatchCommanderForHandshake(_commander);
-            Socket.Blocking = true;
-
-            var remotePeer = Socket.RemoteEndPoint?.ToString() ?? _connect.RemoteAddress.ToString()!;
-            var targetHost = settings.TargetHost ?? (_connect.RemoteAddress switch
-            {
-                DnsEndPoint dnsEndPoint => dnsEndPoint.Host,
-                IPEndPoint ipEndPoint => ipEndPoint.Address.ToString(),
-                _ => _connect.RemoteAddress.ToString()!
-            });
-            var options = settings.CreateAuthenticationOptions(targetHost, remotePeer, Log);
-            var stream = new SslStream(new NetworkStream(Socket, ownsSocket: false), leaveInnerStreamOpen: false);
-
-            Become(TlsAuthenticating);
-            StartTlsHandshake(stream, settings.HandshakeTimeout,
-                cancellationToken => stream.AuthenticateAsClientAsync(options, cancellationToken));
-        }
-
-        private void TlsAuthenticating()
-        {
-            Receive<TlsHandshakeCompleted>(result =>
-            {
-                if (result.Failure is not null)
-                {
-                    Stop(result.Failure);
-                    return;
-                }
-
-                CompleteConnect(_commander, _connect.Options);
-            });
-            Receive<object>(message =>
-            {
-                if (IsCommanderDied(message))
-                    Context.Stop(Self);
-            });
+            Stop(cause);
         }
     }
 

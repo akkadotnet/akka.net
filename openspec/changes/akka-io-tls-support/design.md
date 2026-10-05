@@ -1,6 +1,6 @@
 ## Context
 
-Akka.IO already bridges sockets and streams through `TcpTransportConnection`, which can consume an existing `Stream`. TLS therefore belongs at the Akka.IO connection lifecycle: authenticate an `SslStream` before exposing `Tcp.Connected`, then give that authenticated stream to the existing transport when the handler registers. The handshake must not block the listener's accept loop or the actor mailbox.
+Akka.IO already bridges sockets and streams through `TcpTransportConnection`, which owns the stream and the I/O pumps. TLS therefore belongs in that transport: it authenticates an `SslStream` before reporting generic readiness, then starts the existing pumps when the handler registers. The handshake must not block the listener's accept loop or the actor mailbox.
 
 This work is staged. Akka.IO owns reusable certificate and validation settings; Akka.Streams and Artery add their own entry points in later changes. DotNetty remains an independent transport and is not reconfigured through the new API.
 
@@ -29,13 +29,13 @@ This work is staged. Akka.IO owns reusable certificate and validation settings; 
 
 ### 2. Authenticate before reporting Connected
 
-**Decision:** Outgoing and per-accepted-connection actors run their TLS authentication tasks off the actor thread and process completion through their mailboxes. Only successful authentication calls the existing `CompleteConnect` path. A client failure completes the original command with `Tcp.CommandFailed`; an inbound failure is logged and stops only that child actor.
+**Decision:** Outgoing and per-accepted-connection actors initialize a transport and process its generic readiness result through their mailboxes. The TCP transport runs TLS authentication away from the actor thread. Only successful readiness calls the existing `CompleteConnect` path. A client failure completes the original command with `Tcp.CommandFailed`; an inbound failure is logged and stops only that child actor.
 
 **Rationale:** This prevents unauthenticated bytes from reaching registered handlers, keeps actor responsiveness, and leaves the accept loop available while a peer stalls.
 
-### 3. Keep explicit stream ownership until Register
+### 3. Keep transport ownership until Register
 
-**Decision:** The connection actor owns its authenticated stream while a handshake is pending and while awaiting `Tcp.Register`. `PostStop` cancels authentication and disposes pre-registration resources. `StartTransport` transfers the stream to the existing `TcpTransportConnection`, which owns it from then on.
+**Decision:** `TcpTransportConnection` owns its stream, handshake cancellation, and socket throughout initialization and while awaiting `Tcp.Register`. `PostStop` aborts the transport, which cancels authentication and disposes pre-registration resources. The actor sees only the generic transport readiness result; registration activates the transport's deferred pumps.
 
 **Rationale:** A task result can arrive after actor shutdown, and `Connected` does not yet create transport pumps. Ownership must cover both gaps without a late result leaking a live socket.
 
@@ -47,6 +47,6 @@ This work is staged. Akka.IO owns reusable certificate and validation settings; 
 
 ## Risks / Trade-offs
 
-- A TLS handshake may complete concurrently with actor shutdown. The actor retains stream ownership before starting the task and disposes it from `PostStop`, so a late mailbox result cannot transfer ownership after stop.
+- A TLS handshake may complete concurrently with actor shutdown. The transport serializes stream publication against abort and disposes any stream created after abort; a late generic mailbox result cannot report `Tcp.Connected` after stop.
 - TLS close behavior depends on `SslStream` runtime semantics. Exercise both TLS 1.2 and TLS 1.3 with real peers and preserve the existing confirmed-close and plaintext regression tests.
 - The client hostname check is opt-in for compatibility. Documentation must recommend enabling `ValidateCertificateHostname` and setting `TargetHost` when the application requires server identity checking.

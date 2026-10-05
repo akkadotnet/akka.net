@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
-using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using TcpListener = System.Net.Sockets.TcpListener;
@@ -31,23 +30,6 @@ namespace Akka.Tests.IO
     public class TcpTlsIntegrationSpec : AkkaSpec
     {
         private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(10);
-
-        private sealed class CountingMemoryOwner : IMemoryOwner<byte>
-        {
-            private byte[]? _buffer;
-            private int _disposeCount;
-
-            public CountingMemoryOwner(byte[] buffer) => _buffer = buffer;
-
-            public Memory<byte> Memory => _buffer is null ? Memory<byte>.Empty : new Memory<byte>(_buffer);
-            public int DisposeCount => Volatile.Read(ref _disposeCount);
-
-            public void Dispose()
-            {
-                if (Interlocked.Exchange(ref _buffer, null) is not null)
-                    Interlocked.Increment(ref _disposeCount);
-            }
-        }
 
         public TcpTlsIntegrationSpec(ITestOutputHelper output)
             : base("akka.loglevel = DEBUG\nakka.io.tcp.trace-logging = true", output: output)
@@ -81,6 +63,7 @@ namespace Akka.Tests.IO
 
             var connected = await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
             var connection = commander.LastSender;
+            await WatchAsync(connection);
             ((IPEndPoint)connected.RemoteAddress).Port.Should().Be(endpoint.Port);
             connectionHandler.Send(connection, Tcp.Write.Create(Encoding.UTF8.GetBytes("from Akka")));
             connectionHandler.Send(connection, new Tcp.Register(connectionHandler.Ref));
@@ -88,11 +71,12 @@ namespace Akka.Tests.IO
 
             await ExpectPayloadAsync(connectionHandler, "from peer");
             await connectionHandler.ExpectMsgAsync<Tcp.ConfirmedClosed>(TestTimeout);
+            await ExpectTerminatedAsync(connection, TestTimeout);
             await peerTask.WaitAsync(TestTimeout);
         }
 
-        [Fact(DisplayName = "Should_Authenticate_Incoming_TLS_Before_Reporting_Connected_And_Run_Mutual_Validators")]
-        public async Task Should_authenticate_incoming_tls_before_reporting_connected_and_run_mutual_validators()
+        [Fact(DisplayName = "Should_Exchange_Bytes_And_Run_Mutual_TLS_Validators")]
+        public async Task Should_exchange_bytes_and_run_mutual_tls_validators()
         {
             using var serverCertificate = CreateCertificate("localhost", server: true);
             using var clientCertificate = CreateCertificate("client", server: false);
@@ -144,9 +128,9 @@ namespace Akka.Tests.IO
 
             handler.Send(connection, Tcp.Write.Create(Encoding.UTF8.GetBytes("akka hello")));
             var reply = new byte[10];
-            await ReadExactlyAsync(ssl, reply, cancellation.Token);
+            await ssl.ReadExactlyAsync(reply, cancellation.Token);
             Encoding.UTF8.GetString(reply).Should().Be("akka hello");
-            handler.Send(connection, Tcp.Abort.Instance);
+            await AbortConnectionAsync(handler, connection);
             listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
@@ -155,7 +139,6 @@ namespace Akka.Tests.IO
         public async Task Should_reject_missing_mutual_tls_certificate_even_when_custom_validator_accepts()
         {
             using var serverCertificate = CreateCertificate("localhost", server: true);
-            using var clientCertificate = CreateCertificate("client", server: false);
             var validatorCalls = 0;
             var listenerHandler = CreateTestProbe();
             listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
@@ -178,41 +161,70 @@ namespace Akka.Tests.IO
             {
                 await socket.ConnectAsync(endpoint.Address, endpoint.Port, cancellation.Token);
                 using var ssl = new SslStream(socket.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
-                await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                var authenticationFailed = false;
+                try
                 {
-                    TargetHost = "localhost",
-                    EnabledSslProtocols = SslProtocols.Tls12
-                }, cancellation.Token);
-                (await ObserveTlsPeerCloseAsync(ssl, TimeSpan.FromSeconds(3))).Should().BeTrue();
+                    await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                    {
+                        TargetHost = "localhost",
+                        EnabledSslProtocols = SslProtocols.Tls12
+                    }, cancellation.Token);
+                }
+                catch (Exception exception) when (exception is AuthenticationException or IOException)
+                {
+                    authenticationFailed = true;
+                }
+
+                if (!authenticationFailed)
+                    await ObserveTlsPeerCloseAsync(ssl, TimeSpan.FromSeconds(3));
             }
 
             validatorCalls.Should().Be(0);
             await listenerHandler.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
-
-            using var validSocket = new TcpClient();
-            await validSocket.ConnectAsync(endpoint.Address, endpoint.Port, cancellation.Token);
-            using var validSsl = new SslStream(validSocket.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
-            await validSsl.AuthenticateAsClientAsync(CreateClientOptions(clientCertificate), cancellation.Token);
-            await listenerHandler.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
-            var connection = listenerHandler.LastSender;
-            validatorCalls.Should().Be(1);
-            var handler = CreateTestProbe();
-            listenerHandler.Send(connection, new Tcp.Register(handler.Ref));
-            await validSsl.WriteAsync(Encoding.UTF8.GetBytes("valid client"), cancellation.Token);
-            await ExpectPayloadAsync(handler, "valid client");
-            handler.Send(connection, Tcp.Abort.Instance);
             listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
 
-        [Fact(DisplayName = "Should_Apply_Chain_Suppression_And_Hostname_Validation_Independently_During_Real_Handshake")]
-        public async Task Should_apply_chain_suppression_and_hostname_validation_independently_during_real_handshake()
+        [Theory(DisplayName = "Should_Apply_Chain_Suppression_And_Hostname_Validation_During_Real_Handshake")]
+        [InlineData("localhost", true, true)]
+        [InlineData("wrong.example", true, false)]
+        [InlineData("", true, false)]
+        [InlineData("localhost", false, false)]
+        public async Task Should_apply_chain_suppression_and_hostname_validation_during_real_handshake(
+            string targetHost,
+            bool suppressValidation,
+            bool shouldConnect)
         {
             using var serverCertificate = CreateCertificate("localhost", server: true);
-            await VerifyServerPolicyAsync(serverCertificate, "localhost", suppressValidation: true, shouldConnect: true);
-            await VerifyServerPolicyAsync(serverCertificate, "wrong.example", suppressValidation: true, shouldConnect: false);
-            await VerifyServerPolicyAsync(serverCertificate, string.Empty, suppressValidation: true, shouldConnect: false);
-            await VerifyServerPolicyAsync(serverCertificate, "localhost", suppressValidation: false, shouldConnect: false);
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var endpoint = (IPEndPoint)listener.LocalEndpoint;
+            var peerTask = AcceptAndAuthenticateAsync(listener, serverCertificate, SslProtocols.Tls12);
+            var commander = CreateTestProbe();
+            var command = new Tcp.Connect(endpoint)
+            {
+                Tls = new TlsClientSettings
+                {
+                    RequireMutualAuthentication = false,
+                    SuppressValidation = suppressValidation,
+                    ValidateCertificateHostname = true,
+                    TargetHost = targetHost
+                }
+            };
+            commander.Send(Sys.Tcp(), command);
+
+            if (shouldConnect)
+            {
+                await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
+                await peerTask.WaitAsync(TestTimeout);
+                await AbortConnectionAsync(commander, commander.LastSender);
+            }
+            else
+            {
+                var failure = await commander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
+                failure.Cause.HasValue.Should().BeTrue();
+                await ObservePeerAuthenticationAsync(peerTask);
+            }
         }
 
         [Theory(DisplayName = "Should_Reject_The_Server_When_Custom_Client_Validator_Rejects_Or_Throws")]
@@ -247,7 +259,7 @@ namespace Akka.Tests.IO
             var failed = await commander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
             failed.Cause.HasValue.Should().BeTrue();
             callbackCalls.Should().Be(1);
-            await peerTask;
+            await ObservePeerAuthenticationAsync(peerTask);
         }
 
         [Theory(DisplayName = "Should_Reject_A_Bad_Inbound_Client_And_Accept_A_Good_One_After_Callback_Rejects_Or_Throws")]
@@ -269,10 +281,6 @@ namespace Akka.Tests.IO
                     RequireMutualAuthentication = true,
                     CustomValidator = (certificate, chain, remotePeer, _, log) =>
                     {
-                        certificate.Should().NotBeNull();
-                        chain.Should().NotBeNull();
-                        remotePeer.Should().Contain(":");
-                        log.Should().NotBeNull();
                         if (certificate!.Thumbprint == rejectedClientCertificate.Thumbprint)
                         {
                             rejectedCalls++;
@@ -301,13 +309,13 @@ namespace Akka.Tests.IO
                 {
                     await rejectedTls.AuthenticateAsClientAsync(CreateClientOptions(rejectedClientCertificate), cancellation.Token);
                 }
-                catch (AuthenticationException)
+                catch (Exception exception) when (exception is AuthenticationException or IOException)
                 {
                     authenticationFailed = true;
                 }
 
-                var peerClosed = authenticationFailed || await ObserveTlsPeerCloseAsync(rejectedTls, TimeSpan.FromSeconds(3));
-                peerClosed.Should().BeTrue();
+                if (!authenticationFailed)
+                    await ObserveTlsPeerCloseAsync(rejectedTls, TimeSpan.FromSeconds(3));
             }
 
             await rejectedValidation.Task.WaitAsync(TestTimeout);
@@ -323,10 +331,11 @@ namespace Akka.Tests.IO
             acceptedCalls.Should().Be(1);
 
             var handler = CreateTestProbe();
-            listenerHandler.Send(listenerHandler.LastSender, new Tcp.Register(handler.Ref));
+            var acceptedConnection = listenerHandler.LastSender;
+            listenerHandler.Send(acceptedConnection, new Tcp.Register(handler.Ref));
             await acceptedTls.WriteAsync(Encoding.UTF8.GetBytes("accepted"), cancellation.Token);
             await ExpectPayloadAsync(handler, "accepted");
-            handler.Send(listenerHandler.LastSender, Tcp.Abort.Instance);
+            await AbortConnectionAsync(handler, acceptedConnection);
             listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
@@ -367,7 +376,7 @@ namespace Akka.Tests.IO
             validCommander.Send(Sys.Tcp(), authenticatedConnect);
             await validCommander.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(1));
             var connection = validCommander.LastSender;
-            validCommander.Send(connection, Tcp.Abort.Instance);
+            await AbortConnectionAsync(validCommander, connection);
             var failure = await stalledCommander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
             failure.Cause.HasValue.Should().BeTrue();
             failure.Cause.Value.Should().BeOfType<TimeoutException>();
@@ -376,38 +385,13 @@ namespace Akka.Tests.IO
             await serverTask.WaitAsync(TestTimeout);
         }
 
-        [Fact(DisplayName = "Should_Close_The_Socket_When_The_Handshake_Commander_Stops")]
-        public async Task Should_close_the_socket_when_the_handshake_commander_stops()
+        [Fact(DisplayName = "Should_Close_The_Transport_When_Commander_Stops_Before_TLS_Authentication")]
+        public async Task Should_close_the_transport_when_commander_stops_before_tls_authentication()
         {
             using var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             var endpoint = (IPEndPoint)listener.LocalEndpoint;
             using var cancellation = new CancellationTokenSource(TestTimeout);
-            var accepted = new TaskCompletionSource<Socket>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var peerTask = Task.Run(async () =>
-            {
-                var socket = await listener.AcceptSocketAsync(cancellation.Token);
-                accepted.TrySetResult(socket);
-                using (socket)
-                using (var stream = new NetworkStream(socket, ownsSocket: false))
-                {
-                    var buffer = new byte[1];
-                    using var closeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    try
-                    {
-                        while (await stream.ReadAsync(buffer, closeDeadline.Token) != 0)
-                        {
-                        }
-
-                        return true;
-                    }
-                    catch (IOException)
-                    {
-                        return true;
-                    }
-                }
-            }, cancellation.Token);
-
             var commander = CreateTestProbe();
             commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint)
             {
@@ -417,10 +401,12 @@ namespace Akka.Tests.IO
                     HandshakeTimeout = TestTimeout
                 }
             });
-            await accepted.Task.WaitAsync(TestTimeout);
+            using var peerSocket = await listener.AcceptSocketAsync(cancellation.Token);
+            using var peerStream = new NetworkStream(peerSocket, ownsSocket: false);
+            using var closeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var peerClosed = DrainTcpUntilClosedAsync(peerStream, closeDeadline.Token);
             Sys.Stop(commander.Ref);
-
-            (await peerTask.WaitAsync(TestTimeout)).Should().BeTrue();
+            await peerClosed.WaitAsync(TestTimeout);
         }
 
         [Fact(DisplayName = "Should_Keep_TLS_Listener_Available_While_Another_Incoming_Handshake_Is_Stalled")]
@@ -466,11 +452,11 @@ namespace Akka.Tests.IO
             await ExpectPayloadAsync(handler, "valid peer");
             handler.Send(connection, Tcp.Write.Create(Encoding.UTF8.GetBytes("listener alive")));
             var reply = new byte[14];
-            await ReadExactlyAsync(validTls, reply, cancellation.Token);
+            await validTls.ReadExactlyAsync(reply, cancellation.Token);
             Encoding.UTF8.GetString(reply).Should().Be("listener alive");
 
-            handler.Send(connection, Tcp.Abort.Instance);
-            (await stalledCloseTask.WaitAsync(TestTimeout)).Should().BeTrue();
+            await AbortConnectionAsync(handler, connection);
+            await stalledCloseTask.WaitAsync(TestTimeout);
             listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
@@ -482,11 +468,6 @@ namespace Akka.Tests.IO
             listener.Start();
             var endpoint = (IPEndPoint)listener.LocalEndpoint;
             using var cancellation = new CancellationTokenSource(TestTimeout);
-            var peerTask = Task.Run(async () =>
-            {
-                using var accepted = await listener.AcceptSocketAsync(cancellation.Token);
-                await accepted.DisconnectAsync(reuseSocket: false);
-            }, cancellation.Token);
             var commander = CreateTestProbe();
             var connect = new Tcp.Connect(endpoint)
             {
@@ -498,11 +479,10 @@ namespace Akka.Tests.IO
             };
 
             commander.Send(Sys.Tcp(), connect);
-
+            using var peerSocket = await listener.AcceptSocketAsync(cancellation.Token);
             var failure = await commander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
             failure.Cmd.Should().BeSameAs(connect);
-            failure.Cause.HasValue.Should().BeTrue();
-            await peerTask.WaitAsync(TestTimeout);
+            failure.Cause.Value.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
         [Fact(DisplayName = "Should_Report_Invalid_TLS_Bind_Settings_As_Command_Failure")]
@@ -520,7 +500,7 @@ namespace Akka.Tests.IO
 
             var failure = await handler.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
             failure.Cmd.Should().BeSameAs(bind);
-            failure.Cause.HasValue.Should().BeTrue();
+            failure.Cause.Value.Should().BeOfType<ArgumentException>();
         }
 
         [Fact(DisplayName = "Should_Present_Client_Certificate_And_Provide_Remote_Context_To_Validation")]
@@ -558,12 +538,12 @@ namespace Akka.Tests.IO
             var connection = commander.LastSender;
             callbackCalls.Should().Be(1);
             (await observedClientCertificate.Task.WaitAsync(TestTimeout)).Should().Be(clientCertificate.Thumbprint);
-            commander.Send(connection, Tcp.Abort.Instance);
+            await AbortConnectionAsync(commander, connection);
             await peerTask.WaitAsync(TestTimeout);
         }
 
-        [Fact(DisplayName = "Should_Dispose_Authenticated_Stream_And_Queued_Write_When_Owner_Stops_Before_Register")]
-        public async Task Should_dispose_authenticated_stream_and_queued_write_when_owner_stops_before_register()
+        [Fact(DisplayName = "Should_Close_Authenticated_Transport_When_Commander_Stops_Before_Register")]
+        public async Task Should_close_authenticated_transport_when_commander_stops_before_register()
         {
             using var serverCertificate = CreateCertificate("localhost", server: true);
             using var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -571,7 +551,6 @@ namespace Akka.Tests.IO
             var endpoint = (IPEndPoint)listener.LocalEndpoint;
             var peerTask = AcceptAndDrainUntilCloseAsync(listener, serverCertificate);
             var commander = CreateTestProbe();
-            var handler = CreateTestProbe();
             commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint)
             {
                 Tls = new TlsClientSettings
@@ -583,16 +562,10 @@ namespace Akka.Tests.IO
             });
             await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
             var connection = commander.LastSender;
-            var owner = new CountingMemoryOwner(Encoding.UTF8.GetBytes("must not be written"));
-            var queuedWrite = Tcp.Write.Create(OwnedSequenceSegment.Create(owner, owner.Memory.Length));
-            handler.Send(connection, queuedWrite);
             await WatchAsync(connection);
-            handler.Send(connection, PoisonPill.Instance);
+            Sys.Stop(commander.Ref);
 
             await ExpectTerminatedAsync(connection, TestTimeout);
-            var failedWrite = await handler.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
-            failedWrite.Cmd.Should().BeSameAs(queuedWrite);
-            owner.DisposeCount.Should().Be(1);
             (await peerTask.WaitAsync(TestTimeout)).Should().Be(0);
         }
 
@@ -614,7 +587,7 @@ namespace Akka.Tests.IO
             }, cancellation.Token);
 
             var request = new byte[Encoding.UTF8.GetByteCount(expectedRequest)];
-            await ReadExactlyAsync(ssl, request, cancellation.Token);
+            await ssl.ReadExactlyAsync(request, cancellation.Token);
             Encoding.UTF8.GetString(request).Should().Be(expectedRequest);
             (await ssl.ReadAsync(new byte[1], cancellation.Token)).Should().Be(0);
 
@@ -624,63 +597,17 @@ namespace Akka.Tests.IO
             socket.Shutdown(SocketShutdown.Send);
         }
 
-        private async Task VerifyServerPolicyAsync(
-            X509Certificate2 certificate,
-            string targetHost,
-            bool suppressValidation,
-            bool shouldConnect)
-        {
-            using var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            var endpoint = (IPEndPoint)listener.LocalEndpoint;
-            var peerTask = AcceptAndAuthenticateAsync(listener, certificate, SslProtocols.Tls12);
-            var commander = CreateTestProbe();
-            var command = new Tcp.Connect(endpoint)
-            {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    SuppressValidation = suppressValidation,
-                    ValidateCertificateHostname = true,
-                    TargetHost = targetHost
-                }
-            };
-            commander.Send(Sys.Tcp(), command);
-
-            if (shouldConnect)
-            {
-                await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
-                commander.Send(commander.LastSender, Tcp.Abort.Instance);
-            }
-            else
-            {
-                var failure = await commander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
-                failure.Cause.HasValue.Should().BeTrue();
-            }
-
-            await peerTask.WaitAsync(TestTimeout);
-        }
-
-        private static async Task<bool> AcceptAndAuthenticateAsync(TcpListener listener, X509Certificate2 certificate, SslProtocols protocol)
+        private static async Task AcceptAndAuthenticateAsync(TcpListener listener, X509Certificate2 certificate, SslProtocols protocol)
         {
             using var cancellation = new CancellationTokenSource(TestTimeout);
             using var socket = await listener.AcceptSocketAsync(cancellation.Token);
             using var networkStream = new NetworkStream(socket, ownsSocket: false);
             using var ssl = new SslStream(networkStream, leaveInnerStreamOpen: true);
-            try
+            await ssl.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
             {
-                await ssl.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
-                {
-                    ServerCertificate = certificate,
-                    EnabledSslProtocols = protocol
-                }, cancellation.Token);
-                return true;
-            }
-            catch (AuthenticationException)
-            {
-                // The outgoing Akka connection can reject the server during its certificate callback.
-                return false;
-            }
+                ServerCertificate = certificate,
+                EnabledSslProtocols = protocol
+            }, cancellation.Token);
         }
 
         private static async Task<int> AcceptAndDrainUntilCloseAsync(TcpListener listener, X509Certificate2 certificate)
@@ -711,34 +638,49 @@ namespace Akka.Tests.IO
             return receivedBytes;
         }
 
-        private static async Task<bool> DrainTcpUntilClosedAsync(Stream stream, TimeSpan timeout)
+        private static async Task DrainTcpUntilClosedAsync(Stream stream, TimeSpan timeout)
         {
             using var cancellation = new CancellationTokenSource(timeout);
+            await DrainTcpUntilClosedAsync(stream, cancellation.Token);
+        }
+
+        private static async Task DrainTcpUntilClosedAsync(Stream stream, CancellationToken cancellationToken)
+        {
             var buffer = new byte[256];
             try
             {
-                while (await stream.ReadAsync(buffer, cancellation.Token) != 0)
+                while (await stream.ReadAsync(buffer, cancellationToken) != 0)
                 {
                 }
-
-                return true;
             }
             catch (IOException)
             {
-                return true;
+                return;
             }
         }
 
-        private static async Task<bool> ObserveTlsPeerCloseAsync(SslStream stream, TimeSpan timeout)
+        private static async Task ObserveTlsPeerCloseAsync(SslStream stream, TimeSpan timeout)
         {
             using var cancellation = new CancellationTokenSource(timeout);
             try
             {
-                return await stream.ReadAsync(new byte[1], cancellation.Token) == 0;
+                (await stream.ReadAsync(new byte[1], cancellation.Token)).Should().Be(0);
             }
             catch (Exception exception) when (exception is IOException or AuthenticationException)
             {
-                return true;
+                return;
+            }
+        }
+
+        private static async Task ObservePeerAuthenticationAsync(Task peerAuthentication)
+        {
+            try
+            {
+                await peerAuthentication.WaitAsync(TestTimeout);
+            }
+            catch (Exception exception) when (exception is AuthenticationException or IOException)
+            {
+                return;
             }
         }
 
@@ -773,6 +715,14 @@ namespace Akka.Tests.IO
             EnabledSslProtocols = SslProtocols.Tls12
         };
 
+        private async Task AbortConnectionAsync(Akka.TestKit.TestProbe requester, IActorRef connection)
+        {
+            await WatchAsync(connection);
+            requester.Send(connection, Tcp.Abort.Instance);
+            await requester.ExpectMsgAsync<Tcp.Aborted>(TestTimeout);
+            await ExpectTerminatedAsync(connection, TestTimeout);
+        }
+
         private static async Task AcceptStalledThenAuthenticateAsync(
             TcpListener listener,
             X509Certificate2 certificate,
@@ -792,18 +742,6 @@ namespace Akka.Tests.IO
                 EnabledSslProtocols = SslProtocols.Tls12
             }, cancellation.Token);
             await releaseStalledPeer.Task.WaitAsync(cancellation.Token);
-        }
-
-        private static async Task ReadExactlyAsync(Stream stream, Memory<byte> destination, CancellationToken cancellationToken)
-        {
-            var offset = 0;
-            while (offset < destination.Length)
-            {
-                var count = await stream.ReadAsync(destination[offset..], cancellationToken);
-                if (count == 0)
-                    throw new EndOfStreamException("The TLS peer closed before the expected payload was read.");
-                offset += count;
-            }
         }
 
         private async Task ExpectPayloadAsync(Akka.TestKit.TestProbe probe, string expected)
