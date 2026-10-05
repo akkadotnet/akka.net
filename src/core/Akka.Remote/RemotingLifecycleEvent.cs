@@ -28,33 +28,33 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Base event data shared by remoting association lifecycle events.
     /// </summary>
     public abstract class AssociationEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Gets the local transport address involved in the association.
         /// </summary>
         public abstract Address LocalAddress { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Gets the remote transport address involved in the association.
         /// </summary>
         public abstract Address RemoteAddress { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the association was initiated by an inbound connection.
         /// </summary>
         public abstract bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Event name included in the string representation of this association event.
         /// </summary>
         protected string EventName;
 
         /// <summary>
-        /// TBD
+        /// Returns a string identifying the event and the direction between its local and remote addresses.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The event name, local address, direction, and remote address.</returns>
         public override string ToString()
         {
             var networkDirection = IsInbound ? "<-" : "->";
@@ -63,38 +63,38 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when a transport association is established.
     /// </summary>
     public sealed class AssociatedEvent : AssociationEvent
     {
         /// <summary>
-        /// TBD
+        /// Gets the log level used for an association-established event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The debug log level.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.DebugLevel;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local address of the established association.
         /// </summary>
         public override Address LocalAddress { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Gets the remote address of the established association.
         /// </summary>
         public override Address RemoteAddress { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Gets whether this side accepted the inbound connection.
         /// </summary>
         public override bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Creates an event describing an established association.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="inbound">TBD</param>
+        /// <param name="localAddress">The local transport address.</param>
+        /// <param name="remoteAddress">The remote transport address.</param>
+        /// <param name="inbound"><c>true</c> if the local transport accepted an inbound connection; otherwise, <c>false</c>.</param>
         public AssociatedEvent(Address localAddress, Address remoteAddress, bool inbound)
         {
             LocalAddress = localAddress;
@@ -140,18 +140,18 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when an association fails with an error.
     /// </summary>
     public sealed class AssociationErrorEvent : AssociationEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event describing an association error.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="inbound">TBD</param>
-        /// <param name="level">TBD</param>
+        /// <param name="cause">The exception that caused the association error.</param>
+        /// <param name="localAddress">The local transport address.</param>
+        /// <param name="remoteAddress">The remote transport address.</param>
+        /// <param name="inbound"><c>true</c> if this side accepted an inbound connection; otherwise, <c>false</c>.</param>
+        /// <param name="level">The log level assigned to this event.</param>
         public AssociationErrorEvent(Exception cause, Address localAddress, Address remoteAddress, bool inbound, LogLevel level)
         {
             LocalAddress = localAddress;
@@ -163,37 +163,37 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the exception that caused the association error.
         /// </summary>
         public Exception Cause { get; private set; }
 
         private readonly LogLevel _level;
         /// <summary>
-        /// TBD
+        /// Gets the log level assigned to this event.
         /// </summary>
-		/// <returns>TBD</returns>
+		/// <returns>The configured event log level.</returns>
         public override LogLevel LogLevel()
         {
             return _level;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local address involved in the failed association.
         /// </summary>
         public override Address LocalAddress { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Gets the remote address involved in the failed association.
         /// </summary>
         public override Address RemoteAddress { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Gets whether the failed association was inbound.
         /// </summary>
         public override bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Returns the association details and the cause's message and stack trace.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string describing the association error.</returns>
         public override string ToString()
         {
             return string.Format("{0}: Error [{1}] [{2}]", base.ToString(), Cause.Message, Cause.StackTrace);
@@ -201,37 +201,37 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when remoting begins listening on transport addresses.
     /// </summary>
     public sealed class RemotingListenEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event describing the addresses on which remoting is listening.
         /// </summary>
-        /// <param name="listenAddresses">TBD</param>
+        /// <param name="listenAddresses">The addresses bound by remoting transports.</param>
         public RemotingListenEvent(IList<Address> listenAddresses)
         {
             ListenAddresses = listenAddresses;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the addresses on which remoting is listening.
         /// </summary>
         public IList<Address> ListenAddresses { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the log level used for a remoting-listen event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The info log level.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.InfoLevel;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the addresses on which remoting is listening.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string listing the listening addresses.</returns>
         public override string ToString()
         {
             return string.Format("Remoting now listens on addresses: [{0}]",
@@ -258,37 +258,37 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when the remoting system encounters an error.
     /// </summary>
     public sealed class RemotingErrorEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event for a remoting error.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The exception that caused the remoting error.</param>
         public RemotingErrorEvent(Exception cause)
         {
             Cause = cause;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the exception that caused the remoting error.
         /// </summary>
         public Exception Cause { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the log level used for a remoting error event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The error log level.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.ErrorLevel;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the error message and stack trace.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string describing the remoting error.</returns>
         public override string ToString()
         {
             return string.Format("Remoting error: [{0}] [{1}]", Cause.Message, Cause.StackTrace);
@@ -296,15 +296,15 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when an association to a remote system UID is quarantined.
     /// </summary>
     public sealed class QuarantinedEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event describing a quarantined remote system.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="uid">TBD</param>
+        /// <param name="address">The address of the quarantined remote system.</param>
+        /// <param name="uid">The UID of the quarantined remote system.</param>
         public QuarantinedEvent(Address address, long uid)
         {
             Uid = uid;
@@ -312,28 +312,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the address of the quarantined remote system.
         /// </summary>
         public Address Address { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the UID of the quarantined remote system.
         /// </summary>
         public long Uid { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the log level used for a quarantine event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The warning log level.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.WarningLevel;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the quarantined address and UID with an explanation that messages to that UID are dead-lettered.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string describing the quarantine.</returns>
         public override string ToString()
         {
             return
@@ -345,15 +345,15 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event published when this actor system is quarantined by a remote system.
     /// </summary>
     public sealed class ThisActorSystemQuarantinedEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event describing this actor system being quarantined by a remote system.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
+        /// <param name="localAddress">The address of this actor system.</param>
+        /// <param name="remoteAddress">The address of the remote system that quarantined it.</param>
         public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
         {
             LocalAddress = localAddress;
@@ -361,28 +361,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the address of this quarantined actor system.
         /// </summary>
         public Address LocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the address of the remote system that quarantined this system.
         /// </summary>
         public Address RemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the log level used when this system is quarantined by a remote system.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The warning log level.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.WarningLevel;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a message identifying the remote system and this quarantined system.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string describing the quarantine.</returns>
         public override string ToString()
         {
             return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
@@ -397,26 +397,26 @@ namespace Akka.Remote
     internal sealed class EventPublisher
     {
         /// <summary>
-        /// TBD
+        /// Gets the actor system whose event stream receives lifecycle events.
         /// </summary>
         public ActorSystem System { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the logger used to write lifecycle events.
         /// </summary>
         public ILoggingAdapter Log { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the minimum log level at which lifecycle events are written.
         /// </summary>
         public readonly LogLevel LogLevel;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher for remoting lifecycle events.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <param name="logLevel">TBD</param>
+        /// <param name="system">The actor system whose event stream publishes lifecycle events.</param>
+        /// <param name="log">The logger used for lifecycle event messages.</param>
+        /// <param name="logLevel">The minimum level at which events are logged.</param>
         public EventPublisher(ActorSystem system, ILoggingAdapter log, LogLevel logLevel)
         {
             System = system;
@@ -425,9 +425,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes a lifecycle event and logs it when its level meets the configured threshold.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The event to publish and, when enabled, log.</param>
         public void NotifyListeners(RemotingLifecycleEvent message)
         {
             System.EventStream.Publish(message);

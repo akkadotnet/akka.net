@@ -44,10 +44,10 @@ namespace Akka.Remote.Transport
         #region Static methods
 
         /// <summary>
-        /// TBD
+        /// Gets the transport adapter registry extension for the supplied actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system whose adapter registry should be retrieved.</param>
+        /// <returns>The transport adapter registry extension.</returns>
         public static TransportAdapters For(ActorSystem system)
         {
             return system.WithExtension<TransportAdapters, TransportAdaptersExtension>();
@@ -64,9 +64,9 @@ namespace Akka.Remote.Transport
     internal sealed class TransportAdapters : IExtension
     {
         /// <summary>
-        /// TBD
+        /// Initializes the adapter registry from the remote settings of the actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">Actor system whose configured transport adapters are registered.</param>
         public TransportAdapters(ExtendedActorSystem system)
         {
             System = system;
@@ -110,11 +110,11 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the configured provider for an adapter name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="name">Name used to register the transport adapter in remote settings.</param>
+        /// <exception cref="ArgumentException">Thrown when no provider is registered under <paramref name="name"/>.</exception>
+        /// <returns>The provider configured for the adapter name.</returns>
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
             if (AdaptersTable().TryGetValue(name, out var provider))
@@ -147,20 +147,20 @@ namespace Akka.Remote.Transport
         public readonly string AddedSchemeIdentifier;
 
         /// <summary>
-        /// TBD
+        /// Prefixes a transport protocol scheme with this adapter's scheme identifier.
         /// </summary>
-        /// <param name="originalScheme">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="originalScheme">Underlying transport protocol scheme.</param>
+        /// <returns>The scheme identifier followed by the underlying protocol scheme.</returns>
         public string AugmentScheme(string originalScheme)
         {
             return string.Format("{0}.{1}", AddedSchemeIdentifier, originalScheme);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an address with this adapter's scheme identifier prepended to its protocol.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">Address whose protocol should be augmented.</param>
+        /// <returns>A copy of the address with the augmented protocol.</returns>
         public Address AugmentScheme(Address address)
         {
             var protocol = AugmentScheme(address.Protocol);
@@ -168,10 +168,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Removes this adapter's scheme prefix when it appears at the start of a protocol scheme.
         /// </summary>
-        /// <param name="scheme">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="scheme">Protocol scheme from which to remove the adapter prefix.</param>
+        /// <returns>The scheme without this adapter's prefix, or the original scheme if the prefix is absent.</returns>
         public string RemoveScheme(string scheme)
         {
             if (scheme.StartsWith(string.Format("{0}.", AddedSchemeIdentifier)))
@@ -180,10 +180,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an address with this adapter's scheme prefix removed from its protocol when present.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">Address whose protocol may contain this adapter's prefix.</param>
+        /// <returns>A copy of the address with the adapter prefix removed when present.</returns>
         public Address RemoveScheme(Address address)
         {
             var protocol = RemoveScheme(address.Protocol);
@@ -197,26 +197,26 @@ namespace Akka.Remote.Transport
     public abstract class AbstractTransportAdapter : Transport
     {
         /// <summary>
-        /// TBD
+        /// Creates an adapter that wraps the specified transport.
         /// </summary>
-        /// <param name="wrappedTransport">TBD</param>
+        /// <param name="wrappedTransport">Underlying transport intercepted by this adapter.</param>
         protected AbstractTransportAdapter(Transport wrappedTransport)
         {
             WrappedTransport = wrappedTransport;
         }
 
         /// <summary>
-        /// TBD
+        /// Underlying transport that this adapter wraps.
         /// </summary>
         protected Transport WrappedTransport;
 
         /// <summary>
-        /// TBD
+        /// Scheme prefix applied to the wrapped transport's protocol identifier and addresses.
         /// </summary>
         protected abstract SchemeAugmenter SchemeAugmenter { get; }
 
         /// <summary>
-        /// TBD
+        /// Protocol scheme identifier of the wrapped transport with this adapter's prefix applied.
         /// </summary>
         public override string SchemeIdentifier
         {
@@ -227,7 +227,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Maximum payload size supported by the wrapped transport.
         /// </summary>
         public override long MaximumPayloadBytes
         {
@@ -238,36 +238,36 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Intercepts the wrapped transport's listener and returns the listener to register with it.
         /// </summary>
-        /// <param name="listenAddress">TBD</param>
-        /// <param name="listenerTask">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="listenAddress">Address bound by the wrapped transport.</param>
+        /// <param name="listenerTask">Task that completes with the upstream listener for inbound associations.</param>
+        /// <returns>Task that completes with the listener the wrapped transport should notify.</returns>
         protected abstract Task<IAssociationEventListener> InterceptListen(Address listenAddress,
             Task<IAssociationEventListener> listenerTask);
 
         /// <summary>
-        /// TBD
+        /// Intercepts a request to associate with a remote address stripped of this adapter's scheme.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="statusPromise">TBD</param>
+        /// <param name="remoteAddress">Remote address with this adapter's scheme removed.</param>
+        /// <param name="statusPromise">Completion source for the adapted association handle.</param>
         protected abstract void InterceptAssociate(Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusPromise);
 
         /// <summary>
-        /// TBD
+        /// Delegates responsibility checks to the wrapped transport.
         /// </summary>
-        /// <param name="remote">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remote">Address to check.</param>
+        /// <returns>Whether the wrapped transport is responsible for the address.</returns>
         public override bool IsResponsibleFor(Address remote)
         {
             return WrappedTransport.IsResponsibleFor(remote);
         }
 
         /// <summary>
-        /// TBD
+        /// Starts listening on the wrapped transport and intercepts inbound association events.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task containing the address with the adapter scheme applied and a listener completion source for inbound associations.</returns>
         public override Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             var upstreamListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
@@ -281,10 +281,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Requests an association after removing this adapter's scheme from the remote address.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remoteAddress">Remote address exposed by the adapter.</param>
+        /// <returns>A task completed by the adapter's association interception logic.</returns>
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
@@ -293,9 +293,9 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Shuts down the wrapped transport.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the wrapped transport's shutdown result.</returns>
         public override Task<bool> Shutdown()
         {
             return WrappedTransport.Shutdown();
@@ -303,25 +303,25 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// Base association handle that wraps another handle and exposes addresses with an added transport scheme.
     /// </summary>
     public abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
         /// <summary>
-        /// TBD
+        /// Wraps an association handle and adds the specified scheme identifier to its endpoint addresses.
         /// </summary>
-        /// <param name="wrappedHandle">TBD</param>
-        /// <param name="addedSchemeIdentifier">TBD</param>
+        /// <param name="wrappedHandle">Underlying association handle to wrap.</param>
+        /// <param name="addedSchemeIdentifier">Scheme identifier to add to the local and remote addresses.</param>
         protected AbstractTransportAdapterHandle(AssociationHandle wrappedHandle, string addedSchemeIdentifier)
             : this(wrappedHandle.LocalAddress, wrappedHandle.RemoteAddress, wrappedHandle, addedSchemeIdentifier) { }
 
         /// <summary>
-        /// TBD
+        /// Wraps an association handle while supplying the original local and remote addresses explicitly.
         /// </summary>
-        /// <param name="originalLocalAddress">TBD</param>
-        /// <param name="originalRemoteAddress">TBD</param>
-        /// <param name="wrappedHandle">TBD</param>
-        /// <param name="addedSchemeIdentifier">TBD</param>
+        /// <param name="originalLocalAddress">Local address before adding the adapter's scheme identifier.</param>
+        /// <param name="originalRemoteAddress">Remote address before adding the adapter's scheme identifier.</param>
+        /// <param name="wrappedHandle">Underlying association handle to wrap.</param>
+        /// <param name="addedSchemeIdentifier">Scheme identifier to add to both addresses.</param>
         protected AbstractTransportAdapterHandle(Address originalLocalAddress, Address originalRemoteAddress, AssociationHandle wrappedHandle, string addedSchemeIdentifier) : base(originalLocalAddress, originalRemoteAddress)
         {
             WrappedHandle = wrappedHandle;
@@ -333,30 +333,30 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Local endpoint address before the adapter scheme was added.
         /// </summary>
         public Address OriginalLocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Remote endpoint address before the adapter scheme was added.
         /// </summary>
         public Address OriginalRemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Underlying association handle wrapped by this handle.
         /// </summary>
         public AssociationHandle WrappedHandle { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Helper that adds or removes this adapter's protocol scheme prefix.
         /// </summary>
         protected SchemeAugmenter SchemeAugmenter { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Compares the original addresses and wrapped handle of two adapter handles.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">Adapter handle to compare with this handle.</param>
+        /// <returns><see langword="true"/> when the original addresses and wrapped handles are equal; otherwise <see langword="false"/>.</returns>
         protected bool Equals(AbstractTransportAdapterHandle other)
         {
             return Equals(OriginalLocalAddress, other.OriginalLocalAddress) && Equals(OriginalRemoteAddress, other.OriginalRemoteAddress) && Equals(WrappedHandle, other.WrappedHandle);
@@ -390,41 +390,41 @@ namespace Akka.Remote.Transport
     public abstract class TransportOperation : INoSerializationVerificationNeeded
     {
         /// <summary>
-        /// TBD
+        /// Timeout used by transport adapter operations that use actor asks.
         /// </summary>
         public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
     }
 
     /// <summary>
-    /// TBD
+    /// Manager message indicating that the upstream association event listener has registered.
     /// </summary>
     public sealed class ListenerRegistered : TransportOperation
     {
         /// <summary>
-        /// TBD
+        /// Creates a listener-registration message.
         /// </summary>
-        /// <param name="listener">TBD</param>
+        /// <param name="listener">Listener that should receive inbound association events.</param>
         public ListenerRegistered(IAssociationEventListener listener)
         {
             Listener = listener;
         }
 
         /// <summary>
-        /// TBD
+        /// Upstream listener registered for inbound association events.
         /// </summary>
         public IAssociationEventListener Listener { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Manager message requesting an association from the wrapped transport.
     /// </summary>
     public sealed class AssociateUnderlying : TransportOperation
     {
         /// <summary>
-        /// TBD
+        /// Creates an underlying-association request.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="statusPromise">TBD</param>
+        /// <param name="remoteAddress">Remote address to associate with.</param>
+        /// <param name="statusPromise">Completion source for the underlying association handle.</param>
         public AssociateUnderlying(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
             RemoteAddress = remoteAddress;
@@ -432,26 +432,26 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Remote address requested for association.
         /// </summary>
         public Address RemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Completion source for the underlying association handle.
         /// </summary>
         public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Manager message requesting the wrapped transport to listen at an address.
     /// </summary>
     public sealed class ListenUnderlying : TransportOperation
     {
         /// <summary>
-        /// TBD
+        /// Creates a listen request for the wrapped transport manager.
         /// </summary>
-        /// <param name="listenAddress">TBD</param>
-        /// <param name="upstreamListener">TBD</param>
+        /// <param name="listenAddress">Address bound by the wrapped transport.</param>
+        /// <param name="upstreamListener">Task that completes with the upstream listener for inbound associations.</param>
         public ListenUnderlying(Address listenAddress, Task<IAssociationEventListener> upstreamListener)
         {
             UpstreamListener = upstreamListener;
@@ -459,32 +459,32 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Address bound by the wrapped transport.
         /// </summary>
         public Address ListenAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Task that completes with the upstream listener for inbound associations.
         /// </summary>
         public Task<IAssociationEventListener> UpstreamListener { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Manager message requesting that the underlying association be closed.
     /// </summary>
     public sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Creates a disassociation request with an optional reason.
         /// </summary>
-        /// <param name="info">TBD</param>
+        /// <param name="info">Reason for closing the association.</param>
         public DisassociateUnderlying(DisassociateInfo info = DisassociateInfo.Unknown)
         {
             Info = info;
         }
 
         /// <summary>
-        /// TBD
+        /// Reason supplied when requesting the underlying association to close.
         /// </summary>
         public DisassociateInfo Info { get; private set; }
     }
@@ -495,32 +495,32 @@ namespace Akka.Remote.Transport
     public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
         /// <summary>
-        /// TBD
+        /// Creates an actor-based adapter around an underlying transport.
         /// </summary>
-        /// <param name="wrappedTransport">TBD</param>
-        /// <param name="system">TBD</param>
+        /// <param name="wrappedTransport">Transport whose operations are coordinated by a manager actor.</param>
+        /// <param name="system">Actor system hosting the manager and association actors.</param>
         protected ActorTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport)
         {
             System = system;
         }
 
         /// <summary>
-        /// TBD
+        /// Actor name used to register the transport adapter manager.
         /// </summary>
         protected abstract string ManagerName { get; }
         /// <summary>
-        /// TBD
+        /// Props used to create the transport adapter manager actor.
         /// </summary>
         protected abstract Props ManagerProps { get; }
 
 
         /// <summary>
-        /// TBD
+        /// Maximum duration to wait for manager actor operations that use asks.
         /// </summary>
         public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// TBD
+        /// Manager actor that coordinates listen, association, and shutdown operations.
         /// </summary>
         protected volatile IActorRef manager;
 
@@ -569,7 +569,7 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// Base actor that queues transport adapter operations until its inbound listener is registered.
     /// </summary>
     public abstract class ActorTransportAdapterManager : UntypedActor
     {
@@ -579,31 +579,31 @@ namespace Akka.Remote.Transport
         protected Queue<object> DelayedEvents = new();
 
         /// <summary>
-        /// TBD
+        /// Listener that receives inbound associations after setup completes.
         /// </summary>
         protected IAssociationEventListener AssociationListener;
         /// <summary>
-        /// TBD
+        /// Local address bound by the underlying transport.
         /// </summary>
         protected Address LocalAddress;
         /// <summary>
-        /// TBD
+        /// Counter used to generate unique child actor names.
         /// </summary>
         protected long UniqueId = 0L;
 
         /// <summary>
-        /// TBD
+        /// Returns the next unique identifier for a child actor name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A monotonically increasing identifier.</returns>
         protected long NextId()
         {
             return Interlocked.Increment(ref UniqueId);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers the inbound listener, then delegates subsequent messages to <see cref="Ready"/>.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Transport operation or other message received by the manager.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -635,7 +635,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Method to be implemented for child classes - processes messages once the transport is ready to send / receive
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Message to process after the wrapped transport is ready.</param>
         protected abstract void Ready(object message);
     }
 }
