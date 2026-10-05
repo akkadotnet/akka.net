@@ -53,15 +53,15 @@ namespace Akka.Cluster.Sharding.Tests
     }
 
     /// <summary>
-    /// TBD
+    /// Message that supplies the actor used by the proxy as its journal store.
     /// </summary>
     [Serializable]
     public sealed class SetStore
     {
         /// <summary>
-        /// TBD
+        /// Creates a message containing the target journal-store actor.
         /// </summary>
-        /// <param name="store">TBD</param>
+        /// <param name="store">The actor that handles journal protocol messages.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="store"/> is undefined.
         /// </exception>
@@ -69,7 +69,7 @@ namespace Akka.Cluster.Sharding.Tests
             Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
 
         /// <summary>
-        /// TBD
+        /// The journal-store actor supplied to the proxy.
         /// </summary>
         public readonly IActorRef Store;
     }
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Sharding.Tests
         private IActorRef _store;
 
         /// <summary>
-        /// TBD
+        /// Initializes the journal proxy and prepares a timeout while it waits for its store actor.
         /// </summary>
         protected AsyncWriteProxyEx()
         {
@@ -102,12 +102,12 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// The maximum wait before the proxy stops stashing messages for store initialization.
         /// </summary>
         public abstract TimeSpan Timeout { get; }
 
         /// <summary>
-        /// TBD
+        /// Starts the initialization timeout before the journal's base startup logic runs.
         /// </summary>
         public override void AroundPreStart()
         {
@@ -116,11 +116,11 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// Stashes messages until a store is supplied or the initialization timeout expires, then delegates normal handling.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The journal's receive handler.</param>
+        /// <param name="message">The incoming message to process or stash.</param>
+        /// <returns><c>true</c> when initialization handling consumes the message; otherwise, the base journal result.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)
@@ -198,18 +198,18 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// Replays messages from the configured store through a mediator that invokes the recovery callback and completes the replay task.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
+        /// <param name="context">The actor context used to create a local replay mediator.</param>
+        /// <param name="persistenceId">The persistence identifier being recovered.</param>
+        /// <param name="fromSequenceNr">The first sequence number to replay.</param>
+        /// <param name="toSequenceNr">The last sequence number to replay.</param>
+        /// <param name="max">The maximum number of messages to replay.</param>
+        /// <param name="recoveryCallback">The callback invoked for each replayed persistent representation.</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes when replay succeeds and faults when the store reports failure or the local inactivity timeout elapses.</returns>
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
             if (_store == null)
@@ -253,7 +253,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// The stash used while waiting for the store actor to be set.
         /// </summary>
         public IStash Stash { get; set; }
 
@@ -261,7 +261,7 @@ namespace Akka.Cluster.Sharding.Tests
     }
 
     /// <summary>
-    /// TBD
+    /// Receives replay messages from the journal store, invokes the recovery callback, and completes or times out the replay request.
     /// </summary>
     internal class ReplayMediator : ActorBase
     {
@@ -270,11 +270,11 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly TimeSpan _replayTimeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a mediator for one journal replay request.
         /// </summary>
-        /// <param name="replayCallback">TBD</param>
-        /// <param name="replayCompletionPromise">TBD</param>
-        /// <param name="replayTimeout">TBD</param>
+        /// <param name="replayCallback">The callback invoked for each replayed persistent representation.</param>
+        /// <param name="replayCompletionPromise">The task completion source completed when replay succeeds or fails.</param>
+        /// <param name="replayTimeout">The inactivity timeout for receiving replay messages.</param>
         public ReplayMediator(Action<IPersistentRepresentation> replayCallback, TaskCompletionSource<object> replayCompletionPromise, TimeSpan replayTimeout)
         {
             _replayCallback = replayCallback;
@@ -285,13 +285,13 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// Processes replayed records, completion or failure notifications, and replay inactivity timeouts.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">A replay protocol message or receive-timeout notification.</param>
         /// <exception cref="AsyncReplayTimeoutException">
         /// This exception is thrown when the replay timed out due to inactivity.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> for replay protocol messages and timeouts handled here; otherwise, <c>false</c>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)

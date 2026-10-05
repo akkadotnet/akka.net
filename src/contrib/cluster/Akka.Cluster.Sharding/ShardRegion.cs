@@ -46,7 +46,7 @@ namespace Akka.Cluster.Sharding
         internal sealed class Retry : IShardRegionCommand, INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// Singleton housekeeping tick sent periodically to this shard region.
             /// </summary>
             public static readonly Retry Instance = new();
 
@@ -70,7 +70,7 @@ namespace Akka.Cluster.Sharding
         internal sealed class RegisterRetry : IShardRegionCommand
         {
             /// <summary>
-            /// TBD
+            /// Singleton tick for the accelerated shard-region registration retry during startup or coordinator movement.
             /// </summary>
             public static readonly RegisterRetry Instance = new();
 
@@ -87,14 +87,14 @@ namespace Akka.Cluster.Sharding
         internal sealed class RestartShard
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard to restart after its backoff interval.
             /// </summary>
             public readonly ShardId ShardId;
 
             /// <summary>
-            /// TBD
+            /// Creates a delayed restart notification for a shard.
             /// </summary>
-            /// <param name="shardId">TBD</param>
+            /// <param name="shardId">The id of the shard to restart.</param>
             public RestartShard(ShardId shardId)
             {
                 ShardId = shardId;
@@ -247,15 +247,15 @@ namespace Akka.Cluster.Sharding
             public ITimerScheduler Timers { get; set; } = null!;
 
             /// <summary>
-            /// TBD
+            /// Creates local actor properties for an actor that stops entities during shard handoff.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="shard">TBD</param>
-            /// <param name="replyTo">TBD</param>
-            /// <param name="entities">TBD</param>
-            /// <param name="stopMessage">TBD</param>
-            /// <param name="handoffTimeout">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="typeName">The entity type name used in handoff log messages.</param>
+            /// <param name="shard">The shard id being handed off.</param>
+            /// <param name="replyTo">The actor to notify with <see cref="ShardCoordinator.ShardStopped"/> after the entities terminate.</param>
+            /// <param name="entities">The entity actor references to stop and watch.</param>
+            /// <param name="stopMessage">The message sent to each entity to request termination.</param>
+            /// <param name="handoffTimeout">The delay before the actor forcefully stops entities that have not terminated.</param>
+            /// <returns>Local actor properties for the handoff stopper.</returns>
             public static Props Props(
                 string typeName,
                 ShardId shard,
@@ -274,12 +274,12 @@ namespace Akka.Cluster.Sharding
             /// them have terminated it replies with `ShardStopped`.
             /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="shard">TBD</param>
-            /// <param name="replyTo">TBD</param>
-            /// <param name="entities">TBD</param>
-            /// <param name="stopMessage">TBD</param>
-            /// <param name="handoffTimeout">TBD</param>
+            /// <param name="typeName">The entity type name used in handoff log messages.</param>
+            /// <param name="shard">The shard id being handed off.</param>
+            /// <param name="replyTo">The actor to notify with <see cref="ShardCoordinator.ShardStopped"/> after the entities terminate.</param>
+            /// <param name="entities">The entity actor references to stop and watch.</param>
+            /// <param name="stopMessage">The message sent to each entity to request termination.</param>
+            /// <param name="handoffTimeout">The delay before the actor forcefully stops entities that have not terminated.</param>
             public HandOffStopper(
                 string typeName,
                 ShardId shard,
@@ -338,14 +338,14 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="ShardRegion"/> actor.
         /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="entityProps">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="typeName">The entity type name served by the region.</param>
+        /// <param name="entityProps">The factory used to create entity actor properties for each entity id.</param>
+        /// <param name="settings">The cluster-sharding settings used by this region.</param>
+        /// <param name="coordinatorPath">The actor selection path used to locate the shard coordinator.</param>
         /// <param name="messageExtractor"></param>
-        /// <param name="handOffStopMessage">TBD</param>
-        /// <param name="rememberEntitiesProvider">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handOffStopMessage">The message sent to entities when their shard is handed off.</param>
+        /// <param name="rememberEntitiesProvider">The optional provider used to store and recover remembered entity ids.</param>
+        /// <returns>Local actor properties for the region.</returns>
         internal static Props Props(
             string typeName,
             Func<string, Props> entityProps,
@@ -369,11 +369,11 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="ShardRegion"/> actor when used in proxy only mode.
         /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="typeName">The entity type name served by the proxy.</param>
+        /// <param name="settings">The cluster-sharding settings used by this proxy.</param>
+        /// <param name="coordinatorPath">The actor selection path used to locate the shard coordinator.</param>
         /// <param name="messageExtractor"></param>
-        /// <returns>TBD</returns>
+        /// <returns>Local actor properties for a proxy-only region.</returns>
         internal static Props ProxyProps(
             string typeName,
             ClusterShardingSettings settings,
@@ -433,15 +433,15 @@ namespace Akka.Cluster.Sharding
         private readonly IShardingBufferMessageAdapter _bufferMessageAdapter;
 
         /// <summary>
-        /// TBD
+        /// Creates a shard region that routes entity messages and, when configured, stores remembered entity state.
         /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="entityProps">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="coordinatorPath">TBD</param>
+        /// <param name="typeName">The entity type name served by the region.</param>
+        /// <param name="entityProps">The factory used to create entity actor properties; <see langword="null"/> for proxy-only operation.</param>
+        /// <param name="settings">The cluster-sharding settings used by this region.</param>
+        /// <param name="coordinatorPath">The actor selection path used to locate the shard coordinator.</param>
         /// <param name="messageExtractor"></param>
-        /// <param name="handOffStopMessage">TBD</param>
-        /// <param name="rememberEntitiesProvider">TBD</param>
+        /// <param name="handOffStopMessage">The message sent to entities when their shard is handed off.</param>
+        /// <param name="rememberEntitiesProvider">The optional provider used to store and recover remembered entity ids.</param>
         public ShardRegion(
             string typeName,
             Func<string, Props>? entityProps,

@@ -68,12 +68,12 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Returns a Task that will be completed with the success or failure of the provided value after the specified duration.
+        /// Schedules the supplied asynchronous value factory after the specified duration and returns its result as a task.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="value">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="scheduler">TBD</param>
+        /// <typeparam name="T">The result type produced by the value factory.</typeparam>
+        /// <param name="value">The asynchronous factory to invoke after the delay.</param>
+        /// <param name="timeout">The delay before invoking the factory.</param>
+        /// <param name="scheduler">The scheduler used to invoke the factory.</param>
         private static Task<T> After<T>(TimeSpan timeout, IScheduler scheduler, Func<Task<T>> value)
         {
             var promise = new TaskCompletionSource<T>();
@@ -99,7 +99,7 @@ namespace Akka.Cluster.Sharding
         /// Partitions elements in fixed size
         /// Credits to http://stackoverflow.com/a/13731854/465132
         /// </summary>
-        /// <param name="items">TBD</param>
+        /// <param name="items">The sequence whose elements are grouped.</param>
         /// <param name="size">The number of elements per group</param>
         public static IEnumerable<IEnumerable<T>> Grouped<T>(this IEnumerable<T> items, int size)
         {
