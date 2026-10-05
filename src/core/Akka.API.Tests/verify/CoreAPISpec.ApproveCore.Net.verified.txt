@@ -3766,7 +3766,9 @@ namespace Akka.IO
         void Abort();
         System.Threading.Tasks.Task CloseAsync();
         System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ShutdownAsync();
+        void Start();
         void Write(System.Buffers.ReadOnlySequence<byte> data);
     }
     public class Inet
@@ -4153,7 +4155,9 @@ namespace Akka.IO
         public System.Threading.Tasks.Task CloseAsync() { }
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ShutdownAsync() { }
+        public void Start() { }
         public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
     }
     public delegate bool TlsCertificateValidationCallback(System.Security.Cryptography.X509Certificates.X509Certificate2? certificate, System.Security.Cryptography.X509Certificates.X509Chain? chain, string remotePeer, System.Net.Security.SslPolicyErrors errors, Akka.Event.ILoggingAdapter log);

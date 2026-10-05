@@ -26,135 +26,168 @@ namespace Akka.IO
     /// Owns two pipes (input + output) and two pump loops that bridge them to a network stream,
     /// which may be a plaintext <see cref="NetworkStream"/> or an authenticated TLS stream.
     /// </summary>
-    public sealed class TcpTransportConnection : ITransportConnection, ITransportConnectionLifecycle
+    public sealed class TcpTransportConnection : ITransportConnection
     {
+        private delegate Task TlsInitializer(TcpTransportConnection transport, CancellationToken lifetimeToken,
+            CancellationToken callerToken);
+
         private readonly Socket _socket;
         private readonly object _lifecycleGate = new();
         private Stream? _stream;
         private readonly Pipe _inputPipe;
         private readonly Pipe _outputPipe;
         private readonly CancellationTokenSource _cts = new();
-        private Task _ready = Task.CompletedTask;
+        private readonly TlsInitializer? _tlsInitializer;
+        private Task? _initializationTask;
         private bool _started;
         private bool _disposed;
         private bool _tlsWriteShutdown;
 
         /// <summary>
         /// Creates a transport connection from an already-connected socket.
-        /// Starts the read and write pump loops immediately.
+        /// Call <see cref="InitializeAsync"/> and then <see cref="Start"/> to begin I/O.
         /// </summary>
         public TcpTransportConnection(Socket socket, PipeOptions? inputPipeOptions = null,
             PipeOptions? outputPipeOptions = null)
             : this(socket, new NetworkStream(socket, ownsSocket: false), inputPipeOptions, outputPipeOptions,
-                startImmediately: true)
+                tlsInitializer: null)
         {
         }
 
         /// <summary>
-        /// Creates a transport connection from an existing stream (for TLS or testing).
+        /// Creates a transport connection from an existing stream.
+        /// Call <see cref="InitializeAsync"/> and then <see cref="Start"/> to begin I/O.
         /// </summary>
         public TcpTransportConnection(Socket socket, Stream stream, PipeOptions? inputPipeOptions = null,
             PipeOptions? outputPipeOptions = null)
-            : this(socket, stream, inputPipeOptions, outputPipeOptions, startImmediately: true)
+            : this(socket, stream, inputPipeOptions, outputPipeOptions, tlsInitializer: null)
         {
         }
 
         private TcpTransportConnection(Socket socket, Stream? stream, PipeOptions? inputPipeOptions,
-            PipeOptions? outputPipeOptions, bool startImmediately)
+            PipeOptions? outputPipeOptions, TlsInitializer? tlsInitializer)
         {
             _socket = socket;
             _stream = stream;
+            _tlsInitializer = tlsInitializer;
 
             _inputPipe = new Pipe(inputPipeOptions ?? PipeOptions.Default);
             _outputPipe = new Pipe(outputPipeOptions ?? PipeOptions.Default);
-
-            if (startImmediately)
-                StartPumps();
         }
 
         internal static ITransportConnection CreateForIncoming(Socket socket, Stream? existingStream,
             PipeOptions? inputPipeOptions, PipeOptions? outputPipeOptions, TlsServerSettings? tlsSettings,
             ILoggingAdapter log)
         {
-            var stream = existingStream ?? (tlsSettings is null ? new NetworkStream(socket, ownsSocket: false) : null);
-            var transport = new TcpTransportConnection(socket, stream, inputPipeOptions, outputPipeOptions,
-                startImmediately: false);
-
-            if (tlsSettings is not null)
+            if (tlsSettings is null)
             {
-                var remotePeer = socket.RemoteEndPoint?.ToString() ?? "unknown remote peer";
-                transport.BeginTlsInitialization(tlsSettings.HandshakeTimeout,
-                    () => tlsSettings.CreateAuthenticationOptions(remotePeer, log),
-                    (sslStream, cancellationToken, options) =>
-                        sslStream.AuthenticateAsServerAsync(options, cancellationToken));
+                var plaintextStream = existingStream ?? new NetworkStream(socket, ownsSocket: false);
+                return new TcpTransportConnection(socket, plaintextStream, inputPipeOptions, outputPipeOptions,
+                    tlsInitializer: null);
             }
 
-            return transport;
+            var remotePeer = socket.RemoteEndPoint?.ToString() ?? "unknown remote peer";
+            TlsInitializer initializer = (transport, lifetimeToken, callerToken) => transport.InitializeTlsAsync(
+                tlsSettings.HandshakeTimeout,
+                () => tlsSettings.CreateAuthenticationOptions(remotePeer, log),
+                (sslStream, cancellationToken, options) =>
+                    sslStream.AuthenticateAsServerAsync(options, cancellationToken),
+                lifetimeToken, callerToken);
+
+            return new TcpTransportConnection(socket, stream: null, inputPipeOptions, outputPipeOptions, initializer);
         }
 
         internal static ITransportConnection CreateForOutgoing(Socket socket, EndPoint remoteAddress,
             PipeOptions? inputPipeOptions, PipeOptions? outputPipeOptions, TlsClientSettings? tlsSettings,
             ILoggingAdapter log)
         {
-            var stream = tlsSettings is null ? new NetworkStream(socket, ownsSocket: false) : null;
-            var transport = new TcpTransportConnection(socket, stream, inputPipeOptions, outputPipeOptions,
-                startImmediately: false);
-
-            if (tlsSettings is not null)
+            if (tlsSettings is null)
             {
-                var remotePeer = socket.RemoteEndPoint?.ToString() ?? remoteAddress.ToString() ?? "unknown remote peer";
-                var targetHost = tlsSettings.TargetHost ?? (remoteAddress switch
-                {
-                    DnsEndPoint dnsEndPoint => dnsEndPoint.Host,
-                    IPEndPoint ipEndPoint => ipEndPoint.Address.ToString(),
-                    _ => remoteAddress.ToString() ?? "unknown remote peer"
-                });
-                transport.BeginTlsInitialization(tlsSettings.HandshakeTimeout,
-                    () => tlsSettings.CreateAuthenticationOptions(targetHost, remotePeer, log),
-                    (sslStream, cancellationToken, options) =>
-                        sslStream.AuthenticateAsClientAsync(options, cancellationToken));
+                var plaintextStream = new NetworkStream(socket, ownsSocket: false);
+                return new TcpTransportConnection(socket, plaintextStream, inputPipeOptions, outputPipeOptions,
+                    tlsInitializer: null);
             }
 
-            return transport;
+            var remotePeer = socket.RemoteEndPoint?.ToString() ?? remoteAddress.ToString() ?? "unknown remote peer";
+            var targetHost = tlsSettings.TargetHost ?? (remoteAddress switch
+            {
+                DnsEndPoint dnsEndPoint => dnsEndPoint.Host,
+                IPEndPoint ipEndPoint => ipEndPoint.Address.ToString(),
+                _ => remoteAddress.ToString() ?? "unknown remote peer"
+            });
+            TlsInitializer initializer = (transport, lifetimeToken, callerToken) => transport.InitializeTlsAsync(
+                tlsSettings.HandshakeTimeout,
+                () => tlsSettings.CreateAuthenticationOptions(targetHost, remotePeer, log),
+                (sslStream, cancellationToken, options) =>
+                    sslStream.AuthenticateAsClientAsync(options, cancellationToken),
+                lifetimeToken, callerToken);
+
+            return new TcpTransportConnection(socket, stream: null, inputPipeOptions, outputPipeOptions, initializer);
         }
 
-        private void BeginTlsInitialization<TOptions>(TimeSpan timeout, Func<TOptions> createOptions,
-            Func<SslStream, CancellationToken, TOptions, Task> authenticate)
+        /// <inheritdoc/>
+        /// <remarks>
+        /// For TLS transports, repeated calls reuse the same initialization task. The cancellation token
+        /// supplied by the call that starts initialization applies to that task; later calls observe it.
+        /// </remarks>
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            lock (_lifecycleGate)
+            {
+                if (_disposed)
+                    return Task.FromException(new ObjectDisposedException(nameof(TcpTransportConnection)));
+                if (_initializationTask is not null)
+                    return _initializationTask;
+                if (cancellationToken.IsCancellationRequested)
+                    return Task.FromCanceled(cancellationToken);
+                if (_tlsInitializer is null)
+                {
+                    _initializationTask = Task.CompletedTask;
+                    return _initializationTask;
+                }
+
+                var lifetimeToken = _cts.Token;
+                _initializationTask = Task.Run(() => _tlsInitializer(this, lifetimeToken, cancellationToken));
+                return _initializationTask;
+            }
+        }
+
+        private async Task InitializeTlsAsync<TOptions>(TimeSpan timeout, Func<TOptions> createOptions,
+            Func<SslStream, CancellationToken, TOptions, Task> authenticate, CancellationToken lifetimeToken,
+            CancellationToken callerToken)
             where TOptions : class
         {
-            var ownerToken = _cts.Token;
+            using var timeoutCancellation = new CancellationTokenSource();
+            timeoutCancellation.CancelAfter(timeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                lifetimeToken, callerToken, timeoutCancellation.Token);
 
-            _ready = Task.Run(async () =>
+            try
             {
-                using var timeoutCancellation = new CancellationTokenSource();
-                timeoutCancellation.CancelAfter(timeout);
-                using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-                    ownerToken, timeoutCancellation.Token);
-
-                try
+                lifetimeToken.ThrowIfCancellationRequested();
+                callerToken.ThrowIfCancellationRequested();
+                var options = createOptions();
+                lifetimeToken.ThrowIfCancellationRequested();
+                callerToken.ThrowIfCancellationRequested();
+                timeoutCancellation.Token.ThrowIfCancellationRequested();
+                var networkStream = new NetworkStream(_socket, ownsSocket: false);
+                var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false);
+                if (!PublishStream(sslStream))
                 {
-                    ownerToken.ThrowIfCancellationRequested();
-                    var options = createOptions();
-                    ownerToken.ThrowIfCancellationRequested();
-                    var networkStream = new NetworkStream(_socket, ownsSocket: false);
-                    var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false);
-                    if (!PublishAuthenticatedStream(sslStream))
-                    {
-                        await sslStream.DisposeAsync().ConfigureAwait(false);
-                        throw new OperationCanceledException("Transport was aborted during TLS initialization.", ownerToken);
-                    }
+                    await sslStream.DisposeAsync().ConfigureAwait(false);
+                    throw new OperationCanceledException("Transport was aborted during TLS initialization.", lifetimeToken);
+                }
 
-                    await authenticate(sslStream, linkedCancellation.Token, options).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException e) when
-                    (timeoutCancellation.IsCancellationRequested && !ownerToken.IsCancellationRequested)
-                {
-                    throw new TimeoutException($"TLS handshake timed out after {timeout}.", e);
-                }
-            });
+                await authenticate(sslStream, linkedCancellation.Token, options).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException e) when
+                (timeoutCancellation.IsCancellationRequested && !lifetimeToken.IsCancellationRequested && !callerToken.IsCancellationRequested)
+            {
+                throw new TimeoutException($"TLS handshake timed out after {timeout}.", e);
+            }
         }
 
-        private bool PublishAuthenticatedStream(Stream stream)
+        private bool PublishStream(Stream stream)
         {
             lock (_lifecycleGate)
             {
@@ -166,21 +199,17 @@ namespace Akka.IO
             }
         }
 
-        Task ITransportConnectionLifecycle.Ready => _ready;
-
-        void ITransportConnectionLifecycle.Start() => Start();
-
-        private void Start()
+        /// <inheritdoc/>
+        public void Start()
         {
-            if (!_ready.IsCompletedSuccessfully)
-                throw new InvalidOperationException("Transport cannot start before initialization succeeds.");
-
             lock (_lifecycleGate)
             {
                 if (_disposed)
                     throw new ObjectDisposedException(nameof(TcpTransportConnection));
                 if (_started)
                     return;
+                if (_initializationTask?.IsCompletedSuccessfully != true)
+                    throw new InvalidOperationException("Transport cannot start before initialization succeeds.");
                 if (_stream is null)
                     throw new InvalidOperationException("The transport stream was not initialized.");
 
@@ -315,6 +344,7 @@ namespace Akka.IO
         public void Abort()
         {
             Stream? stream;
+            Task? initializationTask;
             bool started;
             lock (_lifecycleGate)
             {
@@ -323,6 +353,7 @@ namespace Akka.IO
 
                 _disposed = true;
                 stream = _stream;
+                initializationTask = _initializationTask;
                 started = _started;
             }
 
@@ -345,8 +376,7 @@ namespace Akka.IO
 
             if (!started)
             {
-                ObserveInitializationCompletion(_ready);
-                _cts.Dispose();
+                ObserveInitializationCompletion(initializationTask);
             }
 
             // Dispose the stream — ObjectDisposedException if already disposed.
@@ -384,12 +414,19 @@ namespace Akka.IO
             _cts.Dispose();
         }
 
-        private static void ObserveInitializationCompletion(Task ready)
+        private void ObserveInitializationCompletion(Task? initializationTask)
         {
-            _ = ready.ContinueWith(task =>
+            if (initializationTask is null)
+            {
+                _cts.Dispose();
+                return;
+            }
+
+            _ = initializationTask.ContinueWith(task =>
             {
                 if (task.IsFaulted)
                     _ = task.Exception;
+                _cts.Dispose();
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 

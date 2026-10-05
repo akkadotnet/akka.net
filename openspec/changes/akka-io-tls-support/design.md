@@ -1,6 +1,6 @@
 ## Context
 
-Akka.IO already bridges sockets and streams through `TcpTransportConnection`, which owns the stream and the I/O pumps. TLS therefore belongs in that transport: it authenticates an `SslStream` before reporting generic readiness, then starts the existing pumps when the handler registers. The handshake must not block the listener's accept loop or the actor mailbox.
+Akka.IO already bridges sockets and streams through `TcpTransportConnection`, which owns the stream and the I/O pumps. TLS therefore belongs in that transport: `InitializeAsync` authenticates an `SslStream` before reporting readiness, then `Start` activates the existing pumps when the handler registers. The handshake must not block the listener's accept loop or the actor mailbox.
 
 This work is staged. Akka.IO owns reusable certificate and validation settings; Akka.Streams and Artery add their own entry points in later changes. DotNetty remains an independent transport and is not reconfigured through the new API.
 
@@ -35,7 +35,7 @@ This work is staged. Akka.IO owns reusable certificate and validation settings; 
 
 ### 3. Keep transport ownership until Register
 
-**Decision:** `TcpTransportConnection` owns its stream, handshake cancellation, and socket throughout initialization and while awaiting `Tcp.Register`. `PostStop` aborts the transport, which cancels authentication and disposes pre-registration resources. The actor sees only the generic transport readiness result; registration activates the transport's deferred pumps.
+**Decision:** `ITransportConnection` exposes `InitializeAsync(CancellationToken)` and `Start()`. `TcpTransportConnection` owns its stream, handshake cancellation, and socket throughout initialization and while awaiting `Tcp.Register`. `PostStop` aborts the transport, which cancels authentication and disposes pre-registration resources. The actor sees only the generic initialization result; registration starts the transport's deferred pumps. Direct users of the beta `TcpTransportConnection` API must now call `InitializeAsync` and then `Start`.
 
 **Rationale:** A task result can arrive after actor shutdown, and `Connected` does not yet create transport pumps. Ownership must cover both gaps without a late result leaking a live socket.
 
