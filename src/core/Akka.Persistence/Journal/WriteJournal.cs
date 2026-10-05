@@ -30,11 +30,18 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// Creates a sequence of write actions to be executed based on the given messages.
-        /// Applies any registered EventAdapters to the payloads.
+        /// Creates a sequence of atomic writes from the supplied persistent envelopes.
+        /// Applies any registered event adapters to each persistent message's payload.
         /// </summary>
-        /// <param name="resequenceables">list of messages to write</param>
-        /// <returns></returns>
+        /// <param name="resequenceables">The persistent envelopes to prepare for writing.</param>
+        /// <returns>
+        /// A lazily generated sequence containing one adapted <see cref="AtomicWrite"/> for each
+        /// input envelope that is an <see cref="AtomicWrite"/>. Other envelope types are skipped.
+        /// Each persistent message is copied with its sender set to <see cref="ActorRefs.NoSender"/>
+        /// before its payload is adapted. The copy retains the payload and manifest and uses the
+        /// source sequence number, persistence identifier, deletion flag, and writer GUID; its
+        /// timestamp is not copied. Event adapters may then change the payload or manifest.
+        /// </returns>
         protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
             foreach (var resequenceable in resequenceables)
