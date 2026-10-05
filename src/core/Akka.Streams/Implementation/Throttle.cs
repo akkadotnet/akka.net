@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements whose costs are throttled.</typeparam>
     [InternalApi]
     public class Throttle<T> : SimpleLinearGraphStage<T>
     {
@@ -126,13 +126,13 @@ namespace Akka.Streams.Implementation
         private readonly long _ticksBetweenTokens;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that limits throughput according to element cost and a token-bucket rate.
         /// </summary>
-        /// <param name="cost">TBD</param>
-        /// <param name="per">TBD</param>
-        /// <param name="maximumBurst">TBD</param>
-        /// <param name="costCalculation">TBD</param>
-        /// <param name="mode">TBD</param>
+        /// <param name="cost">The amount of cost replenished during each <paramref name="per"/> interval.</param>
+        /// <param name="per">The interval over which <paramref name="cost"/> is replenished.</param>
+        /// <param name="maximumBurst">The maximum token-bucket burst capacity.</param>
+        /// <param name="costCalculation">Calculates the cost of each input element.</param>
+        /// <param name="mode">Whether excess throughput is delayed or causes the stage to fail.</param>
         public Throttle(int cost, TimeSpan per, int maximumBurst, Func<T, int> costCalculation, ThrottleMode mode)
         {
             _maximumBurst = maximumBurst;
@@ -146,16 +146,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic using the inherited supervision strategy for cost-calculation failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The graph stage logic.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
-        /// TBD
+        /// Returns the stage name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>Throttle</c>.</returns>
         public override string ToString() => "Throttle";
     }
 }

@@ -16,10 +16,10 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Manages actor-backed fan-out output subscriptions and downstream demand for a processor.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    /// <typeparam name="T">The element type distributed to subscribers.</typeparam>
+    /// <typeparam name="TStreamBuffer">The buffer implementation retaining elements for subscribers.</typeparam>
     internal class FanoutOutputs<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : SubscriberManagement<T, TStreamBuffer>, IOutputs where TStreamBuffer : IStreamBuffer<T>
     {
         private long _downstreamBufferSpace;
@@ -29,53 +29,53 @@ namespace Akka.Streams.Implementation
         private readonly Action _afterShutdown;
 
         /// <summary>
-        /// TBD
+        /// Gets the exposed actor publisher used to accept downstream subscriptions.
         /// </summary>
         protected IActorPublisher ExposedPublisher;
 
         /// <summary>
-        /// TBD
+        /// Gets the actor message handler for downstream publisher and subscription messages.
         /// </summary>
         public SubReceive SubReceive { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that waits for downstream buffer space.
         /// </summary>
         public TransferState NeedsDemand { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that is ready when space is available or output closes.
         /// </summary>
         public TransferState NeedsDemandOrCancel { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether output buffer space has been requested.
         /// </summary>
         public bool IsDemandAvailable => _downstreamBufferSpace > 0;
 
         /// <summary>
-        /// TBD
+        /// Gets the number of downstream elements that can be enqueued before more demand is needed.
         /// </summary>
         public long DemandCount => _downstreamBufferSpace;
 
         /// <summary>
-        /// TBD
+        /// Gets the initial shared buffer capacity.
         /// </summary>
         public override int InitialBufferSize { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum shared buffer capacity.
         /// </summary>
         public override int MaxBufferSize { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates output management and waits for the publisher-exposure message before handling subscriptions.
         /// </summary>
-        /// <param name="maxBufferSize">TBD</param>
-        /// <param name="initialBufferSize">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="pump">TBD</param>
-        /// <param name="afterShutdown">TBD</param>
+        /// <param name="maxBufferSize">The maximum buffer capacity.</param>
+        /// <param name="initialBufferSize">The initial buffer capacity.</param>
+        /// <param name="self">The actor that owns the output manager.</param>
+        /// <param name="pump">The transfer pump resumed after demand or cancellation changes.</param>
+        /// <param name="afterShutdown">An optional callback invoked after output shutdown.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when the first message isn't of type <see cref="ExposedPublisher"/>.
         /// </exception>
@@ -100,18 +100,18 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor subscription with a cursor into the shared output buffer.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subscriber">The subscriber receiving output elements.</param>
+        /// <returns>The actor subscription tracked by this output manager.</returns>
         protected override ISubscriptionWithCursor<T> CreateSubscription(ISubscriber<T> subscriber)
             => new ActorSubscriptionWithCursor<T>(_self, subscriber);
 
         /// <summary>
-        /// TBD
+        /// Handles subscription requests, demand, and cancellation after the publisher is exposed.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> if the message was handled; otherwise <see langword="false"/>.</returns>
         protected bool DownstreamRunning(object message)
         {
             switch (message)
@@ -133,9 +133,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Records downstream demand as capacity available for elements from the input side.
         /// </summary>
-        /// <param name="elements">TBD</param>
+        /// <param name="elements">The additional downstream capacity requested.</param>
         protected override void RequestFromUpstream(long elements) => _downstreamBufferSpace += elements;
 
         private void SubscribePending()
@@ -144,9 +144,9 @@ namespace Akka.Streams.Implementation
                     .ForEach(s => RegisterSubscriber(UntypedSubscriber.ToTyped<T>(s)));
 
         /// <summary>
-        /// TBD
+        /// Shuts down the exposed publisher and invokes the configured callback after subscriber management finishes.
         /// </summary>
-        /// <param name="isCompleted">TBD</param>
+        /// <param name="isCompleted"><see langword="true"/> when output completes normally; <see langword="false"/> when shutdown follows removal of the last subscription, including cancellation or draining after completion.</param>
         protected override void Shutdown(bool isCompleted)
         {
             ExposedPublisher?.Shutdown(isCompleted ? null : ActorPublisher.NormalShutdownReason);
@@ -155,14 +155,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Marks downstream output closed when the last subscriber cancels.
         /// </summary>
         protected override void CancelUpstream() => _downstreamCompleted = true;
 
         /// <summary>
-        /// TBD
+        /// Validates and enqueues one output element for registered subscribers.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to distribute.</param>
         public void EnqueueOutputElement(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -171,7 +171,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes output and delivers completion after each subscriber drains retained elements.
         /// </summary>
         public void Complete()
         {
@@ -183,14 +183,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Treats output cancellation as successful completion.
         /// </summary>
         public void Cancel() => Complete();
 
         /// <summary>
-        /// TBD
+        /// Fails current subscribers and shuts down the exposed publisher.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure delivered to subscribers.</param>
         public void Error(Exception e)
         {
             if (_downstreamCompleted)
@@ -203,44 +203,44 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether output has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         public bool IsClosed => _downstreamCompleted;
 
         /// <summary>
-        /// TBD
+        /// Gets whether output is still open.
         /// </summary>
         public bool IsOpen => !IsClosed;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor processor implementation that distributes each input element to its active output subscribers.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    /// <typeparam name="T">The element type passed through the processor.</typeparam>
+    /// <typeparam name="TStreamBuffer">The buffer implementation retaining elements for subscribers.</typeparam>
     internal sealed class FanoutProcessorImpl<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : ActorProcessorImpl where TStreamBuffer : IStreamBuffer<T>
     {
         private readonly Action _onTerminated;
 
         /// <summary>
-        /// TBD
+        /// Creates local actor properties for the fan-out processor.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="onTerminated">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="settings">Materializer settings for input/output buffering.</param>
+        /// <param name="onTerminated">An optional callback invoked during subscriber-management shutdown before a stop request; it is not invoked on the error path.</param>
+        /// <returns>Actor properties for creating the processor.</returns>
         public static Props Props(ActorMaterializerSettings settings, Action onTerminated = null)
             => Actor.Props.Create<FanoutProcessorImpl<T, TStreamBuffer>>(settings, onTerminated).WithDeploy(Deploy.Local);
 
         /// <summary>
-        /// TBD
+        /// Gets the output manager used by the transfer pump.
         /// </summary>
         protected override IOutputs PrimaryOutputs { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a processor with the materializer's buffer settings and an optional shutdown callback.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="onTerminated">TBD</param>
+        /// <param name="settings">Materializer settings for input/output buffering.</param>
+        /// <param name="onTerminated">An optional callback invoked during subscriber-management shutdown before a stop request; it is not invoked on the error path.</param>
         /// If this gets changed you must change <see cref="FanoutProcessorImpl{T,TStreamBuffer}.Props"/> as well!
         public FanoutProcessorImpl(ActorMaterializerSettings settings, Action onTerminated) : base(settings)
         {
@@ -255,9 +255,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Fails the processor by canceling input and signaling an error to output subscribers.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure to signal to downstream subscribers.</param>
         protected override void Fail(Exception e)
         {
             if (Settings.IsDebugLogging)
@@ -269,7 +269,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the processor after canceling its upstream input.
         /// </summary>
         public override void PumpFinished()
         {

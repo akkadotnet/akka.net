@@ -26,14 +26,14 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class FilePublisher : Actors.ActorPublisher<ReadOnlySequence<byte>>
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a publisher that reads a file in byte chunks.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="initialBuffer">TBD</param>
-        /// <param name="maxBuffer">TBD</param>
+        /// <param name="f">The file to read.</param>
+        /// <param name="completionPromise">The promise completed with an <see cref="IOResult"/> when the publisher actor stops.</param>
+        /// <param name="chunkSize">The number of bytes requested for each file read.</param>
+        /// <param name="startPosition">The byte position at which reading starts.</param>
+        /// <param name="initialBuffer">The initial input-buffer setting checked against <paramref name="maxBuffer"/>; it is not passed to the publisher actor.</param>
+        /// <param name="maxBuffer">The read-ahead threshold; the publisher can buffer one chunk beyond this value.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when one of the following conditions is met.
         /// 
@@ -44,7 +44,7 @@ namespace Akka.Streams.Implementation.IO
         /// <li>The specified <paramref name="maxBuffer"/> is less than the specified <paramref name="initialBuffer"/>.</li>
         /// </ul>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Local actor properties for the file publisher.</returns>
         public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
             long startPosition, int initialBuffer, int maxBuffer)
         {
@@ -79,13 +79,13 @@ namespace Akka.Streams.Implementation.IO
         private FileStream _chan;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher actor that reads a file and emits byte chunks.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="maxBuffer">TBD</param>
+        /// <param name="f">The file to read.</param>
+        /// <param name="completionPromise">The promise completed with an <see cref="IOResult"/> when the publisher actor stops.</param>
+        /// <param name="chunkSize">The number of bytes requested for each file read.</param>
+        /// <param name="startPosition">The byte position at which reading starts.</param>
+        /// <param name="maxBuffer">The read-ahead threshold; the publisher can buffer one chunk beyond this value.</param>
         /// If this changes you must also change <see cref="FilePublisher.Props"/> as well!
         public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, long startPosition, int maxBuffer)
         {
@@ -102,7 +102,7 @@ namespace Akka.Streams.Implementation.IO
         private bool EofEncountered => _eofReachedAtOffset != long.MinValue;
 
         /// <summary>
-        /// TBD
+        /// Opens the file for reading and seeks to the configured start position.
         /// </summary>
         protected override void PreStart()
         {
@@ -123,10 +123,10 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Handles read requests, continuation messages, and cancellation.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> when the message is handled; otherwise, <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
@@ -204,7 +204,7 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Closes the file and completes the read-result promise if it has not already completed.
         /// </summary>
         protected override void PostStop()
         {

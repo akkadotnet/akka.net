@@ -16,24 +16,24 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Subscription associated with a subscriber and its read position in a shared stream buffer.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements delivered to the subscriber.</typeparam>
     internal interface ISubscriptionWithCursor<in T> : ISubscription, ICursor
     {
         /// <summary>
-        /// TBD
+        /// Gets the subscriber receiving elements through this subscription.
         /// </summary>
         ISubscriber<T> Subscriber { get; }
 
         /// <summary>
-        /// TBD
+        /// Dispatches one element to the subscriber.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to deliver.</param>
         void Dispatch(T element);
 
         /// <summary>
-        /// TBD
+        /// Gets or sets whether this subscription remains registered for delivery.
         /// </summary>
         bool IsActive { get; set; }
 
@@ -46,40 +46,40 @@ namespace Akka.Streams.Implementation
     #region End of stream
 
     /// <summary>
-    /// TBD
+    /// Tracks whether a publisher is active, completed, or completed with failure and dispatches terminal signals.
     /// </summary>
     internal static class SubscriberManagement
     {
         /// <summary>
-        /// TBD
+            /// Applies this lifecycle state to a subscriber; nonterminal state implementations reject the call.
         /// </summary>
         public interface IEndOfStream
         {
             /// <summary>
-            /// TBD
+            /// Applies a completed or failed terminal state to the subscriber.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="subscriber">TBD</param>
+            /// <typeparam name="T">The subscriber's element type.</typeparam>
+            /// <param name="subscriber">The subscriber receiving the terminal signal.</param>
             void Apply<T>(ISubscriber<T> subscriber);
         }
 
         /// <summary>
-        /// TBD
+        /// Represents a stream that has not yet reached a terminal state.
         /// </summary>
         public sealed class NotReached : IEndOfStream
         {
             /// <summary>
-            /// TBD
+            /// Gets the singleton not-reached state.
             /// </summary>
             public static readonly NotReached Instance = new();
             private NotReached() { }
 
             /// <summary>
-            /// TBD
+            /// Applying this state is an error because no terminal signal has been reached.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="subscriber">TBD</param>
-            /// <exception cref="IllegalStateException">TBD</exception>
+            /// <typeparam name="T">The subscriber's element type.</typeparam>
+            /// <param name="subscriber">The subscriber that must not yet receive a terminal signal.</param>
+            /// <exception cref="IllegalStateException">This state is not terminal and cannot be applied.</exception>
             public void Apply<T>(ISubscriber<T> subscriber)
             {
                 throw new IllegalStateException("Called Apply on NotReached");
@@ -87,53 +87,53 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Represents successful stream completion.
         /// </summary>
         public sealed class Completed : IEndOfStream
         {
             /// <summary>
-            /// TBD
+            /// Gets the singleton successful-completion state.
             /// </summary>
             public static readonly Completed Instance = new();
             private Completed() { }
 
             /// <summary>
-            /// TBD
+            /// Signals successful completion to the subscriber.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="subscriber">TBD</param>
+            /// <typeparam name="T">The subscriber's element type.</typeparam>
+            /// <param name="subscriber">The subscriber receiving completion.</param>
             public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnComplete(subscriber);
         }
 
         /// <summary>
-        /// TBD
+        /// Represents stream completion with a failure cause.
         /// </summary>
         public sealed class ErrorCompleted : IEndOfStream
         {
             /// <summary>
-            /// TBD
+            /// Gets the failure signaled to subscribers.
             /// </summary>
             public readonly Exception Cause;
 
             /// <summary>
-            /// TBD
+            /// Creates a failed terminal state.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The failure to signal.</param>
             public ErrorCompleted(Exception cause)
             {
                 Cause = cause;
             }
 
             /// <summary>
-            /// TBD
+            /// Signals the stored failure to the subscriber.
             /// </summary>
-            /// <typeparam name="T">TBD</typeparam>
-            /// <param name="subscriber">TBD</param>
+            /// <typeparam name="T">The subscriber's element type.</typeparam>
+            /// <param name="subscriber">The subscriber receiving the failure.</param>
             public void Apply<T>(ISubscriber<T> subscriber) => ReactiveStreamsCompliance.TryOnError(subscriber, Cause);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the shared shutdown terminal state used when the last subscriber cancels.
         /// </summary>
         public static readonly IEndOfStream ShutDown = new ErrorCompleted(ActorPublisher.NormalShutdownReason);
     }
@@ -141,10 +141,10 @@ namespace Akka.Streams.Implementation
     #endregion
 
     /// <summary>
-    /// TBD
+    /// Coordinates subscriptions, demand, a shared buffer, and terminal signals for a publisher or processor.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    /// <typeparam name="T">The type of elements shared with subscribers.</typeparam>
+    /// <typeparam name="TStreamBuffer">The buffer implementation retaining values for registered cursors.</typeparam>
     internal abstract class SubscriberManagement<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStreamBuffer> : ICursors where TStreamBuffer : IStreamBuffer<T>
     {
         private readonly Lazy<IStreamBuffer<T>> _buffer;
@@ -159,7 +159,7 @@ namespace Akka.Streams.Implementation
         private SubscriberManagement.IEndOfStream _endOfStream = SubscriberManagement.NotReached.Instance;
 
         /// <summary>
-        /// TBD
+        /// Creates subscriber management and lazily initializes its shared stream buffer.
         /// </summary>
         protected SubscriberManagement()
         {
@@ -170,17 +170,17 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the initial capacity used when creating the stream buffer.
         /// </summary>
         public abstract int InitialBufferSize { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum capacity used when creating the stream buffer.
         /// </summary>
         public abstract int MaxBufferSize { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the cursors for all currently registered subscriptions.
         /// </summary>
         public IEnumerable<ICursor> Cursors => _subscriptions;
 
@@ -188,7 +188,7 @@ namespace Akka.Streams.Implementation
         /// Called when we are ready to consume more elements from our upstream.
         /// MUST NOT call <see cref="PushToDownstream"/>.
         /// </summary>
-        /// <param name="elements">TBD</param>
+        /// <param name="elements">The number of elements to request from upstream.</param>
         protected abstract void RequestFromUpstream(long elements);
 
         /// <summary>
@@ -200,21 +200,21 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Called when the spi.Publisher/Processor is ready to be shut down.
         /// </summary>
-        /// <param name="isCompleted">TBD</param>
+        /// <param name="isCompleted"><see langword="true"/> when output completes normally; <see langword="false"/> when shutdown follows removal of the last subscription, including cancellation or draining after completion.</param>
         protected abstract void Shutdown(bool isCompleted);
 
         /// <summary>
         /// Use to register a subscriber
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subscriber">The subscriber to register.</param>
+        /// <returns>A subscription associated with the subscriber and a cursor into the shared buffer.</returns>
         protected abstract ISubscriptionWithCursor<T> CreateSubscription(ISubscriber<T> subscriber);
 
         /// <summary>
         /// More demand was signaled from a given subscriber.
         /// </summary>
-        /// <param name="subscription">TBD</param>
-        /// <param name="elements">TBD</param>
+        /// <param name="subscription">The active subscription requesting more elements.</param>
+        /// <param name="elements">The requested element count; non-positive demand is signaled as a protocol error.</param>
         protected void MoreRequested(ISubscriptionWithCursor<T> subscription, long elements)
         {
             if (!subscription.IsActive) return;
@@ -305,8 +305,8 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// This method must be called by the implementing class whenever a new value is available to be pushed downstream.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="value">The value received from upstream and retained for active subscribers.</param>
+        /// <exception cref="IllegalStateException">The buffer cannot accept the value or the stream has already terminated.</exception>
         protected void PushToDownstream(T value)
         {
             if (_endOfStream is SubscriberManagement.NotReached)
@@ -373,7 +373,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// This method must be called by the implementing class to push an error downstream.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled to registered subscribers.</param>
         protected void AbortDownstream(Exception cause)
         {
             _endOfStream = new SubscriberManagement.ErrorCompleted(cause);
@@ -385,7 +385,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Register a new subscriber.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to register or notify of the existing terminal state.</param>
         protected void RegisterSubscriber(ISubscriber<T> subscriber)
         {
             if (_endOfStream is SubscriberManagement.NotReached)
@@ -419,7 +419,7 @@ namespace Akka.Streams.Implementation
         /// Called from <see cref="ISubscription.Cancel"/>, i.e. from another thread,
         /// override to add synchronization with itself, <see cref="Subscribe{T}"/> and <see cref="MoreRequested"/>
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription to remove from the active reader set.</param>
         protected void UnregisterSubscription(ISubscriptionWithCursor<T> subscription)
             => UnregisterSubscriptionInternal(subscription);
 

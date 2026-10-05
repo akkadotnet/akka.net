@@ -28,30 +28,30 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="subFlowFuser">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="subFlowFuser">Creates an actor for an eligible fused subflow shell.</param>
+        /// <returns>The graph's materialized value.</returns>
         [InternalApi]
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser);
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="subFlowFuser">TBD</param>
-        /// <param name="initialAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="subFlowFuser">Creates an actor for an eligible fused subflow shell.</param>
+        /// <param name="initialAttributes">The attributes inherited by the graph.</param>
+        /// <returns>The graph's materialized value.</returns>
         [InternalApi]
         public abstract TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes);
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context providing effective attributes and an actor name.</param>
+        /// <param name="props">The actor properties to instantiate.</param>
+        /// <returns>The created actor reference.</returns>
         [InternalApi]
         public override IActorRef ActorOf(MaterializationContext context, Props props)
         {
@@ -65,11 +65,11 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="props">The actor properties to instantiate.</param>
+        /// <param name="name">The child actor name.</param>
+        /// <param name="dispatcher">The dispatcher identifier applied to the actor.</param>
+        /// <exception cref="IllegalStateException">The stream supervisor is not a local actor reference.</exception>
+        /// <returns>The created child actor reference.</returns>
         [InternalApi]
         protected IActorRef ActorOf(Props props, string name, string dispatcher)
         {
@@ -233,17 +233,17 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the materializer has been shut down or its supervisor has stopped.
         /// </summary>
         public override bool IsShutdown => _haveShutDown.Value;
 
         /// <summary>
-        /// TBD
+        /// Gets the materializer settings used as defaults for streams.
         /// </summary>
         public override ActorMaterializerSettings Settings => _settings;
 
         /// <summary>
-        /// TBD
+        /// Gets the actor system that owns this materializer.
         /// </summary>
         public override ActorSystem System => _system;
 
@@ -260,10 +260,10 @@ namespace Akka.Streams.Implementation
         public override ILoggingAdapter Logger => _logger ??= GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Returns a materializer copy whose generated flow names use the supplied prefix.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The prefix applied to names generated for materialized flows.</param>
+        /// <returns>A materializer sharing this materializer's shutdown state and settings with the requested name prefix.</returns>
         public override IMaterializer WithNamePrefix(string name)
             => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
 
@@ -275,10 +275,10 @@ namespace Akka.Streams.Implementation
                 .And(ActorAttributes.CreateSupervisionStrategy(_settings.SupervisionDecider));
 
         /// <summary>
-        /// TBD
+        /// Applies supported stream attributes to the materializer's default settings.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The effective attributes to apply.</param>
+        /// <returns>Settings with input-buffer, dispatcher, and supervision values overridden by matching attributes.</returns>
         public override ActorMaterializerSettings EffectiveSettings(Attributes attributes)
         {
             return attributes.AttributeList.Aggregate(Settings, (settings, attribute) =>
@@ -294,62 +294,62 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules an action once using the actor system scheduler.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="delay">The time to wait before running the action.</param>
+        /// <param name="action">The action to run.</param>
+        /// <returns>A handle that can cancel the scheduled action.</returns>
         public override ICancelable ScheduleOnce(TimeSpan delay, Action action)
             => _system.Scheduler.Advanced.ScheduleOnceCancelable(delay, action);
 
         /// <summary>
-        /// TBD
+        /// Schedules an action repeatedly using the actor system scheduler.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="initialDelay">The delay before the first execution.</param>
+        /// <param name="interval">The interval between executions.</param>
+        /// <param name="action">The action to run at each interval.</param>
+        /// <returns>A handle that can cancel the repeated schedule.</returns>
         public override ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
             => _system.Scheduler.Advanced.ScheduleRepeatedlyCancelable(initialDelay, interval, action);
 
         /// <summary>
-        /// TBD
+        /// Materializes a closed graph with the materializer's default initial attributes.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <returns>The graph's materialized value.</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable) => Materialize(runnable, null,
             DefaultInitialAttributes);
 
         /// <summary>
-        /// TBD
+        /// Materializes a closed graph using an optional actor factory for eligible subflow shells and default attributes.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="subFlowFuser">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="subFlowFuser">Creates an actor for eligible subflow shells when no async boundary is present.</param>
+        /// <returns>The graph's materialized value.</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser) 
             => Materialize(runnable, subFlowFuser, DefaultInitialAttributes);
 
         /// <summary>
-        /// TBD
+        /// Materializes a closed graph with the supplied initial attributes and no subflow actor factory.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="initialAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="initialAttributes">The attributes inherited by the graph.</param>
+        /// <returns>The graph's materialized value.</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
             Materialize(runnable, null, initialAttributes);
         
         /// <summary>
-        /// TBD
+        /// Applies configured auto-fusing when enabled, then materializes the graph with the requested initial attributes.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="subFlowFuser">TBD</param>
-        /// <param name="initialAttributes">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="subFlowFuser">Creates actors for eligible subflow shells.</param>
+        /// <param name="initialAttributes">The attributes inherited by the graph.</param>
+        /// <exception cref="IllegalStateException">The materializer has already been shut down.</exception>
+        /// <returns>The graph's materialized value.</returns>
         public override TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Func<GraphInterpreterShell, IActorRef> subFlowFuser, Attributes initialAttributes)
         {
             var runnableGraph = _settings.IsAutoFusing
@@ -392,14 +392,14 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the dispatcher used as the materializer's execution context.
         /// </summary>
         public override MessageDispatcher ExecutionContext => _executionContext.Value;
 
         private readonly Lazy<MessageDispatcher> _executionContext;
 
         /// <summary>
-        /// TBD
+        /// Marks this materializer shut down and sends a stop message to its supervisor once.
         /// </summary>
         public override void Shutdown()
         {
@@ -411,7 +411,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Materializer facade used to materialize subflows into a registered interpreter shell.
     /// </summary>
     public class SubFusingActorMaterializerImpl : IMaterializer
     {
@@ -419,10 +419,10 @@ namespace Akka.Streams.Implementation
         private readonly Func<GraphInterpreterShell, IActorRef> _registerShell;
 
         /// <summary>
-        /// TBD
+        /// Creates a subflow materializer that delegates graph operations and registers fused shells.
         /// </summary>
-        /// <param name="delegateMaterializer">TBD</param>
-        /// <param name="registerShell">TBD</param>
+        /// <param name="delegateMaterializer">The actor materializer that performs graph materialization.</param>
+        /// <param name="registerShell">Creates or registers an actor for each eligible graph interpreter shell.</param>
         public SubFusingActorMaterializerImpl(ExtendedActorMaterializer delegateMaterializer, Func<GraphInterpreterShell, IActorRef> registerShell)
         {
             _delegateMaterializer = delegateMaterializer;
@@ -430,110 +430,110 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a subflow materializer whose generated flow names use the supplied prefix.
         /// </summary>
-        /// <param name="namePrefix">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="namePrefix">The prefix applied to generated flow names.</param>
+        /// <returns>A subflow materializer that retains the shell registration callback.</returns>
         public IMaterializer WithNamePrefix(string namePrefix)
             => new SubFusingActorMaterializerImpl((ActorMaterializerImpl) _delegateMaterializer.WithNamePrefix(namePrefix), _registerShell);
 
         /// <summary>
-        /// TBD
+        /// Materializes the graph and passes the shell-registration callback to the delegated materializer. The callback is used for graph shells without an effective async boundary.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <returns>The graph's materialized value.</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable)
             => _delegateMaterializer.Materialize(runnable, _registerShell);
 
         /// <summary>
-        /// TBD
+        /// Materializes the graph with the supplied initial attributes and passes the shell-registration callback to the delegated materializer. The callback is used for graph shells without an effective async boundary.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="runnable">TBD</param>
-        /// <param name="initialAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The materialized value type of the graph.</typeparam>
+        /// <param name="runnable">The closed graph to materialize.</param>
+        /// <param name="initialAttributes">The attributes inherited by the graph.</param>
+        /// <returns>The graph's materialized value.</returns>
         public TMat Materialize<TMat>(IGraph<ClosedShape, TMat> runnable, Attributes initialAttributes) =>
             _delegateMaterializer.Materialize(runnable, _registerShell, initialAttributes);
 
         /// <summary>
-        /// TBD
+        /// Schedules an action once through the delegated materializer.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="delay">The time to wait before running the action.</param>
+        /// <param name="action">The action to run.</param>
+        /// <returns>A handle that can cancel the scheduled action.</returns>
         public ICancelable ScheduleOnce(TimeSpan delay, Action action)
             => _delegateMaterializer.ScheduleOnce(delay, action);
 
         /// <summary>
-        /// TBD
+        /// Schedules an action repeatedly through the delegated materializer.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="initialDelay">The delay before the first execution.</param>
+        /// <param name="interval">The interval between executions.</param>
+        /// <param name="action">The action to run at each interval.</param>
+        /// <returns>A handle that can cancel the repeated schedule.</returns>
         public ICancelable ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action)
             => _delegateMaterializer.ScheduleRepeatedly(initialDelay, interval, action);
 
         /// <summary>
-        /// TBD
+        /// Gets the execution context provided by the delegated materializer.
         /// </summary>
         public MessageDispatcher ExecutionContext => _delegateMaterializer.ExecutionContext;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor-system extension that exposes an atomic counter.
     /// </summary>
     public class FlowNameCounter : ExtensionIdProvider<FlowNameCounter>, IExtension
     {
         /// <summary>
-        /// TBD
+        /// Gets or creates this extension for the actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the extension.</param>
+        /// <returns>The actor system's counter extension.</returns>
         public static FlowNameCounter Instance(ActorSystem system)
             => system.WithExtension<FlowNameCounter, FlowNameCounter>();
 
         /// <summary>
-        /// TBD
+        /// Gets the counter exposed by this extension.
         /// </summary>
         public readonly AtomicCounterLong Counter = new(0);
 
         /// <summary>
-        /// TBD
+        /// Creates a new flow-name counter extension instance.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system receiving the extension.</param>
+        /// <returns>A new counter extension for that system.</returns>
         public override FlowNameCounter CreateExtension(ExtendedActorSystem system) => new();
     }
 
     /// <summary>
-    /// TBD
+    /// Supervises materialized stream actors and provides child-management operations.
     /// </summary>
     public class StreamSupervisor : ActorBase
     {
         #region Messages
 
         /// <summary>
-        /// TBD
+        /// Requests the supervisor to create a child actor with the specified properties and name.
         /// </summary>
         public sealed class Materialize : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the properties used to create the child actor.
             /// </summary>
             public readonly Props Props;
 
             /// <summary>
-            /// TBD
+            /// Gets the requested child actor name.
             /// </summary>
             public readonly string Name;
 
             /// <summary>
-            /// TBD
+            /// Creates a child-materialization request.
             /// </summary>
-            /// <param name="props">TBD</param>
-            /// <param name="name">TBD</param>
+            /// <param name="props">The properties for the child actor.</param>
+            /// <param name="name">The child actor name.</param>
             public Materialize(Props props, string name)
             {
                 Props = props;
@@ -541,62 +541,62 @@ namespace Akka.Streams.Implementation
             }
         }
         /// <summary>
-        /// TBD
+        /// Requests the current set of child actor references.
         /// </summary>
         public sealed class GetChildren
         {
             /// <summary>
-            /// TBD
+            /// Gets the shared child-query message.
             /// </summary>
             public static readonly GetChildren Instance = new();
             private GetChildren() { }
         }
         /// <summary>
-        /// TBD
+        /// Requests the supervisor to stop all current children.
         /// </summary>
         public sealed class StopChildren
         {
             /// <summary>
-            /// TBD
+            /// Gets the shared stop-children message.
             /// </summary>
             public static readonly StopChildren Instance = new();
             private StopChildren() { }
         }
         /// <summary>
-        /// TBD
+        /// Acknowledges that stop requests have been sent to the supervisor's children.
         /// </summary>
         public sealed class StoppedChildren
         {
             /// <summary>
-            /// TBD
+            /// Gets the shared stop-request acknowledgement.
             /// </summary>
             public static readonly StoppedChildren Instance = new();
             private StoppedChildren() { }
         }
         /// <summary>
-        /// TBD
+        /// Requests a debug dump from a graph interpreter actor.
         /// </summary>
         public sealed class PrintDebugDump
         {
             /// <summary>
-            /// TBD
+            /// Gets the shared debug-dump request.
             /// </summary>
             public static readonly PrintDebugDump Instance = new();
             private PrintDebugDump() { }
         }
         /// <summary>
-        /// TBD
+        /// Carries a snapshot of the supervisor's child actor references.
         /// </summary>
         public sealed class Children
         {
             /// <summary>
-            /// TBD
+            /// Gets the set of child actor references captured by the query.
             /// </summary>
             public readonly IImmutableSet<IActorRef> Refs;
             /// <summary>
-            /// TBD
+            /// Creates a child-reference snapshot.
             /// </summary>
-            /// <param name="refs">TBD</param>
+            /// <param name="refs">The child actor references returned by the supervisor.</param>
             public Children(IImmutableSet<IActorRef> refs)
             {
                 Refs = refs;
@@ -606,36 +606,36 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Creates local actor properties for the stream supervisor.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="haveShutdown">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="settings">The materializer settings stored on the supervisor.</param>
+        /// <param name="haveShutdown">The shutdown flag updated when the supervisor stops.</param>
+        /// <returns>Local actor properties for creating the supervisor.</returns>
         public static Props Props(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
             => Actor.Props.Create<StreamSupervisor>(settings, haveShutdown).WithDeploy(Deploy.Local);
 
         /// <summary>
-        /// TBD
+        /// Generates the next stream-supervisor actor name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A unique name from the supervisor name sequence.</returns>
         public static string NextName() => ActorName.Next();
 
         private static readonly EnumerableActorName ActorName = new EnumerableActorNameImpl("StreamSupervisor", new AtomicCounterLong(0L));
 
         /// <summary>
-        /// TBD
+        /// Gets the materializer settings stored by this supervisor.
         /// </summary>
         public readonly ActorMaterializerSettings Settings;
         /// <summary>
-        /// TBD
+        /// Gets the shared materializer shutdown flag.
         /// </summary>
         public readonly AtomicBoolean HaveShutdown;
 
         /// <summary>
-        /// TBD
+        /// Creates a stream supervisor with the supplied settings and shutdown state.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="haveShutdown">TBD</param>
+        /// <param name="settings">The settings stored by this supervisor.</param>
+        /// <param name="haveShutdown">The shared flag set when this supervisor stops.</param>
         /// If this changes you must also change StreamSupervisor.Props as well!
         public StreamSupervisor(ActorMaterializerSettings settings, AtomicBoolean haveShutdown)
         {
@@ -644,16 +644,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Stops child actors when they fail rather than restarting them.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The stopping supervision strategy.</returns>
         protected override SupervisorStrategy SupervisorStrategy() => Actor.SupervisorStrategy.StoppingStrategy;
 
         /// <summary>
-        /// TBD
+        /// Creates requested actors, reports children, and stops current children.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The supervisor command to handle.</param>
+        /// <returns><see langword="true"/> for a recognized command; otherwise <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             if (message is Materialize materialize)
@@ -675,7 +675,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Marks the shared shutdown flag when the supervisor stops.
         /// </summary>
         protected override void PostStop() => HaveShutdown.Value = true;
     }

@@ -22,14 +22,14 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class OutputStreamSubscriber : ActorSubscriber
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a subscriber that writes byte sequences to a stream.
         /// </summary>
-        /// <param name="os">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="autoFlush">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="os">The output stream to write.</param>
+        /// <param name="completionPromise">The promise completed with the write result.</param>
+        /// <param name="bufferSize">The request-strategy high watermark.</param>
+        /// <param name="autoFlush">Whether to flush the stream after each element.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="bufferSize"/> is not positive.</exception>
+        /// <returns>Local actor properties for the output-stream subscriber.</returns>
         public static Props Props(Stream os, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
             if (bufferSize <= 0)
@@ -47,12 +47,12 @@ namespace Akka.Streams.Implementation.IO
         private readonly ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Creates a subscriber actor that writes byte sequences to a stream.
         /// </summary>
-        /// <param name="outputStream">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="autoFlush">TBD</param>
+        /// <param name="outputStream">The output stream to write.</param>
+        /// <param name="completionPromise">The promise completed with the write result.</param>
+        /// <param name="bufferSize">The request-strategy high watermark.</param>
+        /// <param name="autoFlush">Whether to flush the stream after each element.</param>
         /// If this gets changed you must change <see cref="OutputStreamSubscriber.Props"/> as well!
         public OutputStreamSubscriber(Stream outputStream, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
@@ -64,15 +64,15 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Requests elements according to the configured buffer-size high watermark.
         /// </summary>
         public override IRequestStrategy RequestStrategy { get; }
 
         /// <summary>
-        /// TBD
+        /// Writes elements and handles upstream termination.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> when the message is handled; otherwise, <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
@@ -108,7 +108,7 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Disposes the stream and completes the write-result promise if it has not already completed.
         /// </summary>
         protected override void PostStop()
         {
