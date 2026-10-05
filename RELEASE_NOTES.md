@@ -1,3 +1,7 @@
+#### 1.5.73 (unreleased) ####
+
+* Restore the Microsoft.Extensions minimums from before 1.5.72: 6.0 for `Akka` and `Akka.DependencyInjection`, and 9.0 for `Akka.Hosting.*`. The ranges still allow newer versions. Hosting permits OpenTelemetry SDK 1.12.0 or later while explicitly requiring `OpenTelemetry.Api` 1.15.3 or later, preserving the fix for [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j) without forcing Microsoft.Extensions 10.
+
 #### 1.5.72 October 3rd, 2026 ####
 
 Akka.NET v1.5.72 backports a non-blocking Cluster extension startup, test-infrastructure hardening, a Cluster.Sharding hand-over fix, and a batch of de-flaked specs from `dev`.
