@@ -14,10 +14,10 @@ namespace Akka.DistributedData
     /// <summary>
     /// Delegate responsible for managing <see cref="LWWRegister{T}"/> clock.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Type of values passed to the clock.</typeparam>
     /// <param name="currentTimestamp">The current timestamp value of the <see cref="LWWRegister{T}"/>.</param>
     /// <param name="value">The register value to set and associate with the returned timestamp.</param>
-    /// <returns>Next timestamp</returns>
+    /// <returns>The timestamp to associate with the supplied value.</returns>
     public delegate long Clock<in T>(long currentTimestamp, T value);
 
     /// <summary>
@@ -33,14 +33,12 @@ namespace Akka.DistributedData
     /// <summary>
     /// Key types for <see cref="LWWRegister{T}"/>
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Type of value stored in the register.</typeparam>
     [Serializable]
     public sealed class LWWRegisterKey<T> : Key<LWWRegister<T>>, ILWWRegisterKey
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="id">TBD</param>
+        /// <summary>Creates a typed key for an LWW register.</summary>
+        /// <param name="id">Identifier of the replicated-data key.</param>
         public LWWRegisterKey(string id) : base(id)
         {
         }
@@ -68,7 +66,7 @@ namespace Akka.DistributedData
     /// relies on synchronized clocks. <see cref="LWWRegister{T}"/> should only be used when the choice of
     /// value is not important for concurrent updates occurring within the clock skew.
     /// 
-    /// Merge takes the register updated by the node with lowest address (<see cref="UniqueAddress"/> is ordered)
+    /// Merge takes the register updated by the node with the lower unique address UID
     /// if the timestamps are exactly the same.
     /// 
     /// Instead of using timestamps based on `DateTime.UtcNow` time it is possible to
@@ -80,7 +78,7 @@ namespace Akka.DistributedData
     /// 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Type of value stored in the register.</typeparam>
     [Serializable]
     public sealed class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>, ILWWRegister
     {
@@ -97,11 +95,9 @@ namespace Akka.DistributedData
         public static readonly Clock<T> ReverseClock =
             (timestamp, _) => Math.Min(-DateTime.UtcNow.Ticks, timestamp - 1);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="initial">TBD</param>
+        /// <summary>Creates a register with an initial value and the default clock.</summary>
+        /// <param name="node">Address of the node recorded as the updater.</param>
+        /// <param name="initial">Initial register value.</param>
         public LWWRegister(UniqueAddress node, T initial)
         {
             UpdatedBy = node;
@@ -109,12 +105,10 @@ namespace Akka.DistributedData
             Timestamp = DefaultClock(0L, initial);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="value">TBD</param>
-        /// <param name="timestamp">TBD</param>
+        /// <summary>Creates a register with an explicit timestamp.</summary>
+        /// <param name="node">Address of the node recorded as the updater.</param>
+        /// <param name="value">Register value.</param>
+        /// <param name="timestamp">Timestamp used to compare this register with other updates.</param>
         public LWWRegister(UniqueAddress node, T value, long timestamp)
         {
             UpdatedBy = node;
@@ -122,12 +116,10 @@ namespace Akka.DistributedData
             Timestamp = timestamp;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="initial">TBD</param>
-        /// <param name="clock">TBD</param>
+        /// <summary>Creates a register whose initial timestamp is supplied by a clock.</summary>
+        /// <param name="node">Address of the node recorded as the updater.</param>
+        /// <param name="initial">Initial register value.</param>
+        /// <param name="clock">Clock used to compute the initial timestamp from zero and the initial value.</param>
         public LWWRegister(UniqueAddress node, T initial, Clock<T> clock)
         {
             UpdatedBy = node;
@@ -158,21 +150,19 @@ namespace Akka.DistributedData
         /// increasing version number from a database record that is used for optimistic
         /// concurrency control.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="value">TBD</param>
-        /// <param name="clock">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">Address of the node recorded as the updater.</param>
+        /// <param name="value">New register value.</param>
+        /// <param name="clock">Clock used to compute the new timestamp; when omitted, <see cref="DefaultClock"/> is used.</param>
+        /// <returns>A new register containing the value and timestamp produced by the selected clock.</returns>
         public LWWRegister<T> WithValue(UniqueAddress node, T value, Clock<T> clock = null)
         {
             var c = clock ?? DefaultClock;
             return new LWWRegister<T>(node, value, c(Timestamp, value));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <summary>Merges another register using timestamp and node identifier ordering.</summary>
+        /// <param name="other">Register to merge with this instance.</param>
+        /// <returns>The register with the greater timestamp, or the one with the lower node identifier when timestamps are equal. This instance is retained when both identifiers are equal.</returns>
         public LWWRegister<T> Merge(LWWRegister<T> other)
         {
             if (other.Timestamp > Timestamp) return other;
@@ -181,11 +171,9 @@ namespace Akka.DistributedData
             return this;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <summary>Merges replicated data after casting it to this register's type.</summary>
+        /// <param name="other">Replicated data containing an <see cref="LWWRegister{T}"/>.</param>
+        /// <returns>The merged register.</returns>
         public IReplicatedData Merge(IReplicatedData other) => Merge((LWWRegister<T>)other);
 
         

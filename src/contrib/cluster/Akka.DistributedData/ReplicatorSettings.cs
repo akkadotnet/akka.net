@@ -20,8 +20,8 @@ namespace Akka.DistributedData
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.distributed-data`.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system whose <c>akka.cluster.distributed-data</c> configuration is read.</param>
+        /// <returns>Settings populated from the actor system configuration.</returns>
         public static ReplicatorSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.distributed-data");
@@ -35,9 +35,10 @@ namespace Akka.DistributedData
         /// Create settings from a configuration with the same layout as
         /// the default configuration `akka.cluster.distributed-data`.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentNullException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="config">A configuration object with the layout of <c>akka.cluster.distributed-data</c>.</param>
+        /// <exception cref="ConfigurationException">The supplied configuration is null or empty.</exception>
+        /// <exception cref="ArgumentException">Durable keys are configured without a store actor class, or the configured store actor class cannot be resolved.</exception>
+        /// <returns>Replicator settings populated from <paramref name="config"/>.</returns>
         public static ReplicatorSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())

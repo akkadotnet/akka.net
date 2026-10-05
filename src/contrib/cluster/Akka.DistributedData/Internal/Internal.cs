@@ -18,20 +18,20 @@ using Google.Protobuf;
 namespace Akka.DistributedData.Internal
 {
     /// <summary>
-    /// TBD
+    /// Scheduled signal that asks the replicator to exchange gossip.
     /// </summary>
     [Serializable]
     internal sealed class GossipTick
     {
         /// <summary>
-        /// TBD
+        /// Singleton signal instance.
         /// </summary>
         internal static readonly GossipTick Instance = new();
         private GossipTick() { }
         /// <summary>
-        /// TBD
+        /// Returns the signal name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>GossipTick</c>.</returns>
         public override string ToString() => "GossipTick";
     }
 
@@ -50,38 +50,38 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Scheduled signal that asks the replicator to prune state for removed nodes.
     /// </summary>
     [Serializable]
     internal class RemovedNodePruningTick
     {
         /// <summary>
-        /// TBD
+        /// Singleton signal instance.
         /// </summary>
         internal static readonly RemovedNodePruningTick Instance = new();
         private RemovedNodePruningTick() { }
         /// <summary>
-        /// TBD
+        /// Returns the signal name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>RemovedNodePruningTick</c>.</returns>
         public override string ToString() => "RemovedNodePruningTick";
     }
 
     /// <summary>
-    /// TBD
+    /// Scheduled signal that asks the replicator to update its local version clock.
     /// </summary>
     [Serializable]
     internal class ClockTick
     {
         /// <summary>
-        /// TBD
+        /// Singleton signal instance.
         /// </summary>
         internal static readonly ClockTick Instance = new();
         private ClockTick() { }
         /// <summary>
-        /// TBD
+        /// Returns the signal name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>ClockTick</c>.</returns>
         public override string ToString() => "ClockTick";
     }
 
@@ -96,30 +96,29 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Internal message carrying a replicated-data write to another replicator.
     /// </summary>
     [Serializable]
     internal sealed class Write : IReplicatorMessage, IEquatable<Write>, ISendingSystemUid
     {
         /// <summary>
-        /// TBD
+        /// Identifier of the replicated-data key being written.
         /// </summary>
         public string Key { get; }
         /// <summary>
-        /// TBD
+        /// Replicated data and pruning metadata sent with the write.
         /// </summary>
         public DataEnvelope Envelope { get; }
         /// <summary>
-        /// TBD
+        /// Address of the node that originated the write, when known.
         /// </summary>
         public UniqueAddress FromNode { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a write message.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="envelope">TBD</param>
-        /// <param name="fromNode">TBD</param>
+        /// <param name="key">Identifier of the replicated-data key.</param>
+        /// <param name="envelope">Data and pruning state to write.</param>
+        /// <param name="fromNode">Originating node address, or <see langword="null"/> when not supplied.</param>
         public Write(string key, DataEnvelope envelope, UniqueAddress fromNode = null)
         {
             Key = key;
@@ -153,13 +152,13 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Internal acknowledgment that a remote replicator accepted a write.
     /// </summary>
     [Serializable]
     internal sealed class WriteAck : IReplicatorMessage, IEquatable<WriteAck>
     {
         /// <summary>
-        /// TBD
+        /// Singleton acknowledgment instance.
         /// </summary>
         internal static readonly WriteAck Instance = new();
 
@@ -176,62 +175,60 @@ namespace Akka.DistributedData.Internal
 
 
     /// <summary>
-    /// TBD
+    /// Internal negative acknowledgment that a remote replicator did not accept a write.
     /// </summary>
     [Serializable]
     internal sealed class WriteNack : IReplicatorMessage, IEquatable<WriteNack>
     {
         /// <summary>
-        /// TBD
+        /// Singleton negative-acknowledgment instance.
         /// </summary>
         internal static readonly WriteNack Instance = new();
 
         private WriteNack() { }
         /// <summary>
-        /// TBD
+        /// Compares two write negative acknowledgments.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">Acknowledgment to compare; all instances of this message type are equal.</param>
+        /// <returns><see langword="true"/>.</returns>
         public bool Equals(WriteNack other) => true;
         /// <summary>
-        /// TBD
+        /// Compares this acknowledgment with another object.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">Object to compare.</param>
+        /// <returns><see langword="true"/> when <paramref name="obj"/> is a <see cref="WriteNack"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj) => obj is WriteNack;
         /// <summary>
-        /// TBD
+        /// Returns the hash code for this acknowledgment.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A constant hash code shared by all instances.</returns>
         public override int GetHashCode() => 1;
         /// <summary>
-        /// TBD
+        /// Returns the message name.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>WriteNack</c>.</returns>
         public override string ToString() => "WriteNack";
     }
 
     /// <summary>
-    /// TBD
+    /// Internal request for a replicator to return the current value for a key.
     /// </summary>
     [Serializable]
     internal sealed class Read : IReplicatorMessage, IEquatable<Read>, ISendingSystemUid
     {
         /// <summary>
-        /// TBD
+        /// Identifier of the replicated-data key being read.
         /// </summary>
         public string Key { get; }
-
         /// <summary>
-        /// TBD
+        /// Address of the node that originated the read, when known.
         /// </summary>
         public UniqueAddress FromNode { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a read request.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="fromNode">TBD</param>
+        /// <param name="key">Identifier of the replicated-data key.</param>
+        /// <param name="fromNode">Originating node address, or <see langword="null"/> when not supplied.</param>
         public Read(string key, UniqueAddress fromNode = null)
         {
             Key = key;
@@ -255,20 +252,19 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Result of a replicator read, carrying the local data envelope when the key has a local value.
     /// </summary>
     [Serializable]
     internal sealed class ReadResult : IReplicatorMessage, IEquatable<ReadResult>, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Replicated data and pruning metadata returned by the read, or <see langword="null"/> when the key has no local value.
         /// </summary>
         public DataEnvelope Envelope { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a read result.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">Data and pruning state for the requested key, or <see langword="null"/> when no local value exists.</param>
         public ReadResult(DataEnvelope envelope)
         {
             Envelope = envelope;
@@ -294,25 +290,24 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Internal message asking a replicator to merge a value observed during a read.
     /// </summary>
     [Serializable]
     internal sealed class ReadRepair : IEquatable<ReadRepair>
     {
         /// <summary>
-        /// TBD
+        /// Identifier of the replicated-data key to repair.
         /// </summary>
         public string Key { get; }
         /// <summary>
-        /// TBD
+        /// Observed replicated data and pruning state to merge.
         /// </summary>
         public DataEnvelope Envelope { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a read-repair message.
         /// </summary>
-        /// <param name="key">TBD</param>
-        /// <param name="envelope">TBD</param>
+        /// <param name="key">Identifier of the replicated-data key to repair.</param>
+        /// <param name="envelope">Observed data and pruning state to merge.</param>
         public ReadRepair(string key, DataEnvelope envelope)
         {
             Key = key;
@@ -345,13 +340,13 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Internal acknowledgment sent after processing a read repair.
     /// </summary>
     [Serializable]
     internal sealed class ReadRepairAck
     {
         /// <summary>
-        /// TBD
+        /// Singleton acknowledgment instance.
         /// </summary>
         public static readonly ReadRepairAck Instance = new();
 
@@ -362,33 +357,31 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Replicated value together with pruning metadata and delta-version tracking.
     /// </summary>
     [Serializable]
     public sealed class DataEnvelope : IEquatable<DataEnvelope>, IReplicatorMessage
     {
         /// <summary>
-        /// TBD
+        /// Gets a tombstone envelope representing deleted data.
         /// </summary>
         public static DataEnvelope DeletedEnvelope => new(DeletedData.Instance);
-
         /// <summary>
-        /// TBD
+        /// Replicated data carried by this envelope.
         /// </summary>
         public IReplicatedData Data { get; }
         /// <summary>
-        /// TBD
+        /// Pruning state tracked for removed node addresses.
         /// </summary>
         public ImmutableDictionary<UniqueAddress, IPruningState> Pruning { get; }
 
         public VersionVector DeltaVersions { get; }
-
         /// <summary>
-        /// The <see cref="DataEnvelope"/> wraps a data entry and carries state of the pruning process for the entry.
+        /// Creates an envelope around replicated data.
         /// </summary>
-        /// <param name="data">TBD</param>
-        /// <param name="pruning">TBD</param>
-        /// <param name="deltaVersions"></param>
+        /// <param name="data">The replicated data value.</param>
+        /// <param name="pruning">Pruning state by removed node, or <see langword="null"/> for an empty map.</param>
+        /// <param name="deltaVersions">Per-node delta version tracking, or <see langword="null"/> for an empty version vector.</param>
         internal DataEnvelope(IReplicatedData data, ImmutableDictionary<UniqueAddress, IPruningState> pruning = null, VersionVector deltaVersions = null)
         {
             Data = data;
@@ -406,41 +399,36 @@ namespace Akka.DistributedData.Internal
             DeltaVersions.IsEmpty
                 ? this
                 : new DataEnvelope(Data, Pruning);
-
         /// <summary>
-        /// We only use the deltaVersions to track versions per node, not for ordering comparisons,
-        /// so we can just remove the entry for the removed node.
+        /// Removes the delta-version entry for a removed node.
         /// </summary>
-        /// <param name="from"></param>
-        /// <returns></returns>
+        /// <param name="from">Address of the removed node.</param>
+        /// <returns>A version vector without that node entry.</returns>
         private VersionVector CleanedDeltaVersions(UniqueAddress from) => DeltaVersions.PruningCleanup(from);
-
         /// <summary>
-        /// TBD
+        /// Checks whether the contained data requires pruning for a removed node.
         /// </summary>
-        /// <param name="removedNode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">Address of the removed node.</param>
+        /// <returns><see langword="true"/> if the data implements removed-node pruning and reports work for this node.</returns>
         internal bool NeedPruningFrom(UniqueAddress removedNode)
         {
             return Data is IRemovedNodePruning r && r.NeedPruningFrom(removedNode);
         }
-
         /// <summary>
-        /// TBD
+        /// Records that pruning has started for a removed node.
         /// </summary>
-        /// <param name="removed">TBD</param>
-        /// <param name="owner">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removed">Address of the removed node.</param>
+        /// <param name="owner">Address whose state will absorb the removed node state.</param>
+        /// <returns>A new envelope with initialized pruning state for the removed node.</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
             new(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
-
         /// <summary>
-        /// TBD
+        /// Applies pruning for a removed node when its pruning state is initialized.
         /// </summary>
-        /// <param name="from">TBD</param>
-        /// <param name="pruningPerformed"></param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="from">Address of the removed node.</param>
+        /// <param name="pruningPerformed">Pruning state to store after pruning.</param>
+        /// <exception cref="ArgumentException">No pruning entry exists for <paramref name="from"/> when the data supports removed-node pruning.</exception>
+        /// <returns>A new pruned envelope when initialized pruning is applied; otherwise, this instance.</returns>
         internal DataEnvelope Prune(UniqueAddress from, PruningPerformed pruningPerformed)
         {
             if (Data is IRemovedNodePruning dataWithRemovedNodePruning)
@@ -456,12 +444,11 @@ namespace Akka.DistributedData.Internal
             }
             return this;
         }
-
         /// <summary>
-        /// TBD
+        /// Merges another envelope, combining data, pruning state, and delta-version tracking.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">Envelope whose state is merged with this instance.</param>
+        /// <returns>The merged envelope, or the deleted-data tombstone if the other envelope contains deleted data.</returns>
         internal DataEnvelope Merge(DataEnvelope other)
         {
             if (other.Data is DeletedData) return DeletedEnvelope;
@@ -499,12 +486,12 @@ namespace Akka.DistributedData.Internal
                     deltaVersions: mergedDeltaVersions)
                 .Merge(other.Data);
         }
-
         /// <summary>
-        /// TBD
+        /// Merges replicated data into this envelope after applying its pruning metadata.
         /// </summary>
-        /// <param name="otherData">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="otherData">Replicated data or delta to merge.</param>
+        /// <returns>A new envelope containing the merged data and this envelope metadata, or <see cref="DeletedEnvelope"/> when <paramref name="otherData"/> is deleted data.</returns>
+        /// <exception cref="ArgumentException">The incoming value is a delta but the current data does not support delta merging.</exception>
         internal DataEnvelope Merge(IReplicatedData otherData)
         {
             if (otherData is DeletedData) return DeletedEnvelope;
@@ -532,12 +519,11 @@ namespace Akka.DistributedData.Internal
                 return pruning.PruningCleanup(kvp.Key);
             return acc;
         });
-
         /// <summary>
-        /// TBD
+        /// Adds a node address to initialized pruning states that do not belong to that address and have not already recorded it.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">Address observed by the pruning process.</param>
+        /// <returns>A new envelope if any pruning state changes; otherwise, this instance.</returns>
         internal DataEnvelope AddSeen(Address node)
         {
             var changed = false;
@@ -550,12 +536,11 @@ namespace Akka.DistributedData.Internal
 
             return changed ? new DataEnvelope(Data, newRemovedNodePruning) : this;
         }
-
         /// <summary>
-        /// TBD
+        /// Compares the data, pruning states, and delta versions in two envelopes.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">Envelope to compare with this instance.</param>
+        /// <returns><see langword="true"/> if all compared state is equal; otherwise, <see langword="false"/>.</returns>
         public bool Equals(DataEnvelope other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -580,18 +565,16 @@ namespace Akka.DistributedData.Internal
 
             return true;
         }
-
         /// <summary>
-        /// TBD
+        /// Compares this envelope with another object.
         /// </summary>
-        /// <param name="obj">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="obj">Object to compare.</param>
+        /// <returns><see langword="true"/> if <paramref name="obj"/> is an equal <see cref="DataEnvelope"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj) => obj is DataEnvelope envelope && Equals(envelope);
-
         /// <summary>
-        /// TBD
+        /// Returns a hash code based on the data, pruning states, and delta versions.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A hash code for this envelope.</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -607,11 +590,10 @@ namespace Akka.DistributedData.Internal
                 return seed;
             }
         }
-
         /// <summary>
-        /// TBD
+        /// Formats the data and tracked pruning state for diagnostics.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string representation of this envelope.</returns>
         public override string ToString()
         {
             var sb = new StringBuilder("{");
@@ -657,40 +639,39 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Gossip status message containing key digests and chunk coordinates, with optional actor-system identifiers.
     /// </summary>
     [Serializable]
     internal sealed class Status : IReplicatorMessage, IEquatable<Status>, IDestinationSystemUid
     {
         /// <summary>
-        /// TBD
+        /// Digest values indexed by replicated-data key.
         /// </summary>
         public IImmutableDictionary<string, ByteString> Digests { get; }
         /// <summary>
-        /// TBD
+        /// Zero-based index of this status chunk.
         /// </summary>
         public int Chunk { get; }
         /// <summary>
-        /// TBD
+        /// Total number of chunks in the status exchange.
         /// </summary>
         public int TotalChunks { get; }
         /// <summary>
-        /// TBD
+        /// Destination actor-system UID, when specified.
         /// </summary>
         public long? ToSystemUid { get; }
         /// <summary>
-        /// TBD
+        /// Originating actor-system UID, when supplied.
         /// </summary>
         public long? FromSystemUid { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a status message.
         /// </summary>
-        /// <param name="digests">TBD</param>
-        /// <param name="chunk">TBD</param>
-        /// <param name="totalChunks">TBD</param>
-        /// <param name="toSystemUid">TBD</param>
-        /// <param name="fromSystemUid">TBD</param>
+        /// <param name="digests">Digest for each included key.</param>
+        /// <param name="chunk">Zero-based index of this chunk.</param>
+        /// <param name="totalChunks">Number of chunks in the exchange.</param>
+        /// <param name="toSystemUid">Destination actor-system UID, or <see langword="null"/> if not specified.</param>
+        /// <param name="fromSystemUid">Originating actor-system UID, or <see langword="null"/> if not specified.</param>
         public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid = null, long? fromSystemUid = null)
         {
             Digests = digests;
@@ -744,35 +725,34 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Gossip message carrying updated data envelopes between replicators.
     /// </summary>
     [Serializable]
     internal sealed class Gossip : IReplicatorMessage, IEquatable<Gossip>, IDestinationSystemUid
     {
         /// <summary>
-        /// TBD
+        /// Updated data envelopes indexed by replicated-data key.
         /// </summary>
         public IImmutableDictionary<string, DataEnvelope> UpdatedData { get; }
         /// <summary>
-        /// TBD
+        /// Whether the receiver should send its differing data back in a reply.
         /// </summary>
         public bool SendBack { get; }
         /// <summary>
-        /// TBD
+        /// Destination actor-system UID, when specified.
         /// </summary>
         public long? ToSystemUid { get; }
         /// <summary>
-        /// TBD
+        /// Originating actor-system UID, when supplied.
         /// </summary>
         public long? FromSystemUid { get; }
-
         /// <summary>
-        /// TBD
+        /// Creates a gossip message.
         /// </summary>
-        /// <param name="updatedData">TBD</param>
-        /// <param name="sendBack">TBD</param>
-        /// <param name="toSystemUid">TBD</param>
-        /// <param name="fromSystemUid">TBD</param>
+        /// <param name="updatedData">Data envelopes to merge, indexed by key.</param>
+        /// <param name="sendBack">Whether the receiver should reply with differing data.</param>
+        /// <param name="toSystemUid">Destination actor-system UID, or <see langword="null"/> if not specified.</param>
+        /// <param name="fromSystemUid">Originating actor-system UID, or <see langword="null"/> if not specified.</param>
         public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid = null, long? fromSystemUid = null)
         {
             UpdatedData = updatedData;
