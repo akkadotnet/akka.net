@@ -9,7 +9,7 @@ This guide documents TLS for Akka.IO TCP using the per-connection settings and p
 
 Akka.IO TLS is configured in code with an `X509Certificate2` and immutable settings objects. Akka.IO does not read a TLS schema from HOCON or use the DotNetty remoting settings described in [Network Security](security.md). Your application can load certificates from its configured source and pass the certificate object to Akka.IO.
 
-## Choose server-only TLS or mutual TLS
+## Choose Server-only TLS or Mutual TLS
 
 TLS encrypts the connection and authenticates peers according to the policies you configure. In server-only TLS, the client authenticates the server and the listener accepts clients without certificates. In mutual TLS, the client and server each present and validate a certificate.
 
@@ -23,7 +23,7 @@ For mutual TLS, use the `Mutual` factory on both sides. The client settings take
 
 The factories do not decide whether an authenticated certificate is authorized to join a cluster. Akka.IO TLS only authenticates the connection according to its configured certificate policies; applications and cluster protocols must enforce authorization separately.
 
-## Select a peer trust policy
+## Select a Peer Trust Policy
 
 `TlsPeerPolicy.SystemTrust()` uses the operating system's certificate-chain trust. It ignores only a TLS name-mismatch error; it does not check a host name by itself. For an outgoing connection, add `TlsCertificateValidation.ValidateHostname()` to check the remote server name. The connection endpoint supplies the default target host. `WithTargetHost` is an optional override for when the endpoint address differs from the DNS identity to send as SNI and validate, such as when connecting by IP address. Leave it unset when the endpoint already uses the desired DNS name. To use a private CA with system trust, install that CA in the operating system's trusted root store and use `SystemTrust()`.
 
@@ -41,7 +41,7 @@ Use `CustomTrust(callback)` when the application needs a complete trust decision
 
 [!code-csharp[TlsCustomTrust](../../../src/core/Akka.Docs.Tests/Networking/IO/TlsExamples.cs?name=tlsCustomTrust)]
 
-## Connection and certificate lifetime
+## Connection and Certificate Lifetime
 
 TLS is enabled for a command only when its `Tls` property is set. A command without TLS settings uses plaintext TCP; Akka.IO does not fall back to plaintext when a configured TLS handshake fails.
 
