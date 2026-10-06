@@ -771,7 +771,21 @@ namespace Akka.Tests.IO
                 true));
             var usages = new OidCollection { new Oid(server ? "1.3.6.1.5.5.7.3.1" : "1.3.6.1.5.5.7.3.2") };
             request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(usages, true));
-            return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            using var generatedCertificate = request.CreateSelfSigned(
+                DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            // Windows Schannel needs an imported key container for generated test certificates.
+            var exportedCertificate = generatedCertificate.Export(X509ContentType.Pkcs12);
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(
+                    exportedCertificate,
+                    password: null,
+                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(exportedCertificate);
+            }
         }
     }
 }
