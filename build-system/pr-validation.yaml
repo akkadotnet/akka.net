@@ -369,6 +369,134 @@ jobs:
           contents: '*.log'
           artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
+  # .NET MAUI Native AOT canary (src/aot/Akka.Maui.AOT.App): a real MAUI app hosted with
+  # Akka.Hosting.Maui, where an actor drives updates to the screen. Its README says what it proves.
+  #
+  # Mac Catalyst on purpose. It is the only MAUI target where Native AOT is supported AND a hosted
+  # agent can run the app from a shell: the .app's executable takes an environment variable, prints to
+  # stdout and exits on its own. iOS needs a simulator, Android's Native AOT is experimental in .NET 10
+  # and needs an emulator, and MAUI on Windows does not support Native AOT yet (dotnet/maui#31227).
+  #
+  # Its own job, not more steps in AotCanary: it needs a macOS agent, Xcode and the maui-maccatalyst
+  # workload, none of which the Linux canaries need. Gating like the other canaries.
+  - job: MauiAotCanary
+    displayName: "AOT canary: .NET MAUI (Mac Catalyst)"
+    timeoutInMinutes: 60
+    pool:
+      vmImage: macos-latest
+    steps:
+      - checkout: self
+        clean: false
+        submodules: recursive
+
+      - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
+
+      # The maccatalyst workload for .NET 10 builds against the Xcode 26 SDKs. The image can have
+      # several Xcodes with an older default, so pick the newest Xcode 26 explicitly.
+      - bash: |
+          set -e
+          ls -d /Applications/Xcode*.app || true
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$xcode" ]; then
+            echo "##vso[task.logissue type=error]No Xcode 26 on this image; the .NET 10 maccatalyst workload needs it."
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+          echo "uname -m: $(uname -m)"
+        displayName: 'Select Xcode'
+
+      - bash: |
+          set -e
+          dotnet workload install maui-maccatalyst
+          dotnet workload list
+        displayName: 'Install the maui-maccatalyst workload'
+
+      - bash: |
+          rm -rf src/aot/Akka.Maui.AOT.App/bin src/aot/Akka.Maui.AOT.App/obj
+        displayName: 'Clean the MAUI canary intermediate output'
+
+      # One publish serves the run and the warning check, as in the Hosting canary. The RID follows
+      # the agent's CPU so the app can run here.
+      - bash: |
+          set -o pipefail
+          case "$(uname -m)" in
+            arm64) rid=maccatalyst-arm64 ;;
+            *) rid=maccatalyst-x64 ;;
+          esac
+          dotnet publish src/aot/Akka.Maui.AOT.App -f net10.0-maccatalyst -r "$rid" -c Release \
+            2>&1 | tee "$(Agent.TempDirectory)/maui-aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The publish of the MAUI AOT canary failed with exit code $rc."
+            exit 1
+          fi
+          app=$(find src/aot/Akka.Maui.AOT.App/bin -name 'Akka.Maui.AOT.App.app' -type d | head -1)
+          if [ -z "$app" ] || [ ! -x "$app/Contents/MacOS/Akka.Maui.AOT.App" ]; then
+            echo "##vso[task.logissue type=error]The publish did not produce Akka.Maui.AOT.App.app."
+            exit 1
+          fi
+          echo "app: $app"
+          du -sh "$app"
+          echo "##vso[task.setvariable variable=MauiCanaryApp]$app"
+        displayName: 'Publish the MAUI AOT canary'
+
+      # Same rule as the other canaries: exit 0 alone is not proof, the OK line is. The app has its own
+      # 3-minute timeout; the loop here only guards against a hang the app cannot see (no window
+      # server, a stuck launch). macOS has no coreutils `timeout`.
+      - bash: |
+          log="$(Agent.TempDirectory)/maui-aot-run.log"
+          AKKA_CANARY_SELFTEST=1 "$(MauiCanaryApp)/Contents/MacOS/Akka.Maui.AOT.App" > "$log" 2>&1 &
+          pid=$!
+          for _ in $(seq 1 300); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 "$pid" 2>/dev/null; then
+            kill -9 "$pid"
+            cat "$log"
+            echo "##vso[task.logissue type=error]The MAUI AOT canary did not exit within 300s."
+            exit 1
+          fi
+          wait "$pid"
+          rc=$?
+          cat "$log"
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The MAUI AOT canary exited with code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary-maui] OK' "$log"; then
+            echo "##vso[task.logissue type=error]The MAUI AOT canary exited 0 but never printed '[canary-maui] OK'."
+            exit 1
+          fi
+          echo "MAUI AOT canary: exit code 0 and '[canary-maui] OK' on stdout."
+        displayName: 'Run the MAUI AOT canary (self-test)'
+
+      # Fails on any IL2xxx/IL3xxx warning from Akka.NET code (src/core/, src/contrib/) that is not in
+      # the canary's baseline (empty: a MAUI app must get no warnings from Akka.NET). --unlocated-scope
+      # also fails on a warning from an Akka.* member that arrives without a source file, which happens
+      # when the platform build hands ILC assemblies without their PDBs.
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/maui-aot-publish.log" \
+            --baseline src/aot/Akka.Maui.AOT.App/aot-warnings.baseline.txt \
+            --scope "src/core/,src/contrib/" \
+            --unlocated-scope "Akka." \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare MAUI AOT warnings against the baseline'
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish the MAUI AOT logs'
+        condition: always()
+        inputs:
+          pathtoPublish: '$(Agent.TempDirectory)'
+          contents: 'maui-aot-*.log'
+          artifactName: 'maui_aot_canary_logs-$(Build.BuildId)'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"
