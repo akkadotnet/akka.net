@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
@@ -15,6 +16,7 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util;
 
 namespace Akka.Persistence.Journal
 {
@@ -299,42 +301,96 @@ namespace Akka.Persistence.Journal
         /// <param name="config">Configuration containing event adapter definitions and bindings.</param>
         /// <returns>Event adapters configured for the actor system.</returns>
         public static EventAdapters Create(ExtendedActorSystem system, Config config)
+            => Create(system, config, string.Empty, null);
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Same as <see cref="Create(ExtendedActorSystem, Config)"/>, but the caller names the plugin section
+        /// that <paramref name="config"/> came from so that a failure points at the setting the user has to fix,
+        /// and passes the adapters its journal registered in code. An empty path means the section is unknown,
+        /// and the setting names start at <c>event-adapters</c>.
+        /// <para>
+        /// HOCON adapters and registered ones both apply. On a name clash the registered adapter wins when reflection is
+        /// off, and HOCON wins when it is on, so that nothing changes for a running JIT app. A registered binding for an
+        /// event type replaces a HOCON binding for the same type.
+        /// </para>
+        /// </summary>
+        internal static EventAdapters Create(ExtendedActorSystem system, Config config, string pluginPath, IReadOnlyCollection<EventAdapterDetails>? registered)
         {
             var adapters = ConfigToMap(config, "event-adapters");
             var adapterBindings = ConfigToListMap(config, "event-adapter-bindings");
+            registered ??= Array.Empty<EventAdapterDetails>();
 
-            return Create(system, adapters, adapterBindings);
-        }
+            // With reflection on, an adapter that HOCON also names is built from HOCON as it always was, and a registration
+            // only adds the adapters HOCON does not name. With reflection off the registrations stand in for HOCON.
+            if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                registered = registered.Where(r => !adapters.ContainsKey(r.Name)).ToList();
 
-        private static EventAdapters Create(ExtendedActorSystem system, IDictionary<string, string> adapters, IDictionary<string, string[]> adapterBindings)
-        {
             var adapterNames = new HashSet<string>(adapters.Keys);
+            adapterNames.UnionWith(registered.Select(r => r.Name));
             foreach (var kv in adapterBindings)
             {
                 foreach (var boundAdapter in kv.Value)
                 {
                     if (!adapterNames.Contains(boundAdapter))
                         throw new ArgumentException(string.Format("{0} was bound to undefined event-adapter: {1} (bindings: [{2}], known adapters: [{3}])",
-                            kv.Key, boundAdapter, string.Join(", ", kv.Value), string.Join(", ", adapters.Keys)));
+                            kv.Key, boundAdapter, string.Join(", ", kv.Value), string.Join(", ", adapterNames)));
                 }
             }
 
             // A Map of handler from alias to implementation (i.e. class implementing Akka.Serialization.ISerializer)
             // For example this defines a handler named 'country': `"country" -> com.example.comain.CountryTagsAdapter`
-            var handlers = adapters.ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Value, system));
+            var registeredNames = new HashSet<string>(registered.Select(r => r.Name));
+            var handlers = adapters
+                .Where(kv => !registeredNames.Contains(kv.Key))
+                .ToDictionary(kv => kv.Key, kv => InstantiateAdapter(kv.Key, kv.Value, system, pluginPath));
+            foreach (var details in registered)
+                handlers[details.Name] = details.CreateAdapter(system);
+
+            // The event types registered adapters are bound to. Two adapters on one type combine, as in HOCON.
+            var registeredBindings = new Dictionary<Type, List<IEventAdapter>>();
+            foreach (var details in registered)
+            {
+                foreach (var type in details.BoundTypes)
+                {
+                    if (!registeredBindings.TryGetValue(type, out var list))
+                        registeredBindings[type] = list = new List<IEventAdapter>();
+                    list.Add(handlers[details.Name]);
+                }
+            }
 
             // bindings is a enumerable of key-val representing the mapping from Type to handler.
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
-            var bindings = Sort(adapterBindings.Select(kv =>
+            var pairs = adapterBindings.Select(kv =>
             {
-                var type = Type.GetType(kv.Key)
-                    ?? throw new ConfigurationException(
-                        $"Could not resolve event adapter binding type [{kv.Key}]. Ensure the type name is fully qualified.");
+                // a registered binding never reaches here, it comes from an EventAdapterDetails
+                if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                {
+                    // The binding Akka.Persistence.Hosting writes next to its registrations: every adapter it names is
+                    // registered, and a registered adapter is bound to the type it names, so there is nothing to resolve.
+                    // A hand-written binding of any other type is not in the registrations, so it fails with the rest.
+                    if (kv.Value.All(registeredNames.Contains) && IsBoundByRegistration(kv.Key, registered))
+                        return (KeyValuePair<Type, IEventAdapter>?)null;
+
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{SettingPrefix(pluginPath)}event-adapter-bindings",
+                        kv.Key,
+                        "an event type bound through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)"));
+                }
+
+                var type = ResolveBindingTypeByReflection(kv.Key);
+
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
                     : CombineAdapters(kv.Value.Select(h => handlers[h]));
-                return new KeyValuePair<Type, IEventAdapter>(type, adapter);
-            }).ToList());
+                return (KeyValuePair<Type, IEventAdapter>?)new KeyValuePair<Type, IEventAdapter>(type, adapter);
+            }).Where(pair => pair.HasValue && !registeredBindings.ContainsKey(pair.Value.Key)).Select(pair => pair!.Value).ToList();
+
+            pairs.AddRange(registeredBindings.Select(kv => new KeyValuePair<Type, IEventAdapter>(
+                kv.Key, kv.Value.Count == 1 ? kv.Value[0] : CombineAdapters(kv.Value))));
+
+            var bindings = Sort(pairs);
 
             var backing = new ConcurrentDictionary<Type, IEventAdapter>();
 
@@ -421,18 +477,46 @@ namespace Akka.Persistence.Journal
             return adapter;
         }
 
-        private static IEventAdapter InstantiateAdapter(string qualifiedName, ExtendedActorSystem system)
+        // a name comparison, nothing is loaded: the binding key's type name against the full name of each registered bound type
+        private static bool IsBoundByRegistration(string bindingKey, IReadOnlyCollection<EventAdapterDetails> registered)
+            => Akka.Util.TypeExtensions.TrySplitTypeName(bindingKey, out var name, out _)
+               && registered.Any(r => r.BoundTypes.Any(t => string.Equals(t.FullName, name, StringComparison.Ordinal)));
+
+        private static string SettingPrefix(string pluginPath)
+            => string.IsNullOrEmpty(pluginPath) ? string.Empty : pluginPath + ".";
+
+        private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system, string pluginPath)
+        {
+            // a registered adapter never reaches here, it comes from an EventAdapterDetails
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    $"{SettingPrefix(pluginPath)}event-adapters.{adapterName}",
+                    qualifiedName,
+                    "an event adapter added through Akka.Persistence.Hosting (AddEventAdapter on the journal builder)"));
+
+            return InstantiateAdapterByReflection(qualifiedName, system);
+        }
+
+        [RequiresUnreferencedCode("Loads an event adapter binding type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Type ResolveBindingTypeByReflection(string typeName)
+            => Type.GetType(typeName)
+               ?? throw new ConfigurationException(
+                   $"Could not resolve event adapter binding type [{typeName}]. Ensure the type name is fully qualified.");
+
+        [RequiresUnreferencedCode("Loads an event adapter type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IEventAdapter InstantiateAdapterByReflection(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName, true);
             if (typeof(IEventAdapter).IsAssignableFrom(type))
                 return Instantiate<IEventAdapter>(qualifiedName, system);
-            if (typeof (IWriteEventAdapter).IsAssignableFrom(type))
+            if (typeof(IWriteEventAdapter).IsAssignableFrom(type))
                 return new NoopReadEventAdapter(Instantiate<IWriteEventAdapter>(qualifiedName, system));
-            if (typeof (IReadEventAdapter).IsAssignableFrom(type))
+            if (typeof(IReadEventAdapter).IsAssignableFrom(type))
                 return new NoopWriteEventAdapter(Instantiate<IReadEventAdapter>(qualifiedName, system));
             throw new ArgumentException("Configured " + qualifiedName + " does not implement any EventAdapter interface!");
         }
 
+        [RequiresUnreferencedCode("Loads an event adapter type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
             var type = Type.GetType(qualifiedName)

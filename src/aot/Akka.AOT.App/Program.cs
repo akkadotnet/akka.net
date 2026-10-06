@@ -8,6 +8,7 @@
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.AOT.App.Actors;
+using Akka.AOT.Shared;
 using Akka.Dispatch;
 using Akka.Event;
 

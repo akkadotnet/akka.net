@@ -7,6 +7,7 @@
   <Folder Name="/AOT/">
     <Project Path="src/aot/Akka.AOT.App/Akka.AOT.App.csproj" />
     <Project Path="src/aot/Akka.Hosting.AOT.App/Akka.Hosting.AOT.App.csproj" />
+    <Project Path="src/aot/Akka.Persistence.AOT.App/Akka.Persistence.AOT.App.csproj" />
   </Folder>
   <Folder Name="/Benchmark/">
     <Project Path="src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" />

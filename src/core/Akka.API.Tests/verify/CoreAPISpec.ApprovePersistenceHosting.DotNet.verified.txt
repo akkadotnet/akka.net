@@ -26,11 +26,11 @@ namespace Akka.Persistence.Hosting
         public AkkaPersistenceJournalBuilder(string journalId, Akka.Hosting.AkkaConfigurationBuilder builder) { }
         public AkkaPersistenceJournalBuilder(string journalId, Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Hosting.JournalOptions options) { }
         public Akka.Persistence.Hosting.JournalOptions? Options { get; }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IEventAdapter { }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddReadEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IReadEventAdapter { }
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
+        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder AddWriteEventAdapter<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TAdapter>(string eventAdapterName, System.Collections.Generic.IEnumerable<System.Type> boundTypes)
             where TAdapter : Akka.Persistence.Journal.IWriteEventAdapter { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithCustomHealthCheck(Akka.Hosting.AkkaHealthCheckRegistration registration) { }
         public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder WithHealthCheck(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus unHealthyStatus = 1, string? name = null, System.Collections.Generic.IEnumerable<string>? tags = null) { }
@@ -51,10 +51,6 @@ namespace Akka.Persistence.Hosting
     public abstract class JournalOptions
     {
         protected JournalOptions(bool isDefault) { }
-        [System.Obsolete("Use the configureBuilder callback parameter in WithJournal() instead. This proper" +
-            "ty will be removed in v1.6.0. See https://github.com/akkadotnet/Akka.Hosting/iss" +
-            "ues/665")]
-        public Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder Adapters { get; set; }
         public bool AutoInitialize { get; set; }
         public Akka.Configuration.Config DefaultConfig { get; }
         public abstract string Identifier { get; set; }
@@ -65,6 +61,18 @@ namespace Akka.Persistence.Hosting
         protected virtual System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
         public Akka.Configuration.Config ToConfig() { }
         public override sealed string ToString() { }
+    }
+    public abstract class JournalOptions<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal> : Akka.Persistence.Hosting.JournalOptions
+        where TJournal : Akka.Actor.ActorBase
+    {
+        protected JournalOptions(bool isDefault) { }
+    }
+    public abstract class JournalOptions<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TJournal, [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]  TReadJournalProvider> : Akka.Persistence.Hosting.JournalOptions<TJournal>
+        where TJournal : Akka.Actor.ActorBase
+        where TReadJournalProvider :  class, Akka.Persistence.Query.IReadJournalProvider
+    {
+        protected JournalOptions(bool isDefault) { }
+        protected virtual string ReadJournalPluginId { get; }
     }
     public enum PersistenceMode
     {
@@ -86,29 +94,9 @@ namespace Akka.Persistence.Hosting
         public Akka.Configuration.Config ToConfig() { }
         public override sealed string ToString() { }
     }
-    public abstract class SqlJournalOptions : Akka.Persistence.Hosting.JournalOptions
+    public abstract class SnapshotOptions<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.None | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)]  TSnapshotStore> : Akka.Persistence.Hosting.SnapshotOptions
+        where TSnapshotStore : Akka.Actor.ActorBase
     {
-        protected SqlJournalOptions(bool isDefault) { }
-        public string ConnectionString { get; set; }
-        public System.TimeSpan ConnectionTimeout { get; set; }
-        public abstract string MetadataTableName { get; set; }
-        public abstract System.Data.IsolationLevel ReadIsolationLevel { get; set; }
-        public abstract string SchemaName { get; set; }
-        public abstract bool SequentialAccess { get; set; }
-        public abstract string TableName { get; set; }
-        public abstract System.Data.IsolationLevel WriteIsolationLevel { get; set; }
-        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
-    }
-    public abstract class SqlSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
-    {
-        protected SqlSnapshotOptions(bool isDefault) { }
-        public string ConnectionString { get; set; }
-        public System.TimeSpan ConnectionTimeout { get; set; }
-        public abstract System.Data.IsolationLevel ReadIsolationLevel { get; set; }
-        public abstract string SchemaName { get; set; }
-        public abstract bool SequentialAccess { get; set; }
-        public abstract string TableName { get; set; }
-        public abstract System.Data.IsolationLevel WriteIsolationLevel { get; set; }
-        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+        protected SnapshotOptions(bool isDefault) { }
     }
 }

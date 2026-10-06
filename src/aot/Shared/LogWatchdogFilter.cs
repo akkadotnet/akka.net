@@ -8,7 +8,7 @@
 using System.Collections.Concurrent;
 using Akka.Event;
 
-namespace Akka.AOT.App;
+namespace Akka.AOT.Shared;
 
 /// <summary>
 /// A <see cref="LogFilterBase"/> that keeps every WARNING and ERROR the stdout logger is asked to print,

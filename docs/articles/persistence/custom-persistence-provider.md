@@ -458,6 +458,107 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 
 [!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
 
+## Making Your Persistence Plugin Native AOT Ready
+
+Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
+sections. That takes reflection, which a Native AOT or trimmed app cannot use. If your plugin has
+Akka.Hosting support, you opt in by changing the base class of your options classes. Your users change
+nothing: they call the same `WithJournal` and `WithSnapshot` as before. These steps come from opting in
+the SQL, Azure, Redis and MongoDB plugins.
+
+### Step 1: Name Your Plugin Types in Your Options Classes
+
+Derive your options classes from the generic bases, which name the journal actor, its default read journal
+provider and the snapshot store actor:
+
+```csharp
+public sealed class SqlJournalOptions : JournalOptions<SqlWriteJournal, SqlReadJournalProvider>
+{
+    // ...your existing members, unchanged...
+}
+
+public sealed class SqlSnapshotOptions : SnapshotOptions<SqlSnapshotStore>
+{
+    // ...your existing members, unchanged...
+}
+```
+
+That is the whole change. `WithJournal` and `WithSnapshot` register the types, and core builds them with
+the constructor rules it applies to a HOCON `class`: `(Config)` or parameterless for the actors,
+`(ExtendedActorSystem, Config)`, `(ExtendedActorSystem)` or parameterless for the read journal provider.
+Your classes stay `JournalOptions` and `SnapshotOptions`, so your users' code compiles as before. Without the
+generic base your plugin keeps working on the JIT through its HOCON `class`. A plugin with no read journal
+derives from `JournalOptions<TJournal>`. The generic argument has to be the type the plugin's `class` names:
+with the switch off, a HOCON `class` that names another type fails at start, so a variant of a plugin (a
+GridFS snapshot store, say) needs options with its own generic argument.
+
+### Step 2: Check Your Read Journal's Plugin Id
+
+The read journal is registered at `akka.persistence.query.journal.{Identifier}`. If yours lives elsewhere,
+override `ReadJournalPluginId`:
+
+```csharp
+protected override string ReadJournalPluginId => MongoDbReadJournal.Identifier;
+```
+
+With the switch off nothing finds your read journal's `DefaultConfiguration()` by reflection, so make sure
+your Hosting extension adds the read journal's default HOCON, as Akka.Persistence.Sql does with `DefaultQueryConfig`.
+
+### Step 3: Add Event Adapters Through the Typed Builder Methods
+
+If your Hosting package adds event adapters, use `AddEventAdapter<TAdapter>`, `AddReadEventAdapter<TAdapter>`
+or `AddWriteEventAdapter<TAdapter>` on the journal builder. They name the type in code, which is all core needs.
+
+### Step 4: Route Every Entry Point Through WithJournal and WithSnapshot
+
+Registration happens inside `WithJournal(options, ...)` and `WithSnapshot(options, ...)`. An entry point
+that skips them cannot opt in. The Azure plugin found this: its overload that takes a `Setup` object never
+calls `WithJournal`, so its types are never registered. Make every public entry point, including the
+ones that build the options for the user, end in one of these two calls.
+
+### Step 5: Look for Other Reflection
+
+Two things came up in the spike:
+
+* **Serializers named in HOCON.** A serializer that your plugin's default config names by type, for
+  example the Redis snapshot serializer, does not resolve with reflection off. Register it with
+  `WithCustomSerializer` in your Hosting extension, with the types it serializes.
+* **Payload types in your tests.** Test messages need a serializer too. With the switch off there is no
+  fallback serializer, so give your test payloads one.
+
+Create child actors with `Props.CreateBy` and an `IIndirectActorProducer`, and read your own types
+without `Type.GetType`.
+
+### Step 6: Test It With the Switch Off
+
+Run your Hosting tests with the `Akka.DynamicTypeLoading` feature switch off. In the test project:
+
+```xml
+<ItemGroup>
+  <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" />
+</ItemGroup>
+```
+
+A plugin that has not opted in fails when it starts, with a `ConfigurationException` like this:
+
+```text
+[akka.persistence.journal.sql.class] [Akka.Persistence.Sql.Journal.SqlWriteJournal, Akka.Persistence.Sql]
+is not built in and dynamic type loading is disabled. Use a plugin registered through Akka.Persistence.Hosting
+(WithJournal or WithSnapshot, with options derived from JournalOptions<TJournal> or SnapshotOptions<TSnapshotStore>)
+or enable the [Akka.DynamicTypeLoading] feature switch.
+```
+
+With the generic bases in place the same tests pass. A published Native AOT canary is the final check; the
+repository's `src/aot/Akka.Persistence.AOT.App` shows one.
+
+### Sealed Options Classes
+
+If your options classes are sealed, only you can opt in. That is intended: the plugin types belong to the plugin
+author, so users cannot name different ones.
+
+On the JIT the HOCON `class` still decides when there is one, and the registered type is used when there is none.
+See [Native AOT and Trimming](xref:native-aot) for the whole picture.
+
 ## Unit Testing Journal and SnapshotStore
 
 Akka.Persistence came with a standardized Technology Compatibility Kit (TCK) test kit that can be readily incorporated into your unit testing suite to test that a custom provider adheres to a basic compatibility requirement.

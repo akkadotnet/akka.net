@@ -42,6 +42,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- the log watchdog shared by the canaries that use Akka's own logger -->
+    <Compile Include="..\Shared\LogWatchdogFilter.cs" Link="LogWatchdogFilter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
