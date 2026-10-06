@@ -51,6 +51,26 @@ public sealed class MauiDetectionSpecs
         Assert.False(Util.IsMauiAssembly(satellite));
     }
 
+    [Fact(DisplayName = "Should_DetectMaui_When_ThrowingSatelliteIsListedBeforeMauiAssembly")]
+    public void Should_DetectMaui_When_ThrowingSatelliteIsListedBeforeMauiAssembly()
+    {
+        // FullName does not throw for satellites on CoreCLR, but it does on Native AOT. A fake assembly
+        // exercises the per-assembly catch in IsMauiAssembly: without it the exception would escape to
+        // DetectMaui's outer catch and stop the scan before reaching the MAUI assembly.
+        var assemblies = new Assembly[]
+        {
+            new FakeAssembly(() => throw new CultureNotFoundException("cs")),
+            new FakeAssembly(() => "Microsoft.Maui, Version=10.0.0.0, Culture=neutral, PublicKeyToken=null"),
+        };
+
+        Assert.True(Util.DetectMaui(assemblies));
+    }
+
+    private sealed class FakeAssembly(Func<string?> fullName) : Assembly
+    {
+        public override string? FullName => fullName();
+    }
+
     [Fact(DisplayName = "Should_ReturnFalse_When_AssemblyEnumerationFails")]
     public void Should_ReturnFalse_When_AssemblyEnumerationFails()
     {

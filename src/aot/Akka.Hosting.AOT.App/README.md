@@ -35,3 +35,5 @@ registers the stream-ref serializer at startup; see #8667, and the streams scena
 materializer's island-boundary code; see #8731). `src/core/Akka/` is out of scope - the
 plain-core canary's own baseline already covers it. Checked by the Hosting steps of the `AotCanary` job in
 `build-system/pr-validation.yaml`, which also documents how to reproduce the check locally.
+
+`Resources/Canary.cs.resx` exists only to put a "cs" satellite assembly in the image: under `InvariantGlobalization`, `Assembly.GetName()` (and `FullName` on Native AOT) throws `CultureNotFoundException` for satellites, which crashed `AddAkka`'s MAUI detection (#8782). `Program.cs` checks the satellite is present before `AddAkka`.
