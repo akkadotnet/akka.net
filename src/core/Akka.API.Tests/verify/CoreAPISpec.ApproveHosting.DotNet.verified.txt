@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Hosting.InvariantGlobalization.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Hosting.Maui")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Hosting.Tests")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
