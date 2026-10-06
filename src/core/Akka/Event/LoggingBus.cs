@@ -113,31 +113,12 @@ namespace Akka.Event
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
-            var taskInfos = new Dictionary<Task, string>();
-            // LoggerSetup first, so it wins when both name the same type
-            var startedTypes = new HashSet<Type>();
-
             var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
-            if (loggerSetupOpt.HasValue)
-            {
-                foreach (var props in loggerSetupOpt.Value.Loggers)
-                {
-                    var loggerType = props.Type;
 
-                    if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
-                    {
-                        shouldRemoveStandardOutLogger = false;
-                        continue;
-                    }
-
-                    if (!startedTypes.Add(loggerType))
-                        continue;
-
-                    var (task, name) = AddLogger(system, props, logName);
-                    taskInfos[task] = name;
-                }
-            }
-
+            // Resolve every akka.loggers entry before starting anything: a name that cannot be resolved throws,
+            // and a logger already started by then would be left constructing in a system that failed to start.
+            // Creating a Props starts nothing, and keeping Props (not Type) preserves the trim annotations.
+            var hoconLoggers = new List<Props>();
             foreach (var strLoggerType in system.Settings.Loggers)
             {
                 var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
@@ -145,7 +126,7 @@ namespace Akka.Event
                 {
                     if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                     {
-                        // The LoggerSetup loop above already started a type the name points at, so there is
+                        // The LoggerSetup loggers started below already cover a type the name points at, so there is
                         // nothing left to resolve. This is how a library that ships its logger in default HOCON,
                         // like Akka.TestKit, keeps that HOCON valid with the switch off.
                         if (loggerSetupOpt.HasValue && IsRegisteredByLoggerSetup(loggerSetupOpt.Value, strLoggerType))
@@ -166,10 +147,39 @@ namespace Akka.Event
                     continue;
                 }
 
-                if (!startedTypes.Add(loggerType))
+                hoconLoggers.Add(Props.Create(loggerType));
+            }
+
+            var taskInfos = new Dictionary<Task, string>();
+            // LoggerSetup first, so it wins when both name the same type
+            var startedTypes = new HashSet<Type>();
+
+            if (loggerSetupOpt.HasValue)
+            {
+                foreach (var props in loggerSetupOpt.Value.Loggers)
+                {
+                    var loggerType = props.Type;
+
+                    if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                    {
+                        shouldRemoveStandardOutLogger = false;
+                        continue;
+                    }
+
+                    if (!startedTypes.Add(loggerType))
+                        continue;
+
+                    var (task, name) = AddLogger(system, props, logName);
+                    taskInfos[task] = name;
+                }
+            }
+
+            foreach (var props in hoconLoggers)
+            {
+                if (!startedTypes.Add(props.Type))
                     continue;
 
-                var (task, name) = AddLogger(system, Props.Create(loggerType), logName);
+                var (task, name) = AddLogger(system, props, logName);
                 taskInfos[task] = name;
             }
 

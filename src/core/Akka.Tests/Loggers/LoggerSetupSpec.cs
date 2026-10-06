@@ -256,3 +256,64 @@ public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
         Sys.Settings.LogFormatter.Should().BeSameAs(SetupFormatter);
     }
 }
+
+/// <summary>A minimal resolvable logger for specs that only need a valid logger to be named.</summary>
+public sealed class UnresolvableNameTestLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+/// <summary>
+/// A bad <c>akka.loggers</c> entry must fail <c>ActorSystem.Create</c> before any logger starts. Each spec
+/// also points <c>akka.loggers-dispatcher</c> at a dispatcher that does not exist, which makes starting any
+/// logger throw synchronously, so the exception message shows which happened first: the name check (the
+/// fix) or the first logger start (the old order).
+/// </summary>
+[Collection(DynamicTypeLoadingCollection.Name)]
+public class UnresolvableLoggerNameSpec
+{
+    private const string MissingTypeName = "Akka.Tests.Loggers.NoSuchLoggerAnywhere, Akka.Tests";
+    private const string BogusDispatcherConfig = @"akka.loggers-dispatcher = ""no-such-loggers-dispatcher""";
+
+    [Fact(DisplayName = "Should_ThrowUnresolvableNameBeforeStartingLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled")]
+    public async Task Should_ThrowUnresolvableNameBeforeStartingLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled()
+    {
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{MissingTypeName}""]")
+            .WithFallback(ConfigurationFactory.ParseString(BogusDispatcherConfig));
+        var setup = ActorSystemSetup.Create(
+            BootstrapSetup.Create().WithConfig(config),
+            LoggerSetup.Create(Props.Create<UnresolvableNameTestLogger>()));
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerSetupOff", setup);
+            var thrown = create.Should().Throw<ConfigurationException>().WithMessage("*not built in*");
+            thrown.Which.Message.Should().NotContain("not configured");
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact(DisplayName = "Should_ThrowUnresolvableNameBeforeStartingEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType")]
+    public async Task Should_ThrowUnresolvableNameBeforeStartingEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType()
+    {
+        var goodName = $"{typeof(UnresolvableNameTestLogger).FullName}, {typeof(UnresolvableNameTestLogger).Assembly.GetName().Name}";
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{goodName}"", ""{MissingTypeName}""]")
+            .WithFallback(ConfigurationFactory.ParseString(BogusDispatcherConfig));
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(true, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerHocon", config);
+            var thrown = create.Should().Throw<ConfigurationException>()
+                .WithMessage("*Logger specified in config cannot be found*");
+            thrown.Which.Message.Should().NotContain("not configured");
+            return Task.CompletedTask;
+        });
+    }
+}
