@@ -191,8 +191,7 @@ namespace Akka.Streams.Dsl
             if (ipAddresses.Length == 0)
                 throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
 
-            return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
-                options, halfClose, idleTimeout, BindShutdownTimeout));
+            return CreateBindingSource(new IPEndPoint(ipAddresses[0], port), backlog, options, halfClose, idleTimeout, null);
         }
 
         /// <summary>
@@ -228,6 +227,62 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Creates a TLS-enabled TCP listener. The binding becomes ready as soon as the listener is bound; each incoming
+        /// connection is emitted only after its TLS handshake succeeds.
+        /// </summary>
+        /// <param name="host">The host to listen on.</param>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="tlsSettings">The TLS settings for authenticating incoming connections.</param>
+        /// <param name="backlog">Controls the size of the connection backlog.</param>
+        /// <param name="options">TCP options for the connections.</param>
+        /// <param name="halfClose">Whether accepted connections support independent input and output completion.</param>
+        /// <param name="idleTimeout">Optional maximum idle interval for an accepted connection.</param>
+        /// <returns>A source of authenticated incoming connections and a task for the server binding.</returns>
+
+#nullable enable
+        public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> BindTls(string host, int port,
+            TlsServerSettings tlsSettings, int backlog = 100, IImmutableList<Inet.SocketOption>? options = null,
+            bool halfClose = false, TimeSpan? idleTimeout = null)
+        {
+            if (tlsSettings == null) throw new ArgumentNullException(nameof(tlsSettings));
+            var ipAddresses = System.Net.Dns.GetHostAddresses(host);
+            if (ipAddresses.Length == 0)
+                throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
+
+            return CreateBindingSource(new IPEndPoint(ipAddresses[0], port), backlog, options, halfClose, idleTimeout, tlsSettings);
+        }
+
+        private Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> CreateBindingSource(EndPoint endpoint, int backlog,
+            IImmutableList<Inet.SocketOption>? options, bool halfClose, TimeSpan? idleTimeout, TlsServerSettings? tlsSettings)
+        {
+            return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), endpoint, backlog, options, halfClose,
+                idleTimeout, BindShutdownTimeout, tlsSettings));
+        }
+
+        /// <summary>
+        /// Binds a TLS-enabled listener and handles each authenticated incoming connection with <paramref name="handler"/>.
+        /// </summary>
+        /// <param name="handler">A flow that represents the server logic.</param>
+        /// <param name="materializer">The materializer used to run the handler for each connection.</param>
+        /// <param name="host">The host to listen on.</param>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="tlsSettings">The TLS settings for authenticating incoming connections.</param>
+        /// <param name="backlog">Controls the size of the connection backlog.</param>
+        /// <param name="options">TCP options for the connections.</param>
+        /// <param name="halfClose">Whether accepted connections support independent input and output completion.</param>
+        /// <param name="idleTimeout">Optional maximum idle interval for an accepted connection.</param>
+        /// <returns>A task that completes with the server binding once the listener is bound.</returns>
+        public Task<Tcp.ServerBinding> BindAndHandleTls(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> handler,
+            IMaterializer materializer, string host, int port, TlsServerSettings tlsSettings, int backlog = 100,
+            IImmutableList<Inet.SocketOption>? options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
+        {
+            return BindTls(host, port, tlsSettings, backlog, options, halfClose, idleTimeout)
+                .To(Sink.ForEach<Tcp.IncomingConnection>(connection => connection.Flow.Join(handler).Run(materializer)))
+                .Run(materializer);
+        }
+#nullable restore
+
+        /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
         /// <para>
         /// Note that the <c>ReadOnlySequence&lt;byte&gt;</c> chunk boundaries are not retained across the network,
@@ -251,17 +306,44 @@ namespace Akka.Streams.Dsl
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
-            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
+            return CreateOutgoingConnection(remoteAddress, localAddress, options, halfClose, connectionTimeout, idleTimeout, null);
+        }
 
-            var tcpFlow =
-                Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
-                    halfClose, connectionTimeout)).Via(new Detacher<ReadOnlySequence<byte>>());
+#nullable enable
+        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> CreateOutgoingConnection(
+            EndPoint remoteAddress, EndPoint? localAddress, IImmutableList<Inet.SocketOption>? options, bool halfClose,
+            TimeSpan? connectionTimeout, TimeSpan? idleTimeout, TlsClientSettings? tlsSettings)
+        {
+            var tcpFlow = Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
+                    halfClose, connectionTimeout, tlsSettings))
+                .Via(new Detacher<ReadOnlySequence<byte>>());
 
             if (idleTimeout.HasValue)
                 return tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(idleTimeout.Value));
 
             return tcpFlow;
         }
+
+        /// <summary>
+        /// Creates a TLS-enabled outgoing TCP connection. Its materialized task completes only after the TLS handshake succeeds.
+        /// </summary>
+        /// <param name="remoteAddress">The remote address to connect to.</param>
+        /// <param name="tlsSettings">The TLS settings for authenticating the remote server.</param>
+        /// <param name="localAddress">Optional local address for the connection.</param>
+        /// <param name="options">TCP options for the connection.</param>
+        /// <param name="halfClose">Whether input and output sides can complete independently.</param>
+        /// <param name="connectionTimeout">Optional maximum time allowed to establish the TCP connection.</param>
+        /// <param name="idleTimeout">Optional maximum interval without traffic in either direction.</param>
+        /// <returns>A byte flow whose materialized task completes with the endpoints after TLS authentication.</returns>
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnectionTls(
+            EndPoint remoteAddress, TlsClientSettings tlsSettings, EndPoint? localAddress = null,
+            IImmutableList<Inet.SocketOption>? options = null, bool halfClose = true,
+            TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
+        {
+            if (tlsSettings == null) throw new ArgumentNullException(nameof(tlsSettings));
+            return CreateOutgoingConnection(remoteAddress, localAddress, options, halfClose, connectionTimeout, idleTimeout, tlsSettings);
+        }
+#nullable restore
 
         /// <summary>
         /// Creates an <see cref="Tcp.OutgoingConnection"/> without specifying options.
@@ -277,6 +359,20 @@ namespace Akka.Streams.Dsl
         /// <returns>A byte flow whose materialized task completes, on connection, with the requested remote endpoint and the established local endpoint.</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
+
+        /// <summary>
+        /// Creates a TLS-enabled outgoing TCP connection to the specified host and port.
+        /// </summary>
+        /// <param name="host">The remote host name or IP address.</param>
+        /// <param name="port">The remote TCP port.</param>
+        /// <param name="tlsSettings">The TLS settings for authenticating the remote server.</param>
+        /// <returns>A byte flow whose materialized task completes with the endpoints after TLS authentication.</returns>
+
+#nullable enable
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnectionTls(
+            string host, int port, TlsClientSettings tlsSettings) =>
+            OutgoingConnectionTls(CreateEndpoint(host, port), tlsSettings);
+#nullable restore
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {

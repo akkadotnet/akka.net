@@ -7,6 +7,8 @@ title: Working with streaming IO
 
 Akka Streams provides a way of handling File IO and TCP connections with Streams. While the general approach is very similar to the [Actor based TCP handling using Akka IO](xref:akka-io), by using Akka Streams you are freed of having to manually react to back-pressure signals, as the library does it transparently for you.
 
+To secure TCP Streams connections, see [TLS for Akka.IO, Akka.Streams, and Artery](../remoting/tls-for-io-streams-artery.md).
+
 ## Streaming TCP
 
 ### Accepting Connections: Echo Server
