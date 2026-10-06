@@ -17,7 +17,7 @@ the `Akka.Persistence.Hosting` builders. It references `Akka.Persistence.Hosting
    snapshot plus `c`. `CurrentEventsByPersistenceId` returns three envelopes; `CurrentEventsByTag("canary")`
    returns three too, which only happens when the event adapter ran. The app then checks that the journal and
    snapshot store were built once each, that the journal saw the default config of its options, and that the
-   built-in stash overflow strategy resolves. A second actor persists and snapshots through the
+   built-in stash overflow strategy resolves. `WithClusterShardingJournalMigrationAdapter` registers Cluster Sharding's migration adapter, and the app checks it resolves with the switch off. Only the canary references Akka.Cluster.Sharding, and that adds warnings from Cluster, DistributedData and Remote code that this baseline does not gate. A second actor persists and snapshots through the
    built-in `inmem` plugins in the same system (`WithInMemoryJournal`, `WithInMemorySnapshotStore`). The canary
    does not drive a real stash overflow.
 2. **A Hosting app whose journal options name no type in code.** The options name their class in HOCON only, so starting

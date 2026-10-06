@@ -17,8 +17,8 @@ using Akka.Persistence.Journal;
 namespace Akka.Persistence.Hosting
 {
     /// <summary>
-    /// Base class for all journal options class. If you're writing an options class for SQL plugins, use
-    /// <see cref="SqlJournalOptions"/> instead.
+    /// Base class for all journal options class. To name the plugin's types in code, derive from
+    /// <see cref="JournalOptions{TJournal}"/> or <see cref="JournalOptions{TJournal, TReadJournalProvider}"/> instead.
     /// </summary>
     public abstract class JournalOptions
     {

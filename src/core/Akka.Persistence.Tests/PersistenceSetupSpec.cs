@@ -214,14 +214,15 @@ namespace Akka.Persistence.Tests
                     EventAdapterDetails.Create("own", _ => new WriteOnlyAdapter(), typeof(WriteOnlyEvent)),
                     EventAdapterDetails.Create("clash", _ => new TagAdapter(), typeof(TaggedEvent)),
                 ])
-                // and one added in a later call, which also replaces the adapter that has its name
+                // and one added in a later call, which takes the adapter name and adds its event types to the earlier ones
                 .WithEventAdapters(JournalPath, [EventAdapterDetails.Create("clash", _ => new ReadOnlyAdapter(), typeof(ReadOnlyEvent))])
                 .WithEventAdapters("akka.persistence.journal.other", [EventAdapterDetails.Create("elsewhere", _ => new TagAdapter())]);
 
             var registry = PersistencePluginRegistry.Build(setup);
 
             registry.EventAdaptersFor(JournalPath).Select(a => a.Name).Should().BeEquivalentTo(new[] { "early", "own", "clash" });
-            registry.EventAdaptersFor(JournalPath).Single(a => a.Name == "clash").BoundTypes.Should().BeEquivalentTo(new[] { typeof(ReadOnlyEvent) });
+            registry.EventAdaptersFor(JournalPath).Single(a => a.Name == "clash").BoundTypes.Should().BeEquivalentTo(new[] { typeof(TaggedEvent), typeof(ReadOnlyEvent) },
+                "re-adding a name binds the types of both, as HOCON does");
             registry.EventAdaptersFor("akka.persistence.journal.other").Select(a => a.Name).Should().BeEquivalentTo(new[] { "elsewhere" });
             registry.EventAdaptersFor("akka.persistence.journal.unknown").Should().BeEmpty();
         }

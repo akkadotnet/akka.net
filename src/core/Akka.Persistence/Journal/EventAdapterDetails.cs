@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Akka.Actor;
 
 namespace Akka.Persistence.Journal
@@ -80,6 +81,13 @@ namespace Akka.Persistence.Journal
         }
 
         internal IEventAdapter CreateAdapter(ExtendedActorSystem system) => _factory(system);
+
+        /// <summary>
+        /// Adding an adapter under a name that is taken works as it does in HOCON: this adapter, the later one, wins the
+        /// name, and the event types of both are bound to it.
+        /// </summary>
+        internal EventAdapterDetails ReplacingByName(EventAdapterDetails earlier)
+            => new(Name, _factory, earlier.BoundTypes.Concat(BoundTypes).Distinct().ToImmutableArray());
 
         private static T NotNull<T>(T factory) where T : class
             => factory ?? throw new ArgumentNullException(nameof(factory));

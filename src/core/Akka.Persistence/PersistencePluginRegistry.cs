@@ -91,7 +91,8 @@ namespace Akka.Persistence
 
         /// <summary>
         /// The event adapters registered for the journal at <paramref name="journalPluginId"/>, in registration
-        /// order. An adapter name that repeats keeps the later one.
+        /// order. An adapter name that repeats takes the later adapter and the event types of every one registered
+        /// under it, as in HOCON, where the later type wins the name and the bindings merge.
         /// </summary>
         public IReadOnlyList<EventAdapterDetails> EventAdaptersFor(string journalPluginId)
         {
@@ -100,7 +101,7 @@ namespace Akka.Persistence
 
             var byName = new Dictionary<string, EventAdapterDetails>(StringComparer.Ordinal);
             foreach (var adapter in added)
-                byName[adapter.Name] = adapter;
+                byName[adapter.Name] = byName.TryGetValue(adapter.Name, out var earlier) ? adapter.ReplacingByName(earlier) : adapter;
             return byName.Values.ToList();
         }
 

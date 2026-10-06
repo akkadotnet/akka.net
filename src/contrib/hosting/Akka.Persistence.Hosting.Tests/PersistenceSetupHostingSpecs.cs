@@ -294,6 +294,41 @@ public class PersistenceSetupHostingSpecs
             });
     }
 
+    [Theory(DisplayName = "AddEventAdapter should bind the event types of both calls When an adapter name is added twice")]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Should_bind_the_event_types_of_both_calls_When_an_adapter_name_is_added_twice(bool dynamicTypeLoading, bool inSeparateCalls)
+    {
+        // In HOCON the later adapter type wins the name and the bindings merge, so the name ends up bound to both event types.
+        // With the switch off the setup has to give the same answer.
+        await RunAsync(dynamicTypeLoading,
+            builder =>
+            {
+                if (inSeparateCalls)
+                {
+                    builder
+                        .WithInMemoryJournal(journal => journal.AddEventAdapter<FirstNamedAdapter>("x", new[] { typeof(EventOne) }))
+                        .WithInMemoryJournal(journal => journal.AddEventAdapter<SecondNamedAdapter>("x", new[] { typeof(EventTwo) }));
+                }
+                else
+                {
+                    builder.WithInMemoryJournal(journal => journal
+                        .AddEventAdapter<FirstNamedAdapter>("x", new[] { typeof(EventOne) })
+                        .AddEventAdapter<SecondNamedAdapter>("x", new[] { typeof(EventTwo) }));
+                }
+            },
+            system =>
+            {
+                var adapters = Persistence.Instance.Apply(system).AdaptersFor("akka.persistence.journal.inmem");
+
+                adapters.Get<EventOne>().Should().BeOfType<SecondNamedAdapter>("the later type wins the name");
+                adapters.Get<EventTwo>().Should().BeOfType<SecondNamedAdapter>();
+                return Task.CompletedTask;
+            });
+    }
+
     // ---- read journals ----
 
     [Theory(DisplayName = "WithJournal should register the plugin's default read journal When the options name its provider")]
@@ -326,7 +361,7 @@ public class PersistenceSetupHostingSpecs
 
     // ---- the sharding migration adapter ----
 
-    [Fact(DisplayName = "WithClusterShardingJournalMigrationAdapter should register the adapter in code When Akka.Cluster.Sharding is absent")]
+    [Fact(DisplayName = "WithClusterShardingJournalMigrationAdapter should register nothing in code When Akka.Cluster.Sharding is absent")]
     public void Should_register_nothing_in_code_When_Akka_Cluster_Sharding_is_absent()
     {
         // this test project does not deploy Akka.Cluster.Sharding: the HOCON is written as always and the setup stays empty
@@ -532,6 +567,32 @@ public class PersistenceSetupHostingSpecs
             Interlocked.Increment(ref _fromJournal);
             return EventSequence.Single(evt is string s && s.StartsWith("w:", StringComparison.Ordinal) ? s.Substring(2) : evt);
         }
+    }
+
+    public sealed class EventOne
+    {
+    }
+
+    public sealed class EventTwo
+    {
+    }
+
+    public sealed class FirstNamedAdapter : IEventAdapter
+    {
+        public string Manifest(object evt) => "first";
+
+        public object ToJournal(object evt) => evt;
+
+        public IEventSequence FromJournal(object evt, string manifest) => EventSequence.Single(evt);
+    }
+
+    public sealed class SecondNamedAdapter : IEventAdapter
+    {
+        public string Manifest(object evt) => "second";
+
+        public object ToJournal(object evt) => evt;
+
+        public IEventSequence FromJournal(object evt, string manifest) => EventSequence.Single(evt);
     }
 
     /// <summary>Wraps strings on the way in and leaves the way out alone.</summary>

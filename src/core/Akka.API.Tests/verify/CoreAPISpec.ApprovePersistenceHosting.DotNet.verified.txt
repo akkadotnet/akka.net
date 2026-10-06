@@ -99,29 +99,4 @@ namespace Akka.Persistence.Hosting
     {
         protected SnapshotOptions(bool isDefault) { }
     }
-    public abstract class SqlJournalOptions : Akka.Persistence.Hosting.JournalOptions
-    {
-        protected SqlJournalOptions(bool isDefault) { }
-        public string ConnectionString { get; set; }
-        public System.TimeSpan ConnectionTimeout { get; set; }
-        public abstract string MetadataTableName { get; set; }
-        public abstract System.Data.IsolationLevel ReadIsolationLevel { get; set; }
-        public abstract string SchemaName { get; set; }
-        public abstract bool SequentialAccess { get; set; }
-        public abstract string TableName { get; set; }
-        public abstract System.Data.IsolationLevel WriteIsolationLevel { get; set; }
-        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
-    }
-    public abstract class SqlSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
-    {
-        protected SqlSnapshotOptions(bool isDefault) { }
-        public string ConnectionString { get; set; }
-        public System.TimeSpan ConnectionTimeout { get; set; }
-        public abstract System.Data.IsolationLevel ReadIsolationLevel { get; set; }
-        public abstract string SchemaName { get; set; }
-        public abstract bool SequentialAccess { get; set; }
-        public abstract string TableName { get; set; }
-        public abstract System.Data.IsolationLevel WriteIsolationLevel { get; set; }
-        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
-    }
 }

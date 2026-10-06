@@ -72,6 +72,8 @@ internal static class Program
             .WithJournalAndSnapshot(new CanaryJournalOptions(), new CanarySnapshotOptions(),
                 configureJournal: journal => journal.AddWriteEventAdapter<CanaryTagger>("canary-tagger", new[] { typeof(CanaryEvent) }),
                 configureSnapshot: null)
+            // the sharding migration adapter, named by Hosting with trimmer-visible literals; asserted below
+            .WithClusterShardingJournalMigrationAdapter(new CanaryJournalOptions())
             .WithInMemoryJournal(_ => { }, journalId: "inmem", isDefaultPlugin: false)
             .WithInMemorySnapshotStore("inmem", isDefaultPlugin: false)
             // the read journal rides along with CanaryJournalOptions; its defaults are HOCON, as a plugin ships them
@@ -142,6 +144,14 @@ internal static class Program
         Require(label, CanaryJournal.Marker == "from-default", $"the registered journal got marker [{CanaryJournal.Marker}] from its default config");
         Require(label, CanarySnapshotStore.Instances == 1, $"the registered snapshot store was built {CanarySnapshotStore.Instances} times, not 1");
         Console.WriteLine($"[canary-persistence] {label}: registered journal and snapshot store are in use, and the built-in stash overflow strategy resolves");
+
+        // WithClusterShardingJournalMigrationAdapter: with the switch off the adapter comes from the setup, not from the HOCON type names
+        var domainEvent = Type.GetType("Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding");
+        Require(label, domainEvent is not null, "Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent was trimmed away");
+        var migration = persistence.AdaptersFor("akka.persistence.journal.canary").Get(domainEvent!);
+        Require(label, migration.GetType().FullName == "Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter",
+            $"the sharding migration adapter did not resolve, got [{migration.GetType().FullName}]");
+        Console.WriteLine($"[canary-persistence] {label}: the sharding migration adapter resolves from the setup");
     }
 
     /// <summary>

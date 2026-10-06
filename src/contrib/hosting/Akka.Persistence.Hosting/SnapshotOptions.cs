@@ -12,8 +12,8 @@ using Akka.Hosting;
 namespace Akka.Persistence.Hosting
 {
     /// <summary>
-    /// Base class for all snapshot store options class. If you're writing an options class for SQL plugins, use
-    /// <see cref="SqlSnapshotOptions"/> instead.
+    /// Base class for all snapshot store options class. To name the plugin's type in code, derive from
+    /// <see cref="SnapshotOptions{TSnapshotStore}"/> instead.
     /// </summary>
     public abstract class SnapshotOptions
     {

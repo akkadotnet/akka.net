@@ -262,8 +262,6 @@ namespace Akka.Persistence.Hosting
                   }
                   """;
 
-            builder.AddPersistenceRegistrations(setup => setup.WithJournal(
-                $"akka.persistence.journal.{journalId}", static _ => new MemoryJournal()));
             return builder.AddHocon(liveConfig, HoconAddMode.Prepend);
         }
 
@@ -281,8 +279,6 @@ namespace Akka.Persistence.Hosting
                   }
                   """;
 
-            builder.AddPersistenceRegistrations(setup => setup.WithSnapshotStore(
-                $"akka.persistence.snapshot-store.{snapshotStoreId}", static _ => new MemorySnapshotStore()));
             return builder.AddHocon(liveConfig, HoconAddMode.Prepend);
         }
 

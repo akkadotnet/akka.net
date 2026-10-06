@@ -35,6 +35,9 @@
   <ItemGroup>
     <!-- Akka.Persistence.Hosting brings Akka.Hosting, Akka.Persistence and Akka.Persistence.Query. -->
     <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj"/>
+    <!-- Cluster Sharding ships the event adapter that WithClusterShardingJournalMigrationAdapter registers. Only this app
+         references it; Akka.Persistence.Hosting does not. -->
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj"/>
     <!-- the read journal the canary queries; it is for testing, so Hosting has no helper for it -->
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj"/>
   </ItemGroup>
