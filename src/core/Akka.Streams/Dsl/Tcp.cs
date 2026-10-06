@@ -238,7 +238,8 @@ namespace Akka.Streams.Dsl
         /// <param name="halfClose">Whether accepted connections support independent input and output completion.</param>
         /// <param name="idleTimeout">Optional maximum idle interval for an accepted connection.</param>
         /// <returns>A source of authenticated incoming connections and a task for the server binding.</returns>
-        #nullable enable
+
+#nullable enable
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> BindTls(string host, int port,
             TlsServerSettings tlsSettings, int backlog = 100, IImmutableList<Inet.SocketOption>? options = null,
             bool halfClose = false, TimeSpan? idleTimeout = null)
@@ -279,7 +280,7 @@ namespace Akka.Streams.Dsl
                 .To(Sink.ForEach<Tcp.IncomingConnection>(connection => connection.Flow.Join(handler).Run(materializer)))
                 .Run(materializer);
         }
-        #nullable restore
+#nullable restore
 
         /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
@@ -308,7 +309,7 @@ namespace Akka.Streams.Dsl
             return CreateOutgoingConnection(remoteAddress, localAddress, options, halfClose, connectionTimeout, idleTimeout, null);
         }
 
-        #nullable enable
+#nullable enable
         private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> CreateOutgoingConnection(
             EndPoint remoteAddress, EndPoint? localAddress, IImmutableList<Inet.SocketOption>? options, bool halfClose,
             TimeSpan? connectionTimeout, TimeSpan? idleTimeout, TlsClientSettings? tlsSettings)
@@ -342,7 +343,7 @@ namespace Akka.Streams.Dsl
             if (tlsSettings == null) throw new ArgumentNullException(nameof(tlsSettings));
             return CreateOutgoingConnection(remoteAddress, localAddress, options, halfClose, connectionTimeout, idleTimeout, tlsSettings);
         }
-        #nullable restore
+#nullable restore
 
         /// <summary>
         /// Creates an <see cref="Tcp.OutgoingConnection"/> without specifying options.
@@ -366,11 +367,12 @@ namespace Akka.Streams.Dsl
         /// <param name="port">The remote TCP port.</param>
         /// <param name="tlsSettings">The TLS settings for authenticating the remote server.</param>
         /// <returns>A byte flow whose materialized task completes with the endpoints after TLS authentication.</returns>
-        #nullable enable
+
+#nullable enable
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnectionTls(
             string host, int port, TlsClientSettings tlsSettings) =>
             OutgoingConnectionTls(CreateEndpoint(host, port), tlsSettings);
-        #nullable restore
+#nullable restore
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {
