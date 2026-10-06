@@ -400,6 +400,24 @@ namespace Akka.Remote
         public override string ToString() { }
     }
 }
+namespace Akka.Remote.Artery
+{
+    public sealed class ArteryTlsSettings
+    {
+        public System.TimeSpan HandshakeTimeout { get; }
+        public System.Security.Authentication.SslProtocols Protocols { get; }
+        public Akka.Remote.Artery.ArteryTlsSettings WithHandshakeTimeout(System.TimeSpan value) { }
+        public Akka.Remote.Artery.ArteryTlsSettings WithProtocols(System.Security.Authentication.SslProtocols value) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy peerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy inboundClientPolicy, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings ServerOnly(System.Security.Cryptography.X509Certificates.X509Certificate2 serverCertificate, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+    }
+    public sealed class ArteryTlsSetup : Akka.Actor.Setup.Setup
+    {
+        public ArteryTlsSetup(Akka.Remote.Artery.ArteryTlsSettings settings) { }
+        public Akka.Remote.Artery.ArteryTlsSettings Settings { get; }
+    }
+}
 namespace Akka.Remote.Routing
 {
     public sealed class RemoteRouterConfig : Akka.Routing.Pool, System.IEquatable<Akka.Routing.RouterConfig>
