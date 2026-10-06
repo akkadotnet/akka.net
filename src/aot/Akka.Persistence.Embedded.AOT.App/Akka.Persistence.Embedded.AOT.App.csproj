@@ -28,6 +28,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- the log watchdog shared by the canaries that use Akka's own logger -->
+    <Compile Include="..\Shared\LogWatchdogFilter.cs" Link="LogWatchdogFilter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Same as Akka.Hosting.AOT.App: the full Microsoft.Extensions.Hosting package is what an application adds. -->
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MsExtVersion)" />
   </ItemGroup>

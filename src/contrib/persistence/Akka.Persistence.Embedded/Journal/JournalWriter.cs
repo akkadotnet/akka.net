@@ -395,7 +395,7 @@ namespace Akka.Persistence.Embedded.Journal
             p["@message"].Value = row.Message;
             p["@manifest"].Value = row.Manifest;
             p["@identifier"].Value = (long)row.Identifier;
-            p["@writer_uuid"].Value = (object?)row.WriterUuid ?? DBNull.Value;
+            p["@writer_uuid"].Value = row.WriterUuid;
 
             if (!returnsId)
             {

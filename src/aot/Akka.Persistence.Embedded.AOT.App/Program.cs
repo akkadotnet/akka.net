@@ -8,6 +8,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.AOT.Shared;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Hosting;

@@ -31,7 +31,7 @@ namespace Akka.Persistence.Embedded.Internal
         /// <summary>One entry per tag, for the tag table.</summary>
         public required string[] Tags { get; init; }
 
-        public required string? WriterUuid { get; init; }
+        public required string WriterUuid { get; init; }
     }
 
     /// <summary>A journal row as read from SQLite, before deserialization.</summary>
@@ -75,7 +75,7 @@ namespace Akka.Persistence.Embedded.Internal
         public Akka.Serialization.Serialization Serialization => _serialization;
 
         /// <summary>Serializes one persistent representation. Throws when the payload cannot be serialized.</summary>
-        public JournalRow Serialize(IPersistentRepresentation representation, long batchTicks, string? writerUuid)
+        public JournalRow Serialize(IPersistentRepresentation representation, long batchTicks, string writerUuid)
         {
             var payload = representation.Payload;
             var tags = ImmutableHashSet<string>.Empty as IImmutableSet<string>;
