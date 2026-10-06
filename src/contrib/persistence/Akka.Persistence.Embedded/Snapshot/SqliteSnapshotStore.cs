@@ -132,7 +132,7 @@ namespace Akka.Persistence.Embedded.Snapshot
             int identifier;
             try
             {
-                (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot);
+                (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot, _settings.Serializer);
             }
             catch (Exception e)
             {

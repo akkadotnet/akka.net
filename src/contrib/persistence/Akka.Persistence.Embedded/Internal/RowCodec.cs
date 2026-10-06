@@ -58,11 +58,18 @@ namespace Akka.Persistence.Embedded.Internal
 
         private readonly ExtendedActorSystem _system;
         private readonly Akka.Serialization.Serialization _serialization;
+        private readonly string? _serializerName;
 
-        public RowCodec(ExtendedActorSystem system)
+        /// <param name="system">The actor system.</param>
+        /// <param name="serializerName">
+        /// The <c>serializer</c> setting: a registered serializer name used for payload types that have no binding of their own.
+        /// Null keeps the System.Object fallback. Only writes use it.
+        /// </param>
+        public RowCodec(ExtendedActorSystem system, string? serializerName = null)
         {
             _system = system;
             _serialization = system.Serialization;
+            _serializerName = serializerName;
         }
 
         public Akka.Serialization.Serialization Serialization => _serialization;
@@ -95,15 +102,16 @@ namespace Akka.Persistence.Embedded.Internal
 
         /// <summary>Serializes one payload with transport information set, so actor refs inside it serialize.</summary>
         public (byte[] Bytes, string Manifest, int Identifier) SerializePayload(object? payload)
-            => SerializePayload(_system, payload);
+            => SerializePayload(_system, payload, _serializerName);
 
         /// <summary>Serializes one payload with transport information set, so actor refs inside it serialize.</summary>
-        public static (byte[] Bytes, string Manifest, int Identifier) SerializePayload(ExtendedActorSystem system, object? payload)
+        public static (byte[] Bytes, string Manifest, int Identifier) SerializePayload(ExtendedActorSystem system, object? payload, string? serializerName = null)
         {
             if (payload is null)
                 throw new ArgumentNullException(nameof(payload), "Cannot persist a null payload.");
 
-            var serializer = system.Serialization.FindSerializerForType(payload.GetType());
+            // a serialization binding for the type wins; otherwise the named serializer replaces the System.Object fallback
+            var serializer = system.Serialization.FindSerializerForType(payload.GetType(), serializerName);
             var bytes = Akka.Serialization.Serialization.WithTransport(
                 system, (serializer, payload), static s => s.serializer.ToBinary(s.payload));
             return (bytes, serializer.Manifest(payload) ?? string.Empty, serializer.Identifier);

@@ -47,11 +47,13 @@ namespace Akka.Persistence.Embedded.Tests.Settings
             journal.AutoInitialize.Should().BeTrue();
             (journal.BufferSize, journal.BatchSize, journal.ReplayBatchSize, journal.ReadThreads).Should().Be((5000, 100, 1000, 2));
             journal.Tables.Should().Be(new JournalTableNames("journal", "tags"));
+            journal.Serializer.Should().BeNull();
 
             var config = Full("");
             var snapshot = SnapshotSettings.Create(config.GetConfig(SnapshotPath), SnapshotPath);
             snapshot.AutoInitialize.Should().BeTrue();
             snapshot.TableName.Should().Be("snapshot");
+            snapshot.Serializer.Should().BeNull();
 
             var query = Query("");
             query.MaxBufferSize.Should().Be(500);

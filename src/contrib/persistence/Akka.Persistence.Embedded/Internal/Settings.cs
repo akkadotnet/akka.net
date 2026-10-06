@@ -66,6 +66,13 @@ namespace Akka.Persistence.Embedded.Internal
             return value;
         }
 
+        /// <summary>The <c>serializer</c> setting. Null or empty means not set.</summary>
+        public static string? SerializerName(Config config)
+        {
+            var value = config.GetString("serializer", null);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
         public static int PositiveInt(Config config, string pluginPath, string key, int min = 1, int max = int.MaxValue)
         {
             var value = config.GetInt(key);
@@ -85,6 +92,10 @@ namespace Akka.Persistence.Embedded.Internal
         public required int BatchSize { get; init; }
         public required int ReplayBatchSize { get; init; }
         public required int ReadThreads { get; init; }
+
+        /// <summary>Name of the serializer for event types without a binding. Null: the System.Object fallback.</summary>
+        public required string? Serializer { get; init; }
+
         public required JournalTableNames Tables { get; init; }
 
         public static JournalSettings Create(Config pluginConfig, string pluginPath)
@@ -100,6 +111,7 @@ namespace Akka.Persistence.Embedded.Internal
                 BatchSize = SettingsHelper.PositiveInt(config, pluginPath, "batch-size"),
                 ReplayBatchSize = SettingsHelper.PositiveInt(config, pluginPath, "replay-batch-size"),
                 ReadThreads = SettingsHelper.PositiveInt(config, pluginPath, "read-threads", 1, 64),
+                Serializer = SettingsHelper.SerializerName(config),
                 Tables = new JournalTableNames(
                     Journal: SettingsHelper.Identifier(config, pluginPath, "table-name"),
                     TagTable: SettingsHelper.Identifier(config, pluginPath, "tag-table-name"))
@@ -115,6 +127,9 @@ namespace Akka.Persistence.Embedded.Internal
         public required bool AutoInitialize { get; init; }
         public required string TableName { get; init; }
 
+        /// <summary>Name of the serializer for snapshot types without a binding. Null: the System.Object fallback.</summary>
+        public required string? Serializer { get; init; }
+
         public static SnapshotSettings Create(Config pluginConfig, string pluginPath)
         {
             var config = pluginConfig.WithFallback(SqlitePersistence.DefaultSnapshotConfiguration);
@@ -124,7 +139,8 @@ namespace Akka.Persistence.Embedded.Internal
                 PluginPath = pluginPath,
                 ConnectionString = SettingsHelper.RequireConnectionString(config, pluginPath),
                 AutoInitialize = config.GetBoolean("auto-initialize", true),
-                TableName = SettingsHelper.Identifier(config, pluginPath, "table-name")
+                TableName = SettingsHelper.Identifier(config, pluginPath, "table-name"),
+                Serializer = SettingsHelper.SerializerName(config)
             };
         }
     }

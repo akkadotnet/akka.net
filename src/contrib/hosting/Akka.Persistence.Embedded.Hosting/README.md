@@ -106,8 +106,11 @@ akka.persistence {
 }
 ```
 
-Keys the plugin does not know, such as Akka.Persistence.Sql's `provider-name` or `tag-write-mode`, are not read. The
-`Serializer` property that the Hosting base classes carry has no effect: serialization bindings pick the serializer.
+Keys the plugin does not know, such as Akka.Persistence.Sql's `provider-name` or `tag-write-mode`, are not read.
+
+`Serializer` (the `serializer` setting) works as it does in Akka.Persistence.Sql, on the journal and the snapshot store:
+a serialization binding for the payload type wins, and the named serializer takes the place of the System.Object
+fallback for types without a binding. Reads use the serializer id and manifest stored in the row.
 
 If you register the journal with the generic `WithJournal(options)` instead, nothing registers the read journal in code,
 and it needs `Akka.DynamicTypeLoading` on. Use `WithEmbeddedPersistence`.

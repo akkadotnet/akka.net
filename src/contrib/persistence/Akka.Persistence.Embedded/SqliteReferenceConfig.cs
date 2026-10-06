@@ -40,6 +40,10 @@ namespace Akka.Persistence.Embedded
 
                 # Threads (each with its own connection) that run recovery reads and highest-sequence-number reads.
                 read-threads = 2
+
+                # Name of a serializer (akka.actor.serializers) for event types that have no serialization binding.
+                # A binding always wins. null keeps the System.Object fallback. Reads use the stored serializer id.
+                serializer = null
               }
 
               snapshot-store.embedded {
@@ -53,6 +57,9 @@ namespace Akka.Persistence.Embedded
                 auto-initialize = true
 
                 table-name = "snapshot"
+
+                # Name of a serializer for snapshot types that have no serialization binding. See the journal setting.
+                serializer = null
               }
 
               query.journal.embedded {

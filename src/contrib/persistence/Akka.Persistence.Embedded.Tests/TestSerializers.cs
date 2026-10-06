@@ -24,6 +24,9 @@ namespace Akka.Persistence.Embedded.Tests
     /// <summary>Handled by a serializer that has no manifest at all.</summary>
     public sealed record NoManifestEvent(string Value);
 
+    /// <summary>Has no serialization binding. Only the <c>serializer</c> setting of a plugin reaches its serializer.</summary>
+    public sealed record UnboundEvent(string Value);
+
     /// <summary>Its serializer always throws.</summary>
     public sealed record UnserializableEvent(string Value);
 
@@ -105,6 +108,22 @@ namespace Akka.Persistence.Embedded.Tests
         public override object FromBinary(byte[] bytes, Type? type) => throw new InvalidOperationException("never");
     }
 
+    /// <summary>Registered under a name but bound to no type: the target of the plugins' <c>serializer</c> setting.</summary>
+    public sealed class UnboundEventSerializer : SerializerWithStringManifest
+    {
+        public UnboundEventSerializer(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public override int Identifier => 7305;
+
+        public override string Manifest(object o) => "U";
+
+        public override byte[] ToBinary(object obj) => Encoding.UTF8.GetBytes(((UnboundEvent)obj).Value);
+
+        public override object FromBinary(byte[] bytes, string manifest) => new UnboundEvent(Encoding.UTF8.GetString(bytes));
+    }
+
     public static class TestSerializerConfig
     {
         public static string Hocon { get; } = $$"""
@@ -114,6 +133,7 @@ namespace Akka.Persistence.Embedded.Tests
                     object-manifest = "{{typeof(ObjectManifestSerializer).AssemblyQualifiedName}}"
                     no-manifest = "{{typeof(NoManifestSerializer).AssemblyQualifiedName}}"
                     throwing = "{{typeof(ThrowingSerializer).AssemblyQualifiedName}}"
+                    unbound-event = "{{typeof(UnboundEventSerializer).AssemblyQualifiedName}}"
                 }
                 serialization-bindings {
                     "{{typeof(TestEvent).AssemblyQualifiedName}}" = test-event

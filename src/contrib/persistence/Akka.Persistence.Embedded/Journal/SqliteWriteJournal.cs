@@ -46,7 +46,7 @@ namespace Akka.Persistence.Embedded.Journal
 
             _writerUuid = Guid.NewGuid().ToString("N");
             _sql = new JournalSql(_settings);
-            _codec = new RowCodec((ExtendedActorSystem)Context.System);
+            _codec = new RowCodec((ExtendedActorSystem)Context.System, _settings.Serializer);
             _writer = new JournalWriter(_settings, _sql, _log);
             _readPool = new SqliteWorkerPool(_settings.ConnectionString, _settings.ReadThreads, $"{pluginPath}-read", _log);
         }
