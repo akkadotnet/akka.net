@@ -216,9 +216,11 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
-        #nullable enable
+
+#nullable enable
         private readonly TlsServerSettings? _tls;
-        #nullable restore
+#nullable restore
+
         private readonly Outlet<StreamTcp.IncomingConnection> _out = new("IncomingConnections.out");
 
         /// <summary>
@@ -232,7 +234,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="idleTimeout">An optional timeout applied to each connection flow when no bytes pass.</param>
         /// <param name="bindShutdownTimeout">The time to wait for connection flows to initialize after unbinding before completing the stage.</param>
         /// <param name="tls">Optional TLS settings for incoming connections.</param>
-        #nullable enable
+
+#nullable enable
         public ConnectionSourceStage(IActorRef tcpManager, EndPoint endpoint, int backlog,
             IImmutableList<Inet.SocketOption>? options, bool halfClose, TimeSpan? idleTimeout,
             TimeSpan bindShutdownTimeout, TlsServerSettings? tls = null)
@@ -247,7 +250,7 @@ namespace Akka.Streams.Implementation.IO
             _tls = tls;
             Shape = new SourceShape<StreamTcp.IncomingConnection>(_out);
         }
-        #nullable restore
+#nullable restore
 
         /// <summary>
         /// The source shape that emits incoming TCP connections.
@@ -950,9 +953,11 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
-        #nullable enable
+
+#nullable enable
         private readonly TlsClientSettings? _tls;
-        #nullable restore
+#nullable restore
+
         private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
         private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
 
@@ -966,7 +971,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="halfClose">Whether input and output sides can complete independently.</param>
         /// <param name="connectionTimeout">An optional timeout for establishing the connection.</param>
         /// <param name="tls">Optional TLS settings for the outgoing connection.</param>
-        #nullable enable
+
+#nullable enable
         public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint? localAddress = null,
             IImmutableList<Inet.SocketOption>? options = null, bool halfClose = true, TimeSpan? connectionTimeout = null,
             TlsClientSettings? tls = null)
@@ -980,7 +986,7 @@ namespace Akka.Streams.Implementation.IO
             _tls = tls;
             Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
         }
-        #nullable restore
+#nullable restore
 
         /// <summary>
         /// The default attributes for the outgoing connection stage.
