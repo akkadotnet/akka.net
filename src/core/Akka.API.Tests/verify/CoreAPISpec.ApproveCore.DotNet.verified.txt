@@ -5734,6 +5734,11 @@ namespace Akka.Util.Extensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
     }
+    public class static OptionExtensions
+    {
+        public static TOut Match<TIn, TOut>(this Akka.Util.Option<TIn> option, System.Func<TIn, TOut> some, System.Func<TOut> none) { }
+        public static void Match<T>(this Akka.Util.Option<T> option, System.Action<T> some, System.Action none) { }
+    }
 }
 namespace Akka.Util.Internal
 {
