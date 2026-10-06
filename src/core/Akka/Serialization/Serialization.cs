@@ -1048,7 +1048,12 @@ namespace Akka.Serialization
                         " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
                         $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
-                return serializer.FromBinary(bytes, type);
+                // A wrapped V1 serializer keeps its own FromBinary(byte[], Type): the adapter's override of it is
+                // sealed (SerializerV2 is a SerializerWithStringManifest), and the type -> manifest -> type round
+                // trip would need dynamic type loading for a type the TypeCache has not seen.
+                return serializer is SerializerV1Adapter adapter
+                    ? adapter.Inner.FromBinary(bytes, type)
+                    : serializer.FromBinary(bytes, type);
             });
         }
 
