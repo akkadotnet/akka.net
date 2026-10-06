@@ -1,0 +1,327 @@
+// Generates aps-1.5.70.db with Akka.Persistence.Sql 1.5.70 (default SQLite settings), or reads a database back with it.
+//
+//   dotnet run -- generate <output-directory>     writes <output-directory>/aps-1.5.70.db
+//   dotnet run -- verify <database-file>          replays and queries a COPY of a database with Akka.Persistence.Sql and
+//                                                 prints what it reads (it opens the file read-write: never point it at the fixture)
+//
+// The file holds three persistence ids:
+//   alpha  events 1-8, snapshot at 6, DeleteMessagesTo(3)
+//   beta   events 1-6, two of them records (CompatItem)
+//   gamma  events 1-5, DeleteMessagesTo(5): only the tombstone is left
+using System.Text;
+using Akka.Actor;
+using Akka.Hosting;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
+using Akka.Persistence.Query;
+using Akka.Persistence.Sql.Hosting;
+using Akka.Persistence.Sql.Query;
+using Akka.Serialization;
+using Akka.Streams;
+using Akka.Streams.Dsl;
+using LinqToDB;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+return await Run(args);
+
+static async Task<int> Run(string[] args)
+{
+    if (args.Length != 2 || (args[0] != "generate" && args[0] != "verify"))
+    {
+        Console.Error.WriteLine("usage: generate <output-directory> | verify <database-file>");
+        return 2;
+    }
+
+    if (args[0] == "generate")
+    {
+        var directory = Path.GetFullPath(args[1]);
+        Directory.CreateDirectory(directory);
+        var file = Path.Combine(directory, "aps-1.5.70.db");
+        foreach (var f in new[] { file, file + "-wal", file + "-shm", file + "-journal" })
+            File.Delete(f);
+        await Generate(file);
+        return 0;
+    }
+
+    return await Verify(Path.GetFullPath(args[1]));
+}
+
+static async Task<IHost> StartAsync(string file)
+{
+    var builder = Host.CreateApplicationBuilder();
+    builder.Logging.ClearProviders();
+    builder.Services.AddAkka("aps-compat", akka =>
+    {
+        akka
+            .WithCustomSerializer("compat-item", [typeof(CompatItem)], system => new CompatItemSerializer(system))
+            // DEFAULT settings: tag-write-mode TagTable, no delete-compatibility-mode, default table names, auto-initialize.
+            .WithSqlPersistence(
+                $"Data Source={file}",
+                ProviderName.SQLiteMS,
+                journalBuilder: journal => journal.AddWriteEventAdapter<Tagger>("tagger", [typeof(string), typeof(CompatItem)]));
+    });
+    var host = builder.Build();
+    await host.StartAsync();
+    return host;
+}
+
+static async Task Stop(IHost host, string file)
+{
+    var system = host.Services.GetRequiredService<ActorSystem>();
+    await system.Terminate();
+    await host.StopAsync();
+    host.Dispose();
+    SqliteConnection.ClearAllPools();
+
+    // fold the WAL (if any) into the main file and leave a single .db file behind
+    var builder = new SqliteConnectionStringBuilder { DataSource = file, Pooling = false };
+    using (var connection = new SqliteConnection(builder.ConnectionString))
+    {
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode = DELETE;";
+        command.ExecuteNonQuery();
+    }
+
+    SqliteConnection.ClearAllPools();
+}
+
+static async Task Generate(string file)
+{
+    var host = await StartAsync(file);
+    var system = host.Services.GetRequiredService<ActorSystem>();
+
+    async Task Ask(IActorRef actor, object command)
+        => await actor.Ask<string>(command, TimeSpan.FromSeconds(30));
+
+    var alpha = system.ActorOf(Props.Create(() => new Entity("alpha")));
+    for (var i = 1; i <= 8; i++)
+    {
+        await Ask(alpha, new Add($"alpha-{i}"));
+        if (i == 6)
+            await Ask(alpha, new Snap(new CompatItem("alpha-snapshot", 6)));
+    }
+
+    await Ask(alpha, new DeleteTo(3));
+
+    var beta = system.ActorOf(Props.Create(() => new Entity("beta")));
+    await Ask(beta, new Add("beta-1"));
+    await Ask(beta, new Add(new CompatItem("widget", 2)));
+    await Ask(beta, new Add("beta-3"));
+    await Ask(beta, new Add(new CompatItem("gadget", 5)));
+    await Ask(beta, new Add("beta-5"));
+    await Ask(beta, new Add("beta-6"));
+
+    var gamma = system.ActorOf(Props.Create(() => new Entity("gamma")));
+    for (var i = 1; i <= 5; i++)
+        await Ask(gamma, new Add($"gamma-{i}"));
+    await Ask(gamma, new DeleteTo(5));
+
+    await Stop(host, file);
+    Dump(file);
+}
+
+static void Dump(string file)
+{
+    var builder = new SqliteConnectionStringBuilder { DataSource = file, Mode = SqliteOpenMode.ReadOnly, Pooling = false };
+    using var connection = new SqliteConnection(builder.ConnectionString);
+    connection.Open();
+    foreach (var (title, sql) in new[]
+    {
+        ("journal", "SELECT ordering, persistence_id, sequence_number, deleted, length(message), manifest, identifier FROM journal ORDER BY ordering"),
+        ("tags", "SELECT ordering_id, tag, sequence_nr, persistence_id FROM tags ORDER BY ordering_id, tag"),
+        ("snapshot", "SELECT persistence_id, sequence_number, length(snapshot), manifest, serializer_id FROM snapshot"),
+    })
+    {
+        Console.WriteLine($"-- {title}");
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var values = new object[reader.FieldCount];
+            reader.GetValues(values);
+            Console.WriteLine(string.Join(" | ", values.Select(v => v is DBNull ? "NULL" : v.ToString())));
+        }
+    }
+}
+
+static async Task<int> Verify(string file)
+{
+    var host = await StartAsync(file);
+    var system = host.Services.GetRequiredService<ActorSystem>();
+
+    foreach (var pid in new[] { "alpha", "beta", "gamma", "delta" })
+    {
+        foreach (var useSnapshot in new[] { false, true })
+        {
+            var tcs = new TaskCompletionSource<string>();
+            system.ActorOf(Props.Create(() => new Reader(pid, useSnapshot, tcs)));
+            Console.WriteLine($"replay {pid}{(useSnapshot ? " (with snapshot)" : "")}: {await tcs.Task.WaitAsync(TimeSpan.FromSeconds(30))}");
+        }
+    }
+
+    var readJournal = system.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+    var materializer = system.Materializer();
+
+    async Task Query(string title, Source<EventEnvelope, Akka.NotUsed> source)
+    {
+        var envelopes = await source.RunWith(Sink.Seq<EventEnvelope>(), materializer).WaitAsync(TimeSpan.FromSeconds(30));
+        Console.WriteLine($"{title}:");
+        foreach (var e in envelopes)
+            Console.WriteLine($"  offset={((Sequence)e.Offset).Value} {e.PersistenceId}/{e.SequenceNr} {e.Event} tags=[{string.Join(",", e.Tags.OrderBy(t => t, StringComparer.Ordinal))}]");
+    }
+
+    await Query("currentEventsByTag odd", readJournal.CurrentEventsByTag("odd", Offset.NoOffset()));
+    await Query("currentEventsByTag blue", readJournal.CurrentEventsByTag("blue", Offset.NoOffset()));
+    await Query("currentEventsByTag item", readJournal.CurrentEventsByTag("item", Offset.NoOffset()));
+    await Query("currentEventsByTag nothing", readJournal.CurrentEventsByTag("nothing", Offset.NoOffset()));
+    await Query("currentAllEvents", readJournal.CurrentAllEvents(Offset.NoOffset()));
+    await Query("currentEventsByPersistenceId alpha", readJournal.CurrentEventsByPersistenceId("alpha", 0, long.MaxValue));
+    await Query("currentEventsByPersistenceId delta", readJournal.CurrentEventsByPersistenceId("delta", 0, long.MaxValue));
+
+    var ids = await readJournal.CurrentPersistenceIds().RunWith(Sink.Seq<string>(), materializer).WaitAsync(TimeSpan.FromSeconds(30));
+    Console.WriteLine($"currentPersistenceIds: {string.Join(",", ids.OrderBy(i => i, StringComparer.Ordinal))}");
+
+    await Stop(host, file);
+    return 0;
+}
+
+public sealed record CompatItem(string Name, int Qty);
+
+public sealed class CompatItemSerializer(ExtendedActorSystem system) : SerializerWithStringManifest(system)
+{
+    public override int Identifier => 9001;
+
+    public override string Manifest(object o) => "I";
+
+    public override byte[] ToBinary(object obj)
+    {
+        var item = (CompatItem)obj;
+        return Encoding.UTF8.GetBytes($"{item.Name};{item.Qty}");
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        var parts = Encoding.UTF8.GetString(bytes).Split(';');
+        return new CompatItem(parts[0], int.Parse(parts[1]));
+    }
+}
+
+// Tags: an odd trailing digit gets "odd", -3 and -6 also get "blue", records get "item".
+public sealed class Tagger : IWriteEventAdapter
+{
+    public string Manifest(object evt) => string.Empty;
+
+    public object ToJournal(object evt)
+    {
+        switch (evt)
+        {
+            case string s:
+                var tags = new List<string>();
+                if ((s[^1] - '0') % 2 == 1)
+                    tags.Add("odd");
+                if (s.EndsWith("-3") || s.EndsWith("-6"))
+                    tags.Add("blue");
+                return tags.Count == 0 ? s : new Tagged(s, tags);
+            case CompatItem:
+                return new Tagged(evt, ["item"]);
+            default:
+                return evt;
+        }
+    }
+}
+
+public sealed record Add(object Event);
+
+public sealed record Snap(object State);
+
+public sealed record DeleteTo(long SequenceNr);
+
+public sealed class Entity : UntypedPersistentActor
+{
+    private IActorRef? _asker;
+
+    public Entity(string persistenceId) => PersistenceId = persistenceId;
+
+    public override string PersistenceId { get; }
+
+    protected override void OnRecover(object message)
+    {
+    }
+
+    protected override void OnCommand(object message)
+    {
+        switch (message)
+        {
+            case Add add:
+                var sender = Sender;
+                Persist(add.Event, _ => sender.Tell("ok"));
+                break;
+            case Snap snap:
+                _asker = Sender;
+                SaveSnapshot(snap.State);
+                break;
+            case DeleteTo del:
+                _asker = Sender;
+                DeleteMessages(del.SequenceNr);
+                break;
+            case SaveSnapshotSuccess:
+            case DeleteMessagesSuccess:
+                _asker!.Tell("ok");
+                break;
+            case SaveSnapshotFailure f:
+                throw f.Cause;
+            case DeleteMessagesFailure f:
+                throw f.Cause;
+        }
+    }
+}
+
+public sealed class Reader : UntypedPersistentActor
+{
+    private readonly bool _useSnapshot;
+    private readonly TaskCompletionSource<string> _done;
+    private readonly List<string> _events = [];
+    private string _snapshot = "none";
+
+    public Reader(string persistenceId, bool useSnapshot, TaskCompletionSource<string> done)
+    {
+        PersistenceId = persistenceId;
+        _useSnapshot = useSnapshot;
+        _done = done;
+    }
+
+    public override string PersistenceId { get; }
+
+    public override Recovery Recovery => _useSnapshot ? Recovery.Default : new Recovery(SnapshotSelectionCriteria.None);
+
+    protected override void OnRecover(object message)
+    {
+        switch (message)
+        {
+            case SnapshotOffer offer:
+                _snapshot = $"{offer.Snapshot}@{offer.Metadata.SequenceNr}";
+                break;
+            case RecoveryCompleted:
+                _done.TrySetResult($"snapshot={_snapshot} events=[{string.Join(", ", _events)}] lastSequenceNr={LastSequenceNr}");
+                break;
+            default:
+                _events.Add(message.ToString()!);
+                break;
+        }
+    }
+
+    protected override void OnCommand(object message)
+    {
+    }
+
+    protected override void OnRecoveryFailure(Exception reason, object? message = null)
+    {
+        _done.TrySetException(reason);
+        base.OnRecoveryFailure(reason, message);
+    }
+}
