@@ -5,7 +5,7 @@ title: TLS for Akka.IO, Akka.Streams, and Artery
 
 # TLS for Akka.IO, Akka.Streams, and Artery
 
-This guide documents TLS for Akka.IO TCP using the per-connection settings and peer trust policies available to `Tcp.Connect` and `Tcp.Bind`.
+This guide documents TLS for Akka.IO TCP, Akka.Streams TCP, and Artery remoting, all of which configure TLS in code with immutable settings and peer trust policies.
 
 Akka.IO TLS is configured in code with an `X509Certificate2` and immutable settings objects. Akka.IO does not read a TLS schema from HOCON or use the DotNetty remoting settings described in [Network Security](security.md). Your application can load certificates from its configured source and pass the certificate object to Akka.IO.
 
@@ -68,3 +68,23 @@ An outgoing graph's connection materialized value completes after authentication
 [!code-csharp[TlsStreamsClient](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpTlsDocTests.cs?name=tls-client)]
 
 TLS does not change Streams back-pressure or half-close behavior. Accepted connections still expose the same bidirectional byte flow, so completing its write side leaves the read side available when half-close is enabled. See [Working With Streaming IO](../streams/workingwithstreamingio.md) for the TCP Streams API and graph patterns.
+
+## Use TLS With Artery Remoting
+
+Artery TLS uses the same Akka.Streams TCP transport as the other Streams TCP APIs. Add one `ArteryTlsSetup` containing an immutable `ArteryTlsSettings` profile to the actor-system setup. When that setup is present, Artery uses TLS for inbound connections and every outbound channel, including control, ordinary, and large-message traffic. Without it, Artery continues to use plaintext TCP. A failed TLS handshake closes that connection; Artery does not retry it as plaintext.
+
+TLS profiles and peer-validation callbacks are configured in code; there is no Artery TLS HOCON schema. Existing HOCON remains available for Artery addresses and other transport settings.
+
+For mutual TLS, each node presents a certificate that has both client and server authentication usage. The inbound client policy and outbound server policy can be the same or distinct. Each node validates the identity of the certificate presented by its peer, while the policies decide which certificates are trusted. Artery derives the outgoing TLS target host from the remote endpoint for SNI and name validation; the policy must include `TlsCertificateValidation.ValidateHostname()` when DNS identity validation is required. The local Artery bind hostname does not override that remote identity.
+
+This direct setup example adds TLS alongside the application's existing Artery configuration:
+
+[!code-csharp[ArteryTlsDirectSetup](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsDirectSetup)]
+
+Artery can also use server-only TLS when clients should authenticate the server while the listener accepts connections without client certificates. Configure every participating node with a server certificate and an outbound server policy that trusts its peers. `ServerOnly` affects the inbound client-certificate requirement; it does not turn off validation of the remote server certificate on outgoing connections.
+
+`WithArteryRemoting` provides the same profile through Akka.Hosting. It enables Artery and allows explicit bind host and port overrides. Omitted host and port values remain under the application's existing configuration. The extension preserves an already selected Cluster, Remote, or custom actor-ref provider; a local or unspecified provider is changed to Remote so that remoting is active. Setting `Tls` adds or replaces the typed Artery TLS setup. Leaving it null preserves an `ArteryTlsSetup` supplied directly to the builder.
+
+[!code-csharp[ArteryTlsHosting](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsHosting)]
+
+Artery TLS policies authenticate transport peers; they do not authorize cluster membership or actor access. Configure trust and application-level authorization for those separate decisions. Keep the profile's certificate and private key alive until the actor system and its remoting transport have stopped, then dispose the caller-owned certificate.
