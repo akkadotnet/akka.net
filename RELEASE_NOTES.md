@@ -1,3 +1,49 @@
+#### 1.6.0-beta2 October 6th, 2026 ####
+
+Akka.NET 1.6.0-beta2 builds on the first public beta of the 1.6 line. It keeps the `.NET 10`-only target and the experimental Artery TCP transport, and it hardens the `SerializerV2` API and the Native AOT story.
+
+**Serialization V2**
+
+The `SerializerV2` work continues, including the generator:
+
+* Formatters inside collections (G-1). ([#8726](https://github.com/akkadotnet/akka.net/pull/8726))
+* Native `TimeSpan` and small scalars (G-3). ([#8727](https://github.com/akkadotnet/akka.net/pull/8727))
+* The V2 switch is HOCON-only; the `SerializationV2Setup` object is dropped. ([#8729](https://github.com/akkadotnet/akka.net/pull/8729))
+* The V2 switch is a global opt-in, off by default. ([#8724](https://github.com/akkadotnet/akka.net/pull/8724))
+* Delete the built-in serializer rows from module HOCON. ([#8711](https://github.com/akkadotnet/akka.net/pull/8711))
+* Remote `PrimitiveSerializers` become a native `SerializerV2` (same id 17, same bytes). ([#8719](https://github.com/akkadotnet/akka.net/pull/8719))
+* Fix docs and diagnostics drift; diagnose private nested message types. ([#8721](https://github.com/akkadotnet/akka.net/pull/8721))
+
+**Native AOT**
+
+* Akka.Persistence.Embedded: SQLite journal, snapshot store and read journal, AOT-compatible. ([#8739](https://github.com/akkadotnet/akka.net/pull/8739))
+* Persistence.Hosting: start plugin types from code (Native AOT). ([#8738](https://github.com/akkadotnet/akka.net/pull/8738))
+* Akka.Streams: build island-boundary subscribers without runtime generics (Native AOT). ([#8732](https://github.com/akkadotnet/akka.net/pull/8732))
+
+**Core and fixes**
+
+* Resolve `akka.loggers` names before starting any logger. ([#8778](https://github.com/akkadotnet/akka.net/pull/8778))
+* Add `Match` extension methods for `Option<T>`. ([#8774](https://github.com/akkadotnet/akka.net/pull/8774))
+
+**Docs**
+
+* Complete XML documentation placeholders across Core, Cluster, Cluster Tools, Distributed Data, Persistence, Remote, Sharding, Streams and TestKit. ([#8760](https://github.com/akkadotnet/akka.net/pull/8760)) ([#8761](https://github.com/akkadotnet/akka.net/pull/8761)) ([#8762](https://github.com/akkadotnet/akka.net/pull/8762)) ([#8763](https://github.com/akkadotnet/akka.net/pull/8763)) ([#8764](https://github.com/akkadotnet/akka.net/pull/8764)) ([#8750](https://github.com/akkadotnet/akka.net/pull/8750)) ([#8751](https://github.com/akkadotnet/akka.net/pull/8751)) ([#8752](https://github.com/akkadotnet/akka.net/pull/8752)) ([#8755](https://github.com/akkadotnet/akka.net/pull/8755)) ([#8756](https://github.com/akkadotnet/akka.net/pull/8756)) ([#8757](https://github.com/akkadotnet/akka.net/pull/8757)) ([#8758](https://github.com/akkadotnet/akka.net/pull/8758))
+* Document channel sink behavior and distributed data reads. ([#8767](https://github.com/akkadotnet/akka.net/pull/8767))
+* Correct serializer loading and supervision documentation. ([#8766](https://github.com/akkadotnet/akka.net/pull/8766))
+* Clarify journal write outcomes and snapshot selection bounds. ([#8765](https://github.com/akkadotnet/akka.net/pull/8765))
+
+**Release pipeline**
+
+* Publish suffixed tags (betas, RCs) as GitHub pre-releases. ([#8710](https://github.com/akkadotnet/akka.net/pull/8710))
+
+3 contributors since release 1.6.0-beta1
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 39      | 37456 | 17026 | Aaron Stannard  |
+| 1       | 110   | 0    | Jan             |
+| 2       | 0     | 0    | dependabot[bot] |
+
 #### 1.6.0-beta1 October 2nd, 2026 ####
 
 Akka.NET 1.6.0-beta1 is the first public beta of the 1.6 line. Every package now targets .NET 10 only. This beta adds an experimental Artery TCP remoting transport, a buffer-based `SerializerV2` API with a source generator for your own messages, a rewritten Akka.IO TCP layer, Native AOT support for local and Akka.Hosting apps, and code-based serializer registration for Akka's built-in modules. Akka.Hosting now ships from this repository. This release has breaking changes.
