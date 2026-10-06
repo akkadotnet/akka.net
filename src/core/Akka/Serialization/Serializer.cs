@@ -183,7 +183,9 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
-            var manifest = type.TypeQualifiedName();
+            // A null type maps to the empty manifest - the same thing SerializerV2 did before it derived from
+            // this class - so FromBinary(bytes, string) decides what an empty manifest means.
+            var manifest = type is null ? string.Empty : type.TypeQualifiedName();
             return FromBinary(bytes, manifest);
         }
 
