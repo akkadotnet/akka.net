@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -150,13 +151,23 @@ public class DynamicTypeLoadingOffLoggerSetupSpec
 /// <summary>
 /// Not generic on purpose: a generic type's name carries its arguments' assembly identities, which no
 /// HOCON author writes by hand.
+/// Constructions are counted per <see cref="ActorSystem"/> rather than process-wide: a spec that expects
+/// <c>ActorSystem.Create</c> to throw leaves its logger to be constructed in the background, and that
+/// late construction must not be counted against another spec's system (see #8772).
 /// </summary>
 public sealed class NamedInHoconLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
 {
-    private static int _instances;
-    public static int Instances => _instances;
+    private sealed class Counter
+    {
+        public int Value;
+    }
 
-    public NamedInHoconLogger() => Interlocked.Increment(ref _instances);
+    private static readonly ConditionalWeakTable<ActorSystem, Counter> Counts = new();
+
+    public static int InstancesIn(ActorSystem system) =>
+        Counts.TryGetValue(system, out var counter) ? Volatile.Read(ref counter.Value) : 0;
+
+    public NamedInHoconLogger() => Interlocked.Increment(ref Counts.GetOrCreateValue(Context.System).Value);
 
     protected override bool Receive(object message)
     {
@@ -186,7 +197,6 @@ public class DynamicTypeLoadingOffLoggerSetupNamedInHoconSpec
     public async Task Should_StartLoggerOnce_When_HoconNamesATypeLoggerSetupRegisters_AndDynamicTypeLoadingIsDisabled(
         string hoconTypeName)
     {
-        var before = NamedInHoconLogger.Instances;
         ActorSystem? sys = null;
 
         await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
@@ -197,7 +207,7 @@ public class DynamicTypeLoadingOffLoggerSetupNamedInHoconSpec
 
         try
         {
-            (NamedInHoconLogger.Instances - before).Should().Be(1);
+            NamedInHoconLogger.InstancesIn(sys!).Should().Be(1);
         }
         finally
         {
