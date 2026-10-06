@@ -108,8 +108,7 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
 
-                // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on it is
-                // reflection on the HOCON type name, exactly as it always was. With it off: built-in, then the guard.
+                // reflection on the HOCON type name as always; with the switch off, the built-ins, then the guard
                 if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                     return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
 
@@ -349,9 +348,8 @@ namespace Akka.Persistence
             var pluginTypeName = pluginConfig.GetString("class", null);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
 
-            // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, HOCON `class`
-            // decides as it always did, and a registration only fills in when there is no `class`. With reflection off:
-            // registration (by plugin id), built-in, guard.
+            // Switch on: HOCON `class` decides as always, and a registration fills in when there is none.
+            // Switch off: registration (by plugin id), built-in, guard (see AkkaFeatures).
             Props pluginProps;
             if (registeredProps is not null && (!AkkaFeatures.IsDynamicTypeLoadingSupported || string.IsNullOrEmpty(pluginTypeName)))
             {

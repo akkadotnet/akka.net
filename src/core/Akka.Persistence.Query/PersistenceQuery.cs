@@ -69,9 +69,8 @@ namespace Akka.Persistence.Query
 
         private IReadJournalProvider CreatePlugin(string configPath, Config config)
         {
-            // lookup order, written out at the site on purpose (see AkkaFeatures). With reflection on, HOCON `class` decides
-            // as it always did, and a registration only fills in when there is no `class`. With reflection off:
-            // registration (by plugin id), then the guard. There is no built-in read journal.
+            // Switch on: HOCON `class` decides as always, and a registration fills in when there is none.
+            // Switch off: registration (by plugin id), then the guard (see AkkaFeatures). There is no built-in read journal.
             _registry.TryGet<ReadJournalDetails>(configPath, out var registered);
 
             if (AkkaFeatures.IsDynamicTypeLoadingSupported)

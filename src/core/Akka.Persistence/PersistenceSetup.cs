@@ -77,28 +77,6 @@ namespace Akka.Persistence
             return new PersistenceSetup(
                 Registrations.AddRange(eventAdapters.Select(a => PersistenceRegistration.ForEventAdapter(journalPluginId, a))));
         }
-
-        /// <summary>
-        /// Appends a journal registration.
-        /// </summary>
-        public PersistenceSetup WithJournal<
-            [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TJournal>(
-            string pluginId,
-            Func<Config, TJournal> factory,
-            Config? defaultConfig = null,
-            IEnumerable<EventAdapterDetails>? eventAdapters = null) where TJournal : ActorBase
-            => WithPlugin(JournalDetails.Create(pluginId, factory, defaultConfig, eventAdapters));
-
-        /// <summary>
-        /// Appends a snapshot store registration.
-        /// </summary>
-        public PersistenceSetup WithSnapshotStore<
-            [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TStore>(
-            string pluginId,
-            Func<Config, TStore> factory,
-            Config? defaultConfig = null) where TStore : ActorBase
-            => WithPlugin(SnapshotStoreDetails.Create(pluginId, factory, defaultConfig));
-
     }
 
     /// <summary>
@@ -198,35 +176,23 @@ namespace Akka.Persistence
     {
         private readonly Func<Config, Props> _createProps;
 
-        private JournalDetails(string pluginId, string typeName, Func<Config, Props> createProps, Config? defaultConfig, ImmutableArray<EventAdapterDetails> eventAdapters)
+        private JournalDetails(string pluginId, string typeName, Func<Config, Props> createProps, Config? defaultConfig)
             : base(pluginId, typeName, defaultConfig)
         {
             _createProps = createProps;
-            EventAdapters = eventAdapters;
         }
-
-        /// <summary>
-        /// The event adapters this record brings with it.
-        /// </summary>
-        public IReadOnlyList<EventAdapterDetails> EventAdapters { get; }
 
         public static JournalDetails Create<
             [DynamicallyAccessedMembers(Props.ActorTypeMembers)] TJournal>(
             string pluginId,
             Func<Config, TJournal> factory,
-            Config? defaultConfig = null,
-            IEnumerable<EventAdapterDetails>? eventAdapters = null) where TJournal : ActorBase
+            Config? defaultConfig = null) where TJournal : ActorBase
         {
             if (factory is null)
                 throw new ArgumentNullException(nameof(factory));
 
-            var adapters = (eventAdapters ?? Enumerable.Empty<EventAdapterDetails>()).ToImmutableArray();
-            var duplicate = adapters.GroupBy(a => a.Name, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1);
-            if (duplicate is not null)
-                throw new ArgumentException($"Event adapter name [{duplicate.Key}] is used more than once.", nameof(eventAdapters));
-
             // the closed generic producer is created here, where the type is known, so the trimmer keeps what Props needs
-            return new JournalDetails(pluginId, typeof(TJournal).FullName!, config => Props.CreateBy(new PluginActorProducer<TJournal>(factory, config)), defaultConfig, adapters);
+            return new JournalDetails(pluginId, typeof(TJournal).FullName!, config => Props.CreateBy(new PluginActorProducer<TJournal>(factory, config)), defaultConfig);
         }
 
         public override Props CreateProps(Config config) => _createProps(config);

@@ -215,7 +215,7 @@ namespace Akka.Persistence.Query.Tests
         {
             const string journalPath = "akka.persistence.journal.registered";
             var setup = PersistenceSetup.Create()
-                .WithJournal(journalPath, _ => new RegisteredJournal())
+                .WithPlugin(JournalDetails.Create(journalPath, _ => new RegisteredJournal()))
                 .WithPlugin(ReadJournalDetails.Create(ProviderId, (_, _) => new RegisteredProvider()));
 
             await RunAsync(false, "", setup, system =>

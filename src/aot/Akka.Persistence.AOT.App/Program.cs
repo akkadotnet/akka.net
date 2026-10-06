@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.AOT.Shared;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Hosting;

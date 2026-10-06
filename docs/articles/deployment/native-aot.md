@@ -164,7 +164,7 @@ adapters you add to a journal pile up across calls, whichever call configures th
 `AddEventAdapter<TAdapter>`, `AddReadEventAdapter<TAdapter>` and `AddWriteEventAdapter<TAdapter>` name the
 adapter type in code, so they work under Native AOT: core builds the adapter with the constructor that takes
 the `ExtendedActorSystem`, or the parameterless one, as it does for HOCON. The obsolete
-`JournalOptions.Adapters` builder is ignored, as it has been since Akka.Hosting 1.5.55, with the switch on or off.
+`JournalOptions.Adapters` property is removed in 1.6; use these methods.
 
 The order in which core looks a plugin up depends on the switch.
 
@@ -180,6 +180,9 @@ The order in which core looks a plugin up depends on the switch.
   strategies). A plugin that is in neither throws a `ConfigurationException` when it starts. The message
   names the HOCON setting and the switch, and points to Akka.Persistence.Hosting (`WithJournal` or
   `WithSnapshot` with options derived from `JournalOptions<TJournal>` or `SnapshotOptions<TSnapshotStore>`).
+  A HOCON `class` that names a different type than the registration also fails at start, for journals,
+  snapshot stores and read journals, and the message names both types. Remove the `class` override, or
+  register options for the type it names.
 
 A plugin package makes its plugin AOT-safe in one place, the options class its users already pass to
 `WithJournal` or `WithSnapshot`. If you write a plugin, follow
@@ -190,8 +193,8 @@ or `DiscardConfigurator`, which resolve without reflection, or override `Interna
 persistent actor.
 
 HOCON adapters in a journal section still work on the JIT. With the switch off an adapter has to come from
-`AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. HOCON that only repeats what those methods
-registered is harmless. `WithClusterShardingJournalMigrationAdapter` registers its adapter too: Akka.Persistence.Hosting
+`AddEventAdapter`, `AddReadEventAdapter` or `AddWriteEventAdapter`. A HOCON binding that only repeats a binding
+those methods registered is harmless; a hand-written binding of any other type fails at start. `WithClusterShardingJournalMigrationAdapter` registers its adapter too: Akka.Persistence.Hosting
 does not reference Akka.Cluster.Sharding, so it names the adapter and the event type by compile-time literals,
 the way core names its first-party extensions, and registers nothing when Akka.Cluster.Sharding is absent.
 

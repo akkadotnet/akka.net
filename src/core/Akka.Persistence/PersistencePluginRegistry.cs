@@ -23,8 +23,7 @@ namespace Akka.Persistence
     /// INTERNAL API
     ///
     /// The one place persistence (and Akka.Persistence.Query) reads code-based registrations from, one per
-    /// actor system. Today the only source is the user's <see cref="PersistenceSetup"/>; a module source can
-    /// plug in here later without touching the lookup sites. Answers the registration arm only: each site
+    /// actor system, built from its <see cref="PersistenceSetup"/>. Answers the registration arm only: each site
     /// writes the built-in, guard and reflection arms out itself, see <see cref="AkkaFeatures"/>.
     /// </summary>
     internal sealed class PersistencePluginRegistry
@@ -67,11 +66,6 @@ namespace Akka.Persistence
                 if (registration.Plugin is { } plugin)
                 {
                     plugins[plugin.PluginId] = plugin;
-                    if (plugin is JournalDetails journal)
-                    {
-                        foreach (var adapter in journal.EventAdapters)
-                            AddAdapter(adapters, journal.PluginId, adapter);
-                    }
                 }
                 else
                 {

@@ -88,7 +88,9 @@ public sealed class AkkaPersistenceJournalBuilder
         IEnumerable<Type> boundTypes) where TAdapter : IEventAdapter
     {
         var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
-        AddRegisteredAdapter(eventAdapterName, types, system => (IEventAdapter)Instantiate<TAdapter>(system));
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+                (Func<ExtendedActorSystem, IEventAdapter>)(system => Instantiate<TAdapter>(system)), types.ToArray()));
 
         return this;
     }
@@ -100,7 +102,9 @@ public sealed class AkkaPersistenceJournalBuilder
         IEnumerable<Type> boundTypes) where TAdapter : IReadEventAdapter
     {
         var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
-        AddRegisteredAdapter(eventAdapterName, types, system => new NoopWriteEventAdapter((IReadEventAdapter)Instantiate<TAdapter>(system)));
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+                (Func<ExtendedActorSystem, IReadEventAdapter>)(system => Instantiate<TAdapter>(system)), types.ToArray()));
 
         return this;
     }
@@ -112,7 +116,9 @@ public sealed class AkkaPersistenceJournalBuilder
         IEnumerable<Type> boundTypes) where TAdapter : IWriteEventAdapter
     {
         var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
-        AddRegisteredAdapter(eventAdapterName, types, system => new NoopReadEventAdapter((IWriteEventAdapter)Instantiate<TAdapter>(system)));
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName,
+                (Func<ExtendedActorSystem, IWriteEventAdapter>)(system => Instantiate<TAdapter>(system)), types.ToArray()));
 
         return this;
     }
@@ -133,25 +139,17 @@ public sealed class AkkaPersistenceJournalBuilder
         return types;
     }
 
-    // The setup copy of what the HOCON says. Build adds it only when the HOCON is written, so a call that built
-    // nothing before still builds nothing. A name the HOCON would reject is skipped rather than made to throw here.
-    private void AddRegisteredAdapter(string eventAdapterName, List<Type> types, Func<ExtendedActorSystem, IEventAdapter> factory)
-    {
-        if (!string.IsNullOrWhiteSpace(eventAdapterName))
-            RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName, factory, types.ToArray()));
-    }
-
     // core's reflection path (EventAdapters.Instantiate) on a type named in code: the constructor that takes the
     // system, and when there is none, the parameterless one
-    private static object Instantiate<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(ExtendedActorSystem system)
+    private static TAdapter Instantiate<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(ExtendedActorSystem system)
     {
         try
         {
-            return Activator.CreateInstance(typeof(TAdapter), system)!;
+            return (TAdapter)Activator.CreateInstance(typeof(TAdapter), system)!;
         }
         catch (MissingMethodException)
         {
-            return Activator.CreateInstance(typeof(TAdapter))!;
+            return (TAdapter)Activator.CreateInstance(typeof(TAdapter))!;
         }
     }
 

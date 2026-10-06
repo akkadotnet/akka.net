@@ -488,7 +488,9 @@ the constructor rules it applies to a HOCON `class`: `(Config)` or parameterless
 `(ExtendedActorSystem, Config)`, `(ExtendedActorSystem)` or parameterless for the read journal provider.
 Your classes stay `JournalOptions` and `SnapshotOptions`, so your users' code compiles as before. Without the
 generic base your plugin keeps working on the JIT through its HOCON `class`. A plugin with no read journal
-derives from `JournalOptions<TJournal>`.
+derives from `JournalOptions<TJournal>`. The generic argument has to be the type the plugin's `class` names:
+with the switch off, a HOCON `class` that names another type fails at start, so a variant of a plugin (a
+GridFS snapshot store, say) needs options with its own generic argument.
 
 ### Step 2: Check Your Read Journal's Plugin Id
 

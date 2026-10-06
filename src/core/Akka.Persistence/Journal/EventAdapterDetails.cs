@@ -15,9 +15,8 @@ using Akka.Actor;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// An event adapter registered in code, together with the event types it is bound to. It goes into
-    /// <see cref="JournalDetails.Create{TJournal}"/> and replaces the HOCON <c>event-adapters</c> entry and
-    /// its <c>event-adapter-bindings</c> lines.
+    /// An event adapter registered in code, together with the event types it is bound to. It stands in for the HOCON
+    /// <c>event-adapters</c> entry and its <c>event-adapter-bindings</c> lines.
     /// </summary>
     internal sealed class EventAdapterDetails
     {

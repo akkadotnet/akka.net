@@ -364,8 +364,7 @@ namespace Akka.Persistence.Journal
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
             var pairs = adapterBindings.Select(kv =>
             {
-                // lookup order, written out at the site on purpose (see AkkaFeatures): guard, reflection.
-                // A registered binding never reaches here, it comes from an EventAdapterDetails.
+                // a registered binding never reaches here, it comes from an EventAdapterDetails
                 if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 {
                     // The binding Akka.Persistence.Hosting writes next to its registrations: every adapter it names is
@@ -488,8 +487,7 @@ namespace Akka.Persistence.Journal
 
         private static IEventAdapter InstantiateAdapter(string adapterName, string qualifiedName, ExtendedActorSystem system, string pluginPath)
         {
-            // lookup order, written out at the site on purpose (see AkkaFeatures): guard, reflection.
-            // A registered adapter never reaches here, it comes from an EventAdapterDetails.
+            // a registered adapter never reaches here, it comes from an EventAdapterDetails
             if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
                     $"{SettingPrefix(pluginPath)}event-adapters.{adapterName}",
