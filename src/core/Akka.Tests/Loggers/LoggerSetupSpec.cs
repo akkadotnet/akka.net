@@ -256,3 +256,85 @@ public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
         Sys.Settings.LogFormatter.Should().BeSameAs(SetupFormatter);
     }
 }
+
+/// <summary>A logger that counts constructions, for specs checking that a failed start never builds it.</summary>
+public sealed class UnresolvableNameSetupLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    private static int _instances;
+    public static int Instances => Volatile.Read(ref _instances);
+
+    public UnresolvableNameSetupLogger() => Interlocked.Increment(ref _instances);
+
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+/// <summary>A resolvable <c>akka.loggers</c> logger that counts constructions.</summary>
+public sealed class UnresolvableNameHoconLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    private static int _instances;
+    public static int Instances => Volatile.Read(ref _instances);
+
+    public UnresolvableNameHoconLogger() => Interlocked.Increment(ref _instances);
+
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+/// <summary>
+/// A bad <c>akka.loggers</c> entry must fail <c>ActorSystem.Create</c> before any logger starts, so no
+/// logger is left constructing in the background of a system that never came up.
+/// </summary>
+[Collection(DynamicTypeLoadingCollection.Name)]
+public class UnresolvableLoggerNameSpec
+{
+    private const string MissingTypeName = "Akka.Tests.Loggers.NoSuchLoggerAnywhere, Akka.Tests";
+
+    [Fact(DisplayName = "Should_NotStartLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled")]
+    public async Task Should_NotStartLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled()
+    {
+        var before = UnresolvableNameSetupLogger.Instances;
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{MissingTypeName}""]");
+        var setup = ActorSystemSetup.Create(
+            BootstrapSetup.Create().WithConfig(config),
+            LoggerSetup.Create(Props.Create<UnresolvableNameSetupLogger>()));
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerSetupOff", setup);
+            create.Should().Throw<ConfigurationException>().WithMessage("*not built in*");
+            return Task.CompletedTask;
+        });
+
+        UnresolvableNameSetupLogger.Instances.Should().Be(before);
+    }
+
+    [Fact(DisplayName = "Should_NotStartEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType")]
+    public async Task Should_NotStartEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType()
+    {
+        var before = UnresolvableNameHoconLogger.Instances;
+        var goodName = $"{typeof(UnresolvableNameHoconLogger).FullName}, {typeof(UnresolvableNameHoconLogger).Assembly.GetName().Name}";
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{goodName}"", ""{MissingTypeName}""]");
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(true, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerHocon", config);
+            create.Should().Throw<ConfigurationException>().WithMessage("*Logger specified in config cannot be found*");
+            return Task.CompletedTask;
+        });
+
+        UnresolvableNameHoconLogger.Instances.Should().Be(before);
+    }
+}

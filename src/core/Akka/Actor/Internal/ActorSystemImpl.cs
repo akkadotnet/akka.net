@@ -232,7 +232,17 @@ namespace Akka.Actor.Internal
             {
                 try
                 {
-                    Terminate();
+                    // Not awaited, so Start() still throws the startup failure. A failed shutdown of this
+                    // half-started system is reported to the stdout logger, since the logging system may be the
+                    // thing that failed. TaskScheduler.Default, as the system's dispatcher is going away.
+                    Terminate().ContinueWith(
+                        t => _settings.StdoutLogger.Tell(
+                            new Error(t.Exception!.GetBaseException(), nameof(ActorSystemImpl), typeof(ActorSystemImpl),
+                                "Shutting down the ActorSystem after a failed start also failed."),
+                            ActorRefs.Nobody),
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
                 }
                 catch (Exception)
                 {
