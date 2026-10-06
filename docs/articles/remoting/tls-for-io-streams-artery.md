@@ -54,3 +54,17 @@ An outgoing `Tcp.Connected` is sent only after the TLS handshake succeeds. The h
 `TlsCertificateLoader` loads PKCS#12 certificates from a file or byte array, or finds a certificate in an X.509 store. It requires an accessible RSA or ECDSA private key and returns a caller-owned certificate. Dispose every returned certificate after the systems and pending connections that use it have stopped. This compiled example shows each source:
 
 [!code-csharp[TlsCertificateLoading](../../../src/core/Akka.Docs.Tests/Networking/IO/TlsExamples.cs?name=tlsCertificateLoading)]
+
+## Use TLS With Akka.Streams
+
+Akka.Streams uses the same `TlsClientSettings` and `TlsServerSettings` as Akka.IO. Use `BindTls` or `BindAndHandleTls` for listeners and `OutgoingConnectionTls` for clients. The outgoing methods accept either an `EndPoint` or a host and port. Existing plaintext `Bind`, `BindAndHandle`, and `OutgoingConnection` methods keep their current behavior.
+
+This example starts a server-only TLS echo listener. `BindAndHandleTls` completes when the listener is ready; each accepted connection reaches the handler only after its TLS handshake succeeds:
+
+[!code-csharp[TlsStreamsServer](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpTlsDocTests.cs?name=tls-server)]
+
+An outgoing graph's connection materialized value completes after authentication. Handshake rejection, timeout, cancellation, and stream shutdown use the existing Akka.IO connection lifecycle. This client sends a payload using the supplied client settings. Construct the policy and target host as shown above:
+
+[!code-csharp[TlsStreamsClient](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpTlsDocTests.cs?name=tls-client)]
+
+TLS does not change Streams back-pressure or half-close behavior. Accepted connections still expose the same bidirectional byte flow, so completing its write side leaves the read side available when half-close is enabled. See [Working With Streaming IO](../streams/workingwithstreamingio.md) for the TCP Streams API and graph patterns.

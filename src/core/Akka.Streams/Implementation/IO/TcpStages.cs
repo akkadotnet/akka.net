@@ -136,7 +136,10 @@ namespace Akka.Streams.Implementation.IO
             public override void PreStart()
             {
                 GetStageActor(Receive);
-                _stage._tcpManager.Tell(new Tcp.Bind(StageActor.Ref, _stage._endpoint, _stage._backlog, _stage._options, pullMode: true), StageActor.Ref);
+                _stage._tcpManager.Tell(new Tcp.Bind(StageActor.Ref, _stage._endpoint, _stage._backlog, _stage._options, pullMode: true)
+                {
+                    Tls = _stage._tls
+                }, StageActor.Ref);
             }
 
             private void Receive((IActorRef, object) args)
@@ -213,6 +216,9 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
+        #nullable enable
+        private readonly TlsServerSettings? _tls;
+        #nullable restore
         private readonly Outlet<StreamTcp.IncomingConnection> _out = new("IncomingConnections.out");
 
         /// <summary>
@@ -225,9 +231,11 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="halfClose">Whether each connection flow supports independent input and output completion.</param>
         /// <param name="idleTimeout">An optional timeout applied to each connection flow when no bytes pass.</param>
         /// <param name="bindShutdownTimeout">The time to wait for connection flows to initialize after unbinding before completing the stage.</param>
+        /// <param name="tls">Optional TLS settings for incoming connections.</param>
+        #nullable enable
         public ConnectionSourceStage(IActorRef tcpManager, EndPoint endpoint, int backlog,
-            IImmutableList<Inet.SocketOption> options, bool halfClose, TimeSpan? idleTimeout,
-            TimeSpan bindShutdownTimeout)
+            IImmutableList<Inet.SocketOption>? options, bool halfClose, TimeSpan? idleTimeout,
+            TimeSpan bindShutdownTimeout, TlsServerSettings? tls = null)
         {
             _tcpManager = tcpManager;
             _endpoint = endpoint;
@@ -236,8 +244,10 @@ namespace Akka.Streams.Implementation.IO
             _halfClose = halfClose;
             _idleTimeout = idleTimeout;
             _bindShutdownTimeout = bindShutdownTimeout;
+            _tls = tls;
             Shape = new SourceShape<StreamTcp.IncomingConnection>(_out);
         }
+        #nullable restore
 
         /// <summary>
         /// The source shape that emits incoming TCP connections.
@@ -832,7 +842,16 @@ namespace Akka.Streams.Implementation.IO
                     if (msg is Terminated)
                         FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
                     else if (msg is Tcp.CommandFailed failed)
-                        FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                    {
+                        var failure = failed.Cause.HasValue
+                            ? new StreamTcpException($"Tcp command {failed.Cmd} failed", failed.Cause.Value)
+                            : new StreamTcpException($"Tcp command {failed.Cmd} failed");
+                        var materializationFailure = failed.Cause.HasValue
+                            ? new StreamTcpException("Connection failed", failed.Cause.Value)
+                            : new StreamTcpException("Connection failed");
+                        outbound.LocalAddressPromise.TrySetException(materializationFailure);
+                        FailStage(failure);
+                    }
                     else if (msg is Tcp.Connected connected)
                     {
                         ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
@@ -897,7 +916,9 @@ namespace Akka.Streams.Implementation.IO
                         FailStage(new StreamTcpException("The connection actor has terminated. Stopping now."));
                         break;
                     case Tcp.CommandFailed failed:
-                        FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                        FailStage(failed.Cause.HasValue
+                            ? new StreamTcpException($"Tcp command {failed.Cmd} failed", failed.Cause.Value)
+                            : new StreamTcpException($"Tcp command {failed.Cmd} failed"));
                         break;
                     case Tcp.ErrorClosed closed:
                         FailStage(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
@@ -929,6 +950,9 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
+        #nullable enable
+        private readonly TlsClientSettings? _tls;
+        #nullable restore
         private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
         private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
 
@@ -941,8 +965,11 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="options">Optional socket options applied to the connection.</param>
         /// <param name="halfClose">Whether input and output sides can complete independently.</param>
         /// <param name="connectionTimeout">An optional timeout for establishing the connection.</param>
-        public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint localAddress = null,
-            IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null)
+        /// <param name="tls">Optional TLS settings for the outgoing connection.</param>
+        #nullable enable
+        public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint? localAddress = null,
+            IImmutableList<Inet.SocketOption>? options = null, bool halfClose = true, TimeSpan? connectionTimeout = null,
+            TlsClientSettings? tls = null)
         {
             _tcpManager = tcpManager;
             _remoteAddress = remoteAddress;
@@ -950,8 +977,10 @@ namespace Akka.Streams.Implementation.IO
             _options = options;
             _halfClose = halfClose;
             _connectionTimeout = connectionTimeout;
+            _tls = tls;
             Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
         }
+        #nullable restore
 
         /// <summary>
         /// The default attributes for the outgoing connection stage.
@@ -979,7 +1008,11 @@ namespace Akka.Streams.Implementation.IO
                     else outgoingConnectionPromise.TrySetResult(new StreamTcp.OutgoingConnection(_remoteAddress, t.Result));
                 }, TaskContinuationOptions.AttachedToParent);
 
-            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true), localAddressPromise, _halfClose), _remoteAddress);
+            var connect = new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true)
+            {
+                Tls = _tls
+            };
+            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, connect, localAddressPromise, _halfClose), _remoteAddress);
 
             return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
