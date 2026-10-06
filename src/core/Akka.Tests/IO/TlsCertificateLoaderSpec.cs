@@ -137,7 +137,20 @@ namespace Akka.Tests.IO
             request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
             request.CertificateExtensions.Add(new X509KeyUsageExtension(
                 X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, true));
-            return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            using var generatedCertificate = request.CreateSelfSigned(
+                DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            var exportedCertificate = generatedCertificate.Export(X509ContentType.Pkcs12);
+            try
+            {
+                return X509CertificateLoader.LoadPkcs12(
+                    exportedCertificate,
+                    password: null,
+                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(exportedCertificate);
+            }
         }
     }
 }
