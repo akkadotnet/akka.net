@@ -155,6 +155,13 @@ namespace Akka.API.Tests
         }
 
         [Fact]
+        public Task ApproveHostingMaui()
+        {
+            // the package's only public type is a static class, which cannot be a type argument
+            return Verifier.Verify(typeof(Hosting.Maui.MauiAkkaHostingExtensions).Assembly.GeneratePublicApi(ApiOptions));
+        }
+
+        [Fact]
         public Task ApproveRemoteHosting()
         {
             return VerifyAssembly<Remote.Hosting.RemoteOptions>();

@@ -67,36 +67,53 @@ namespace Akka.Hosting
         public static IServiceCollection AddAkka<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
             this IServiceCollection services, string actorSystemName, Action<AkkaConfigurationBuilder, IServiceProvider> builder) where T:AkkaHostedService
         {
+            RegisterActorSystem(services, actorSystemName, builder);
+
+            if (Util.IsRunningInMaui)
+            {
+                // MAUI never starts IHostedService instances (https://github.com/dotnet/maui/issues/2244), so the
+                // registration above would give the app an ActorSystem whose WithActors/StartActors callbacks never
+                // run - IRequiredActor<T>.GetAsync would wait forever. Fail loudly instead.
+                throw new PlatformNotSupportedException(
+                    "Due to https://github.com/dotnet/maui/issues/2244, .NET MAUI does not start IHostedService instances, " +
+                    "so AddAkka would register an ActorSystem that never starts. Install the Akka.Hosting.Maui package " +
+                    "(same version as Akka.Hosting) and call AddAkkaMaui instead.");
+            }
+
+            // start the IHostedService which will run Akka.NET
+            services.AddHostedService<T>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// Everything <c>AddAkka</c> registers except the <see cref="IHostedService"/> that starts the
+        /// <see cref="ActorSystem"/>. Shared with Akka.Hosting.Maui, which starts the same
+        /// <see cref="AkkaHostedService"/> from a MAUI initializer instead.
+        /// </remarks>
+        internal static AkkaConfigurationBuilder RegisterActorSystem(IServiceCollection services, string actorSystemName,
+            Action<AkkaConfigurationBuilder, IServiceProvider> builder)
+        {
             var b = new AkkaConfigurationBuilder(services, actorSystemName);
-            
+
             // add the default Akka.Streams configuration by default - hurts nothing, but
             // ensures that StreamRefs work correctly out of the box in case users
             // haven't attempted to materialize a stream yet
             b.AddHocon(ActorMaterializer.DefaultConfig(), HoconAddMode.Append);
-            
+
             services.AddSingleton<AkkaConfigurationBuilder>(sp =>
             {
                 builder(b, sp);
                 return b;
             });
-            
-            // registers the hosted services and begins execution
-            b.Bind();
-            
-            if (Util.IsRunningInMaui)
-            {
-                // blow up Maui users who are about to footgun
-                throw new PlatformNotSupportedException(
-                    "Due to https://github.com/dotnet/maui/issues/2244, normal Akka.Hosting.AddAkka method will not work." +
-                    "Instead, you need to install Akka.Hosting.Maui and use the AddAkkaMaui extension method instead.");
-            }
-            else
-            {
-                // start the IHostedService which will run Akka.NET
-                services.AddHostedService<T>();
-            }
 
-            return services;
+            // registers the ActorSystem, ActorRegistry and IRequiredActor<T>
+            b.Bind();
+
+            return b;
         }
 
         /// <summary>

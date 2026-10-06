@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\xunitSettings.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Its own project because loading Microsoft.Maui turns on Akka.Hosting's MAUI guard for the whole process:
+       every plain AddAkka call in Akka.Hosting.Tests would throw if MAUI were loaded there. These tests build a real
+       MauiApp from Microsoft.Maui.Core's net10.0 asset, so no MAUI workload is needed. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Hosting.Maui\Akka.Hosting.Maui.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
+  </ItemGroup>
+</Project>
