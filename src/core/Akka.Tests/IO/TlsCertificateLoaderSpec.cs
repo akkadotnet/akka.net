@@ -86,7 +86,7 @@ namespace Akka.Tests.IO
         {
             using var certificate = CreateCertificate("store.example.net");
             using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            store.Open(OpenFlags.ReadWrite | OpenFlags.OpenExistingOnly);
+            store.Open(OpenFlags.ReadWrite);
             store.Add(certificate);
 
             try
@@ -111,10 +111,22 @@ namespace Akka.Tests.IO
         [Fact(DisplayName = "Should_Reject_Invalid_Or_Missing_Store_Certificate_Thumbprints")]
         public void Should_reject_invalid_or_missing_store_certificate_thumbprints()
         {
-            Assert.Throws<ArgumentNullException>(() => TlsCertificateLoader.LoadFromStore(null!));
-            Assert.Throws<ArgumentException>(() => TlsCertificateLoader.LoadFromStore("not-a-thumbprint"));
-            Assert.Throws<InvalidOperationException>(() =>
-                TlsCertificateLoader.LoadFromStore("0000000000000000000000000000000000000000"));
+            using var certificate = CreateCertificate("missing-thumbprint.example.net");
+            using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadWrite);
+            store.Add(certificate);
+
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => TlsCertificateLoader.LoadFromStore(null!));
+                Assert.Throws<ArgumentException>(() => TlsCertificateLoader.LoadFromStore("not-a-thumbprint"));
+                Assert.Throws<InvalidOperationException>(() =>
+                    TlsCertificateLoader.LoadFromStore("0000000000000000000000000000000000000000"));
+            }
+            finally
+            {
+                store.Remove(certificate);
+            }
         }
 
         private static X509Certificate2 CreateCertificate(string subject)

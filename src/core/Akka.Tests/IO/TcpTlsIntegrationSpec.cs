@@ -96,7 +96,7 @@ namespace Akka.Tests.IO
                 }
                 else if (source == "store")
                 {
-                    store.Open(OpenFlags.ReadWrite | OpenFlags.OpenExistingOnly);
+                    store.Open(OpenFlags.ReadWrite);
                     store.Add(generatedCertificate);
                     stored = true;
                     serverCertificate = TlsCertificateLoader.LoadFromStore(
