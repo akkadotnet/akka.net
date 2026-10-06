@@ -37,6 +37,8 @@ namespace Akka.IO
         private readonly Pipe _inputPipe;
         private readonly Pipe _outputPipe;
         private readonly CancellationTokenSource _cts = new();
+        private readonly SemaphoreSlim _tlsReadGate = new(1, 1);
+        private CancellationTokenSource? _tlsReadCancellation;
         private readonly TlsInitializer? _tlsInitializer;
         private Task? _initializationTask;
         private bool _started;
@@ -220,6 +222,8 @@ namespace Akka.IO
         private void StartPumps()
         {
             var stream = _stream ?? throw new InvalidOperationException("The transport stream was not initialized.");
+            if (stream is SslStream)
+                _tlsReadCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
             _started = true;
             ReadCompleted = RunReadPumpAsync(stream, _cts.Token);
             WriteCompleted = RunWritePumpAsync(stream, _cts.Token);
@@ -334,11 +338,44 @@ namespace Akka.IO
 
         private async Task ShutdownTlsWriteAsync(Stream? stream)
         {
-            if (_tlsWriteShutdown || stream is not SslStream sslStream)
+            if (stream is not SslStream sslStream)
                 return;
 
-            await sslStream.ShutdownAsync().ConfigureAwait(false);
-            _tlsWriteShutdown = true;
+            Task enterReadGate;
+            lock (_lifecycleGate)
+            {
+                if (_tlsWriteShutdown)
+                    return;
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(TcpTransportConnection));
+
+                // Queue before canceling: the read pump must wait behind shutdown when its
+                // canceled read exits, rather than retrying with the canceled token.
+                enterReadGate = _tlsReadGate.WaitAsync(_cts.Token);
+                _tlsReadCancellation?.Cancel();
+            }
+
+            await enterReadGate.ConfigureAwait(false);
+            try
+            {
+                if (!_tlsWriteShutdown)
+                {
+                    // SslStream.ShutdownAsync does not synchronize native TLS shutdown with
+                    // an active read. Wait for that read to exit before sending close_notify.
+                    await sslStream.ShutdownAsync().ConfigureAwait(false);
+                    _tlsWriteShutdown = true;
+                }
+            }
+            finally
+            {
+                lock (_lifecycleGate)
+                {
+                    var readCancellation = _tlsReadCancellation;
+                    _tlsReadCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+                    readCancellation?.Dispose();
+                }
+                _tlsReadGate.Release();
+            }
         }
 
         public void Abort()
@@ -411,6 +448,7 @@ namespace Akka.IO
             if (stream is not null)
                 await stream.DisposeAsync().ConfigureAwait(false);
             _socket.Dispose();
+            _tlsReadCancellation?.Dispose();
             _cts.Dispose();
         }
 
@@ -444,7 +482,9 @@ namespace Akka.IO
                 while (!ct.IsCancellationRequested)
                 {
                     var memory = writer.GetMemory();
-                    var bytesRead = await stream.ReadAsync(memory, ct).ConfigureAwait(false);
+                    var bytesRead = stream is SslStream sslStream
+                        ? await ReadTlsAsync(sslStream, memory, ct).ConfigureAwait(false)
+                        : await stream.ReadAsync(memory, ct).ConfigureAwait(false);
 
                     if (bytesRead == 0)
                         break; // EOF — peer closed
@@ -484,6 +524,31 @@ namespace Akka.IO
             // is available for the actor to drain.
             if (error != null)
                 throw error;
+        }
+
+        private async ValueTask<int> ReadTlsAsync(SslStream stream, Memory<byte> memory, CancellationToken ct)
+        {
+            while (true)
+            {
+                await _tlsReadGate.WaitAsync(ct).ConfigureAwait(false);
+                var readCancellation = _tlsReadCancellation;
+                try
+                {
+                    if (readCancellation is null)
+                        throw new InvalidOperationException("TLS read cancellation was not initialized.");
+                    return await stream.ReadAsync(memory, readCancellation.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (readCancellation?.IsCancellationRequested == true)
+                {
+                    // A TLS write shutdown pauses this read, but keeps the input pipe open.
+                    // SslStream retains incomplete TLS records so the next read can resume.
+                    ct.ThrowIfCancellationRequested();
+                }
+                finally
+                {
+                    _tlsReadGate.Release();
+                }
+            }
         }
 
         /* ================================================================= */
