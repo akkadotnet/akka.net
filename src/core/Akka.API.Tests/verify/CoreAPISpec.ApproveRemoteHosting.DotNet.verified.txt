@@ -8,6 +8,17 @@ namespace Akka.Remote.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.RemoteOptions> configure) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, string? hostname = null, int? port = default, string? publicHostname = null, int? publicPort = default) { }
     }
+    public static class ArteryRemoteHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithArteryRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.ArteryRemoteOptions> configure) { }
+    }
+    public sealed class ArteryRemoteOptions
+    {
+        public ArteryRemoteOptions() { }
+        public string? HostName { get; set; }
+        public int? Port { get; set; }
+        public Akka.Remote.Artery.ArteryTlsSettings? Tls { get; set; }
+    }
     public class DeadlineFailureDetectorOptions
     {
         public DeadlineFailureDetectorOptions() { }
