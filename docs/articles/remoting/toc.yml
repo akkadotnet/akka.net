@@ -10,5 +10,7 @@
   href: deathwatch.md
 - name: Network Security
   href: security.md
+- name: TLS for Akka.IO, Akka.Streams, and Artery
+  href: tls-for-io-streams-artery.md
 - name: Performance Optimization
   href: performance.md

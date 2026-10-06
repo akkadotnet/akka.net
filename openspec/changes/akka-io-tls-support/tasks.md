@@ -1,6 +1,6 @@
 ## 1. Akka.IO TCP TLS
 
-- [ ] 1.1 Add client/server TLS settings, certificate validation policy and fresh authentication-option factories.
+- [x] 1.1 Add role-specific client/server TLS settings, peer trust policy and fresh internal authentication-option factories.
 - [x] 1.2 Add optional TLS settings to `Tcp.Connect` and `Tcp.Bind` without changing existing constructors.
 - [x] 1.3 Authenticate outgoing and accepted connections asynchronously before `Tcp.Connected`; bound handshakes and cancel/dispose pending resources on actor stop.
 - [x] 1.4 Reuse the registered stream transport and send TLS `close_notify` before TCP FIN during graceful half-close.

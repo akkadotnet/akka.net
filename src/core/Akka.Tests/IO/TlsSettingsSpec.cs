@@ -8,6 +8,7 @@
 
 using System;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Event;
@@ -18,125 +19,177 @@ namespace Akka.Tests.IO
 {
     public sealed class TlsSettingsSpec
     {
-        [Fact(DisplayName = "Should_Create_Fresh_Options_And_Not_Select_Certificates_Without_Mutual_Authentication")]
-        public void Should_Create_Fresh_Options_And_Not_Select_Certificates_Without_Mutual_Authentication()
+        [Fact(DisplayName = "Should_Create_Role_Specific_Options_And_Leave_Original_Settings_Unchanged")]
+        public void Should_create_role_specific_options_and_keep_copy_settings_immutable()
         {
-            using var certificate = CreateCertificate("localhost", server: false);
-            var settings = new TlsClientSettings(certificate) { RequireMutualAuthentication = false };
-            var first = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance);
-            var second = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance);
-
-            Assert.NotSame(first, second);
-            Assert.Null(first.ClientCertificates);
-            Assert.Null(first.LocalCertificateSelectionCallback);
-            Assert.Equal("server.example", first.TargetHost);
-        }
-
-        [Fact(DisplayName = "Should_Require_A_Client_Certificate_When_Mutual_Authentication_Is_Enabled")]
-        public void Should_Require_A_Client_Certificate_When_Mutual_Authentication_Is_Enabled()
-        {
-            var settings = new TlsClientSettings();
-
-            Assert.Throws<InvalidOperationException>(() =>
-                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance));
-        }
-
-        [Fact(DisplayName = "Should_Ignore_Chain_Errors_Independently_From_Hostname_Errors")]
-        public void Should_Ignore_Chain_Errors_Independently_From_Hostname_Errors()
-        {
-            using var serverCertificate = CreateCertificate("server.example", server: true);
-            var settings = new TlsClientSettings
-            {
-                RequireMutualAuthentication = false,
-                SuppressValidation = true,
-                ValidateCertificateHostname = true
-            };
-            var validation = settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance)
-                .RemoteCertificateValidationCallback!;
-
-            var sender = new object();
-            Assert.True(validation(sender, serverCertificate, null,
-                SslPolicyErrors.RemoteCertificateChainErrors));
-            Assert.False(validation(sender, serverCertificate, null,
-                SslPolicyErrors.RemoteCertificateNameMismatch));
-            Assert.False(validation(sender, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
-
-            var hostnameDisabled = new TlsClientSettings { RequireMutualAuthentication = false, SuppressValidation = true }
-                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance).RemoteCertificateValidationCallback!;
-            Assert.True(hostnameDisabled(sender, serverCertificate, null, SslPolicyErrors.RemoteCertificateNameMismatch));
-        }
-
-        [Fact(DisplayName = "Should_Allow_Custom_Validation_To_Override_Built_In_Policy_But_Reject_Missing_Mutual_Certificate_First")]
-        public void Should_Allow_Custom_Validation_To_Override_Built_In_Policy_But_Reject_Missing_Mutual_Certificate_First()
-        {
+            using var clientCertificate = CreateCertificate("client", server: false);
             using var serverCertificate = CreateCertificate("localhost", server: true);
-            var customCalls = 0;
-            var settings = new TlsServerSettings(serverCertificate)
-            {
-                CustomValidator = (_, _, _, _, _) =>
-                {
-                    customCalls++;
-                    return true;
-                }
-            };
-            var validation = settings.CreateAuthenticationOptions("127.0.0.1:1234", NoLogger.Instance)
-                .RemoteCertificateValidationCallback!;
+            var peerPolicy = TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true);
+            var originalClient = TlsClientSettings.Mutual(clientCertificate, peerPolicy);
+            var client = originalClient.WithTargetHost("server.example").WithProtocols(SslProtocols.Tls12);
+            Assert.Null(originalClient.TargetHost);
+            Assert.Equal(SslProtocols.None, originalClient.Protocols);
+            Assert.Equal(TimeSpan.FromSeconds(10), originalClient.HandshakeTimeout);
+            var clientOptions = client.CreateAuthenticationOptions("fallback", "peer", NoLogger.Instance);
+            Assert.Equal("server.example", clientOptions.TargetHost);
+            Assert.Equal(SslProtocols.Tls12, clientOptions.EnabledSslProtocols);
+            Assert.NotNull(clientOptions.ClientCertificates);
+            Assert.NotNull(clientOptions.LocalCertificateSelectionCallback);
 
-            var sender = new object();
-            Assert.False(validation(sender, null, null, SslPolicyErrors.RemoteCertificateNotAvailable));
-            Assert.Equal(0, customCalls);
-            Assert.True(validation(sender, serverCertificate, null, SslPolicyErrors.RemoteCertificateChainErrors));
-            Assert.Equal(1, customCalls);
+            var clientOnly = TlsClientSettings.ServerOnly(peerPolicy);
+            var clientOnlyOptions = clientOnly.CreateAuthenticationOptions("server.example", "peer", NoLogger.Instance);
+            Assert.Null(clientOnlyOptions.ClientCertificates);
+            Assert.Null(clientOnlyOptions.LocalCertificateSelectionCallback);
+            Assert.Equal(TimeSpan.FromSeconds(10), clientOnly.HandshakeTimeout);
+            Assert.Equal(SslProtocols.None, clientOnly.Protocols);
+
+            var mutualServer = TlsServerSettings.Mutual(serverCertificate, peerPolicy);
+            var serverOptions = mutualServer.CreateAuthenticationOptions("peer", NoLogger.Instance);
+            Assert.True(serverOptions.ClientCertificateRequired);
+            Assert.NotNull(serverOptions.RemoteCertificateValidationCallback);
+            Assert.False(TlsServerSettings.ServerOnly(serverCertificate)
+                .CreateAuthenticationOptions("peer", NoLogger.Instance).ClientCertificateRequired);
         }
 
-        [Fact(DisplayName = "Should_Allow_Custom_Client_Validation_To_Override_Chain_And_Hostname_Flags")]
-        public void Should_allow_custom_client_validation_to_override_chain_and_hostname_flags()
+        [Fact(DisplayName = "Should_Reject_Missing_Peer_Certificate_Before_Invoking_Trust_Callback")]
+        public void Should_reject_missing_peer_certificate_before_invoking_trust_callback()
         {
-            using var serverCertificate = CreateCertificate("localhost", server: true);
-            var customCalls = 0;
-            var validation = new TlsClientSettings
+            var callbackCalls = 0;
+            var policy = TlsPeerPolicy.CustomTrust((_, _, _, _, _) =>
             {
-                RequireMutualAuthentication = false,
-                SuppressValidation = true,
-                ValidateCertificateHostname = true,
-                CustomValidator = (_, _, _, errors, _) =>
-                {
-                    customCalls++;
-                    return errors == (SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch);
-                }
-            }
-                .CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance)
-                .RemoteCertificateValidationCallback!;
+                callbackCalls++;
+                return true;
+            });
 
-            Assert.True(validation(new object(), serverCertificate, null,
-                SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch));
-            Assert.Equal(1, customCalls);
+            Assert.False(policy.ValidatePeer(null, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.Equal(0, callbackCalls);
         }
 
-        [Theory(DisplayName = "Should_Reject_Invalid_Handshake_Timeouts")]
+        [Fact(DisplayName = "Should_Preserve_Original_Errors_And_Only_Narrow_Base_Trust")]
+        public void Should_preserve_original_errors_and_only_narrow_base_trust()
+        {
+            using var leaf = CreateCertificate("worker-one", server: true);
+            var errors = SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch;
+            var observedErrors = SslPolicyErrors.None;
+            var validators = new TlsCertificateValidationCallback[]
+            {
+                (_, _, _, suppliedErrors, _) => { observedErrors = suppliedErrors; return true; }
+            };
+            var policy = TlsPeerPolicy.CustomTrust((_, _, _, suppliedErrors, _) =>
+                    suppliedErrors == errors)
+                .And(validators);
+            validators[0] = (_, _, _, _, _) => false;
+
+            Assert.True(policy.ValidatePeer(leaf, null, "peer", errors, NoLogger.Instance));
+            Assert.Equal(errors, observedErrors);
+
+            var systemTrust = TlsPeerPolicy.SystemTrust()
+                .And((_, _, _, _, _) => true);
+            Assert.False(systemTrust.ValidatePeer(leaf, null, "peer",
+                SslPolicyErrors.RemoteCertificateChainErrors, NoLogger.Instance));
+        }
+
+        [Fact(DisplayName = "Should_Validate_Settings_Factories_And_Copy_Arguments")]
+        public void Should_validate_settings_factories_and_copy_arguments()
+        {
+            var policy = TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true);
+            Assert.Throws<ArgumentNullException>(() => TlsClientSettings.ServerOnly(null!));
+            Assert.Throws<ArgumentOutOfRangeException>(() => TlsClientSettings.ServerOnly(policy).WithHandshakeTimeout(TimeSpan.Zero));
+            Assert.Throws<ArgumentNullException>(() => TlsClientSettings.ServerOnly(policy).WithTargetHost(null!));
+            Assert.Throws<ArgumentException>(() => TlsClientSettings.ServerOnly(policy).WithTargetHost(" "));
+            Assert.Throws<ArgumentException>(() => TlsPeerPolicy.PinnedCertificates());
+            Assert.Throws<ArgumentException>(() => TlsCertificateValidation.ValidateHostname("*.example.net"));
+
+            using var certificate = CreateCertificate("localhost", server: true);
+            using var publicCertificate = X509CertificateLoader.LoadCertificate(certificate.RawData);
+            Assert.Throws<ArgumentException>(() => TlsServerSettings.ServerOnly(publicCertificate));
+            Assert.Throws<ArgumentException>(() => TlsClientSettings.Mutual(publicCertificate, policy));
+        }
+
+        [Theory(DisplayName = "Should_Reject_Handshake_Timeouts_Outside_The_Transport_Timer_Range")]
         [InlineData(0L)]
         [InlineData(-1L)]
         [InlineData(4294967295L)]
-        public void Should_reject_invalid_handshake_timeouts(long milliseconds)
+        public void Should_reject_handshake_timeouts_outside_the_transport_timer_range(long milliseconds)
         {
-            var settings = new TlsClientSettings
-            {
-                RequireMutualAuthentication = false,
-                HandshakeTimeout = TimeSpan.FromMilliseconds(milliseconds)
-            };
-
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                settings.CreateAuthenticationOptions("server.example", "127.0.0.1:1234", NoLogger.Instance));
+                TlsClientSettings.ServerOnly(TlsPeerPolicy.SystemTrust())
+                    .WithHandshakeTimeout(TimeSpan.FromMilliseconds(milliseconds)));
         }
 
-        [Fact(DisplayName = "Should_Reject_Server_Certificates_Without_A_Private_Key")]
-        public void Should_reject_server_certificates_without_a_private_key()
+        [Fact(DisplayName = "Should_Accept_Only_Configured_Certificate_Pins")]
+        public void Should_accept_only_configured_certificate_pins()
         {
-            using var certificateWithKey = CreateCertificate("localhost", server: true);
-            using var publicCertificate = X509CertificateLoader.LoadCertificate(certificateWithKey.RawData);
-            var settings = new TlsServerSettings(publicCertificate);
+            using var certificate = CreateCertificate("worker-one", server: true);
+            var allowedPins = new[] { certificate.Thumbprint };
+            var pinned = TlsCertificateValidation.PinnedCertificate(allowedPins);
+            allowedPins[0] = new string('0', 40);
 
-            Assert.Throws<ArgumentException>(() => settings.CreateAuthenticationOptions("127.0.0.1:1234", NoLogger.Instance));
+            Assert.True(pinned(certificate, null, "peer", SslPolicyErrors.RemoteCertificateChainErrors, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.PinnedCertificate(new string('0', 40))(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.PinnedCertificate(null!));
+            Assert.Throws<ArgumentException>(() => TlsCertificateValidation.PinnedCertificate(" "));
+        }
+
+        [Fact(DisplayName = "Should_Reject_Subject_Issuer_And_Hostname_Mismatches")]
+        public void Should_reject_subject_issuer_and_hostname_mismatches()
+        {
+            using var certificate = CreateCertificate("worker-one", server: true);
+
+            Assert.True(TlsCertificateValidation.ValidateSubject("CN=worker-*")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateSubject("CN=other-*")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(TlsCertificateValidation.ValidateIssuer("CN=worker-one")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateIssuer("CN=other-*")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(TlsCertificateValidation.ValidateHostname("localhost")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateHostname("wrong.example")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateHostname()(
+                certificate, null, "peer", SslPolicyErrors.RemoteCertificateNameMismatch, NoLogger.Instance));
+        }
+
+        [Fact(DisplayName = "Should_Snapshot_And_Short_Circuit_Composed_Validation_Callbacks")]
+        public void Should_snapshot_and_short_circuit_composed_validation_callbacks()
+        {
+            using var certificate = CreateCertificate("worker-one", server: true);
+            var laterCalls = 0;
+            TlsCertificateValidationCallback later = (_, _, _, _, _) =>
+            {
+                laterCalls++;
+                return true;
+            };
+            var validators = new TlsCertificateValidationCallback[] { (_, _, _, _, _) => true, later };
+            var combined = TlsCertificateValidation.Combine(validators);
+            validators[0] = (_, _, _, _, _) => false;
+            validators[1] = (_, _, _, _, _) => false;
+
+            Assert.True(combined(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.Equal(1, laterCalls);
+
+            laterCalls = 0;
+            var shortCircuit = TlsCertificateValidation.Combine((_, _, _, _, _) => false, later);
+            Assert.False(shortCircuit(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.Equal(0, laterCalls);
+            Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.Combine(null!));
+            Assert.Throws<ArgumentException>(() => TlsCertificateValidation.Combine());
+            Assert.Throws<ArgumentException>(() => TlsCertificateValidation.Combine((TlsCertificateValidationCallback)null!));
+
+            laterCalls = 0;
+            var chainThen = TlsCertificateValidation.ChainPlusThen((_, _, _) =>
+            {
+                laterCalls++;
+                return false;
+            });
+            Assert.False(chainThen(certificate, null, "peer", SslPolicyErrors.RemoteCertificateChainErrors, NoLogger.Instance));
+            Assert.Equal(0, laterCalls);
+            Assert.False(chainThen(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.Equal(1, laterCalls);
+            Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.ChainPlusThen(null!));
         }
 
         private static X509Certificate2 CreateCertificate(string host, bool server)
@@ -144,7 +197,7 @@ namespace Akka.Tests.IO
             using var rsa = RSA.Create(2048);
             var request = new CertificateRequest($"CN={host}", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             var san = new SubjectAlternativeNameBuilder();
-            san.AddDnsName(host);
+            san.AddDnsName("localhost");
             request.CertificateExtensions.Add(san.Build());
             request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
             var usages = server ? X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment : X509KeyUsageFlags.DigitalSignature;

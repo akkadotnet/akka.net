@@ -36,37 +36,49 @@ The system SHALL enforce the configured finite positive handshake timeout and ca
 - **WHEN** the connection actor stops while authentication is pending
 - **THEN** it SHALL cancel the handshake and dispose its socket and stream, and a late task completion SHALL NOT report `Tcp.Connected`
 
-### Requirement: Certificate policy and mutual authentication
+### Requirement: Role-specific settings and peer trust policy
 
-The system SHALL create fresh TLS authentication options for each connection and apply the configured certificate, chain, hostname, mutual-authentication and custom-validator settings.
-
-#### Scenario: Client validates server identity
-- **WHEN** client hostname validation is enabled and `TargetHost` is configured
-- **THEN** the server certificate SHALL be checked against that target host
+The system SHALL expose immutable role-specific TLS settings and create fresh native TLS authentication options internally for each connection. Client and listener settings SHALL be constructed using `ServerOnly` or `Mutual` factories with the certificate and peer policy required for that role. Peer trust SHALL use `TlsPeerPolicy.SystemTrust`, `PinnedCertificates`, or `CustomTrust` as its base decision, with `And` callbacks only narrowing acceptance.
 
 #### Scenario: Server-only TLS
-- **WHEN** mutual authentication is disabled
-- **THEN** the TLS connection SHALL not require a client certificate
+- **WHEN** a client uses `TlsClientSettings.ServerOnly` and a listener uses `TlsServerSettings.ServerOnly`
+- **THEN** the client SHALL validate the server according to its policy and the listener SHALL permit clients without certificates
 
 #### Scenario: Mutual TLS
-- **WHEN** mutual authentication is enabled
-- **THEN** the client SHALL present its configured certificate and the server SHALL require and validate the client's certificate
+- **WHEN** a client uses `TlsClientSettings.Mutual` and a listener uses `TlsServerSettings.Mutual`
+- **THEN** the client SHALL present its configured certificate and the listener SHALL require and validate the client's certificate
+
+#### Scenario: System trust ignores only hostname mismatch
+- **WHEN** a peer is evaluated using `TlsPeerPolicy.SystemTrust`
+- **THEN** OS certificate-chain errors SHALL reject the peer, while a name mismatch alone SHALL be left to an explicit hostname check
+
+#### Scenario: Outgoing target host defaults from endpoint
+- **WHEN** `WithTargetHost` is not set on an outgoing client
+- **THEN** the remote connection endpoint SHALL supply the target host used for SNI and runtime hostname context
+
+#### Scenario: Outgoing target host override
+- **WHEN** an outgoing client sets `WithTargetHost`
+- **THEN** the configured name SHALL override the endpoint-derived target for SNI and certificate name validation
+
+#### Scenario: Hostname validation
+- **WHEN** a policy includes `TlsCertificateValidation.ValidateHostname()`
+- **THEN** the runtime name-mismatch result SHALL be checked; an explicit expected-host overload SHALL match that DNS or IP name
 
 #### Scenario: Missing mutual TLS certificate is rejected before custom validation
 - **WHEN** the server requires a client certificate but the client presents none
 - **THEN** the handshake SHALL be rejected even if the configured custom validator would accept a presented certificate, and that validator SHALL NOT be called
 
-#### Scenario: Chain suppression does not suppress hostname errors
-- **WHEN** chain validation is suppressed and hostname validation is enabled
-- **THEN** chain errors SHALL be ignored while a hostname mismatch SHALL still reject the peer
-
-#### Scenario: Hostname suppression is independent of chain validation
-- **WHEN** hostname validation is disabled and chain validation is not suppressed
-- **THEN** a hostname mismatch alone SHALL not reject a peer whose certificate chain is otherwise trusted
-
 #### Scenario: Custom validator
-- **WHEN** a custom certificate validator is configured
-- **THEN** it SHALL decide whether a presented peer certificate is accepted and receive the certificate, chain, peer context, policy errors and connection logger
+- **WHEN** a peer policy uses `CustomTrust(callback)`
+- **THEN** the callback SHALL make the complete trust decision and receive the certificate, chain, remote peer, original policy errors, and connection logger
+
+#### Scenario: Narrowing callbacks
+- **WHEN** a peer policy has one or more checks added with `And`
+- **THEN** the checks SHALL run only after base trust accepts and any false result SHALL reject the peer
+
+#### Scenario: Pin trust
+- **WHEN** a leaf thumbprint matches one configured with `PinnedCertificates`
+- **THEN** the pin SHALL establish trust without implying CA-chain, expiry, revocation, or hostname validation
 
 ### Requirement: TLS half-close
 
