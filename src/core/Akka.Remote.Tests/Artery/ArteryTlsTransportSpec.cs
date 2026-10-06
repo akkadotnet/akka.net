@@ -34,6 +34,7 @@ namespace Akka.Remote.Tests.Artery
         }
 
         private static Config ArteryConfig(int port = 0) => ConfigurationFactory.ParseString($$"""
+            akka.loglevel = DEBUG
             akka.actor.provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
             akka.remote.artery.enabled = on
             akka.remote.artery.canonical.hostname = "127.0.0.1"
@@ -94,7 +95,9 @@ namespace Akka.Remote.Tests.Artery
             try
             {
                 systemA = ActorSystem.Create("ArteryTlsA", MutualTlsSetup(certificate, inboundPolicyA, outboundPolicyA));
+                InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsB", MutualTlsSetup(certificate, inboundPolicyB, outboundPolicyB));
+                InitializeLogger(systemB, "[B] ");
                 var ordinaryOnB = systemB.ActorOf(Props.Create(() => new Echo()), "ordinary");
                 var largeOnB = systemB.ActorOf(Props.Create(() => new LargeReceiver()), "large");
 
@@ -168,7 +171,9 @@ namespace Akka.Remote.Tests.Artery
                     new ArteryTlsSetup(ArteryTlsSettings.ServerOnly(certificate, trust)));
 
                 systemA = ActorSystem.Create("ArteryTlsServerOnlyA", ServerOnlySetup());
+                InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsServerOnlyB", ServerOnlySetup());
+                InitializeLogger(systemB, "[B] ");
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
 
                 var echo = await systemA.ActorSelection(SelectionPath(systemB, "echo"))
@@ -201,7 +206,9 @@ namespace Akka.Remote.Tests.Artery
                 var systemASetup = MutualTlsSetup(certificateA, trustB, TrustCertificate(unrelatedCertificate));
                 var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA);
                 systemA = ActorSystem.Create("ArteryTlsRejectA", systemASetup);
+                InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsRejectB", systemBSetup);
+                InitializeLogger(systemB, "[B] ");
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
 
                 var resolve = () => systemA.ActorSelection(SelectionPath(systemB, "echo"))
@@ -237,7 +244,9 @@ namespace Akka.Remote.Tests.Artery
                     new ArteryTlsSetup(ArteryTlsSettings.ServerOnly(certificateA, trustB)));
                 var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA);
                 systemA = ActorSystem.Create("ArteryTlsMissingClientA", systemASetup);
+                InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsMissingClientB", systemBSetup);
+                InitializeLogger(systemB, "[B] ");
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
 
                 var resolve = () => systemA.ActorSelection(SelectionPath(systemB, "echo"))
@@ -269,7 +278,9 @@ namespace Akka.Remote.Tests.Artery
             try
             {
                 systemA = ActorSystem.Create("ArteryTlsRestartA", MutualTlsSetup(certificate, trust, trust));
+                InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create(peerName, MutualTlsSetup(certificate, trust, trust));
+                InitializeLogger(systemB, "[B] ");
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
                 var port = RARP.For(systemB).Provider.DefaultAddress.Port!.Value;
                 var address = RARP.For(systemB).Provider.DefaultAddress;
@@ -286,6 +297,7 @@ namespace Akka.Remote.Tests.Artery
 
                 restartedSystemB = ActorSystem.Create(peerName,
                     MutualTlsSetup(certificate, trust, trust, port));
+                InitializeLogger(restartedSystemB, "[B restarted] ");
                 restartedSystemB.ActorOf(Props.Create(() => new Echo()), "echo");
                 var newUid = AddressUidExtension.Uid(restartedSystemB);
                 newUid.Should().NotBe(oldUid);
