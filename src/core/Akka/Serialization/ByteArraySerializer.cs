@@ -98,17 +98,6 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
-        /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            return bytes;
-        }
-
-        /// <summary>
         /// Deserializes a byte array without copying for legacy compatibility callers.
         /// </summary>
         public override object FromBinary(byte[] bytes, string manifest)
