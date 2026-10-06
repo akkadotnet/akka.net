@@ -24,6 +24,17 @@ namespace Akka.IO
     public interface ITransportConnection : IAsyncDisposable
     {
         /// <summary>
+        /// Initializes the transport before a connection is announced. Implementations that require no
+        /// initialization may return a completed task. Repeated calls observe the same initialization operation.
+        /// </summary>
+        /// <param name="cancellationToken">Cancels the initialization operation when supplied on the call that starts it.</param>
+        /// <returns>A task that completes when the transport is ready.</returns>
+        Task InitializeAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>Starts the transport's I/O pumps after successful initialization. Repeated calls are idempotent.</summary>
+        void Start();
+
+        /// <summary>
         /// Pipe reader for inbound data (data received from the remote peer).
         /// The actor reads from this to get <see cref="Tcp.Received"/> data.
         /// </summary>
@@ -53,7 +64,7 @@ namespace Akka.IO
         Task CloseAsync();
 
         /// <summary>
-        /// Abort: RST the connection immediately, no flush.
+        /// Aborts the connection immediately without flushing and cancels pending initialization.
         /// </summary>
         void Abort();
 

@@ -505,7 +505,7 @@ namespace Akka.Tests.IO
                 _transport = transport;
             }
 
-            protected override void PreStart() => CompleteConnect(_bindHandler, Array.Empty<Inet.SocketOption>());
+            protected override void PreStart() => InitializeTransport(_bindHandler, Array.Empty<Inet.SocketOption>());
 
             protected override ITransportConnection CreateTransport() => _transport;
         }
@@ -521,6 +521,8 @@ namespace Akka.Tests.IO
             public FakeTransport(Func<int, ValueTask<FlushResult>> onFlush) => _onFlush = onFlush;
 
             public PipeReader Input => _input.Reader;
+            public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+            public void Start() { }
             public Task ReadCompleted => _never.Task;
             public Task WriteCompleted => _never.Task;
             public bool HasReadError => false;

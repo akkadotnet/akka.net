@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -22,7 +23,8 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-        private readonly Stream? _stream;
+        private ITransportConnection? _preparedTransport;
+        private readonly TlsServerSettings? _tlsSettings;
 
         public TcpIncomingConnection(TcpSettings settings,
                                      Socket socket,
@@ -43,12 +45,37 @@ namespace Akka.IO
         {
             _bindHandler = bindHandler;
             _options = options;
-            _stream = stream;
+            _preparedTransport = CreateTcpTransport(stream);
+            Context.Watch(bindHandler); // sign death pact
+        }
+
+        public TcpIncomingConnection(TcpSettings settings,
+                                     Socket socket,
+                                     IActorRef bindHandler,
+                                     IEnumerable<Inet.SocketOption> options,
+                                     bool readThrottling,
+                                     TlsServerSettings tlsSettings)
+            : base(settings, socket, readThrottling)
+        {
+            _bindHandler = bindHandler;
+            _options = options;
+            _tlsSettings = tlsSettings;
 
             Context.Watch(bindHandler); // sign death pact
         }
 
         protected override ITransportConnection CreateTransport()
+        {
+            if (_preparedTransport is { } preparedTransport)
+            {
+                _preparedTransport = null;
+                return preparedTransport;
+            }
+
+            return CreateTcpTransport(existingStream: null);
+        }
+
+        private ITransportConnection CreateTcpTransport(Stream? existingStream)
         {
             var pipeBufferSize = ResolvePipeBufferSize(Settings, _options);
             var inputPipeOptions = new PipeOptions(
@@ -57,19 +84,14 @@ namespace Akka.IO
                 minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
-            if (_stream != null)
-            {
-                // Use the provided stream (for TLS or testing)
-                return new TcpTransportConnection(Socket, _stream, inputPipeOptions, ResolveOutputPipeOptions(Settings, _options));
-            }
-
-            // Default: plaintext TCP using the socket directly
-            return new TcpTransportConnection(Socket, inputPipeOptions, ResolveOutputPipeOptions(Settings, _options));
+            return TcpTransportConnection.CreateForIncoming(Socket, existingStream, inputPipeOptions,
+                ResolveOutputPipeOptions(Settings, _options), _tlsSettings, Log);
         }
 
         protected override void PreStart()
         {
-            CompleteConnect(_bindHandler, _options);
+            InitializeTransport(_bindHandler, _options);
         }
+
     }
 }
