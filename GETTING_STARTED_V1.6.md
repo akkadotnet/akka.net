@@ -33,8 +33,9 @@ reference the projects you need with a `ProjectReference` instead.
 * **Native AOT support, in progress.** A local `ActorSystem` and a basic Akka.Hosting app
   publish and run clean under Native AOT in CI. Classic remoting does not work under AOT at
   all; Artery is the target transport for Remote under AOT, but only a manual probe has tried
-  it so far. Akka.Cluster, Akka.Persistence, and cluster tools aren't supported under AOT yet.
-  See [Native AOT and trimming](#native-aot-and-trimming) below.
+  it so far. Akka.Persistence runs under AOT through the Akka.Persistence.Hosting builders; Akka.Cluster
+  and cluster tools aren't supported under AOT yet. See
+  [Native AOT and trimming](#native-aot-and-trimming) below.
 
 Every breaking change in this cycle is tracked in
 [`BREAKING_CHANGES_V1.6.md`](BREAKING_CHANGES_V1.6.md). Read it before you upgrade an
@@ -109,10 +110,16 @@ Everything beyond that is unverified by CI. Classic DotNetty remoting does not w
 Native AOT - it loads its transport by type name, and that lookup fails at startup.
 [Artery](#enabling-artery) is the target transport for Remote under AOT; a manual probe has
 round-tripped a remote `Ask` over Artery under AOT, but no CI canary covers it yet. Treat
-Akka.Cluster, Akka.Persistence, and cluster tools (ClusterClient, PubSub, Singleton) as
-unsupported under AOT for now - several of their own settings (the downing provider, a journal
-plugin class, event adapters, the DData durable store) still resolve a type by name,
-unguarded, regardless of the switch below.
+Akka.Cluster and cluster tools (ClusterClient, PubSub, Singleton) as
+unsupported under AOT for now - several of their own settings (the downing provider, the DData
+durable store) still resolve a type by name, unguarded, regardless of the switch below.
+
+Akka.Persistence works under AOT when you configure it through the Akka.Persistence.Hosting
+builders (`WithJournal`, `WithSnapshot`, `WithInMemoryJournal` and the others): they hand core the
+plugins, event adapters and read journals as code. A third-party persistence plugin has to opt in; if
+you write one, read
+[Making Your Persistence Plugin Native AOT Ready](docs/articles/persistence/custom-persistence-provider.md#making-your-persistence-plugin-native-aot-ready).
+`src/aot/Akka.Persistence.AOT.App` is the CI canary for it.
 
 Publishing under Native AOT turns off a feature switch, `Akka.DynamicTypeLoading`:
 

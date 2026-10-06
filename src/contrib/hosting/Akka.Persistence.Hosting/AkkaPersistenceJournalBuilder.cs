@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
@@ -20,6 +22,8 @@ public sealed class AkkaPersistenceJournalBuilder
     internal readonly Dictionary<Type, HashSet<string>> Bindings = new Dictionary<Type, HashSet<string>>();
     internal readonly Dictionary<string, Type> Adapters = new Dictionary<string, Type>();
     internal readonly HashSet<AkkaHealthCheckRegistration> HealthCheckRegistrations = [];
+    // the adapters above as setup registrations, which core builds them from with Akka.DynamicTypeLoading off
+    internal readonly List<EventAdapterDetails> RegisteredAdapters = new();
 
     /// <summary>
     /// The <see cref="JournalOptions"/> instance used to configure this journal.
@@ -76,38 +80,78 @@ public sealed class AkkaPersistenceJournalBuilder
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddEventAdapter<TAdapter>(string eventAdapterName,
+    /// <summary>
+    /// Adds an event adapter that reads and writes. It goes into the HOCON as it always did, which the JIT builds it
+    /// from, and into the persistence setup, which core builds it from when <c>Akka.DynamicTypeLoading</c> is off.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddEventAdapter<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddRegisteredAdapter(eventAdapterName, types, system => (IEventAdapter)Instantiate<TAdapter>(system));
 
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddReadEventAdapter<TAdapter>(string eventAdapterName,
+    /// <summary>
+    /// Adds an event adapter that only reads. See <see cref="AddEventAdapter{TAdapter}(string, IEnumerable{Type})"/>.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddReadEventAdapter<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IReadEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddRegisteredAdapter(eventAdapterName, types, system => new NoopWriteEventAdapter((IReadEventAdapter)Instantiate<TAdapter>(system)));
 
         return this;
     }
 
-    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<TAdapter>(string eventAdapterName,
+    /// <summary>
+    /// Adds an event adapter that only writes. See <see cref="AddEventAdapter{TAdapter}(string, IEnumerable{Type})"/>.
+    /// </summary>
+    public AkkaPersistenceJournalBuilder AddWriteEventAdapter<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(string eventAdapterName,
         IEnumerable<Type> boundTypes) where TAdapter : IWriteEventAdapter
     {
-        AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        var types = AddAdapter<TAdapter>(eventAdapterName, boundTypes);
+        AddRegisteredAdapter(eventAdapterName, types, system => new NoopReadEventAdapter((IWriteEventAdapter)Instantiate<TAdapter>(system)));
 
         return this;
     }
 
-    private void AddAdapter<TAdapter>(string eventAdapterName, IEnumerable<Type> boundTypes)
+    // Enumerates boundTypes exactly once and in the same order as before, so a null or a lazy sequence behaves as it always did.
+    private List<Type> AddAdapter<TAdapter>(string eventAdapterName, IEnumerable<Type> boundTypes)
     {
         Adapters[eventAdapterName] = typeof(TAdapter);
+        var types = new List<Type>();
         foreach (var t in boundTypes)
         {
+            types.Add(t);
             if (!Bindings.ContainsKey(t))
                 Bindings[t] = new HashSet<string>();
             Bindings[t].Add(eventAdapterName);
+        }
+
+        return types;
+    }
+
+    // The setup copy of what the HOCON says. Build adds it only when the HOCON is written, so a call that built
+    // nothing before still builds nothing. A name the HOCON would reject is skipped rather than made to throw here.
+    private void AddRegisteredAdapter(string eventAdapterName, List<Type> types, Func<ExtendedActorSystem, IEventAdapter> factory)
+    {
+        if (!string.IsNullOrWhiteSpace(eventAdapterName))
+            RegisteredAdapters.Add(EventAdapterDetails.Create(eventAdapterName, factory, types.ToArray()));
+    }
+
+    // core's reflection path (EventAdapters.Instantiate) on a type named in code: the constructor that takes the
+    // system, and when there is none, the parameterless one
+    private static object Instantiate<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TAdapter>(ExtendedActorSystem system)
+    {
+        try
+        {
+            return Activator.CreateInstance(typeof(TAdapter), system)!;
+        }
+        catch (MissingMethodException)
+        {
+            return Activator.CreateInstance(typeof(TAdapter))!;
         }
     }
 
@@ -131,6 +175,15 @@ public sealed class AkkaPersistenceJournalBuilder
         // add the health checks if specified - do this FIRST before any early returns
         foreach(var hc in HealthCheckRegistrations)
             Builder.WithHealthCheck(hc);
+
+        // The adapters go into the setup only when the HOCON below is written, so that a call which built nothing
+        // before still builds nothing. The HOCON stays as it always was.
+        if (Adapters.Count > 0 && Bindings.Count > 0 && RegisteredAdapters.Count > 0)
+        {
+            var pluginId = Options?.PluginId ?? $"akka.persistence.journal.{JournalId}";
+            var registered = RegisteredAdapters.ToList();
+            Builder.AddPersistenceRegistrations(setup => setup.WithEventAdapters(pluginId, registered));
+        }
 
         // useless configuration - don't bother.
         if (Adapters.Count == 0 || Bindings.Count == 0)

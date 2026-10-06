@@ -67,6 +67,12 @@ namespace Akka.Persistence.Hosting
         public Config DefaultConfig => InternalDefaultConfig.MoveTo(PluginId);
 
         public string PluginId => $"akka.persistence.snapshot-store.{Identifier}";
+
+        /// <summary>
+        /// INTERNAL API. The snapshot store's registration, when the options class names its type in code
+        /// (<see cref="SnapshotOptions{TSnapshotStore}"/>); <c>null</c> leaves the store on its HOCON <c>class</c>.
+        /// </summary>
+        internal virtual SnapshotStoreDetails? CreateSnapshotStoreDetails() => null;
         
         /// <summary>
         /// The chain config builder.

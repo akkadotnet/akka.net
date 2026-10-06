@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Hosting;
 using Akka.Persistence.Journal;
+using Akka.Persistence.Snapshot;
 using Akka.Actor;
 
 #nullable enable
@@ -132,6 +134,13 @@ namespace Akka.Persistence.Hosting
             builder.AddHocon(journalOptions.ToConfig(), HoconAddMode.Prepend);
             builder.AddHocon(journalOptions.DefaultConfig, HoconAddMode.Append);
 
+            // A plugin whose options name its types in code starts from them, not from its HOCON `class`, which is
+            // what Akka.DynamicTypeLoading off (Native AOT) needs. Its default read journal comes along.
+            if (journalOptions.CreateJournalDetails() is { } journal)
+                builder.AddPersistenceRegistrations(setup => setup.WithPlugin(journal));
+            if (journalOptions.CreateReadJournalDetails() is { } readJournal)
+                builder.AddPersistenceRegistrations(setup => setup.WithPlugin(readJournal));
+
             // Apply the builder configuration (adapters + health checks) if provided
             if (configureBuilder != null)
             {
@@ -186,6 +195,10 @@ namespace Akka.Persistence.Hosting
             // Apply the options configuration
             builder.AddHocon(snapshotOptions.ToConfig(), HoconAddMode.Prepend);
             builder.AddHocon(snapshotOptions.DefaultConfig, HoconAddMode.Append);
+
+            // a plugin whose options name its type in code starts from it, not from its HOCON `class`
+            if (snapshotOptions.CreateSnapshotStoreDetails() is { } snapshotStore)
+                builder.AddPersistenceRegistrations(setup => setup.WithPlugin(snapshotStore));
 
             // Apply the builder configuration (health checks) if provided
             if (configureBuilder != null)
@@ -249,6 +262,8 @@ namespace Akka.Persistence.Hosting
                   }
                   """;
 
+            builder.AddPersistenceRegistrations(setup => setup.WithJournal(
+                $"akka.persistence.journal.{journalId}", static _ => new MemoryJournal()));
             return builder.AddHocon(liveConfig, HoconAddMode.Prepend);
         }
 
@@ -266,6 +281,8 @@ namespace Akka.Persistence.Hosting
                   }
                   """;
 
+            builder.AddPersistenceRegistrations(setup => setup.WithSnapshotStore(
+                $"akka.persistence.snapshot-store.{snapshotStoreId}", static _ => new MemorySnapshotStore()));
             return builder.AddHocon(liveConfig, HoconAddMode.Prepend);
         }
 
@@ -301,7 +318,41 @@ namespace Akka.Persistence.Hosting
                                }
                            }
                            """;
+
+            // the same adapter for the setup, which core builds it from with Akka.DynamicTypeLoading off
+            if (ClusterShardingMigrationAdapter() is { } adapter)
+                builder.AddPersistenceRegistrations(setup => setup.WithEventAdapters(journalId, new[] { adapter }));
+
             return builder.AddHocon(config, HoconAddMode.Prepend);
+        }
+
+        // Akka.Persistence.Hosting does not reference Akka.Cluster.Sharding, so it names the two sharding types the way
+        // core names its first-party extensions: by compile-time literals the trimmer can see. With Akka.Cluster.Sharding
+        // absent there is nothing to register, and the HOCON fails exactly as it always did.
+        private static EventAdapterDetails? ClusterShardingMigrationAdapter()
+        {
+            var adapterType = FirstPartyType("Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding");
+            var eventType = FirstPartyType("Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding");
+            if (adapterType is null || eventType is null)
+                return null;
+
+            return EventAdapterDetails.Create("coordinator-migration",
+                _ => (IEventAdapter)Activator.CreateInstance(adapterType)!, eventType);
+        }
+
+        /// <summary>Pass a literal: the annotation lets the trimmer keep that type and its constructor.</summary>
+        [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        private static Type? FirstPartyType(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] string typeName)
+        {
+            try
+            {
+                return Type.GetType(typeName);
+            }
+            catch (Exception e) when (e is System.IO.FileLoadException or BadImageFormatException or TypeLoadException)
+            {
+                return null; // an assembly that will not load counts as absent
+            }
         }
     }
 }
