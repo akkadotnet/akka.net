@@ -291,7 +291,18 @@ namespace Akka.Remote.Artery
                 new Inet.SO.SendBufferSize(1024 * 1024),
                 new Inet.SO.PipeBufferSize(settings.TcpPipeBufferSize));
 
+        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>>
+            CreateOutgoingConnection(EndPoint remoteEndpoint)
+        {
+            if (_tlsSettings is null)
+                return _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false);
+
+            return _tcp!.OutgoingConnectionTls(remoteEndpoint, _tlsSettings.ClientSettings,
+                options: _arterySocketOptions, halfClose: false);
+        }
+
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
+        private ArteryTlsSettings? _tlsSettings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
@@ -369,6 +380,8 @@ namespace Akka.Remote.Artery
             // so its lifetime does not depend on when /system itself eventually tears down either.
             _materializer = CreateSystemMaterializer();
             _tcp = System.TcpStream();
+            var tlsSetup = System.Settings.Setup.Get<ArteryTlsSetup>();
+            _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings : null;
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
             // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
             // than ArrayPool<byte>.Shared (which is what a null value resolves to downstream). Shared is
@@ -411,8 +424,13 @@ namespace Akka.Remote.Artery
             // under the peer within milliseconds of it being accepted. halfClose: true makes it send
             // `Tcp.ConfirmedClose` (FIN on the write half only) instead, keeping the read side open
             // for as long as the peer keeps sending.
-            var (bindingTask, _) = _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
+            var inboundConnections = _tlsSettings is null
+                ? _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
                     options: _arterySocketOptions, halfClose: true)
+                : _tcp.BindTls(_settings.CanonicalHostname, _settings.CanonicalPort,
+                    _tlsSettings.ServerSettings, options: _arterySocketOptions, halfClose: true);
+
+            var (bindingTask, _) = inboundConnections
                 .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(HandleIncomingConnection), Keep.Both)
                 .Run(_materializer);
 
@@ -1851,7 +1869,7 @@ namespace Akka.Remote.Artery
                 var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
                     () => Flow.Create<ReadOnlySequence<byte>>()
                         .Prepend(Source.Single(BuildPreamble(ArteryStreamId.Ordinary)))
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Right)
+                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Right)
                         .MapMaterializedValue(connectionTask =>
                         {
                             // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2291,7 +2309,7 @@ namespace Akka.Remote.Artery
                     Task connectionTask;
                     ((terminationWatch, connectionTask), _) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Both)
+                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
@@ -2336,7 +2354,7 @@ namespace Akka.Remote.Artery
                     var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
                         () => Flow.Create<ReadOnlySequence<byte>>()
                             .Prepend(Source.Single(BuildPreamble(streamId)))
-                            .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false), Keep.Right)
+                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Right)
                             .MapMaterializedValue(connectionTask =>
                             {
                                 // Runs at EVERY (re-)materialization of the socket flow -- including

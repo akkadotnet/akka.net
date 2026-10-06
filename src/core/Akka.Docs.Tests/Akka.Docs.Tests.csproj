@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
