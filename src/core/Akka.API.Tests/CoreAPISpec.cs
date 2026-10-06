@@ -16,6 +16,8 @@ using Akka.Persistence.Query;
 using PublicApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
+using Akka.Persistence.Embedded.Hosting;
+using Akka.Persistence.Embedded.Journal;
 using Akka.Persistence.Query.InMemory;
 using Akka.Streams;
 using Akka.TestKit;
@@ -65,6 +67,18 @@ namespace Akka.API.Tests
         public Task ApprovePersistenceQuery()
         {
             return VerifyAssembly<PersistenceQuery>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceEmbedded()
+        {
+            return VerifyAssembly<SqliteWriteJournal>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceEmbeddedHosting()
+        {
+            return VerifyAssembly<EmbeddedJournalOptions>();
         }
 
         [Fact]

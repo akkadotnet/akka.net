@@ -8,6 +8,7 @@
     <Project Path="src/aot/Akka.AOT.App/Akka.AOT.App.csproj" />
     <Project Path="src/aot/Akka.Hosting.AOT.App/Akka.Hosting.AOT.App.csproj" />
     <Project Path="src/aot/Akka.Persistence.AOT.App/Akka.Persistence.AOT.App.csproj" />
+    <Project Path="src/aot/Akka.Persistence.Embedded.AOT.App/Akka.Persistence.Embedded.AOT.App.csproj" />
   </Folder>
   <Folder Name="/Benchmark/">
     <Project Path="src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" />
@@ -83,12 +84,16 @@
     <Project Path="src/contrib/hosting/Akka.Hosting.TestKit/Akka.Hosting.TestKit.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting.Tests/Akka.Hosting.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting/Akka.Hosting.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Persistence.Embedded.Hosting.Tests/Akka.Persistence.Embedded.Hosting.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Persistence.Embedded.Hosting/Akka.Persistence.Embedded.Hosting.csproj" />
     <Project Path="src/contrib/hosting/Akka.Persistence.Hosting.Tests/Akka.Persistence.Hosting.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Persistence.Hosting/Akka.Persistence.Hosting.csproj" />
     <Project Path="src/contrib/hosting/Akka.Remote.Hosting.Tests/Akka.Remote.Hosting.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Remote.Hosting/Akka.Remote.Hosting.csproj" />
   </Folder>
   <Folder Name="/Contrib/Persistence/">
+    <Project Path="src/contrib/persistence/Akka.Persistence.Embedded.Tests/Akka.Persistence.Embedded.Tests.csproj" />
+    <Project Path="src/contrib/persistence/Akka.Persistence.Embedded/Akka.Persistence.Embedded.csproj" />
     <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory.Tests/Akka.Persistence.Query.InMemory.Tests.csproj" />
     <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory/Akka.Persistence.Query.InMemory.csproj" />
   </Folder>
