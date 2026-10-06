@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.6.0-beta1</VersionPrefix>
+    <VersionPrefix>1.6.0-beta2</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -65,11 +65,11 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET 1.6.0-beta1 is the first public beta of the 1.6 line. Every package now targets .NET 10 only. This beta adds an experimental Artery TCP remoting transport, a buffer-based `SerializerV2` API with a source generator for your own messages, a rewritten Akka.IO TCP layer, Native AOT support for local and Akka.Hosting apps, and code-based serializer registration for Akka's built-in modules. Akka.Hosting now ships from this repository. This release has breaking changes.
+    <PackageReleaseNotes>Akka.NET 1.6.0-beta2 builds on the first public beta of the 1.6 line. It keeps the .NET 10-only target and the experimental Artery TCP transport, and it hardens the `SerializerV2` API and the Native AOT story. Notable additions include the `SerializerV2` generator for formatters inside collections and native `TimeSpan`/small scalars, an AOT-compatible Akka.Persistence.Embedded SQLite journal and read journal, Native AOT plugin startup for Persistence.Hosting, and `Match` extension methods for `Option<T>`.
 
-Start here: [Akka.NET v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta1/GETTING_STARTED_V1.6.md)
+Start here: [Akka.NET v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta2/GETTING_STARTED_V1.6.md)
 
-Upgrading from 1.5? Read the [breaking changes](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta1/BREAKING_CHANGES_V1.6.md).
+Upgrading from 1.5? Read the [breaking changes](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta2/BREAKING_CHANGES_V1.6.md).
 
 **Breaking changes**
 
