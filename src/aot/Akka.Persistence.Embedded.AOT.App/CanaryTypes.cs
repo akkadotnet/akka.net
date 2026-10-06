@@ -30,7 +30,7 @@ public sealed record GetState;
 public sealed record CanaryState(string[] Values, long SnapshotSequenceNr, long LastSequenceNr);
 
 /// <summary>
-/// Tags every event whose value starts with "adapted-". It is added with <c>AddWriteEventAdapter</c> and a factory, which
+/// Tags every event whose value starts with "adapted-". It is added with the typed <c>AddWriteEventAdapter&lt;T&gt;</c>, which
 /// is what lets core build it with <c>Akka.DynamicTypeLoading</c> off.
 /// </summary>
 public sealed class CanaryTagger : IWriteEventAdapter

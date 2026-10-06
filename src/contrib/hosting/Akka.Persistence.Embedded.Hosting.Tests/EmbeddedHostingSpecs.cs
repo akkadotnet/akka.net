@@ -111,7 +111,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                     connectionString,
                     // the factory overload builds the adapter in code, so no type name is resolved
                     journalBuilder: journal => journal
-                        .AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent))
+                        .AddWriteEventAdapter<RedTagger>("red-tagger", [typeof(HostingEvent)])
                         .WithHealthCheck(),
                     snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 
@@ -148,11 +148,11 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                 .WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system))
                 .WithEmbeddedPersistence(
                     firstDb.ConnectionString,
-                    journalBuilder: journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
+                    journalBuilder: journal => journal.AddWriteEventAdapter<RedTagger>("red-tagger", [typeof(HostingEvent)]),
                     pluginIdentifier: "first")
                 .WithEmbeddedPersistence(
                     secondDb.ConnectionString,
-                    journalBuilder: journal => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent)),
+                    journalBuilder: journal => journal.AddWriteEventAdapter<RedTagger>("red-tagger", [typeof(HostingEvent)]),
                     pluginIdentifier: "second",
                     isDefaultPlugin: false));
             var system = hosted.System;
@@ -266,7 +266,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             => builder.WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system));
 
         private static void AddTagger(AkkaPersistenceJournalBuilder journal)
-            => journal.AddWriteEventAdapter("red-tagger", static _ => new RedTagger(), typeof(HostingEvent));
+            => journal.AddWriteEventAdapter<RedTagger>("red-tagger", [typeof(HostingEvent)]);
 
         private static async Task<string[]> TablesAsync(string path)
         {
@@ -405,15 +405,15 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             system.Settings.Config.GetBoolean("akka.persistence.journal.embedded.auto-initialize").Should().BeFalse();
         }
 
-        [Fact(DisplayName = "Should_read_the_journal_of_a_default_plugin_When_its_identifier_is_not_embedded")]
-        public async Task Should_read_the_journal_of_a_default_plugin_When_its_identifier_is_not_embedded()
+        [Fact(DisplayName = "Should_read_the_journal_through_its_own_read_journal_id_When_its_identifier_is_not_embedded")]
+        public async Task Should_read_the_journal_through_its_own_read_journal_id_When_its_identifier_is_not_embedded()
         {
             using var db = new TempDb();
             await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
                 .WithEmbeddedPersistence(db.ConnectionString, journalBuilder: AddTagger, pluginIdentifier: "custom"));
 
-            // the default read journal id and the custom one both read the custom journal
-            await Scenario.RunAsync(hosted.System, "alias-1", readJournalId: SqliteReadJournal.Identifier);
+            // the read journal id follows the identifier: akka.persistence.query.journal.{id}
+            await Scenario.RunAsync(hosted.System, "alias-1", readJournalId: "akka.persistence.query.journal.custom");
             var viaCustom = await hosted.System.ReadJournalFor<SqliteReadJournal>("akka.persistence.query.journal.custom")
                 .CurrentPersistenceIds().RunWith(Sink.Seq<string>(), hosted.System.Materializer()).WaitAsync(TimeSpan.FromSeconds(10));
             viaCustom.Should().Equal("alias-1");

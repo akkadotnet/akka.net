@@ -21,7 +21,7 @@ Akka.Persistence.Sql.Hosting (minus the linq2db ones: `providerName`, `schemaNam
 akka.WithEmbeddedPersistence(
     "Data Source=app.db",
     journalBuilder: journal => journal
-        .AddWriteEventAdapter("tagger", static _ => new MyTagger(), typeof(MyEvent))   // the factory overload is Native AOT safe
+        .AddWriteEventAdapter<MyTagger>("tagger", [typeof(MyEvent)])   // Native AOT safe
         .WithHealthCheck(),
     snapshotBuilder: snapshot => snapshot.WithHealthCheck());
 ```
@@ -81,8 +81,8 @@ akka
 
 A persistent actor picks the non-default plugin with `JournalPluginId = "akka.persistence.journal.audit"` and
 `SnapshotPluginId = "akka.persistence.snapshot-store.audit"`. Read it with
-`ReadJournalFor<SqliteReadJournal>("akka.persistence.query.journal.audit")`. A default plugin under another identifier is
-also what the default read journal id, `akka.persistence.query.journal.embedded`, reads.
+`ReadJournalFor<SqliteReadJournal>("akka.persistence.query.journal.audit")`. The read journal id always follows the
+journal's identifier, `akka.persistence.query.journal.{identifier}`.
 
 ## Journal only or snapshot store only
 

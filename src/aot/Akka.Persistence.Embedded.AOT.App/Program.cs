@@ -139,7 +139,7 @@ internal static class Program
                 },
                 snapshotOptions: new EmbeddedSnapshotOptions { ConnectionString = "Data Source=" + path },
                 journalBuilder: journal => journal
-                    .AddWriteEventAdapter("canary-tagger", static _ => new CanaryTagger(), typeof(CanaryEvent))
+                    .AddWriteEventAdapter<CanaryTagger>("canary-tagger", [typeof(CanaryEvent)])
                     .WithHealthCheck(),
                 snapshotBuilder: snapshot => snapshot.WithHealthCheck()));
 

@@ -28,10 +28,10 @@ namespace Akka.Persistence.Embedded.Hosting
     /// <summary>
     /// Options of the SQLite journal and of the read journal that reads it, shaped like Akka.Persistence.Sql.Hosting's
     /// <c>SqlJournalOptions</c>. A property left null keeps the plugin's reference setting. The plugin is registered in code
-    /// (<see cref="CreatePluginActorFactory"/>), so it needs no <c>class</c> setting and starts with
-    /// <c>Akka.DynamicTypeLoading</c> off.
+    /// by type (<c>JournalOptions&lt;SqliteWriteJournal, SqliteReadJournalProvider&gt;</c>), so it needs no <c>class</c> setting
+    /// and starts with <c>Akka.DynamicTypeLoading</c> off.
     /// </summary>
-    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions
+    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions<SqliteWriteJournal, Akka.Persistence.Embedded.Query.SqliteReadJournalProvider>
     {
         private static readonly Config Default = SqlitePersistence.DefaultJournalConfiguration;
 
@@ -112,11 +112,7 @@ namespace Akka.Persistence.Embedded.Hosting
         protected override Config InternalDefaultConfig => Default;
 
         /// <summary>The read journal's plugin id: <c>akka.persistence.query.journal.{Identifier}</c>.</summary>
-        public string QueryPluginId => $"akka.persistence.query.journal.{Identifier}";
-
-        /// <inheritdoc />
-        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory()
-            => Akka.Persistence.Hosting.PluginActorFactory.For(static config => new SqliteWriteJournal(config));
+        public string QueryPluginId => ReadJournalPluginId;
 
         /// <inheritdoc />
         protected override StringBuilder Build(StringBuilder sb)
@@ -152,10 +148,6 @@ namespace Akka.Persistence.Embedded.Hosting
 
             BuildQueryConfig(sb, QueryPluginId);
 
-            // a default journal under another id is also what the default read journal id reads
-            if (IsDefaultPlugin && QueryPluginId != SqlitePersistence.QueryPluginId)
-                BuildQueryConfig(sb, SqlitePersistence.QueryPluginId);
-
             return sb;
         }
 
@@ -180,7 +172,7 @@ namespace Akka.Persistence.Embedded.Hosting
     }
 
     /// <summary>Options of the SQLite snapshot store, shaped like Akka.Persistence.Sql.Hosting's <c>SqlSnapshotOptions</c>.</summary>
-    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
+    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions<SqliteSnapshotStore>
     {
         private static readonly Config Default = SqlitePersistence.DefaultSnapshotConfiguration;
 
@@ -208,10 +200,6 @@ namespace Akka.Persistence.Embedded.Hosting
 
         /// <inheritdoc />
         protected override Config InternalDefaultConfig => Default;
-
-        /// <inheritdoc />
-        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory()
-            => Akka.Persistence.Hosting.PluginActorFactory.For(static config => new SqliteSnapshotStore(config));
 
         /// <inheritdoc />
         protected override StringBuilder Build(StringBuilder sb)

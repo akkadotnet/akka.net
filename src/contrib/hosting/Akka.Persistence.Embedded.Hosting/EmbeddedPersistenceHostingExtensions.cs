@@ -8,7 +8,6 @@
 #nullable enable
 using System;
 using Akka.Hosting;
-using Akka.Persistence.Embedded.Query;
 using Akka.Persistence.Hosting;
 
 namespace Akka.Persistence.Embedded.Hosting
@@ -153,30 +152,16 @@ namespace Akka.Persistence.Embedded.Hosting
 
             if (journalOptions is not null)
             {
+                // the read journal's reference section sits under the options' HOCON, which WithJournal adds; the
+                // options name the read journal's type, so WithJournal also registers it
                 builder.WithJournal(journalOptions, journalBuilder);
-                builder.AddReadJournal(journalOptions.QueryPluginId, journalOptions);
-
-                // a default journal under another id is also what the default read journal id reads
-                if (journalOptions.IsDefaultPlugin && journalOptions.QueryPluginId != SqlitePersistence.QueryPluginId)
-                    builder.AddReadJournal(SqlitePersistence.QueryPluginId, journalOptions);
+                builder.AddHocon(SqlitePersistence.DefaultQueryConfiguration.MoveTo(journalOptions.QueryPluginId), HoconAddMode.Append);
             }
 
             if (snapshotOptions is not null)
                 builder.WithSnapshot(snapshotOptions, snapshotBuilder);
 
             return builder;
-        }
-
-        private static void AddReadJournal(this AkkaConfigurationBuilder builder, string queryPluginId, EmbeddedJournalOptions journalOptions)
-        {
-            // the plugin's reference section sits under the options' HOCON, which the journal options have already added
-            var defaults = SqlitePersistence.DefaultQueryConfiguration.MoveTo(queryPluginId);
-            builder.AddHocon(defaults, HoconAddMode.Append);
-
-            builder.WithReadJournal(
-                queryPluginId,
-                (system, config) => new SqliteReadJournalProvider(system, config, queryPluginId),
-                SqlitePersistence.DefaultQueryConfiguration);
         }
     }
 }

@@ -4,7 +4,7 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence.Embedded.Hosting
 {
-    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions
+    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions<Akka.Persistence.Embedded.Journal.SqliteWriteJournal, Akka.Persistence.Embedded.Query.SqliteReadJournalProvider>
     {
         public EmbeddedJournalOptions() { }
         public EmbeddedJournalOptions(bool isDefaultPlugin, string identifier = "embedded") { }
@@ -30,7 +30,6 @@ namespace Akka.Persistence.Embedded.Hosting
         public string? TagTableName { get; set; }
         public bool? UseWriterUuidColumn { get; set; }
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
-        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
     }
     public static class EmbeddedPersistenceHostingExtensions
     {
@@ -38,7 +37,7 @@ namespace Akka.Persistence.Embedded.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions? journalOptions = null, Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions? snapshotOptions = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, Akka.Persistence.Hosting.PersistenceMode mode = 0, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null, bool autoInitialize = true, string pluginIdentifier = "embedded", bool isDefaultPlugin = true, Akka.Persistence.Embedded.TagWriteMode? tagStorageMode = default, bool? deleteCompatibilityMode = default, bool? useWriterUuidColumn = default, int? maxConcurrentQueries = default) { }
     }
-    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions
+    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions<Akka.Persistence.Embedded.Snapshot.SqliteSnapshotStore>
     {
         public EmbeddedSnapshotOptions() { }
         public EmbeddedSnapshotOptions(bool isDefaultPlugin, string identifier = "embedded") { }
@@ -47,6 +46,5 @@ namespace Akka.Persistence.Embedded.Hosting
         protected override Akka.Configuration.Config InternalDefaultConfig { get; }
         public string? TableName { get; set; }
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
-        protected override Akka.Persistence.Hosting.PluginActorFactory? CreatePluginActorFactory() { }
     }
 }
