@@ -51,13 +51,7 @@ namespace Akka.Tests.IO
             var connectionHandler = CreateTestProbe();
             var connect = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    TargetHost = "localhost",
-                    EnabledSslProtocols = protocol,
-                    CustomValidator = (_, _, _, _, _) => true
-                }
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.PinnedCertificates(serverCertificate.Thumbprint)).WithTargetHost("localhost").WithProtocols(protocol)
             };
             commander.Send(Sys.Tcp(), connect);
 
@@ -75,6 +69,30 @@ namespace Akka.Tests.IO
             await peerTask.WaitAsync(TestTimeout);
         }
 
+        [Fact(DisplayName = "Should_Keep_Plain_TCP_Connections_Working_Without_TLS_Settings")]
+        public async Task Should_keep_plain_tcp_connections_working_without_tls_settings()
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var endpoint = (IPEndPoint)listener.LocalEndpoint;
+            using var cancellation = new CancellationTokenSource(TestTimeout);
+            var commander = CreateTestProbe();
+            commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
+
+            await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
+            var connection = commander.LastSender;
+            using var peerSocket = await listener.AcceptSocketAsync(cancellation.Token);
+            using var peerStream = new NetworkStream(peerSocket, ownsSocket: false);
+            var handler = CreateTestProbe();
+            commander.Send(connection, new Tcp.Register(handler.Ref));
+            handler.Send(connection, Tcp.Write.Create(Encoding.UTF8.GetBytes("plain tcp")));
+
+            var payload = new byte["plain tcp".Length];
+            await peerStream.ReadExactlyAsync(payload, cancellation.Token);
+            Encoding.UTF8.GetString(payload).Should().Be("plain tcp");
+            await AbortConnectionAsync(handler, connection);
+        }
+
         [Fact(DisplayName = "Should_Exchange_Bytes_And_Run_Mutual_TLS_Validators")]
         public async Task Should_exchange_bytes_and_run_mutual_tls_validators()
         {
@@ -85,15 +103,11 @@ namespace Akka.Tests.IO
             var listenerHandler = CreateTestProbe();
             var bind = new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = new TlsServerSettings(serverCertificate)
-                {
-                    RequireMutualAuthentication = true,
-                    CustomValidator = (_, _, _, _, _) =>
+                Tls = TlsServerSettings.Mutual(serverCertificate, TlsPeerPolicy.CustomTrust((_, _, _, _, _) =>
                     {
                         serverValidatorCalls++;
                         return true;
-                    }
-                }
+                    }))
             };
             listenerHandler.Send(Sys.Tcp(), bind);
             var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
@@ -143,15 +157,11 @@ namespace Akka.Tests.IO
             var listenerHandler = CreateTestProbe();
             listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = new TlsServerSettings(serverCertificate)
-                {
-                    RequireMutualAuthentication = true,
-                    CustomValidator = (_, _, _, _, _) =>
+                Tls = TlsServerSettings.Mutual(serverCertificate, TlsPeerPolicy.CustomTrust((_, _, _, _, _) =>
                     {
                         validatorCalls++;
                         return true;
-                    }
-                }
+                    }))
             });
             var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
             var listenerActor = listenerHandler.LastSender;
@@ -185,14 +195,15 @@ namespace Akka.Tests.IO
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
 
-        [Theory(DisplayName = "Should_Apply_Chain_Suppression_And_Hostname_Validation_During_Real_Handshake")]
-        [InlineData("localhost", true, true)]
-        [InlineData("wrong.example", true, false)]
-        [InlineData("", true, false)]
-        [InlineData("localhost", false, false)]
-        public async Task Should_apply_chain_suppression_and_hostname_validation_during_real_handshake(
+        [Theory(DisplayName = "Should_Apply_Explicit_Trust_And_Hostname_Policies_During_Real_Handshake")]
+        [InlineData("pinned", "localhost", true)]
+        [InlineData("pinned", "wrong.example", false)]
+        [InlineData("pin-rotation", "localhost", true)]
+        [InlineData("wrong-pin", "localhost", false)]
+        [InlineData("system", "localhost", false)]
+        public async Task Should_apply_explicit_trust_and_hostname_policies_during_real_handshake(
+            string trustMode,
             string targetHost,
-            bool suppressValidation,
             bool shouldConnect)
         {
             using var serverCertificate = CreateCertificate("localhost", server: true);
@@ -200,16 +211,21 @@ namespace Akka.Tests.IO
             listener.Start();
             var endpoint = (IPEndPoint)listener.LocalEndpoint;
             var peerTask = AcceptAndAuthenticateAsync(listener, serverCertificate, SslProtocols.Tls12);
+            var validation = trustMode switch
+            {
+                "pinned" => TlsPeerPolicy.PinnedCertificates(serverCertificate.Thumbprint)
+                    .And(TlsCertificateValidation.ValidateHostname()),
+                "wrong-pin" => TlsPeerPolicy.PinnedCertificates(new string('0', 40))
+                    .And(TlsCertificateValidation.ValidateHostname()),
+                "pin-rotation" => TlsPeerPolicy.PinnedCertificates(new string('0', 40), serverCertificate.Thumbprint)
+                    .And(TlsCertificateValidation.ValidateHostname()),
+                "system" => TlsPeerPolicy.SystemTrust(),
+                _ => throw new ArgumentOutOfRangeException(nameof(trustMode), trustMode, "Unknown trust mode.")
+            };
             var commander = CreateTestProbe();
             var command = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    SuppressValidation = suppressValidation,
-                    ValidateCertificateHostname = true,
-                    TargetHost = targetHost
-                }
+                Tls = TlsClientSettings.ServerOnly(validation).WithTargetHost(targetHost)
             };
             commander.Send(Sys.Tcp(), command);
 
@@ -241,18 +257,13 @@ namespace Akka.Tests.IO
             var callbackCalls = 0;
             var connect = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    TargetHost = "localhost",
-                    CustomValidator = (_, _, _, _, _) =>
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.CustomTrust((_, _, _, _, _) =>
                     {
                         callbackCalls++;
                         if (throwFromValidator)
                             throw new InvalidOperationException("intentional validator failure");
                         return false;
-                    }
-                }
+                    })).WithTargetHost("localhost")
             };
 
             commander.Send(Sys.Tcp(), connect);
@@ -276,10 +287,7 @@ namespace Akka.Tests.IO
             var listenerHandler = CreateTestProbe();
             listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = new TlsServerSettings(serverCertificate)
-                {
-                    RequireMutualAuthentication = true,
-                    CustomValidator = (certificate, chain, remotePeer, _, log) =>
+                Tls = TlsServerSettings.Mutual(serverCertificate, TlsPeerPolicy.CustomTrust((certificate, chain, remotePeer, _, log) =>
                     {
                         if (certificate!.Thumbprint == rejectedClientCertificate.Thumbprint)
                         {
@@ -292,8 +300,7 @@ namespace Akka.Tests.IO
 
                         acceptedCalls++;
                         return certificate.Thumbprint == acceptedClientCertificate.Thumbprint;
-                    }
-                }
+                    }))
             });
             var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
             var listenerActor = listenerHandler.LastSender;
@@ -354,24 +361,14 @@ namespace Akka.Tests.IO
             var validCommander = CreateTestProbe();
             var stalledConnect = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    HandshakeTimeout = TimeSpan.FromSeconds(2),
-                    CustomValidator = (_, _, _, _, _) => true
-                }
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true)).WithHandshakeTimeout(TimeSpan.FromSeconds(2))
             };
             stalledCommander.Send(Sys.Tcp(), stalledConnect);
             await stalledAccepted.Task.WaitAsync(TimeSpan.FromSeconds(1));
 
             var authenticatedConnect = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    TargetHost = "localhost",
-                    CustomValidator = (_, _, _, _, _) => true
-                }
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true)).WithTargetHost("localhost")
             };
             validCommander.Send(Sys.Tcp(), authenticatedConnect);
             await validCommander.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(1));
@@ -395,11 +392,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    HandshakeTimeout = TestTimeout
-                }
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.SystemTrust()).WithHandshakeTimeout(TestTimeout)
             });
             using var peerSocket = await listener.AcceptSocketAsync(cancellation.Token);
             using var peerStream = new NetworkStream(peerSocket, ownsSocket: false);
@@ -416,12 +409,7 @@ namespace Akka.Tests.IO
             var listenerHandler = CreateTestProbe();
             listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = new TlsServerSettings(serverCertificate)
-                {
-                    RequireMutualAuthentication = false,
-                    HandshakeTimeout = TimeSpan.FromSeconds(5),
-                    CustomValidator = (_, _, _, _, _) => true
-                }
+                Tls = TlsServerSettings.ServerOnly(serverCertificate).WithHandshakeTimeout(TimeSpan.FromSeconds(5))
             });
             var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
             var listenerActor = listenerHandler.LastSender;
@@ -461,46 +449,23 @@ namespace Akka.Tests.IO
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
 
-        [Fact(DisplayName = "Should_Report_Invalid_TLS_Connect_Settings_As_Command_Failure")]
-        public async Task Should_report_invalid_tls_connect_settings_as_command_failure()
-        {
-            using var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            var endpoint = (IPEndPoint)listener.LocalEndpoint;
-            using var cancellation = new CancellationTokenSource(TestTimeout);
-            var commander = CreateTestProbe();
-            var connect = new Tcp.Connect(endpoint)
-            {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    HandshakeTimeout = TimeSpan.Zero
-                }
-            };
-
-            commander.Send(Sys.Tcp(), connect);
-            using var peerSocket = await listener.AcceptSocketAsync(cancellation.Token);
-            var failure = await commander.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
-            failure.Cmd.Should().BeSameAs(connect);
-            failure.Cause.Value.Should().BeOfType<ArgumentOutOfRangeException>();
-        }
-
         [Fact(DisplayName = "Should_Report_Invalid_TLS_Bind_Settings_As_Command_Failure")]
         public async Task Should_report_invalid_tls_bind_settings_as_command_failure()
         {
-            using var certificateWithKey = CreateCertificate("localhost", server: true);
-            using var publicCertificate = X509CertificateLoader.LoadCertificate(certificateWithKey.RawData);
+            var certificate = CreateCertificate("localhost", server: true);
+            var tls = TlsServerSettings.ServerOnly(certificate);
+            certificate.Dispose();
             var handler = CreateTestProbe();
             var bind = new Tcp.Bind(handler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = new TlsServerSettings(publicCertificate)
+                Tls = tls
             };
 
             handler.Send(Sys.Tcp(), bind);
 
             var failure = await handler.ExpectMsgAsync<Tcp.CommandFailed>(TestTimeout);
             failure.Cmd.Should().BeSameAs(bind);
-            failure.Cause.Value.Should().BeOfType<ArgumentException>();
+            failure.Cause.Value.Should().BeOfType<CryptographicException>();
         }
 
         [Fact(DisplayName = "Should_Present_Client_Certificate_And_Provide_Remote_Context_To_Validation")]
@@ -517,10 +482,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             var connect = new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings(clientCertificate)
-                {
-                    TargetHost = "localhost",
-                    CustomValidator = (certificate, chain, remotePeer, errors, log) =>
+                Tls = TlsClientSettings.Mutual(clientCertificate, TlsPeerPolicy.CustomTrust((certificate, chain, remotePeer, errors, log) =>
                     {
                         callbackCalls++;
                         certificate.Should().NotBeNull();
@@ -529,8 +491,7 @@ namespace Akka.Tests.IO
                         log.Should().NotBeNull();
                         errors.Should().Be(SslPolicyErrors.RemoteCertificateChainErrors);
                         return true;
-                    }
-                }
+                    })).WithTargetHost("localhost")
             };
             commander.Send(Sys.Tcp(), connect);
 
@@ -553,12 +514,7 @@ namespace Akka.Tests.IO
             var commander = CreateTestProbe();
             commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint)
             {
-                Tls = new TlsClientSettings
-                {
-                    RequireMutualAuthentication = false,
-                    TargetHost = "localhost",
-                    CustomValidator = (_, _, _, _, _) => true
-                }
+                Tls = TlsClientSettings.ServerOnly(TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true)).WithTargetHost("localhost")
             });
             await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
             var connection = commander.LastSender;

@@ -9,7 +9,6 @@
 using System;
 using System.Net.Security;
 using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Event;
 
@@ -18,6 +17,10 @@ namespace Akka.IO
     /// <summary>
     /// Validates a peer certificate during TLS authentication.
     /// </summary>
+    /// <remarks>
+    /// Callbacks run synchronously and may run concurrently or reentrantly across connections. Any state captured
+    /// by a callback remains caller-owned and must support that use.
+    /// </remarks>
     /// <param name="certificate">The peer certificate, or <c>null</c> if no certificate was presented.</param>
     /// <param name="chain">The certificate chain built by the TLS implementation, when available.</param>
     /// <param name="remotePeer">The remote peer address or configured host name.</param>
@@ -32,67 +35,66 @@ namespace Akka.IO
         ILoggingAdapter log);
 
     /// <summary>
-    /// Provides certificate and validation settings for an outgoing TLS connection.
+    /// Immutable authentication settings for an outgoing TLS connection.
     /// </summary>
-    public sealed record TlsClientSettings
+    public sealed class TlsClientSettings
     {
-        /// <summary>
-        /// Initializes client TLS settings with an optional certificate for mutual TLS.
-        /// </summary>
-        /// <param name="certificate">The caller-owned client certificate.</param>
-        public TlsClientSettings(X509Certificate2? certificate = null)
+        private TlsClientSettings(X509Certificate2? certificate, TlsPeerPolicy serverValidation,
+            TimeSpan handshakeTimeout, SslProtocols protocols, string? targetHost)
         {
+            if (certificate is not null)
+                TlsSettingsValidation.ValidateCertificate(certificate, nameof(certificate));
             Certificate = certificate;
+            ServerValidation = serverValidation ?? throw new ArgumentNullException(nameof(serverValidation));
+            TlsSettingsValidation.ValidateTimeout(handshakeTimeout);
+            HandshakeTimeout = handshakeTimeout;
+            Protocols = protocols;
+            TargetHost = ValidateTargetHost(targetHost);
         }
 
-        /// <summary>
-        /// Gets the caller-owned certificate presented to a server when configured.
-        /// </summary>
+        /// <summary>Gets the caller-owned certificate presented to the server for mutual TLS.</summary>
         public X509Certificate2? Certificate { get; }
 
-        /// <summary>
-        /// Gets or initializes whether chain errors are ignored. Hostname validation remains independently controlled.
-        /// </summary>
-        public bool SuppressValidation { get; init; }
+        /// <summary>Gets the policy used to validate the remote server.</summary>
+        public TlsPeerPolicy ServerValidation { get; }
 
-        /// <summary>
-        /// Gets or initializes whether a client certificate is required for mutual TLS. Defaults to <c>true</c>.
-        /// </summary>
-        public bool RequireMutualAuthentication { get; init; } = true;
+        /// <summary>Gets the maximum time allowed for the TLS handshake.</summary>
+        public TimeSpan HandshakeTimeout { get; }
 
-        /// <summary>
-        /// Gets or initializes whether the server certificate must match the configured target host.
-        /// </summary>
-        public bool ValidateCertificateHostname { get; init; }
+        /// <summary>Gets the TLS protocols available to the connection.</summary>
+        public SslProtocols Protocols { get; }
 
-        /// <summary>
-        /// Gets or initializes a custom server certificate validator. When supplied, it replaces the built-in policy.
-        /// </summary>
-        public TlsCertificateValidationCallback? CustomValidator { get; init; }
+        /// <summary>Gets the optional target host used for SNI and certificate name validation.</summary>
+        public string? TargetHost { get; }
 
-        /// <summary>
-        /// Gets or initializes the maximum time allowed for the TLS handshake. Defaults to ten seconds.
-        /// </summary>
-        public TimeSpan HandshakeTimeout { get; init; } = TimeSpan.FromSeconds(10);
+        /// <summary>Creates outgoing settings without a client certificate.</summary>
+        public static TlsClientSettings ServerOnly(TlsPeerPolicy serverValidation) =>
+            new(null, serverValidation, TimeSpan.FromSeconds(10), SslProtocols.None, null);
 
-        /// <summary>
-        /// Gets or initializes the TLS protocols available to the connection. Defaults to runtime selection.
-        /// </summary>
-        public SslProtocols EnabledSslProtocols { get; init; } = SslProtocols.None;
+        /// <summary>Creates outgoing settings with a client certificate for mutual TLS.</summary>
+        public static TlsClientSettings Mutual(X509Certificate2 clientCertificate, TlsPeerPolicy serverValidation)
+        {
+            ArgumentNullException.ThrowIfNull(clientCertificate);
+            return new(clientCertificate, serverValidation, TimeSpan.FromSeconds(10), SslProtocols.None, null);
+        }
 
-        /// <summary>
-        /// Gets or initializes the TLS target host used for server-name indication and certificate name checks.
-        /// </summary>
-        public string? TargetHost { get; init; }
+        /// <summary>Returns a copy with a different handshake timeout.</summary>
+        public TlsClientSettings WithHandshakeTimeout(TimeSpan value) =>
+            new(Certificate, ServerValidation, value, Protocols, TargetHost);
 
-        /// <summary>
-        /// Creates fresh authentication options for an outgoing TLS connection.
-        /// </summary>
-        /// <param name="targetHost">The server host name used for SNI and certificate name validation.</param>
-        /// <param name="remotePeer">The remote peer address used in callback context.</param>
-        /// <param name="log">The logger associated with the connection.</param>
-        /// <returns>A new options instance for one TLS handshake.</returns>
-        public SslClientAuthenticationOptions CreateAuthenticationOptions(string targetHost, string remotePeer, ILoggingAdapter log)
+        /// <summary>Returns a copy with different TLS protocols.</summary>
+        public TlsClientSettings WithProtocols(SslProtocols value) =>
+            new(Certificate, ServerValidation, HandshakeTimeout, value, TargetHost);
+
+        /// <summary>Returns a copy with a different SNI and certificate-validation target.</summary>
+        public TlsClientSettings WithTargetHost(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, value);
+        }
+
+        internal SslClientAuthenticationOptions CreateAuthenticationOptions(string targetHost, string remotePeer,
+            ILoggingAdapter log)
         {
             ArgumentNullException.ThrowIfNull(targetHost);
             ArgumentNullException.ThrowIfNull(remotePeer);
@@ -100,83 +102,73 @@ namespace Akka.IO
             TlsSettingsValidation.ValidateTimeout(HandshakeTimeout);
             if (Certificate is not null)
                 TlsSettingsValidation.ValidateCertificate(Certificate, nameof(Certificate));
-            if (RequireMutualAuthentication && Certificate is null)
-                throw new InvalidOperationException("A client certificate is required when mutual TLS is enabled.");
 
             return new SslClientAuthenticationOptions
             {
                 TargetHost = TargetHost ?? targetHost,
-                EnabledSslProtocols = EnabledSslProtocols,
-                ClientCertificates = RequireMutualAuthentication && Certificate is not null
-                    ? new X509CertificateCollection { Certificate }
-                    : null,
-                LocalCertificateSelectionCallback = RequireMutualAuthentication && Certificate is not null
-                    ? (_, _, _, _, _) => Certificate
-                    : null,
-                RemoteCertificateValidationCallback = (_, certificate, chain, errors) => TlsSettingsValidation.ValidatePeer(
-                    certificate, chain, remotePeer, errors, log, CustomValidator,
-                    SuppressValidation, ValidateCertificateHostname, requireCertificate: true)
+                EnabledSslProtocols = Protocols,
+                ClientCertificates = Certificate is null ? null : new X509CertificateCollection { Certificate },
+                LocalCertificateSelectionCallback = Certificate is null ? null : (_, _, _, _, _) => Certificate,
+                RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
+                    TlsSettingsValidation.ValidatePeer(ServerValidation, certificate, chain, remotePeer, errors, log)
             };
+        }
+
+        private static string? ValidateTargetHost(string? value)
+        {
+            if (value is not null && string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("The TLS target host cannot be empty or whitespace.", nameof(value));
+            return value;
         }
     }
 
     /// <summary>
-    /// Provides certificate and validation settings for an incoming TLS connection.
+    /// Immutable authentication settings for an incoming TLS connection.
     /// </summary>
-    public sealed record TlsServerSettings
+    public sealed class TlsServerSettings
     {
-        /// <summary>
-        /// Initializes server TLS settings with the certificate presented to clients.
-        /// </summary>
-        /// <param name="certificate">The caller-owned server certificate, including its private key.</param>
-        public TlsServerSettings(X509Certificate2 certificate)
+        private TlsServerSettings(X509Certificate2 certificate, TlsPeerPolicy? clientValidation,
+            TimeSpan handshakeTimeout, SslProtocols protocols)
         {
-            Certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+            ArgumentNullException.ThrowIfNull(certificate);
+            TlsSettingsValidation.ValidateCertificate(certificate, nameof(certificate));
+            Certificate = certificate;
+            ClientValidation = clientValidation;
+            TlsSettingsValidation.ValidateTimeout(handshakeTimeout);
+            HandshakeTimeout = handshakeTimeout;
+            Protocols = protocols;
         }
 
-        /// <summary>
-        /// Gets the caller-owned certificate presented to clients.
-        /// </summary>
+        /// <summary>Gets the caller-owned certificate presented to clients.</summary>
         public X509Certificate2 Certificate { get; }
 
-        /// <summary>
-        /// Gets or initializes whether chain errors are ignored. Defaults to <c>false</c>.
-        /// </summary>
-        public bool SuppressValidation { get; init; }
+        /// <summary>Gets the policy used to validate client certificates, or <c>null</c> for anonymous clients.</summary>
+        public TlsPeerPolicy? ClientValidation { get; }
 
-        /// <summary>
-        /// Gets or initializes whether clients must present a certificate. Defaults to <c>true</c>.
-        /// </summary>
-        public bool RequireMutualAuthentication { get; init; } = true;
+        /// <summary>Gets the maximum time allowed for the TLS handshake.</summary>
+        public TimeSpan HandshakeTimeout { get; }
 
-        /// <summary>
-        /// Gets or initializes whether a runtime-reported peer name mismatch is rejected. Incoming connections do
-        /// not infer a client host name from the remote endpoint. Defaults to <c>false</c>.
-        /// </summary>
-        public bool ValidateCertificateHostname { get; init; }
+        /// <summary>Gets the TLS protocols available to the connection.</summary>
+        public SslProtocols Protocols { get; }
 
-        /// <summary>
-        /// Gets or initializes a custom client certificate validator. When supplied, it replaces the built-in policy.
-        /// </summary>
-        public TlsCertificateValidationCallback? CustomValidator { get; init; }
+        /// <summary>Creates incoming settings that permit clients without certificates.</summary>
+        public static TlsServerSettings ServerOnly(X509Certificate2 serverCertificate) =>
+            new(serverCertificate, null, TimeSpan.FromSeconds(10), SslProtocols.None);
 
-        /// <summary>
-        /// Gets or initializes the maximum time allowed for the TLS handshake. Defaults to ten seconds.
-        /// </summary>
-        public TimeSpan HandshakeTimeout { get; init; } = TimeSpan.FromSeconds(10);
+        /// <summary>Creates incoming settings that require and validate client certificates.</summary>
+        public static TlsServerSettings Mutual(X509Certificate2 serverCertificate, TlsPeerPolicy clientValidation) =>
+            new(serverCertificate, clientValidation ?? throw new ArgumentNullException(nameof(clientValidation)),
+                TimeSpan.FromSeconds(10), SslProtocols.None);
 
-        /// <summary>
-        /// Gets or initializes the TLS protocols available to the connection. Defaults to runtime selection.
-        /// </summary>
-        public SslProtocols EnabledSslProtocols { get; init; } = SslProtocols.None;
+        /// <summary>Returns a copy with a different handshake timeout.</summary>
+        public TlsServerSettings WithHandshakeTimeout(TimeSpan value) =>
+            new(Certificate, ClientValidation, value, Protocols);
 
-        /// <summary>
-        /// Creates fresh authentication options for an incoming TLS connection.
-        /// </summary>
-        /// <param name="remotePeer">The remote peer address used in callback context.</param>
-        /// <param name="log">The logger associated with the connection.</param>
-        /// <returns>A new options instance for one TLS handshake.</returns>
-        public SslServerAuthenticationOptions CreateAuthenticationOptions(string remotePeer, ILoggingAdapter log)
+        /// <summary>Returns a copy with different TLS protocols.</summary>
+        public TlsServerSettings WithProtocols(SslProtocols value) =>
+            new(Certificate, ClientValidation, HandshakeTimeout, value);
+
+        internal SslServerAuthenticationOptions CreateAuthenticationOptions(string remotePeer, ILoggingAdapter log)
         {
             ArgumentNullException.ThrowIfNull(remotePeer);
             ArgumentNullException.ThrowIfNull(log);
@@ -186,45 +178,28 @@ namespace Akka.IO
             return new SslServerAuthenticationOptions
             {
                 ServerCertificate = Certificate,
-                ClientCertificateRequired = RequireMutualAuthentication,
-                EnabledSslProtocols = EnabledSslProtocols,
-                RemoteCertificateValidationCallback = (_, certificate, chain, errors) => TlsSettingsValidation.ValidatePeer(
-                    certificate, chain, remotePeer, errors, log, CustomValidator,
-                    SuppressValidation, ValidateCertificateHostname, RequireMutualAuthentication)
+                ClientCertificateRequired = ClientValidation is not null,
+                EnabledSslProtocols = Protocols,
+                RemoteCertificateValidationCallback = ClientValidation is null ? null :
+                    (_, certificate, chain, errors) =>
+                        TlsSettingsValidation.ValidatePeer(ClientValidation, certificate, chain, remotePeer, errors, log)
             };
         }
     }
 
     internal static class TlsSettingsValidation
     {
-        internal static bool ValidatePeer(
-            X509Certificate? certificate,
-            X509Chain? chain,
-            string remotePeer,
-            SslPolicyErrors errors,
-            ILoggingAdapter log,
-            TlsCertificateValidationCallback? customValidator,
-            bool suppressValidation,
-            bool validateHostname,
-            bool requireCertificate)
+        internal static bool ValidatePeer(TlsPeerPolicy policy, X509Certificate? certificate,
+            X509Chain? chain, string remotePeer, SslPolicyErrors errors, ILoggingAdapter log)
         {
             if (certificate is null)
-                return !requireCertificate;
+                return false;
 
             var suppliedCertificate = certificate as X509Certificate2;
             using var transientCertificate = suppliedCertificate is null
                 ? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData())
                 : null;
-            var peerCertificate = suppliedCertificate ?? transientCertificate!;
-            if (customValidator is not null)
-                return customValidator(peerCertificate, chain, remotePeer, errors, log);
-
-            var allowedErrors = SslPolicyErrors.None;
-            if (!validateHostname)
-                allowedErrors |= SslPolicyErrors.RemoteCertificateNameMismatch;
-            if (suppressValidation)
-                allowedErrors |= SslPolicyErrors.RemoteCertificateChainErrors;
-            return (errors & ~allowedErrors) == SslPolicyErrors.None;
+            return policy.ValidatePeer(suppliedCertificate ?? transientCertificate, chain, remotePeer, errors, log);
         }
 
         internal static void ValidateTimeout(TimeSpan timeout)
@@ -246,5 +221,4 @@ namespace Akka.IO
                 throw new ArgumentException("The TLS certificate private key must be accessible as RSA or ECDSA.", parameterName);
         }
     }
-
 }

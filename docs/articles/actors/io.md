@@ -40,37 +40,7 @@ The following example shows a simple Telnet client. The client send lines entere
 
 ### TLS Connections
 
-Akka.IO TCP can authenticate and encrypt a connection before it reports `Tcp.Connected`. Set `Tls` on an individual `Tcp.Connect` or `Tcp.Bind` command to enable TLS for that connection or listener; commands without TLS settings continue to use plaintext TCP.
-
-For server-authenticated TLS, configure the server certificate on the listener and disable the default client-certificate requirement. On the client, provide the server name used for SNI and enable hostname validation:
-
-```csharp
-var serverTls = new TlsServerSettings(serverCertificate)
-{
-    RequireMutualAuthentication = false
-};
-
-var clientTls = new TlsClientSettings
-{
-    RequireMutualAuthentication = false,
-    TargetHost = "example.com",
-    ValidateCertificateHostname = true
-};
-
-manager.Tell(new Tcp.Bind(server, new IPEndPoint(IPAddress.Any, 8443))
-{
-    Tls = serverTls
-});
-
-manager.Tell(new Tcp.Connect(new DnsEndPoint("example.com", 8443))
-{
-    Tls = clientTls
-});
-```
-
-The default certificate policy validates the certificate chain. Hostname validation is disabled by default for compatibility; set `ValidateCertificateHostname` to `true` and configure `TargetHost` when the server name should be checked. `SuppressValidation` ignores chain errors only, so it does not disable an enabled hostname check. Set `CustomValidator` to replace the built-in certificate decision; a missing certificate required for mutual TLS remains a handshake failure.
-
-Mutual TLS is enabled by default. Supply a client certificate to `TlsClientSettings` and keep `RequireMutualAuthentication` enabled on both peers to require and validate certificates in both directions. The certificate objects remain owned by the caller and must stay valid while connections use them. A failed or timed-out handshake does not produce `Tcp.Connected`; an outbound connection reports `Tcp.CommandFailed`, and an inbound connection is closed while its listener continues accepting other clients. TLS never falls back to plaintext.
+Akka.IO TCP supports TLS on individual connections and listeners. See [TLS for Akka.IO, Akka.Streams, and Artery](../remoting/tls-for-io-streams-artery.md) for the current Akka.IO API, trust policies, and handshake behavior.
 
 ### Server Connection
 
