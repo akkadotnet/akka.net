@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SqliteDeleteCompatEventsByTagSpec.cs" company="Akka.NET Project">
+// <copyright file="SqliteCurrentEventsByTagSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,18 +13,18 @@ using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Xunit;
 
-namespace Akka.Persistence.Embedded.Tests.Query.TagTable
+namespace Akka.Persistence.Embedded.Tests.Query.Tck
 {
-    public class SqliteDeleteCompatEventsByTagSpec : EventsByTagSpec
+    public class SqliteCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         private readonly SqliteTestDb _db;
 
-        public SqliteDeleteCompatEventsByTagSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public SqliteCurrentEventsByTagSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private SqliteDeleteCompatEventsByTagSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(SqliteSpecConfig.Create(db, SqliteTestMode.DC, $$"""
+        private SqliteCurrentEventsByTagSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(SqliteSpecConfig.Create(db, $$"""
                     akka.persistence.journal.embedded {
                         event-adapters {
                           color-tagger = "{{typeof(ColorFruitTagger).FullName}}, {{typeof(ColorFruitTagger).Assembly.GetName().Name}}"
@@ -33,7 +33,7 @@ namespace Akka.Persistence.Embedded.Tests.Query.TagTable
                           "System.String" = color-tagger
                         }
                     }
-                    """), nameof(SqliteDeleteCompatEventsByTagSpec), output)
+                    """), nameof(SqliteCurrentEventsByTagSpec), output)
         {
             _db = db;
             SqliteSpecConfig.EnsureThreadPoolWarmed();

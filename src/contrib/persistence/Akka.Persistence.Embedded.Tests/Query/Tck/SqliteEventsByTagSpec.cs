@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SqliteCsvCurrentEventsByTagSpec.cs" company="Akka.NET Project">
+// <copyright file="SqliteEventsByTagSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,18 +13,18 @@ using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Xunit;
 
-namespace Akka.Persistence.Embedded.Tests.Query.Csv
+namespace Akka.Persistence.Embedded.Tests.Query.Tck
 {
-    public class SqliteCsvCurrentEventsByTagSpec : CurrentEventsByTagSpec
+    public class SqliteEventsByTagSpec : EventsByTagSpec
     {
         private readonly SqliteTestDb _db;
 
-        public SqliteCsvCurrentEventsByTagSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public SqliteEventsByTagSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private SqliteCsvCurrentEventsByTagSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(SqliteSpecConfig.Create(db, SqliteTestMode.CSV, $$"""
+        private SqliteEventsByTagSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(SqliteSpecConfig.Create(db, $$"""
                     akka.persistence.journal.embedded {
                         event-adapters {
                           color-tagger = "{{typeof(ColorFruitTagger).FullName}}, {{typeof(ColorFruitTagger).Assembly.GetName().Name}}"
@@ -33,7 +33,7 @@ namespace Akka.Persistence.Embedded.Tests.Query.Csv
                           "System.String" = color-tagger
                         }
                     }
-                    """), nameof(SqliteCsvCurrentEventsByTagSpec), output)
+                    """), nameof(SqliteEventsByTagSpec), output)
         {
             _db = db;
             SqliteSpecConfig.EnsureThreadPoolWarmed();

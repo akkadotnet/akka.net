@@ -12,45 +12,38 @@ using Microsoft.Data.Sqlite;
 
 namespace Akka.Persistence.Embedded.Journal
 {
-    /// <summary>The journal's SQL text. Table and column names are validated identifiers, so they go in unquoted.</summary>
+    /// <summary>The journal's SQL. Table names are validated identifiers, so they go in unquoted.</summary>
     internal sealed class JournalSql
     {
-        private readonly JournalSettings _settings;
+        private readonly string _highestSequenceNr;
+        private readonly string _highestSequenceNrFrom;
 
         public JournalSql(JournalSettings settings)
         {
-            _settings = settings;
-            var t = settings.Tables;
+            var journal = settings.Tables.Journal;
+            var tags = settings.Tables.TagTable;
 
-            var columns = $"{t.Created}, {t.Deleted}, {t.PersistenceId}, {t.SequenceNumber}, {t.Message}"
-                + (settings.WritesTagsColumn ? $", {t.Tags}" : "")
-                + $", {t.Manifest}, {t.Identifier}"
-                + (settings.UseWriterUuid ? $", {t.WriterUuid}" : "");
-            var values = "@created, @deleted, @persistence_id, @sequence_number, @message"
-                + (settings.WritesTagsColumn ? ", @tags" : "")
-                + ", @manifest, @identifier"
-                + (settings.UseWriterUuid ? ", @writer_uuid" : "");
-            Insert = $"INSERT INTO {t.Journal} ({columns}) VALUES ({values})";
+            Insert = $"INSERT INTO {journal} (created, deleted, persistence_id, sequence_number, message, manifest, identifier, writer_uuid) " +
+                     "VALUES (@created, @deleted, @persistence_id, @sequence_number, @message, @manifest, @identifier, @writer_uuid)";
             InsertReturningId = Insert + "; SELECT last_insert_rowid();";
-            InsertTag = $"INSERT INTO {t.TagTable} ({t.TagOrderingId}, {t.TagValue}, {t.TagSequenceNr}, {t.TagPersistenceId}) " +
+            InsertTag = $"INSERT INTO {tags} (ordering_id, tag, sequence_nr, persistence_id) " +
                         "VALUES (@ordering_id, @tag, @sequence_nr, @persistence_id)";
 
-            var replayColumns = $"{t.Ordering}, {t.Created}, {t.Deleted}, {t.PersistenceId}, {t.SequenceNumber}, {t.Message}, {t.Manifest}, {t.Identifier}"
-                + (settings.UseWriterUuid ? $", {t.WriterUuid}" : "");
-            Replay = $"SELECT {replayColumns} FROM {t.Journal} " +
-                     $"WHERE {t.PersistenceId} = @persistence_id AND {t.SequenceNumber} >= @from AND {t.SequenceNumber} <= @to AND {t.Deleted} = 0 " +
-                     $"ORDER BY {t.SequenceNumber} LIMIT @take";
+            Replay = $"SELECT ordering, created, deleted, persistence_id, sequence_number, message, manifest, identifier, writer_uuid FROM {journal} " +
+                     "WHERE persistence_id = @persistence_id AND sequence_number >= @from AND sequence_number <= @to AND deleted = 0 " +
+                     "ORDER BY sequence_number LIMIT @take";
 
-            DeleteSelectHighest = $"SELECT {t.SequenceNumber} FROM {t.Journal} " +
-                                  $"WHERE {t.PersistenceId} = @persistence_id AND {t.SequenceNumber} <= @to " +
-                                  $"ORDER BY {t.SequenceNumber} DESC LIMIT 1";
-            DeleteTombstone = $"UPDATE {t.Journal} SET {t.Deleted} = 1 WHERE {t.PersistenceId} = @persistence_id AND {t.SequenceNumber} = @marker";
-            DeletePhysical = $"DELETE FROM {t.Journal} WHERE {t.PersistenceId} = @persistence_id AND {t.SequenceNumber} < @marker";
-            DeleteTags = $"DELETE FROM {t.TagTable} WHERE {t.TagSequenceNr} < @marker AND {t.TagPersistenceId} = @persistence_id";
-            MetadataInsert = $"INSERT INTO {t.Metadata} ({t.MetadataPersistenceId}, {t.MetadataSequenceNumber}) " +
-                             $"SELECT @persistence_id, @marker WHERE NOT EXISTS " +
-                             $"(SELECT 1 FROM {t.Metadata} WHERE {t.MetadataPersistenceId} = @persistence_id AND {t.MetadataSequenceNumber} = @marker)";
-            MetadataDelete = $"DELETE FROM {t.Metadata} WHERE {t.MetadataPersistenceId} = @persistence_id AND {t.MetadataSequenceNumber} < @marker";
+            // The highest row at or below the target is the tombstone: it stays, marked deleted and with an empty message
+            // (the highest sequence number survives, the payload does not). Lower rows and their tag rows go.
+            DeleteSelectHighest = $"SELECT sequence_number FROM {journal} " +
+                                  "WHERE persistence_id = @persistence_id AND sequence_number <= @to ORDER BY sequence_number DESC LIMIT 1";
+            DeleteTombstone = $"UPDATE {journal} SET deleted = 1, message = x'' WHERE persistence_id = @persistence_id AND sequence_number = @marker";
+            DeletePhysical = $"DELETE FROM {journal} WHERE persistence_id = @persistence_id AND sequence_number < @marker";
+            DeleteTags = $"DELETE FROM {tags} WHERE sequence_nr < @marker AND persistence_id = @persistence_id";
+
+            // MAX over every row, deleted ones included: the tombstone keeps the highest sequence number alive
+            _highestSequenceNr = $"SELECT MAX(sequence_number) FROM {journal} WHERE persistence_id = @persistence_id";
+            _highestSequenceNrFrom = _highestSequenceNr + " AND sequence_number > @from";
         }
 
         public string Insert { get; }
@@ -61,23 +54,6 @@ namespace Akka.Persistence.Embedded.Journal
         public string DeleteTombstone { get; }
         public string DeletePhysical { get; }
         public string DeleteTags { get; }
-        public string MetadataInsert { get; }
-        public string MetadataDelete { get; }
-
-        public string HighestSequenceNr(bool hasFrom)
-        {
-            var t = _settings.Tables;
-            var journalFrom = hasFrom ? $" AND {t.SequenceNumber} > @from" : "";
-            var journal = $"SELECT MAX({t.SequenceNumber}) FROM {t.Journal} WHERE {t.PersistenceId} = @persistence_id{journalFrom}";
-            if (!_settings.DeleteCompatibilityMode)
-                return journal;
-
-            var metadataFrom = hasFrom ? $" AND {t.MetadataSequenceNumber} > @from" : "";
-            return "SELECT MAX(c1) FROM (" +
-                   $"SELECT MAX({t.SequenceNumber}) AS c1 FROM {t.Journal} WHERE {t.PersistenceId} = @persistence_id{journalFrom} " +
-                   "UNION " +
-                   $"SELECT MAX({t.MetadataSequenceNumber}) AS c1 FROM {t.Metadata} WHERE {t.MetadataPersistenceId} = @persistence_id{metadataFrom})";
-        }
 
         // ---- execution helpers (run on worker threads) ---------------------------------------------
 
@@ -85,7 +61,7 @@ namespace Akka.Persistence.Embedded.Journal
         public long ReadHighestSequenceNr(SqliteConnection connection, string persistenceId, long from)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = HighestSequenceNr(from != 0);
+            command.CommandText = from != 0 ? _highestSequenceNrFrom : _highestSequenceNr;
             command.Parameters.Add("@persistence_id", SqliteType.Text).Value = persistenceId;
             if (from != 0)
                 command.Parameters.Add("@from", SqliteType.Integer).Value = from;
@@ -107,28 +83,16 @@ namespace Akka.Persistence.Embedded.Journal
             var rows = new List<RawJournalRow>();
             using var reader = command.ExecuteReader();
             while (reader.Read())
-                rows.Add(ReadRow(reader, _settings.UseWriterUuid, hasTagList: false));
+                rows.Add(ReadRow(reader, hasTagList: false));
             return rows;
         }
 
         /// <summary>
         /// Reads a row laid out as ordering, created, deleted, persistence_id, sequence_number, message, manifest,
-        /// identifier, [writer_uuid], [tag list].
+        /// identifier, writer_uuid, [tag list].
         /// </summary>
-        public static RawJournalRow ReadRow(SqliteDataReader reader, bool hasWriterUuid, bool hasTagList)
+        public static RawJournalRow ReadRow(SqliteDataReader reader, bool hasTagList)
         {
-            var next = 8;
-            string? writerUuid = null;
-            if (hasWriterUuid)
-            {
-                writerUuid = reader.IsDBNull(next) ? null : reader.GetString(next);
-                next++;
-            }
-
-            string? tagList = null;
-            if (hasTagList)
-                tagList = reader.IsDBNull(next) ? null : reader.GetString(next);
-
             return new RawJournalRow
             {
                 Ordering = reader.GetInt64(0),
@@ -139,8 +103,8 @@ namespace Akka.Persistence.Embedded.Journal
                 Message = reader.IsDBNull(5) ? System.Array.Empty<byte>() : (byte[])reader.GetValue(5),
                 Manifest = reader.IsDBNull(6) ? null : reader.GetString(6),
                 Identifier = reader.IsDBNull(7) ? null : reader.GetInt64(7),
-                WriterUuid = writerUuid,
-                TagList = tagList
+                WriterUuid = reader.IsDBNull(8) ? null : reader.GetString(8),
+                TagList = hasTagList && !reader.IsDBNull(9) ? reader.GetString(9) : null
             };
         }
     }

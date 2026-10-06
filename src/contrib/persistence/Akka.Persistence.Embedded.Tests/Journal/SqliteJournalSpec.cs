@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SqliteTagTableJournalSpec.cs" company="Akka.NET Project">
+// <copyright file="SqliteJournalSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -12,16 +12,16 @@ using Xunit;
 
 namespace Akka.Persistence.Embedded.Tests.Journal
 {
-    public class SqliteTagTableJournalSpec : JournalSpec
+    public class SqliteJournalSpec : JournalSpec
     {
         private readonly SqliteTestDb _db;
 
-        public SqliteTagTableJournalSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public SqliteJournalSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private SqliteTagTableJournalSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(SqliteSpecConfig.Create(db, SqliteTestMode.TT), nameof(SqliteTagTableJournalSpec), output)
+        private SqliteJournalSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(SqliteSpecConfig.Create(db), nameof(SqliteJournalSpec), output)
         {
             _db = db;
             SqliteSpecConfig.EnsureThreadPoolWarmed();

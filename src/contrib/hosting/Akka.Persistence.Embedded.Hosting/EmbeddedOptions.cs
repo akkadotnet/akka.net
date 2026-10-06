@@ -57,26 +57,11 @@ namespace Akka.Persistence.Embedded.Hosting
         /// </summary>
         public string? ConnectionString { get; set; }
 
-        /// <summary>Where tags are stored. Default <see cref="TagWriteMode.TagTable"/>.</summary>
-        public TagWriteMode? TagStorageMode { get; set; }
-
-        /// <summary>Separator of the Csv tags column. Used with <see cref="TagWriteMode.Csv"/> and <see cref="TagWriteMode.Both"/>.</summary>
-        public string? TagSeparator { get; set; }
-
-        /// <summary>Create and use <c>journal_metadata</c> for deletes and highest sequence numbers.</summary>
-        public bool? DeleteCompatibilityMode { get; set; }
-
-        /// <summary>Write the <c>writer_uuid</c> column. Turn off for tables created without it.</summary>
-        public bool? UseWriterUuidColumn { get; set; }
-
         /// <summary>Name of the journal table.</summary>
         public string? JournalTableName { get; set; }
 
         /// <summary>Name of the tag table.</summary>
         public string? TagTableName { get; set; }
-
-        /// <summary>Name of the metadata table.</summary>
-        public string? MetadataTableName { get; set; }
 
         /// <summary>Write requests queued for the writer thread. Further writes fail.</summary>
         public int? BufferSize { get; set; }
@@ -96,17 +81,8 @@ namespace Akka.Persistence.Embedded.Hosting
         /// <summary>Rows per read journal round trip.</summary>
         public int? QueryMaxBufferSize { get; set; }
 
-        /// <summary>Queries that run or wait at once.</summary>
-        public int? MaxConcurrentQueries { get; set; }
-
-        /// <summary>How long a query waits for a slot before it fails.</summary>
-        public TimeSpan? QueryThrottleTimeout { get; set; }
-
         /// <summary>Threads that run read journal queries.</summary>
         public int? QueryThreads { get; set; }
-
-        /// <summary>Bound live and by-tag batches with the Akka.Persistence.Sql style gap tracker. Off by default.</summary>
-        public bool? JournalSequenceRetrievalEnabled { get; set; }
 
         /// <inheritdoc />
         protected override Config InternalDefaultConfig => Default;
@@ -121,12 +97,10 @@ namespace Akka.Persistence.Embedded.Hosting
                 throw new ArgumentNullException(nameof(ConnectionString), $"{nameof(ConnectionString)} can not be null or empty.");
 
             sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString!)}");
-            if (TagStorageMode is not null)
-                sb.AppendLine($"tag-write-mode = {TagStorageMode}");
-            if (TagSeparator is not null)
-                sb.AppendLine($"tag-separator = {HoconText.Quote(TagSeparator)}");
-            if (DeleteCompatibilityMode is not null)
-                sb.AppendLine($"delete-compatibility-mode = {HoconText.Bool(DeleteCompatibilityMode.Value)}");
+            if (JournalTableName is not null)
+                sb.AppendLine($"table-name = {HoconText.Quote(JournalTableName)}");
+            if (TagTableName is not null)
+                sb.AppendLine($"tag-table-name = {HoconText.Quote(TagTableName)}");
             if (BufferSize is not null)
                 sb.AppendLine($"buffer-size = {BufferSize}");
             if (BatchSize is not null)
@@ -135,14 +109,6 @@ namespace Akka.Persistence.Embedded.Hosting
                 sb.AppendLine($"replay-batch-size = {ReplayBatchSize}");
             if (ReadThreads is not null)
                 sb.AppendLine($"read-threads = {ReadThreads}");
-            if (UseWriterUuidColumn is not null)
-                sb.AppendLine($"default.journal.use-writer-uuid-column = {HoconText.Bool(UseWriterUuidColumn.Value)}");
-            if (JournalTableName is not null)
-                sb.AppendLine($"default.journal.table-name = {HoconText.Quote(JournalTableName)}");
-            if (TagTableName is not null)
-                sb.AppendLine($"default.tag.table-name = {HoconText.Quote(TagTableName)}");
-            if (MetadataTableName is not null)
-                sb.AppendLine($"default.metadata.table-name = {HoconText.Quote(MetadataTableName)}");
 
             base.Build(sb);
 
@@ -159,14 +125,8 @@ namespace Akka.Persistence.Embedded.Hosting
                 sb.AppendLine($"refresh-interval = {HoconText.Milliseconds(QueryRefreshInterval.Value)}");
             if (QueryMaxBufferSize is not null)
                 sb.AppendLine($"max-buffer-size = {QueryMaxBufferSize}");
-            if (MaxConcurrentQueries is not null)
-                sb.AppendLine($"max-concurrent-queries = {MaxConcurrentQueries}");
-            if (QueryThrottleTimeout is not null)
-                sb.AppendLine($"query-throttle-timeout = {HoconText.Milliseconds(QueryThrottleTimeout.Value)}");
             if (QueryThreads is not null)
                 sb.AppendLine($"query-threads = {QueryThreads}");
-            if (JournalSequenceRetrievalEnabled is not null)
-                sb.AppendLine($"journal-sequence-retrieval.enabled = {HoconText.Bool(JournalSequenceRetrievalEnabled.Value)}");
             sb.AppendLine("}");
         }
     }
@@ -209,7 +169,7 @@ namespace Akka.Persistence.Embedded.Hosting
 
             sb.AppendLine($"connection-string = {HoconText.Quote(ConnectionString!)}");
             if (TableName is not null)
-                sb.AppendLine($"default.snapshot.table-name = {HoconText.Quote(TableName)}");
+                sb.AppendLine($"table-name = {HoconText.Quote(TableName)}");
 
             return base.Build(sb);
         }

@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -21,7 +20,6 @@ using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
-using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace Akka.Persistence.Embedded.Tests.Query
@@ -85,9 +83,6 @@ namespace Akka.Persistence.Embedded.Tests.Query
         {
         }
 
-        /// <summary>Csv tag matching ignores ASCII case, so "red" also finds the event tagged "Red" (ordering 6).</summary>
-        protected virtual long LastRedOrdering => 5L;
-
         [Fact(DisplayName = "Should_resolve_FromEnd_like_Sql")]
         public async Task Should_resolve_FromEnd_like_Sql()
         {
@@ -96,7 +91,7 @@ namespace Akka.Persistence.Embedded.Tests.Query
             // Akka.Persistence.Sql 1.5.70 capture: FromEnd(1) on "red" starts at ordering 5,
             // CurrentAllEvents(FromEnd(2)) returns the events at orderings 7 and 10.
             var red = await RunAsync(ReadJournal.CurrentEventsByTag("red", new FromEnd(1)));
-            red.Select(e => ((Sequence)e.Offset).Value).Should().Equal(LastRedOrdering);
+            red.Select(e => ((Sequence)e.Offset).Value).Should().Equal(5L);
 
             var all = await RunAsync(ReadJournal.CurrentAllEvents(new FromEnd(2)));
             all.Select(e => ((Sequence)e.Offset).Value).Should().Equal(7L, 10L);
@@ -127,33 +122,31 @@ namespace Akka.Persistence.Embedded.Tests.Query
         }
     }
 
-    public class TagTableQueryBehaviorSpec : CaptureWorkloadQuerySpecBase
+    public class QueryBehaviorSpec : CaptureWorkloadQuerySpecBase
     {
-        public TagTableQueryBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public QueryBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private TagTableQueryBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
+        private QueryBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, $$"""
+                SqliteSpecConfig.Create(db, $$"""
                     akka.persistence.query.journal.embedded {
                         max-buffer-size = 3
-                        max-concurrent-queries = 1
-                        query-throttle-timeout = 500ms
                     }
                     akka.persistence.journal.embedded {
                         event-adapters.doubler = "{{typeof(DoublingReadAdapter).AssemblyQualifiedName}}"
                         event-adapter-bindings."{{typeof(ObjectManifestEvent).AssemblyQualifiedName}}" = doubler
                     }
                     """),
-                nameof(TagTableQueryBehaviorSpec),
+                nameof(QueryBehaviorSpec),
                 output)
         {
         }
 
-        [Fact(DisplayName = "Should_match_TagTable_tags_exactly")]
-        public async Task Should_match_TagTable_tags_exactly()
+        [Fact(DisplayName = "Should_match_tags_exactly")]
+        public async Task Should_match_tags_exactly()
         {
             await WriteOneAsync("exact", 1, new TestEvent("a"), "red");
             await WriteOneAsync("exact", 2, new TestEvent("b"), "Red");
@@ -162,8 +155,8 @@ namespace Akka.Persistence.Embedded.Tests.Query
             (await RunAsync(ReadJournal.CurrentEventsByTag("RED", NoOffset.Instance))).Should().BeEmpty();
         }
 
-        [Fact(DisplayName = "Should_treat_percent_and_underscore_in_tag_literally_When_TagTable")]
-        public async Task Should_treat_percent_and_underscore_in_tag_literally_When_TagTable()
+        [Fact(DisplayName = "Should_treat_percent_and_underscore_in_tag_literally_When_querying_by_tag")]
+        public async Task Should_treat_percent_and_underscore_in_tag_literally_When_querying_by_tag()
         {
             await WriteOneAsync("like", 1, new TestEvent("a"), "a%b_c");
 
@@ -173,8 +166,8 @@ namespace Akka.Persistence.Embedded.Tests.Query
             (await RunAsync(ReadJournal.CurrentEventsByTag("A%B_C", NoOffset.Instance))).Should().BeEmpty();
         }
 
-        [Fact(DisplayName = "Should_return_tags_containing_semicolon_intact_When_TagTable")]
-        public async Task Should_return_tags_containing_semicolon_intact_When_TagTable()
+        [Fact(DisplayName = "Should_return_tags_containing_semicolon_intact_When_querying_by_tag")]
+        public async Task Should_return_tags_containing_semicolon_intact_When_querying_by_tag()
         {
             await WriteOneAsync("semi", 1, new TestEvent("a"), "a;b", "plain");
 
@@ -222,39 +215,6 @@ namespace Akka.Persistence.Embedded.Tests.Query
             Db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'journal'").Should().HaveCount(1);
         }
 
-        [Fact(DisplayName = "Should_fail_with_timeout_When_query_throttle_is_exceeded")]
-        public async Task Should_fail_with_timeout_When_query_throttle_is_exceeded()
-        {
-            await WriteOneAsync("throttle", 1, new TestEvent("x"));
-            await RunAsync(ReadJournal.CurrentEventsByPersistenceId("throttle", 0, long.MaxValue)); // warm: query init done
-
-            using var other = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Db.FilePath, Pooling = false }.ConnectionString);
-            other.Open();
-            using (var lockCommand = other.CreateCommand())
-            {
-                lockCommand.CommandText = "BEGIN EXCLUSIVE";
-                lockCommand.ExecuteNonQuery();
-            }
-
-            // the only permit goes to a query that waits for the database lock
-            var holding = ReadJournal.CurrentPersistenceIds().RunWith(Sink.Seq<string>(), Mat);
-            SpinWait.SpinUntil(() => ReadJournal.AvailablePermitsForTests == 0, Timeout).Should().BeTrue();
-            var starved = ReadJournal.CurrentPersistenceIds().RunWith(Sink.Seq<string>(), Mat);
-
-            var thrown = await Record.ExceptionAsync(() => starved.WaitAsync(Timeout));
-            var failure = thrown is AggregateException aggregate ? aggregate.Flatten().InnerException : thrown;
-            failure.Should().BeOfType<TimeoutException>();
-            failure!.Message.Should().Contain("could not start a query within");
-
-            using (var release = other.CreateCommand())
-            {
-                release.CommandText = "ROLLBACK";
-                release.ExecuteNonQuery();
-            }
-
-            (await holding.WaitAsync(Timeout)).Should().Equal("throttle");
-        }
-
         [Fact(DisplayName = "Should_not_stall_When_live_query_crosses_physically_deleted_rows")]
         public async Task Should_not_stall_When_live_query_crosses_physically_deleted_rows()
         {
@@ -264,150 +224,47 @@ namespace Akka.Persistence.Embedded.Tests.Query
             await DeleteToAsync("holes", 3); // physically removes orderings 1 and 2, tombstone at 3
 
             var probe = ReadJournal.AllEvents(NoOffset.Instance).RunWith(this.SinkProbe<EventEnvelope>(), Mat);
-            probe.Request(5);
+            await probe.RequestAsync(5);
             await WriteOneAsync("after-holes", 1, new TestEvent("d"));
 
-            // APS's tracker stalls for query-delay x max-tries (3 s here, 10 s by default) at a hole, so a short wait fails a stall
-            var next = probe.ExpectNext(TimeSpan.FromSeconds(2));
+            // APS's tracker stalls for query-delay x max-tries (10 s by default) at a hole, so a short wait fails a stall
+            var next = await probe.ExpectNextAsync(TimeSpan.FromSeconds(2));
             next.PersistenceId.Should().Be("after-holes");
             ((Sequence)next.Offset).Value.Should().Be(4L);
             probe.Cancel();
         }
-    }
 
-    public class CsvQueryBehaviorSpec : CaptureWorkloadQuerySpecBase
-    {
-        public CsvQueryBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        [Fact(DisplayName = "Should_not_return_the_tombstone_event_When_querying_by_tag")]
+        public async Task Should_not_return_the_tombstone_event_When_querying_by_tag()
         {
-        }
+            await WriteOneAsync("tomb-tag", 1, new TestEvent("a"), "tomb");
+            await WriteOneAsync("tomb-tag", 2, new TestEvent("b"), "tomb");
+            await WriteOneAsync("tomb-tag", 3, new TestEvent("c"), "tomb");
 
-        private CsvQueryBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.CSV), nameof(CsvQueryBehaviorSpec), output)
-        {
-        }
+            await DeleteToAsync("tomb-tag", 3);
 
-        protected override long LastRedOrdering => 6L;
+            // the tombstone (sequence number 3) keeps its tag row, so only the deleted flag keeps it out of the results
+            Db.Query("SELECT sequence_nr FROM tags WHERE persistence_id = 'tomb-tag'").Select(r => r[0]).Should().Equal(3L);
+            Db.Query("SELECT deleted FROM journal WHERE persistence_id = 'tomb-tag'").Select(r => r[0]).Should().Equal(1L);
 
-        [Fact(DisplayName = "Should_match_Csv_tags_ignoring_ascii_case_like_Sql")]
-        public async Task Should_match_Csv_tags_ignoring_ascii_case_like_Sql()
-        {
-            await WriteOneAsync("case", 1, new TestEvent("a"), "red");
-            await WriteOneAsync("case", 2, new TestEvent("b"), "Red");
-            await WriteOneAsync("case", 3, new TestEvent("c"), "blue");
+            (await RunAsync(ReadJournal.CurrentEventsByTag("tomb", NoOffset.Instance))).Should().BeEmpty();
+            (await RunAsync(ReadJournal.CurrentEventsByTag("tomb", new FromEnd(1)))).Should().BeEmpty();
+            (await RunAsync(ReadJournal.CurrentAllEvents(NoOffset.Instance))).Should().BeEmpty();
+            (await RunAsync(ReadJournal.CurrentEventsByPersistenceId("tomb-tag", 0, long.MaxValue))).Should().BeEmpty();
 
-            foreach (var tag in new[] { "red", "Red", "RED" })
-            {
-                (await RunAsync(ReadJournal.CurrentEventsByTag(tag, NoOffset.Instance))).Select(e => e.SequenceNr)
-                    .Should().Equal(1L, 2L);
-            }
-        }
-
-        [Fact(DisplayName = "Should_treat_percent_and_underscore_in_tag_literally_When_Csv")]
-        public async Task Should_treat_percent_and_underscore_in_tag_literally_When_Csv()
-        {
-            await WriteOneAsync("like", 1, new TestEvent("a"), "a%b_c");
-            await WriteOneAsync("like", 2, new TestEvent("b"), "x~y");
-
-            (await RunAsync(ReadJournal.CurrentEventsByTag("a%b_c", NoOffset.Instance))).Should().HaveCount(1);
-            (await RunAsync(ReadJournal.CurrentEventsByTag("a%", NoOffset.Instance))).Should().BeEmpty();
-            (await RunAsync(ReadJournal.CurrentEventsByTag("a_b_c", NoOffset.Instance))).Should().BeEmpty();
-            // LIKE is ASCII case-insensitive, so the upper-case spelling still matches (same as Akka.Persistence.Sql)
-            (await RunAsync(ReadJournal.CurrentEventsByTag("A%B_C", NoOffset.Instance))).Should().HaveCount(1);
-            // "~" is the escape character of the LIKE pattern and is escaped itself
-            (await RunAsync(ReadJournal.CurrentEventsByTag("x~y", NoOffset.Instance))).Should().HaveCount(1);
-            (await RunAsync(ReadJournal.CurrentEventsByTag("x", NoOffset.Instance))).Should().BeEmpty();
-        }
-    }
-
-    public class BothQueryBehaviorSpec : CaptureWorkloadQuerySpecBase
-    {
-        public BothQueryBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private BothQueryBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.BOTH), nameof(BothQueryBehaviorSpec), output)
-        {
-        }
-    }
-
-    public class GapDetectionQueryBehaviorSpec : QueryBehaviorSpecBase
-    {
-        public GapDetectionQueryBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private GapDetectionQueryBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(
-                db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
-                    akka.persistence.query.journal.embedded.journal-sequence-retrieval {
-                        enabled = on
-                        query-delay = 500ms
-                        max-tries = 6
-                    }
-                    """),
-                nameof(GapDetectionQueryBehaviorSpec),
-                output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_hold_back_at_gap_When_gap_detection_is_on")]
-        public async Task Should_hold_back_at_gap_When_gap_detection_is_on()
-        {
-            await WriteOneAsync("gap", 1, new TestEvent("a"));
-            await WriteOneAsync("gap", 2, new TestEvent("b"));
-
-            var probe = ReadJournal.AllEvents(NoOffset.Instance).RunWith(this.SinkProbe<EventEnvelope>(), Mat);
-            probe.Request(10);
-            probe.ExpectNext(Timeout).SequenceNr.Should().Be(1L);
-            probe.ExpectNext(Timeout).SequenceNr.Should().Be(2L);
-
-            // a row at ordering 5 with 3 and 4 missing: the tracker holds reads back at 2 until it gives up on them
-            Db.Execute(
-                "INSERT INTO journal (ordering, created, deleted, persistence_id, sequence_number, message, manifest, identifier, writer_uuid) " +
-                "SELECT 5, created, deleted, 'gap-later', 1, message, manifest, identifier, writer_uuid FROM journal WHERE ordering = 2");
-
-            // the tracker gives up on the gap after about 3 s (query-delay x max-tries), so this window is well inside it
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
-            var late = probe.ExpectNext(TimeSpan.FromSeconds(30));
-            late.PersistenceId.Should().Be("gap-later");
+            // the live query skips it too, and still sees what comes after
+            var probe = ReadJournal.EventsByTag("tomb", NoOffset.Instance).RunWith(this.SinkProbe<EventEnvelope>(), Mat);
+            await probe.RequestAsync(5);
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            await WriteOneAsync("tomb-tag", 4, new TestEvent("d"), "tomb");
+            (await probe.ExpectNextAsync(Timeout)).SequenceNr.Should().Be(4L);
             probe.Cancel();
+
+            (await RunAsync(ReadJournal.CurrentEventsByTag("tomb", NoOffset.Instance))).Select(e => e.SequenceNr).Should().Equal(4L);
         }
     }
 
-    public class CsvSeparatorQuerySpec : QueryBehaviorSpecBase
-    {
-        public CsvSeparatorQuerySpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private CsvSeparatorQuerySpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(
-                db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.CSV, "akka.persistence.journal.embedded.tag-separator = \"|\""),
-                nameof(CsvSeparatorQuerySpec),
-                output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_round_trip_tags_When_tag_separator_is_not_the_default")]
-        public async Task Should_round_trip_tags_When_tag_separator_is_not_the_default()
-        {
-            await WriteOneAsync("sep", 1, new TestEvent("a"), "red", "blue");
-            await WriteOneAsync("sep", 2, new TestEvent("b"), "green");
-
-            var column = (string)Db.Query("SELECT tags FROM journal WHERE persistence_id = 'sep' AND sequence_number = 1")[0][0]!;
-            column.Should().StartWith("|").And.EndWith("|");
-            column.Trim('|').Split('|').Should().BeEquivalentTo("red", "blue");
-
-            var found = await RunAsync(ReadJournal.CurrentEventsByTag("red", NoOffset.Instance));
-            found.Select(e => e.SequenceNr).Should().Equal(1L);
-            found[0].Tags.Should().BeEquivalentTo("red", "blue");
-        }
-    }
-
-    /// <summary>Two read journals in one system, with the same write plugin and table name, both tracking gaps.</summary>
+    /// <summary>Two read journals in one system, with the same write plugin and table names.</summary>
     public class TwoReadJournalsSpec : QueryBehaviorSpecBase
     {
         private const string SecondId = "akka.persistence.query.journal.embedded-2";
@@ -419,14 +276,12 @@ namespace Akka.Persistence.Embedded.Tests.Query
         private TwoReadJournalsSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
-                    akka.persistence.query.journal.embedded.journal-sequence-retrieval.enabled = on
+                SqliteSpecConfig.Create(db, """
                     akka.persistence.query.journal.embedded-2 {
                         class = "Akka.Persistence.Embedded.Query.SqliteReadJournalProvider, Akka.Persistence.Embedded"
                         write-plugin = "akka.persistence.journal.embedded"
                         refresh-interval = 100ms
-                        parallelism = 3
-                        journal-sequence-retrieval.enabled = on
+                        max-buffer-size = 1
                     }
                     """),
                 nameof(TwoReadJournalsSpec),
@@ -434,30 +289,21 @@ namespace Akka.Persistence.Embedded.Tests.Query
         {
         }
 
-        [Fact(DisplayName = "Should_start_both_trackers_and_use_own_section_When_two_read_journals_share_a_table")]
-        public async Task Should_start_both_trackers_and_use_own_section_When_two_read_journals_share_a_table()
+        [Fact(DisplayName = "Should_serve_both_read_journals_When_they_share_a_write_plugin")]
+        public async Task Should_serve_both_read_journals_When_they_share_a_write_plugin()
         {
             await WriteOneAsync("two", 1, new TestEvent("a"));
+            await WriteOneAsync("two", 2, new TestEvent("b"));
 
-            SqliteReadJournal second = null!;
-            // the setting only the second section has is reported under the second plugin id, so its own section was read
-            await EventFilter.Warning(contains: $"[{SecondId}] ignores setting(s)").ExpectOneAsync(
-                () =>
-                {
-                    second = Sys.ReadJournalFor<SqliteReadJournal>(SecondId);
-                    return Task.CompletedTask;
-                });
+            var second = Sys.ReadJournalFor<SqliteReadJournal>(SecondId);
             var first = ReadJournal;
 
             first.Should().NotBeSameAs(second);
             foreach (var journal in new[] { first, second })
             {
-                // the tracker answers 0 until its first poll finished, so a query right after start may see nothing yet
-                await AwaitAssertAsync(async () =>
-                {
-                    var events = await journal.CurrentAllEvents(NoOffset.Instance).RunWith(Sink.Seq<EventEnvelope>(), Mat).WaitAsync(Timeout);
-                    events.Select(e => e.PersistenceId).Should().Equal("two");
-                }, Timeout);
+                // the second section pages one row at a time, the first 500: same events either way
+                var events = await journal.CurrentEventsByPersistenceId("two", 0, long.MaxValue).RunWith(Sink.Seq<EventEnvelope>(), Mat).WaitAsync(Timeout);
+                events.Select(e => e.SequenceNr).Should().Equal(1L, 2L);
             }
         }
     }

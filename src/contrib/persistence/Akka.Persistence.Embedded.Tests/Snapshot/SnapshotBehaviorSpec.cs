@@ -25,7 +25,7 @@ namespace Akka.Persistence.Embedded.Tests.Snapshot
         }
 
         private SnapshotBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.TT), nameof(SnapshotBehaviorSpec), output)
+            : base(db, SqliteSpecConfig.Create(db), nameof(SnapshotBehaviorSpec), output)
         {
         }
 

@@ -11,31 +11,23 @@ namespace Akka.Persistence.Embedded.Hosting
         public int? BatchSize { get; set; }
         public int? BufferSize { get; set; }
         public string? ConnectionString { get; set; }
-        public bool? DeleteCompatibilityMode { get; set; }
         public override string Identifier { get; set; }
         protected override Akka.Configuration.Config InternalDefaultConfig { get; }
-        public bool? JournalSequenceRetrievalEnabled { get; set; }
         public string? JournalTableName { get; set; }
-        public int? MaxConcurrentQueries { get; set; }
-        public string? MetadataTableName { get; set; }
         public int? QueryMaxBufferSize { get; set; }
         public string QueryPluginId { get; }
         public System.TimeSpan? QueryRefreshInterval { get; set; }
         public int? QueryThreads { get; set; }
-        public System.TimeSpan? QueryThrottleTimeout { get; set; }
         public int? ReadThreads { get; set; }
         public int? ReplayBatchSize { get; set; }
-        public string? TagSeparator { get; set; }
-        public Akka.Persistence.Embedded.TagWriteMode? TagStorageMode { get; set; }
         public string? TagTableName { get; set; }
-        public bool? UseWriterUuidColumn { get; set; }
         protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
     }
     public static class EmbeddedPersistenceHostingExtensions
     {
         public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions>? journalOptionConfigurator = null, System.Action<Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions>? snapshotOptionConfigurator = null, bool isDefaultPlugin = true) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions? journalOptions = null, Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions? snapshotOptions = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null) { }
-        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, Akka.Persistence.Hosting.PersistenceMode mode = 0, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null, bool autoInitialize = true, string pluginIdentifier = "embedded", bool isDefaultPlugin = true, Akka.Persistence.Embedded.TagWriteMode? tagStorageMode = default, bool? deleteCompatibilityMode = default, bool? useWriterUuidColumn = default, int? maxConcurrentQueries = default) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, Akka.Persistence.Hosting.PersistenceMode mode = 0, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null, bool autoInitialize = true, string pluginIdentifier = "embedded", bool isDefaultPlugin = true) { }
     }
     public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions<Akka.Persistence.Embedded.Snapshot.SqliteSnapshotStore>
     {

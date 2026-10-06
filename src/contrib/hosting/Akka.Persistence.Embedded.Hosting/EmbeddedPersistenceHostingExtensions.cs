@@ -14,7 +14,7 @@ namespace Akka.Persistence.Embedded.Hosting
 {
     /// <summary>
     /// Adds the SQLite journal, snapshot store and read journal to an Akka.Hosting <see cref="AkkaConfigurationBuilder"/>.
-    /// The methods mirror <c>WithSqlPersistence</c> of Akka.Persistence.Sql.Hosting. The plugins are registered in code,
+    /// The methods mirror <c>WithSqlPersistence</c> of Akka.Persistence.Sql.Hosting, for the one layout the plugin supports. The plugins are registered in code,
     /// so they start with <c>Akka.DynamicTypeLoading</c> off (Native AOT) and need no HOCON <c>class</c> setting.
     /// The read journal comes with the journal, and its settings are properties of <see cref="EmbeddedJournalOptions"/>.
     /// </summary>
@@ -32,10 +32,6 @@ namespace Akka.Persistence.Embedded.Hosting
         /// <param name="autoInitialize">Create missing tables on start. Default <c>true</c>.</param>
         /// <param name="pluginIdentifier">Plugin identifier: <c>akka.persistence.journal.{id}</c>, <c>akka.persistence.snapshot-store.{id}</c> and <c>akka.persistence.query.journal.{id}</c>. Default <c>"embedded"</c>.</param>
         /// <param name="isDefaultPlugin">Make these the default journal and snapshot store. Default <c>true</c>.</param>
-        /// <param name="tagStorageMode">Where tags are stored. Leave null for <see cref="TagWriteMode.TagTable"/>.</param>
-        /// <param name="deleteCompatibilityMode">If true, <c>journal_metadata</c> is created and used for deletes and highest sequence numbers.</param>
-        /// <param name="useWriterUuidColumn">Write the <c>writer_uuid</c> column. Turn off for tables created without it.</param>
-        /// <param name="maxConcurrentQueries">How many read journal queries run or wait at once.</param>
         /// <returns>The same <see cref="AkkaConfigurationBuilder"/> instance originally passed in.</returns>
         /// <exception cref="Exception">
         /// Thrown when a builder is given for a plugin that <paramref name="mode"/> leaves out.
@@ -49,11 +45,7 @@ namespace Akka.Persistence.Embedded.Hosting
             Action<AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null,
             bool autoInitialize = true,
             string pluginIdentifier = "embedded",
-            bool isDefaultPlugin = true,
-            TagWriteMode? tagStorageMode = null,
-            bool? deleteCompatibilityMode = null,
-            bool? useWriterUuidColumn = null,
-            int? maxConcurrentQueries = null)
+            bool isDefaultPlugin = true)
         {
             if (mode == PersistenceMode.SnapshotStore && journalBuilder is not null)
                 throw new Exception($"{nameof(journalBuilder)} can only be set when {nameof(mode)} is set to either {PersistenceMode.Both} or {PersistenceMode.Journal}");
@@ -68,10 +60,6 @@ namespace Akka.Persistence.Embedded.Hosting
             {
                 ConnectionString = connectionString,
                 AutoInitialize = autoInitialize,
-                TagStorageMode = tagStorageMode,
-                DeleteCompatibilityMode = deleteCompatibilityMode,
-                UseWriterUuidColumn = useWriterUuidColumn,
-                MaxConcurrentQueries = maxConcurrentQueries,
             };
 
             var snapshotOpt = new EmbeddedSnapshotOptions(isDefaultPlugin, pluginIdentifier)

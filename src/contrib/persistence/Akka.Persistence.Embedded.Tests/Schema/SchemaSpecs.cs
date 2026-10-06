@@ -50,69 +50,58 @@ namespace Akka.Persistence.Embedded.Tests.Schema
             => db.Query("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name")
                 .Select(r => ((string)r[0]!, (string)r[1]!, (string)r[2]!, (string?)r[3])).ToArray();
 
-        [Theory(DisplayName = "Should_create_byte_identical_sqlite_master_When_auto_initialize_runs")]
-        [InlineData(SqliteTestMode.TT)]
-        [InlineData(SqliteTestMode.CSV)]
-        [InlineData(SqliteTestMode.BOTH)]
-        [InlineData(SqliteTestMode.DC)]
-        [InlineData(SqliteTestMode.NW)]
-        public async Task Should_create_byte_identical_sqlite_master_When_auto_initialize_runs(SqliteTestMode mode)
+        [Fact(DisplayName = "Should_create_byte_identical_sqlite_master_When_auto_initialize_runs")]
+        public async Task Should_create_byte_identical_sqlite_master_When_auto_initialize_runs()
         {
             using var db = new SqliteTestDb();
-            await WithSystemAsync($"schema-{mode}", SqliteSpecConfig.Create(db, mode), InitializeAsync);
+            await WithSystemAsync("schema-default", SqliteSpecConfig.Create(db), InitializeAsync);
 
-            var expected = ExpectedSchemas.For(mode);
-            SchemaOf(db).Should().Equal(expected.Select(e => (e.Type, e.Name, e.TableName, e.Sql)));
+            SchemaOf(db).Should().Equal(ExpectedSchemas.Default.Select(e => (e.Type, e.Name, e.TableName, e.Sql)));
         }
 
         [Fact(DisplayName = "Should_not_alter_existing_tables_When_auto_initialize_runs_twice")]
         public async Task Should_not_alter_existing_tables_When_auto_initialize_runs_twice()
         {
             using var db = new SqliteTestDb();
-            await WithSystemAsync("schema-twice-1", SqliteSpecConfig.Create(db, SqliteTestMode.TT), InitializeAsync);
+            await WithSystemAsync("schema-twice-1", SqliteSpecConfig.Create(db), InitializeAsync);
             var first = SchemaOf(db);
 
-            await WithSystemAsync("schema-twice-2", SqliteSpecConfig.Create(db, SqliteTestMode.TT), InitializeAsync);
+            await WithSystemAsync("schema-twice-2", SqliteSpecConfig.Create(db), InitializeAsync);
 
             SchemaOf(db).Should().Equal(first);
         }
 
-        [Fact(DisplayName = "Should_fail_init_naming_missing_columns_When_tags_column_is_absent_in_Csv_mode")]
-        public async Task Should_fail_init_naming_missing_columns_When_tags_column_is_absent_in_Csv_mode()
+        [Fact(DisplayName = "Should_fail_init_naming_missing_columns_When_a_required_column_is_absent")]
+        public async Task Should_fail_init_naming_missing_columns_When_a_required_column_is_absent()
         {
             using var db = new SqliteTestDb();
-            await WithSystemAsync("schema-missing", SqliteSpecConfig.Create(db, SqliteTestMode.TT), InitializeAsync);
+            await WithSystemAsync("schema-missing", SqliteSpecConfig.Create(db), InitializeAsync);
+            db.Execute("ALTER TABLE journal DROP COLUMN writer_uuid");
+            db.Execute("DROP INDEX tags_persistence_id_sequence_nr_idx");
+            db.Execute("ALTER TABLE tags DROP COLUMN sequence_nr");
 
-            var csv = SqliteSpecConfig.Create(db, SqliteTestMode.CSV);
-            var settings = JournalSettings.Create(csv.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, csv);
+            var config = SqliteSpecConfig.Create(db);
+            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId);
             using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
             connection.Open();
 
-            var failure = Assert.Throws<SqliteSchemaException>(() => SqliteSchema.EnsureJournalSchema(connection, settings, false, false));
+            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, settings)).Message
+                .Should().Be("Table [journal] is missing column(s): writer_uuid. This plugin never alters tables.");
 
-            failure.Message.Should().Be(
-                "Table [journal] is missing column(s): tags (required by tag-write-mode = Csv). This plugin never alters tables.");
-
-            // the same table also fails when only the read side wants the column
-            var tagTable = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
-            var tagTableSettings = JournalSettings.Create(tagTable.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, tagTable);
-            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, tagTableSettings, requireTagsColumnForReads: true))
-                .Message.Should().Be("Table [journal] is missing column(s): tags (required by tag-read-mode = Csv). This plugin never alters tables.");
+            db.Execute("ALTER TABLE journal ADD COLUMN writer_uuid NVARCHAR(128) NULL");
+            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, settings)).Message
+                .Should().Be("Table [tags] is missing column(s): sequence_nr. This plugin never alters tables.");
         }
 
-        [Fact(DisplayName = "Should_blame_writer_uuid_setting_When_writer_uuid_column_is_absent")]
-        public async Task Should_blame_writer_uuid_setting_When_writer_uuid_column_is_absent()
+        [Fact(DisplayName = "Should_accept_the_table_When_it_has_extra_columns")]
+        public async Task Should_accept_the_table_When_it_has_extra_columns()
         {
             using var db = new SqliteTestDb();
-            await WithSystemAsync("schema-no-uuid", SqliteSpecConfig.Create(db, SqliteTestMode.NW), InitializeAsync);
+            await WithSystemAsync("schema-extra", SqliteSpecConfig.Create(db), InitializeAsync);
+            db.Execute("ALTER TABLE journal ADD COLUMN tags NVARCHAR(100) NULL");
+            db.Execute("ALTER TABLE journal ADD COLUMN something_else TEXT NULL");
 
-            var withUuid = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
-            var settings = JournalSettings.Create(withUuid.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, withUuid);
-            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
-            connection.Open();
-
-            Assert.Throws<SqliteSchemaException>(() => SqliteSchema.VerifyJournalSchema(connection, settings))
-                .Message.Should().Be("Table [journal] is missing column(s): writer_uuid (required by use-writer-uuid-column = true). This plugin never alters tables.");
+            await WithSystemAsync("schema-extra-2", SqliteSpecConfig.Create(db), InitializeAsync);
         }
     }
 
@@ -130,8 +119,8 @@ namespace Akka.Persistence.Embedded.Tests.Schema
         {
             using var db = new SqliteTestDb();
             db.Execute($"CREATE TABLE journal ({orderingColumn}, {Columns})");
-            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
-            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, config);
+            var config = SqliteSpecConfig.Create(db);
+            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId);
             using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
             connection.Open();
 
@@ -146,8 +135,8 @@ namespace Akka.Persistence.Embedded.Tests.Schema
             using var db = new SqliteTestDb();
             db.Execute($"CREATE TABLE journal (ordering INTEGER NOT NULL PRIMARY KEY, {Columns})");
             db.Execute("CREATE TABLE tags (ordering_id INTEGER NOT NULL, tag NVARCHAR(64) NOT NULL, sequence_nr INTEGER NOT NULL, persistence_id NVARCHAR(255) NOT NULL, PRIMARY KEY (ordering_id, tag))");
-            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT);
-            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId, config);
+            var config = SqliteSpecConfig.Create(db);
+            var settings = JournalSettings.Create(config.GetConfig(SqlitePersistence.JournalPluginId), SqlitePersistence.JournalPluginId);
             using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = db.FilePath, Pooling = false }.ConnectionString);
             connection.Open();
 
@@ -166,7 +155,7 @@ namespace Akka.Persistence.Embedded.Tests.Schema
         private MissingUniqueIndexSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
+                SqliteSpecConfig.Create(db, """
                     akka.persistence.journal.embedded.auto-initialize = false
                     akka.persistence.snapshot-store.embedded.auto-initialize = false
                     """),
@@ -187,29 +176,39 @@ namespace Akka.Persistence.Embedded.Tests.Schema
         }
     }
 
-    /// <summary>Tables created by hand from the Akka.Persistence.Sql docs, with auto-initialize off.</summary>
-    public abstract class DocsDdlSpecBase : EmbeddedSpec
+    /// <summary>
+    /// Tables created by hand from the Akka.Persistence.Sql docs, with auto-initialize off. The docs journal table has a
+    /// nullable <c>tags</c> column that this plugin never writes.
+    /// </summary>
+    public class DocsDdlSpec : EmbeddedSpec
     {
-        protected DocsDdlSpecBase(SqliteTestDb db, SqliteTestMode mode, string name, ITestOutputHelper output)
+        public DocsDdlSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        {
+        }
+
+        private DocsDdlSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, mode, """
+                SqliteSpecConfig.Create(db, """
                     akka.persistence.journal.embedded.auto-initialize = false
                     akka.persistence.snapshot-store.embedded.auto-initialize = false
                     """),
-                name,
+                nameof(DocsDdlSpec),
                 output)
         {
-            foreach (var script in new[] { "journal", "journal-tags", "snapshot" }.Concat(mode == SqliteTestMode.DC ? ["metadata"] : Array.Empty<string>()))
+            foreach (var script in new[] { "journal", "journal-tags", "snapshot" })
                 db.Execute(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "TestData", "docs-ddl", $"{script}.sql")));
         }
 
-        protected async Task RunScenarioAsync()
+        [Fact(DisplayName = "Should_work_on_docs_ddl_schema_When_auto_initialize_is_off")]
+        public async Task Should_work_on_docs_ddl_schema_When_auto_initialize_is_off()
         {
             var materializer = Sys.Materializer();
             (await WriteAsync(Write(
                 Evt("docs", 1, new Tagged(new TestEvent("a"), new[] { "red" })),
                 Evt("docs", 2, new TestEvent("b"))))).Succeeded.Should().BeTrue();
+            Db.Query("PRAGMA table_info(journal)").Select(r => (string)r[1]!).Should().Contain("tags");
+            Db.Query("SELECT tags FROM journal").Should().OnlyContain(r => r[0] == null, "the plugin leaves the docs tags column NULL");
 
             var replay = await ReplayAsync("docs");
             replay.Replayed.Select(p => p.SequenceNr).Should().Equal(1L, 2L);
@@ -229,50 +228,5 @@ namespace Akka.Persistence.Embedded.Tests.Schema
             SnapshotStore.Tell(new LoadSnapshot("docs", SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
             (await probe.ExpectMsgAsync<LoadSnapshotResult>(Timeout)).Snapshot.Snapshot.Should().Be(new TestEvent("snap"));
         }
-    }
-
-    public class DocsDdlTagTableSpec : DocsDdlSpecBase
-    {
-        public DocsDdlTagTableSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private DocsDdlTagTableSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteTestMode.TT, nameof(DocsDdlTagTableSpec), output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_TagTable_mode")]
-        public Task Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_TagTable_mode() => RunScenarioAsync();
-    }
-
-    public class DocsDdlCsvSpec : DocsDdlSpecBase
-    {
-        public DocsDdlCsvSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private DocsDdlCsvSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteTestMode.CSV, nameof(DocsDdlCsvSpec), output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_Csv_mode")]
-        public Task Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_Csv_mode() => RunScenarioAsync();
-    }
-
-    public class DocsDdlDeleteCompatSpec : DocsDdlSpecBase
-    {
-        public DocsDdlDeleteCompatSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private DocsDdlDeleteCompatSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteTestMode.DC, nameof(DocsDdlDeleteCompatSpec), output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_delete_compatibility_mode")]
-        public Task Should_work_on_docs_ddl_schema_When_auto_initialize_is_off_in_delete_compatibility_mode() => RunScenarioAsync();
     }
 }

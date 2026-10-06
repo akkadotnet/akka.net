@@ -208,25 +208,24 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             var config = hosted.System.Settings.Config;
 
             config.GetString("akka.persistence.journal.embedded.connection-string").Should().Contain(db.FilePath);
-            config.GetString("akka.persistence.journal.embedded.tag-write-mode").Should().Be("TagTable");
             config.GetBoolean("akka.persistence.journal.embedded.auto-initialize").Should().BeTrue();
             config.GetString("akka.persistence.journal.plugin").Should().Be("akka.persistence.journal.embedded");
             config.GetString("akka.persistence.snapshot-store.plugin").Should().Be("akka.persistence.snapshot-store.embedded");
             config.GetString("akka.persistence.query.journal.embedded.write-plugin").Should().Be("akka.persistence.journal.embedded");
         }
 
-        [Fact(DisplayName = "Should_start_two_read_journals_with_gap_tracking_When_their_ids_differ")]
-        public async Task Should_start_two_read_journals_with_gap_tracking_When_their_ids_differ()
+        [Fact(DisplayName = "Should_start_two_read_journals_When_their_ids_differ")]
+        public async Task Should_start_two_read_journals_When_their_ids_differ()
         {
             using var firstDb = new TempDb();
             using var secondDb = new TempDb();
             await using var hosted = await HostedSystem.StartAsync(true, builder => builder
                 .WithCustomSerializer("hosting-test", [typeof(HostingEvent), typeof(HostingSnapshot)], system => new HostingSerializer(system))
                 .WithEmbeddedPersistence(
-                    new EmbeddedJournalOptions { ConnectionString = firstDb.ConnectionString, JournalSequenceRetrievalEnabled = true },
+                    new EmbeddedJournalOptions { ConnectionString = firstDb.ConnectionString },
                     new EmbeddedSnapshotOptions { ConnectionString = firstDb.ConnectionString })
                 .WithEmbeddedPersistence(
-                    new EmbeddedJournalOptions(false, "second") { ConnectionString = secondDb.ConnectionString, JournalSequenceRetrievalEnabled = true }));
+                    new EmbeddedJournalOptions(false, "second") { ConnectionString = secondDb.ConnectionString }));
             var system = hosted.System;
 
             var first = system.ActorOf(Props.Create(() => new HostingActor("two-readers", null, null)));
@@ -234,7 +233,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             var second = system.ActorOf(Props.Create(() => new HostingActor("two-readers", "akka.persistence.journal.second", null)));
             (await second.Ask<int>(new Persist("only"), TimeSpan.FromSeconds(10))).Should().Be(1);
 
-            // both gap trackers started: they used to share one actor name, and the second read journal failed to start
+            // both read journals start and read their own journal
             foreach (var id in new[] { "akka.persistence.query.journal.embedded", "akka.persistence.query.journal.second" })
             {
                 var journal = system.ReadJournalFor<SqliteReadJournal>(id);
@@ -303,17 +302,17 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                     journal =>
                     {
                         journal.ConnectionString = db.ConnectionString;
-                        journal.DeleteCompatibilityMode = true;
+                        journal.JournalTableName = "configured_events";
                     },
                     snapshot => snapshot.ConnectionString = db.ConnectionString));
 
-            // the delegate overload takes no adapters, so this checks persistence, snapshots and the metadata table only
+            // the delegate overload takes no adapters, so this checks persistence, snapshots and the table name only
             var system = hosted.System;
             var actor = system.ActorOf(Props.Create(() => new HostingActor("configurator-1", null, null)));
             (await actor.Ask<int>(new Persist("a"), TimeSpan.FromSeconds(10))).Should().Be(1);
             (await actor.Ask<long>(new Snapshot(), TimeSpan.FromSeconds(10))).Should().Be(1);
 
-            (await TablesAsync(db.FilePath)).Should().Contain("journal_metadata", "delete compatibility mode was set in the configurator");
+            (await TablesAsync(db.FilePath)).Should().Contain("configured_events", "the table name was set in the configurator");
         }
 
         [Fact(DisplayName = "Should_throw_When_both_configurator_delegates_are_null")]
@@ -377,18 +376,6 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             (await TablesAsync(db.FilePath)).Should().Contain("snapshot").And.NotContain("journal");
         }
 
-        [Fact(DisplayName = "Should_write_no_tag_table_When_tag_storage_mode_is_Csv")]
-        public async Task Should_write_no_tag_table_When_tag_storage_mode_is_Csv()
-        {
-            using var db = new TempDb();
-            await using var hosted = await HostedSystem.StartAsync(false, builder => WithSerializer(builder)
-                .WithEmbeddedPersistence(db.ConnectionString, journalBuilder: AddTagger, tagStorageMode: TagWriteMode.Csv));
-
-            await Scenario.RunAsync(hosted.System, "csv-1");
-
-            (await TablesAsync(db.FilePath)).Should().NotContain("tags");
-        }
-
         [Fact(DisplayName = "Should_leave_the_database_empty_and_fail_writes_When_autoInitialize_is_false")]
         public async Task Should_leave_the_database_empty_and_fail_writes_When_autoInitialize_is_false()
         {
@@ -430,10 +417,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                         ConnectionString = db.ConnectionString,
                         QueryRefreshInterval = TimeSpan.FromMilliseconds(250),
                         QueryMaxBufferSize = 3,
-                        MaxConcurrentQueries = 7,
-                        QueryThrottleTimeout = TimeSpan.FromSeconds(2),
-                        QueryThreads = 2,
-                        JournalSequenceRetrievalEnabled = true
+                        QueryThreads = 2
                     },
                     null,
                     AddTagger));
@@ -442,10 +426,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
 
             config.GetTimeSpan("refresh-interval").Should().Be(TimeSpan.FromMilliseconds(250));
             config.GetInt("max-buffer-size").Should().Be(3);
-            config.GetInt("max-concurrent-queries").Should().Be(7);
-            config.GetTimeSpan("query-throttle-timeout").Should().Be(TimeSpan.FromSeconds(2));
             config.GetInt("query-threads").Should().Be(2);
-            config.GetBoolean("journal-sequence-retrieval.enabled").Should().BeTrue();
 
             // the settings reach the read journal: 10 events come back through pages of 3
             var actor = system.ActorOf(Props.Create(() => new HostingActor("paged", null, null)));
@@ -467,9 +448,7 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
                     {
                         ConnectionString = db.ConnectionString,
                         JournalTableName = "events",
-                        TagTableName = "event_tags",
-                        MetadataTableName = "event_meta",
-                        DeleteCompatibilityMode = true
+                        TagTableName = "event_tags"
                     },
                     new EmbeddedSnapshotOptions { ConnectionString = db.ConnectionString, TableName = "snaps" },
                     AddTagger));
@@ -477,8 +456,8 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             await Scenario.RunAsync(hosted.System, "names-1");
 
             var tables = await TablesAsync(db.FilePath);
-            tables.Should().Contain(["events", "event_tags", "event_meta", "snaps"]);
-            tables.Should().NotContain(["journal", "tags", "snapshot", "journal_metadata"]);
+            tables.Should().Contain(["events", "event_tags", "snaps"]);
+            tables.Should().NotContain(["journal", "tags", "snapshot"]);
         }
     }
 
@@ -490,29 +469,44 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
             var options = new EmbeddedJournalOptions(isDefaultPlugin: false, identifier: "custom")
             {
                 ConnectionString = "Data Source=a \"quoted\".db",
-                TagStorageMode = TagWriteMode.Both,
-                TagSeparator = "|",
-                DeleteCompatibilityMode = true,
-                UseWriterUuidColumn = false,
+                AutoInitialize = false,
                 JournalTableName = "events",
+                TagTableName = "event_tags",
+                BufferSize = 5,
                 BatchSize = 7,
-                MaxConcurrentQueries = 9
+                ReplayBatchSize = 9,
+                ReadThreads = 3,
+                QueryRefreshInterval = TimeSpan.FromMilliseconds(250),
+                QueryMaxBufferSize = 11,
+                QueryThreads = 6
             };
 
             var all = options.ToConfig();
             var config = all.GetConfig("akka.persistence.journal.custom");
 
             config.GetString("connection-string").Should().Be("Data Source=a \"quoted\".db");
-            config.GetString("tag-write-mode").Should().Be("Both");
-            config.GetString("tag-separator").Should().Be("|");
-            config.GetBoolean("delete-compatibility-mode").Should().BeTrue();
-            config.GetBoolean("default.journal.use-writer-uuid-column").Should().BeFalse();
-            config.GetString("default.journal.table-name").Should().Be("events");
+            config.GetBoolean("auto-initialize").Should().BeFalse();
+            config.GetString("table-name").Should().Be("events");
+            config.GetString("tag-table-name").Should().Be("event_tags");
+            config.GetInt("buffer-size").Should().Be(5);
             config.GetInt("batch-size").Should().Be(7);
-            all.GetString("akka.persistence.query.journal.custom.write-plugin").Should().Be("akka.persistence.journal.custom");
-            all.GetInt("akka.persistence.query.journal.custom.max-concurrent-queries").Should().Be(9);
+            config.GetInt("replay-batch-size").Should().Be(9);
+            config.GetInt("read-threads").Should().Be(3);
+            var query = all.GetConfig("akka.persistence.query.journal.custom");
+            query.GetString("write-plugin").Should().Be("akka.persistence.journal.custom");
+            query.GetTimeSpan("refresh-interval").Should().Be(TimeSpan.FromMilliseconds(250));
+            query.GetInt("max-buffer-size").Should().Be(11);
+            query.GetInt("query-threads").Should().Be(6);
             all.HasPath("akka.persistence.journal.plugin").Should().BeFalse("it is not the default plugin");
             options.DefaultConfig.GetString("akka.persistence.journal.custom.class").Should().Contain("SqliteWriteJournal");
+        }
+
+        [Fact(DisplayName = "Should_write_the_table_name_When_snapshot_options_are_turned_into_config")]
+        public void Should_write_the_table_name_When_snapshot_options_are_turned_into_config()
+        {
+            var options = new EmbeddedSnapshotOptions { ConnectionString = "Data Source=a.db", TableName = "snaps" };
+
+            options.ToConfig().GetString("akka.persistence.snapshot-store.embedded.table-name").Should().Be("snaps");
         }
 
         [Fact(DisplayName = "Should_keep_the_reference_settings_When_options_are_left_null")]
@@ -522,9 +516,9 @@ namespace Akka.Persistence.Embedded.Hosting.Tests
 
             var merged = options.ToConfig().WithFallback(options.DefaultConfig).GetConfig("akka.persistence.journal.embedded");
 
-            merged.GetString("tag-write-mode").Should().Be("TagTable");
             merged.GetInt("batch-size").Should().Be(100);
-            merged.GetString("default.journal.table-name").Should().Be("journal");
+            merged.GetString("table-name").Should().Be("journal");
+            merged.GetString("tag-table-name").Should().Be("tags");
             options.ToConfig().HasPath("akka.persistence.journal.embedded.batch-size").Should().BeFalse("a null property writes nothing");
         }
 

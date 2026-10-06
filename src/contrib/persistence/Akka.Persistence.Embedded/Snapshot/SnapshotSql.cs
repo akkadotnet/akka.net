@@ -26,11 +26,11 @@ namespace Akka.Persistence.Embedded.Snapshot
     /// <summary>The snapshot store's SQL. Runs on the store's single worker thread.</summary>
     internal sealed class SnapshotSql
     {
-        private readonly SnapshotTableNames _t;
+        private readonly string _table;
 
         public SnapshotSql(SnapshotSettings settings)
         {
-            _t = settings.Tables;
+            _table = settings.TableName;
         }
 
         public void Save(SqliteConnection connection, string persistenceId, long sequenceNr, long created, byte[] payload, string manifest, int serializerId)
@@ -43,8 +43,8 @@ namespace Akka.Persistence.Embedded.Snapshot
             {
                 update.Transaction = transaction;
                 update.CommandText =
-                    $"UPDATE {_t.Snapshot} SET {_t.Created} = @created, {_t.Payload} = @snapshot, {_t.Manifest} = @manifest, {_t.SerializerId} = @serializer_id " +
-                    $"WHERE {_t.PersistenceId} = @persistence_id AND {_t.SequenceNumber} = @sequence_number";
+                    $"UPDATE {_table} SET created = @created, snapshot = @snapshot, manifest = @manifest, serializer_id = @serializer_id " +
+                    $"WHERE persistence_id = @persistence_id AND sequence_number = @sequence_number";
                 Bind(update, persistenceId, sequenceNr, created, payload, manifest, serializerId);
                 changed = update.ExecuteNonQuery();
             }
@@ -54,7 +54,7 @@ namespace Akka.Persistence.Embedded.Snapshot
                 using var insert = connection.CreateCommand();
                 insert.Transaction = transaction;
                 insert.CommandText =
-                    $"INSERT INTO {_t.Snapshot} ({_t.PersistenceId}, {_t.SequenceNumber}, {_t.Created}, {_t.Payload}, {_t.Manifest}, {_t.SerializerId}) " +
+                    $"INSERT INTO {_table} (persistence_id, sequence_number, created, snapshot, manifest, serializer_id) " +
                     "VALUES (@persistence_id, @sequence_number, @created, @snapshot, @manifest, @serializer_id)";
                 Bind(insert, persistenceId, sequenceNr, created, payload, manifest, serializerId);
                 insert.ExecuteNonQuery();
@@ -77,8 +77,8 @@ namespace Akka.Persistence.Embedded.Snapshot
         {
             using var command = connection.CreateCommand();
             command.CommandText =
-                $"SELECT {_t.PersistenceId}, {_t.SequenceNumber}, {_t.Created}, {_t.Payload}, {_t.Manifest}, {_t.SerializerId} " +
-                $"FROM {_t.Snapshot} WHERE {Where(command, persistenceId, criteria)} ORDER BY {_t.SequenceNumber} DESC LIMIT 1";
+                $"SELECT persistence_id, sequence_number, created, snapshot, manifest, serializer_id " +
+                $"FROM {_table} WHERE {Where(command, persistenceId, criteria)} ORDER BY sequence_number DESC LIMIT 1";
 
             using var reader = command.ExecuteReader();
             if (!reader.Read())
@@ -98,12 +98,12 @@ namespace Akka.Persistence.Embedded.Snapshot
         public void Delete(SqliteConnection connection, SnapshotMetadata metadata)
         {
             using var command = connection.CreateCommand();
-            var sql = $"DELETE FROM {_t.Snapshot} WHERE {_t.PersistenceId} = @persistence_id AND {_t.SequenceNumber} = @sequence_number";
+            var sql = $"DELETE FROM {_table} WHERE persistence_id = @persistence_id AND sequence_number = @sequence_number";
             command.Parameters.Add("@persistence_id", SqliteType.Text).Value = metadata.PersistenceId;
             command.Parameters.Add("@sequence_number", SqliteType.Integer).Value = metadata.SequenceNr;
             if (metadata.Timestamp > DateTime.MinValue)
             {
-                sql += $" AND {_t.Created} <= @ticks";
+                sql += $" AND created <= @ticks";
                 command.Parameters.Add("@ticks", SqliteType.Integer).Value = metadata.Timestamp.Ticks;
             }
 
@@ -114,7 +114,7 @@ namespace Akka.Persistence.Embedded.Snapshot
         public void Delete(SqliteConnection connection, string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM {_t.Snapshot} WHERE {Where(command, persistenceId, criteria)}";
+            command.CommandText = $"DELETE FROM {_table} WHERE {Where(command, persistenceId, criteria)}";
             command.ExecuteNonQuery();
         }
 
@@ -125,17 +125,17 @@ namespace Akka.Persistence.Embedded.Snapshot
         private string Where(SqliteCommand command, string persistenceId, SnapshotSelectionCriteria criteria)
         {
             command.Parameters.Add("@persistence_id", SqliteType.Text).Value = persistenceId;
-            var where = $"{_t.PersistenceId} = @persistence_id";
+            var where = $"persistence_id = @persistence_id";
 
             if (criteria.MaxSequenceNr != long.MaxValue)
             {
-                where += $" AND {_t.SequenceNumber} <= @sequence_number";
+                where += $" AND sequence_number <= @sequence_number";
                 command.Parameters.Add("@sequence_number", SqliteType.Integer).Value = criteria.MaxSequenceNr;
             }
 
             if (criteria.MaxTimeStamp != DateTime.MaxValue)
             {
-                where += $" AND {_t.Created} <= @ticks";
+                where += $" AND created <= @ticks";
                 command.Parameters.Add("@ticks", SqliteType.Integer).Value = criteria.MaxTimeStamp.Ticks;
             }
 

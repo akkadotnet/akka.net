@@ -2,18 +2,19 @@
 
 A Native AOT canary for the SQLite persistence plugin (`Akka.Persistence.Embedded`). It sets the
 `Akka.DynamicTypeLoading` feature switch to `false` with `Trim="true"`, builds its systems with Akka.Hosting and
-`WithEmbeddedPersistence(...)` (one call for the journal, snapshot store and read journal) and runs four scenarios (`Program.cs`):
+`WithEmbeddedPersistence(...)` (one call for the journal, snapshot store and read journal) and runs three scenarios (`Program.cs`):
 
-1. **TagTable database.** A persistent actor persists five events (two tagged `red`), snapshots at
+1. **Main database.** A persistent actor persists five events (two tagged `red`), snapshots at
    sequence number 3, stops, and a new incarnation recovers with the snapshot. `DeleteMessages(2)` and a
    recovery from events only give `LastSequenceNr = 5` with events 3-5 replayed. Then every current query
    runs (`CurrentPersistenceIds`, `CurrentEventsByPersistenceId`, `CurrentEventsByTag`, `CurrentAllEvents`,
    `CurrentAllEvents(FromEnd(1))`), a live `EventsByTag` and a live `PersistenceIds` each see a new event,
    and `DeleteSnapshots(Latest)` leaves nothing to load.
    An event adapter registered with the journal tags one event, and `CurrentEventsByTag` finds it.
-2. **Csv database.** A second system and file in `tag-write-mode = Csv` finds a tagged event.
-3. **Both database.** A third one in `tag-write-mode = Both` finds a tagged event after a delete.
-4. **Unregistered.** A system without `WithEmbeddedPersistence()` must fail at start with a
+2. **Custom table names.** A second system and file with `JournalTableName`, `TagTableName` and the snapshot
+   `TableName` set persists, snapshots and deletes. The events, tags and snapshot land in the named tables, and a tag
+   query skips the tombstone.
+3. **Unregistered.** A system without `WithEmbeddedPersistence()` must fail at start with a
    `ConfigurationException` that names `Akka.DynamicTypeLoading`.
 
 It also opens a `SqliteConnection` first and prints `sqlite_version()`, which proves the native library

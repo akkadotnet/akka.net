@@ -28,7 +28,7 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         }
 
         private PoolingSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.TT, "akka.loglevel = DEBUG"), nameof(PoolingSpec), output)
+            : base(db, SqliteSpecConfig.Create(db, "akka.loglevel = DEBUG"), nameof(PoolingSpec), output)
         {
         }
 
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         public async Task Should_hand_the_journal_writer_the_users_pooling_value_When_the_string_sets_it()
         {
             using var db = new SqliteTestDb();
-            var config = SqliteSpecConfig.Create(db, SqliteTestMode.TT).WithFallback(ConfigurationFactory.ParseString(TestSerializerConfig.Hocon));
+            var config = SqliteSpecConfig.Create(db).WithFallback(ConfigurationFactory.ParseString(TestSerializerConfig.Hocon));
             // the db's own connection string, with Pooling added
             var pooled = ConfigurationFactory.ParseString($"akka.persistence.journal.embedded.connection-string = \"{db.HoconConnectionString};Pooling=True\"")
                 .WithFallback(config);
@@ -110,7 +110,7 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         private ProviderPathSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
+                SqliteSpecConfig.Create(db, """
                     akka.persistence.query.journal.twin-a {
                         class = "Akka.Persistence.Embedded.Query.SqliteReadJournalProvider, Akka.Persistence.Embedded"
                         write-plugin = "akka.persistence.journal.embedded"

@@ -64,6 +64,38 @@ namespace Akka.Persistence.Embedded.Tests.Journal
         }
     }
 
+    /// <summary>Persists strings as <see cref="TestEvent"/>, answers with its last sequence number and deletes on request.</summary>
+    public sealed class TombstoneProbeActor : ReceivePersistentActor
+    {
+        public sealed record DeleteAll;
+
+        public sealed record GetLastSequenceNr;
+
+        private IActorRef? _deleteRequester;
+
+        public TombstoneProbeActor(string persistenceId)
+        {
+            PersistenceId = persistenceId;
+
+            Recover<TestEvent>(_ => { });
+            Command<string>(value =>
+            {
+                var sender = Sender;
+                Persist(new TestEvent(value), _ => sender.Tell(LastSequenceNr));
+            });
+            Command<GetLastSequenceNr>(_ => Sender.Tell(LastSequenceNr));
+            Command<DeleteAll>(_ =>
+            {
+                _deleteRequester = Sender;
+                DeleteMessages(LastSequenceNr);
+            });
+            Command<DeleteMessagesSuccess>(success => _deleteRequester?.Tell(success));
+            Command<DeleteMessagesFailure>(failure => _deleteRequester?.Tell(new Status.Failure(failure.Cause)));
+        }
+
+        public override string PersistenceId { get; }
+    }
+
     public abstract class JournalBehaviorSpecBase : EmbeddedSpec
     {
         private JournalWriter? _writer;
@@ -93,22 +125,22 @@ namespace Akka.Persistence.Embedded.Tests.Journal
         }
     }
 
-    public class TagTableJournalBehaviorSpec : JournalBehaviorSpecBase
+    public class JournalBehaviorSpec : JournalBehaviorSpecBase
     {
-        public TagTableJournalBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public JournalBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private TagTableJournalBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
+        private JournalBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, """
+                SqliteSpecConfig.Create(db, """
                     akka.persistence.journal.embedded {
                         buffer-size = 2
                         batch-size = 2
                     }
                     """),
-                nameof(TagTableJournalBehaviorSpec),
+                nameof(JournalBehaviorSpec),
                 output)
         {
         }
@@ -272,6 +304,53 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             replay.HighestSequenceNr.Should().Be(3L);
         }
 
+        [Fact(DisplayName = "Should_blank_the_tombstone_message_When_deleting_messages")]
+        public async Task Should_blank_the_tombstone_message_When_deleting_messages()
+        {
+            await WriteAsync(Write(Evt("blank", 1, new TestEvent("a")), Evt("blank", 2, new TestEvent("b")), Evt("blank", 3, new TestEvent("c"))));
+
+            await DeleteToAsync("blank", 2);
+
+            var rows = Db.Query("SELECT sequence_number, deleted, typeof(message), length(message), manifest, identifier FROM journal WHERE persistence_id = 'blank' ORDER BY sequence_number");
+            rows.Should().HaveCount(2);
+            // the tombstone: still there, deleted, an empty blob (the column is NOT NULL), manifest and identifier untouched
+            rows[0].Should().Equal(2L, 1L, "blob", 0L, "E", 7301L);
+            // the row above it is untouched
+            rows[1][0].Should().Be(3L);
+            rows[1][1].Should().Be(0L);
+            ((long)rows[1][3]!).Should().BeGreaterThan(0L);
+        }
+
+        [Fact(DisplayName = "Should_continue_from_the_next_sequence_number_When_all_events_of_a_persistence_id_are_deleted")]
+        public async Task Should_continue_from_the_next_sequence_number_When_all_events_of_a_persistence_id_are_deleted()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new TombstoneProbeActor("tombstone")), "tombstone-1");
+            foreach (var expected in new[] { 1L, 2L, 3L })
+                (await actor.Ask<long>("event", Timeout)).Should().Be(expected);
+
+            await actor.Ask<DeleteMessagesSuccess>(new TombstoneProbeActor.DeleteAll(), Timeout);
+
+            // only the tombstone is left: highest sequence number 3, deleted, no payload
+            Db.Query("SELECT sequence_number, deleted, typeof(message), length(message) FROM journal WHERE persistence_id = 'tombstone'")
+                .Should().ContainSingle().Which.Should().Equal(3L, 1L, "blob", 0L);
+            (await ReplayAsync("tombstone")).Replayed.Should().BeEmpty();
+
+            Watch(actor);
+            Sys.Stop(actor);
+            await ExpectTerminatedAsync(actor, Timeout);
+
+            // the new incarnation recovers sequence number 3 from the tombstone and goes on with 4
+            var reborn = Sys.ActorOf(Props.Create(() => new TombstoneProbeActor("tombstone")), "tombstone-2");
+            (await reborn.Ask<long>(new TombstoneProbeActor.GetLastSequenceNr(), Timeout)).Should().Be(3L);
+            (await reborn.Ask<long>("after", Timeout)).Should().Be(4L);
+
+            Db.Query("SELECT sequence_number, deleted, length(message) > 0 FROM journal WHERE persistence_id = 'tombstone' ORDER BY sequence_number")
+                .Select(r => (r[0], r[1], r[2])).Should().Equal((3L, 1L, 0L), (4L, 0L, 1L));
+            var replay = await ReplayAsync("tombstone");
+            replay.Replayed.Select(p => p.SequenceNr).Should().Equal(4L);
+            replay.HighestSequenceNr.Should().Be(4L);
+        }
+
         [Fact(DisplayName = "Should_report_highest_sequence_number_When_all_events_are_deleted")]
         public async Task Should_report_highest_sequence_number_When_all_events_are_deleted()
         {
@@ -340,7 +419,6 @@ namespace Akka.Persistence.Embedded.Tests.Journal
                 Message = [1],
                 Manifest = "",
                 Identifier = 7301,
-                TagsColumn = "",
                 Tags = [],
                 WriterUuid = "w"
             };
@@ -400,57 +478,6 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             }
 
             (await CollectWriteAsync(probe, writes)).Succeeded.Should().BeTrue();
-        }
-    }
-
-    public class DeleteCompatJournalBehaviorSpec : EmbeddedSpec
-    {
-        public DeleteCompatJournalBehaviorSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private DeleteCompatJournalBehaviorSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.DC), nameof(DeleteCompatJournalBehaviorSpec), output)
-        {
-        }
-
-        [Fact(DisplayName = "Should_store_highest_existing_sequence_in_metadata_When_delete_compatibility_mode")]
-        public async Task Should_store_highest_existing_sequence_in_metadata_When_delete_compatibility_mode()
-        {
-            await WriteAsync(Write(
-                Evt("meta", 1, new TestEvent("a")), Evt("meta", 2, new TestEvent("b")), Evt("meta", 3, new TestEvent("c")),
-                Evt("meta", 4, new TestEvent("d")), Evt("meta", 5, new TestEvent("e"))));
-
-            await DeleteToAsync("meta", 3);
-            Db.Query("SELECT persistence_id, sequence_number FROM journal_metadata").Select(r => (r[0], r[1])).Should().Equal(("meta", 3L));
-
-            await DeleteToAsync("meta", 4);
-            Db.Query("SELECT persistence_id, sequence_number FROM journal_metadata").Select(r => (r[0], r[1])).Should().Equal(("meta", 4L));
-
-            // asks for 100, but only 5 exists: the metadata stores the highest existing number
-            await DeleteToAsync("meta", 100);
-            Db.Query("SELECT persistence_id, sequence_number FROM journal_metadata").Select(r => (r[0], r[1])).Should().Equal(("meta", 5L));
-
-            var replay = await ReplayAsync("meta");
-            replay.Replayed.Should().BeEmpty();
-            replay.HighestSequenceNr.Should().Be(5L);
-
-            // storage classes of the metadata row, as Akka.Persistence.Sql writes them
-            var row = Db.Query("SELECT typeof(persistence_id), typeof(sequence_number) FROM journal_metadata")[0];
-            row[0].Should().Be("text");
-            row[1].Should().Be("integer");
-        }
-
-        [Fact(DisplayName = "Should_read_highest_sequence_number_above_from_When_delete_compatibility_mode")]
-        public async Task Should_read_highest_sequence_number_above_from_When_delete_compatibility_mode()
-        {
-            await WriteAsync(Write(Evt("meta-from", 1, new TestEvent("a")), Evt("meta-from", 2, new TestEvent("b")), Evt("meta-from", 3, new TestEvent("c"))));
-            await DeleteToAsync("meta-from", 100);
-
-            var replay = await ReplayAsync("meta-from", from: 3);
-
-            replay.Replayed.Should().BeEmpty();
-            replay.HighestSequenceNr.Should().Be(3L);
         }
     }
 }

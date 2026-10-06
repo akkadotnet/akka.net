@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SqliteNoWriterUuidEventsByPersistenceIdSpec.cs" company="Akka.NET Project">
+// <copyright file="SqliteEventsByPersistenceIdSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,18 +13,18 @@ using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Xunit;
 
-namespace Akka.Persistence.Embedded.Tests.Query.TagTable
+namespace Akka.Persistence.Embedded.Tests.Query.Tck
 {
-    public class SqliteNoWriterUuidEventsByPersistenceIdSpec : EventsByPersistenceIdSpec
+    public class SqliteEventsByPersistenceIdSpec : EventsByPersistenceIdSpec
     {
         private readonly SqliteTestDb _db;
 
-        public SqliteNoWriterUuidEventsByPersistenceIdSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public SqliteEventsByPersistenceIdSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private SqliteNoWriterUuidEventsByPersistenceIdSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(SqliteSpecConfig.Create(db, SqliteTestMode.NW), nameof(SqliteNoWriterUuidEventsByPersistenceIdSpec), output)
+        private SqliteEventsByPersistenceIdSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(SqliteSpecConfig.Create(db), nameof(SqliteEventsByPersistenceIdSpec), output)
         {
             _db = db;
             SqliteSpecConfig.EnsureThreadPoolWarmed();

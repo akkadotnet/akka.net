@@ -52,12 +52,8 @@ namespace Akka.Persistence.Embedded.Query
         private readonly IActorRef _journal;
         private readonly SqliteWorkerPool _pool;
         private readonly SemaphoreSlim _throttle;
-        private readonly IActorRef? _sequenceActor;
         private readonly object _initLock = new();
         private Task? _initialization;
-
-        /// <summary>Test seam: query permits that are not in use.</summary>
-        internal int AvailablePermitsForTests => _throttle.CurrentCount;
 
         internal string PluginPathForTests => _pluginPath;
 
@@ -70,31 +66,18 @@ namespace Akka.Persistence.Embedded.Query
             _pluginPath = pluginPath;
             _log = Logging.GetLogger(system, pluginPath);
             _settings = QuerySettings.Create(config, _pluginPath, system.Settings.Config);
-            foreach (var warning in _settings.Warnings)
-                _log.Warning(warning);
 
             _sql = new QuerySql(_settings);
-            _codec = new RowCodec(system, _settings.Journal);
+            _codec = new RowCodec(system);
 
             var persistence = Persistence.Instance.Apply(system);
             _adapters = persistence.AdaptersFor(_settings.WritePluginId);
             _journal = persistence.JournalFor(_settings.WritePluginId);
 
-            _pool = new SqliteWorkerPool(_settings.ConnectionString, _settings.QueryThreads, $"{_pluginPath}-query", _log);
+            _pool = new SqliteWorkerPool(_settings.Journal.ConnectionString, _settings.QueryThreads, $"{_pluginPath}-query", _log);
             _pool.Start();
-            _throttle = new SemaphoreSlim(_settings.MaxConcurrentQueries, _settings.MaxConcurrentQueries);
+            _throttle = new SemaphoreSlim(QuerySettings.MaxConcurrentQueries, QuerySettings.MaxConcurrentQueries);
             system.RegisterOnTermination(() => _pool.Dispose());
-
-            if (_settings.SequenceRetrieval.Enabled)
-            {
-                var tables = _settings.Journal.Tables;
-                var producer = new JournalSequenceActorProducer(
-                    (offset, take) => RunAsync<IReadOnlyList<long>>(connection => _sql.ReadOrderings(connection, offset, take)),
-                    () => RunAsync(connection => _sql.ReadMaxOrdering(connection)),
-                    _settings.SequenceRetrieval);
-                _sequenceActor = system.SystemActorOf(
-                    Props.CreateBy(producer), $"{_pluginPath}-{tables.Journal}-sequence-actor");
-            }
         }
 
         // ---- plumbing ------------------------------------------------------------------------------
@@ -121,23 +104,19 @@ namespace Akka.Persistence.Embedded.Query
         {
             try
             {
-                await _journal.Ask<Initialized>(EnsureInitialized.Instance, _settings.WritePluginInitTimeout).ConfigureAwait(false);
+                await _journal.Ask<Initialized>(EnsureInitialized.Instance, QuerySettings.WritePluginInitTimeout).ConfigureAwait(false);
             }
             catch (Exception e) when (e is AskTimeoutException or TimeoutException)
             {
                 throw new TimeoutException(
-                    $"[{_pluginPath}] write plugin [{_settings.WritePluginPath}] did not finish initializing within {_settings.WritePluginInitTimeout}.", e);
+                    $"[{_pluginPath}] write plugin [{_settings.WritePluginPath}] did not finish initializing within {QuerySettings.WritePluginInitTimeout}.", e);
             }
 
             // The read journal never creates tables, but it checks the ones it reads.
-            var readMode = _settings.TagReadMode;
             await _pool.Run(
                 connection =>
                 {
-                    SqliteSchema.VerifyJournalSchema(
-                        connection, _settings.Journal,
-                        requireTagsColumnForReads: readMode == TagReadMode.Csv,
-                        requireTagTableForReads: readMode == TagReadMode.TagTable);
+                    SqliteSchema.VerifyJournalSchema(connection, _settings.Journal);
                     return true;
                 },
                 CancellationToken.None).ConfigureAwait(false);
@@ -148,10 +127,10 @@ namespace Akka.Persistence.Embedded.Query
         {
             await EnsureInitializedAsync().ConfigureAwait(false);
 
-            if (!await _throttle.WaitAsync(_settings.ThrottleTimeout).ConfigureAwait(false))
+            if (!await _throttle.WaitAsync(QuerySettings.ThrottleTimeout).ConfigureAwait(false))
             {
                 throw new TimeoutException(
-                    $"[{_pluginPath}] could not start a query within {_settings.ThrottleTimeout}: {_settings.MaxConcurrentQueries} queries are running or waiting.");
+                    $"[{_pluginPath}] could not start a query within {QuerySettings.ThrottleTimeout}: {QuerySettings.MaxConcurrentQueries} queries are running or waiting.");
             }
 
             try
@@ -172,13 +151,11 @@ namespace Akka.Persistence.Embedded.Query
 
         private IReadOnlyList<EventEnvelope> ToEnvelopes(List<RawJournalRow> rows)
         {
-            var identifierColumn = _settings.Journal.Tables.Identifier;
-            var fromTagTable = _settings.TagReadMode == TagReadMode.TagTable;
             var envelopes = new List<EventEnvelope>(rows.Count);
             foreach (var row in rows)
             {
-                var persistent = _codec.ToPersistent(row, identifierColumn);
-                var tags = _codec.SplitTags(row.TagList, fromTagTable);
+                var persistent = _codec.ToPersistent(row);
+                var tags = RowCodec.SplitTags(row.TagList);
                 envelopes.AddRange(RowCodec.ToEnvelopes(persistent, row.Ordering, tags, _adapters));
             }
 
@@ -357,15 +334,6 @@ namespace Akka.Persistence.Embedded.Query
                 // a current query stops at the max it saw when it started
                 max = state.Max;
                 rows = await RunAsync(connection => _sql.ReadOrdered(connection, null, tag, from, state.Max, take)).ConfigureAwait(false);
-            }
-            else if (_sequenceActor is not null)
-            {
-                // gap tracking: the tracker decides how far reads may go
-                var reply = await _sequenceActor
-                    .Ask<MaxOrderingId>(GetMaxOrderingId.Instance, _settings.SequenceRetrieval.AskTimeout)
-                    .ConfigureAwait(false);
-                max = reply.Max;
-                rows = await RunAsync(connection => _sql.ReadOrdered(connection, null, tag, from, reply.Max, take)).ConfigureAwait(false);
             }
             else
             {

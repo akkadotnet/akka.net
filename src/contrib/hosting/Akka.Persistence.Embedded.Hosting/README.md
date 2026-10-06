@@ -1,7 +1,7 @@
 # Akka.Persistence.Embedded.Hosting
 
 Akka.Hosting support for `Akka.Persistence.Embedded`: a SQLite journal, snapshot store and read journal that read and
-write the same tables as Akka.Persistence.Sql on SQLite, and run under Native AOT. This is how you use the plugin.
+write the tables Akka.Persistence.Sql creates on SQLite by default, and run under Native AOT. This is how you use the plugin.
 
 ```csharp
 builder.Services.AddAkka("my-system", akka => akka
@@ -14,6 +14,21 @@ turned off, which is what a Native AOT publish does.
 
 `WithEmbeddedPersistence` has the same overloads and parameter names as `WithSqlPersistence` in
 Akka.Persistence.Sql.Hosting (minus the linq2db ones: `providerName`, `schemaName`, `databaseMapping`, `DataOptions`).
+
+## One layout
+
+The plugin supports one table layout: the one Akka.Persistence.Sql 1.5.70 creates on SQLite by default. A database file
+moves between the two plugins in both directions.
+
+- Tags go to the `tags` table, one row per tag. The journal never writes a tags column (a table made from the
+  Akka.Persistence.Sql docs DDL has a nullable one, which stays NULL).
+- Every journal row has a `writer_uuid`.
+- `DeleteMessagesTo` keeps the highest row at or below the target as a tombstone: `deleted = 1` and an empty `message`.
+  Lower rows and their tag rows are deleted. The highest sequence number comes from `MAX(sequence_number)`, deleted rows
+  included, so a persistence id goes on from where it was after you delete all its events. Queries and replay skip
+  deleted rows, tag queries too.
+- Column names are fixed. Table names are not (see below). There is no `journal_metadata` table, no CSV tags column and
+  no schema name.
 
 ## Event adapters and health checks
 
@@ -46,9 +61,8 @@ akka.WithEmbeddedPersistence(
     new EmbeddedJournalOptions
     {
         ConnectionString = "Data Source=app.db",
-        TagStorageMode = TagWriteMode.Both,
-        QueryRefreshInterval = TimeSpan.FromMilliseconds(250),   // read journal
-        JournalSequenceRetrievalEnabled = true                   // read journal
+        JournalTableName = "events",
+        QueryRefreshInterval = TimeSpan.FromMilliseconds(250)    // read journal
     },
     new EmbeddedSnapshotOptions { ConnectionString = "Data Source=app.db" });
 ```
@@ -61,10 +75,39 @@ akka.WithEmbeddedPersistence(
     snapshot => snapshot.ConnectionString = "Data Source=app.db");
 ```
 
-A property left null keeps the plugin's reference setting. `EmbeddedJournalOptions` also has `TagSeparator`,
-`DeleteCompatibilityMode`, `UseWriterUuidColumn`, `JournalTableName`, `TagTableName`, `MetadataTableName`, `BufferSize`,
-`BatchSize`, `ReplayBatchSize`, `ReadThreads`, `QueryMaxBufferSize`, `MaxConcurrentQueries`, `QueryThrottleTimeout` and
-`QueryThreads`. They match the plugin's configuration keys.
+A property left null keeps the plugin's reference setting. `EmbeddedJournalOptions` has `ConnectionString`,
+`AutoInitialize`, `JournalTableName`, `TagTableName`, `BufferSize`, `BatchSize`, `ReplayBatchSize`, `ReadThreads` and,
+for the read journal, `QueryRefreshInterval`, `QueryMaxBufferSize` and `QueryThreads`. `EmbeddedSnapshotOptions` has
+`ConnectionString`, `AutoInitialize` and `TableName`. They match the plugin's configuration keys:
+
+```hocon
+akka.persistence {
+  journal.embedded {
+    connection-string = ""      # required
+    auto-initialize = true
+    table-name = "journal"
+    tag-table-name = "tags"
+    buffer-size = 5000          # write requests queued for the writer thread
+    batch-size = 100            # rows per write transaction
+    replay-batch-size = 1000    # rows per recovery round trip
+    read-threads = 2
+  }
+  snapshot-store.embedded {
+    connection-string = ""      # required
+    auto-initialize = true
+    table-name = "snapshot"
+  }
+  query.journal.embedded {
+    write-plugin = "akka.persistence.journal.embedded"   # its connection string and table names are used
+    max-buffer-size = 500       # rows per query round trip
+    refresh-interval = 1s
+    query-threads = 4
+  }
+}
+```
+
+Keys the plugin does not know, such as Akka.Persistence.Sql's `provider-name` or `tag-write-mode`, are not read. The
+`Serializer` property that the Hosting base classes carry has no effect: serialization bindings pick the serializer.
 
 If you register the journal with the generic `WithJournal(options)` instead, nothing registers the read journal in code,
 and it needs `Akka.DynamicTypeLoading` on. Use `WithEmbeddedPersistence`.

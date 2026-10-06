@@ -12,25 +12,6 @@ using Akka.Configuration;
 
 namespace Akka.Persistence.Embedded.Tests
 {
-    /// <summary>The five modes the TCK matrix runs in.</summary>
-    public enum SqliteTestMode
-    {
-        /// <summary>TagTable.</summary>
-        TT,
-
-        /// <summary>Csv.</summary>
-        CSV,
-
-        /// <summary>Both (reads resolve to TagTable).</summary>
-        BOTH,
-
-        /// <summary>TagTable plus delete-compatibility-mode.</summary>
-        DC,
-
-        /// <summary>TagTable without the writer_uuid column.</summary>
-        NW
-    }
-
     public static class SqliteSpecConfig
     {
         /// <summary>Raises the thread pool minimum so recovery does not wait on thread pool growth in CI.</summary>
@@ -40,20 +21,7 @@ namespace Akka.Persistence.Embedded.Tests
             ThreadPool.SetMinThreads(Math.Max(worker, Environment.ProcessorCount * 2), io);
         }
 
-        public static Config Create(SqliteTestDb db, SqliteTestMode mode, string extra = "")
-            => Create(
-                db,
-                mode switch
-                {
-                    SqliteTestMode.CSV => TagWriteMode.Csv,
-                    SqliteTestMode.BOTH => TagWriteMode.Both,
-                    _ => TagWriteMode.TagTable
-                },
-                deleteCompat: mode == SqliteTestMode.DC,
-                writerUuid: mode != SqliteTestMode.NW,
-                extra: extra);
-
-        public static Config Create(SqliteTestDb db, TagWriteMode mode, bool deleteCompat = false, bool writerUuid = true, string extra = "")
+        public static Config Create(SqliteTestDb db, string extra = "")
             => ConfigurationFactory.ParseString(
                     $$"""
                     akka.loglevel = INFO
@@ -61,9 +29,6 @@ namespace Akka.Persistence.Embedded.Tests
                     akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.embedded"
                     akka.persistence.journal.embedded {
                         connection-string = "{{db.HoconConnectionString}}"
-                        tag-write-mode = {{mode}}
-                        delete-compatibility-mode = {{(deleteCompat ? "true" : "false")}}
-                        default.journal.use-writer-uuid-column = {{(writerUuid ? "true" : "false")}}
                     }
                     akka.persistence.snapshot-store.embedded {
                         connection-string = "{{db.HoconConnectionString}}"

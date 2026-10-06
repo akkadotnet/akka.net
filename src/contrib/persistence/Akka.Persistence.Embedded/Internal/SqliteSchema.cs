@@ -23,8 +23,8 @@ namespace Akka.Persistence.Embedded.Internal
     }
 
     /// <summary>
-    /// Builds the exact DDL text Akka.Persistence.Sql (linq2db) sends to SQLite, creates missing tables and
-    /// verifies that the tables have what the plugin needs. Never alters or drops anything.
+    /// Builds the exact DDL text Akka.Persistence.Sql (linq2db) sends to SQLite for its default layout (tag table, no
+    /// journal_metadata), creates missing tables and verifies that the tables have what the plugin needs. Never alters or drops anything.
     /// </summary>
     internal static class SqliteSchema
     {
@@ -34,90 +34,71 @@ namespace Akka.Persistence.Embedded.Internal
 
         // ---- DDL text ------------------------------------------------------------------------------
 
-        /// <summary>J1, J2 and J3: the journal table plus its three indexes.</summary>
+        /// <summary>The journal table plus its three indexes.</summary>
         public static string JournalDdl(JournalSettings settings)
         {
-            var t = settings.Tables;
+            var table = settings.Tables.Journal;
             var columns = new List<Column>
             {
-                new(t.Ordering, "INTEGER", true, " PRIMARY KEY AUTOINCREMENT"),
-                new(t.Created, "BigInt", true),
-                new(t.Deleted, "Bit", true),
-                new(t.PersistenceId, "NVarChar(255)", true),
-                new(t.SequenceNumber, "BigInt", true),
-                new(t.Message, "VarBinary", true)
+                new("ordering", "INTEGER", true, " PRIMARY KEY AUTOINCREMENT"),
+                new("created", "BigInt", true),
+                new("deleted", "Bit", true),
+                new("persistence_id", "NVarChar(255)", true),
+                new("sequence_number", "BigInt", true),
+                new("message", "VarBinary", true),
+                new("manifest", "NVarChar(500)", false),
+                new("identifier", "INTEGER", false),
+                new("writer_uuid", "NVarChar(128)", false)
             };
-            if (settings.WritesTagsColumn)
-                columns.Add(new Column(t.Tags, "NVarChar(100)", false));
-            columns.Add(new Column(t.Manifest, "NVarChar(500)", false));
-            columns.Add(new Column(t.Identifier, "INTEGER", false));
-            if (settings.UseWriterUuid)
-                columns.Add(new Column(t.WriterUuid, "NVarChar(128)", false));
 
             var sb = new StringBuilder();
-            AppendCreateTable(sb, t.Journal, columns, typePadding: 2, constraint: null);
+            AppendCreateTable(sb, table, columns, typePadding: 2, constraint: null);
             sb.Append("\n;").Append("\r\n");
-            sb.Append($"CREATE UNIQUE INDEX IF NOT EXISTS {t.Journal}_uq ON {t.Journal} ({t.PersistenceId}, {t.SequenceNumber})").Append(StatementEnd);
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.Journal}_{t.Created}_idx ON {t.Journal} ({t.Created})").Append(StatementEnd);
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.Journal}_{t.SequenceNumber}_idx ON {t.Journal} ({t.SequenceNumber});");
+            sb.Append($"CREATE UNIQUE INDEX IF NOT EXISTS {table}_uq ON {table} (persistence_id, sequence_number)").Append(StatementEnd);
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_created_idx ON {table} (created)").Append(StatementEnd);
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_sequence_number_idx ON {table} (sequence_number);");
             return sb.ToString();
         }
 
-        /// <summary>T1: the tag table plus its two indexes.</summary>
+        /// <summary>The tag table plus its two indexes.</summary>
         public static string TagTableDdl(JournalSettings settings)
         {
-            var t = settings.Tables;
+            var table = settings.Tables.TagTable;
             var columns = new List<Column>
             {
-                new(t.TagOrderingId, "INTEGER", true),
-                new(t.TagValue, "NVarChar(64)", true),
-                new(t.TagSequenceNr, "INTEGER", true),
-                new(t.TagPersistenceId, "NVarChar(255)", true)
+                new("ordering_id", "INTEGER", true),
+                new("tag", "NVarChar(64)", true),
+                new("sequence_nr", "INTEGER", true),
+                new("persistence_id", "NVarChar(255)", true)
             };
 
             var sb = new StringBuilder();
-            AppendCreateTable(sb, t.TagTable, columns, typePadding: 1, constraint: $"[{t.TagOrderingId}], [{t.TagValue}]");
+            AppendCreateTable(sb, table, columns, typePadding: 1, constraint: "[ordering_id], [tag]");
             sb.Append("\n;").Append("\r\n");
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.TagTable}_{t.TagPersistenceId}_{t.TagSequenceNr}_idx ON {t.TagTable} ({t.TagPersistenceId}, {t.TagSequenceNr})").Append(StatementEnd);
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.TagTable}_{t.TagValue}_idx ON {t.TagTable} ({t.TagValue});");
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_persistence_id_sequence_nr_idx ON {table} (persistence_id, sequence_nr)").Append(StatementEnd);
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_tag_idx ON {table} (tag);");
             return sb.ToString();
         }
 
-        /// <summary>M1: journal_metadata. No indexes, no trailing semicolon.</summary>
-        public static string MetadataDdl(JournalSettings settings)
-        {
-            var t = settings.Tables;
-            var columns = new List<Column>
-            {
-                new(t.MetadataPersistenceId, "NVarChar(255)", true),
-                new(t.MetadataSequenceNumber, "BigInt", true)
-            };
-
-            var sb = new StringBuilder();
-            AppendCreateTable(sb, t.Metadata, columns, typePadding: 1,
-                constraint: $"[{t.MetadataSequenceNumber}], [{t.MetadataPersistenceId}]");
-            return sb.ToString();
-        }
-
-        /// <summary>S1: the snapshot table plus its two indexes.</summary>
+        /// <summary>The snapshot table plus its two indexes.</summary>
         public static string SnapshotDdl(SnapshotSettings settings)
         {
-            var t = settings.Tables;
+            var table = settings.TableName;
             var columns = new List<Column>
             {
-                new(t.PersistenceId, "NVarChar(255)", true),
-                new(t.SequenceNumber, "BigInt", true),
-                new(t.Created, "BigInt", true),
-                new(t.Payload, "VarBinary", false),
-                new(t.Manifest, "NVarChar(500)", false),
-                new(t.SerializerId, "INTEGER", false)
+                new("persistence_id", "NVarChar(255)", true),
+                new("sequence_number", "BigInt", true),
+                new("created", "BigInt", true),
+                new("snapshot", "VarBinary", false),
+                new("manifest", "NVarChar(500)", false),
+                new("serializer_id", "INTEGER", false)
             };
 
             var sb = new StringBuilder();
-            AppendCreateTable(sb, t.Snapshot, columns, typePadding: 1, constraint: $"[{t.PersistenceId}], [{t.SequenceNumber}]");
+            AppendCreateTable(sb, table, columns, typePadding: 1, constraint: "[persistence_id], [sequence_number]");
             sb.Append("\n;").Append("\r\n");
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.Snapshot}_{t.SequenceNumber}_idx ON {t.Snapshot} ({t.SequenceNumber})").Append(StatementEnd);
-            sb.Append($"CREATE INDEX IF NOT EXISTS {t.Snapshot}_{t.Created}_idx ON {t.Snapshot} ({t.Created});");
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_sequence_number_idx ON {table} (sequence_number)").Append(StatementEnd);
+            sb.Append($"CREATE INDEX IF NOT EXISTS {table}_created_idx ON {table} (created);");
             return sb.ToString();
         }
 
@@ -153,23 +134,20 @@ namespace Akka.Persistence.Embedded.Internal
         // ---- create + verify -----------------------------------------------------------------------
 
         /// <summary>
-        /// Creates missing journal-side tables when auto-initialize is on, then verifies them.
+        /// Creates the journal and tag tables when auto-initialize is on, then verifies them.
         /// Returns warnings to log.
         /// </summary>
-        public static IReadOnlyList<string> EnsureJournalSchema(SqliteConnection connection, JournalSettings settings, bool requireTagsColumnForReads, bool requireTagTableForReads)
+        public static IReadOnlyList<string> EnsureJournalSchema(SqliteConnection connection, JournalSettings settings)
         {
             if (settings.AutoInitialize)
             {
                 using var tx = connection.BeginTransaction(deferred: false);
                 Execute(connection, tx, JournalDdl(settings));
-                if (settings.WritesTagTable)
-                    Execute(connection, tx, TagTableDdl(settings));
-                if (settings.DeleteCompatibilityMode)
-                    Execute(connection, tx, MetadataDdl(settings));
+                Execute(connection, tx, TagTableDdl(settings));
                 tx.Commit();
             }
 
-            return VerifyJournalSchema(connection, settings, requireTagsColumnForReads, requireTagTableForReads);
+            return VerifyJournalSchema(connection, settings);
         }
 
         /// <summary>Creates the snapshot table when auto-initialize is on, then verifies it.</summary>
@@ -193,66 +171,41 @@ namespace Akka.Persistence.Embedded.Internal
             command.ExecuteNonQuery();
         }
 
-        public static IReadOnlyList<string> VerifyJournalSchema(SqliteConnection connection, JournalSettings settings, bool requireTagsColumnForReads = false, bool requireTagTableForReads = false)
+        /// <summary>
+        /// Checks that the journal and tag tables have every column the plugin uses and that the ordering column is a rowid alias.
+        /// Extra columns are fine (the Akka.Persistence.Sql docs DDL has a <c>tags</c> column that is never written here).
+        /// A missing unique index only produces a warning.
+        /// </summary>
+        public static IReadOnlyList<string> VerifyJournalSchema(SqliteConnection connection, JournalSettings settings)
         {
             var warnings = new List<string>();
             var t = settings.Tables;
             var dataSource = DataSourceOf(connection);
 
             var columns = RequireTable(connection, t.Journal, dataSource);
-            var needsTagsColumn = settings.WritesTagsColumn || requireTagsColumnForReads;
-            const string schema = "the journal schema";
-            var required = new List<(string Column, string Reason)>
-            {
-                (t.Ordering, schema), (t.Created, schema), (t.Deleted, schema), (t.PersistenceId, schema),
-                (t.SequenceNumber, schema), (t.Message, schema), (t.Manifest, schema), (t.Identifier, schema)
-            };
-            if (settings.UseWriterUuid)
-                required.Add((t.WriterUuid, "use-writer-uuid-column = true"));
-            if (needsTagsColumn)
-                required.Add((t.Tags, settings.WritesTagsColumn ? $"tag-write-mode = {settings.TagWriteMode}" : "tag-read-mode = Csv"));
-            RequireColumns(columns, t.Journal, required);
+            RequireColumns(
+                columns, t.Journal,
+                ["ordering", "created", "deleted", "persistence_id", "sequence_number", "message", "manifest", "identifier", "writer_uuid"]);
 
-            var ordering = columns.First(c => string.Equals(c.Name, t.Ordering, StringComparison.OrdinalIgnoreCase));
+            var ordering = columns.First(c => string.Equals(c.Name, "ordering", StringComparison.OrdinalIgnoreCase));
             if (ordering.Pk != 1 || !string.Equals(ordering.Type, "INTEGER", StringComparison.OrdinalIgnoreCase))
-                throw new SqliteSchemaException($"Column [{t.Ordering}] must be INTEGER PRIMARY KEY (rowid alias).");
+                throw new SqliteSchemaException("Column [ordering] must be INTEGER PRIMARY KEY (rowid alias).");
 
-            if (!HasUniqueIndex(connection, t.Journal, t.PersistenceId, t.SequenceNumber))
+            if (!HasUniqueIndex(connection, t.Journal, "persistence_id", "sequence_number"))
             {
-                warnings.Add($"Table [{t.Journal}] has no UNIQUE index on ({t.PersistenceId}, {t.SequenceNumber}); duplicate writes will not be detected.");
+                warnings.Add($"Table [{t.Journal}] has no UNIQUE index on (persistence_id, sequence_number); duplicate writes will not be detected.");
             }
 
-            if (settings.WritesTagTable || requireTagTableForReads)
-            {
-                var tagColumns = RequireTable(connection, t.TagTable, dataSource);
-                var tagReason = settings.WritesTagTable ? $"tag-write-mode = {settings.TagWriteMode}" : "tag-read-mode = TagTable";
-                RequireColumns(
-                    tagColumns, t.TagTable,
-                    [(t.TagOrderingId, tagReason), (t.TagValue, tagReason), (t.TagSequenceNr, tagReason), (t.TagPersistenceId, tagReason)]);
-            }
-
-            if (settings.DeleteCompatibilityMode)
-            {
-                var metaColumns = RequireTable(connection, t.Metadata, dataSource);
-                const string reason = "delete-compatibility-mode = true";
-                RequireColumns(metaColumns, t.Metadata, [(t.MetadataPersistenceId, reason), (t.MetadataSequenceNumber, reason)]);
-            }
+            var tagColumns = RequireTable(connection, t.TagTable, dataSource);
+            RequireColumns(tagColumns, t.TagTable, ["ordering_id", "tag", "sequence_nr", "persistence_id"]);
 
             return warnings;
         }
 
         public static void VerifySnapshotSchema(SqliteConnection connection, SnapshotSettings settings)
         {
-            var t = settings.Tables;
-            var columns = RequireTable(connection, t.Snapshot, DataSourceOf(connection));
-            var missing = new[] { t.PersistenceId, t.SequenceNumber, t.Created, t.Payload, t.Manifest, t.SerializerId }
-                .Where(r => !columns.Any(c => string.Equals(c.Name, r, StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-            if (missing.Length > 0)
-            {
-                throw new SqliteSchemaException(
-                    $"Table [{t.Snapshot}] is missing column(s) [{string.Join(", ", missing)}] required by the snapshot store. This plugin never alters tables.");
-            }
+            var columns = RequireTable(connection, settings.TableName, DataSourceOf(connection));
+            RequireColumns(columns, settings.TableName, ["persistence_id", "sequence_number", "created", "snapshot", "manifest", "serializer_id"]);
         }
 
         private readonly record struct ColumnInfo(string Name, string Type, long Pk);
@@ -282,12 +235,11 @@ namespace Akka.Persistence.Embedded.Internal
             return result;
         }
 
-        /// <summary>Throws naming each missing column and the setting (or the schema itself) that requires it.</summary>
-        private static void RequireColumns(List<ColumnInfo> columns, string table, IEnumerable<(string Column, string Reason)> required)
+        /// <summary>Throws naming each missing column.</summary>
+        private static void RequireColumns(List<ColumnInfo> columns, string table, IEnumerable<string> required)
         {
             var missing = required
-                .Where(r => !columns.Any(c => string.Equals(c.Name, r.Column, StringComparison.OrdinalIgnoreCase)))
-                .Select(r => $"{r.Column} (required by {r.Reason})")
+                .Where(r => !columns.Any(c => string.Equals(c.Name, r, StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
             if (missing.Length > 0)
                 throw new SqliteSchemaException($"Table [{table}] is missing column(s): {string.Join(", ", missing)}. This plugin never alters tables.");

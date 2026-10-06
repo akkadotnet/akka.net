@@ -28,9 +28,6 @@ namespace Akka.Persistence.Embedded.Internal
         public required string Manifest { get; init; }
         public required int Identifier { get; init; }
 
-        /// <summary>Csv tags column value. Empty string when untagged. Only written in Csv and Both modes.</summary>
-        public required string TagsColumn { get; init; }
-
         /// <summary>One entry per tag, for the tag table.</summary>
         public required string[] Tags { get; init; }
 
@@ -50,7 +47,7 @@ namespace Akka.Persistence.Embedded.Internal
         public long? Identifier { get; init; }
         public string? WriterUuid { get; init; }
 
-        /// <summary>The tags column (Csv read) or the group_concat of the tag table (TagTable read). Null for replay.</summary>
+        /// <summary>The group_concat of the event's tag table rows. Null for replay.</summary>
         public string? TagList { get; init; }
     }
 
@@ -61,15 +58,11 @@ namespace Akka.Persistence.Embedded.Internal
 
         private readonly ExtendedActorSystem _system;
         private readonly Akka.Serialization.Serialization _serialization;
-        private readonly JournalSettings _settings;
-        private readonly string[] _csvSeparator;
 
-        public RowCodec(ExtendedActorSystem system, JournalSettings settings)
+        public RowCodec(ExtendedActorSystem system)
         {
             _system = system;
             _serialization = system.Serialization;
-            _settings = settings;
-            _csvSeparator = [settings.TagSeparator];
         }
 
         public Akka.Serialization.Serialization Serialization => _serialization;
@@ -85,7 +78,7 @@ namespace Akka.Persistence.Embedded.Internal
                 tags = tagged.Tags ?? tags;
             }
 
-            var (bytes, manifest, identifier) = SerializePayload(payload, _settings.DefaultSerializer);
+            var (bytes, manifest, identifier) = SerializePayload(payload);
             var tagArray = tags.ToArray();
             return new JournalRow
             {
@@ -95,38 +88,34 @@ namespace Akka.Persistence.Embedded.Internal
                 Message = bytes,
                 Manifest = manifest,
                 Identifier = identifier,
-                TagsColumn = tagArray.Length == 0
-                    ? string.Empty
-                    : _settings.TagSeparator + string.Join(_settings.TagSeparator, tagArray) + _settings.TagSeparator,
                 Tags = tagArray,
                 WriterUuid = writerUuid
             };
         }
 
         /// <summary>Serializes one payload with transport information set, so actor refs inside it serialize.</summary>
-        public (byte[] Bytes, string Manifest, int Identifier) SerializePayload(object? payload, string? defaultSerializerName)
-            => SerializePayload(_system, payload, defaultSerializerName);
+        public (byte[] Bytes, string Manifest, int Identifier) SerializePayload(object? payload)
+            => SerializePayload(_system, payload);
 
         /// <summary>Serializes one payload with transport information set, so actor refs inside it serialize.</summary>
-        public static (byte[] Bytes, string Manifest, int Identifier) SerializePayload(
-            ExtendedActorSystem system, object? payload, string? defaultSerializerName)
+        public static (byte[] Bytes, string Manifest, int Identifier) SerializePayload(ExtendedActorSystem system, object? payload)
         {
             if (payload is null)
                 throw new ArgumentNullException(nameof(payload), "Cannot persist a null payload.");
 
-            var serializer = system.Serialization.FindSerializerForType(payload.GetType(), defaultSerializerName);
+            var serializer = system.Serialization.FindSerializerForType(payload.GetType());
             var bytes = Akka.Serialization.Serialization.WithTransport(
                 system, (serializer, payload), static s => s.serializer.ToBinary(s.payload));
             return (bytes, serializer.Manifest(payload) ?? string.Empty, serializer.Identifier);
         }
 
         /// <summary>Deserializes the payload of a journal row.</summary>
-        public object DeserializePayload(RawJournalRow row, string identifierColumn)
+        public object DeserializePayload(RawJournalRow row)
         {
             if (row.Identifier is null)
             {
                 throw new SerializationException(
-                    $"Journal row ({row.PersistenceId}, {row.SequenceNr}) has a NULL {identifierColumn}. " +
+                    $"Journal row ({row.PersistenceId}, {row.SequenceNr}) has a NULL identifier. " +
                     "Akka.Persistence.Embedded cannot read rows without a serializer id (that needs Type.GetType). " +
                     "Re-write these rows with Akka.Persistence.Sql first.");
             }
@@ -134,9 +123,9 @@ namespace Akka.Persistence.Embedded.Internal
             return _serialization.Deserialize(row.Message, (int)row.Identifier.Value, row.Manifest ?? string.Empty);
         }
 
-        public IPersistentRepresentation ToPersistent(RawJournalRow row, string identifierColumn)
+        public IPersistentRepresentation ToPersistent(RawJournalRow row)
         {
-            var payload = DeserializePayload(row, identifierColumn);
+            var payload = DeserializePayload(row);
             return new Persistent(
                 payload,
                 row.SequenceNr,
@@ -148,16 +137,9 @@ namespace Akka.Persistence.Embedded.Internal
                 row.Created);
         }
 
-        /// <summary>Splits the tags of a row. <paramref name="fromTagTable"/> = the list came from group_concat(tag, char(31)).</summary>
-        public string[] SplitTags(string? tagList, bool fromTagTable)
-        {
-            if (string.IsNullOrEmpty(tagList))
-                return [];
-
-            return fromTagTable
-                ? tagList.Split(TagTableSeparator, StringSplitOptions.RemoveEmptyEntries)
-                : tagList.Split(_csvSeparator, StringSplitOptions.RemoveEmptyEntries);
-        }
+        /// <summary>Splits the <c>group_concat(tag, char(31))</c> list of a row.</summary>
+        public static string[] SplitTags(string? tagList)
+            => string.IsNullOrEmpty(tagList) ? [] : tagList.Split(TagTableSeparator, StringSplitOptions.RemoveEmptyEntries);
 
         /// <summary>Builds the envelopes of a row: one per event the adapters produce. All share the row's offset.</summary>
         public static IEnumerable<EventEnvelope> ToEnvelopes(

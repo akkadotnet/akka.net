@@ -67,10 +67,4 @@ namespace Akka.Persistence.Embedded
         public static Akka.Configuration.Config DefaultQueryConfiguration { get; }
         public static Akka.Configuration.Config DefaultSnapshotConfiguration { get; }
     }
-    public enum TagWriteMode
-    {
-        Csv = 0,
-        TagTable = 1,
-        Both = 2,
-    }
 }

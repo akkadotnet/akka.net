@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SqliteBothCurrentAllEventsSpec.cs" company="Akka.NET Project">
+// <copyright file="SqliteCurrentPersistenceIdsSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,18 +13,18 @@ using Akka.Persistence.Query;
 using Akka.Persistence.TCK.Query;
 using Xunit;
 
-namespace Akka.Persistence.Embedded.Tests.Query.Both
+namespace Akka.Persistence.Embedded.Tests.Query.Tck
 {
-    public class SqliteBothCurrentAllEventsSpec : CurrentAllEventsSpec
+    public class SqliteCurrentPersistenceIdsSpec : CurrentPersistenceIdsSpec
     {
         private readonly SqliteTestDb _db;
 
-        public SqliteBothCurrentAllEventsSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public SqliteCurrentPersistenceIdsSpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private SqliteBothCurrentAllEventsSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(SqliteSpecConfig.Create(db, SqliteTestMode.BOTH), nameof(SqliteBothCurrentAllEventsSpec), output)
+        private SqliteCurrentPersistenceIdsSpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(SqliteSpecConfig.Create(db), nameof(SqliteCurrentPersistenceIdsSpec), output)
         {
             _db = db;
             SqliteSpecConfig.EnsureThreadPoolWarmed();

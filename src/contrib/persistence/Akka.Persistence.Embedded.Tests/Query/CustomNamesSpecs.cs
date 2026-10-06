@@ -16,81 +16,58 @@ using Xunit;
 namespace Akka.Persistence.Embedded.Tests.Query
 {
     /// <summary>
-    /// Every table and column has a non-default name. Several default names are shared (<c>persistence_id</c> in three
-    /// tables, <c>manifest</c> in two, <c>sequence_number</c> in three), so a column name swapped in a statement hides
-    /// behind the defaults and shows here.
+    /// Every table has a non-default name. The columns keep their fixed names, so this shows a table name that a statement
+    /// leaves out or hard codes.
     /// </summary>
     internal static class CustomNames
     {
         public const string Hocon = """
             akka.persistence.journal.embedded {
-                default {
-                    journal {
-                        table-name = evt
-                        columns {
-                            ordering = o, created = created_at_ticks, deleted = is_deleted_flag, persistence-id = pid
-                            sequence-number = seq, message = payload_blob, tags = tgs, manifest = man, identifier = ident
-                            writer-uuid = writer_uuid_long_name_x
-                        }
-                    }
-                    metadata {
-                        table-name = md
-                        columns { persistence-id = mpid, sequence-number = mseq }
-                    }
-                    tag {
-                        table-name = tg
-                        columns { ordering-id = oid, tag-value = tg_value_column, persistence-id = tpid, sequence-nr = tseq }
-                    }
-                }
+                table-name = evt
+                tag-table-name = tg
             }
             akka.persistence.snapshot-store.embedded {
-                default.snapshot {
-                    table-name = snp
-                    columns { persistence-id = spid, sequence-number = sseq, created = sc, snapshot = payload_snapshot_bytes, manifest = sman, serializerId = sid }
-                }
+                table-name = snp
             }
             """;
     }
 
-    /// <summary>Capture workload, delete-compatibility, tag table and writer uuid, all with custom names.</summary>
-    public class CustomNamesBothQuerySpec : CaptureWorkloadQuerySpecBase
+    /// <summary>Capture workload, deletes, tags and snapshots, all with custom table names.</summary>
+    public class CustomNamesQuerySpec : CaptureWorkloadQuerySpecBase
     {
-        public CustomNamesBothQuerySpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
+        public CustomNamesQuerySpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
         {
         }
 
-        private CustomNamesBothQuerySpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(
-                db,
-                SqliteSpecConfig.Create(db, TagWriteMode.Both, deleteCompat: true, extra: CustomNames.Hocon),
-                nameof(CustomNamesBothQuerySpec),
-                output)
+        private CustomNamesQuerySpec(SqliteTestDb db, ITestOutputHelper output)
+            : base(db, SqliteSpecConfig.Create(db, CustomNames.Hocon), nameof(CustomNamesQuerySpec), output)
         {
         }
 
-        [Fact(DisplayName = "Should_write_replay_delete_and_snapshot_through_custom_names_When_every_name_is_custom")]
-        public async Task Should_write_replay_delete_and_snapshot_through_custom_names_When_every_name_is_custom()
+        [Fact(DisplayName = "Should_write_replay_delete_and_snapshot_through_custom_names_When_every_table_name_is_custom")]
+        public async Task Should_write_replay_delete_and_snapshot_through_custom_names_When_every_table_name_is_custom()
         {
             await WriteOneAsync("names", 1, new TestEvent("a"), "red");
             await WriteOneAsync("names", 2, new TestEvent("b"), "red", "blue");
             await WriteOneAsync("names", 3, new TestEvent("c"));
 
             // the rows are where the custom names say
-            Db.Query("SELECT pid, seq, ident, writer_uuid_long_name_x, tgs FROM evt WHERE pid = 'names' ORDER BY seq")
+            Db.Query("SELECT persistence_id, sequence_number FROM evt WHERE persistence_id = 'names' ORDER BY sequence_number")
                 .Select(r => ((string)r[0]!, (long)r[1]!)).Should().Equal(("names", 1L), ("names", 2L), ("names", 3L));
-            Db.Query("SELECT tg_value_column, tpid, tseq FROM tg ORDER BY oid, tg_value_column")
+            Db.Query("SELECT tag, persistence_id, sequence_nr FROM tg ORDER BY ordering_id, tag")
                 .Select(r => ((string)r[0]!, (string)r[1]!, (long)r[2]!))
                 .Should().Equal(("red", "names", 1L), ("blue", "names", 2L), ("red", "names", 2L));
-            Db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('journal', 'tags', 'snapshot', 'journal_metadata')")
+            Db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('journal', 'tags', 'snapshot')")
                 .Should().BeEmpty("no table with a default name exists");
 
             var replayed = await ReplayAsync("names");
             replayed.Replayed.Select(r => r.SequenceNr).Should().Equal(1L, 2L, 3L);
             replayed.HighestSequenceNr.Should().Be(3L);
 
-            // delete-compatibility: the metadata row keeps the highest sequence number after the rows are gone
+            // the tombstone keeps the highest sequence number after the other rows are gone
             await DeleteToAsync("names", 3);
-            Db.Query("SELECT mpid, mseq FROM md WHERE mpid = 'names'").Select(r => ((string)r[0]!, (long)r[1]!)).Should().Equal(("names", 3L));
+            Db.Query("SELECT sequence_number, deleted FROM evt WHERE persistence_id = 'names'").Select(r => (r[0], r[1])).Should().Equal((3L, 1L));
+            Db.Query("SELECT count(*) FROM tg WHERE persistence_id = 'names'").Single()[0].Should().Be(0L);
             var afterDelete = await ReplayAsync("names");
             afterDelete.Replayed.Should().BeEmpty();
             afterDelete.HighestSequenceNr.Should().Be(3L);
@@ -100,45 +77,15 @@ namespace Akka.Persistence.Embedded.Tests.Query
 
             // snapshot store
             var probe = CreateTestProbe();
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata("names", 3, new System.DateTime(2026, 1, 1, 12, 0, 0, System.DateTimeKind.Utc)), new TestEvent("snap")), probe.Ref);
+            var created = new System.DateTime(2026, 1, 1, 12, 0, 0, System.DateTimeKind.Utc);
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata("names", 3, created), new TestEvent("snap")), probe.Ref);
             await probe.ExpectMsgAsync<SaveSnapshotSuccess>(Timeout);
             SnapshotStore.Tell(new LoadSnapshot("names", SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
             var loaded = await probe.ExpectMsgAsync<LoadSnapshotResult>(Timeout);
             loaded.Snapshot!.Metadata.SequenceNr.Should().Be(3L);
             loaded.Snapshot.Snapshot.Should().Be(new TestEvent("snap"));
-            Db.Query("SELECT spid, sseq, sc FROM snp").Select(r => ((string)r[0]!, (long)r[1]!, (long)r[2]!)).Should().Equal(("names", 3L, new System.DateTime(2026, 1, 1, 12, 0, 0, System.DateTimeKind.Utc).Ticks));
-        }
-    }
-
-    /// <summary>Capture workload in Csv mode with custom names, so the <c>tags</c> column name is exercised.</summary>
-    public class CustomNamesCsvQuerySpec : CaptureWorkloadQuerySpecBase
-    {
-        public CustomNamesCsvQuerySpec(ITestOutputHelper output) : this(new SqliteTestDb(), output)
-        {
-        }
-
-        private CustomNamesCsvQuerySpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(
-                db,
-                SqliteSpecConfig.Create(db, TagWriteMode.Csv, extra: CustomNames.Hocon),
-                nameof(CustomNamesCsvQuerySpec),
-                output)
-        {
-        }
-
-        protected override long LastRedOrdering => 6L;
-
-        [Fact(DisplayName = "Should_store_tags_in_the_custom_tags_column_When_tag_mode_is_Csv")]
-        public async Task Should_store_tags_in_the_custom_tags_column_When_tag_mode_is_Csv()
-        {
-            await WriteOneAsync("csv-names", 1, new TestEvent("a"), "red", "blue");
-
-            var column = (string)Db.Query("SELECT tgs FROM evt WHERE pid = 'csv-names'")[0][0]!;
-            column.Trim(';').Split(';').Should().BeEquivalentTo("red", "blue");
-            Db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('tg', 'tags')").Should().BeEmpty();
-
-            var found = await RunAsync(ReadJournal.CurrentEventsByTag("blue", Akka.Persistence.Query.NoOffset.Instance));
-            found.Select(e => e.PersistenceId).Should().Equal("csv-names");
+            Db.Query("SELECT persistence_id, sequence_number, created FROM snp").Select(r => ((string)r[0]!, (long)r[1]!, (long)r[2]!))
+                .Should().Equal(("names", 3L, created.Ticks));
         }
     }
 
@@ -152,7 +99,7 @@ namespace Akka.Persistence.Embedded.Tests.Query
         private ReplayPagingSpec(SqliteTestDb db, ITestOutputHelper output)
             : base(
                 db,
-                SqliteSpecConfig.Create(db, SqliteTestMode.TT, "akka.persistence.journal.embedded.replay-batch-size = 3"),
+                SqliteSpecConfig.Create(db, "akka.persistence.journal.embedded.replay-batch-size = 3"),
                 nameof(ReplayPagingSpec),
                 output)
         {

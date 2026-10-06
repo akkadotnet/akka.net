@@ -363,11 +363,8 @@ namespace Akka.Persistence.Embedded.Journal
             // Prepared once per batch inside the transaction: a missing table fails the batch, not the thread.
             // Prepare is a no-op for a command that is already prepared.
             _insert.Prepare();
-            if (_settings.WritesTagTable)
-            {
-                _insertReturningId.Prepare();
-                _insertTag.Prepare();
-            }
+            _insertReturningId.Prepare();
+            _insertTag.Prepare();
         }
 
         private SqliteCommand CreateInsert(SqliteConnection connection, string sql)
@@ -379,18 +376,15 @@ namespace Akka.Persistence.Embedded.Journal
             command.Parameters.Add("@persistence_id", SqliteType.Text);
             command.Parameters.Add("@sequence_number", SqliteType.Integer);
             command.Parameters.Add("@message", SqliteType.Blob);
-            if (_settings.WritesTagsColumn)
-                command.Parameters.Add("@tags", SqliteType.Text);
             command.Parameters.Add("@manifest", SqliteType.Text);
             command.Parameters.Add("@identifier", SqliteType.Integer);
-            if (_settings.UseWriterUuid)
-                command.Parameters.Add("@writer_uuid", SqliteType.Text);
+            command.Parameters.Add("@writer_uuid", SqliteType.Text);
             return command;
         }
 
         private void InsertRow(JournalRow row)
         {
-            var returnsId = _settings.WritesTagTable && row.Tags.Length > 0;
+            var returnsId = row.Tags.Length > 0;
             var command = returnsId ? _insertReturningId! : _insert!;
 
             var p = command.Parameters;
@@ -399,12 +393,9 @@ namespace Akka.Persistence.Embedded.Journal
             p["@persistence_id"].Value = row.PersistenceId;
             p["@sequence_number"].Value = row.SequenceNr;
             p["@message"].Value = row.Message;
-            if (_settings.WritesTagsColumn)
-                p["@tags"].Value = row.TagsColumn;
             p["@manifest"].Value = row.Manifest;
             p["@identifier"].Value = (long)row.Identifier;
-            if (_settings.UseWriterUuid)
-                p["@writer_uuid"].Value = (object?)row.WriterUuid ?? DBNull.Value;
+            p["@writer_uuid"].Value = (object?)row.WriterUuid ?? DBNull.Value;
 
             if (!returnsId)
             {
@@ -452,14 +443,7 @@ namespace Akka.Persistence.Embedded.Journal
                 {
                     ExecuteWithMarker(connection, transaction, _sql.DeleteTombstone, request.PersistenceId, marker.Value);
                     ExecuteWithMarker(connection, transaction, _sql.DeletePhysical, request.PersistenceId, marker.Value);
-                    if (_settings.DeleteCompatibilityMode)
-                    {
-                        ExecuteWithMarker(connection, transaction, _sql.MetadataInsert, request.PersistenceId, marker.Value);
-                        ExecuteWithMarker(connection, transaction, _sql.MetadataDelete, request.PersistenceId, marker.Value);
-                    }
-
-                    if (_settings.WritesTagTable)
-                        ExecuteWithMarker(connection, transaction, _sql.DeleteTags, request.PersistenceId, marker.Value);
+                    ExecuteWithMarker(connection, transaction, _sql.DeleteTags, request.PersistenceId, marker.Value);
                 }
 
                 transaction.Commit();

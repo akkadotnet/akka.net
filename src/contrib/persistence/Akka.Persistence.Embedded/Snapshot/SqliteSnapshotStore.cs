@@ -38,9 +38,7 @@ namespace Akka.Persistence.Embedded.Snapshot
         {
             var pluginPath = Self.Path.Name;
             _system = (ExtendedActorSystem)Context.System;
-            _settings = SnapshotSettings.Create(snapshotConfig, pluginPath, _system.Settings.Config);
-            foreach (var warning in _settings.Warnings)
-                _log.Warning(warning);
+            _settings = SnapshotSettings.Create(snapshotConfig, pluginPath);
 
             _sql = new SnapshotSql(_settings);
             _worker = new SqliteWorkerPool(_settings.ConnectionString, 1, $"{pluginPath}-worker", _log);
@@ -115,7 +113,7 @@ namespace Akka.Persistence.Embedded.Snapshot
             if (row.SerializerId is null)
             {
                 throw new SerializationException(
-                    $"Snapshot row ({row.PersistenceId}, {row.SequenceNr}) has a NULL {_settings.Tables.SerializerId}. " +
+                    $"Snapshot row ({row.PersistenceId}, {row.SequenceNr}) has a NULL serializer_id. " +
                     "Akka.Persistence.Embedded cannot read rows without a serializer id (that needs Type.GetType). " +
                     "Re-write these rows with Akka.Persistence.Sql first.");
             }
@@ -134,7 +132,7 @@ namespace Akka.Persistence.Embedded.Snapshot
             int identifier;
             try
             {
-                (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot, _settings.DefaultSerializer);
+                (bytes, manifest, identifier) = RowCodec.SerializePayload(_system, snapshot);
             }
             catch (Exception e)
             {

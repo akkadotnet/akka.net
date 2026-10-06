@@ -46,9 +46,8 @@ internal static class Program
         try
         {
             CheckNativeLibrary();
-            await RunTagTableAsync(NewDatabase(files));
-            await RunCsvAsync(NewDatabase(files));
-            await RunBothAsync(NewDatabase(files));
+            await RunMainAsync(NewDatabase(files));
+            await RunCustomTablesAsync(NewDatabase(files));
             await RunUnregisteredAsync(NewDatabase(files));
 
             Console.WriteLine("[canary-sqlite] OK");
@@ -121,7 +120,7 @@ internal static class Program
     /// Builds the system the way an application does: Akka.Hosting plus <c>WithEmbeddedPersistence</c>. HOCON is not
     /// involved at all: no class names, no reference config, no loggers by name.
     /// </summary>
-    private static async Task<HostedCanary> StartHostedAsync(string label, string path, TagWriteMode tagWriteMode, LogWatchdogFilter watchdog)
+    private static async Task<HostedCanary> StartHostedAsync(string label, string path, bool customTableNames, LogWatchdogFilter watchdog)
     {
         var appBuilder = Host.CreateApplicationBuilder();
         appBuilder.Logging.ClearProviders();
@@ -134,10 +133,15 @@ internal static class Program
                 journalOptions: new EmbeddedJournalOptions
                 {
                     ConnectionString = "Data Source=" + path,
-                    TagStorageMode = tagWriteMode,
+                    JournalTableName = customTableNames ? "canary_events" : null,
+                    TagTableName = customTableNames ? "canary_tags" : null,
                     QueryRefreshInterval = TimeSpan.FromMilliseconds(100)
                 },
-                snapshotOptions: new EmbeddedSnapshotOptions { ConnectionString = "Data Source=" + path },
+                snapshotOptions: new EmbeddedSnapshotOptions
+                {
+                    ConnectionString = "Data Source=" + path,
+                    TableName = customTableNames ? "canary_snapshots" : null
+                },
                 journalBuilder: journal => journal
                     .AddWriteEventAdapter<CanaryTagger>("canary-tagger", [typeof(CanaryEvent)])
                     .WithHealthCheck(),
@@ -169,14 +173,14 @@ internal static class Program
     }
 
     /// <summary>
-    /// Persists, snapshots, recovers, deletes and runs every query against a TagTable database.
+    /// Persists, snapshots, recovers, deletes and runs every query against a database with the default table names.
     /// </summary>
-    private static async Task RunTagTableAsync(string path)
+    private static async Task RunMainAsync(string path)
     {
-        const string label = "tagtable";
+        const string label = "main";
         Console.WriteLine($"[canary-sqlite] creating ActorSystem '{label}' ...");
         var watchdog = new LogWatchdogFilter();
-        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.TagTable, watchdog);
+        await using var hosted = await StartHostedAsync(label, path, customTableNames: false, watchdog);
         var system = hosted.System;
         {
             watchdog.ThrowIfAnyProblems(label, "startup");
@@ -282,42 +286,22 @@ internal static class Program
         Console.WriteLine($"[canary-sqlite] {label}: every current query returned what it should");
     }
 
-    /// <summary>A second database in Csv mode: tagged events are found through the tags column.</summary>
-    private static async Task RunCsvAsync(string path)
+    /// <summary>
+    /// A second database with custom table names (set through the Hosting options): events, tags, a delete and a snapshot
+    /// all go to the named tables, and a tag query skips the tombstone.
+    /// </summary>
+    private static async Task RunCustomTablesAsync(string path)
     {
-        const string label = "csv";
+        const string label = "custom-tables";
         var watchdog = new LogWatchdogFilter();
-        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.Csv, watchdog);
+        await using var hosted = await StartHostedAsync(label, path, customTableNames: true, watchdog);
         var system = hosted.System;
         {
-            var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("csv-1", true)), "csv-1");
-            Require(label, await actor.Ask<int>(new PersistCmd("tagged", true), AskTimeout) == 1, "persist tagged");
-            Require(label, await actor.Ask<int>(new PersistCmd("plain", false), AskTimeout) == 2, "persist plain");
-
-            var readJournal = system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier);
-            var found = await readJournal.CurrentEventsByTag("red", Offset.NoOffset())
-                .RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(AskTimeout);
-            Require(label, found.Count == 1 && found[0].SequenceNr == 1 && found[0].Tags.SequenceEqual(["red"]),
-                $"CurrentEventsByTag(red) returned {found.Count} envelopes");
-            Console.WriteLine($"[canary-sqlite] {label}: found the tagged event through the Csv column");
-
-            watchdog.ThrowIfAnyProblems(label, "run");
-        }
-        Console.WriteLine($"[canary-sqlite] {label}: terminated");
-    }
-
-    /// <summary>A third database in Both mode: tags go to the column and the table, and a delete cleans up the tag table.</summary>
-    private static async Task RunBothAsync(string path)
-    {
-        const string label = "both";
-        var watchdog = new LogWatchdogFilter();
-        await using var hosted = await StartHostedAsync(label, path, TagWriteMode.Both, watchdog);
-        var system = hosted.System;
-        {
-            var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("both-1", true)), "both-1");
+            var actor = system.ActorOf(Props.Create(() => new CanaryPersistentActor("custom-1", true)), "custom-1");
             Require(label, await actor.Ask<int>(new PersistCmd("plain", false), AskTimeout) == 1, "persist plain");
             Require(label, await actor.Ask<int>(new PersistCmd("tagged", true), AskTimeout) == 2, "persist tagged");
             Require(label, await actor.Ask<int>(new PersistCmd("last", true), AskTimeout) == 3, "persist last");
+            Require(label, await actor.Ask<long>(new SaveNow(), AskTimeout) == 3, "snapshot at 3");
             Require(label, await actor.Ask<long>(new DeleteTo(2), AskTimeout) == 2, "delete up to 2");
 
             var readJournal = system.ReadJournalFor<SqliteReadJournal>(SqliteReadJournal.Identifier);
@@ -325,7 +309,21 @@ internal static class Program
                 .RunWith(Sink.Seq<EventEnvelope>(), system.Materializer()).WaitAsync(AskTimeout);
             Require(label, found.Count == 1 && found[0].SequenceNr == 3 && found[0].Tags.SequenceEqual(["red"]),
                 $"CurrentEventsByTag(red) returned {found.Count} envelopes after the delete");
-            Console.WriteLine($"[canary-sqlite] {label}: tag lookup and delete work with the column and the table");
+
+            await using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('canary_events', 'canary_tags', 'canary_snapshots', 'journal', 'tags', 'snapshot')";
+            var names = new List<string>();
+            await using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                    names.Add(reader.GetString(0));
+            }
+
+            Require(label, names.Order().SequenceEqual(["canary_events", "canary_snapshots", "canary_tags"]),
+                $"the tables were [{string.Join(',', names)}]");
+            Console.WriteLine($"[canary-sqlite] {label}: events, tags and snapshots went to the custom tables, and the tag query skipped the tombstone");
 
             watchdog.ThrowIfAnyProblems(label, "run");
         }

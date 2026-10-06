@@ -57,7 +57,7 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         public async Task Should_release_database_file_When_actor_system_terminates()
         {
             using var db = new SqliteTestDb();
-            var system = (ExtendedActorSystem)ActorSystem.Create("release-file", SqliteSpecConfig.Create(db, SqliteTestMode.TT));
+            var system = (ExtendedActorSystem)ActorSystem.Create("release-file", SqliteSpecConfig.Create(db));
             var persistence = Persistence.Instance.Apply(system);
 
             // touch every component that opens a connection: writer, readers, snapshot worker, query threads
@@ -99,7 +99,7 @@ namespace Akka.Persistence.Embedded.Tests.Lifecycle
         }
 
         private RestartSpec(SqliteTestDb db, ITestOutputHelper output)
-            : base(db, SqliteSpecConfig.Create(db, SqliteTestMode.TT), nameof(RestartSpec), output)
+            : base(db, SqliteSpecConfig.Create(db), nameof(RestartSpec), output)
         {
         }
 

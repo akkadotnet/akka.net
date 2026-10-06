@@ -28,7 +28,7 @@ namespace Akka.Persistence.Embedded.Journal
     {
         private readonly JournalSettings _settings;
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly string? _writerUuid;
+        private readonly string _writerUuid;
         private readonly JournalSql _sql;
         private readonly RowCodec _codec;
         private readonly JournalWriter _writer;
@@ -42,13 +42,11 @@ namespace Akka.Persistence.Embedded.Journal
         public SqliteWriteJournal(Config journalConfig)
         {
             var pluginPath = Self.Path.Name;
-            _settings = JournalSettings.Create(journalConfig, pluginPath, Context.System.Settings.Config);
-            foreach (var warning in _settings.Warnings)
-                _log.Warning(warning);
+            _settings = JournalSettings.Create(journalConfig, pluginPath);
 
-            _writerUuid = _settings.UseWriterUuid ? Guid.NewGuid().ToString("N") : null;
+            _writerUuid = Guid.NewGuid().ToString("N");
             _sql = new JournalSql(_settings);
-            _codec = new RowCodec((ExtendedActorSystem)Context.System, _settings);
+            _codec = new RowCodec((ExtendedActorSystem)Context.System);
             _writer = new JournalWriter(_settings, _sql, _log);
             _readPool = new SqliteWorkerPool(_settings.ConnectionString, _settings.ReadThreads, $"{pluginPath}-read", _log);
         }
@@ -65,7 +63,7 @@ namespace Akka.Persistence.Embedded.Journal
 
             var init = new InitWork(connection =>
             {
-                var warnings = SqliteSchema.EnsureJournalSchema(connection, _settings, false, false);
+                var warnings = SqliteSchema.EnsureJournalSchema(connection, _settings);
                 foreach (var warning in warnings)
                     _log.Warning(warning);
             });
@@ -236,7 +234,6 @@ namespace Akka.Persistence.Embedded.Journal
         {
             var next = Math.Max(1L, fromSequenceNr);
             var remaining = max;
-            var identifierColumn = _settings.Tables.Identifier;
 
             while (remaining > 0 && next <= toSequenceNr)
             {
@@ -248,7 +245,7 @@ namespace Akka.Persistence.Embedded.Journal
 
                 // deserialize here, on the awaiting side, never on a reader thread
                 foreach (var row in rows)
-                    recoveryCallback(_codec.ToPersistent(row, identifierColumn));
+                    recoveryCallback(_codec.ToPersistent(row));
 
                 remaining -= rows.Count;
                 if (rows.Count < take)
