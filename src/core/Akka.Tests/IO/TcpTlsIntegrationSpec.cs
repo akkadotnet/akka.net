@@ -69,6 +69,75 @@ namespace Akka.Tests.IO
             await peerTask.WaitAsync(TestTimeout);
         }
 
+        [Theory(DisplayName = "Should_Handshake_With_A_Loaded_Certificate_And_Explicit_Pin_And_Hostname_Policy")]
+        [InlineData("bytes")]
+        [InlineData("file")]
+        [InlineData("store")]
+        public async Task Should_handshake_with_a_loaded_certificate_and_explicit_pin_and_hostname_policy(string source)
+        {
+            using var generatedCertificate = CreateCertificate("localhost", server: true);
+            var pfx = generatedCertificate.Export(X509ContentType.Pkcs12);
+            var path = Path.Combine(Path.GetTempPath(), $"akka-tls-{Guid.NewGuid():N}.p12");
+            using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            var stored = false;
+            try
+            {
+                X509Certificate2 serverCertificate;
+                if (source == "bytes")
+                {
+                    serverCertificate = TlsCertificateLoader.LoadPkcs12(
+                        pfx, password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+                }
+                else if (source == "file")
+                {
+                    File.WriteAllBytes(path, pfx);
+                    serverCertificate = TlsCertificateLoader.LoadPkcs12FromFile(
+                        path, password: null, keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+                }
+                else if (source == "store")
+                {
+                    store.Open(OpenFlags.ReadWrite);
+                    store.Add(generatedCertificate);
+                    stored = true;
+                    serverCertificate = TlsCertificateLoader.LoadFromStore(
+                        generatedCertificate.Thumbprint, validOnly: false);
+                    store.Remove(generatedCertificate);
+                    stored = false;
+                }
+                else
+                {
+                    throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown certificate source.");
+                }
+
+                using (serverCertificate)
+                {
+                    using var listener = new TcpListener(IPAddress.Loopback, 0);
+                    listener.Start();
+                    var endpoint = (IPEndPoint)listener.LocalEndpoint;
+                    var peerTask = AcceptAndAuthenticateAsync(listener, serverCertificate, SslProtocols.Tls12);
+                    var peerPolicy = TlsPeerPolicy.PinnedCertificates(serverCertificate.Thumbprint)
+                        .And(TlsCertificateValidation.ValidateHostname("localhost"));
+                    var commander = CreateTestProbe();
+
+                    commander.Send(Sys.Tcp(), new Tcp.Connect(endpoint)
+                    {
+                        Tls = TlsClientSettings.ServerOnly(peerPolicy).WithTargetHost("localhost")
+                    });
+
+                    await commander.ExpectMsgAsync<Tcp.Connected>(TestTimeout);
+                    await peerTask.WaitAsync(TestTimeout);
+                    await AbortConnectionAsync(commander, commander.LastSender);
+                }
+            }
+            finally
+            {
+                if (stored)
+                    store.Remove(generatedCertificate);
+                File.Delete(path);
+                CryptographicOperations.ZeroMemory(pfx);
+            }
+        }
+
         [Fact(DisplayName = "Should_Keep_Plain_TCP_Connections_Working_Without_TLS_Settings")]
         public async Task Should_keep_plain_tcp_connections_working_without_tls_settings()
         {
