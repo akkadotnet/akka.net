@@ -437,6 +437,14 @@ namespace Akka.Persistence
                 section = section.WithFallback(defaultConfig);
 
             var config = section.WithFallback(system.Settings.Config.GetConfig(fallbackPath));
+
+            // With reflection off the registration decides, but a HOCON `class` that names another type is a conflict, and
+            // starting the registered type quietly would not be what the HOCON says. With reflection on, HOCON decides.
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported && registered is not null && registered.NamesAnotherType(config.GetString("class", null)))
+                throw new ConfigurationException(
+                    $"[{configPath}.class] names [{config.GetString("class", null)}], but Akka.Persistence.Hosting registered [{registered.TypeName}] for this plugin and " +
+                    "dynamic type loading is disabled. Remove the `class` override, or register options whose generic argument is the type it names.");
+
             var registeredProps = registered switch
             {
                 JournalDetails j => j.CreateProps(config),

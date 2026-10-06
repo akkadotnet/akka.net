@@ -119,13 +119,12 @@ namespace Akka.Persistence.Tests
             });
         }
 
-        [Fact(DisplayName = "PersistenceSetup should ignore the HOCON class When the plugin is registered")]
-        public async Task Should_ignore_hocon_class_When_plugin_is_registered()
+        [Fact(DisplayName = "PersistenceSetup should start the registered plugins When the HOCON class names them and the switch is off")]
+        public async Task Should_start_the_registered_plugins_When_the_hocon_class_names_them_and_the_switch_is_off()
         {
-            var hocon = $$"""
-                {{JournalPath}}.class = "Some.Missing.Journal, Some.Missing.Assembly"
-                {{SnapshotPath}}.class = "Some.Missing.Store, Some.Missing.Assembly"
-                """;
+            // the assembly part of the name does not take part in the comparison
+            var hocon = JournalHocon(typeof(RegisteredJournal)) + SnapshotHocon(typeof(RegisteredSnapshotStore))
+                        + $"{JournalPath}.class = \"{typeof(RegisteredJournal).FullName}\"";
             var setup = PersistenceSetup.Create()
                 .WithJournal(JournalPath, _ => new RegisteredJournal())
                 .WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore());
@@ -136,6 +135,39 @@ namespace Akka.Persistence.Tests
 
                 UnderlyingProps(persistence.JournalFor(JournalPath)).Type.Should().Be(typeof(RegisteredJournal));
                 UnderlyingProps(persistence.SnapshotStoreFor(SnapshotPath)).Type.Should().Be(typeof(RegisteredSnapshotStore));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should throw naming both types When the HOCON class of a journal names another type and the switch is off")]
+        public async Task Should_throw_naming_both_types_When_the_hocon_class_of_a_journal_names_another_type_and_the_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal());
+
+            await RunAsync(false, JournalHocon(typeof(UnregisteredJournal)), setup, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).JournalFor(JournalPath));
+
+                exception.Message.Should().Contain($"[{JournalPath}.class]");
+                exception.Message.Should().Contain(typeof(UnregisteredJournal).FullName!);
+                exception.Message.Should().Contain(typeof(RegisteredJournal).FullName!);
+                exception.Message.Should().Contain("Remove the `class` override");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should throw naming both types When the HOCON class of a snapshot store names another type and the switch is off")]
+        public async Task Should_throw_naming_both_types_When_the_hocon_class_of_a_snapshot_store_names_another_type_and_the_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithSnapshotStore(SnapshotPath, _ => new RegisteredSnapshotStore());
+
+            await RunAsync(false, SnapshotHocon(typeof(UnregisteredSnapshotStore)), setup, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).SnapshotStoreFor(SnapshotPath));
+
+                exception.Message.Should().Contain($"[{SnapshotPath}.class]");
+                exception.Message.Should().Contain(typeof(UnregisteredSnapshotStore).FullName!);
+                exception.Message.Should().Contain(typeof(RegisteredSnapshotStore).FullName!);
                 return Task.CompletedTask;
             });
         }
@@ -487,7 +519,7 @@ namespace Akka.Persistence.Tests
             var registeredTagger = new TagAdapter();
             var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
             [
-                EventAdapterDetails.Create("tagger", _ => registeredTagger, typeof(TaggedEvent)),
+                EventAdapterDetails.Create("tagger", _ => registeredTagger, typeof(TaggedEvent), typeof(WriteOnlyEvent)),
             ]);
             var hocon = $$"""
                 {{JournalPath}} {
@@ -594,8 +626,8 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        [Fact(DisplayName = "PersistenceSetup should ignore a HOCON binding that only names registered adapters When the switch is off")]
-        public async Task Should_ignore_a_hocon_binding_that_only_names_registered_adapters_When_the_switch_is_off()
+        [Fact(DisplayName = "PersistenceSetup should ignore a HOCON binding that a registered adapter already has When the switch is off")]
+        public async Task Should_ignore_a_hocon_binding_that_a_registered_adapter_already_has_When_the_switch_is_off()
         {
             // what Akka.Persistence.Hosting writes next to its registrations: the same adapter and binding in HOCON
             var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
@@ -610,6 +642,29 @@ namespace Akka.Persistence.Tests
             await RunAsync(false, hocon, setup, system =>
             {
                 Persistence.Instance.Apply(system).AdaptersFor(JournalPath).Get<TaggedEvent>().Should().BeOfType<TagAdapter>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "PersistenceSetup should throw naming the binding When HOCON binds another type to a registered adapter and the switch is off")]
+        public async Task Should_throw_naming_the_binding_When_hocon_binds_another_type_to_a_registered_adapter_and_the_switch_is_off()
+        {
+            var setup = PersistenceSetup.Create().WithJournal(JournalPath, _ => new RegisteredJournal(), eventAdapters:
+            [
+                EventAdapterDetails.Create("tagger", _ => new TagAdapter(), typeof(TaggedEvent)),
+            ]);
+            // the adapter is registered, but nothing in the registrations binds WriteOnlyEvent to it
+            var hocon = $$"""
+                {{JournalPath}}.event-adapters.tagger = "{{typeof(TagAdapter).FullName}}, {{TestAssembly}}"
+                {{JournalPath}}.event-adapter-bindings."{{typeof(WriteOnlyEvent).FullName}}, {{TestAssembly}}" = tagger
+                """;
+
+            await RunAsync(false, hocon, setup, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor(JournalPath));
+
+                exception.Message.Should().Contain($"[{JournalPath}.event-adapter-bindings]");
+                exception.Message.Should().Contain(typeof(WriteOnlyEvent).FullName!);
                 return Task.CompletedTask;
             });
         }

@@ -368,9 +368,10 @@ namespace Akka.Persistence.Journal
                 // A registered binding never reaches here, it comes from an EventAdapterDetails.
                 if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
                 {
-                    // HOCON that only points at registered adapters is what Akka.Persistence.Hosting writes next to
-                    // its registrations; the registrations carry the same bindings, so there is nothing to resolve
-                    if (kv.Value.All(registeredNames.Contains))
+                    // The binding Akka.Persistence.Hosting writes next to its registrations: every adapter it names is
+                    // registered, and a registered adapter is bound to the type it names, so there is nothing to resolve.
+                    // A hand-written binding of any other type is not in the registrations, so it fails with the rest.
+                    if (kv.Value.All(registeredNames.Contains) && IsBoundByRegistration(kv.Key, registered))
                         return (KeyValuePair<Type, IEventAdapter>?)null;
 
                     throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
@@ -476,6 +477,11 @@ namespace Akka.Persistence.Journal
             adapter = _map.GetOrAdd(type, value);
             return adapter;
         }
+
+        // a name comparison, nothing is loaded: the binding key's type name against the full name of each registered bound type
+        private static bool IsBoundByRegistration(string bindingKey, IReadOnlyCollection<EventAdapterDetails> registered)
+            => Akka.Util.TypeExtensions.TrySplitTypeName(bindingKey, out var name, out _)
+               && registered.Any(r => r.BoundTypes.Any(t => string.Equals(t.FullName, name, StringComparison.Ordinal)));
 
         private static string SettingPrefix(string pluginPath)
             => string.IsNullOrEmpty(pluginPath) ? string.Empty : pluginPath + ".";

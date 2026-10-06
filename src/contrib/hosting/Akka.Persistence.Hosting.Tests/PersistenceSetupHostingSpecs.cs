@@ -181,14 +181,53 @@ public class PersistenceSetupHostingSpecs
             });
     }
 
-    [Theory(DisplayName = "WithJournal should pick the HOCON class or the typed plugin When a plugin has both")]
-    [InlineData(true, typeof(JournalB))]
-    [InlineData(false, typeof(JournalA))]
-    public async Task Should_pick_the_HOCON_class_or_the_typed_plugin_When_a_plugin_has_both(bool dynamicTypeLoading, Type expected)
+    [Fact(DisplayName = "WithJournal should load the HOCON class When the options name another type and the switch is on")]
+    public async Task Should_load_the_HOCON_class_When_the_options_name_another_type_and_the_switch_is_on()
     {
         // HOCON names JournalB and the options name JournalA: with reflection on HOCON `class` wins, as it always did
         var journal = new TestJournalOptions<JournalA>("both", className: typeof(JournalB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
         var snapshot = new TestSnapshotOptions<SnapshotA>("both", className: typeof(SnapshotB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+
+        await RunAsync(true,
+            builder => builder.WithJournalAndSnapshot(journal, snapshot),
+            async system =>
+            {
+                var persistence = Persistence.Instance.Apply(system);
+
+                PropsOf(persistence.JournalFor(null)).Type.Should().Be(typeof(JournalB));
+                PropsOf(persistence.SnapshotStoreFor(null)).Type.Should().Be(typeof(SnapshotB));
+                await PersistAndRecoverAsync(system, "p-both", null, null);
+            });
+    }
+
+    [Fact(DisplayName = "WithJournal should throw naming both types When the options name another type than the HOCON class and the switch is off")]
+    public async Task Should_throw_naming_both_types_When_the_options_name_another_type_than_the_HOCON_class_and_the_switch_is_off()
+    {
+        var journal = new TestJournalOptions<JournalA>("clash", className: typeof(JournalB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+        var snapshot = new TestSnapshotOptions<SnapshotA>("clash", className: typeof(SnapshotB).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+
+        await RunAsync(false,
+            builder => builder.WithJournalAndSnapshot(journal, snapshot),
+            system =>
+            {
+                var persistence = Persistence.Instance.Apply(system);
+
+                var journalError = Assert.Throws<ConfigurationException>(() => persistence.JournalFor(null));
+                journalError.Message.Should().Contain(typeof(JournalA).FullName!).And.Contain(typeof(JournalB).FullName!);
+
+                var snapshotError = Assert.Throws<ConfigurationException>(() => persistence.SnapshotStoreFor(null));
+                snapshotError.Message.Should().Contain(typeof(SnapshotA).FullName!).And.Contain(typeof(SnapshotB).FullName!);
+                return Task.CompletedTask;
+            });
+    }
+
+    [Theory(DisplayName = "WithJournal should start the plugins When the HOCON class names the type the options name")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_start_the_plugins_When_the_HOCON_class_names_the_type_the_options_name(bool dynamicTypeLoading)
+    {
+        var journal = new TestJournalOptions<JournalA>("same", className: typeof(JournalA).AssemblyQualifiedName!) { IsDefaultPlugin = true };
+        var snapshot = new TestSnapshotOptions<SnapshotA>("same", className: typeof(SnapshotA).AssemblyQualifiedName!) { IsDefaultPlugin = true };
 
         await RunAsync(dynamicTypeLoading,
             builder => builder.WithJournalAndSnapshot(journal, snapshot),
@@ -196,9 +235,30 @@ public class PersistenceSetupHostingSpecs
             {
                 var persistence = Persistence.Instance.Apply(system);
 
-                PropsOf(persistence.JournalFor(null)).Type.Should().Be(expected);
-                PropsOf(persistence.SnapshotStoreFor(null)).Type.Should().Be(expected == typeof(JournalB) ? typeof(SnapshotB) : typeof(SnapshotA));
-                await PersistAndRecoverAsync(system, "p-both", null, null);
+                PropsOf(persistence.JournalFor(null)).Type.Should().Be(typeof(JournalA));
+                PropsOf(persistence.SnapshotStoreFor(null)).Type.Should().Be(typeof(SnapshotA));
+                await PersistAndRecoverAsync(system, "p-same", null, null);
+            });
+    }
+
+    [Fact(DisplayName = "AddEventAdapter should throw naming the binding When a hand-written binding of another type points at a Hosting adapter and the switch is off")]
+    public async Task Should_throw_naming_the_binding_When_a_hand_written_binding_of_another_type_points_at_a_Hosting_adapter_and_the_switch_is_off()
+    {
+        var extraBinding = $$"""
+            akka.persistence.journal.inmem.event-adapter-bindings."{{typeof(EventTwo).FullName}}, {{typeof(EventTwo).Assembly.GetName().Name}}" = [x]
+            """;
+
+        await RunAsync(false,
+            builder => builder
+                .WithInMemoryJournal(journal => journal.AddEventAdapter<FirstNamedAdapter>("x", new[] { typeof(EventOne) }))
+                .AddHocon(extraBinding, HoconAddMode.Append),
+            system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => Persistence.Instance.Apply(system).AdaptersFor("akka.persistence.journal.inmem"));
+
+                exception.Message.Should().Contain("akka.persistence.journal.inmem.event-adapter-bindings");
+                exception.Message.Should().Contain(typeof(EventTwo).FullName!);
+                return Task.CompletedTask;
             });
     }
 

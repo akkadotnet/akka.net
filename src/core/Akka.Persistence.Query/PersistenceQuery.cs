@@ -91,7 +91,15 @@ namespace Akka.Persistence.Query
             }
 
             if (registered is not null)
+            {
+                var hocon = _system.Settings.Config.HasPath(configPath) ? _system.Settings.Config.GetConfig(configPath).GetString("class", null) : null;
+                if (registered.NamesAnotherType(hocon))
+                    throw new ConfigurationException(
+                        $"[{configPath}.class] names [{hocon}], but Akka.Persistence.Hosting registered [{registered.TypeName}] for this read journal and " +
+                        "dynamic type loading is disabled. Remove the `class` override, or register options whose generic argument is the type it names.");
+
                 return CreateRegistered(registered, configPath);
+            }
 
             var pluginConfig = !string.IsNullOrEmpty(configPath) && _system.Settings.Config.HasPath(configPath)
                 ? _system.Settings.Config.GetConfig(configPath)

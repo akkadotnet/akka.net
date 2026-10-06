@@ -21,8 +21,8 @@ namespace Akka.Persistence.Query
     {
         private readonly Func<ExtendedActorSystem, Config, IReadJournalProvider> _createProvider;
 
-        private ReadJournalDetails(string pluginId, Func<ExtendedActorSystem, Config, IReadJournalProvider> createProvider, Config? defaultConfig)
-            : base(pluginId, defaultConfig)
+        private ReadJournalDetails(string pluginId, string typeName, Func<ExtendedActorSystem, Config, IReadJournalProvider> createProvider, Config? defaultConfig)
+            : base(pluginId, typeName, defaultConfig)
         {
             _createProvider = createProvider;
         }
@@ -43,7 +43,7 @@ namespace Akka.Persistence.Query
             if (factory is null)
                 throw new ArgumentNullException(nameof(factory));
 
-            return new ReadJournalDetails(pluginId, (system, config) => factory(system, config), defaultConfig);
+            return new ReadJournalDetails(pluginId, typeof(TProvider).FullName!, (system, config) => factory(system, config), defaultConfig);
         }
 
         internal IReadJournalProvider CreateProvider(ExtendedActorSystem system, Config config) => _createProvider(system, config);

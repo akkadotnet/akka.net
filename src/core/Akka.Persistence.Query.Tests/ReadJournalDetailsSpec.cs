@@ -86,14 +86,30 @@ namespace Akka.Persistence.Query.Tests
             });
         }
 
-        [Fact(DisplayName = "ReadJournalDetails should ignore the HOCON class When the read journal is registered and the switch is off")]
-        public async Task Should_ignore_hocon_class_When_read_journal_is_registered_and_the_switch_is_off()
+        [Fact(DisplayName = "ReadJournalDetails should start the registered read journal When the HOCON class names it and the switch is off")]
+        public async Task Should_start_the_registered_read_journal_When_the_hocon_class_names_it_and_the_switch_is_off()
         {
             var setup = Registered((_, _) => new RegisteredProvider());
 
-            await RunAsync(false, $"{ProviderId}.class = \"Some.Missing.Provider, Some.Missing.Assembly\"", setup, system =>
+            await RunAsync(false, ProviderHocon(typeof(RegisteredProvider)), setup, system =>
             {
                 PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId).Should().BeOfType<DummyReadJournal>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should throw naming both types When the HOCON class names another type and the switch is off")]
+        public async Task Should_throw_naming_both_types_When_the_hocon_class_names_another_type_and_the_switch_is_off()
+        {
+            var setup = Registered((_, _) => new RegisteredProvider());
+
+            await RunAsync(false, ProviderHocon(typeof(OtherProvider)), setup, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId));
+
+                exception.Message.Should().Contain($"[{ProviderId}.class]");
+                exception.Message.Should().Contain(typeof(OtherProvider).FullName!);
+                exception.Message.Should().Contain(typeof(RegisteredProvider).FullName!);
                 return Task.CompletedTask;
             });
         }

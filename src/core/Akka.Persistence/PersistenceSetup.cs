@@ -15,6 +15,7 @@ using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
+using Akka.Util;
 
 namespace Akka.Persistence
 {
@@ -136,14 +137,28 @@ namespace Akka.Persistence
     /// </summary>
     internal abstract class PersistencePluginDetails
     {
-        protected PersistencePluginDetails(string pluginId, Config? defaultConfig)
+        protected PersistencePluginDetails(string pluginId, string typeName, Config? defaultConfig)
         {
             if (string.IsNullOrWhiteSpace(pluginId))
                 throw new ArgumentException("A plugin id is required.", nameof(pluginId));
 
             PluginId = pluginId;
+            TypeName = typeName;
             DefaultConfig = defaultConfig;
         }
+
+        /// <summary>
+        /// The full name of the registered type, the name a HOCON <c>class</c> setting would give it.
+        /// </summary>
+        public string TypeName { get; }
+
+        /// <summary>
+        /// Whether a HOCON <c>class</c> setting names a type other than the registered one. An empty setting names
+        /// none, and the assembly part of a name is ignored. This is a name comparison, nothing is loaded.
+        /// </summary>
+        public bool NamesAnotherType(string? hoconClass)
+            => Akka.Util.TypeExtensions.TrySplitTypeName(hoconClass, out var name, out _)
+               && !string.Equals(name, TypeName, StringComparison.Ordinal);
 
         /// <summary>
         /// The plugin's config path, for example <c>akka.persistence.journal.my-journal</c>.
@@ -164,7 +179,7 @@ namespace Akka.Persistence
     /// </summary>
     internal abstract class PersistenceActorPluginDetails : PersistencePluginDetails
     {
-        protected PersistenceActorPluginDetails(string pluginId, Config? defaultConfig) : base(pluginId, defaultConfig)
+        protected PersistenceActorPluginDetails(string pluginId, string typeName, Config? defaultConfig) : base(pluginId, typeName, defaultConfig)
         {
         }
 
@@ -183,8 +198,8 @@ namespace Akka.Persistence
     {
         private readonly Func<Config, Props> _createProps;
 
-        private JournalDetails(string pluginId, Func<Config, Props> createProps, Config? defaultConfig, ImmutableArray<EventAdapterDetails> eventAdapters)
-            : base(pluginId, defaultConfig)
+        private JournalDetails(string pluginId, string typeName, Func<Config, Props> createProps, Config? defaultConfig, ImmutableArray<EventAdapterDetails> eventAdapters)
+            : base(pluginId, typeName, defaultConfig)
         {
             _createProps = createProps;
             EventAdapters = eventAdapters;
@@ -211,7 +226,7 @@ namespace Akka.Persistence
                 throw new ArgumentException($"Event adapter name [{duplicate.Key}] is used more than once.", nameof(eventAdapters));
 
             // the closed generic producer is created here, where the type is known, so the trimmer keeps what Props needs
-            return new JournalDetails(pluginId, config => Props.CreateBy(new PluginActorProducer<TJournal>(factory, config)), defaultConfig, adapters);
+            return new JournalDetails(pluginId, typeof(TJournal).FullName!, config => Props.CreateBy(new PluginActorProducer<TJournal>(factory, config)), defaultConfig, adapters);
         }
 
         public override Props CreateProps(Config config) => _createProps(config);
@@ -226,8 +241,8 @@ namespace Akka.Persistence
     {
         private readonly Func<Config, Props> _createProps;
 
-        private SnapshotStoreDetails(string pluginId, Func<Config, Props> createProps, Config? defaultConfig)
-            : base(pluginId, defaultConfig)
+        private SnapshotStoreDetails(string pluginId, string typeName, Func<Config, Props> createProps, Config? defaultConfig)
+            : base(pluginId, typeName, defaultConfig)
         {
             _createProps = createProps;
         }
@@ -241,7 +256,7 @@ namespace Akka.Persistence
             if (factory is null)
                 throw new ArgumentNullException(nameof(factory));
 
-            return new SnapshotStoreDetails(pluginId, config => Props.CreateBy(new PluginActorProducer<TStore>(factory, config)), defaultConfig);
+            return new SnapshotStoreDetails(pluginId, typeof(TStore).FullName!, config => Props.CreateBy(new PluginActorProducer<TStore>(factory, config)), defaultConfig);
         }
 
         public override Props CreateProps(Config config) => _createProps(config);
