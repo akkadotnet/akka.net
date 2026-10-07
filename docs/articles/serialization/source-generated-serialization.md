@@ -146,9 +146,9 @@ serializer. See
 
 ### HOCON Registration
 
-A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then `Serializer`. So it
-satisfies Akka's classic reflection contract: a public constructor that takes
-`ExtendedActorSystem`, and a stable `Identifier`. You can register it exactly like any hand-written
+A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then
+`SerializerWithStringManifest`, then `Serializer`. So it satisfies Akka's classic reflection
+contract: a public constructor that takes `ExtendedActorSystem`, and a stable `Identifier`. You can register it exactly like any hand-written
 serializer, through the classic `akka.actor.serializers` and `serialization-bindings` HOCON blocks:
 
 ```hocon

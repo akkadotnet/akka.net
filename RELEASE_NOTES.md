@@ -1,3 +1,22 @@
+#### 1.6.0-beta3 October 6th, 2026 ####
+
+Akka.NET 1.6.0-beta3 fixes two bugs found in 1.6.0-beta2: persistence plugins that stored the wrong manifest for `SerializerV2` and source-generated serializers, and an Akka.Hosting startup crash under `InvariantGlobalization`.
+
+**Serialization V2**
+
+* `SerializerV2` and source-generated serializers now derive from `SerializerWithStringManifest`. Persistence plugins that pick the stored manifest with the v1.5-era `is SerializerWithStringManifest` check (Akka.Persistence.Sql, Akka.Persistence.Redis snapshots and many third-party plugins) store the serializer's own manifest again. Under 1.6.0-beta2 they stored a CLR type name, so writes were acknowledged but could not be recovered. Rows that 1.6.0-beta2 already wrote this way are not repaired. The same check also gets the v1.5 manifests back for `PrimitiveSerializers` (`"S"`, `"I"`, `"L"`) and `byte[]` (`""`). ([#8785](https://github.com/akkadotnet/akka.net/pull/8785), fixes [#8784](https://github.com/akkadotnet/akka.net/issues/8784))
+* Library authors: a `SerializerV2` subclass built against 1.6.0-beta1 or beta2 that overrides `FromBinary(byte[], Type)` fails to load; move that logic to `FromBinary(byte[], string)` and recompile.
+
+**Akka.Hosting**
+
+* `AddAkka` no longer crashes at startup with `InvariantGlobalization=true` when the app ships satellite resource assemblies (for example, Microsoft.Data.SqlClient). ([#8783](https://github.com/akkadotnet/akka.net/pull/8783), fixes [#8782](https://github.com/akkadotnet/akka.net/issues/8782))
+
+1 contributor since release 1.6.0-beta2
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 3       | 771  | 48   | Aaron Stannard  |
+
 #### 1.6.0-beta2 October 6th, 2026 ####
 
 Akka.NET 1.6.0-beta2 builds on the first public beta of the 1.6 line. It keeps the `.NET 10`-only target and the experimental Artery TCP transport, and it hardens the `SerializerV2` API and the Native AOT story.
