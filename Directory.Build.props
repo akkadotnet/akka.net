@@ -38,7 +38,7 @@
     <ProtobufVersion>3.36.2</ProtobufVersion>
     <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
-    <MessagePackVersion>3.1.8</MessagePackVersion>
+    <MessagePackVersion>3.1.11</MessagePackVersion>
     <MicrosoftDataSqliteVersion>10.0.12</MicrosoftDataSqliteVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
