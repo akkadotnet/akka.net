@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.6.0-beta2</VersionPrefix>
+    <VersionPrefix>1.6.0-beta3</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -35,10 +35,10 @@
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.36.1</ProtobufVersion>
+    <ProtobufVersion>3.36.2</ProtobufVersion>
     <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
-    <MessagePackVersion>3.1.8</MessagePackVersion>
+    <MessagePackVersion>3.1.11</MessagePackVersion>
     <MicrosoftDataSqliteVersion>10.0.12</MicrosoftDataSqliteVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
@@ -67,49 +67,22 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET 1.6.0-beta2 builds on the first public beta of the 1.6 line. It keeps the `.NET 10`-only target and the experimental Artery TCP transport, and it hardens the `SerializerV2` API and the Native AOT story.
+    <PackageReleaseNotes>Akka.NET 1.6.0-beta3 fixes two bugs found in 1.6.0-beta2: persistence plugins that stored the wrong manifest for `SerializerV2` and source-generated serializers, and an Akka.Hosting startup crash under `InvariantGlobalization`.
 
 **Serialization V2**
 
-The `SerializerV2` work continues, including the generator:
+* `SerializerV2` and source-generated serializers now derive from `SerializerWithStringManifest`. Persistence plugins that pick the stored manifest with the v1.5-era `is SerializerWithStringManifest` check (Akka.Persistence.Sql, Akka.Persistence.Redis snapshots and many third-party plugins) store the serializer's own manifest again. Under 1.6.0-beta2 they stored a CLR type name, so writes were acknowledged but could not be recovered. Rows that 1.6.0-beta2 already wrote this way are not repaired. The same check also gets the v1.5 manifests back for `PrimitiveSerializers` (`"S"`, `"I"`, `"L"`) and `byte[]` (`""`). ([#8785](https://github.com/akkadotnet/akka.net/pull/8785), fixes [#8784](https://github.com/akkadotnet/akka.net/issues/8784))
+* Library authors: a `SerializerV2` subclass built against 1.6.0-beta1 or beta2 that overrides `FromBinary(byte[], Type)` fails to load; move that logic to `FromBinary(byte[], string)` and recompile.
 
-* Formatters inside collections (G-1). ([#8726](https://github.com/akkadotnet/akka.net/pull/8726))
-* Native `TimeSpan` and small scalars (G-3). ([#8727](https://github.com/akkadotnet/akka.net/pull/8727))
-* The V2 switch is HOCON-only; the `SerializationV2Setup` object is dropped. ([#8729](https://github.com/akkadotnet/akka.net/pull/8729))
-* The V2 switch is a global opt-in, off by default. ([#8724](https://github.com/akkadotnet/akka.net/pull/8724))
-* Delete the built-in serializer rows from module HOCON. ([#8711](https://github.com/akkadotnet/akka.net/pull/8711))
-* Remote `PrimitiveSerializers` become a native `SerializerV2` (same id 17, same bytes). ([#8719](https://github.com/akkadotnet/akka.net/pull/8719))
-* Fix docs and diagnostics drift; diagnose private nested message types. ([#8721](https://github.com/akkadotnet/akka.net/pull/8721))
+**Akka.Hosting**
 
-**Native AOT**
+* `AddAkka` no longer crashes at startup with `InvariantGlobalization=true` when the app ships satellite resource assemblies (for example, Microsoft.Data.SqlClient). ([#8783](https://github.com/akkadotnet/akka.net/pull/8783), fixes [#8782](https://github.com/akkadotnet/akka.net/issues/8782))
 
-* Akka.Persistence.Embedded: SQLite journal, snapshot store and read journal, AOT-compatible. ([#8739](https://github.com/akkadotnet/akka.net/pull/8739))
-* Persistence.Hosting: start plugin types from code (Native AOT). ([#8738](https://github.com/akkadotnet/akka.net/pull/8738))
-* Akka.Streams: build island-boundary subscribers without runtime generics (Native AOT). ([#8732](https://github.com/akkadotnet/akka.net/pull/8732))
-
-**Core and fixes**
-
-* Resolve `akka.loggers` names before starting any logger. ([#8778](https://github.com/akkadotnet/akka.net/pull/8778))
-* Add `Match` extension methods for `Option&lt;T&gt;`. ([#8774](https://github.com/akkadotnet/akka.net/pull/8774))
-
-**Docs**
-
-* Complete XML documentation placeholders across Core, Cluster, Cluster Tools, Distributed Data, Persistence, Remote, Sharding, Streams and TestKit. ([#8760](https://github.com/akkadotnet/akka.net/pull/8760)) ([#8761](https://github.com/akkadotnet/akka.net/pull/8761)) ([#8762](https://github.com/akkadotnet/akka.net/pull/8762)) ([#8763](https://github.com/akkadotnet/akka.net/pull/8763)) ([#8764](https://github.com/akkadotnet/akka.net/pull/8764)) ([#8750](https://github.com/akkadotnet/akka.net/pull/8750)) ([#8751](https://github.com/akkadotnet/akka.net/pull/8751)) ([#8752](https://github.com/akkadotnet/akka.net/pull/8752)) ([#8755](https://github.com/akkadotnet/akka.net/pull/8755)) ([#8756](https://github.com/akkadotnet/akka.net/pull/8756)) ([#8757](https://github.com/akkadotnet/akka.net/pull/8757)) ([#8758](https://github.com/akkadotnet/akka.net/pull/8758))
-* Document channel sink behavior and distributed data reads. ([#8767](https://github.com/akkadotnet/akka.net/pull/8767))
-* Correct serializer loading and supervision documentation. ([#8766](https://github.com/akkadotnet/akka.net/pull/8766))
-* Clarify journal write outcomes and snapshot selection bounds. ([#8765](https://github.com/akkadotnet/akka.net/pull/8765))
-
-**Release pipeline**
-
-* Publish suffixed tags (betas, RCs) as GitHub pre-releases. ([#8710](https://github.com/akkadotnet/akka.net/pull/8710))
-
-3 contributors since release 1.6.0-beta1
+1 contributor since release 1.6.0-beta2
 
 | COMMITS | LOC+ | LOC- | AUTHOR          |
 |---------|------|------|-----------------|
-| 39      | 37456 | 17026 | Aaron Stannard  |
-| 1       | 110   | 0    | Jan             |
-| 2       | 0     | 0    | dependabot[bot] |</PackageReleaseNotes>
+| 3       | 771  | 48   | Aaron Stannard  |</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
