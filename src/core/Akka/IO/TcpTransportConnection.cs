@@ -417,7 +417,7 @@ namespace Akka.IO
             }
 
             // Dispose the stream — ObjectDisposedException if already disposed.
-            stream?.Dispose();
+            try { stream?.Dispose(); } catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 stream may already be disposed
         }
 
         public async ValueTask DisposeAsync()
