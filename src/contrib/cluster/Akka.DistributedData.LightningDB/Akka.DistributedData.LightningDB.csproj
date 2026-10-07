@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="LightningDB" Version="0.22.0"/>
+        <PackageReference Include="LightningDB" Version="0.23.1"/>
     </ItemGroup>
 
 </Project>
