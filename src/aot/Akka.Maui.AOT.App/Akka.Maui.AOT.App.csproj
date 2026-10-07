@@ -7,7 +7,11 @@
   <PropertyGroup>
     <!-- One MAUI target per host OS, so a restore never asks for a workload the machine cannot have
          (Mac Catalyst only builds on macOS). Override with -p:TargetFrameworks=... for anything else. -->
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst</TargetFrameworks>
+    <!-- The maccatalyst platform version is pinned. Without it the workload picks its newest pack, and each pack
+         builds with exactly one Xcode major.minor: SDK 10.0.401 brings .NET for Mac Catalyst 27.0, which needs
+         Xcode 27.0, and the CI image stops at Xcode 26.3. Every .NET 10 maccatalyst workload also carries the
+         26.0 pack (it needs Xcode 26.0), and MAUI 10 itself targets net10.0-maccatalyst26.0. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst26.0</TargetFrameworks>
     <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('osx'))">net10.0-android</TargetFrameworks>
 
     <OutputType>Exe</OutputType>

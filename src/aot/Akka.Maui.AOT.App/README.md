@@ -36,18 +36,22 @@ Against an unrooted `PublishAot` publish:
 | iOS | supported | no | no |
 | Windows | not supported by MAUI yet (dotnet/maui#31227) | no | no |
 
-The project targets `net10.0-maccatalyst` on macOS and `net10.0-android` everywhere else, so a restore never
+The project targets `net10.0-maccatalyst26.0` on macOS and `net10.0-android` everywhere else, so a restore never
 needs a workload the machine cannot install. It is not in `Akka.slnx` because the solution build runs on agents
 without the MAUI workloads.
 
 ## Run
 
-### Mac Catalyst (macOS, Xcode 26)
+### Mac Catalyst (macOS, Xcode 26.0)
+
+The target is pinned to Mac Catalyst 26.0, and that pack builds only with Xcode 26.0.x
+(`sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer`). To build with another Xcode, pass
+the matching version: `-p:TargetFrameworks=net10.0-maccatalyst<version> -f net10.0-maccatalyst<version>`.
 
 ```bash
 dotnet workload install maui-maccatalyst
 rm -rf src/aot/Akka.Maui.AOT.App/bin src/aot/Akka.Maui.AOT.App/obj
-dotnet publish src/aot/Akka.Maui.AOT.App -f net10.0-maccatalyst -r maccatalyst-arm64 -c Release
+dotnet publish src/aot/Akka.Maui.AOT.App -f net10.0-maccatalyst26.0 -r maccatalyst-arm64 -c Release
 APP=$(find src/aot/Akka.Maui.AOT.App/bin -name 'Akka.Maui.AOT.App.app' -type d | head -1)
 
 # interactive: the window shows the metrics ticking

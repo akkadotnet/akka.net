@@ -384,6 +384,10 @@ jobs:
     timeoutInMinutes: 60
     pool:
       vmImage: macos-latest
+    variables:
+      # Must match the maccatalyst target platform version in Akka.Maui.AOT.App.csproj.
+      MauiCatalystTpv: '26.0'
+      MauiCanaryLogs: '$(Agent.TempDirectory)/maui-aot-logs'
     steps:
       - checkout: self
         clean: false
@@ -395,14 +399,15 @@ jobs:
           packageType: 'sdk'
           useGlobalJson: true
 
-      # The maccatalyst workload for .NET 10 builds against the Xcode 26 SDKs. The image can have
-      # several Xcodes with an older default, so pick the newest Xcode 26 explicitly.
+      # Each .NET for Mac Catalyst pack builds with exactly one Xcode major.minor and fails the build on
+      # any other. The canary targets net10.0-maccatalyst$(MauiCatalystTpv) (see its csproj), which picks
+      # the pack for that version whatever workload the SDK installs, so select the matching Xcode.
       - bash: |
           set -e
           ls -d /Applications/Xcode*.app || true
-          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          xcode=$(ls -d /Applications/Xcode_$(MauiCatalystTpv)*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$xcode" ]; then
-            echo "##vso[task.logissue type=error]No Xcode 26 on this image; the .NET 10 maccatalyst workload needs it."
+            echo "##vso[task.logissue type=error]No Xcode $(MauiCatalystTpv) on this image; net10.0-maccatalyst$(MauiCatalystTpv) needs exactly that version."
             exit 1
           fi
           sudo xcode-select -s "$xcode/Contents/Developer"
@@ -418,6 +423,7 @@ jobs:
 
       - bash: |
           rm -rf src/aot/Akka.Maui.AOT.App/bin src/aot/Akka.Maui.AOT.App/obj
+          mkdir -p "$(MauiCanaryLogs)"
         displayName: 'Clean the MAUI canary intermediate output'
 
       # One publish serves the run and the warning check, as in the Hosting canary. The RID follows
@@ -428,8 +434,8 @@ jobs:
             arm64) rid=maccatalyst-arm64 ;;
             *) rid=maccatalyst-x64 ;;
           esac
-          dotnet publish src/aot/Akka.Maui.AOT.App -f net10.0-maccatalyst -r "$rid" -c Release \
-            2>&1 | tee "$(Agent.TempDirectory)/maui-aot-publish.log"
+          dotnet publish src/aot/Akka.Maui.AOT.App -f "net10.0-maccatalyst$(MauiCatalystTpv)" -r "$rid" -c Release \
+            2>&1 | tee "$(MauiCanaryLogs)/maui-aot-publish.log"
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             echo "##vso[task.logissue type=error]The publish of the MAUI AOT canary failed with exit code $rc."
@@ -449,7 +455,7 @@ jobs:
       # 3-minute timeout; the loop here only guards against a hang the app cannot see (no window
       # server, a stuck launch). macOS has no coreutils `timeout`.
       - bash: |
-          log="$(Agent.TempDirectory)/maui-aot-run.log"
+          log="$(MauiCanaryLogs)/maui-aot-run.log"
           AKKA_CANARY_SELFTEST=1 "$(MauiCanaryApp)/Contents/MacOS/Akka.Maui.AOT.App" > "$log" 2>&1 &
           pid=$!
           for _ in $(seq 1 300); do
@@ -482,19 +488,19 @@ jobs:
       # when the platform build hands ILC assemblies without their PDBs.
       - bash: |
           dotnet run scripts/CheckAotWarnings.cs -- \
-            --log "$(Agent.TempDirectory)/maui-aot-publish.log" \
+            --log "$(MauiCanaryLogs)/maui-aot-publish.log" \
             --baseline src/aot/Akka.Maui.AOT.App/aot-warnings.baseline.txt \
             --scope "src/core/,src/contrib/" \
             --unlocated-scope "Akka." \
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare MAUI AOT warnings against the baseline'
 
+      # PublishBuildArtifacts has no file filter: it uploads the whole directory, so the logs get their own.
       - task: PublishBuildArtifacts@1
         displayName: 'Publish the MAUI AOT logs'
         condition: always()
         inputs:
-          pathtoPublish: '$(Agent.TempDirectory)'
-          contents: 'maui-aot-*.log'
+          pathtoPublish: '$(MauiCanaryLogs)'
           artifactName: 'maui_aot_canary_logs-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
