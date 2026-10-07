@@ -441,14 +441,22 @@ jobs:
             echo "##vso[task.logissue type=error]The publish of the MAUI AOT canary failed with exit code $rc."
             exit 1
           fi
-          app=$(find src/aot/Akka.Maui.AOT.App/bin -name 'Akka.Maui.AOT.App.app' -type d | head -1)
-          if [ -z "$app" ] || [ ! -x "$app/Contents/MacOS/Akka.Maui.AOT.App" ]; then
-            echo "##vso[task.logissue type=error]The publish did not produce Akka.Maui.AOT.App.app."
+          # From .NET 10 a Mac Catalyst bundle is named after ApplicationTitle, not the assembly, so find
+          # the bundle by extension and read the executable's name from its Info.plist.
+          app=$(find src/aot/Akka.Maui.AOT.App/bin -name '*.app' -type d -prune | head -1)
+          exe=""
+          if [ -n "$app" ]; then
+            exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+          fi
+          if [ -z "$app" ] || [ ! -f "$exe" ] || [ ! -x "$exe" ]; then
+            find src/aot/Akka.Maui.AOT.App/bin -maxdepth 6 | head -200
+            echo "##vso[task.logissue type=error]The publish did not produce a runnable .app bundle (app: '$app', executable: '$exe')."
             exit 1
           fi
           echo "app: $app"
+          echo "executable: $exe"
           du -sh "$app"
-          echo "##vso[task.setvariable variable=MauiCanaryApp]$app"
+          echo "##vso[task.setvariable variable=MauiCanaryExe]$exe"
         displayName: 'Publish the MAUI AOT canary'
 
       # Same rule as the other canaries: exit 0 alone is not proof, the OK line is. The app has its own
@@ -456,7 +464,7 @@ jobs:
       # server, a stuck launch). macOS has no coreutils `timeout`.
       - bash: |
           log="$(MauiCanaryLogs)/maui-aot-run.log"
-          AKKA_CANARY_SELFTEST=1 "$(MauiCanaryApp)/Contents/MacOS/Akka.Maui.AOT.App" > "$log" 2>&1 &
+          AKKA_CANARY_SELFTEST=1 "$(MauiCanaryExe)" > "$log" 2>&1 &
           pid=$!
           for _ in $(seq 1 300); do
             kill -0 "$pid" 2>/dev/null || break

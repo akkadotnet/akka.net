@@ -52,7 +52,8 @@ the matching version: `-p:TargetFrameworks=net10.0-maccatalyst<version> -f net10
 dotnet workload install maui-maccatalyst
 rm -rf src/aot/Akka.Maui.AOT.App/bin src/aot/Akka.Maui.AOT.App/obj
 dotnet publish src/aot/Akka.Maui.AOT.App -f net10.0-maccatalyst26.0 -r maccatalyst-arm64 -c Release
-APP=$(find src/aot/Akka.Maui.AOT.App/bin -name 'Akka.Maui.AOT.App.app' -type d | head -1)
+# the bundle is named after ApplicationTitle ("Akka.NET MAUI canary.app"); the executable keeps the assembly name
+APP=$(find src/aot/Akka.Maui.AOT.App/bin -name '*.app' -type d -prune | head -1)
 
 # interactive: the window shows the metrics ticking
 open "$APP"
