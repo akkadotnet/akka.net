@@ -1,0 +1,12 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.Hosting.Maui
+{
+    public static class MauiAkkaHostingExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkkaMaui(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder> builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkkaMaui(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder) { }
+    }
+}
