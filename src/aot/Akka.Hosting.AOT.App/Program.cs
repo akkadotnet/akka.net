@@ -50,6 +50,18 @@ appBuilder.Services.AddSingleton<IGreetingService, GreetingService>();
 // adds Akka's built-in liveness check to it with WithActorSystemLivenessCheck() below.
 appBuilder.Services.AddHealthChecks();
 
+// Self-check (#8782): the "cs" satellite resource must be in the image, or this canary no longer
+// covers MAUI detection under InvariantGlobalization. On Native AOT a satellite's FullName throws
+// CultureNotFoundException; on the JIT it contains "Culture=cs".
+var hasSatellite = AppDomain.CurrentDomain.GetAssemblies().Any(a =>
+{
+    try { return a.FullName?.Contains("Culture=cs", StringComparison.Ordinal) ?? false; }
+    catch (System.Globalization.CultureNotFoundException) { return true; }
+});
+Console.WriteLine($"[canary-hosting] satellite assembly present: {hasSatellite}");
+if (!hasSatellite)
+    throw new InvalidOperationException("The 'cs' satellite assembly is missing from the canary; see #8782.");
+
 appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
 {
     builder
