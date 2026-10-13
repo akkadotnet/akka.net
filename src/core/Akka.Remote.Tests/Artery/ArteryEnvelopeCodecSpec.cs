@@ -12,7 +12,9 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Remote.Artery;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 
@@ -438,6 +440,105 @@ namespace Akka.Remote.Tests.Artery
 
             var deserialized = Sys.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, decoded.TryGetManifest(out var m) ? m : string.Empty);
             Assert.Equal(message, deserialized);
+        }
+
+        [Theory(DisplayName = "Should_restore_transport_context_and_release_buffer_When_encoding_succeeds_or_fails")]
+        [InlineData(0, false)]
+        [InlineData(0, true)]
+        [InlineData(1, false)]
+        [InlineData(1, true)]
+        [InlineData(2, false)]
+        [InlineData(2, true)]
+        public void Should_restore_transport_context_and_release_buffer_When_encoding_succeeds_or_fails(int context, bool fail)
+        {
+            var system = (ExtendedActorSystem)Sys;
+            var serializer = new ContextCheckingSerializer(system, fail);
+            Sys.Serialization.AddSerializer("context-checking", serializer);
+            Sys.Serialization.AddSerializationMap(typeof(ContextMessage), serializer);
+            var pool = new TrackingArrayPool();
+            var saved = Akka.Serialization.Serialization.CurrentTransportInformation;
+            var previous = context switch
+            {
+                0 => null,
+                1 => system.Provider.SerializationInformation,
+                _ => new Information(new Address("akka", "outer", "localhost", 1234), Sys)
+            };
+
+            try
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = previous;
+                if (fail)
+                {
+                    var exception = Assert.Throws<InvalidOperationException>(() =>
+                        ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, "sender", "recipient", new ContextMessage(), pool));
+                    Assert.Same(serializer.Failure, exception);
+                }
+                else
+                {
+                    using var writer = ArteryEnvelopeCodec.Encode(
+                        Sys.Serialization, 42L, "sender", "recipient", new ContextMessage(), pool);
+                    var expected = new byte[ArteryEnvelopeCodec.MaxEncodedSize("sender", "recipient", "ctx", 1)];
+                    var length = ArteryEnvelopeCodec.Encode(expected, 42L, serializer.Identifier,
+                        "sender", "recipient", "ctx", new byte[] { 0x42 });
+                    Assert.Equal(expected.AsSpan(0, length).ToArray(), writer.WrittenMemory.ToArray());
+                }
+
+                Assert.Same(previous, Akka.Serialization.Serialization.CurrentTransportInformation);
+                Assert.Equal(1, pool.Rents);
+                Assert.Equal(pool.Rents, pool.Returns);
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = saved;
+            }
+        }
+
+        private sealed class ContextMessage
+        {
+        }
+
+        private sealed class ContextCheckingSerializer(ExtendedActorSystem system, bool fail) : SerializerV2(system)
+        {
+            public override int Identifier => 987654;
+            public InvalidOperationException Failure { get; } = new("serializer failed after writing");
+
+            public override string Manifest(object obj)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                return "ctx";
+            }
+
+            public override int SizeHint(object obj)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                return 1;
+            }
+
+            public override int Serialize(object obj, IBufferWriter<byte> writer)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                writer.GetSpan(1)[0] = 0x42;
+                writer.Advance(1);
+                if (fail)
+                    throw Failure;
+                return 1;
+            }
+
+            public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => new ContextMessage();
+        }
+
+        private sealed class TrackingArrayPool : ArrayPool<byte>
+        {
+            public int Rents { get; private set; }
+            public int Returns { get; private set; }
+
+            public override byte[] Rent(int minimumLength)
+            {
+                Rents++;
+                return new byte[minimumLength];
+            }
+
+            public override void Return(byte[] array, bool clearArray = false) => Returns++;
         }
     }
 }
