@@ -255,6 +255,16 @@ namespace Akka.Streams.Implementation.Fusing
 
                     logic.PortToConn[outlet.Id + inCount] = connection;
                 }
+
+                if (inlet != null && outlet != null &&
+                    InletOwners[i] != Boundary && OutletOwners[i] != Boundary)
+                {
+                    // Select from the stages' actual ports, not an exposed or recast graph shape.
+                    // Actor boundaries have an erased outlet and must retain their object path.
+                    var actualInlet = Stages[InletOwners[i]].Shape.Inlets[inlet.Id];
+                    var actualOutlet = Stages[OutletOwners[i]].Shape.Outlets[outlet.Id];
+                    connection.Storage = actualInlet.CreateElementSlot(actualOutlet);
+                }
             }
 
             return (connections, logics);

@@ -280,7 +280,48 @@ namespace Akka.Streams.Implementation.Fusing
             /// * A failure (with an optional in-flight element), if elem is an instance of <see cref="Failed"/>
             /// * A cancellation cause, is elem is an instance of <see cref="Cancelled"/>
             /// </summary>
-            public object Slot { get; set; } = Empty.Instance;
+            public object Slot
+            {
+                get => HasTypedElement ? Storage.BoxedValue : _slot;
+                set
+                {
+                    Storage?.Clear();
+                    _slot = value;
+                }
+            }
+
+            private object _slot = Empty.Instance;
+
+#nullable enable annotations
+            internal ElementSlot? Storage { get; set; }
+
+            internal bool HasTypedElement => Storage?.HasValue == true;
+
+            internal bool HasElement => HasTypedElement || !ReferenceEquals(_slot, Empty.Instance);
+
+            internal void StoreElement<T>(T element)
+            {
+                if (Storage is ElementSlot<T> typed)
+                {
+                    _slot = Empty.Instance;
+                    typed.Store(element);
+                }
+                else
+                {
+                    Slot = element!;
+                }
+            }
+
+            internal T ReadElement<T>() => Storage is ElementSlot<T> { HasValue: true } typed
+                ? typed.Value
+                : (T)Slot;
+
+            internal void ClearElement()
+            {
+                Storage?.Clear();
+                _slot = Empty.Instance;
+            }
+#nullable restore annotations
 
             /// <summary>
             /// The OpenTelemetry trace context associated with the element currently in <see cref="Slot"/>,
