@@ -21,8 +21,13 @@ namespace Akka.Benchmarks.Remoting.Artery
     [Config(typeof(MicroBenchmarkConfig))]
     public class ArterySinglePassEncodeBenchmarks
     {
+        private const string SenderPath = "akka://Sys@127.0.0.1:9001/user/sender";
+        private const string RecipientPath = "akka://Sys@127.0.0.1:9002/user/recipient";
+        private const string Manifest = "real-benchmark-v1";
+
         private ActorSystem _system = null!;
         private byte[] _payload = null!;
+        private byte[] _frame = null!;
 
         [Params(32, 256, 4096)]
         public int PayloadSize { get; set; }
@@ -32,15 +37,20 @@ namespace Akka.Benchmarks.Remoting.Artery
         {
             _system = ActorSystem.Create("single-pass-encode");
             _payload = new byte[PayloadSize];
+            _frame = new byte[Codec.MaxEncodedSize(SenderPath, RecipientPath, Manifest, PayloadSize)];
         }
 
         [Benchmark]
         public int Encode()
         {
             using var writer = Codec.Encode(((ExtendedActorSystem)_system).Serialization, 42L,
-                "akka://Sys@127.0.0.1:9001/user/sender", "akka://Sys@127.0.0.1:9002/user/recipient", _payload);
+                SenderPath, RecipientPath, _payload);
             return writer.WrittenCount;
         }
+
+        /// <summary>Isolates all three metadata literals, including a nonempty manifest, in a reused frame buffer.</summary>
+        [Benchmark]
+        public int EncodeLiteralMetadata() => Codec.Encode(_frame, 42L, 4, SenderPath, RecipientPath, Manifest, _payload);
 
         [GlobalCleanup]
         public Task Cleanup() => _system.Terminate();

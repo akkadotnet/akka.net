@@ -344,12 +344,7 @@ namespace Akka.Remote.Artery
 
             if (byteCount > 0)
             {
-                // PERF: Encoding.GetBytes(string) allocates an intermediate byte[] -- netstandard2.0
-                // has no Encoding.GetBytes(string, Span<byte>) overload. Literals (actor paths /
-                // manifests) are the cold path at G1; ref/manifest compression (deferred) removes
-                // them from the hot path entirely.
-                var bytes = Encoding.UTF8.GetBytes(value);
-                bytes.CopyTo(envelope.Slice(cursor, byteCount));
+                Encoding.UTF8.GetBytes(value.AsSpan(), envelope.Slice(cursor, byteCount));
                 cursor += byteCount;
             }
 
@@ -371,10 +366,7 @@ namespace Akka.Remote.Artery
 
             if (byteCount > 0)
             {
-                // PERF: see the Span<byte> overload above -- same netstandard2.0 limitation.
-                var bytes = Encoding.UTF8.GetBytes(value);
-                var dataSpan = writer.GetSpan(byteCount);
-                bytes.CopyTo(dataSpan);
+                Encoding.UTF8.GetBytes(value.AsSpan(), writer.GetSpan(byteCount));
                 writer.Advance(byteCount);
             }
 

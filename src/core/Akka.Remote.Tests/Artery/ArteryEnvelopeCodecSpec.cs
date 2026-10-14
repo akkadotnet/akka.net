@@ -493,11 +493,75 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Theory(DisplayName = "Should_preserve_UTF8_wire_bytes_When_metadata_contains_unicode_or_unpaired_surrogates")]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void Should_preserve_UTF8_wire_bytes_When_metadata_contains_unicode_or_unpaired_surrogates(int kind)
+        {
+            var literal = kind switch
+            {
+                0 => "Ω送😀",
+                1 => "\ud800",
+                _ => "\udc00"
+            };
+            var expectedBytes = kind == 0
+                ? new byte[] { 0xCE, 0xA9, 0xE9, 0x80, 0x81, 0xF0, 0x9F, 0x98, 0x80 }
+                : new byte[] { 0xEF, 0xBF, 0xBD };
+            var serializer = new ContextCheckingSerializer((ExtendedActorSystem)Sys, false, literal);
+            Sys.Serialization.AddSerializer("unicode-metadata", serializer);
+            Sys.Serialization.AddSerializationMap(typeof(ContextMessage), serializer);
+
+            using var writer = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, literal, literal, new ContextMessage());
+            var explicitFrame = new byte[ArteryEnvelopeCodec.MaxEncodedSize(literal, literal, literal, 1)];
+            var length = ArteryEnvelopeCodec.Encode(explicitFrame, 42L, serializer.Identifier,
+                literal, literal, literal, new byte[] { 0x42 });
+            Assert.Equal(explicitFrame.AsSpan(0, length).ToArray(), writer.WrittenSpan.ToArray());
+
+            // Independent expected UTF-8 bytes pin replacement fallback and supplementary characters.
+            // Every literal is [u16 LE byte count][bytes], immediately following the fixed header.
+            var cursor = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.Equal(expectedBytes.Length, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(cursor, 2)));
+                cursor += 2;
+                Assert.Equal(expectedBytes, writer.WrittenSpan.Slice(cursor, expectedBytes.Length).ToArray());
+                cursor += expectedBytes.Length;
+            }
+            Assert.Equal(cursor + 1, writer.WrittenCount);
+            Assert.Equal(0x42, writer.WrittenSpan[cursor]);
+        }
+
+        [Theory(DisplayName = "Should_enforce_literal_byte_limit_When_metadata_uses_multibyte_UTF8")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_enforce_literal_byte_limit_When_metadata_uses_multibyte_UTF8(bool oversized)
+        {
+            var literal = new string('Ω', 32767) + (oversized ? "Ω" : "a");
+            if (oversized)
+            {
+                Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Encode(
+                    new byte[70000], 42L, 4, literal, null, string.Empty, ReadOnlySpan<byte>.Empty));
+                Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Encode(
+                    Sys.Serialization, 42L, literal, null, Array.Empty<byte>()));
+                return;
+            }
+
+            using var writer = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, literal, null, Array.Empty<byte>());
+            var explicitFrame = new byte[ArteryEnvelopeCodec.MaxEncodedSize(literal, null, string.Empty, 0)];
+            ArteryEnvelopeCodec.Encode(explicitFrame, 42L, 4, literal, null, string.Empty, ReadOnlySpan<byte>.Empty);
+            Assert.Equal(explicitFrame, writer.WrittenSpan.ToArray());
+            Assert.Equal(ushort.MaxValue, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(36, 2)));
+            var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(writer.WrittenMemory.Slice(4)));
+            Assert.True(decoded.TryGetSenderPath(out var sender));
+            Assert.Equal(literal, sender);
+        }
+
         private sealed class ContextMessage
         {
         }
 
-        private sealed class ContextCheckingSerializer(ExtendedActorSystem system, bool fail) : SerializerV2(system)
+        private sealed class ContextCheckingSerializer(ExtendedActorSystem system, bool fail, string manifest = "ctx") : SerializerV2(system)
         {
             public override int Identifier => 987654;
             public InvalidOperationException Failure { get; } = new("serializer failed after writing");
@@ -505,7 +569,7 @@ namespace Akka.Remote.Tests.Artery
             public override string Manifest(object obj)
             {
                 Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
-                return "ctx";
+                return manifest;
             }
 
             public override int SizeHint(object obj)
