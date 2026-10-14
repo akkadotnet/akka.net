@@ -40,7 +40,7 @@ All invocations ran sequentially, with an additional process check before each s
 | 3 | candidate | 306,467, 485,555, 481,580 | 481,580 |
 | 4 | parent | 305,111, 471,365, 353,732 | 353,732 |
 
-Every repetition completed without drop/resend warnings. The host contention and memory pressure preclude a reliable throughput improvement or no-regression conclusion. The actor systems are recreated between repetitions; cold tiering effects remain. No latency percentiles were measured. Keep the PR draft pending a quiet-machine timing comparison and the parent merge.
+Every repetition completed without drop/resend warnings. The host contention and memory pressure preclude a reliable throughput improvement or no-regression conclusion. The actor systems are recreated between repetitions; cold tiering effects remain. No latency percentiles were measured. A quiet-machine comparison is needed for reliable throughput claims.
 
 ## Boxing finding from the existing profile
 
@@ -71,4 +71,6 @@ Raw benchmark reports, every RemotePingPong log, failed build evidence, test res
 
 ## Stack delivery
 
-The PR base `feature/artery-encode-static-delegate-stack` mirrors #8804 at the parent revision. After #8804 merges, retarget #8805 to `dev`, resolve any integration differences, and run affected checks against the resulting base before merging. The draft state keeps this incremental change from being merged into the temporary base branch.
+After #8804 merged as `6659f8abb51dc5fea4a8aafcbebffa9525892032`, #8805 was rebased onto `dev`, replaying only its UTF-8 implementation, tests, benchmark extension, and report. A range comparison confirmed those two commits were unchanged by the rebase. The temporary stack base is no longer the PR target.
+
+The rebased `dev` also includes the MessagePack 3.1.12 dependency update. The tables above remain historical measurements at their stated revisions; they are not new measurements of the rebased head. All 29 codec tests passed on the rebased branch. Hosted CI validates the broader integrated result separately.
