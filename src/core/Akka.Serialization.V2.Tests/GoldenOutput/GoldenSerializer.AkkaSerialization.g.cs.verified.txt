@@ -491,355 +491,373 @@ public sealed partial class GoldenSerializer
             else
             {
                 __size4 = SizeOfArrayHeader(message.Samples.Count);
-                foreach (var __item5 in message.Samples)
+                var __collection5 = message.Samples;
+                if (__collection5 is global::System.Collections.Generic.List<double> __list6 && __list6.GetType() == typeof(global::System.Collections.Generic.List<double>))
                 {
-                    __size4 += SizeOfDouble(__item5);
+                    foreach (var __item8 in __list6)
+                    {
+                        __size4 += SizeOfDouble(__item8);
+                    }
+                }
+                else if (__collection5 is double[] __array7)
+                {
+                    foreach (var __item9 in __array7)
+                    {
+                        __size4 += SizeOfDouble(__item9);
+                    }
+                }
+                else
+                {
+                    foreach (var __item10 in __collection5)
+                    {
+                        __size4 += SizeOfDouble(__item10);
+                    }
                 }
             }
             size += __size4;
             size += SizeOfInt32(4);
-            int __size6;
+            int __size11;
             if (message.Ids is null)
             {
-                __size6 = SizeOfNil();
+                __size11 = SizeOfNil();
             }
             else
             {
-                __size6 = SizeOfArrayHeader(message.Ids.Count);
-                foreach (var __item7 in message.Ids)
+                __size11 = SizeOfArrayHeader(message.Ids.Count);
+                foreach (var __item12 in message.Ids)
                 {
-                    __size6 += SizeOfGuid(__item7);
+                    __size11 += SizeOfGuid(__item12);
                 }
             }
-            size += __size6;
+            size += __size11;
             size += SizeOfInt32(5);
-            int __size8;
-            if (message.Tags is null)
-            {
-                __size8 = SizeOfNil();
-            }
-            else
-            {
-                __size8 = SizeOfMapHeader(message.Tags.Count);
-                foreach (var __kvp9 in message.Tags)
-                {
-                    __size8 += SizeOfString(__kvp9.Key);
-                    __size8 += SizeOfString(__kvp9.Value);
-                }
-            }
-            size += __size8;
-            size += SizeOfInt32(6);
-            int __size10;
-            if (message.ReadingsById is null)
-            {
-                __size10 = SizeOfNil();
-            }
-            else
-            {
-                __size10 = SizeOfMapHeader(message.ReadingsById.Count);
-                foreach (var __kvp11 in message.ReadingsById)
-                {
-                    __size10 += SizeOfInt32(__kvp11.Key);
-                    var __size12 = __kvp11.Value is null ? SizeOfNil() : SizeOfReading(__kvp11.Value);
-                    if (__size12 < 0)
-                        return global::Akka.Serialization.SerializerV2.UnknownSize;
-                    __size10 += __size12;
-                }
-            }
-            size += __size10;
-            size += SizeOfInt32(7);
             int __size13;
-            if (message.Points.IsDefault)
+            if (message.Tags is null)
             {
                 __size13 = SizeOfNil();
             }
             else
             {
-                __size13 = SizeOfArrayHeader(message.Points.Length);
-                foreach (var __item14 in message.Points)
+                __size13 = SizeOfMapHeader(message.Tags.Count);
+                foreach (var __kvp14 in message.Tags)
                 {
-                    __size13 += SizeOfInt32(__item14);
+                    __size13 += SizeOfString(__kvp14.Key);
+                    __size13 += SizeOfString(__kvp14.Value);
                 }
             }
             size += __size13;
-            size += SizeOfInt32(8);
+            size += SizeOfInt32(6);
             int __size15;
-            if (message.Readings is null)
+            if (message.ReadingsById is null)
             {
                 __size15 = SizeOfNil();
             }
             else
             {
-                __size15 = SizeOfArrayHeader(message.Readings.Count);
-                foreach (var __item16 in message.Readings)
+                __size15 = SizeOfMapHeader(message.ReadingsById.Count);
+                foreach (var __kvp16 in message.ReadingsById)
                 {
-                    var __size17 = __item16 is null ? SizeOfNil() : SizeOfReading(__item16);
+                    __size15 += SizeOfInt32(__kvp16.Key);
+                    var __size17 = __kvp16.Value is null ? SizeOfNil() : SizeOfReading(__kvp16.Value);
                     if (__size17 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size15 += __size17;
                 }
             }
             size += __size15;
-            size += SizeOfInt32(9);
+            size += SizeOfInt32(7);
             int __size18;
-            if (message.Labels is null)
+            if (message.Points.IsDefault)
             {
                 __size18 = SizeOfNil();
             }
             else
             {
-                __size18 = SizeOfArrayHeader(message.Labels.Count);
-                foreach (var __item19 in message.Labels)
+                __size18 = SizeOfArrayHeader(message.Points.Length);
+                foreach (var __item19 in message.Points)
                 {
-                    __size18 += SizeOfString(__item19);
+                    __size18 += SizeOfInt32(__item19);
                 }
             }
             size += __size18;
-            size += SizeOfInt32(10);
+            size += SizeOfInt32(8);
             int __size20;
-            if (message.Counters is null)
+            if (message.Readings is null)
             {
                 __size20 = SizeOfNil();
             }
             else
             {
-                __size20 = SizeOfMapHeader(message.Counters.Count);
-                foreach (var __kvp21 in message.Counters)
+                __size20 = SizeOfArrayHeader(message.Readings.Count);
+                foreach (var __item21 in message.Readings)
                 {
-                    __size20 += SizeOfString(__kvp21.Key);
-                    __size20 += SizeOfInt64(__kvp21.Value);
+                    var __size22 = __item21 is null ? SizeOfNil() : SizeOfReading(__item21);
+                    if (__size22 < 0)
+                        return global::Akka.Serialization.SerializerV2.UnknownSize;
+                    __size20 += __size22;
                 }
             }
             size += __size20;
-            size += SizeOfInt32(11);
-            int __size22;
-            if (message.MaybeTrack is null)
+            size += SizeOfInt32(9);
+            int __size23;
+            if (message.Labels is null)
             {
-                __size22 = SizeOfNil();
+                __size23 = SizeOfNil();
             }
             else
             {
-                int __size23;
+                __size23 = SizeOfArrayHeader(message.Labels.Count);
+                foreach (var __item24 in message.Labels)
+                {
+                    __size23 += SizeOfString(__item24);
+                }
+            }
+            size += __size23;
+            size += SizeOfInt32(10);
+            int __size25;
+            if (message.Counters is null)
+            {
+                __size25 = SizeOfNil();
+            }
+            else
+            {
+                __size25 = SizeOfMapHeader(message.Counters.Count);
+                foreach (var __kvp26 in message.Counters)
+                {
+                    __size25 += SizeOfString(__kvp26.Key);
+                    __size25 += SizeOfInt64(__kvp26.Value);
+                }
+            }
+            size += __size25;
+            size += SizeOfInt32(11);
+            int __size27;
+            if (message.MaybeTrack is null)
+            {
+                __size27 = SizeOfNil();
+            }
+            else
+            {
+                int __size28;
                 if (message.MaybeTrack.Value.IsDefault)
                 {
-                    __size23 = SizeOfNil();
+                    __size28 = SizeOfNil();
                 }
                 else
                 {
-                    __size23 = SizeOfArrayHeader(message.MaybeTrack.Value.Length);
-                    foreach (var __item24 in message.MaybeTrack.Value)
+                    __size28 = SizeOfArrayHeader(message.MaybeTrack.Value.Length);
+                    foreach (var __item29 in message.MaybeTrack.Value)
                     {
-                        var __size25 = SizeOfGeoPoint(__item24);
-                        if (__size25 < 0)
+                        var __size30 = SizeOfGeoPoint(__item29);
+                        if (__size30 < 0)
                             return global::Akka.Serialization.SerializerV2.UnknownSize;
-                        __size23 += __size25;
+                        __size28 += __size30;
                     }
                 }
-                __size22 = __size23;
+                __size27 = __size28;
             }
-            size += __size22;
+            size += __size27;
             size += SizeOfInt32(12);
-            int __size26;
+            int __size31;
             if (message.MaybeNumbers is null)
             {
-                __size26 = SizeOfNil();
+                __size31 = SizeOfNil();
             }
             else
             {
-                __size26 = SizeOfArrayHeader(message.MaybeNumbers.Count);
-                foreach (var __item27 in message.MaybeNumbers)
+                __size31 = SizeOfArrayHeader(message.MaybeNumbers.Count);
+                foreach (var __item32 in message.MaybeNumbers)
                 {
-                    __size26 += SizeOfInt32(__item27);
+                    __size31 += SizeOfInt32(__item32);
                 }
             }
-            size += __size26;
+            size += __size31;
             size += SizeOfInt32(13);
-            int __size28;
+            int __size33;
             if (message.Matrix is null)
             {
-                __size28 = SizeOfNil();
+                __size33 = SizeOfNil();
             }
             else
             {
-                __size28 = SizeOfArrayHeader(message.Matrix.Count);
-                foreach (var __item29 in message.Matrix)
+                __size33 = SizeOfArrayHeader(message.Matrix.Count);
+                foreach (var __item34 in message.Matrix)
                 {
-                    int __size30;
-                    if (__item29 is null)
+                    int __size35;
+                    if (__item34 is null)
                     {
-                        __size30 = SizeOfNil();
+                        __size35 = SizeOfNil();
                     }
                     else
                     {
-                        __size30 = SizeOfArrayHeader(__item29.Count);
-                        foreach (var __item31 in __item29)
+                        __size35 = SizeOfArrayHeader(__item34.Count);
+                        foreach (var __item36 in __item34)
                         {
-                            __size30 += SizeOfInt32(__item31);
+                            __size35 += SizeOfInt32(__item36);
                         }
                     }
-                    __size28 += __size30;
+                    __size33 += __size35;
                 }
             }
-            size += __size28;
+            size += __size33;
             size += SizeOfInt32(14);
-            int __size32;
-            if (message.History is null)
-            {
-                __size32 = SizeOfNil();
-            }
-            else
-            {
-                __size32 = SizeOfMapHeader(message.History.Count);
-                foreach (var __kvp33 in message.History)
-                {
-                    __size32 += SizeOfString(__kvp33.Key);
-                    int __size34;
-                    if (__kvp33.Value is null)
-                    {
-                        __size34 = SizeOfNil();
-                    }
-                    else
-                    {
-                        __size34 = SizeOfArrayHeader(__kvp33.Value.Count);
-                        foreach (var __item35 in __kvp33.Value)
-                        {
-                            var __size36 = __item35 is null ? SizeOfNil() : SizeOfReading(__item35);
-                            if (__size36 < 0)
-                                return global::Akka.Serialization.SerializerV2.UnknownSize;
-                            __size34 += __size36;
-                        }
-                    }
-                    __size32 += __size34;
-                }
-            }
-            size += __size32;
-            size += SizeOfInt32(15);
             int __size37;
-            if (message.SparseReadings is null)
+            if (message.History is null)
             {
                 __size37 = SizeOfNil();
             }
             else
             {
-                __size37 = SizeOfArrayHeader(message.SparseReadings.Count);
-                foreach (var __item38 in message.SparseReadings)
+                __size37 = SizeOfMapHeader(message.History.Count);
+                foreach (var __kvp38 in message.History)
                 {
-                    var __size39 = __item38 is null ? SizeOfNil() : SizeOfReading(__item38);
-                    if (__size39 < 0)
-                        return global::Akka.Serialization.SerializerV2.UnknownSize;
+                    __size37 += SizeOfString(__kvp38.Key);
+                    int __size39;
+                    if (__kvp38.Value is null)
+                    {
+                        __size39 = SizeOfNil();
+                    }
+                    else
+                    {
+                        __size39 = SizeOfArrayHeader(__kvp38.Value.Count);
+                        foreach (var __item40 in __kvp38.Value)
+                        {
+                            var __size41 = __item40 is null ? SizeOfNil() : SizeOfReading(__item40);
+                            if (__size41 < 0)
+                                return global::Akka.Serialization.SerializerV2.UnknownSize;
+                            __size39 += __size41;
+                        }
+                    }
                     __size37 += __size39;
                 }
             }
             size += __size37;
+            size += SizeOfInt32(15);
+            int __size42;
+            if (message.SparseReadings is null)
+            {
+                __size42 = SizeOfNil();
+            }
+            else
+            {
+                __size42 = SizeOfArrayHeader(message.SparseReadings.Count);
+                foreach (var __item43 in message.SparseReadings)
+                {
+                    var __size44 = __item43 is null ? SizeOfNil() : SizeOfReading(__item43);
+                    if (__size44 < 0)
+                        return global::Akka.Serialization.SerializerV2.UnknownSize;
+                    __size42 += __size44;
+                }
+            }
+            size += __size42;
             size += SizeOfInt32(16);
-            int __size40;
+            int __size45;
             if (message.Track is null)
             {
-                __size40 = SizeOfNil();
+                __size45 = SizeOfNil();
             }
             else
             {
-                __size40 = SizeOfArrayHeader(message.Track.Count);
-                foreach (var __item41 in message.Track)
+                __size45 = SizeOfArrayHeader(message.Track.Count);
+                foreach (var __item46 in message.Track)
                 {
-                    var __size42 = SizeOfGeoPoint(__item41);
-                    if (__size42 < 0)
+                    var __size47 = SizeOfGeoPoint(__item46);
+                    if (__size47 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
-                    __size40 += __size42;
+                    __size45 += __size47;
                 }
             }
-            size += __size40;
+            size += __size45;
             size += SizeOfInt32(17);
-            int __size43;
-            if (message.SparseTrack is null)
-            {
-                __size43 = SizeOfNil();
-            }
-            else
-            {
-                __size43 = SizeOfArrayHeader(message.SparseTrack.Count);
-                foreach (var __item44 in message.SparseTrack)
-                {
-                    var __size45 = __item44 is null ? SizeOfNil() : SizeOfGeoPoint(__item44.Value);
-                    if (__size45 < 0)
-                        return global::Akka.Serialization.SerializerV2.UnknownSize;
-                    __size43 += __size45;
-                }
-            }
-            size += __size43;
-            size += SizeOfInt32(18);
-            int __size46;
-            if (message.SparseCodes is null)
-            {
-                __size46 = SizeOfNil();
-            }
-            else
-            {
-                __size46 = SizeOfArrayHeader(message.SparseCodes.Count);
-                foreach (var __item47 in message.SparseCodes)
-                {
-                    __size46 += __item47 is null ? SizeOfNil() : SizeOfInt32(__item47.Value);
-                }
-            }
-            size += __size46;
-            size += SizeOfInt32(19);
             int __size48;
-            if (message.SparseNames is null)
+            if (message.SparseTrack is null)
             {
                 __size48 = SizeOfNil();
             }
             else
             {
-                __size48 = SizeOfArrayHeader(message.SparseNames.Count);
-                foreach (var __item49 in message.SparseNames)
+                __size48 = SizeOfArrayHeader(message.SparseTrack.Count);
+                foreach (var __item49 in message.SparseTrack)
                 {
-                    __size48 += SizeOfString(__item49);
+                    var __size50 = __item49 is null ? SizeOfNil() : SizeOfGeoPoint(__item49.Value);
+                    if (__size50 < 0)
+                        return global::Akka.Serialization.SerializerV2.UnknownSize;
+                    __size48 += __size50;
                 }
             }
             size += __size48;
-            size += SizeOfInt32(20);
-            int __size50;
-            if (message.Jagged is null)
+            size += SizeOfInt32(18);
+            int __size51;
+            if (message.SparseCodes is null)
             {
-                __size50 = SizeOfNil();
+                __size51 = SizeOfNil();
             }
             else
             {
-                __size50 = SizeOfArrayHeader(message.Jagged.Length);
-                foreach (var __item51 in message.Jagged)
+                __size51 = SizeOfArrayHeader(message.SparseCodes.Count);
+                foreach (var __item52 in message.SparseCodes)
                 {
-                    int __size52;
-                    if (__item51 is null)
+                    __size51 += __item52 is null ? SizeOfNil() : SizeOfInt32(__item52.Value);
+                }
+            }
+            size += __size51;
+            size += SizeOfInt32(19);
+            int __size53;
+            if (message.SparseNames is null)
+            {
+                __size53 = SizeOfNil();
+            }
+            else
+            {
+                __size53 = SizeOfArrayHeader(message.SparseNames.Count);
+                foreach (var __item54 in message.SparseNames)
+                {
+                    __size53 += SizeOfString(__item54);
+                }
+            }
+            size += __size53;
+            size += SizeOfInt32(20);
+            int __size55;
+            if (message.Jagged is null)
+            {
+                __size55 = SizeOfNil();
+            }
+            else
+            {
+                __size55 = SizeOfArrayHeader(message.Jagged.Length);
+                foreach (var __item56 in message.Jagged)
+                {
+                    int __size57;
+                    if (__item56 is null)
                     {
-                        __size52 = SizeOfNil();
+                        __size57 = SizeOfNil();
                     }
                     else
                     {
-                        __size52 = SizeOfArrayHeader(__item51.Length);
-                        foreach (var __item53 in __item51)
+                        __size57 = SizeOfArrayHeader(__item56.Length);
+                        foreach (var __item58 in __item56)
                         {
-                            __size52 += SizeOfInt32(__item53);
+                            __size57 += SizeOfInt32(__item58);
                         }
                     }
-                    __size50 += __size52;
+                    __size55 += __size57;
                 }
             }
-            size += __size50;
+            size += __size55;
             size += SizeOfInt32(21);
-            int __size54;
+            int __size59;
             if (message.Palette is null)
             {
-                __size54 = SizeOfNil();
+                __size59 = SizeOfNil();
             }
             else
             {
-                __size54 = SizeOfArrayHeader(message.Palette.Count);
-                foreach (var __item55 in message.Palette)
+                __size59 = SizeOfArrayHeader(message.Palette.Count);
+                foreach (var __item60 in message.Palette)
                 {
-                    __size54 += SizeOfEnum((int)__item55);
+                    __size59 += SizeOfEnum((int)__item60);
                 }
             }
-            size += __size54;
+            size += __size59;
             return size;
         }
     }
@@ -881,9 +899,27 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Samples.Count);
-            foreach (var __item2 in message.Samples)
+            var __collection2 = message.Samples;
+            if (__collection2 is global::System.Collections.Generic.List<double> __list3 && __list3.GetType() == typeof(global::System.Collections.Generic.List<double>))
             {
-                writer.Write(__item2);
+                foreach (var __item5 in __list3)
+                {
+                    writer.Write(__item5);
+                }
+            }
+            else if (__collection2 is double[] __array4)
+            {
+                foreach (var __item6 in __array4)
+                {
+                    writer.Write(__item6);
+                }
+            }
+            else
+            {
+                foreach (var __item7 in __collection2)
+                {
+                    writer.Write(__item7);
+                }
             }
         }
         writer.Write(4);
@@ -894,9 +930,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Ids.Count);
-            foreach (var __item3 in message.Ids)
+            foreach (var __item8 in message.Ids)
             {
-                WriteGuid(ref writer, __item3);
+                WriteGuid(ref writer, __item8);
             }
         }
         writer.Write(5);
@@ -907,10 +943,10 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteMapHeader(message.Tags.Count);
-            foreach (var __kvp4 in message.Tags)
+            foreach (var __kvp9 in message.Tags)
             {
-                writer.Write(__kvp4.Key);
-                writer.Write(__kvp4.Value);
+                writer.Write(__kvp9.Key);
+                writer.Write(__kvp9.Value);
             }
         }
         writer.Write(6);
@@ -921,13 +957,13 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteMapHeader(message.ReadingsById.Count);
-            foreach (var __kvp5 in message.ReadingsById)
+            foreach (var __kvp10 in message.ReadingsById)
             {
-                writer.Write(__kvp5.Key);
-                if (__kvp5.Value is null)
+                writer.Write(__kvp10.Key);
+                if (__kvp10.Value is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __kvp5.Value);
+                    WriteReading(ref writer, __kvp10.Value);
             }
         }
         writer.Write(7);
@@ -938,9 +974,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Points.Length);
-            foreach (var __item6 in message.Points)
+            foreach (var __item11 in message.Points)
             {
-                writer.Write(__item6);
+                writer.Write(__item11);
             }
         }
         writer.Write(8);
@@ -951,12 +987,12 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Readings.Count);
-            foreach (var __item7 in message.Readings)
+            foreach (var __item12 in message.Readings)
             {
-                if (__item7 is null)
+                if (__item12 is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __item7);
+                    WriteReading(ref writer, __item12);
             }
         }
         writer.Write(9);
@@ -967,9 +1003,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Labels.Count);
-            foreach (var __item8 in message.Labels)
+            foreach (var __item13 in message.Labels)
             {
-                writer.Write(__item8);
+                writer.Write(__item13);
             }
         }
         writer.Write(10);
@@ -980,10 +1016,10 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteMapHeader(message.Counters.Count);
-            foreach (var __kvp9 in message.Counters)
+            foreach (var __kvp14 in message.Counters)
             {
-                writer.Write(__kvp9.Key);
-                writer.Write(__kvp9.Value);
+                writer.Write(__kvp14.Key);
+                writer.Write(__kvp14.Value);
             }
         }
         writer.Write(11);
@@ -997,9 +1033,9 @@ public sealed partial class GoldenSerializer
             else
             {
                 writer.WriteArrayHeader(message.MaybeTrack.Value.Length);
-                foreach (var __item10 in message.MaybeTrack.Value)
+                foreach (var __item15 in message.MaybeTrack.Value)
                 {
-                    WriteGeoPoint(ref writer, __item10);
+                    WriteGeoPoint(ref writer, __item15);
                 }
             }
         writer.Write(12);
@@ -1010,9 +1046,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.MaybeNumbers.Count);
-            foreach (var __item11 in message.MaybeNumbers)
+            foreach (var __item16 in message.MaybeNumbers)
             {
-                writer.Write(__item11);
+                writer.Write(__item16);
             }
         }
         writer.Write(13);
@@ -1023,18 +1059,18 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Matrix.Count);
-            foreach (var __item12 in message.Matrix)
+            foreach (var __item17 in message.Matrix)
             {
-                if (__item12 is null)
+                if (__item17 is null)
                 {
                     writer.WriteNil();
                 }
                 else
                 {
-                    writer.WriteArrayHeader(__item12.Count);
-                    foreach (var __item13 in __item12)
+                    writer.WriteArrayHeader(__item17.Count);
+                    foreach (var __item18 in __item17)
                     {
-                        writer.Write(__item13);
+                        writer.Write(__item18);
                     }
                 }
             }
@@ -1047,22 +1083,22 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteMapHeader(message.History.Count);
-            foreach (var __kvp14 in message.History)
+            foreach (var __kvp19 in message.History)
             {
-                writer.Write(__kvp14.Key);
-                if (__kvp14.Value is null)
+                writer.Write(__kvp19.Key);
+                if (__kvp19.Value is null)
                 {
                     writer.WriteNil();
                 }
                 else
                 {
-                    writer.WriteArrayHeader(__kvp14.Value.Count);
-                    foreach (var __item15 in __kvp14.Value)
+                    writer.WriteArrayHeader(__kvp19.Value.Count);
+                    foreach (var __item20 in __kvp19.Value)
                     {
-                        if (__item15 is null)
+                        if (__item20 is null)
                             writer.WriteNil();
                         else
-                            WriteReading(ref writer, __item15);
+                            WriteReading(ref writer, __item20);
                     }
                 }
             }
@@ -1075,12 +1111,12 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.SparseReadings.Count);
-            foreach (var __item16 in message.SparseReadings)
+            foreach (var __item21 in message.SparseReadings)
             {
-                if (__item16 is null)
+                if (__item21 is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __item16);
+                    WriteReading(ref writer, __item21);
             }
         }
         writer.Write(16);
@@ -1091,9 +1127,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Track.Count);
-            foreach (var __item17 in message.Track)
+            foreach (var __item22 in message.Track)
             {
-                WriteGeoPoint(ref writer, __item17);
+                WriteGeoPoint(ref writer, __item22);
             }
         }
         writer.Write(17);
@@ -1104,12 +1140,12 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.SparseTrack.Count);
-            foreach (var __item18 in message.SparseTrack)
+            foreach (var __item23 in message.SparseTrack)
             {
-                if (__item18 is null)
+                if (__item23 is null)
                     writer.WriteNil();
                 else
-                    WriteGeoPoint(ref writer, __item18.Value);
+                    WriteGeoPoint(ref writer, __item23.Value);
             }
         }
         writer.Write(18);
@@ -1120,12 +1156,12 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.SparseCodes.Count);
-            foreach (var __item19 in message.SparseCodes)
+            foreach (var __item24 in message.SparseCodes)
             {
-                if (__item19 is null)
+                if (__item24 is null)
                     writer.WriteNil();
                 else
-                    writer.Write(__item19.Value);
+                    writer.Write(__item24.Value);
             }
         }
         writer.Write(19);
@@ -1136,9 +1172,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.SparseNames.Count);
-            foreach (var __item20 in message.SparseNames)
+            foreach (var __item25 in message.SparseNames)
             {
-                writer.Write(__item20);
+                writer.Write(__item25);
             }
         }
         writer.Write(20);
@@ -1149,18 +1185,18 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Jagged.Length);
-            foreach (var __item21 in message.Jagged)
+            foreach (var __item26 in message.Jagged)
             {
-                if (__item21 is null)
+                if (__item26 is null)
                 {
                     writer.WriteNil();
                 }
                 else
                 {
-                    writer.WriteArrayHeader(__item21.Length);
-                    foreach (var __item22 in __item21)
+                    writer.WriteArrayHeader(__item26.Length);
+                    foreach (var __item27 in __item26)
                     {
-                        writer.Write(__item22);
+                        writer.Write(__item27);
                     }
                 }
             }
@@ -1173,9 +1209,9 @@ public sealed partial class GoldenSerializer
         else
         {
             writer.WriteArrayHeader(message.Palette.Count);
-            foreach (var __item23 in message.Palette)
+            foreach (var __item28 in message.Palette)
             {
-                writer.Write((int)__item23);
+                writer.Write((int)__item28);
             }
         }
     }

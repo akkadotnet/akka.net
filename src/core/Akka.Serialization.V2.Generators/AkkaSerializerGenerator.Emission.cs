@@ -2008,13 +2008,56 @@ public sealed partial class AkkaSerializerGenerator
             }
             else
             {
-                var item = alloc.Next("item");
                 w.Raw("writer.WriteArrayHeader(").Value(value.Member(CollectionCountMember(mapping.Kind))).Line(");");
-                w.Raw("foreach (var ").Local(item).Raw(" in ").Value(value).Line(")");
-                using (w.Block())
-                    EmitWriteElement(w, mapping.TypeArguments[0], item, alloc);
+                EmitCollectionElements(w, mapping, value, alloc,
+                    item => EmitWriteElement(w, mapping.TypeArguments[0], item, alloc));
             }
         }
+    }
+
+    /// <summary>
+    /// Emits a list-like traversal, specializing IReadOnlyList's common runtime representations
+    /// without boxing their enumerators. Other implementations retain interface enumeration.
+    /// </summary>
+    private static void EmitCollectionElements(CodeWriter w, TypeMapping mapping, ValueExpr value,
+        NameAlloc alloc, Action<Local> emitElement)
+    {
+        // Native collection element bodies are emitted inline. Specializing their outer traversal
+        // would multiply nested branches by three at every level; specialize only leaf traversals.
+        if (mapping.Kind != FieldKind.ReadOnlyList || IsCollectionKind(mapping.TypeArguments[0].Kind))
+        {
+            EmitCollectionForeach(w, value, alloc, emitElement);
+            return;
+        }
+
+        var collection = alloc.Next("collection");
+        var list = alloc.Next("list");
+        var array = alloc.Next("array");
+        var elementType = TypeName.Global(mapping.TypeArguments[0].DeclaredTypeName);
+
+        // Evaluate the traversal source once, where the original foreach evaluated it. The header's
+        // Count read stays before this capture, including for properties with observable getters.
+        w.Raw("var ").Local(collection).Raw(" = ").Value(value).Line(";");
+        w.Raw("if (").Local(collection).Raw(" is global::System.Collections.Generic.List<").Type(elementType)
+            .Raw("> ").Local(list).Raw(" && ").Local(list)
+            .Raw(".GetType() == typeof(global::System.Collections.Generic.List<").Type(elementType).Line(">))");
+        using (w.Block())
+            EmitCollectionForeach(w, list, alloc, emitElement);
+        w.Raw("else if (").Local(collection).Raw(" is ").Type(elementType).Raw("[] ").Local(array).Line(")");
+        using (w.Block())
+            EmitCollectionForeach(w, array, alloc, emitElement);
+        w.Line("else");
+        using (w.Block())
+            EmitCollectionForeach(w, collection, alloc, emitElement);
+    }
+
+    private static void EmitCollectionForeach(CodeWriter w, ValueExpr collection, NameAlloc alloc,
+        Action<Local> emitElement)
+    {
+        var item = alloc.Next("item");
+        w.Raw("foreach (var ").Local(item).Raw(" in ").Value(collection).Line(")");
+        using (w.Block())
+            emitElement(item);
     }
 
     private static void EmitWriteElement(CodeWriter w, TypeMapping mapping, ValueExpr value, NameAlloc alloc)
@@ -2510,11 +2553,9 @@ public sealed partial class AkkaSerializerGenerator
             }
             else
             {
-                var item = alloc.Next("item");
                 w.Local(sizeVar).Raw(" = SizeOfArrayHeader(").Value(value.Member(CollectionCountMember(mapping.Kind))).Line(");");
-                w.Raw("foreach (var ").Local(item).Raw(" in ").Value(value).Line(")");
-                using (w.Block())
-                    EmitSizeElement(w, mapping.TypeArguments[0], item, sizeVar, alloc);
+                EmitCollectionElements(w, mapping, value, alloc,
+                    item => EmitSizeElement(w, mapping.TypeArguments[0], item, sizeVar, alloc));
             }
         }
     }

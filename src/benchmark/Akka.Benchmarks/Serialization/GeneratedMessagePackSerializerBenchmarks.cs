@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -52,6 +53,10 @@ public class GeneratedMessagePackSerializerBenchmarks
     private string _envelopeManifest = null!;
     private string _nestedEnvelopeManifest = null!;
     private string _jsonManifest = null!;
+    private OrderBenchmarkSerializer _collectionSerializer = null!;
+    private BenchmarkReadOnlyList _collectionList = null!;
+    private BenchmarkReadOnlyList _collectionArray = null!;
+    private ArrayBufferWriter<byte> _collectionWriter = null!;
 
     [GlobalSetup]
     public void Setup()
@@ -117,6 +122,20 @@ public class GeneratedMessagePackSerializerBenchmarks
         if (_envelopeSerializer is not EnvelopeBenchmarkSerializer)
             throw new InvalidOperationException($"Expected generated envelope serializer, got [{_envelopeSerializer.GetType()}].");
 
+        _collectionSerializer = (OrderBenchmarkSerializer)_generatedSerializer;
+        var readings = new BenchmarkCollectionReading[8];
+        for (var i = 0; i < readings.Length; i++)
+            readings[i] = new BenchmarkCollectionReading($"sensor-{i}", i + 0.5, 1_700_000_000_000L + i);
+        _collectionList = new BenchmarkReadOnlyList(new List<BenchmarkCollectionReading>(readings));
+        _collectionArray = new BenchmarkReadOnlyList(readings);
+        _collectionWriter = new ArrayBufferWriter<byte>(4096);
+        var listBytes = _collectionSerializer.ToBinary(_collectionList);
+        var arrayBytes = _collectionSerializer.ToBinary(_collectionArray);
+        if (!listBytes.AsSpan().SequenceEqual(arrayBytes)
+            || _collectionSerializer.SizeHint(_collectionList) != listBytes.Length
+            || _collectionSerializer.SizeHint(_collectionArray) != arrayBytes.Length)
+            throw new InvalidOperationException("Collection benchmark representations must have identical bytes and exact size hints.");
+
         Console.WriteLine($"Generated MessagePack payload size: {_generatedBytes.Length} bytes");
         Console.WriteLine($"Generated envelope with generated payload size: {_generatedPayloadEnvelopeBytes.Length} bytes");
         Console.WriteLine($"Generated envelope with custom payload size: {_customPayloadEnvelopeBytes.Length} bytes");
@@ -137,6 +156,28 @@ public class GeneratedMessagePackSerializerBenchmarks
     {
         return _generatedSystem.Serialization.Serialize(_message);
     }
+
+    // The same eight nested readings are held behind IReadOnlyList in both cases. Construction
+    // and writer capacity are outside measurement; these isolate generated traversal allocations.
+    [Benchmark]
+    public int ReadOnlyList_ListWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionList, _collectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_ListSizeHint() => _collectionSerializer.SizeHint(_collectionList);
+
+    [Benchmark]
+    public int ReadOnlyList_ArrayWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionArray, _collectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_ArraySizeHint() => _collectionSerializer.SizeHint(_collectionArray);
 
     [Benchmark]
     public object Generated_MessagePack_deserialize()
@@ -333,6 +374,16 @@ public sealed record SubmitOrder(
     [property: AkkaField(5)] DateTimeOffset CreatedAt,
     [property: AkkaField(6)] OrderPriority Priority,
     [property: AkkaField(7)] IActorRef? ReplyTo) : IOrderBenchmarkProtocol;
+
+[AkkaSerializable(Manifest = "benchmark-readonly-list-v1")]
+public sealed record BenchmarkReadOnlyList(
+    [property: AkkaField(1)] IReadOnlyList<BenchmarkCollectionReading> Readings) : IOrderBenchmarkProtocol;
+
+[AkkaSerializable]
+public sealed record BenchmarkCollectionReading(
+    [property: AkkaField(1)] string SensorId,
+    [property: AkkaField(2)] double Value,
+    [property: AkkaField(3)] long TimestampTicks);
 
 [AkkaSerializable(Manifest = "benchmark-envelope-v1")]
 public sealed record BenchmarkEnvelope(
