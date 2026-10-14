@@ -1457,7 +1457,23 @@ namespace Akka.Streams.Stage
         private T Grab<T>(Inlet inlet)
         {
             var connection = GetConnection(inlet);
+            if (connection.Storage is not null)
+                return GrabWithStorage<T>(inlet, connection);
 
+            var element = connection.ObjectSlot;
+            if ((connection.PortState & (InReady | InFailed | InClosed)) == InReady &&
+                !ReferenceEquals(element, Empty.Instance))
+            {
+                connection.ObjectSlot = Empty.Instance;
+                ClearConsumedTraceContext(connection);
+                return (T)element;
+            }
+
+            return GrabSlow<T>(inlet, connection);
+        }
+
+        private T GrabWithStorage<T>(Inlet inlet, Connection connection)
+        {
             if ((connection.PortState & (InReady | InFailed | InClosed)) == InReady &&
                 connection.HasElement)
             {
@@ -1465,25 +1481,22 @@ namespace Akka.Streams.Stage
                 {
                     var value = typed.Value;
                     connection.ClearElement();
-                    if (connection.SlotContext.HasValue)
-                    {
-                        connection.SlotContext = null;
-                        connection.SlotLinks = null;
-                    }
+                    ClearConsumedTraceContext(connection);
                     return value;
                 }
 
                 // fast path
                 var element = connection.Slot;
                 connection.ClearElement();
-                if (connection.SlotContext.HasValue)
-                {
-                    connection.SlotContext = null;
-                    connection.SlotLinks = null;
-                }
+                ClearConsumedTraceContext(connection);
                 return (T)element;
             }
 
+            return GrabSlow<T>(inlet, connection);
+        }
+
+        private T GrabSlow<T>(Inlet inlet, Connection connection)
+        {
             // Slow path for grabbing element from already failed or completed connections
             if (!IsAvailable(inlet))
                 throw new ArgumentException($"Cannot get element from already empty input port ({inlet})");
@@ -1500,12 +1513,17 @@ namespace Akka.Streams.Stage
             // Completed
             var elem = connection.ReadElement<T>();
             connection.ClearElement();
+            ClearConsumedTraceContext(connection);
+            return elem;
+        }
+
+        private static void ClearConsumedTraceContext(Connection connection)
+        {
             if (connection.SlotContext.HasValue)
             {
                 connection.SlotContext = null;
                 connection.SlotLinks = null;
             }
-            return elem;
         }
 #nullable restore annotations
 

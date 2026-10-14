@@ -295,20 +295,34 @@ namespace Akka.Streams.Implementation.Fusing
 #nullable enable annotations
             internal ElementSlot? Storage { get; set; }
 
+            // Only use after establishing that Storage is null. Public Slot remains the bridge
+            // for connections that may carry typed payloads.
+            internal object ObjectSlot
+            {
+                get => _slot;
+                set => _slot = value;
+            }
+
             internal bool HasTypedElement => Storage?.HasValue == true;
 
             internal bool HasElement => HasTypedElement || !ReferenceEquals(_slot, Empty.Instance);
 
             internal void StoreElement<T>(T element)
             {
-                if (Storage is ElementSlot<T> typed)
+                var storage = Storage;
+                if (storage is null)
+                {
+                    _slot = element!;
+                }
+                else if (storage is ElementSlot<T> typed)
                 {
                     _slot = Empty.Instance;
                     typed.Store(element);
                 }
                 else
                 {
-                    Slot = element!;
+                    storage.Clear();
+                    _slot = element!;
                 }
             }
 

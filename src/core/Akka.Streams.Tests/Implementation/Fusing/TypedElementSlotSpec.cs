@@ -92,9 +92,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [InlineData(true)]
         public void Should_preserve_setter_identity_and_deferred_cast_errors_When_the_public_slot_is_assigned(bool completed)
         {
-            using var graph = new ManualGraph<int, int>(Sys);
+            AssertSetter(12, completed);
+            AssertSetter("assigned reference", completed);
+        }
+
+        private void AssertSetter<T>(T value, bool completed)
+        {
+            using var graph = new ManualGraph<T, T>(Sys);
             graph.Request();
-            graph.Source.Logic.Send(1);
+            graph.Source.Logic.Send(value);
             graph.Run();
             if (completed)
             {
@@ -102,11 +108,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 graph.Run();
             }
 
-            object assigned = 12;
+            object assigned = value!;
             graph.Connection.Slot = assigned;
             graph.Connection.Slot.Should().BeSameAs(assigned);
-            graph.Connection.Storage!.HasValue.Should().BeFalse();
-            graph.Sink.Logic.Take().Should().Be(12);
+            if (graph.Connection.Storage is { } storage)
+                storage.HasValue.Should().BeFalse();
+            graph.Sink.Logic.Take().Should().Be(value);
 
             // Restore the arrived port state to isolate the existing public setter contract.
             graph.Connection.PortState = completed
@@ -353,18 +360,31 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             values.First().Start.GetObject().Should().BeSameAs(second.Start.GetObject());
         }
 
+        [Fact(DisplayName = "Should_allow_widened_grab_When_pass_along_reads_a_typed_input_as_object")]
+        public async Task Should_allow_widened_grab_When_pass_along_reads_a_typed_input_as_object()
+        {
+            var values = await Source.From(new[] { 1, 2, 3 })
+                .Via(new WideningPassAlong())
+                .RunWith(Sink.Seq<object>(), Sys.Materializer())
+                .WaitAsync(TimeSpan.FromSeconds(5));
+            values.Cast<int>().Should().Equal(1, 2, 3);
+        }
+
         private void AssertPending<T>(T value, bool chasing, bool fail)
         {
             using var graph = new ManualGraph<T, T>(Sys, chasing);
             graph.Connection.Storage.Should().BeOfType<ElementSlot<T>>();
-            graph.Request();
-            graph.Source.Logic.Send(value);
             var error = new InvalidOperationException("terminal");
-            if (fail)
-                graph.Source.Logic.FailOutput(error);
-            else
-                graph.Source.Logic.CompleteOutput();
-            graph.Run();
+            graph.Source.Logic.OnNextDemand(() =>
+            {
+                // Push and close inside interpreter execution to exercise chased events too.
+                graph.Source.Logic.Send(value);
+                if (fail)
+                    graph.Source.Logic.FailOutput(error);
+                else
+                    graph.Source.Logic.CompleteOutput();
+            });
+            graph.Request();
 
             graph.Sink.Logic.Events.Should().Equal("next", fail ? "failure" : "complete");
             if (fail)
@@ -466,6 +486,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public sealed class SourceLogic : OutGraphStageLogic
             {
                 private readonly ManualSource<T> _stage;
+                private Action? _onNextDemand;
+
                 public SourceLogic(ManualSource<T> stage) : base(stage.Shape)
                 {
                     _stage = stage;
@@ -474,8 +496,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public Exception? Cancellation { get; private set; }
                 public override void OnPull()
                 {
-                    // The test controls when this source pushes after demand arrives.
+                    var action = _onNextDemand;
+                    _onNextDemand = null;
+                    action?.Invoke();
                 }
+                public void OnNextDemand(Action action) => _onNextDemand = action;
                 public override void OnDownstreamFinish(Exception cause) => Cancellation = cause;
                 public void Send(T value) => Push(_stage.Out, value);
                 public void CompleteOutput() => Complete(_stage.Out);
@@ -512,6 +537,32 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 public void Request() => Pull(_stage.In);
                 public T Take() => Grab(_stage.In);
                 public void CancelInput(Exception cause) => Cancel(_stage.In, cause);
+            }
+        }
+
+        private sealed class WideningPassAlong : GraphStage<FlowShape<int, object>>
+        {
+            private readonly Inlet<int> _in = new("widen.in");
+            private readonly Outlet<object> _out = new("widen.out");
+
+            public WideningPassAlong() => Shape = new FlowShape<int, object>(_in, _out);
+
+            public override FlowShape<int, object> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(WideningPassAlong stage) : base(stage.Shape)
+                {
+                    SetHandler(stage._out, onPull: () =>
+                    {
+                        // PassAlong also pulls after emission; do not issue a second demand.
+                        if (!HasBeenPulled(stage._in))
+                            TryPull(stage._in);
+                    });
+                    PassAlong(stage._in, stage._out, doPull: false);
+                }
             }
         }
 
