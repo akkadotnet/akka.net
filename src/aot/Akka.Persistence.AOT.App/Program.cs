@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+using System.Buffers;
 using Akka.Actor;
 using Akka.AOT.Shared;
 using Akka.Configuration;
@@ -15,6 +17,7 @@ using Akka.Persistence.Query;
 using Akka.Persistence.Query.InMemory;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -116,6 +119,7 @@ internal static class Program
             await AssertQueriesAsync(label, system);
             AssertRegisteredPluginsAreUsed(system);
             await AssertBuiltInPluginsAsync(label, system);
+            await AssertFusedStreamsAsync(system);
 
             system.Log.Info("[canary-persistence] {0}: round-trip complete", label);
             watchdog.ThrowIfAnyProblems(label, "post-boot");
@@ -201,6 +205,59 @@ internal static class Program
         Require(label, byTag.Count == 3, $"CurrentEventsByTag returned {byTag.Count} envelopes, not 3 - the event adapter did not run");
 
         Console.WriteLine($"[canary-persistence] {label}: CurrentEventsByPersistenceId and CurrentEventsByTag both returned 3 events");
+    }
+
+    private static async Task AssertFusedStreamsAsync(ActorSystem system)
+    {
+        var materializer = system.Materializer();
+        await AssertFusedStreamAsync("int", Source.Repeat(3).Take(100), static value => value, 300, materializer);
+        await AssertFusedStreamAsync("sequence",
+            Source.Repeat(new ReadOnlySequence<byte>(new byte[8])).Take(100),
+            static value => value.Length, 800, materializer);
+    }
+
+    private static async Task AssertFusedStreamAsync<T>(string label, Source<T, NotUsed> source,
+        Func<T, long> value, long expectedSum, ActorMaterializer materializer)
+    {
+        var totals = await source
+            .Via(new CanaryForwardStage<T>())
+            .Via(new CanaryForwardStage<T>())
+            .RunWith(Sink.Aggregate<T, StreamTotals>(default,
+                (acc, element) => new StreamTotals(acc.Count + 1, acc.Sum + value(element))), materializer)
+            .WaitAsync(AskTimeout);
+        Require(label, totals.Count == 100 && totals.Sum == expectedSum,
+            $"fused stream delivered {totals.Count} elements with sum {totals.Sum}, expected 100 and {expectedSum}");
+        Console.WriteLine($"[canary-persistence] streams-{label}: 100 elements, sum {totals.Sum}, two fused forwarding stages");
+    }
+
+    private readonly record struct StreamTotals(int Count, long Sum);
+
+    // Actual stages keep both typed ports present even when identity maps could be optimized away.
+    private sealed class CanaryForwardStage<T> : GraphStage<FlowShape<T, T>>
+    {
+        private readonly Inlet<T> _in = new("canary-fused.in");
+        private readonly Outlet<T> _out = new("canary-fused.out");
+
+        public CanaryForwardStage() => Shape = new FlowShape<T, T>(_in, _out);
+
+        public override FlowShape<T, T> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly CanaryForwardStage<T> _stage;
+
+            public Logic(CanaryForwardStage<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandlers(stage._in, stage._out, this);
+            }
+
+            public override void OnPush() => Push(_stage._out, Grab(_stage._in));
+
+            public override void OnPull() => Pull(_stage._in);
+        }
     }
 
     /// <summary>
