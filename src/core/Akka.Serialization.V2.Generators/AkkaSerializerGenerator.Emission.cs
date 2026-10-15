@@ -775,7 +775,8 @@ public sealed partial class AkkaSerializerGenerator
             w.BlankLine();
             GenerateRegistration(w, serializer);
             GenerateManifest(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
-            GenerateSerialize(w);
+            GenerateSerialize(w, usedFormatters.IsEmpty && !resolved.ReachableMessages
+                .Any(message => message.Fields.Any(field => ContainsEnvelopePayload(field.Mapping))));
             GenerateSerializeDirect(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
             GenerateDeserialize(w, resolved.TopLevelMessages);
             GenerateSizeHint(w, resolved.TopLevelMessages);
@@ -947,11 +948,44 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSerialize(CodeWriter w)
+    private static bool ContainsEnvelopePayload(TypeMapping mapping)
+        => mapping.Kind == FieldKind.EnvelopePayload || mapping.TypeArguments.Any(ContainsEnvelopePayload);
+
+    private static void GenerateSerialize(CodeWriter w, bool useWriterCounts)
     {
         w.Line("public override int Serialize(object obj, IBufferWriter<byte> writer)");
         using (w.Block())
         {
+            // Formatter and envelope callbacks can commit via another alias after Flush;
+            // preserve the original per-wrapper accounting for those serializers.
+            if (useWriterCounts)
+            {
+                // These sealed writers already count successful advances. Read the starting count
+                // after MessagePack acquires its initial buffer, preserving writer-failure ordering.
+                w.Line("if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)");
+                using (w.Block())
+                {
+                    w.Line("var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);");
+                    w.Line("var initialCount = pooledWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref pooledMessagePackWriter);");
+                    w.Line("pooledMessagePackWriter.Flush();");
+                    w.Line("return checked(pooledWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+                w.Line("if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)");
+                using (w.Block())
+                {
+                    w.Line("var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);");
+                    w.Line("var initialCount = arrayWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref arrayMessagePackWriter);");
+                    w.Line("arrayMessagePackWriter.Flush();");
+                    w.Line("return checked(arrayWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+            }
+
             w.Line("var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);");
             w.Line("var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);");
             w.Line("SerializeMessagePack(obj, ref messagePackWriter);");

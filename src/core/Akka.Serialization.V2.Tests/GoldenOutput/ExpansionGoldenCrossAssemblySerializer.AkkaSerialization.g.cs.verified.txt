@@ -34,6 +34,24 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)
+        {
+            var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);
+            var initialCount = pooledWriter.WrittenCount;
+            SerializeMessagePack(obj, ref pooledMessagePackWriter);
+            pooledMessagePackWriter.Flush();
+            return checked(pooledWriter.WrittenCount - initialCount);
+        }
+
+        if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)
+        {
+            var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);
+            var initialCount = arrayWriter.WrittenCount;
+            SerializeMessagePack(obj, ref arrayMessagePackWriter);
+            arrayMessagePackWriter.Flush();
+            return checked(arrayWriter.WrittenCount - initialCount);
+        }
+
         var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);
         var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);
         SerializeMessagePack(obj, ref messagePackWriter);
