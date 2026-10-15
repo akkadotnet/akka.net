@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -72,6 +73,136 @@ public sealed class CollectionFieldSpec : IAsyncLifetime
         RoundTrip(message).Readings.Should().Equal(new CollReading("s-1", 1.5), new CollReading("s-2", 2.5));
     }
 
+    [Theory(DisplayName = "Should_PreserveWireBytesAndExactSize_When_ReadOnlyListUsesListOrArray")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_preserve_wire_bytes_and_exact_size_when_readonly_list_uses_list_or_array(bool empty)
+    {
+        var readings = empty ? Array.Empty<CollReading>() : new[] { new CollReading("s-1", 1.5), new CollReading("s-2", 2.5) };
+        var expected = _serializer.ToBinary(new ReadingArrayMessage(readings));
+        var messages = new[]
+        {
+            new ReadingListMessage(new List<CollReading>(readings)),
+            new ReadingListMessage(readings)
+        };
+
+        foreach (var message in messages)
+        {
+            var bytes = _serializer.ToBinary(message);
+            bytes.Should().Equal(expected);
+            _serializer.SizeHint(message).Should().Be(bytes.Length);
+            RoundTrip(message).Readings.Should().Equal(readings);
+        }
+    }
+
+    [Theory(DisplayName = "Should_EnumerateWithoutIndexing_When_ReadOnlyListUsesCustomImplementation")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_enumerate_without_indexing_when_readonly_list_uses_custom_implementation(bool empty)
+    {
+        var readings = new EnumerationProbeReadOnlyList<CollReading>(
+            empty ? Array.Empty<CollReading>() : new[] { new CollReading("s-1", 1.5), new CollReading("s-2", 2.5) });
+        AssertUsesInterfaceEnumeration(readings, () => readings.Enumerations, () => readings.IndexerReads);
+    }
+
+    [Theory(DisplayName = "Should_PreserveCustomEnumeration_When_ReadOnlyListUsesDerivedList")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_preserve_custom_enumeration_when_readonly_list_uses_derived_list(bool empty)
+    {
+        var readings = new EnumerationProbeList<CollReading>(
+            empty ? Array.Empty<CollReading>() : new[] { new CollReading("s-1", 1.5), new CollReading("s-2", 2.5) });
+        AssertUsesInterfaceEnumeration(readings, () => readings.Enumerations, () => readings.IndexerReads);
+    }
+
+    [Theory(DisplayName = "Should_KeepFailFastVersionChecks_When_ReadOnlyListIsMutatedDuringTraversal")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_keep_fail_fast_version_checks_when_readonly_list_is_mutated_during_traversal(bool sizeHint)
+    {
+        var values = new List<CollectionMutationValue> { new(1), new(2) };
+        values[0].OnRead = () => values.Add(new CollectionMutationValue(3));
+        var message = new MutatingReadOnlyListMessage(values);
+        Action traverse = sizeHint
+            ? () => _serializer.SizeHint(message)
+            : () => _serializer.Serialize(message, new ArrayBufferWriter<byte>());
+
+        traverse.Should().Throw<InvalidOperationException>();
+    }
+
+    private void AssertUsesInterfaceEnumeration(IReadOnlyList<CollReading> readings,
+        Func<int> enumerations, Func<int> indexerReads)
+    {
+        var message = new ReadingListMessage(readings);
+        var writer = new ArrayBufferWriter<byte>();
+        _serializer.Serialize(message, writer).Should().Be(writer.WrittenCount);
+        enumerations().Should().Be(1, "Write must preserve the collection's interface enumeration");
+        indexerReads().Should().Be(0);
+
+        _serializer.SizeHint(message).Should().Be(writer.WrittenCount);
+        enumerations().Should().Be(2, "SizeOf must preserve the collection's interface enumeration too");
+        indexerReads().Should().Be(0);
+
+        var recovered = _serializer.FromBinary(writer.WrittenMemory.ToArray(), "coll-reading-list-v1")
+            .Should().BeOfType<ReadingListMessage>().Subject;
+        recovered.Readings.Should().Equal(readings);
+    }
+
+    private sealed class EnumerationProbeReadOnlyList<T> : IReadOnlyList<T>
+    {
+        private readonly List<T> _values;
+
+        public EnumerationProbeReadOnlyList(IEnumerable<T> values) => _values = new List<T>(values);
+
+        public int Enumerations { get; private set; }
+        public int IndexerReads { get; private set; }
+        public int Count => _values.Count;
+
+        public T this[int index]
+        {
+            get
+            {
+                IndexerReads++;
+                return _values[index];
+            }
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            Enumerations++;
+            return _values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class EnumerationProbeList<T> : List<T>, IReadOnlyList<T>
+    {
+        public EnumerationProbeList(IEnumerable<T> values) : base(values)
+        {
+        }
+
+        public int Enumerations { get; private set; }
+        public int IndexerReads { get; private set; }
+
+        T IReadOnlyList<T>.this[int index]
+        {
+            get
+            {
+                IndexerReads++;
+                return base[index];
+            }
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            Enumerations++;
+            return base.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)this).GetEnumerator();
+    }
+
     [Fact(DisplayName = "Generated serializer should round-trip a Dictionary with non-string keys")]
     public void Should_round_trip_dictionary_with_non_string_keys()
     {
@@ -128,6 +259,29 @@ public sealed class CollectionFieldSpec : IAsyncLifetime
         recovered.Matrix[0].Should().Equal(1, 2);
         recovered.Matrix[1].Should().Equal(3);
         recovered.Matrix[2].Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Should_PreserveWireBytesAndExactSize_When_ReadOnlyListsAreNestedTwoOrThreeLevels")]
+    public void Should_preserve_wire_bytes_and_exact_size_when_readonly_lists_are_nested_two_or_three_levels()
+    {
+        IReadOnlyList<IReadOnlyList<int>> rows = new List<IReadOnlyList<int>>
+        {
+            new List<int> { 1, 2 }, Array.Empty<int>(), new[] { 3 }
+        };
+        var twoLevels = new NestedReadOnlyListMessage(rows);
+        var twoBytes = _serializer.ToBinary(twoLevels);
+        twoBytes.Should().Equal(_serializer.ToBinary(new JaggedIntArrayMessage(
+            new[] { new[] { 1, 2 }, Array.Empty<int>(), new[] { 3 } })));
+        _serializer.SizeHint(twoLevels).Should().Be(twoBytes.Length);
+        RoundTrip(twoLevels).Rows.Should().BeEquivalentTo(rows, options => options.WithStrictOrdering());
+
+        IReadOnlyList<IReadOnlyList<IReadOnlyList<int>>> cubes = new[] { rows };
+        var threeLevels = new DeepReadOnlyListMessage(cubes);
+        var threeBytes = _serializer.ToBinary(threeLevels);
+        // map(field1 -> array(array(array(1,2), array(), array(3))))
+        threeBytes.Should().Equal(0x81, 0x01, 0x91, 0x93, 0x92, 0x01, 0x02, 0x90, 0x91, 0x03);
+        _serializer.SizeHint(threeLevels).Should().Be(threeBytes.Length);
+        RoundTrip(threeLevels).Cubes.Should().BeEquivalentTo(cubes, options => options.WithStrictOrdering());
     }
 
     [Fact(DisplayName = "Generated serializer should round-trip Dictionary<string, List<Reading>>")]
@@ -497,6 +651,30 @@ public sealed record ReadingListMessage(
 public sealed record ReadingArrayMessage(
     [property: AkkaField(1)] CollReading[] Readings) : ICollectionProtocol;
 
+[AkkaSerializable(Manifest = "coll-mutating-readonly-list-v1")]
+public sealed record MutatingReadOnlyListMessage(
+    [property: AkkaField(1)] IReadOnlyList<CollectionMutationValue> Values) : ICollectionProtocol;
+
+[AkkaSerializable]
+public sealed class CollectionMutationValue
+{
+    private readonly int _value;
+
+    public CollectionMutationValue(int value) => _value = value;
+
+    public Action? OnRead { get; set; }
+
+    [AkkaField(1)]
+    public int Value
+    {
+        get
+        {
+            OnRead?.Invoke();
+            return _value;
+        }
+    }
+}
+
 [AkkaSerializable(Manifest = "coll-int-string-dict-v1")]
 public sealed record IntStringDictMessage(
     [property: AkkaField(1)] Dictionary<int, string> Map) : ICollectionProtocol;
@@ -508,6 +686,14 @@ public sealed record GuidReadingDictMessage(
 [AkkaSerializable(Manifest = "coll-nested-list-v1")]
 public sealed record NestedListMessage(
     [property: AkkaField(1)] List<List<int>> Matrix) : ICollectionProtocol;
+
+[AkkaSerializable(Manifest = "coll-nested-readonly-list-v1")]
+public sealed record NestedReadOnlyListMessage(
+    [property: AkkaField(1)] IReadOnlyList<IReadOnlyList<int>> Rows) : ICollectionProtocol;
+
+[AkkaSerializable(Manifest = "coll-deep-readonly-list-v1")]
+public sealed record DeepReadOnlyListMessage(
+    [property: AkkaField(1)] IReadOnlyList<IReadOnlyList<IReadOnlyList<int>>> Cubes) : ICollectionProtocol;
 
 [AkkaSerializable(Manifest = "coll-dict-of-list-v1")]
 public sealed record DictOfListMessage(
