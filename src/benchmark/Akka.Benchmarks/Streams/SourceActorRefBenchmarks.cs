@@ -5,11 +5,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+using System;
+using System.Diagnostics;
+using System.Runtime;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Streams
@@ -36,22 +42,32 @@ namespace Akka.Benchmarks.Streams
     public class SourceActorRefBenchmarks
     {
         private const int ElementCount = 100_000;
+        private const string ProducerSourceName = "Akka.Benchmarks.QueueProducer";
+        private const string ReferencePayload = "hit";
 
-        private ActorSystem _system;
-        private ActorMaterializer _materializer;
+        private ActorSystem _system = null!;
+        private ActorMaterializer _materializer = null!;
+        private ActivitySource _producerSource = null!;
 
         [GlobalSetup]
         public void Setup()
         {
+            Console.WriteLine("Queue benchmark GC: server={0}, runtime={1}, processors={2}",
+                GCSettings.IsServerGC, Environment.Version, Environment.ProcessorCount);
+            foreach (var setting in GC.GetConfigurationVariables())
+                Console.WriteLine("Queue benchmark GC config: {0}={1}", setting.Key, setting.Value);
             _system = ActorSystem.Create("source-actorref-bench");
             _materializer = _system.Materializer();
+            _producerSource = new ActivitySource(ProducerSourceName);
+            _ = StreamsDiagnostics.ActivitySource;
         }
 
         [GlobalCleanup]
-        public void Cleanup()
+        public async Task Cleanup()
         {
+            _producerSource.Dispose();
             _materializer.Dispose();
-            _system.Dispose();
+            await _system.Terminate();
         }
 
         /// <summary>
@@ -83,17 +99,85 @@ namespace Akka.Benchmarks.Streams
         /// backpressure-aware <see cref="Source.Queue{T}(int,OverflowStrategy)"/> ingress path.
         /// </summary>
         [Benchmark(OperationsPerInvoke = ElementCount)]
-        public async Task Source_Queue_Ingress_Throughput()
+        public Task Source_Queue_Ingress_Throughput()
+            => RunUntracedQueue(1, static value => value);
+
+        [Benchmark(OperationsPerInvoke = ElementCount)]
+        public Task Source_Queue_Reference_Ingress_Throughput()
+            => RunUntracedQueue(ReferencePayload, static value => value.Length);
+
+        [Benchmark(OperationsPerInvoke = ElementCount)]
+        public Task Source_Queue_Traced_Ingress_Throughput()
+            => RunTracedQueue(1, static value => value);
+
+        [Benchmark(OperationsPerInvoke = ElementCount)]
+        public Task Source_Queue_Traced_Reference_Ingress_Throughput()
+            => RunTracedQueue(ReferencePayload, static value => value.Length);
+
+        // Queue's async callback receives a reference-typed Offer command for both payload types.
+        // These cases compare stream payloads; direct callback<T> boxing belongs in separate tests.
+        private Task RunUntracedQueue<T>(T payload, Func<T, long> value)
         {
-            var (queue, completion) = Source.Queue<int>(1024, OverflowStrategy.Backpressure)
-                .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
+            if (Activity.Current is not null || StreamsDiagnostics.ActivitySource.HasListeners())
+                throw new InvalidOperationException("Untraced queue control requires no activity or Streams listener.");
+            return OfferAndDrain(payload, value);
+        }
+
+        private async Task RunTracedQueue<T>(T payload, Func<T, long> value)
+        {
+            var expectedParent = default(ActivityContext);
+            var ingressCount = 0;
+            var wrongParentCount = 0;
+            using var listener = new ActivityListener
+            {
+                ShouldListenTo = static source => source.Name is ProducerSourceName or "Akka.Streams",
+                Sample = static (ref ActivityCreationOptions<ActivityContext> options) =>
+                    options.Source.Name == ProducerSourceName || options.Name == StreamsDiagnostics.OperationIngressQueued
+                        || options.Name.StartsWith(StreamsDiagnostics.OperationIngress + " ", StringComparison.Ordinal)
+                        ? ActivitySamplingResult.AllDataAndRecorded
+                        : ActivitySamplingResult.None,
+                ActivityStarted = activity =>
+                {
+                    if (activity.Source.Name != "Akka.Streams"
+                        || !activity.OperationName.StartsWith(StreamsDiagnostics.OperationIngress + " ", StringComparison.Ordinal))
+                        return;
+                    Interlocked.Increment(ref ingressCount);
+                    // A pre-initialization offer may have a queued-ingress span between it and
+                    // the producer; it must still preserve the producer's trace and a real parent.
+                    if (activity.TraceId != expectedParent.TraceId || activity.ParentSpanId == default)
+                        Interlocked.Increment(ref wrongParentCount);
+                }
+            };
+            ActivitySource.AddActivityListener(listener);
+            using var producer = _producerSource.StartActivity("queue.offer.batch")
+                ?? throw new InvalidOperationException("Traced queue control did not create a producer activity.");
+            expectedParent = producer.Context;
+
+            await OfferAndDrain(payload, value, () =>
+            {
+                if (Volatile.Read(ref ingressCount) != ElementCount || Volatile.Read(ref wrongParentCount) != 0)
+                    throw new InvalidOperationException("Queue ingress did not preserve the producer trace for every offer.");
+            });
+        }
+
+        private async Task OfferAndDrain<T>(T payload, Func<T, long> value, Action? beforeComplete = null)
+        {
+            var (queue, completion) = Source.Queue<T>(1024, OverflowStrategy.Backpressure)
+                .ToMaterialized(Sink.Aggregate<T, (int Count, long Sum)>(default,
+                    (totals, element) => (totals.Count + 1, totals.Sum + value(element))), Keep.Both)
                 .Run(_materializer);
 
             for (var i = 0; i < ElementCount; i++)
-                await queue.OfferAsync(i);
+            {
+                if (await queue.OfferAsync(payload) is not QueueOfferResult.Enqueued)
+                    throw new InvalidOperationException("Queue did not accept a benchmark element.");
+            }
 
+            beforeComplete?.Invoke();
             queue.Complete();
-            await completion;
+            var totals = await completion;
+            if (totals.Count != ElementCount || totals.Sum != ElementCount * value(payload))
+                throw new InvalidOperationException($"Incomplete queue delivery: {totals.Count} elements, sum {totals.Sum}.");
         }
     }
 }
