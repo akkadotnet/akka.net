@@ -1,6 +1,6 @@
 # TCP receive ownership experiment
 
-Status: isolated prototype; production TCP/Streams/Artery receive code is unchanged. Correctness tests and six focused BenchmarkDotNet cases must establish whether this direction warrants an integration design. This is not a shipping zero-copy transport fix.
+Status: measured research prototype. Reject shipping this one-outstanding borrowed-read integration and retain the production receive copy. Production TCP/Streams/Artery receive code is unchanged. This decision applies to the measured protocol; it does not rule out a future ownership design with different concurrency and explicit contracts.
 
 ## Existing lifetimes
 
@@ -37,7 +37,7 @@ Each nonempty read gets one completion, including reads that contain only a part
 
 ## Controls and checks
 
-The existing `ArteryIngressSourceBenchmarks` class has six focused methods: copy and borrow for complete frames, fragmented headers/bodies, and queued actor consumers. No new benchmark class or parameter matrix is added. Both arms use prebuilt production-encoded Artery frames, a real `Pipe`, production `ArteryFrameParser` and envelope decode, two asynchronous actors, ordered frame IDs and full payload-content checks. Complete reads batch 32 frames. Fragmented reads first split the length field, then repeatedly split bodies. Results normalize by 4096 delivered frames per invocation.
+The existing `ArteryIngressSourceBenchmarks` class has six focused methods: copy and borrow for complete frames, fragmented headers/bodies, and queued actor consumers. No new benchmark class or parameter matrix is added. Both arms use prebuilt production-encoded Artery frames with 128-byte payloads, a real `Pipe`, production `ArteryFrameParser` and envelope decode, two asynchronous actors, ordered frame IDs and full payload-content checks. Each invocation delivers 4096 frames. Complete reads batch 32 frames. Fragmented reads first split the length field, then repeatedly split bodies. Results normalize by 4096 delivered frames per invocation.
 
 Correctness controls exercise both arms with normal/queued consumers and complete/fragmented input, empty EOF, truncated EOF, cancellation and writer failure while borrowed memory is retained, exactly-once acknowledgements/finish/owner return, and copied data consumed after its pool rental has been poisoned. A separate real-socket public TCP test retains `Received.Data` through 128 KiB of subsequent reads. The production copy contract remains required.
 
@@ -45,12 +45,53 @@ Correctness controls exercise both arms with normal/queued consumers and complet
 
 This is an end-to-end experiment in one revision, comparing two arms. It is not a before/after TCP socket implementation or a RemotePingPong measurement. The writer copies prebuilt bytes into the pipe in both arms; actual network I/O, generated deserialization, multi-lane channels, backoff and reconnect are absent. Actor creation/termination and a parser reconstruction per read are included and amortized. The completion objects, batch arrays and queued actor work are experimental coordination costs. The copy arm can pipeline reads; the borrow arm deliberately waits for the slow consumer. This asymmetry is part of the ownership tradeoff, not a promised optimization.
 
-Preserve the class's existing GC flavor, log the actual BenchmarkDotNet child GC configuration, and apply identical fixed-policy environment controls to both arms when coordinated. Retain raw output; noisy Short timings cannot establish a throughput benefit.
+The measured job preserved the class's server-GC Monitoring/RunOnce configuration and used one launch, three warmups and three measured iterations, with no outlier removal. Both arms ran with `DOTNET_GCDynamicAdaptationMode=0` and `DOTNET_GCHeapCount=8`. Actual child Setup output confirmed server GC, eight heaps and adaptation disabled in every case. All three actual observations per case are retained in the full JSON; this small run supports a directional comparison, not a precise production throughput claim.
 
-Before integrating, decide from measured allocation and time whether the saved copy justifies coordination and backpressure. A viable production design additionally needs an explicit internal opt-in carrying the read-completion token through TCP Streams, parser partial storage and every async lane; teardown must not complete the reader while consumers retain borrowed slices. It also needs serializer ownership capability/fallback copying for serializers allowed to retain input. Existing public TCP and serializer contracts cannot be silently tightened. If these changes cost more than the savings or cannot preserve contracts, retain the copy and report the measured rejection.
+The measured borrowing arm reduces allocations but imposes per-read acknowledgement/backpressure and has roughly twice the observed mean time in all three scenarios. Retain the production copy rather than integrate this protocol. A different viable production design would additionally need an explicit internal opt-in carrying the read-completion token through TCP Streams, parser partial storage and every async lane; teardown must not complete the reader while consumers retain borrowed slices. It also needs serializer ownership capability/fallback copying for serializers allowed to retain input. Existing public TCP and serializer contracts cannot be silently tightened. A future experiment must preserve those contracts explicitly before its measurements can justify integration.
 
 ## Verification so far
 
-The focused Release run passed **16 tests, 0 failed, 0 skipped** on .NET10 in727ms. Evidence: `/tmp/receive-ownership-evidence/tests/receive-ownership-corrected.trx` and `corrected-tests.log`. The initial run found a setup error (non-public experimental actor constructors unavailable to Akka's activator); that owned run was stopped, constructors corrected, and its original log retained as `initial-tests.log`. No ownership result is inferred from that failed setup.
+The focused Release run passed **16 tests, 0 failed, 0 skipped** on .NET 10 in 727 ms. Evidence: `/tmp/receive-ownership-evidence/tests/receive-ownership-corrected.trx` and `corrected-tests.log`. The initial run found a setup error (non-public experimental actor constructors unavailable to Akka's activator); that owned run was stopped, constructors corrected, and its original log retained as `initial-tests.log`. No ownership result is inferred from that failed setup.
 
-Slopwatch and whitespace checks passed. Product TCP, Streams TCP and Artery parser source remain unchanged. The benchmark project itself has not yet been built, and the six BenchmarkDotNet cases have not run. Performance evidence and an integration decision are pending the coordinated measurement slot; no performance outcome is assumed here.
+Slopwatch and whitespace checks passed. The Release benchmark project built with 0 warnings and 0 errors. Product TCP, Streams TCP and Artery parser source remain unchanged.
+
+Copied-byte validation has a specific scope: the shared helper's focused tests assert zero copied bytes for borrowed complete reads, and positive copied bytes for whole-read copy and fragmented-tail paths. The helper counts copied bytes in its returned totals; the frozen BDN methods return `Task` and do not export those per-invocation totals. Do not present an inferred exact copied-byte count as a benchmark result. Full payload bytes, ordered frame IDs, frame count and acknowledgement count are checked inside every measured invocation.
+
+## Measured results and decision
+
+The following is the generated BenchmarkDotNet output, shown directly. Allocations and times are per delivered frame.
+
+```
+
+BenchmarkDotNet v0.15.8, Linux Ubuntu 24.04.4 LTS (Noble Numbat)
+Intel Core i9-9900K CPU 3.60GHz (Coffee Lake), 1 CPU, 8 logical and 8 physical cores
+.NET SDK 10.0.103
+  [Host]     : .NET 10.0.12 (10.0.12, 10.0.1226.42308), X64 RyuJIT x86-64-v3
+  Job-DIUUYA : .NET 10.0.12 (10.0.12, 10.0.1226.42308), X64 RyuJIT x86-64-v3
+
+OutlierMode=DontRemove  Concurrent=True  Server=True
+InvocationCount=1  IterationCount=3  LaunchCount=1
+RunStrategy=Monitoring  UnrollFactor=1  WarmupCount=3
+
+```
+| Method                            | Mean       | Error      | StdDev    | Req/sec      | Allocated |
+|---------------------------------- |-----------:|-----------:|----------:|-------------:|----------:|
+| ReceiveCopy_CompleteFrames        |   495.4 ns |   685.7 ns |  37.59 ns | 2,018,380.27 |     337 B |
+| ReceiveBorrow_CompleteFrames      | 1,058.0 ns | 3,127.4 ns | 171.42 ns |   945,147.16 |      98 B |
+| ReceiveCopy_FragmentedFrames      |   635.2 ns | 1,581.2 ns |  86.67 ns | 1,574,264.47 |     363 B |
+| ReceiveBorrow_FragmentedFrames    | 1,397.1 ns | 6,291.4 ns | 344.85 ns |   715,747.36 |     134 B |
+| ReceiveCopy_QueuedActorConsumer   |   556.5 ns | 2,324.0 ns | 127.39 ns | 1,796,840.09 |     349 B |
+| ReceiveBorrow_QueuedActorConsumer | 1,155.5 ns | 4,278.9 ns | 234.54 ns |   865,388.92 |     111 B |
+
+Borrowing reduced allocated memory by 239 B/frame for complete reads, 229 B/frame for fragmented reads, and 238 B/frame with queued actor consumption. Observed mean times increased by about 114%, 120%, and 108%, respectively. The three-sample confidence intervals are wide; these are directional experimental observations, not an estimate of a production TCP regression. The borrow arm's one-read limit and the copy arm's ability to pipeline actor work are part of the measured tradeoff. The experiment does not isolate a CPU cost for acknowledgement alone.
+
+Decision: do not ship this one-outstanding-read protocol. Keep the safe production copy. Input-retaining serializers, non-acknowledging/terminated consumers, reader teardown, bounded multi-lane backpressure and restart ownership need a separate contract and design before another integration attempt.
+
+## Source and evidence
+
+The measured source was frozen at commit `7cda4b54786d35d7343844d5d22d463aaa2fd384`:
+
+- `ReceiveOwnershipExperiment.cs`: SHA256 `fd0d4569521085c5e03cb47b2c82630461c6d60255f26ab372ffec49ccdee876`.
+- `ArteryIngressSourceBenchmarks.cs`: SHA256 `4be51ad0df8d9b0755ae9f82bb65920fa890dd22863cd927f7a46c12cb02fbfd`.
+
+Raw generated Markdown/CSV/full JSON, strict validation, exact commands, source/binary/runtimeconfig hashes, child GC output, and host process/load receipts are retained under `/tmp/akka-remaining-perf-20261016/receive-ownership`. The validated `summary.json` retains all 18 actual observations. No extra measurements or retries were used for this result. External shared-host activity remains a timing limitation. The lifetime test evidence and the initial setup-failure log remain under `/tmp/receive-ownership-evidence`.
