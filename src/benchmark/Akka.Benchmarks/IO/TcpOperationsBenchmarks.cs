@@ -65,10 +65,9 @@ namespace Akka.Benchmarks
             _clientCoordinator = _system.ActorOf(Props.Create(() => new ClientCoordinator(_server, ClientsCount)));
         }
         
-        [IterationCleanup]
-        public async Task IterationCleanup()
+        private async Task StopIterationAsync()
         {
-            // Clean up actors after each iteration measurement
+            // Awaited inside the invocation: this cleanup is included in the measured operation.
             var clientStop = _clientCoordinator.GracefulStop(TimeSpan.FromSeconds(3));
             var serverStop = _server.GracefulStop(TimeSpan.FromSeconds(3));
             await Task.WhenAll(clientStop, serverStop);
@@ -77,11 +76,18 @@ namespace Akka.Benchmarks
         [Benchmark(OperationsPerInvoke = MessageCount)]
         public async Task ClientServerCommunication()
         {
-            // Only the communication is measured, not setup/teardown
-            var result = await _clientCoordinator.Ask<CommunicationFinished>(
-                new CommunicationRequest(MessageCount, _message), TimeSpan.FromMinutes(5));
-            if (result.Messages != MessageCount)
-                throw new InvalidOperationException($"Expected {MessageCount} echoes, received {result.Messages}.");
+            // IterationSetup is unmeasured; communication and awaited cleanup are measured.
+            try
+            {
+                var result = await _clientCoordinator.Ask<CommunicationFinished>(
+                    new CommunicationRequest(MessageCount, _message), TimeSpan.FromMinutes(5));
+                if (result.Messages != MessageCount)
+                    throw new InvalidOperationException($"Expected {MessageCount} echoes, received {result.Messages}.");
+            }
+            finally
+            {
+                await StopIterationAsync();
+            }
         }
 
         public class CommunicationRequest
@@ -274,16 +280,21 @@ namespace Akka.Benchmarks
                 
                 Receive<ChildCommunicationFinished>(completed =>
                 {
-                    Context.Stop(Sender);
-
                     if (!_waitingChildren.Remove(Sender))
-                        throw new InvalidOperationException("Duplicate TCP client completion.");
+                    {
+                        FailCommunication("Duplicate TCP client completion.");
+                        return;
+                    }
+                    Context.Stop(Sender);
                     _completedMessages += completed.Messages;
 
                     if (_waitingChildren.Count == 0)
-                        {
+                    {
                         if (_completedMessages != _expectedMessages)
-                            throw new InvalidOperationException("TCP clients completed with a missing echo.");
+                        {
+                            FailCommunication("TCP clients completed with a missing echo.");
+                            return;
+                        }
                         _requester.Tell(new CommunicationFinished(_completedMessages));
                     }
                 });
@@ -296,6 +307,12 @@ namespace Akka.Benchmarks
                 });
                 
                 ServerDiedHandler();
+            }
+
+            private void FailCommunication(string reason)
+            {
+                _requester.Tell(new Status.Failure(new InvalidOperationException(reason)));
+                Context.Stop(Self);
             }
 
             protected override void PreStart()
@@ -320,6 +337,8 @@ namespace Akka.Benchmarks
             {
                 _messageSize = messageSize;
             }
+
+            public bool HasPartial => !_partialRead.IsEmpty;
 
             public IEnumerable<ReadOnlySequence<byte>> Deframe(ReadOnlySequence<byte> data)
             {
@@ -426,10 +445,14 @@ namespace Akka.Benchmarks
                 {
                     foreach (var m in _framer.Deframe(r.Data))
                     {
-                        ValidateEcho(m);
+                        if (!ValidateEcho(m))
+                            return;
                         _receivedCount++;
                         if (_receivedCount > messagesToSend)
-                            throw new InvalidOperationException("TCP benchmark received an extra echo.");
+                        {
+                            FailCommunication("TCP benchmark received an extra echo.");
+                            return;
+                        }
                         if (_receivedCount == messagesToSend)
                         {
                             _connection.Tell(Tcp.Close.Instance);
@@ -444,24 +467,47 @@ namespace Akka.Benchmarks
                 Receive<Tcp.Closed>(_ =>
                 {
                     if (_receivedCount != _messagesToSend || _sentCount != _messagesToSend)
-                        throw new InvalidOperationException("TCP connection closed before all echoes were delivered.");
+                    {
+                        FailCommunication("TCP connection closed before all echoes were delivered.");
+                        return;
+                    }
+                    if (_framer.HasPartial)
+                    {
+                        FailCommunication("TCP connection closed with an incomplete trailing echo.");
+                        return;
+                    }
                     Context.Parent.Tell(new ChildCommunicationFinished(_receivedCount));
                 });
             }
 
-            private void ValidateEcho(ReadOnlySequence<byte> message)
+            private bool ValidateEcho(ReadOnlySequence<byte> message)
             {
                 if (message.Length != _expectedMessage.Length)
-                    throw new InvalidOperationException("TCP benchmark echo length changed.");
+                {
+                    FailCommunication("TCP benchmark echo length changed.");
+                    return false;
+                }
                 var offset = 0;
                 foreach (var segment in message)
                 {
                     foreach (var value in segment.Span)
                     {
                         if (value != _expectedMessage[offset++])
-                            throw new InvalidOperationException("TCP benchmark echo payload changed.");
+                        {
+                            FailCommunication("TCP benchmark echo payload changed.");
+                            return false;
+                        }
                     }
                 }
+                return true;
+            }
+
+            private void FailCommunication(string reason)
+            {
+                Context.Parent.Tell(new Status.Failure(new InvalidOperationException(reason)));
+                if (_connection is not null)
+                    _connection.Tell(Tcp.Abort.Instance);
+                Context.Stop(Self);
             }
 
             private static void DoConnect(EndPoint endpoint)
