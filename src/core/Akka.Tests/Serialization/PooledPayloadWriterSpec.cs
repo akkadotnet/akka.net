@@ -11,6 +11,8 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Akka.IO;
 using Akka.Serialization;
 using Xunit;
 
@@ -304,7 +306,153 @@ namespace Akka.Tests.Serialization
             Assert.Throws<ObjectDisposedException>(() => writer.Reset());
         }
 
+        [Theory(DisplayName = "Should_preserve_rent_and_written_bytes_When_detaching_an_owned_sequence")]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(1000)]
+        public void Should_preserve_rent_and_written_bytes_When_detaching_an_owned_sequence(int length)
+        {
+            var pool = new PoisonTrackingPool();
+            var writer = new PooledPayloadWriter(64, pool: pool);
+            var expected = MakeBytes(length, 97);
+            for (var offset = 0; offset < length; offset += 50)
+            {
+                var count = Math.Min(50, length - offset);
+                expected.AsSpan(offset, count).CopyTo(writer.GetSpan(count));
+                writer.Advance(count);
+            }
+            Assert.True(MemoryMarshal.TryGetArray(writer.WrittenMemory, out var written));
+            var sequence = writer.DetachOwnedSequence();
+            Assert.True(MemoryMarshal.TryGetArray(sequence.First, out var detached));
+            Assert.Same(written.Array, detached.Array);
+            Assert.Equal(expected, sequence.ToArray());
+            Assert.Equal(1, pool.Outstanding);
+            if (length > 64)
+                Assert.True(pool.Rents > 1);
+
+            Assert.Throws<ObjectDisposedException>(() => writer.WrittenCount);
+            Assert.Throws<ObjectDisposedException>(() => { _ = writer.WrittenSpan; });
+            Assert.Throws<ObjectDisposedException>(() => writer.WrittenMemory);
+            Assert.Throws<ObjectDisposedException>(() => writer.GetSpan(1));
+            Assert.Throws<ObjectDisposedException>(() => writer.GetMemory(1));
+            Assert.Throws<ObjectDisposedException>(() => writer.Advance(1));
+            Assert.Throws<ObjectDisposedException>(() => writer.GetPatchSpan(0, 1));
+            Assert.Throws<ObjectDisposedException>(() => writer.Reset());
+            Assert.Throws<ObjectDisposedException>(() => writer.Detach());
+            Assert.Throws<ObjectDisposedException>(() => writer.DetachOwnedSequence());
+            writer.Dispose();
+            Assert.Equal(1, pool.Outstanding);
+
+            var segment = Assert.IsAssignableFrom<IOwnedSequenceSegment>(sequence.Start.GetObject());
+            Assert.True(segment.HasOwner);
+            sequence.DisposeOwnedSegments();
+            sequence.DisposeOwnedSegments();
+            Assert.False(segment.HasOwner);
+            Assert.Null(segment.DetachOwner());
+            Assert.Equal(pool.Rents, pool.Returns);
+            Assert.All(detached.Array!, b => Assert.Equal(0xDE, b));
+        }
+
+        [Fact(DisplayName = "Should_return_rent_only_from_new_owner_When_sequence_ownership_is_transferred")]
+        public void Should_return_rent_only_from_new_owner_When_sequence_ownership_is_transferred()
+        {
+            var pool = new PoisonTrackingPool();
+            using var writer = new PooledPayloadWriter(pool: pool);
+            writer.GetSpan(4).Slice(0, 4).Fill(0x12);
+            writer.Advance(4);
+            var sequence = writer.DetachOwnedSequence();
+            var segment = Assert.IsAssignableFrom<IOwnedSequenceSegment>(sequence.Start.GetObject());
+            var owner = Assert.IsAssignableFrom<IMemoryOwner<byte>>(segment.DetachOwner());
+            var consumer = OwnedSequenceSegment.Create(owner);
+
+            Assert.False(segment.HasOwner);
+            Assert.Null(segment.DetachOwner());
+            sequence.DisposeOwnedSegments();
+            Assert.Equal(0, pool.Returns);
+            Assert.Equal(new byte[] { 0x12, 0x12, 0x12, 0x12 }, consumer.ToArray());
+            consumer.DisposeOwnedSegments();
+            owner.Dispose();
+            sequence.DisposeOwnedSegments();
+            Assert.True(owner.Memory.IsEmpty);
+            Assert.Equal(1, pool.Returns);
+        }
+
+        [Fact(DisplayName = "Should_not_return_a_reused_rent_When_a_spent_sequence_is_disposed_again")]
+        public void Should_not_return_a_reused_rent_When_a_spent_sequence_is_disposed_again()
+        {
+            var pool = new PoisonTrackingPool();
+            using var firstWriter = new PooledPayloadWriter(pool: pool);
+            var first = firstWriter.DetachOwnedSequence();
+            Assert.True(MemoryMarshal.TryGetArray(first.First, out var firstArray));
+            first.DisposeOwnedSegments();
+
+            using var secondWriter = new PooledPayloadWriter(pool: pool);
+            secondWriter.GetSpan(1)[0] = 0x42;
+            secondWriter.Advance(1);
+            var second = secondWriter.DetachOwnedSequence();
+            Assert.True(MemoryMarshal.TryGetArray(second.First, out var secondArray));
+            Assert.Same(firstArray.Array, secondArray.Array);
+            first.DisposeOwnedSegments();
+            Assert.Equal(1, pool.Outstanding);
+            Assert.Equal(new byte[] { 0x42 }, second.ToArray());
+            second.DisposeOwnedSegments();
+            Assert.Equal(2, pool.Returns);
+        }
+
+        [Theory(DisplayName = "Should_keep_current_rent_usable_When_capacity_or_growth_rent_fails")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_keep_current_rent_usable_When_capacity_or_growth_rent_fails(bool rentFailure)
+        {
+            var pool = new PoisonTrackingPool();
+            using var writer = new PooledPayloadWriter(64, maxCapacity: rentFailure ? 1024 : 64, pool: pool);
+            writer.GetSpan(64).Slice(0, 64).Fill(0x23);
+            writer.Advance(64);
+            pool.FailRent = rentFailure;
+            if (rentFailure)
+                Assert.Same(pool.Failure, Assert.Throws<InvalidOperationException>(() => writer.GetSpan(1)));
+            else
+                Assert.Throws<PayloadSizeExceededException>(() => writer.GetSpan(1));
+
+            var sequence = writer.DetachOwnedSequence();
+            Assert.Equal(64, sequence.Length);
+            Assert.All(sequence.ToArray(), b => Assert.Equal(0x23, b));
+            sequence.DisposeOwnedSegments();
+            Assert.Equal(1, pool.Rents);
+            Assert.Equal(1, pool.Returns);
+        }
+
         // ===================== helpers =====================
+
+        private sealed class PoisonTrackingPool : ArrayPool<byte>
+        {
+            private readonly HashSet<byte[]> _outstanding = new();
+            private byte[]? _available;
+            public int Rents { get; private set; }
+            public int Returns { get; private set; }
+            public int Outstanding => _outstanding.Count;
+            public bool FailRent { get; set; }
+            public InvalidOperationException Failure { get; } = new("rent failed");
+
+            public override byte[] Rent(int minimumLength)
+            {
+                if (FailRent)
+                    throw Failure;
+                var array = _available is { } available && available.Length >= minimumLength ? available : new byte[minimumLength];
+                _available = null;
+                Assert.True(_outstanding.Add(array));
+                Rents++;
+                return array;
+            }
+
+            public override void Return(byte[] array, bool clearArray = false)
+            {
+                Assert.True(_outstanding.Remove(array), "Array was returned twice or to the wrong pool.");
+                Array.Fill(array, (byte)0xDE);
+                _available = array;
+                Returns++;
+            }
+        }
 
         private static byte[] MakeBytes(int length, int seed)
         {
