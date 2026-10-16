@@ -51,6 +51,7 @@ namespace RemotePingPong
         // baseline); "--artery" points the exact same benchmark at Artery.Tcp so the two produce
         // directly comparable msgs/sec numbers over an otherwise-identical workload.
         private static bool _useArtery;
+        private static bool _refCompressionSpike;
 
         // Selected once at startup via the "--oneway" option. Default mode is ping-pong
         // (client sends, destination echoes every message back - see EchoActor/BenchmarkActor).
@@ -284,6 +285,11 @@ namespace RemotePingPong
                 }}");
 
             var config = transportConfig.WithFallback(commonConfig);
+            if (_useArtery && _refCompressionSpike)
+                config = ConfigurationFactory.ParseString("""
+                    akka.remote.artery.advanced.ref-compression-spike.enabled = on
+                    akka.remote.artery.advanced.ref-compression-spike.interval = 100ms
+                    """).WithFallback(config);
 
             if (!string.IsNullOrEmpty(_ioBufSize))
             {
@@ -650,6 +656,11 @@ namespace RemotePingPong
             var runCommand = new Command("run",
                 "Run the default in-process loopback benchmark: both ActorSystems live in this process, " +
                 "communicating over loopback. This is what runs when no subcommand is given.");
+            var refCompressionOption = new Option<bool>("--ref-compression-spike")
+            {
+                Description = "Enable the experimental actor-ref-only compression spike (loopback Artery only)."
+            };
+            runCommand.Options.Add(refCompressionOption);
             runCommand.Options.Add(arteryOption);
             runCommand.Options.Add(onewayOption);
             runCommand.Options.Add(windowOption);
@@ -675,7 +686,8 @@ namespace RemotePingPong
                 parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(payloadOption)!,
-                parseResult.GetValue(serializerOption)));
+                parseResult.GetValue(serializerOption),
+                parseResult.GetValue(refCompressionOption)));
 
             var serverHostOption = new Option<string>("--host")
             {
@@ -796,9 +808,10 @@ namespace RemotePingPong
 
         private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
             string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
-            string payload, string? serializer)
+            string payload, string? serializer, bool refCompressionSpike = false)
         {
             _useArtery = artery;
+            _refCompressionSpike = refCompressionSpike;
             _onewayMode = oneway;
             _windowSize = window;
             _pinnedClients = clients;
@@ -1057,7 +1070,7 @@ namespace RemotePingPong
             // whenever new drops appeared since the last poll (below). Zero drops -> zero noise, so
             // any SUSPECT line in a server log taints the client-side numbers from the same window.
             var dropCounter = new DropCounter();
-            var dropWatcher = system.ActorOf(Props.Create(() => new DropCounterActor(dropCounter)), "dropWatcher");
+            var dropWatcher = system.ActorOf(Props.Create(() => new DropCounterActor(dropCounter, 1)), "dropWatcher");
             system.EventStream.Subscribe(dropWatcher, typeof(Dropped));
 
             Console.CancelKeyPress += (_, e) =>
@@ -1212,9 +1225,20 @@ namespace RemotePingPong
             // mode only system1 is watched from here - the server process runs its own watcher and
             // prints its own SUSPECT lines to its own stdout, so BOTH sides' drops stay visible.
             var dropCounter = new DropCounter();
-            var dropWatcher = system1.ActorOf(Props.Create(() => new DropCounterActor(dropCounter)), "dropWatcher");
+            var dropWatcher = system1.ActorOf(Props.Create(() => new DropCounterActor(dropCounter, 1)), "dropWatcher");
             system1.EventStream.Subscribe(dropWatcher, typeof(Dropped));
             system2?.EventStream.Subscribe(dropWatcher, typeof(Dropped));
+            if (_refCompressionSpike)
+            {
+                // Internal experimental event: reflection only during setup, outside the timer.
+                var usedType = typeof(Akka.Remote.RemoteActorRef).Assembly.GetType("Akka.Remote.Artery.ActorRefCompressionUsed", throwOnError: true)!;
+                system1.EventStream.Subscribe(dropWatcher, usedType);
+                if (system2 is not null)
+                {
+                    var otherWatcher = system2.ActorOf(Props.Create(() => new DropCounterActor(dropCounter, 2)), "compressionWatcher");
+                    system2.EventStream.Subscribe(otherWatcher, usedType);
+                }
+            }
 
             // Resend visibility (one-way mode only): tallies every sender-side ack-timeout resend
             // across all client pairs in this rep. Same lifetime/rationale as dropCounter above - see
@@ -1351,6 +1375,8 @@ namespace RemotePingPong
             system2?.EventStream.Unsubscribe(dropWatcher);
             var dropped = dropCounter.Count;
             var resent = resendCounter.Count;
+            Console.WriteLine("REF COMPRESSION: enabled={0} generationsObserved={1}", _refCompressionSpike, dropCounter.CompressedGenerations);
+
 
             // force clean termination (split-client mode: only the local system - the server
             // process owns system2's lifecycle and keeps serving subsequent reps/runs)
@@ -1358,6 +1384,8 @@ namespace RemotePingPong
                 ? new[] { system1.Terminate() }
                 : new[] { system1.Terminate(), system2.Terminate() });
 
+            if (_refCompressionSpike && dropCounter.CompressedSystems != 3)
+                throw new InvalidOperationException("Compression was not observed in both ActorSystems; this run cannot measure the compressed path.");
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
             var foregroundColor = Console.ForegroundColor;
@@ -1414,6 +1442,15 @@ namespace RemotePingPong
         private sealed class DropCounter
         {
             private long _drops;
+            private long _compressedGenerations;
+            private int _compressedSystems;
+            public int CompressedSystems => Volatile.Read(ref _compressedSystems);
+            public void CompressionUsed(int systemMask)
+            {
+                Interlocked.Increment(ref _compressedGenerations);
+                Interlocked.Or(ref _compressedSystems, systemMask);
+            }
+            public long CompressedGenerations => Interlocked.Read(ref _compressedGenerations);
 
             public void Increment() => Interlocked.Increment(ref _drops);
 
@@ -1435,15 +1472,19 @@ namespace RemotePingPong
         {
             private readonly DropCounter _counter;
 
-            public DropCounterActor(DropCounter counter)
+            private readonly int _systemMask;
+            public DropCounterActor(DropCounter counter, int systemMask)
             {
                 _counter = counter;
+                _systemMask = systemMask;
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is Dropped)
                     _counter.Increment();
+                else if (message.GetType().FullName == "Akka.Remote.Artery.ActorRefCompressionUsed")
+                    _counter.CompressionUsed(_systemMask);
             }
         }
 
