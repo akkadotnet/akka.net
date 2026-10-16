@@ -179,6 +179,8 @@ namespace Akka.Remote.Artery
         /// <see langword="null"/> (the default, and the only value when test-mode is off) disables
         /// the lane-path blackhole check entirely.
         /// </param>
+        /// <param name="actorRefDecoder">Experimental table lookup before lane routing.</param>
+        /// <param name="dispatchActorRefs">Dispatch using cached positive refs when available.</param>
         public ArteryInboundProcessingStage(
             int maxFrameLength,
             int maxLargeFrameLength,
@@ -189,7 +191,9 @@ namespace Akka.Remote.Artery
             IInboundContext? inboundContext = null,
             Action<object, string?, string>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
-            SharedTestState? testState = null)
+            SharedTestState? testState = null,
+            ActorRefDecoder? actorRefDecoder = null,
+            Action<object, InboundActorRef, InboundActorRef>? dispatchActorRefs = null)
         {
             if (inboundLanes < 1)
                 throw new ArgumentOutOfRangeException(nameof(inboundLanes), inboundLanes, "Must be >= 1.");
@@ -207,6 +211,8 @@ namespace Akka.Remote.Artery
             DispatchOrdinary = dispatchOrdinary;
             OnLanesInitialized = onLanesInitialized;
             TestState = testState;
+            ActorRefDecoder = actorRefDecoder;
+            DispatchActorRefs = dispatchActorRefs;
 
             // Resolved ONCE per accepted connection (this stage is materialized per-connection),
             // never on the per-frame hot path -- and only when lanes are actually enabled, since
@@ -267,6 +273,8 @@ namespace Akka.Remote.Artery
 
         /// <summary>See the constructor parameter of the same name. <see langword="null"/> when <see cref="InboundLanes"/> is 1.</summary>
         public Action<object, string?, string>? DispatchOrdinary { get; }
+        private ActorRefDecoder? ActorRefDecoder { get; }
+        private Action<object, InboundActorRef, InboundActorRef>? DispatchActorRefs { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public Action<int>? OnLanesInitialized { get; }
@@ -325,24 +333,27 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly struct LaneWorkItem
         {
-            public LaneWorkItem(ReadOnlySequence<byte> payload, int serializerId, string manifest, string? senderPath, string recipientPath)
+            public LaneWorkItem(ReadOnlySequence<byte> payload, int serializerId, string manifest, InboundActorRef sender, InboundActorRef recipient)
             {
                 Payload = payload;
                 SerializerId = serializerId;
                 Manifest = manifest;
-                SenderPath = senderPath;
-                RecipientPath = recipientPath;
+                Sender = sender;
+                Recipient = recipient;
             }
 
             public ReadOnlySequence<byte> Payload { get; }
             public int SerializerId { get; }
             public string Manifest { get; }
-            public string? SenderPath { get; }
-            public string RecipientPath { get; }
+            public InboundActorRef Sender { get; }
+            public InboundActorRef Recipient { get; }
+            public string? SenderPath => Sender.Path;
+            public string RecipientPath => Recipient.Path!;
         }
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            private bool _ordinaryConnection;
             /// <summary>
             /// Rate limit for this connection's unknown-origin drop warnings -- the lane path's
             /// half of the pair <see cref="InboundHandshakeStage"/> owns the other half of; see
@@ -550,6 +561,7 @@ namespace Akka.Remote.Artery
 
                 // The frame-size limit depends on which stream this connection carries (task
                 // 10.2) -- construct the parser only now that the preamble has revealed it.
+                _ordinaryConnection = streamId == ArteryStreamId.Ordinary;
                 _frameParser = streamId == ArteryStreamId.Large
                     ? new ArteryFrameParser(_stage.MaxLargeFrameLength)
                     : new ArteryFrameParser(_stage.MaxFrameLength);
@@ -623,6 +635,17 @@ namespace Akka.Remote.Artery
                 if (payload is IArteryControlMessage)
                     return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
 
+                if (_ordinaryConnection && _stage.ActorRefDecoder is { } decoder)
+                {
+                    if (!decoder(in decoded, out var senderMetadata, out var recipientMetadata))
+                    {
+                        Log.Warning("Dropping inbound ordinary-stream message: COMPRESSED actor-ref table miss or unknown origin.");
+                        return null;
+                    }
+                    return new RefInboundEnvelope(payload, senderMetadata, recipientMetadata,
+                        decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                }
+
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
                     Log.Warning(
@@ -686,7 +709,8 @@ namespace Akka.Remote.Artery
                     var log = _laneLog;
                     var serialization = _stage.Serialization;
                     var dispatch = _stage.DispatchOrdinary!;
-                    _ = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log));
+                    var dispatchRefs = _stage.DispatchActorRefs;
+                    _ = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log, dispatchRefs));
                 }
 
                 _lanes = lanes;
@@ -713,7 +737,8 @@ namespace Akka.Remote.Artery
                 ChannelReader<LaneWorkItem> reader,
                 Akka.Serialization.Serialization serialization,
                 Action<object, string?, string> dispatch,
-                ILoggingAdapter log)
+                ILoggingAdapter log,
+                Action<object, InboundActorRef, InboundActorRef>? dispatchActorRefs)
             {
                 try
                 {
@@ -724,7 +749,10 @@ namespace Akka.Remote.Artery
                             try
                             {
                                 var message = serialization.Deserialize(item.Payload, item.SerializerId, item.Manifest);
-                                dispatch(message, item.SenderPath, item.RecipientPath);
+                                if (dispatchActorRefs is { } dispatchRefs)
+                                    dispatchRefs(message, item.Sender, item.Recipient);
+                                else
+                                    dispatch(message, item.SenderPath, item.RecipientPath);
                             }
                             catch (Exception ex)
                             {
@@ -884,31 +912,50 @@ namespace Akka.Remote.Artery
                     }
                 }
 
-                if (!decoded.TryGetRecipientPath(out var recipientPath))
+                InboundActorRef senderMetadata;
+                InboundActorRef recipientMetadata;
+                string? recipientPath;
+                if (_stage.ActorRefDecoder is { } decoder)
                 {
-                    Log.Warning(
-                        "Dropping inbound ordinary-stream message (serializer id [{0}]): COMPRESSED recipient tag " +
-                        "(ref compression is not implemented at G2).", decoded.Header.SerializerId);
-                    return true;
+                    if (!decoder(in decoded, out senderMetadata, out recipientMetadata))
+                    {
+                        Log.Warning("Dropping inbound lane message: COMPRESSED actor-ref table miss or unknown origin.");
+                        return true;
+                    }
+                    recipientPath = recipientMetadata.Path;
+                }
+                else
+                {
+                    if (!decoded.TryGetRecipientPath(out recipientPath))
+                    {
+                        Log.Warning(
+                            "Dropping inbound ordinary-stream message (serializer id [{0}]): COMPRESSED recipient tag " +
+                            "(ref compression is not implemented at G2).", decoded.Header.SerializerId);
+                        return true;
+                    }
+
+                    if (recipientPath is null)
+                    {
+                        Log.Warning("Dropping inbound ordinary-stream message (serializer id [{0}]) with no recipient.", decoded.Header.SerializerId);
+                        return true;
+                    }
+
+                    senderMetadata = new InboundActorRef(decoded.TryGetSenderPath(out var senderLiteral) ? senderLiteral : null);
+                    recipientMetadata = new InboundActorRef(recipientPath);
+
+                    // ActorSelectionMessage special case -- see the type-level "ActorSelectionMessage
+                    // lane key" remarks.
                 }
 
                 if (recipientPath is null)
-                {
-                    Log.Warning("Dropping inbound ordinary-stream message (serializer id [{0}]) with no recipient.", decoded.Header.SerializerId);
                     return true;
-                }
-
-                var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-
-                // ActorSelectionMessage special case -- see the type-level "ActorSelectionMessage
-                // lane key" remarks.
                 var laneKey = decoded.Header.SerializerId == _stage.SelectionMessageSerializerId
                     ? BuildSelectionLaneKey(decoded.Payload) ?? recipientPath
                     : recipientPath;
 
                 var laneIndex = LaneFor(laneKey, _stage.InboundLanes);
 
-                return TryRouteToLane(laneIndex, new LaneWorkItem(decoded.Payload, decoded.Header.SerializerId, manifest, senderPath, recipientPath));
+                return TryRouteToLane(laneIndex, new LaneWorkItem(decoded.Payload, decoded.Header.SerializerId, manifest, senderMetadata, recipientMetadata));
             }
 
             /// <summary>
