@@ -15,7 +15,7 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Source-generated V2 MessagePack serializer for ALL NINE Artery control/handshake/reliable-
+    /// Source-generated V2 MessagePack serializer for all Artery control/handshake/reliable-
     /// system-message-delivery messages (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> /
     /// <see cref="ArteryHeartbeat"/> / <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> /
     /// <see cref="Ack"/> / <see cref="Nack"/> / <see cref="SystemMessageEnvelope"/> /

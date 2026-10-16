@@ -92,6 +92,8 @@ namespace Akka.Remote.Artery
     internal sealed class ArteryRemoting : RemoteTransport, IControlMessageSubscriber
     {
         private readonly ArterySettings _settings;
+        private ICancelable? _refCompressionTimer;
+        private Func<string, IActorRef>? _resolveCompressionRef;
         private readonly ILoggingAdapter _log;
         private readonly AssociationRegistry _registry;
 
@@ -465,6 +467,12 @@ namespace Akka.Remote.Artery
             // Self-subscribe to handle ArteryHeartbeat (reply) and ArteryQuarantined (publish
             // ThisActorSystemQuarantinedEvent) -- see IControlMessageSubscriber.ControlMessageReceived.
             SubscribeControl(this);
+            if (_settings.RefCompressionSpike)
+            {
+                _resolveCompressionRef = path => Provider.ResolveActorRefWithLocalAddress(path, DefaultAddress);
+                _refCompressionTimer = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
+                    _settings.RefCompressionInterval, _settings.RefCompressionInterval, AdvertiseRefTables);
+            }
 
             _log.Info("Artery TCP remoting started; listening on [{0}]", address);
         }
@@ -511,6 +519,7 @@ namespace Akka.Remote.Artery
         /// <inheritdoc/>
         public override async Task Shutdown()
         {
+            _refCompressionTimer?.Cancel();
             // Set the guard FIRST (mirrors Pekko's hasBeenShutdown.compareAndSet at the top of
             // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
             // late system message racing termination can no longer trigger a materialization.
@@ -816,6 +825,14 @@ namespace Akka.Remote.Artery
                 return;
             }
 
+            if (_settings.RefCompressionSpike && message is not ISystemMessage && message is not DaemonMsgCreate &&
+                (ResolveSendRoute(recipient, association) != LargeMessageRoute || message is ActorSelectionMessage))
+            {
+                EnqueueOutbound(remoteAddress,
+                    new RefOutboundEnvelope(message, sender.IsNobody() ? null : sender, recipient, DefaultAddress), recipient);
+                return;
+            }
+
             var recipientPath = recipient.Path.ToSerializationFormatWithAddress(remoteAddress);
 
             if (message is ISystemMessage systemMessage)
@@ -971,13 +988,12 @@ namespace Akka.Remote.Artery
             // never reaches them at all (dispatched directly from the lane), while any (should
             // never happen) control-classified frame on that same connection, and everything on
             // every Control/Large connection, still flows through them completely unchanged.
-            var processingStage = _settings.InboundLanes > 1
-                ? new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
-                    _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
-                    _onInboundLanesInitialized, _testState)
-                : new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler);
+            var processingStage = new ArteryInboundProcessingStage(
+                _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
+                _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
+                _onInboundLanesInitialized, _testState,
+                _settings.RefCompressionSpike ? DecodeActorRefs : null,
+                _settings.RefCompressionSpike ? DispatchOrdinaryMessage : null);
 
             var decoded = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
@@ -1052,7 +1068,10 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            DispatchOrdinaryMessage(env.Message, env.SenderPath, env.RecipientPath);
+            if (env is RefInboundEnvelope refs)
+                DispatchOrdinaryMessage(env.Message, refs.Sender, refs.Recipient);
+            else
+                DispatchOrdinaryMessage(env.Message, env.SenderPath, env.RecipientPath);
         }
 
         /// <summary>
@@ -1064,9 +1083,14 @@ namespace Akka.Remote.Artery
         /// identical semantics, regardless of which caller invokes it -- lanes change WHERE this
         /// runs (a dedicated lane thread vs. this connection's own stage thread), never WHAT it does.
         /// </summary>
-        private void DispatchOrdinaryMessage(object message, string? senderPath, string recipientPath)
+        private void DispatchOrdinaryMessage(object message, string? senderPath, string recipientPath) =>
+            DispatchOrdinaryMessage(message, new InboundActorRef(senderPath), new InboundActorRef(recipientPath));
+
+        private void DispatchOrdinaryMessage(object message, InboundActorRef senderMetadata, InboundActorRef recipientMetadata)
         {
-            var recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
+            var senderPath = senderMetadata.Path;
+            var recipientPath = recipientMetadata.Path!;
+            var recipient = recipientMetadata.Resolved ?? Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
 
             // Defensive-only safety branch mirroring DispatchInbound's ISystemMessage handling
             // above -- in practice UNREACHABLE for either of this method's callers: DispatchInbound
@@ -1080,7 +1104,7 @@ namespace Akka.Remote.Artery
             // above, or an inbound lane's consumer loop -- ends up invoking it.
             if (message is ISystemMessage systemMessage)
             {
-                recipient.SendSystemMessage(systemMessage);
+                Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress).SendSystemMessage(systemMessage);
                 return;
             }
 
@@ -1113,12 +1137,15 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            DeliverOrdinaryMessage(recipient, message, senderPath);
+            if (senderMetadata.Resolved is { } resolvedSender)
+                recipient.Tell(message, resolvedSender);
+            else
+                DeliverOrdinaryMessage(recipient, message, senderPath);
         }
 
         /// <summary>
         /// The final Tell of the ordinary dispatch path -- factored out of
-        /// <see cref="DispatchOrdinaryMessage"/> so the remote-deploy retry-resolve flush
+        /// <see cref="DispatchOrdinaryMessage(object,string?,string)"/> so the remote-deploy retry-resolve flush
         /// (<see cref="RetryResolveRemoteDeployedRecipient"/>) delivers with EXACTLY the same
         /// semantics as a direct dispatch.
         /// </summary>
@@ -1330,6 +1357,14 @@ namespace Akka.Remote.Artery
         {
             switch (message)
             {
+                case ActorRefTableAdvertisement advertisement when _settings.RefCompressionSpike:
+                    InstallRefTable(originUid, advertisement);
+                    break;
+                case ActorRefTableAck ack when _settings.RefCompressionSpike:
+                    if (ack.From.Uid == originUid && _registry.TryGetByUid(originUid) is { } ackAssociation &&
+                        ack.From.Address.Equals(ackAssociation.RemoteAddress))
+                        ackAssociation.GetRefCompression(originUid, _settings.RefCompressionMaximum)?.Confirm(ack.Version);
+                    break;
                 case ArteryQuarantined quarantined when quarantined.QuarantinedUid == _localUniqueAddress.Uid:
                     // Only act when the notification is about THIS system's CURRENT incarnation --
                     // a notification about a stale/superseded uid must not be acted on (design.md's
@@ -1353,6 +1388,87 @@ namespace Akka.Remote.Artery
                     // subscribe to see liveness/non-starvation -- see ArteryTransportSpec).
                     break;
             }
+        }
+
+        private void AdvertiseRefTables()
+        {
+            if (_isShutdown)
+                return;
+            foreach (var association in _registry.AllAssociations)
+            {
+                if (association.CurrentState.UniqueRemoteAddress is not { } peer)
+                    continue;
+                if (association.GetRefCompression(peer.Uid, _settings.RefCompressionMaximum)?.Advertise() is { } table)
+                    EnqueueControl(peer.Address, new ActorRefTableAdvertisement(_localUniqueAddress, peer.Uid, table.Version, table.Paths()));
+            }
+        }
+
+        private void InstallRefTable(long originUid, ActorRefTableAdvertisement advertisement)
+        {
+            if (advertisement.From.Uid != originUid || advertisement.OriginUid != _localUniqueAddress.Uid ||
+                advertisement.Version > 127 || advertisement.Paths is null || advertisement.Paths.Length > ushort.MaxValue ||
+                _registry.TryGetByUid(originUid) is not { } association ||
+                !advertisement.From.Address.Equals(association.RemoteAddress))
+                return;
+            var compression = association.GetRefCompression(originUid, _settings.RefCompressionMaximum);
+            if (compression is null)
+                return;
+            var previous = compression.Outbound;
+            if (previous is not null && previous.Version > advertisement.Version)
+                return;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var entries = new CompressedActorRef[advertisement.Paths.Length];
+            for (var i = 0; i < entries.Length; i++)
+            {
+                var path = advertisement.Paths[i];
+                if (string.IsNullOrEmpty(path) || !seen.Add(path) || !ActorPath.TryParse(path, out _))
+                    return;
+                var actorRef = _resolveCompressionRef!(path);
+                entries[i] = new CompressedActorRef(path, ActorRefCompression.IsCacheable(path, actorRef) ? actorRef : null);
+            }
+            if (previous?.Version == advertisement.Version && !previous.SameEntries(entries))
+                return;
+            if (!compression.TryInstall(new ActorRefTable(advertisement.Version, entries)))
+                return;
+            EnqueueControl(association.RemoteAddress, new ActorRefTableAck(_localUniqueAddress, advertisement.Version));
+        }
+
+        private bool DecodeActorRefs(in ArteryEnvelopeDecoded decoded, out InboundActorRef sender, out InboundActorRef recipient)
+        {
+            sender = default;
+            recipient = default;
+            if (_registry.TryGetByUid(decoded.Header.OriginUid) is not { } association ||
+                association.GetRefCompression(decoded.Header.OriginUid, _settings.RefCompressionMaximum) is not { } compression)
+                return false;
+            if (decoded.TryGetRecipientPath(out var recipientPath))
+                recipient = new InboundActorRef(recipientPath);
+            else if (!compression.TryResolve(decoded.Header.ActorRefTableVersion, decoded.RecipientCompressedIndex, out recipient))
+                return false;
+            if (recipient.Path is null)
+                return false;
+            if (decoded.TryGetSenderPath(out var senderPath))
+                sender = new InboundActorRef(senderPath);
+            else if (!compression.TryResolve(decoded.Header.ActorRefTableVersion, decoded.SenderCompressedIndex, out sender))
+                return false;
+            if (decoded.RecipientKind == ArteryTagKind.Compressed || decoded.SenderKind == ArteryTagKind.Compressed)
+            {
+                if (compression.HasPendingAdvertisement)
+                    compression.Confirm(decoded.Header.ActorRefTableVersion);
+                if (compression.MarkUsed(decoded.Header.ActorRefTableVersion))
+                    System.EventStream.Publish(new ActorRefCompressionUsed(decoded.Header.OriginUid, decoded.Header.ActorRefTableVersion));
+            }
+            compression.Observe(sender, recipient, _resolveCompressionRef!);
+            return true;
+        }
+
+        internal ActorRefTable? RefCompressionTableFor(Address address)
+        {
+            if (!_settings.RefCompressionSpike)
+                return null;
+            var association = _registry.AssociationFor(address);
+            return association.CurrentState.UniqueRemoteAddress is { } peer
+                ? association.GetRefCompression(peer.Uid, _settings.RefCompressionMaximum)?.Outbound
+                : null;
         }
 
         private void SendControlToAddress(Address to, object message) => EnqueueControl(to, message);
@@ -1394,8 +1510,12 @@ namespace Akka.Remote.Artery
             return computed;
         }
 
-        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath, RemoteActorRef recipient)
+        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath, RemoteActorRef recipient) =>
+            EnqueueOutbound(remoteAddress, new OutboundEnvelope(message, senderPath, recipientPath), recipient);
+
+        private void EnqueueOutbound(Address remoteAddress, IOutboundEnvelope envelope, RemoteActorRef recipient)
         {
+            var message = envelope.Message;
             var association = _registry.AssociationFor(remoteAddress);
             var route = ResolveSendRoute(recipient, association);
 
@@ -1416,7 +1536,7 @@ namespace Akka.Remote.Artery
                 if (!association.IsLargeOutboundMaterialized)
                     association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
 
-                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, senderPath, recipientPath)))
+                if (!association.TryEnqueueLarge(envelope))
                 {
                     // Same direct-to-event-stream Dropped semantics as the ordinary queue's PR
                     // #8346 fix (see below) -- soft drop, never a quarantine.
@@ -1443,7 +1563,7 @@ namespace Akka.Remote.Artery
                 // Association.HasOutboundEverRestarted's remarks).
                 association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
 
-            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath), laneIndex))
+            if (!association.TryEnqueueOutbound(envelope, laneIndex))
             {
                 // Publish DIRECTLY to the event stream -- mirrors Pekko's Association.dropped().
                 // NOT routed through System.DeadLetters.Tell (that would double-wrap: Tell to the
@@ -1939,7 +2059,8 @@ namespace Akka.Remote.Artery
                         timeProvider: System.Scheduler);
 
                     var encodeStage = new ArteryEncodeStage(
-                        System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
+                        System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i],
+                        _settings.RefCompressionSpike ? association : null, _settings.RefCompressionMaximum);
 
                     // RecoverWithRetries sits AFTER WatchTermination -- the ordering is load-bearing:
                     // the termination task (upstream of the recovery) must still observe the lane's
@@ -2194,7 +2315,9 @@ namespace Akka.Remote.Artery
             // Large-message stream (task 10.2) rents from its OWN dedicated, large-sized pool --
             // see _largeEncodeBufferPool's remarks.
             var encodeStage = new ArteryEncodeStage(
-                System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
+                System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool,
+                _settings.RefCompressionSpike && !isControlStream && !isLargeStream ? association : null,
+                _settings.RefCompressionMaximum);
 
             var source = ChannelSource.FromReader(reader);
 
