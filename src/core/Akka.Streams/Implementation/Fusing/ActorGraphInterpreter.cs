@@ -137,7 +137,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _resumeScheduled;
         private bool _waitingForShutdown;
         private Action<object> _enqueueToShortCircuit;
-        private Action<ActorGraphInterpreter.AsyncInput> _enqueueAsyncToShortCircuit;
+        private ActorGraphInterpreter _shortCircuitOwner;
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
@@ -206,11 +206,11 @@ namespace Akka.Streams.Implementation.Fusing
             => Init(self, subMat, enqueueToShourtCircuit, null, eventLimit);
 
         internal int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShortCircuit,
-            Action<ActorGraphInterpreter.AsyncInput> enqueueAsyncToShortCircuit, int eventLimit)
+            ActorGraphInterpreter shortCircuitOwner, int eventLimit)
         {
             Self = self;
             _enqueueToShortCircuit = enqueueToShortCircuit;
-            _enqueueAsyncToShortCircuit = enqueueAsyncToShortCircuit;
+            _shortCircuitOwner = shortCircuitOwner;
 
             for (int i = 0; i < _inputs.Length; i++)
             {
@@ -452,8 +452,8 @@ namespace Akka.Streams.Implementation.Fusing
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
                         Self.Tell(asyncInput);
-                    else if (_enqueueAsyncToShortCircuit != null)
-                        _enqueueAsyncToShortCircuit(asyncInput);
+                    else if (_shortCircuitOwner != null)
+                        _shortCircuitOwner.EnqueueAsyncToShortCircuit(asyncInput);
                     else
                         _enqueueToShortCircuit(asyncInput);
                 }, _settings.IsFuzzingMode, Self);
@@ -1646,7 +1646,7 @@ namespace Akka.Streams.Implementation.Fusing
             _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
         }
 
-        private void EnqueueAsyncToShortCircuit(AsyncInput input)
+        internal void EnqueueAsyncToShortCircuit(AsyncInput input)
         {
             if (_shortCircuitBuffer == null)
                 _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
@@ -1660,7 +1660,7 @@ namespace Akka.Streams.Implementation.Fusing
             try
             {
                 _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit,
-                    EnqueueAsyncToShortCircuit, _currentLimit);
+                    this, _currentLimit);
                 if (IsDebug)
                     Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)

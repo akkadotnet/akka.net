@@ -196,8 +196,9 @@ namespace Akka.Benchmarks.Streams
             {
                 private readonly ReferenceStageActorSource _stage;
                 private readonly TaskCompletionSource<IActorRef> _ready;
-                // The producer sends one fixed batch. Bound the buffer and fail on overflow.
-                private readonly Queue<object> _buffer = new();
+                // Preallocate the fixed batch capacity so scheduling-dependent growth does not skew allocations.
+                // The producer sends one fixed batch; fail rather than silently lose elements on overflow.
+                private readonly Queue<object> _buffer = new(ElementCount);
                 private bool _completed;
 
                 public Logic(ReferenceStageActorSource stage, TaskCompletionSource<IActorRef> ready) : base(stage.Shape)
