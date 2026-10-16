@@ -5,11 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
@@ -25,8 +27,8 @@ namespace Akka.Benchmarks
     [MemoryDiagnoser]
     public class TcpOperationsBenchmarks
     {
-        private ActorSystem _system;
-        private byte[] _message;
+        private ActorSystem _system = null!;
+        private byte[] _message = null!;
         
         public const int MessageCount = 1_000_000;
 
@@ -39,18 +41,21 @@ namespace Akka.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
+            Console.WriteLine("TCP benchmark GC: server={0}, runtime={1}, processors={2}",
+                GCSettings.IsServerGC, Environment.Version, Environment.ProcessorCount);
+            foreach (var setting in GC.GetConfigurationVariables())
+                Console.WriteLine("TCP benchmark GC config: {0}={1}", setting.Key, setting.Value);
             _system = ActorSystem.Create("system", "akka.log-dead-letters = off");
             _message = new byte[MessageLength];
+            for (var i = 0; i < _message.Length; i++)
+                _message[i] = (byte)i;
         }
 
         [GlobalCleanup]
-        public void Cleanup()
-        {
-            _system.Dispose();
-        }
+        public Task Cleanup() => _system.Terminate();
 
-        private IActorRef _server;
-        private IActorRef _clientCoordinator;
+        private IActorRef _server = null!;
+        private IActorRef _clientCoordinator = null!;
         
         [IterationSetup]
         public void IterationSetup()
@@ -61,19 +66,22 @@ namespace Akka.Benchmarks
         }
         
         [IterationCleanup]
-        public void IterationCleanup()
+        public async Task IterationCleanup()
         {
             // Clean up actors after each iteration measurement
             var clientStop = _clientCoordinator.GracefulStop(TimeSpan.FromSeconds(3));
             var serverStop = _server.GracefulStop(TimeSpan.FromSeconds(3));
-            Task.WhenAll(clientStop, serverStop).Wait();
+            await Task.WhenAll(clientStop, serverStop);
         }
         
         [Benchmark(OperationsPerInvoke = MessageCount)]
         public async Task ClientServerCommunication()
         {
             // Only the communication is measured, not setup/teardown
-            await _clientCoordinator.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));
+            var result = await _clientCoordinator.Ask<CommunicationFinished>(
+                new CommunicationRequest(MessageCount, _message), TimeSpan.FromMinutes(5));
+            if (result.Messages != MessageCount)
+                throw new InvalidOperationException($"Expected {MessageCount} echoes, received {result.Messages}.");
         }
 
         public class CommunicationRequest
@@ -88,12 +96,16 @@ namespace Akka.Benchmarks
             public byte[] Message { get; }
         }
 
-        public class CommunicationFinished
+        public sealed class CommunicationFinished
         {
+            public CommunicationFinished(int messages) => Messages = messages;
+            public int Messages { get; }
         }
 
-        public class ChildCommunicationFinished
+        public sealed class ChildCommunicationFinished
         {
+            public ChildCommunicationFinished(int messages) => Messages = messages;
+            public int Messages { get; }
         }
         
         public sealed class GetBindAddress
@@ -144,8 +156,9 @@ namespace Akka.Benchmarks
             {
                 Receive<Tcp.Connected>(_ =>
                 {
-                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender, _messageSize)));
-                    Sender.Tell(new Tcp.Register(connection));
+                    var connectionRef = Sender;
+                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(connectionRef, _messageSize)));
+                    connectionRef.Tell(new Tcp.Register(connection));
                 });
                 
                 Receive<Tcp.CommandFailed>(f =>
@@ -196,8 +209,10 @@ namespace Akka.Benchmarks
         {
             private readonly IActorRef _echoServer;
             private readonly HashSet<IActorRef> _waitingChildren = new();
-            private IActorRef _requester;
+            private IActorRef _requester = null!;
             private readonly int _clientsCount;
+            private int _expectedMessages;
+            private int _completedMessages;
             private EndPoint? _endpoint;
             
             private class ServerDied
@@ -244,23 +259,33 @@ namespace Akka.Benchmarks
                 Receive<CommunicationRequest>(request =>
                 {
                     _requester = Sender;
+                    _expectedMessages = request.MessagesToSend;
+                    _completedMessages = 0;
+                    var remainder = request.MessagesToSend % _clientsCount;
                     var messagesPerActor = request.MessagesToSend / _clientsCount;
                     for (var i = 0; i < _clientsCount; ++i)
                     {
+                        var childMessages = messagesPerActor + (i < remainder ? 1 : 0);
                         var child = Context.ActorOf(Props.Create(() =>
-                            new Client(_endpoint!, messagesPerActor, request.Message)));
+                            new Client(_endpoint!, childMessages, request.Message)));
                         _waitingChildren.Add(child);
                     }
                 });
                 
-                Receive<ChildCommunicationFinished>(_ =>
+                Receive<ChildCommunicationFinished>(completed =>
                 {
                     Context.Stop(Sender);
 
-                    _waitingChildren.Remove(Sender);
+                    if (!_waitingChildren.Remove(Sender))
+                        throw new InvalidOperationException("Duplicate TCP client completion.");
+                    _completedMessages += completed.Messages;
 
                     if (_waitingChildren.Count == 0)
-                        _requester.Tell(new CommunicationFinished());
+                        {
+                        if (_completedMessages != _expectedMessages)
+                            throw new InvalidOperationException("TCP clients completed with a missing echo.");
+                        _requester.Tell(new CommunicationFinished(_completedMessages));
+                    }
                 });
 
                 Receive<Status.Failure>(failure =>
@@ -276,14 +301,14 @@ namespace Akka.Benchmarks
             protected override void PreStart()
             {
                 Timers.StartSingleTimer("BenchmarkTimeout", new Status.Failure(new Exception("Benchmark timed out")),
-                    TimeSpan.FromSeconds(60));
+                    TimeSpan.FromMinutes(5));
                 
                 Context.WatchWith(_echoServer, ServerDied.Instance);
                 _echoServer.Tell(GetBindAddress.Instance);
             }
 
-            public ITimerScheduler Timers { get; set; }
-            public IStash Stash { get; set; }
+            public ITimerScheduler Timers { get; set; } = null!;
+            public IStash Stash { get; set; } = null!;
         }
 
         private sealed class Framer
@@ -330,8 +355,11 @@ namespace Akka.Benchmarks
         private class Client : ReceiveActor, IWithTimers
         {
             private readonly ILoggingAdapter _log = Context.GetLogger();
-            private int _receivedCount = 0;
-            private IActorRef _connection;
+            private int _receivedCount;
+            private int _sentCount;
+            private readonly byte[] _expectedMessage;
+            private readonly int _messagesToSend;
+            private IActorRef _connection = null!;
             private int _connectAttemptsRemaining = 5;
             
             private Framer _framer;
@@ -349,6 +377,8 @@ namespace Akka.Benchmarks
             public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
                 _framer = new Framer(message.Length);
+                _expectedMessage = message;
+                _messagesToSend = messagesToSend;
                 var write =
                     // create the write only once
                     Tcp.Write.Create(message.AsMemory());
@@ -359,9 +389,10 @@ namespace Akka.Benchmarks
                     Sender.Tell(new Tcp.Register(Self));
                     
                     // send messages in bursts of 20
-                    for (var i = 0; i < 20; i++)
+                    for (var i = 0; i < Math.Min(20, messagesToSend); i++)
                     {
                         Sender.Tell(write);
+                        _sentCount++;
                     }
                     _connection = Sender;
                 });
@@ -395,18 +426,42 @@ namespace Akka.Benchmarks
                 {
                     foreach (var m in _framer.Deframe(r.Data))
                     {
+                        ValidateEcho(m);
                         _receivedCount++;
-                        if (_receivedCount >= messagesToSend)
+                        if (_receivedCount > messagesToSend)
+                            throw new InvalidOperationException("TCP benchmark received an extra echo.");
+                        if (_receivedCount == messagesToSend)
                         {
                             _connection.Tell(Tcp.Close.Instance);
                         }
-                        else
+                        else if (_sentCount < messagesToSend)
                         {
                             _connection.Tell(write);
+                            _sentCount++;
                         }
                     }
                 });
-                Receive<Tcp.Closed>(_ => { Context.Parent.Tell(new ChildCommunicationFinished()); });
+                Receive<Tcp.Closed>(_ =>
+                {
+                    if (_receivedCount != _messagesToSend || _sentCount != _messagesToSend)
+                        throw new InvalidOperationException("TCP connection closed before all echoes were delivered.");
+                    Context.Parent.Tell(new ChildCommunicationFinished(_receivedCount));
+                });
+            }
+
+            private void ValidateEcho(ReadOnlySequence<byte> message)
+            {
+                if (message.Length != _expectedMessage.Length)
+                    throw new InvalidOperationException("TCP benchmark echo length changed.");
+                var offset = 0;
+                foreach (var segment in message)
+                {
+                    foreach (var value in segment.Span)
+                    {
+                        if (value != _expectedMessage[offset++])
+                            throw new InvalidOperationException("TCP benchmark echo payload changed.");
+                    }
+                }
             }
 
             private static void DoConnect(EndPoint endpoint)
@@ -414,7 +469,7 @@ namespace Akka.Benchmarks
                 Context.System.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(5)));
             }
 
-            public ITimerScheduler Timers { get; set; }
+            public ITimerScheduler Timers { get; set; } = null!;
         }
     }
 }
