@@ -6,10 +6,13 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System;
+using System.Runtime;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Benchmarks.Experimental;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using BenchmarkDotNet.Attributes;
@@ -43,20 +46,28 @@ namespace Akka.Benchmarks.Remoting.Artery
         private Channel<InboundFrame> _channel = null!;
         private ISourceQueueWithComplete<InboundFrame> _queue = null!;
         private Task _streamDone = null!;
+        private ReceiveOwnershipExperiment.Corpus _completeReads = null!;
+        private ReceiveOwnershipExperiment.Corpus _fragmentedReads = null!;
 
         [GlobalSetup]
         public void GlobalSetup()
         {
+            Console.WriteLine("Receive experiment GC: server={0}, runtime={1}, processors={2}",
+                GCSettings.IsServerGC, Environment.Version, Environment.ProcessorCount);
+            foreach (var setting in GC.GetConfigurationVariables())
+                Console.WriteLine("Receive experiment GC config: {0}={1}", setting.Key, setting.Value);
             _system = ActorSystem.Create("artery-ingress-bench", ArterySubstrateFixture.SystemConfig);
             _materializer = _system.Materializer();
             _corpus = ArterySubstrateFixture.CreateCorpus();
+            _completeReads = new ReceiveOwnershipExperiment.Corpus(ReceiveOwnershipExperiment.BenchmarkFrames, false);
+            _fragmentedReads = new ReceiveOwnershipExperiment.Corpus(ReceiveOwnershipExperiment.BenchmarkFrames, true);
         }
 
         [GlobalCleanup]
-        public void GlobalCleanup()
+        public async Task GlobalCleanup()
         {
             _materializer.Dispose();
-            _system.Dispose();
+            await _system.Terminate();
         }
 
         [IterationSetup(Target = nameof(SourceQueue_PerMessage))]
@@ -121,6 +132,32 @@ namespace Akka.Benchmarks.Remoting.Artery
             writer.Complete();
             return _streamDone;
         }
+
+        // Isolated receive-ownership experiment: real Pipe and production Artery framing,
+        // actor consumers, no socket/TcpConnection integration or public contract change.
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveCopy_CompleteFrames() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _completeReads, borrow: false, queuedConsumer: false);
+
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveBorrow_CompleteFrames() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _completeReads, borrow: true, queuedConsumer: false);
+
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveCopy_FragmentedFrames() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _fragmentedReads, borrow: false, queuedConsumer: false);
+
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveBorrow_FragmentedFrames() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _fragmentedReads, borrow: true, queuedConsumer: false);
+
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveCopy_QueuedActorConsumer() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _completeReads, borrow: false, queuedConsumer: true);
+
+        [Benchmark(OperationsPerInvoke = ReceiveOwnershipExperiment.BenchmarkFrames)]
+        public Task ReceiveBorrow_QueuedActorConsumer() =>
+            ReceiveOwnershipExperiment.RunAsync(_system, _completeReads, borrow: true, queuedConsumer: true);
     }
 
     /// <summary>
