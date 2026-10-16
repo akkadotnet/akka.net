@@ -1654,7 +1654,12 @@ namespace Akka.Streams.Implementation.Fusing
 #nullable enable
         // One FIFO retains the ordering of async inputs, resumes, and shell registrations.
         // Sharing the reference fields keeps all three event kinds in one FIFO without boxing.
-        private enum ShortCircuitEventKind : byte { Boundary, AsyncInput, StageActorInput }
+        private enum ShortCircuitEventKind : byte
+        {
+            Boundary,
+            AsyncInput,
+            StageActorInput
+        }
 
         private readonly struct ShortCircuitEvent
         {
