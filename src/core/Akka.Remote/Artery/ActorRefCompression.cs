@@ -235,7 +235,7 @@ namespace Akka.Remote.Artery
     {
         public string? SenderPath => Sender?.Path.ToSerializationFormatWithAddress(LocalAddress);
         public string RecipientPath => Recipient.Path.ToSerializationFormatWithAddress(Recipient.Path.Address);
-        public bool IsControl { get; } = Message is IArteryControlMessage;
+        public bool IsControl => Message is IArteryControlMessage;
     }
 
     internal sealed record RefInboundEnvelope(object Message, InboundActorRef Sender, InboundActorRef Recipient,
@@ -243,6 +243,6 @@ namespace Akka.Remote.Artery
     {
         public string? SenderPath => Sender.Path;
         public string? RecipientPath => Recipient.Path;
-        public bool IsControl { get; } = Message is IArteryControlMessage;
+        public bool IsControl => Message is IArteryControlMessage;
     }
 }

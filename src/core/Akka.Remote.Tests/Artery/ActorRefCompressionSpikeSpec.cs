@@ -230,7 +230,7 @@ namespace Akka.Remote.Tests.Artery
                 var mixed = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(partial.WrittenMemory.Slice(4)));
                 Assert.Equal(ArteryTagKind.Compressed, mixed.RecipientKind);
                 Assert.Equal(absentSender ? ArteryTagKind.Absent : ArteryTagKind.Literal, mixed.SenderKind);
-                var controlEnvelope = new RefOutboundEnvelope(new ArteryHeartbeat(), envelope.Sender, recipient, provider.DefaultAddress);
+                var controlEnvelope = envelope with { Message = new ArteryHeartbeat() };
                 using var control = ArteryEnvelopeCodec.EncodeRefs(((ExtendedActorSystem)system).Serialization, 42, controlEnvelope, null, table);
                 var controlDecoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(control.WrittenMemory.Slice(4)));
                 Assert.Equal(ArteryTagKind.Literal, controlDecoded.RecipientKind);
