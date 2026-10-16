@@ -1,4 +1,4 @@
-# Actor-ref compression spike
+# Actor-Ref Compression Spike
 
 Experimental and disabled by default. This is a measurement vehicle for simplifying #8343,
 not a production replacement. It is stacked on the allocation work through #8819.
@@ -15,23 +15,23 @@ serializer IDs, or manifests. Control and large-message streams retain literal m
 
 ## Mechanism
 
-- One association-incarnation-owned state is shared by connections and outbound lanes.
-- One bounded counter observes both refs every 64 ordinary messages. Capacity is four times
+* One association-incarnation-owned state is shared by connections and outbound lanes.
+* One bounded counter observes both refs every 64 ordinary messages. Capacity is four times
   the table maximum, capped at 65535. Cold advertisement sorts candidates and clears counts.
-- Receiver publishes an immutable decode table before advertising its ordered paths.
+* Receiver publishes an immutable decode table before advertising its ordered paths.
   Lookup is pure. ACK or successfully decoded compressed data confirms publication and
   stops retries. One pending table retries each interval. Confirmed snapshots retain three
   older tables; a pending publication temporarily retains four older tables.
-- Advertisements use source-generated native `byte` and `string[]` fields. No custom
+* Advertisements use source-generated native `byte` and `string[]` fields. No custom
   formatter, table wrapper, manifest compression, or separate heavy-hitter structure.
-- Sender resolves advertised refs once, then looks up actual `IActorRef` values. Actor-ref
+* Sender resolves advertised refs once, then looks up actual `IActorRef` values. Actor-ref
   equality includes actor UID. Misses format the original literal path.
-- Receiver caches only positive refs with matching explicit actor UID; unresolved and
+* Receiver caches only positive refs with matching explicit actor UID; unresolved and
   temporary refs keep literal resolution/retry behavior. A one-reference metadata slot
   holds either a literal string or a table-owned cached ref and its original wire path.
-- Existing recipient lane hashing still uses the original wire path, preserving lane choice.
+* Existing recipient lane hashing still uses the original wire path, preserving lane choice.
   Application payload bytes, serializer ID and manifest stay unchanged.
-- Stale/conflicting advertisements and stale ACKs are rejected. Installing outbound tables
+* Stale/conflicting advertisements and stale ACKs are rejected. Installing outbound tables
   is atomic and monotonic. Unknown table/index drops the ordinary message.
 
 ```mermaid
@@ -47,7 +47,7 @@ sequenceDiagram
   B->>B: cached positive refs; ordinary Tell
 ```
 
-## Deliberate limits
+## Deliberate Limits
 
 **Do not enable this in production.** Association ownership alone does not fence already
 encoded frames against receiver restart. The envelope identifies the sender incarnation,
@@ -82,7 +82,7 @@ Run existing `ArterySinglePassEncodeBenchmarks` with filter `*ActorRefs*`. Paire
 reuse the same payload, serializer, actual refs and envelope. Cold formats literals; warm
 uses a setup-built table. Paired decode arms parse the actual codec frame and either resolve
 literal paths or retrieve cached refs. Table construction/learning and envelope allocation
-are outside those microbenchmarks. This is warm-path isolation, not an end-to-end result.
+are outside those isolated benchmarks. This is warm-path isolation, not an end-to-end result.
 
 RemotePingPong `run --artery --ref-compression-spike` enables both loopback systems. The
 harness requires compressed-frame observations from both systems; an enabled run cannot
