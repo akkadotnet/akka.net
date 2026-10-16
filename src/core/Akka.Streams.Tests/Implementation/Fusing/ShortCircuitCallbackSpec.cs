@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -129,6 +130,86 @@ public sealed class ShortCircuitCallbackSpec : AkkaSpec
             input.TrySetResult(0);
             await completion.WaitAsync(TimeSpan.FromSeconds(3));
         }, materializer);
+    }
+
+    [Theory(DisplayName = "Should_PreserveBufferedCallbackBeforePreStartSelfSend_When_StageActorStarts")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_preserve_buffered_callback_before_prestart_self_send_when_stage_actor_starts(bool subfused)
+    {
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var control = new PreStartControl();
+            Task<int> StartInner(IMaterializer innerMaterializer) => Source.Maybe<int>()
+                .Via(new PreStartSelfSendStage(control)).RunWith(Sink.First<int>(), innerMaterializer);
+            var result = subfused
+                ? Source.Single(0).Select(_ =>
+                {
+                    control.OuterActor = GraphInterpreter.Current.Context;
+                    return StartInner(GraphInterpreter.Current.SubFusingMaterializer);
+                }).SelectAsync(1, static task => task).RunWith(Sink.First<int>(), materializer)
+                : StartInner(materializer);
+            (await result.WaitAsync(TimeSpan.FromSeconds(3))).Should().Be(2);
+            control.Events.Should().Equal("prestart-enter", "prestart-exit", "buffered-callback", "self-message");
+            control.HandlerActors.Should().HaveCount(2);
+            if (subfused)
+            {
+                control.OuterActor.Should().NotBeNull();
+                foreach (var actor in control.HandlerActors)
+                    actor.Should().BeSameAs(control.OuterActor);
+            }
+        }, materializer);
+    }
+
+    private sealed class PreStartControl
+    {
+        public List<string> Events { get; } = new();
+        public List<object> HandlerActors { get; } = new();
+        public object? OuterActor { get; set; }
+    }
+
+    private sealed class PreStartSelfSendStage : GraphStage<FlowShape<int, int>>
+    {
+        private readonly PreStartControl _control;
+        private readonly Inlet<int> _in = new("prestart-self-send.in");
+        private readonly Outlet<int> _out = new("prestart-self-send.out");
+        public PreStartSelfSendStage(PreStartControl control)
+        {
+            _control = control;
+            Shape = new FlowShape<int, int>(_in, _out);
+        }
+        public override FlowShape<int, int> Shape { get; }
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly PreStartSelfSendStage _stage;
+            private int _delivered;
+            public Logic(PreStartSelfSendStage stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandlers(stage._in, stage._out, this);
+                // This callback is still Pending because Interpreter has not been assigned.
+                GetAsyncCallback<int>(_ => Delivered("buffered-callback"))(0);
+            }
+            public override void PreStart()
+            {
+                _stage._control.Events.Add("prestart-enter");
+                GetStageActor(_ => Delivered("self-message")).Ref.Tell("self-message");
+                _stage._control.Events.Add("prestart-exit");
+            }
+            private void Delivered(string name)
+            {
+                _stage._control.Events.Add(name);
+                _stage._control.HandlerActors.Add(GraphInterpreter.Current.Context);
+                if (++_delivered == 2)
+                    Emit(_stage._out, _delivered, CompleteStage);
+            }
+            public override void OnPull() => Pull(_stage._in);
+            public override void OnPush() => Grab(_stage._in);
+        }
     }
 
     private sealed class CallbackControl
