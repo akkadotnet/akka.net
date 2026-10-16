@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime;
 using System.Threading;
@@ -16,6 +17,7 @@ using Akka.Benchmarks.Configurations;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.Stage;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Streams
@@ -48,6 +50,7 @@ namespace Akka.Benchmarks.Streams
         private ActorSystem _system = null!;
         private ActorMaterializer _materializer = null!;
         private ActivitySource _producerSource = null!;
+        private object[] _orderedPayloads = null!;
 
         [GlobalSetup]
         public void Setup()
@@ -60,6 +63,9 @@ namespace Akka.Benchmarks.Streams
             _materializer = _system.Materializer();
             _producerSource = new ActivitySource(ProducerSourceName);
             _ = StreamsDiagnostics.ActivitySource;
+            _orderedPayloads = new object[ElementCount];
+            for (var index = 0; index < ElementCount; index++)
+                _orderedPayloads[index] = new object();
         }
 
         [GlobalCleanup]
@@ -113,6 +119,129 @@ namespace Akka.Benchmarks.Streams
         [Benchmark(OperationsPerInvoke = ElementCount)]
         public Task Source_Queue_Traced_Reference_Ingress_Throughput()
             => RunTracedQueue(ReferencePayload, static value => value.Length);
+
+        // This source calls public GetStageActor, unlike the legacy ActorPublisher-backed Source.ActorRef.
+        [Benchmark(OperationsPerInvoke = ElementCount)]
+        public Task StageActor_Reference_Ingress_Throughput()
+        {
+            if (Activity.Current is not null || StreamsDiagnostics.ActivitySource.HasListeners())
+                throw new InvalidOperationException("Untraced StageActor control requires no activity or Streams listener.");
+            return SendAndDrainStageActor();
+        }
+
+        [Benchmark(OperationsPerInvoke = ElementCount)]
+        public async Task StageActor_Traced_Reference_Ingress_Throughput()
+        {
+            var expectedParent = default(ActivityContext);
+            var ingressCount = 0;
+            var wrongParentCount = 0;
+            using var listener = new ActivityListener
+            {
+                ShouldListenTo = static source => source.Name is ProducerSourceName or "Akka.Streams",
+                Sample = static (ref ActivityCreationOptions<ActivityContext> options) =>
+                    options.Source.Name == ProducerSourceName
+                    || options.Name.StartsWith(StreamsDiagnostics.OperationIngress + " ", StringComparison.Ordinal)
+                        ? ActivitySamplingResult.AllDataAndRecorded
+                        : ActivitySamplingResult.None,
+                ActivityStarted = activity =>
+                {
+                    if (activity.Source.Name != "Akka.Streams"
+                        || !activity.OperationName.StartsWith(StreamsDiagnostics.OperationIngress + " ", StringComparison.Ordinal))
+                        return;
+                    Interlocked.Increment(ref ingressCount);
+                    if (activity.TraceId != expectedParent.TraceId || activity.ParentSpanId != expectedParent.SpanId)
+                        Interlocked.Increment(ref wrongParentCount);
+                }
+            };
+            ActivitySource.AddActivityListener(listener);
+            using var producer = _producerSource.StartActivity("stage-actor.send.batch")
+                ?? throw new InvalidOperationException("Traced StageActor control did not create a producer activity.");
+            expectedParent = producer.Context;
+            await SendAndDrainStageActor();
+            // Completion is another StageActor message and must also preserve the producer context.
+            if (Volatile.Read(ref ingressCount) != ElementCount + 1 || Volatile.Read(ref wrongParentCount) != 0)
+                throw new InvalidOperationException("StageActor ingress did not preserve every producer context.");
+        }
+
+        private async Task SendAndDrainStageActor()
+        {
+            var (ready, completion) = Source.FromGraph(new ReferenceStageActorSource())
+                .ToMaterialized(Sink.Aggregate<object, int>(0, (count, element) =>
+                {
+                    if (count >= _orderedPayloads.Length || !ReferenceEquals(element, _orderedPayloads[count]))
+                        throw new InvalidOperationException("StageActor lost reference identity or delivery order.");
+                    return count + 1;
+                }), Keep.Both).Run(_materializer);
+            var actor = await ready;
+            foreach (var payload in _orderedPayloads)
+                actor.Tell(payload);
+            actor.Tell(new Status.Success(Done.Instance));
+            if (await completion != ElementCount)
+                throw new InvalidOperationException("Incomplete StageActor delivery.");
+        }
+
+        private sealed class ReferenceStageActorSource : GraphStageWithMaterializedValue<SourceShape<object>, Task<IActorRef>>
+        {
+            private readonly Outlet<object> _out = new("reference-stage-actor.out");
+            public ReferenceStageActorSource() => Shape = new SourceShape<object>(_out);
+            public override SourceShape<object> Shape { get; }
+
+            public override ILogicAndMaterializedValue<Task<IActorRef>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+            {
+                var ready = new TaskCompletionSource<IActorRef>(TaskCreationOptions.RunContinuationsAsynchronously);
+                return new LogicAndMaterializedValue<Task<IActorRef>>(new Logic(this, ready), ready.Task);
+            }
+
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly ReferenceStageActorSource _stage;
+                private readonly TaskCompletionSource<IActorRef> _ready;
+                // The producer sends one fixed batch. Bound the buffer and fail on overflow.
+                private readonly Queue<object> _buffer = new();
+                private bool _completed;
+
+                public Logic(ReferenceStageActorSource stage, TaskCompletionSource<IActorRef> ready) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _ready = ready;
+                    SetHandler(stage._out, this);
+                }
+
+                public override void PreStart()
+                {
+                    var actor = GetStageActor(pair =>
+                    {
+                        if (pair.Item2 is Status.Success)
+                        {
+                            _completed = true;
+                            if (_buffer.Count == 0)
+                                CompleteStage();
+                        }
+                        else if (IsAvailable(_stage._out))
+                        {
+                            Push(_stage._out, pair.Item2);
+                        }
+                        else if (_buffer.Count < ElementCount)
+                        {
+                            _buffer.Enqueue(pair.Item2);
+                        }
+                        else
+                        {
+                            FailStage(new InvalidOperationException("StageActor benchmark buffer overflow."));
+                        }
+                    });
+                    _ready.TrySetResult(actor.Ref);
+                }
+
+                public override void OnPull()
+                {
+                    if (_buffer.Count > 0)
+                        Push(_stage._out, _buffer.Dequeue());
+                    if (_completed && _buffer.Count == 0)
+                        CompleteStage();
+                }
+            }
+        }
 
         // Queue's async callback receives a reference-typed Offer command for both payload types.
         // These cases compare stream payloads; direct callback<T> boxing belongs in separate tests.
