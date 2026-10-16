@@ -29,6 +29,7 @@ using Akka.Util;
 using Inet = Akka.IO.Inet;
 using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
 using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
+using PooledSequenceSegment = Akka.IO.PooledSequenceSegment;
 
 namespace Akka.Remote.Artery
 {
@@ -2698,15 +2699,16 @@ namespace Akka.Remote.Artery
         /// accumulation starts from a fresh seed).
         ///
         /// <para>
-        /// <b>Invariant (throws if violated).</b> Both inputs are always
-        /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
-        /// <see cref="ArteryEncodeStage"/> as <c>OwnedSequenceSegment.Create(owner)</c> -- a
+        /// <b>Invariant (throws if violated).</b> Inputs are always backed by owned segments.
+        /// Every element on this path is pushed by
+        /// <see cref="ArteryEncodeStage"/> as a <see cref="PooledSequenceSegment"/> -- a
         /// single-segment, owner-carrying, segment-backed sequence -- and reaches the batch stage
         /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
         /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
         /// INSIDE the downstream restart factory, so it never passes through this stage. The batch
-        /// side holds by induction: <see cref="LaneWriteBatchStage"/> seeds from the first frame, so an accumulator
-        /// is either a raw encode-stage frame or a previous return value of this method. A
+        /// side holds by induction: <see cref="LaneWriteBatchStage"/> seeds from the first frame;
+        /// the first append normalizes it into an appendable <see cref="OwnedSequenceSegment"/>
+        /// chain, and later appends reuse that chain. A
         /// violation means a foreign producer got wired into the merge tail -- failing the stage
         /// loudly (settling the assembly, whose restart tier takes over) beats silently copying, or
         /// worse dropping, bytes of unknown provenance.
@@ -2717,6 +2719,31 @@ namespace Akka.Remote.Artery
         /// <returns>One sequence over the batch's head through the newly appended tail.</returns>
         internal static ReadOnlySequence<byte> AppendFrameToBatch(ReadOnlySequence<byte> batch, ReadOnlySequence<byte> frame)
         {
+            // The compact producer segment does not expose mutable chaining. Normalize only
+            // when a second frame arrives: one appendable wrapper per multi-frame lane batch.
+            if (batch.Start.GetObject() is PooledSequenceSegment seed && ReferenceEquals(seed, batch.End.GetObject()))
+            {
+                var appendable = seed.TransferToAppendableSegment(batch.Start.GetInteger(), checked((int)batch.Length));
+                var normalized = new ReadOnlySequence<byte>(appendable, 0, appendable, appendable.Memory.Length);
+                try
+                {
+                    return AppendFrameToBatch(normalized, frame);
+                }
+                catch
+                {
+                    // A failed append can already have moved additional owners onto this new
+                    // chain. The caller still holds the spent producer view, so clean this chain
+                    // here, including links appended beyond normalized.End.
+                    ReadOnlySequenceSegment<byte>? cleanupSegment = appendable;
+                    while (cleanupSegment is not null)
+                    {
+                        (cleanupSegment as IOwnedSequenceSegment)?.DisposeOwner();
+                        cleanupSegment = cleanupSegment.Next;
+                    }
+                    throw;
+                }
+            }
+
             if (batch.Start.GetObject() is not OwnedSequenceSegment head ||
                 batch.End.GetObject() is not OwnedSequenceSegment tail)
                 throw new InvalidOperationException(
