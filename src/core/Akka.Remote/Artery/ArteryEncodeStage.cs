@@ -22,13 +22,13 @@ namespace Akka.Remote.Artery
     /// <c>ArteryRemoting.EncodeOutboundElement</c>'s <c>.Select(...)</c> step, which did
     /// <c>writer.WrittenSpan.ToArray()</c> (an O(frame) alloc + memcpy on EVERY single message)
     /// before disposing the encode writer. This stage instead calls
-    /// <see cref="Akka.Serialization.PooledPayloadWriter.Detach"/>: the encoded, POOLED buffer's
-    /// ownership moves directly into an <see cref="OwnedSequenceSegment"/> and rides -- zero-copy --
+    /// <see cref="Akka.Serialization.PooledPayloadWriter.DetachOwnedSequence"/>: the encoded, POOLED buffer's
+    /// ownership moves directly into a combined segment/owner and rides -- zero-copy --
     /// inside the <see cref="ReadOnlySequence{T}"/> this stage pushes.
     ///
     /// <para>
     /// <b>Ownership model (modernize-akka-io-tcp design.md, Decision 8).</b> This stage never
-    /// disposes anything itself, on any path -- push, upstream finish, upstream failure, or
+    /// disposes a frame after handoff -- push, upstream finish, upstream failure, or
     /// downstream finish. It hands the owner off synchronously on every <c>OnPush</c> and is
     /// done with it. Disposal happens exactly once, downstream, by whichever party ends up
     /// responsible for the segment: write-coalescing (<c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic</c>)
@@ -107,16 +107,13 @@ namespace Akka.Remote.Artery
                 // try/catch already disposes its writer on failure before rethrowing, and an
                 // exception escaping OnPush fails this stage (matching the old .Select(...)
                 // behavior of failing the whole outbound stream on an encode error).
-                var writer = ArteryEnvelopeCodec.Encode(
+                using var writer = ArteryEnvelopeCodec.Encode(
                     _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool);
 
-                // Detach moves ownership of the encoded, pooled buffer to `owner` -- no
-                // WrittenSpan.ToArray() copy, and deliberately NO writer.Dispose() here (Detach
-                // already spent the writer; see PooledPayloadWriter's ownership-rules remarks).
-                // OwnedSequenceSegment.Create wraps it in a segment-backed sequence so the owner
-                // rides -- zero-copy -- straight into coalescing's write buffer.
-                var owner = writer.Detach();
-                Push(_stage.Out, OwnedSequenceSegment.Create(owner));
+                // One object carries both the producer segment and detachable owner. Coalescing
+                // transfers that owner through IOwnedSequenceSegment as before. The writer's
+                // Dispose is a no-op after handoff, but covers failure constructing the segment.
+                Push(_stage.Out, writer.DetachOwnedSequence());
             }
 
             public void OnPull() => Pull(_stage.In);
