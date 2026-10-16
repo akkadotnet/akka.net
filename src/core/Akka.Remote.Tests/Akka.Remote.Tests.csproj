@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Experimental receive ownership harness shared with BDN; no benchmark assembly dependency. -->
+    <Compile Include="..\..\benchmark\Akka.Benchmarks\Remoting\Artery\ReceiveOwnershipExperiment.cs"
+             Link="Artery\ReceiveOwnershipExperiment.cs" />
     <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
