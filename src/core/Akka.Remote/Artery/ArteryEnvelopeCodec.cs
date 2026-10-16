@@ -164,6 +164,32 @@ namespace Akka.Remote.Artery
             string? recipientPath,
             object message,
             ArrayPool<byte>? pool = null)
+            => EncodeCore(serialization, originUid, senderPath, recipientPath, message, pool, -1, -1, 0);
+
+        internal static Akka.Serialization.PooledPayloadWriter EncodeRefs(
+            Akka.Serialization.Serialization serialization, long originUid, RefOutboundEnvelope envelope,
+            ArrayPool<byte>? pool, ActorRefTable? table)
+        {
+            var senderIndex = -1;
+            var recipientIndex = -1;
+            if (!envelope.IsControl && table is not null)
+            {
+                if (envelope.Sender is { } sender && table.TryCompress(sender, out var si))
+                    senderIndex = si;
+                if (table.TryCompress(envelope.Recipient, out var ri))
+                    recipientIndex = ri;
+            }
+            return EncodeCore(serialization, originUid,
+                senderIndex < 0 ? envelope.SenderPath : null,
+                recipientIndex < 0 ? envelope.RecipientPath : null,
+                envelope.Message, pool, senderIndex, recipientIndex,
+                senderIndex >= 0 || recipientIndex >= 0 ? table!.Version : (byte)0);
+        }
+
+        private static Akka.Serialization.PooledPayloadWriter EncodeCore(
+            Akka.Serialization.Serialization serialization, long originUid,
+            string? senderPath, string? recipientPath, object message, ArrayPool<byte>? pool,
+            int senderIndex, int recipientIndex, byte actorRefVersion)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -171,7 +197,7 @@ namespace Akka.Remote.Artery
                 throw new ArgumentNullException(nameof(message));
 
             return Akka.Serialization.Serialization.WithTransport(serialization.System,
-                (serialization, originUid, senderPath, recipientPath, message, pool), static state =>
+                (serialization, originUid, senderPath, recipientPath, message, pool, senderIndex, recipientIndex, actorRefVersion), static state =>
             {
                 var serializer = state.serialization.FindSerializerV2For(state.message);
                 var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, state.message) ?? string.Empty;
@@ -195,8 +221,8 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, state.senderPath);
-                    var recipientTag = WriteLiteral(writer, state.recipientPath);
+                    var senderTag = state.senderIndex >= 0 ? 0x0100_0000u | (uint)state.senderIndex : WriteLiteral(writer, state.senderPath);
+                    var recipientTag = state.recipientIndex >= 0 ? 0x0100_0000u | (uint)state.recipientIndex : WriteLiteral(writer, state.recipientPath);
                     var manifestTag = WriteLiteral(writer, manifest);
 
                     var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
@@ -211,7 +237,7 @@ namespace Akka.Remote.Artery
                         writer.GetPatchSpan(0, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
                     WriteFixedHeader(
                         writer.GetPatchSpan(ArteryEnvelopeHeader.FrameLengthFieldLength, ArteryEnvelopeHeader.HeaderLength),
-                        serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                        serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset, state.actorRefVersion);
 
                     return writer;
                 }
@@ -316,11 +342,12 @@ namespace Akka.Remote.Artery
             uint senderTag,
             uint recipientTag,
             uint manifestTag,
-            long payloadOffset)
+            long payloadOffset,
+            byte actorRefVersion = 0)
         {
             header[ArteryEnvelopeHeader.VersionOffset] = ArteryEnvelopeHeader.CurrentVersion;
             header[ArteryEnvelopeHeader.FlagsOffset] = 0;
-            header[ArteryEnvelopeHeader.ActorRefTableVersionOffset] = 0;
+            header[ArteryEnvelopeHeader.ActorRefTableVersionOffset] = actorRefVersion;
             header[ArteryEnvelopeHeader.ManifestTableVersionOffset] = 0;
             BinaryPrimitives.WriteInt64LittleEndian(header.Slice(ArteryEnvelopeHeader.OriginUidOffset), originUid);
             BinaryPrimitives.WriteInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.SerializerIdOffset), serializerId);
