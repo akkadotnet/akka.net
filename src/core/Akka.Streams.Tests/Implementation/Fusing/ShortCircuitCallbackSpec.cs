@@ -1,0 +1,216 @@
+//-----------------------------------------------------------------------
+// <copyright file="ShortCircuitCallbackSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
+using Akka.Streams.TestKit;
+using Akka.TestKit;
+using FluentAssertions;
+using Xunit;
+
+namespace Akka.Streams.Tests.Implementation.Fusing;
+
+public sealed class ShortCircuitCallbackSpec : AkkaSpec
+{
+    public ShortCircuitCallbackSpec(ITestOutputHelper output) : base(output) { }
+
+    [Theory(DisplayName = "Should_QueueCallbacksInOrderAndCompleteFeedback_When_ActorEventLimitIsReached")]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(1000)]
+    public async Task Should_queue_callbacks_in_order_and_complete_feedback_when_actor_event_limit_is_reached(int limit)
+    {
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(limit).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            const int count = 64;
+            var (control, result) = Source.Single(count)
+                .ViaMaterialized(new CallbackBurstStage(), Keep.Right)
+                .ToMaterialized(Sink.First<int>(), Keep.Both).Run(materializer);
+
+            (await result.WaitAsync(TimeSpan.FromSeconds(3))).Should().Be(count);
+            await Task.WhenAll(control.Feedback).WaitAsync(TimeSpan.FromSeconds(3));
+            control.Events.Should().Equal(new[] { "push-enter", "push-exit" }
+                .Concat(Enumerable.Range(0, count).Select(value => $"callback-{value}")));
+            control.Feedback.Should().HaveCount(count);
+            foreach (var feedback in control.Feedback)
+                (await feedback).Should().Be(Done.Instance);
+            await control.Stopped.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Func<Task> detached = async () => await control.Callback.InvokeWithFeedback(99);
+            await detached.Should().ThrowAsync<StreamDetachedException>();
+        }, materializer);
+    }
+
+    [Fact(DisplayName = "Should_FailQueuedFeedbackAndStop_When_ShortCircuitHandlerThrows")]
+    public async Task Should_fail_queued_feedback_and_stop_when_short_circuit_handler_throws()
+    {
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var failure = new InvalidOperationException("short-circuit callback failure");
+            var (control, result) = Source.Single(64)
+                .ViaMaterialized(new CallbackBurstStage(failure), Keep.Right)
+                .ToMaterialized(Sink.First<int>(), Keep.Both).Run(materializer);
+
+            Func<Task> stream = async () => await result.WaitAsync(TimeSpan.FromSeconds(3));
+            (await stream.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(failure);
+            await control.Stopped.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Func<Task> failed = async () => await control.Feedback[17];
+            (await failed.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(failure);
+            foreach (var pending in control.Feedback.Skip(18))
+            {
+                Func<Task> detached = async () => await pending.WaitAsync(TimeSpan.FromSeconds(3));
+                await detached.Should().ThrowAsync<StreamDetachedException>();
+            }
+            control.Events.Should().Equal(new[] { "push-enter", "push-exit" }
+                .Concat(Enumerable.Range(0, 18).Select(value => $"callback-{value}")));
+        }, materializer);
+    }
+
+    [Fact(DisplayName = "Should_RestoreProducerContext_When_TracedCallbackIsQueuedOnItsOwnInterpreter")]
+    public async Task Should_restore_producer_context_when_traced_callback_is_queued_on_its_own_interpreter()
+    {
+        using var collector = new StreamsActivityCollector();
+        using var producer = new ProducerActivityScope("ShortCircuitCallbackProducer");
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithSyncProcessingLimit(1).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var (control, result) = Source.Single(4)
+                .ViaMaterialized(new CallbackBurstStage(producer: producer), Keep.Right)
+                .ToMaterialized(Sink.First<int>(), Keep.Both).Run(materializer);
+
+            (await result.WaitAsync(TimeSpan.FromSeconds(3))).Should().Be(4);
+            await Task.WhenAll(control.Feedback).WaitAsync(TimeSpan.FromSeconds(3));
+            control.ProducerContext.Should().NotBeNull();
+            control.Contexts.Should().HaveCount(4);
+            foreach (var context in control.Contexts)
+            {
+                context.Should().NotBeNull();
+                context!.Value.TraceId.Should().Be(control.ProducerContext!.Value.TraceId);
+            }
+            collector.StoppedActivities.Should().Contain(activity =>
+                activity.OperationName.StartsWith("akka.stream.ingress", StringComparison.Ordinal)
+                && activity.ParentSpanId == control.ProducerContext!.Value.SpanId);
+        }, materializer);
+    }
+
+    [Fact(DisplayName = "Should_ScheduleOnTargetActor_When_CallbackIsInvokedFromAnotherInterpreter")]
+    public async Task Should_schedule_on_target_actor_when_callback_is_invoked_from_another_interpreter()
+    {
+        using var materializer = ActorMaterializer.Create(Sys);
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var probe = CreateTestProbe();
+            var ((input, callbacks), completion) = Source.Maybe<int>()
+                .ViaMaterialized(new AsyncCallbackSpec.AsyncCallbackGraphStage(probe.Ref), Keep.Both)
+                .ToMaterialized(Sink.Ignore<int>(), Keep.Both).Run(materializer);
+            await probe.ExpectMsgAsync<AsyncCallbackSpec.Started>();
+
+            var feedback = await Source.Single(42)
+                .Select(value => callbacks.CallbackAsync.InvokeWithFeedback(value))
+                .RunWith(Sink.First<Task<Done>>(), materializer).WaitAsync(TimeSpan.FromSeconds(3));
+
+            (await feedback.WaitAsync(TimeSpan.FromSeconds(3))).Should().Be(Done.Instance);
+            await probe.ExpectMsgAsync(42);
+            input.TrySetResult(0);
+            await completion.WaitAsync(TimeSpan.FromSeconds(3));
+        }, materializer);
+    }
+
+    private sealed class CallbackControl
+    {
+        public IAsyncCallback<int> Callback { get; set; } = null!;
+        public List<Task<Done>> Feedback { get; } = new();
+        public List<string> Events { get; } = new();
+        public List<ActivityContext?> Contexts { get; } = new();
+        public ActivityContext? ProducerContext { get; set; }
+        public TaskCompletionSource<Done> Stopped { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class CallbackBurstStage : GraphStageWithMaterializedValue<FlowShape<int, int>, CallbackControl>
+    {
+        private readonly Exception? _failure;
+        private readonly ProducerActivityScope? _producer;
+        private readonly Inlet<int> _in = new("callback-burst.in");
+        private readonly Outlet<int> _out = new("callback-burst.out");
+
+        public CallbackBurstStage(Exception? failure = null, ProducerActivityScope? producer = null)
+        {
+            _failure = failure;
+            _producer = producer;
+            Shape = new FlowShape<int, int>(_in, _out);
+        }
+
+        public override FlowShape<int, int> Shape { get; }
+
+        public override ILogicAndMaterializedValue<CallbackControl> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var control = new CallbackControl();
+            return new LogicAndMaterializedValue<CallbackControl>(new Logic(this, control), control);
+        }
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly CallbackBurstStage _stage;
+            private readonly CallbackControl _control;
+            private int _remaining;
+            private int _count;
+
+            public Logic(CallbackBurstStage stage, CallbackControl control) : base(stage.Shape)
+            {
+                _stage = stage;
+                _control = control;
+                control.Callback = GetTypedAsyncCallback<int>(value =>
+                {
+                    control.Events.Add($"callback-{value}");
+                    control.Contexts.Add(Activity.Current?.Context);
+                    if (value == 17 && stage._failure is { } failure)
+                        throw failure;
+                    if (--_remaining == 0)
+                    {
+                        Push(stage._out, _count);
+                        CompleteStage();
+                    }
+                });
+                SetHandlers(stage._in, stage._out, this);
+            }
+
+            public override void OnPull() => Pull(_stage._in);
+
+            public override void OnPush()
+            {
+                _count = _remaining = Grab(_stage._in);
+                _control.Events.Add("push-enter");
+                using (var producer = _stage._producer?.Start("enqueue-own-callbacks"))
+                {
+                    _control.ProducerContext = producer?.Context;
+                    for (var value = 0; value < _count; value++)
+                        _control.Feedback.Add(_control.Callback.InvokeWithFeedback(value));
+                }
+                _control.Events.Add("push-exit");
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (_remaining == 0)
+                    CompleteStage();
+            }
+
+            public override void PostStop() => _control.Stopped.TrySetResult(Done.Instance);
+        }
+    }
+}
