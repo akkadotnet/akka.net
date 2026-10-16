@@ -137,6 +137,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _resumeScheduled;
         private bool _waitingForShutdown;
         private Action<object> _enqueueToShortCircuit;
+        private Action<ActorGraphInterpreter.AsyncInput> _enqueueAsyncToShortCircuit;
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
@@ -202,9 +203,14 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="eventLimit">The maximum number of interpreter events to process in the initial batch.</param>
         /// <returns>The remaining event limit after the initial interpreter batch.</returns>
         public int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShourtCircuit, int eventLimit)
+            => Init(self, subMat, enqueueToShourtCircuit, null, eventLimit);
+
+        internal int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShortCircuit,
+            Action<ActorGraphInterpreter.AsyncInput> enqueueAsyncToShortCircuit, int eventLimit)
         {
             Self = self;
-            _enqueueToShortCircuit = enqueueToShourtCircuit;
+            _enqueueToShortCircuit = enqueueToShortCircuit;
+            _enqueueAsyncToShortCircuit = enqueueAsyncToShortCircuit;
 
             for (int i = 0; i < _inputs.Length; i++)
             {
@@ -286,17 +292,7 @@ namespace Akka.Streams.Implementation.Fusing
                     return eventLimit;
 
                 case ActorGraphInterpreter.AsyncInput asyncInput:
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Promise, asyncInput.Handler);
-                    if (eventLimit == 1 && _interpreter.IsSuspended)
-                    {
-                        // Parking here without a RunBatch — flush any elements the async callback
-                        // pushed to an output boundary so they aren't stranded until the next event
-                        // (issue #8314). The fall-through path flushes inside RunBatch after Execute.
-                        FlushOutputs();
-                        SendResume(true);
-                        return 0;
-                    }
-                    return RunBatch(eventLimit - 1);
+                    return RunAsyncInput(asyncInput, eventLimit);
 
                 case ActorGraphInterpreter.OnError onError:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
@@ -332,6 +328,25 @@ namespace Akka.Streams.Implementation.Fusing
             return eventLimit;
         }
 #pragma warning restore CS0162
+
+        internal int ReceiveAsyncInput(ActorGraphInterpreter.AsyncInput input, int eventLimit)
+        {
+            _resumeScheduled = false;
+            return _waitingForShutdown ? eventLimit : RunAsyncInput(input, eventLimit);
+        }
+
+        private int RunAsyncInput(ActorGraphInterpreter.AsyncInput input, int eventLimit)
+        {
+            Interpreter.RunAsyncInput(input.Logic, input.Event, input.Promise, input.Handler);
+            if (eventLimit == 1 && _interpreter.IsSuspended)
+            {
+                // Preserve flush-on-park when an async callback uses the last event in this batch.
+                FlushOutputs();
+                SendResume(true);
+                return 0;
+            }
+            return RunBatch(eventLimit - 1);
+        }
 
         /**
          * Attempts to abort execution, by first propagating the reason given until either
@@ -437,6 +452,8 @@ namespace Akka.Streams.Implementation.Fusing
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
                         Self.Tell(asyncInput);
+                    else if (_enqueueAsyncToShortCircuit != null)
+                        _enqueueAsyncToShortCircuit(asyncInput);
                     else
                         _enqueueToShortCircuit(asyncInput);
                 }, _settings.IsFuzzingMode, Self);
@@ -1578,7 +1595,29 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _eventLimit;
         private int _currentLimit;
         //this is a var in order to save the allocation when no short-circuiting actually happens
-        private Queue<object> _shortCircuitBuffer;
+        private Queue<ShortCircuitEvent> _shortCircuitBuffer;
+
+#nullable enable
+        // One FIFO retains the ordering of async inputs, resumes, and shell registrations.
+        // A non-null async shell marks the inline AsyncInput; default/null controls stay ignorable.
+        private readonly struct ShortCircuitEvent
+        {
+            public readonly object? Boundary;
+            public readonly AsyncInput AsyncInput;
+
+            public ShortCircuitEvent(object boundary)
+            {
+                Boundary = boundary;
+                AsyncInput = default;
+            }
+
+            public ShortCircuitEvent(AsyncInput input)
+            {
+                Boundary = null;
+                AsyncInput = input;
+            }
+        }
+#nullable restore
 
         /// <summary>
         /// Creates an actor to process the supplied initial shell and its boundary events.
@@ -1602,9 +1641,17 @@ namespace Akka.Streams.Implementation.Fusing
         private void EnqueueToShortCircuit(object input)
         {
             if(_shortCircuitBuffer == null)
-                _shortCircuitBuffer = new Queue<object>();
+                _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
 
-            _shortCircuitBuffer.Enqueue(input);
+            _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
+        }
+
+        private void EnqueueAsyncToShortCircuit(AsyncInput input)
+        {
+            if (_shortCircuitBuffer == null)
+                _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
+
+            _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
         }
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
@@ -1612,7 +1659,8 @@ namespace Akka.Streams.Implementation.Fusing
         {
             try
             {
-                _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit, _currentLimit);
+                _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit,
+                    EnqueueAsyncToShortCircuit, _currentLimit);
                 if (IsDebug)
                     Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)
@@ -1683,9 +1731,11 @@ namespace Akka.Streams.Implementation.Fusing
             while (_shortCircuitBuffer.Count != 0 && _currentLimit > 0 && _activeInterpreters.Count != 0)
             {
                 var element = _shortCircuitBuffer.Dequeue();
-                if (element is IBoundaryEvent boundary)
+                if (element.AsyncInput.Shell != null)
+                    ProcessAsyncInput(element.AsyncInput);
+                else if (element.Boundary is IBoundaryEvent boundary)
                     ProcessEvent(boundary);
-                else if (element is ShellRegistered)
+                else if (element.Boundary is ShellRegistered)
                     FinishShellRegistration();
             }
 
@@ -1707,12 +1757,34 @@ namespace Akka.Streams.Implementation.Fusing
                     shell.TryAbort(ex);
                 }
 
-                if (shell.IsTerminated)
+                AfterShellEvent(shell);
+            }
+        }
+
+        private void ProcessAsyncInput(AsyncInput input)
+        {
+            var shell = input.Shell;
+            if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
+            {
+                try
                 {
-                    _activeInterpreters.Remove(shell);
-                    if(_activeInterpreters.Count == 0 && _newShells.Count == 0)
-                        Context.Stop(Self);
+                    _currentLimit = shell.ReceiveAsyncInput(input, _currentLimit);
                 }
+                catch (Exception ex)
+                {
+                    shell.TryAbort(ex);
+                }
+                AfterShellEvent(shell);
+            }
+        }
+
+        private void AfterShellEvent(GraphInterpreterShell shell)
+        {
+            if (shell.IsTerminated)
+            {
+                _activeInterpreters.Remove(shell);
+                if (_activeInterpreters.Count == 0 && _newShells.Count == 0)
+                    Context.Stop(Self);
             }
         }
 
