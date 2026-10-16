@@ -2259,7 +2259,7 @@ namespace Akka.Streams.Stage
                 var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 _stageActor = new StageActor(
                     actorMaterializer,
-                    r => GetAsyncCallback<(IActorRef, object)>(message => r(message)),
+                    this,
                     receive,
                     StageActorName);
             }
@@ -2268,6 +2268,23 @@ namespace Akka.Streams.Stage
 
             return _stageActor;
         }
+
+#nullable enable
+        internal Action<IActorRef, object> CreateStageActorCallback(StageActorRef.Receive receive)
+        {
+            Action<(IActorRef, object)> handler = receive.Invoke;
+            var legacyCallback = GetAsyncCallback(handler);
+            return (sender, message) =>
+            {
+                // Keep the existing trace capture/ingress Activity adapter on the traced path.
+                var shell = Interpreter.StageActorShell;
+                if (shell == null || (StreamsDiagnostics.ActivitySource.HasListeners() && Activity.Current != null))
+                    legacyCallback((sender, message));
+                else
+                    shell.DispatchStageActorInput(this, sender, message, handler);
+            };
+        }
+#nullable restore
 
         /// <summary>
         /// Override and return a name to be given to the StageActor of this stage.
@@ -3082,7 +3099,10 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class StageActor
     {
-        private readonly Action<(IActorRef, object)> _callback;
+        #nullable enable annotations
+        private readonly Action<(IActorRef, object)>? _legacyCallback;
+        private readonly Action<IActorRef, object>? _nativeCallback;
+        #nullable restore annotations
         private readonly ActorCell _cell;
         private readonly FunctionRef _functionRef;
         private StageActorRef.Receive _behavior;
@@ -3092,8 +3112,25 @@ namespace Akka.Streams.Stage
             Func<StageActorRef.Receive, Action<(IActorRef, object)>> getAsyncCallback,
             StageActorRef.Receive initialReceive,
             string name = null)
+            : this(materializer, getAsyncCallback, null, initialReceive, name)
         {
-            _callback = getAsyncCallback(InternalReceive);
+        }
+
+        internal StageActor(ActorMaterializer materializer, GraphStageLogic logic,
+            StageActorRef.Receive initialReceive, string name)
+            : this(materializer, null, logic, initialReceive, name)
+        {
+        }
+
+        private StageActor(ActorMaterializer materializer,
+            Func<StageActorRef.Receive, Action<(IActorRef, object)>> getAsyncCallback,
+            GraphStageLogic logic, StageActorRef.Receive initialReceive, string name)
+        {
+            // Select and initialize the callback before publishing the FunctionRef.
+            if (logic != null)
+                _nativeCallback = logic.CreateStageActorCallback(InternalReceive);
+            else
+                _legacyCallback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
 
             _cell = ActorMaterializerHelper.GetSupervisorCell(materializer);
@@ -3108,7 +3145,12 @@ namespace Akka.Streams.Stage
                             "{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor. " +
                             "Use a custom message type to communicate with it instead.", message, _functionRef.Path);
                         break;
-                    default: _callback((sender, message)); break;
+                    default:
+                        if (_nativeCallback != null)
+                            _nativeCallback(sender, message);
+                        else
+                            _legacyCallback!((sender, message));
+                        break;
                 }
             });
         }
