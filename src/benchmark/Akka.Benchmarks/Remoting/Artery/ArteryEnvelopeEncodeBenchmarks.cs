@@ -9,6 +9,7 @@
 using System;
 using System.Buffers;
 using Akka.Benchmarks.Configurations;
+using Akka.IO;
 using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
 
@@ -31,9 +32,8 @@ namespace Akka.Benchmarks.Remoting.Artery
     /// <c>writer.Dispose()</c> (return the rented array to the pool immediately);
     /// </description></item>
     /// <item><description>
-    /// the NEW pattern <c>Akka.Remote.Artery.ArteryEncodeStage</c> uses: <c>writer.Detach()</c> (no
-    /// copy -- ownership of the SAME rented array moves to the caller) then, once it is safe (see
-    /// that type's "empirical finding" / two-generation-lag remarks), <c>owner.Dispose()</c>.
+    /// the owner-only public handoff: <c>writer.Detach()</c> (no copy -- ownership of the SAME
+    /// rented array moves to the caller) followed by <c>owner.Dispose()</c>.
     /// </description></item>
     /// </list>
     /// <para>
@@ -43,10 +43,14 @@ namespace Akka.Benchmarks.Remoting.Artery
     /// written directly into a <see cref="PooledPayloadWriter"/>'s rented span. This is
     /// deliberately NOT the V2 single-pass overload: that one needs a live <c>ActorSystem</c>'s
     /// <c>Serialization</c> extension to resolve a serializer + manifest, which would confound this
-    /// benchmark's ONLY variable (copy-then-dispose vs. detach-then-dispose) with serializer-lookup
+    /// benchmark's buffer-handoff comparison with serializer-lookup
     /// noise that the other Artery benchmarks (<see cref="ArteryWireFormat"/>,
     /// <see cref="ArterySingleIslandBenchmarks"/>) already cover.
     /// </para>
+    /// <para>The producer-carrier pairs additionally include owner/segment construction and the
+    /// ownership disposal walk. Their two-frame variants use the real lane-batching append,
+    /// including the consolidated seed's normalization wrapper. They exclude TCP's separate
+    /// write-buffer segment and do not establish an end-to-end transport improvement.</para>
     /// </remarks>
     [Config(typeof(MicroBenchmarkConfig))]
     public class ArteryEnvelopeEncodeBenchmarks
@@ -94,6 +98,60 @@ namespace Akka.Benchmarks.Remoting.Artery
             var owner = writer.Detach();
             var length = owner.Memory.Length;
             owner.Dispose();
+            return length;
+        }
+
+        /// <summary>Original producer handoff, including both detached owner and sequence segment.</summary>
+        [Benchmark]
+        public long Encode_SeparateOwnerAndSegment_Then_Dispose()
+        {
+            using var writer = new PooledPayloadWriter(_capacityHint);
+            EncodeInto(writer);
+            var sequence = OwnedSequenceSegment.Create(writer.Detach());
+            var length = sequence.Length;
+            sequence.DisposeOwnedSegments();
+            return length;
+        }
+
+        /// <summary>Combined producer handoff with the same frame, pool and disposal walk.</summary>
+        [Benchmark]
+        public long Encode_CombinedOwnerAndSegment_Then_Dispose()
+        {
+            using var writer = new PooledPayloadWriter(_capacityHint);
+            EncodeInto(writer);
+            var sequence = writer.DetachOwnedSequence();
+            var length = sequence.Length;
+            sequence.DisposeOwnedSegments();
+            return length;
+        }
+
+        /// <summary>Two original frames through the actual lane batch append operation.</summary>
+        [Benchmark]
+        public long Encode_TwoSeparateOwnerFrames_Then_BatchAndDispose()
+        {
+            using var first = new PooledPayloadWriter(_capacityHint);
+            using var second = new PooledPayloadWriter(_capacityHint);
+            EncodeInto(first);
+            EncodeInto(second);
+            var batch = Akka.Remote.Artery.ArteryRemoting.AppendFrameToBatch(
+                OwnedSequenceSegment.Create(first.Detach()), OwnedSequenceSegment.Create(second.Detach()));
+            var length = batch.Length;
+            batch.DisposeOwnedSegments();
+            return length;
+        }
+
+        /// <summary>Includes normalization of the consolidated seed before the first lane append.</summary>
+        [Benchmark]
+        public long Encode_TwoCombinedOwnerFrames_Then_BatchAndDispose()
+        {
+            using var first = new PooledPayloadWriter(_capacityHint);
+            using var second = new PooledPayloadWriter(_capacityHint);
+            EncodeInto(first);
+            EncodeInto(second);
+            var batch = Akka.Remote.Artery.ArteryRemoting.AppendFrameToBatch(
+                first.DetachOwnedSequence(), second.DetachOwnedSequence());
+            var length = batch.Length;
+            batch.DisposeOwnedSegments();
             return length;
         }
 
