@@ -268,7 +268,7 @@ namespace Akka.Tests.Util
             var copied = byteString.CopyTo(ref destination, 0, 1024);
 
             copied.Should().Be(1024);
-            destination.ToArray().Should().Equal(SequentialBytes(2048)[..1024]);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(2048), 0, 1024));
         }
 
         [Fact(DisplayName = "A ByteString must copy into a Memory sized exactly to count")]
@@ -280,7 +280,7 @@ namespace Akka.Tests.Util
             var copied = byteString.CopyTo(ref destination, 0, 1024);
 
             copied.Should().Be(1024);
-            destination.ToArray().Should().Equal(SequentialBytes(2048)[..1024]);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(2048), 0, 1024));
         }
 
         [Fact(DisplayName = "A ByteString must truncate a segment longer than the remaining Span space")]
@@ -295,7 +295,7 @@ namespace Akka.Tests.Util
             var copied = byteString.CopyTo(ref destination, 0, 96);
 
             copied.Should().Be(96);
-            destination.ToArray().Should().Equal(SequentialBytes(128)[..96]);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(128), 0, 96));
         }
 
         [Fact(DisplayName = "A ByteString must honor a non-zero destination index when copying to a Span")]
@@ -310,9 +310,9 @@ namespace Akka.Tests.Util
             var copied = byteString.CopyTo(ref destination, 16, 32);
 
             copied.Should().Be(32);
-            destination[..16].ToArray().Should().OnlyContain(b => b == 0xFF);
-            destination[16..48].ToArray().Should().Equal(SequentialBytes(32));
-            destination[48..].ToArray().Should().OnlyContain(b => b == 0xFF);
+            destination.Slice(0, 16).ToArray().Should().OnlyContain(b => b == 0xFF);
+            destination.Slice(16, 32).ToArray().Should().Equal(SequentialBytes(32));
+            destination.Slice(48, 16).ToArray().Should().OnlyContain(b => b == 0xFF);
         }
 
         [Fact(DisplayName = "A sliced ByteString with a buffer offset must copy the right bytes to a Span")]
@@ -326,7 +326,7 @@ namespace Akka.Tests.Util
             var copied = sliced.CopyTo(ref destination, 0, 64);
 
             copied.Should().Be(64);
-            destination.ToArray().Should().Equal(SequentialBytes(128)[32..96]);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(128), 32, 64));
         }
 
         [Fact(DisplayName = "A ByteString CopyTo must not write past count into a Span or Memory")]
@@ -337,12 +337,12 @@ namespace Akka.Tests.Util
             Span<byte> spanDestination = new byte[256];
             spanDestination.Fill(0xFF);
             byteString.CopyTo(ref spanDestination);
-            spanDestination.ToArray().Should().Equal(SequentialBytes(512)[..256]);
+            spanDestination.ToArray().Should().Equal(Segment(SequentialBytes(512), 0, 256));
 
             Memory<byte> memoryDestination = new byte[256];
             memoryDestination.Span.Fill(0xFF);
             byteString.CopyTo(ref memoryDestination);
-            memoryDestination.ToArray().Should().Equal(SequentialBytes(512)[..256]);
+            memoryDestination.ToArray().Should().Equal(Segment(SequentialBytes(512), 0, 256));
         }
 
         [Fact(DisplayName = "A ByteString CopyTo to any Span at least as large as count must never throw")]
@@ -357,9 +357,9 @@ namespace Akka.Tests.Util
                 Span<byte> destination = buffer;
                 var copied = byteString.CopyTo(ref destination, 0, size);
 
-                // never overwrites more than the ByteString holds
-                copied.Should().Be(Math.Min(size, expected.Length));
-                destination[..count].ToArray().Should().Equal(expected[..count]);
+                // never copies more than the ByteString holds
+                copied.Should().Be(count);
+                destination.Slice(0, count).ToArray().Should().Equal(Segment(expected, 0, count));
                 return true;
             }).QuickCheckThrowOnFailure();
         }
@@ -370,6 +370,14 @@ namespace Akka.Tests.Util
             for (var i = 0; i < length; i++)
                 bytes[i] = (byte)(start + i % byte.MaxValue);
             return bytes;
+        }
+
+        // net48 has no Range/Index support, so slices are taken explicitly instead of with [..] syntax
+        private static byte[] Segment(byte[] source, int start, int length)
+        {
+            var destination = new byte[length];
+            Array.Copy(source, start, destination, 0, length);
+            return destination;
         }
     }
 }
