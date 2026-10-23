@@ -131,6 +131,24 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class Association
     {
+        private ActorRefCompression? _refCompression;
+
+        internal ActorRefCompression? GetRefCompression(long peerUid, int maximum)
+        {
+            while (true)
+            {
+                var state = CurrentState;
+                if (state.UniqueRemoteAddress?.Uid != peerUid || state.IsQuarantined(peerUid))
+                    return null;
+                var current = Volatile.Read(ref _refCompression);
+                if (current?.PeerUid == peerUid)
+                    return current;
+                var replacement = new ActorRefCompression(peerUid, maximum);
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _refCompression, replacement, current), current))
+                    return CurrentState.UniqueRemoteAddress?.Uid == peerUid ? replacement : null;
+            }
+        }
+
         /// <summary>
         /// Default capacity for <see cref="OutboundReader"/>'s bounded channel (Decision 7/9). A
         /// sane constant rather than a new <c>ArterySettings</c>/<c>Remote.conf</c> key -- see the
