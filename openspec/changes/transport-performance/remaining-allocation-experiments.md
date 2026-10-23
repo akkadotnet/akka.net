@@ -1,6 +1,6 @@
 # Remaining transport allocation experiments
 
-Active user-authorized goal, 2026-10-16. Baseline is #8813 head 0879aceea. Literal caching/compression remains excluded. Primary dev checkout stays untouched; all experiments use isolated worktrees.
+User-authorized experiment goal, 2026-10-16. Baseline is #8813 head 0879aceea. Literal caching/compression remains excluded. Primary dev checkout stays untouched; all experiments use isolated worktrees.
 
 | Sequence | Candidate | Control and decision evidence |
 |---|---|---|
@@ -29,3 +29,26 @@ The 12 paired BenchmarkDotNet rows observe 144→112 B/single-frame operation an
 Matched profiles and source/IL establish the producer representation change from sampled 40 B owner plus 56 B segment to a private 64 B combined carrier. All 3 new captures pass zero-loss/three-window/eight-heap checks; one-lane parent trace reuse has an explicit exact-match receipt. Candidate shared append samples remain normalization/ordinary-link ambiguous unless TransferToAppendableSegment qualifies the stack; no shared TypeID expansion infers site counts. Sampled ticks do not measure objects, per-message rates or the whole-process delta. The 64 B carrier remains as owner until completion, versus the former 40 B owner whose 56 B producer segment could die earlier; cumulative allocation reduction proves no peak-live/retention improvement.
 
 Remaining sampled allocations include the 48 B writer and 56 B TCP write-buffer metadata. Removing the writer allocation needs an explicit internal reusable-handoff lifecycle or different writer that preserves public terminal behavior and known PooledPayloadWriter serializer/backpatch fast paths. That design was not implemented or measured here; writer reuse is not ruled out. Receive ownership remains a separate experiment and no merge authority is implied.
+
+## Delivered experiment stack, 2026-10-16
+
+| Candidate | Pull request | Decision |
+|---|---|---|
+| TCP read capture and nested async wrapper | [#8815](https://github.com/akkadotnet/akka.net/pull/8815) | Retain the static combined operation; copying before advancing the Pipe remains. |
+| Same-actor async-input FIFO | [#8816](https://github.com/akkadotnet/akka.net/pull/8816) | Retain; isolated handoffs and the actual Artery comparison observed lower allocation. |
+| StageActor sender/message tuple | [#8817](https://github.com/akkadotnet/akka.net/pull/8817) | Retain for review as localized allocation removal; the independent Artery study establishes no overall allocation benefit. |
+| Producer owner/segment consolidation | [#8818](https://github.com/akkadotnet/akka.net/pull/8818) | Retain; isolated and one-/two-lane Artery allocation observations support the change. Writer/TCP wrappers remain. |
+| Receive-buffer borrowing | [#8819](https://github.com/akkadotnet/akka.net/pull/8819) | Publish research and retain production copying. Borrowing saved 229–239 B/frame but observed means were about twice the copy controls; safe integration needs explicit asynchronous ownership contracts. |
+
+Each PR is labeled and stacked on the preceding PR, and embeds original generated BenchmarkDotNet tables directly in its description. The 52 successful selected benchmark cases retain all 156 actual observations. The transport comparisons retain all 60 unprofiled repetitions, with no concurrent RemotePingPong workloads; profiles are separate from timing comparisons. Eight retained allocation traces (the TCP pair and six Streams/metadata captures) pass zero-loss, three-window and eight-observed-heap checks. These measurements support the bounded decisions above, not causal throughput or peak-live-memory claims.
+
+After rebasing the receive research onto the exact metadata publication parent, all 16 focused lifetime tests passed again with zero failures/skips. Its helper, benchmark, tests, parser and project patch match the measured experiment; the final plan update changes documentation only. The research introduces no production TCP, Streams or Artery changes relative to its parent. See [receive-ownership-experiment.md](receive-ownership-experiment.md) for its generated results, rejection decision and remaining lifetime design.
+
+Raw evidence was copied to durable local archives with SHA256 copy/readback verification:
+
+- `/home/petabridge/benchmark-results/akka.net/tcp-read-wrapper-2026-10-16`
+- `/home/petabridge/benchmark-results/akka.net/streams-callback-carriers-2026-10-16`
+- `/home/petabridge/benchmark-results/akka.net/artery-buffer-metadata-2026-10-16`
+- `/home/petabridge/benchmark-results/akka.net/artery-receive-ownership-2026-10-16`
+
+All five experiments now have reviewable results and explicit decisions. Hosted CI, merge and release remain separate from this local evidence and PR delivery; no merge or release was performed.
