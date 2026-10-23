@@ -607,7 +607,7 @@ namespace Akka.IO
                 var toCopy = Math.Min(b.Count, remaining);
 
                 var bufferSpan = buffer.Span.Slice(position, toCopy);
-                b.AsSpan().CopyTo(bufferSpan);
+                b.AsSpan(0, toCopy).CopyTo(bufferSpan);
                 
                 position += toCopy;
                 remaining -= toCopy;
@@ -646,7 +646,7 @@ namespace Akka.IO
                 var toCopy = Math.Min(b.Count, remaining);
 
                 var bufferSpan = buffer.Slice(position, toCopy);
-                b.AsSpan().CopyTo(bufferSpan);
+                b.AsSpan(0, toCopy).CopyTo(bufferSpan);
                 
                 position += toCopy;
                 remaining -= toCopy;
