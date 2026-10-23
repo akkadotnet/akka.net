@@ -600,9 +600,7 @@ public sealed partial class AkkaSerializerGenerator
             var targetTypeKey = TypeKey.FromSymbol(targetTypeSymbol);
 
             var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
-            var formatterTypeFullName = formatterNamedType != null
-                ? GetFullyQualifiedTypeName(formatterNamedType)
-                : formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var formatterTypeFullName = formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint is enforced by
             // the compiler at the attribute usage site, so AKKASG008's former interface-conformance
