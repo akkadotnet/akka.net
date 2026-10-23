@@ -4269,19 +4269,24 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
+#nullable enable
             private readonly LazyFlow<TIn, TOut, TMat> _stage;
             private readonly TaskCompletionSource<Option<TMat>> _promise;
+            private readonly Attributes _inheritedAttributes;
             private bool _switching;
 
-            public Logic(LazyFlow<TIn, TOut, TMat> stage, TaskCompletionSource<Option<TMat>> promise)
+            public Logic(LazyFlow<TIn, TOut, TMat> stage, TaskCompletionSource<Option<TMat>> promise,
+                Attributes inheritedAttributes)
                 : base(stage.Shape)
             {
                 _stage = stage;
                 _promise = promise;
+                _inheritedAttributes = inheritedAttributes;
 
                 SetHandler(stage.In, this);
                 SetHandler(stage.Out, this);
             }
+#nullable restore
 
             public override void OnPush()
             {
@@ -4397,10 +4402,10 @@ namespace Akka.Streams.Implementation.Fusing
                         CompleteStage();
                 }
 
-                var matVal = Source.FromGraph(subOutlet.Source)
+                var runnable = Source.FromGraph(subOutlet.Source)
                     .ViaMaterialized(flow, Keep.Right)
-                    .ToMaterialized(subInlet.Sink, Keep.Left)
-                    .Run(Interpreter.SubFusingMaterializer);
+                    .ToMaterialized(subInlet.Sink, Keep.Left);
+                var matVal = Interpreter.SubFusingMaterializer.Materialize(runnable, _inheritedAttributes);
 
                 // The stage must not be shut down automatically; it is completed when MaybeCompleteStage decides
                 SetKeepGoing(true);
@@ -4521,7 +4526,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();
-            var stageLogic = new Logic(this, promise);
+            var stageLogic = new Logic(this, promise, inheritedAttributes);
             return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, promise.Task);
         }
 
