@@ -478,11 +478,11 @@ namespace Akka.Streams.Implementation.Fusing
                         _enqueueToShortCircuit(asyncInput);
                 }, _settings.IsFuzzingMode, Self)
             {
-                CallbackDispatcher = DispatchAsyncCallbackInput
+                CallbackShell = this
             };
         }
 
-        private void DispatchAsyncCallbackInput(IAsyncCallbackTarget target, AsyncCallbackArguments arguments,
+        internal void DispatchAsyncCallbackInput(IAsyncCallbackTarget target, AsyncCallbackArguments arguments,
             TaskCompletionSource<Done> promise)
         {
             var input = new AsyncCallbackInput(this, target, arguments, promise);

@@ -969,7 +969,7 @@ namespace Akka.Streams.Stage
                     return default;
                 if (value is T typed)
                     return typed;
-                throw new ArgumentException($"Expected input to be of type {typeof(T)}, but was {value.GetType()}");
+                throw new ArgumentException($"Expected obj to be of type {typeof(T)}, but was {value.GetType()}");
             }
 
             GraphStageLogic IAsyncCallbackTarget.Logic => _ownedStage;
@@ -1018,9 +1018,9 @@ namespace Akka.Streams.Stage
                 if (ingressContext.HasValue)
                     target = new TracedAsyncCallbackTarget(target, ingressContext.Value,
                         StreamsDiagnostics.GetIngressOperationName(_ownedStage));
-                var dispatcher = _ownedStage.Interpreter.CallbackDispatcher;
-                if (dispatcher is not null)
-                    dispatcher(target, _pack(e), promise);
+                var shell = _ownedStage.Interpreter.CallbackShell;
+                if (shell is not null)
+                    shell.DispatchAsyncCallbackInput(target, _pack(e), promise);
                 else
                     // Compatibility for callers constructing GraphInterpreter through its public callback API.
                     _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, target.LegacyHandler);

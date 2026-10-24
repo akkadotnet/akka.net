@@ -508,7 +508,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public readonly Action<GraphStageLogic, object, TaskCompletionSource<Done>, Action<object>> OnAsyncInput;
 #nullable enable annotations
-        internal Action<IAsyncCallbackTarget, AsyncCallbackArguments, TaskCompletionSource<Done>>? CallbackDispatcher { get; set; }
+        internal GraphInterpreterShell? CallbackShell { get; set; }
 #nullable restore annotations
         /// <summary>
         /// Whether event processing uses randomized connection order for fuzzing.
