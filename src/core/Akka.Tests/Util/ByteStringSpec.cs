@@ -345,23 +345,42 @@ namespace Akka.Tests.Util
             memoryDestination.ToArray().Should().Equal(Segment(SequentialBytes(512), 0, 256));
         }
 
-        [Fact(DisplayName = "A ByteString CopyTo to any Span at least as large as count must never throw")]
-        public void A_ByteString_CopyTo_to_Span_at_least_count_must_never_throw()
+        [Fact(DisplayName = "A ByteString CopyTo must fill an exactly-sized destination and leave the rest untouched")]
+        public void A_ByteString_CopyTo_must_fill_exactly_sized_destination_and_leave_rest_untouched()
         {
-            Prop.ForAll(ByteStringArb, Arb.From(Gen.Choose(1, 4096)), (byteString, size) =>
-            {
-                var expected = byteString.ToArray();
-                var count = Math.Min(size, expected.Length);
+            Prop.ForAll(ByteStringArb, Arb.From(Gen.Choose(0, 64)), Arb.From(Gen.Choose(1, 4096)),
+                (byteString, index, size) =>
+                {
+                    // exercise the rope shape too: the copy boundary lands mid-segment
+                    var rope = byteString + byteString;
+                    var expected = rope.ToArray();
+                    var count = Math.Min(size, expected.Length);
 
-                var buffer = new byte[Math.Max(size, expected.Length)];
-                Span<byte> destination = buffer;
-                var copied = byteString.CopyTo(ref destination, 0, size);
+                    // destination capacity is exactly the requested copy size, so any
+                    // truncating copy lands on the boundary that triggered #8469
+                    var spanBuffer = new byte[index + size];
+                    Span<byte> spanDestination = spanBuffer;
+                    spanDestination.Fill(0xFF);
 
-                // never copies more than the ByteString holds
-                copied.Should().Be(count);
-                destination.Slice(0, count).ToArray().Should().Equal(Segment(expected, 0, count));
-                return true;
-            }).QuickCheckThrowOnFailure();
+                    var spanCopied = rope.CopyTo(ref spanDestination, index, size);
+
+                    spanCopied.Should().Be(count);
+                    spanDestination.Slice(index, count).ToArray().Should().Equal(Segment(expected, 0, count));
+                    // bytes outside the copied window must be untouched (vacuously true when empty,
+                    // which is why this uses All instead of OnlyContain)
+                    spanDestination.Slice(0, index).ToArray().All(b => b == 0xFF).Should().BeTrue();
+                    spanDestination.Slice(index + count).ToArray().All(b => b == 0xFF).Should().BeTrue();
+
+                    var memoryBuffer = new byte[index + size];
+                    Memory<byte> memoryDestination = memoryBuffer;
+                    memoryDestination.Span.Fill(0xFF);
+
+                    var memoryCopied = rope.CopyTo(ref memoryDestination, index, size);
+
+                    memoryCopied.Should().Be(count);
+                    memoryDestination.ToArray().Should().Equal(spanBuffer);
+                    return true;
+                }).QuickCheckThrowOnFailure();
         }
 
         private static byte[] SequentialBytes(int length, byte start = 0)
