@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ByteStringSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -258,5 +258,145 @@ namespace Akka.Tests.Util
             Assert.Equal(expectedRight, actualRight);
         }
 #endif
+
+        [Fact(DisplayName = "A ByteString must copy into a Span sized exactly to count")]
+        public void A_ByteString_must_copy_into_Span_sized_exactly_to_count()
+        {
+            var byteString = ByteString.FromBytes(SequentialBytes(2048));
+            Span<byte> destination = new byte[1024];
+
+            var copied = byteString.CopyTo(ref destination, 0, 1024);
+
+            copied.Should().Be(1024);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(2048), 0, 1024));
+        }
+
+        [Fact(DisplayName = "A ByteString must copy into a Memory sized exactly to count")]
+        public void A_ByteString_must_copy_into_Memory_sized_exactly_to_count()
+        {
+            var byteString = ByteString.FromBytes(SequentialBytes(2048));
+            Memory<byte> destination = new byte[1024];
+
+            var copied = byteString.CopyTo(ref destination, 0, 1024);
+
+            copied.Should().Be(1024);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(2048), 0, 1024));
+        }
+
+        [Fact(DisplayName = "A ByteString must truncate a segment longer than the remaining Span space")]
+        public void A_ByteString_must_truncate_segment_longer_than_remaining_Span_space()
+        {
+            // concat keeps two segments; the copy has to stop mid-way through the second one
+            var byteString = ByteString.FromBytes(SequentialBytes(64)) + ByteString.FromBytes(SequentialBytes(64, 64));
+
+            Span<byte> destination = new byte[96];
+            destination.Fill(0xFF);
+
+            var copied = byteString.CopyTo(ref destination, 0, 96);
+
+            copied.Should().Be(96);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(128), 0, 96));
+        }
+
+        [Fact(DisplayName = "A ByteString must honor a non-zero destination index when copying to a Span")]
+        public void A_ByteString_must_honor_non_zero_destination_index_when_copying_to_Span()
+        {
+            var byteString = ByteString.FromBytes(SequentialBytes(32));
+
+            Span<byte> destination = new byte[64];
+            destination.Fill(0xFF);
+
+            // index 16, count 32 -> destination is exactly large enough to hold the copy
+            var copied = byteString.CopyTo(ref destination, 16, 32);
+
+            copied.Should().Be(32);
+            destination.Slice(0, 16).ToArray().Should().OnlyContain(b => b == 0xFF);
+            destination.Slice(16, 32).ToArray().Should().Equal(SequentialBytes(32));
+            destination.Slice(48, 16).ToArray().Should().OnlyContain(b => b == 0xFF);
+        }
+
+        [Fact(DisplayName = "A sliced ByteString with a buffer offset must copy the right bytes to a Span")]
+        public void A_sliced_ByteString_with_buffer_offset_must_copy_correct_bytes_to_Span()
+        {
+            // Slice reuses the backing array, so the segment carries a non-zero Offset
+            var sliced = ByteString.FromBytes(SequentialBytes(128)).Slice(32, 64);
+
+            Span<byte> destination = new byte[64];
+
+            var copied = sliced.CopyTo(ref destination, 0, 64);
+
+            copied.Should().Be(64);
+            destination.ToArray().Should().Equal(Segment(SequentialBytes(128), 32, 64));
+        }
+
+        [Fact(DisplayName = "A ByteString CopyTo must not write past count into a Span or Memory")]
+        public void A_ByteString_CopyTo_must_not_write_past_count()
+        {
+            var byteString = ByteString.FromBytes(SequentialBytes(512));
+
+            Span<byte> spanDestination = new byte[256];
+            spanDestination.Fill(0xFF);
+            byteString.CopyTo(ref spanDestination);
+            spanDestination.ToArray().Should().Equal(Segment(SequentialBytes(512), 0, 256));
+
+            Memory<byte> memoryDestination = new byte[256];
+            memoryDestination.Span.Fill(0xFF);
+            byteString.CopyTo(ref memoryDestination);
+            memoryDestination.ToArray().Should().Equal(Segment(SequentialBytes(512), 0, 256));
+        }
+
+        [Fact(DisplayName = "A ByteString CopyTo must fill an exactly-sized destination and leave the rest untouched")]
+        public void A_ByteString_CopyTo_must_fill_exactly_sized_destination_and_leave_rest_untouched()
+        {
+            Prop.ForAll(ByteStringArb, Arb.From(Gen.Choose(0, 64)), Arb.From(Gen.Choose(1, 4096)),
+                (byteString, index, size) =>
+                {
+                    // exercise the rope shape too: the copy boundary lands mid-segment
+                    var rope = byteString + byteString;
+                    var expected = rope.ToArray();
+                    var count = Math.Min(size, expected.Length);
+
+                    // destination capacity is exactly the requested copy size, so any
+                    // truncating copy lands on the boundary that triggered #8469
+                    var spanBuffer = new byte[index + size];
+                    Span<byte> spanDestination = spanBuffer;
+                    spanDestination.Fill(0xFF);
+
+                    var spanCopied = rope.CopyTo(ref spanDestination, index, size);
+
+                    spanCopied.Should().Be(count);
+                    spanDestination.Slice(index, count).ToArray().Should().Equal(Segment(expected, 0, count));
+                    // bytes outside the copied window must be untouched (vacuously true when empty,
+                    // which is why this uses All instead of OnlyContain)
+                    spanDestination.Slice(0, index).ToArray().All(b => b == 0xFF).Should().BeTrue();
+                    spanDestination.Slice(index + count).ToArray().All(b => b == 0xFF).Should().BeTrue();
+
+                    var memoryBuffer = new byte[index + size];
+                    Memory<byte> memoryDestination = memoryBuffer;
+                    memoryDestination.Span.Fill(0xFF);
+
+                    var memoryCopied = rope.CopyTo(ref memoryDestination, index, size);
+
+                    memoryCopied.Should().Be(count);
+                    memoryDestination.ToArray().Should().Equal(spanBuffer);
+                    return true;
+                }).QuickCheckThrowOnFailure();
+        }
+
+        private static byte[] SequentialBytes(int length, byte start = 0)
+        {
+            var bytes = new byte[length];
+            for (var i = 0; i < length; i++)
+                bytes[i] = (byte)(start + i % byte.MaxValue);
+            return bytes;
+        }
+
+        // net48 has no Range/Index support, so slices are taken explicitly instead of with [..] syntax
+        private static byte[] Segment(byte[] source, int start, int length)
+        {
+            var destination = new byte[length];
+            Array.Copy(source, start, destination, 0, length);
+            return destination;
+        }
     }
 }
