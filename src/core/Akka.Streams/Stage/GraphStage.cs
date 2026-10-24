@@ -885,6 +885,37 @@ namespace Akka.Streams.Stage
             }
         }
 
+        private sealed class TracedAsyncCallbackTarget : IAsyncCallbackTarget
+        {
+            private readonly IAsyncCallbackTarget _inner;
+            private readonly ActivityContext _context;
+            private readonly string _operationName;
+            private Action<object> _legacyHandler;
+
+            internal TracedAsyncCallbackTarget(IAsyncCallbackTarget inner, ActivityContext context, string operationName)
+            {
+                _inner = inner;
+                _context = context;
+                _operationName = operationName;
+            }
+
+            public GraphStageLogic Logic => _inner.Logic;
+            public Action<object> LegacyHandler => _legacyHandler ??= InvokeLegacy;
+
+            public void Invoke(AsyncCallbackArguments arguments)
+            {
+                // Restore the producer context on the interpreter thread before the handler can Push.
+                using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(_operationName, ActivityKind.Internal, _context);
+                _inner.Invoke(arguments);
+            }
+
+            private void InvokeLegacy(object argument)
+            {
+                using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(_operationName, ActivityKind.Internal, _context);
+                _inner.LegacyHandler(argument);
+            }
+        }
+
         /// <summary>
         /// Used by the <see cref="GraphStageLogic"/> to invoke all queue events
         /// once the interpreter is started.
@@ -906,35 +937,44 @@ namespace Akka.Streams.Stage
         ///  - From the owning <see cref="GraphStage{TShape}"/>, TO 
         /// </summary>
         /// <typeparam name="T">The type of input argument accepted</typeparam>
-        internal sealed class ConcurrentAsyncCallback<T> : IAsyncCallback<T>, IConcurrentAsyncCallback
+        internal sealed class ConcurrentAsyncCallback<T> : IAsyncCallback<T>, IConcurrentAsyncCallback, IAsyncCallbackTarget
         {
-            // need this to make the GraphInterpreter happy
-            private readonly Action<object> _wrappedHandler;
+            private readonly Action<T> _handler;
+            private readonly Func<T, AsyncCallbackArguments> _pack;
+            private readonly Func<AsyncCallbackArguments, T> _unpack;
+            private Action<object> _legacyHandler;
             private readonly GraphStageLogic _ownedStage;
 
             private readonly AtomicReference<ConcurrentAsyncCallbackState.IState<T>> _state =
                 new(ConcurrentAsyncCallbackState.Pending<T>.Empty);
 
             public ConcurrentAsyncCallback(Action<T> handler, GraphStageLogic ownedStage)
+                : this(handler, ownedStage, static value => new AsyncCallbackArguments(value, null),
+                    static arguments => Cast(arguments.First))
             {
-                var handler1 = handler;
-                _ownedStage = ownedStage;
-                _wrappedHandler = obj =>
-                {
-                    switch (obj)
-                    {
-                        // Always assume that T can be null and the handler will handle null values
-                        case null:
-                            handler1(default);
-                            break;
-                        case T e:
-                            handler1(e);
-                            break;
-                        default:
-                            throw new ArgumentException($"Expected {nameof(obj)} to be of type {typeof(T)}, but was {obj.GetType()}");
-                    }
-                };
             }
+
+            internal ConcurrentAsyncCallback(Action<T> handler, GraphStageLogic ownedStage,
+                Func<T, AsyncCallbackArguments> pack, Func<AsyncCallbackArguments, T> unpack)
+            {
+                _handler = handler;
+                _ownedStage = ownedStage;
+                _pack = pack;
+                _unpack = unpack;
+            }
+
+            private static T Cast(object value)
+            {
+                if (value is null)
+                    return default;
+                if (value is T typed)
+                    return typed;
+                throw new ArgumentException($"Expected input to be of type {typeof(T)}, but was {value.GetType()}");
+            }
+
+            GraphStageLogic IAsyncCallbackTarget.Logic => _ownedStage;
+            Action<object> IAsyncCallbackTarget.LegacyHandler => _legacyHandler ??= value => _handler(Cast(value));
+            void IAsyncCallbackTarget.Invoke(AsyncCallbackArguments arguments) => _handler(_unpack(arguments));
 
             /// <summary>
             /// Called from the owning <see cref="GraphStage{TShape}"/>.
@@ -974,32 +1014,16 @@ namespace Akka.Streams.Stage
 #nullable enable
             private void OnAsyncInput(T e, TaskCompletionSource<Done> promise, ActivityContext? ingressContext)
             {
-                if (!ingressContext.HasValue)
-                {
-                    // Fast path: no producer trace context captured — dispatch without wrapping.
-                    _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, _wrappedHandler);
-                    return;
-                }
-
-                OnAsyncInputWithContext(e, promise, ingressContext.Value);
-            }
-
-            private void OnAsyncInputWithContext(T e, TaskCompletionSource<Done> promise, ActivityContext capturedContext)
-            {
-                // Start an ingress Activity on the interpreter thread so Push captures
-                // the producer's trace into Connection.SlotContext.
-                var owner = _ownedStage;
-                var realHandler = _wrappedHandler;
-                var ingressOpName = StreamsDiagnostics.GetIngressOperationName(owner);
-                Action<object> contextAwareHandler = obj =>
-                {
-                    using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(
-                        ingressOpName,
-                        ActivityKind.Internal,
-                        capturedContext);
-                    realHandler(obj);
-                };
-                _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, contextAwareHandler);
+                IAsyncCallbackTarget target = this;
+                if (ingressContext.HasValue)
+                    target = new TracedAsyncCallbackTarget(target, ingressContext.Value,
+                        StreamsDiagnostics.GetIngressOperationName(_ownedStage));
+                var dispatcher = _ownedStage.Interpreter.CallbackDispatcher;
+                if (dispatcher is not null)
+                    dispatcher(target, _pack(e), promise);
+                else
+                    // Compatibility for callers constructing GraphInterpreter through its public callback API.
+                    _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, target.LegacyHandler);
             }
 #nullable restore
 
@@ -2211,12 +2235,24 @@ namespace Akka.Streams.Stage
         /// </summary>
         protected IAsyncCallback<T> GetTypedAsyncCallback<T>(Action<T> handler)
         {
-            var callback = new ConcurrentAsyncCallback<T>(handler, this);
-            if (_interpreter != null) callback.OnStart();
-            else _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Add(callback);
-            
-            // backwards compatibility
+            return RegisterAsyncCallback(new ConcurrentAsyncCallback<T>(handler, this));
+        }
+
+        private ConcurrentAsyncCallback<T> RegisterAsyncCallback<T>(ConcurrentAsyncCallback<T> callback)
+        {
+            if (_interpreter != null)
+                callback.OnStart();
+            else
+                _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Add(callback);
             return callback;
+        }
+
+        internal Action<object, object> GetReferencePairAsyncCallback(Action<object, object> handler)
+        {
+            var callback = RegisterAsyncCallback(new ConcurrentAsyncCallback<AsyncCallbackArguments>(
+                arguments => handler(arguments.First, arguments.Second), this,
+                static arguments => arguments, static arguments => arguments));
+            return (first, second) => callback.Invoke(new AsyncCallbackArguments(first, second));
         }
 
         /// <summary>
@@ -2259,7 +2295,7 @@ namespace Akka.Streams.Stage
                 var actorMaterializer = ActorMaterializerHelper.Downcast(Interpreter.Materializer);
                 _stageActor = new StageActor(
                     actorMaterializer,
-                    r => GetAsyncCallback<(IActorRef, object)>(message => r(message)),
+                    this,
                     receive,
                     StageActorName);
             }
@@ -3082,7 +3118,8 @@ namespace Akka.Streams.Stage
     /// </summary>
     public sealed class StageActor
     {
-        private readonly Action<(IActorRef, object)> _callback;
+        private readonly Action<IActorRef, object> _callback;
+        private delegate Action<IActorRef, object> CallbackFactory(StageActorRef.Receive receive);
         private readonly ActorCell _cell;
         private readonly FunctionRef _functionRef;
         private StageActorRef.Receive _behavior;
@@ -3092,6 +3129,24 @@ namespace Akka.Streams.Stage
             Func<StageActorRef.Receive, Action<(IActorRef, object)>> getAsyncCallback,
             StageActorRef.Receive initialReceive,
             string name = null)
+            : this(materializer, new CallbackFactory(receive =>
+            {
+                var callback = getAsyncCallback(receive);
+                return (sender, message) => callback((sender, message));
+            }), initialReceive, name)
+        {
+        }
+
+        internal StageActor(ActorMaterializer materializer, GraphStageLogic logic,
+            StageActorRef.Receive initialReceive, string name)
+            : this(materializer, new CallbackFactory(receive =>
+                logic.GetReferencePairAsyncCallback((sender, message) => receive(((IActorRef)sender, message)))),
+                initialReceive, name)
+        {
+        }
+
+        private StageActor(ActorMaterializer materializer, CallbackFactory getAsyncCallback,
+            StageActorRef.Receive initialReceive, string name)
         {
             _callback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
@@ -3108,7 +3163,7 @@ namespace Akka.Streams.Stage
                             "{0} message sent to StageActor({1}) will be ignored, since it is not a real Actor. " +
                             "Use a custom message type to communicate with it instead.", message, _functionRef.Path);
                         break;
-                    default: _callback((sender, message)); break;
+                    default: _callback(sender, message); break;
                 }
             });
         }

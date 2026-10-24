@@ -294,6 +294,9 @@ namespace Akka.Streams.Implementation.Fusing
                 case ActorGraphInterpreter.AsyncInput asyncInput:
                     return RunAsyncInput(asyncInput, eventLimit);
 
+                case AsyncCallbackInput callbackInput:
+                    return RunAsyncCallbackInput(callbackInput, eventLimit);
+
                 case ActorGraphInterpreter.OnError onError:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
                     _inputs[onError.Id].OnError(onError.Cause);
@@ -338,6 +341,23 @@ namespace Akka.Streams.Implementation.Fusing
         private int RunAsyncInput(ActorGraphInterpreter.AsyncInput input, int eventLimit)
         {
             Interpreter.RunAsyncInput(input.Logic, input.Event, input.Promise, input.Handler);
+            return AfterAsyncInput(eventLimit);
+        }
+
+        internal int ReceiveAsyncCallbackInput(AsyncCallbackInput input, int eventLimit)
+        {
+            _resumeScheduled = false;
+            return _waitingForShutdown ? eventLimit : RunAsyncCallbackInput(input, eventLimit);
+        }
+
+        private int RunAsyncCallbackInput(AsyncCallbackInput input, int eventLimit)
+        {
+            Interpreter.RunAsyncCallbackInput(input);
+            return AfterAsyncInput(eventLimit);
+        }
+
+        private int AfterAsyncInput(int eventLimit)
+        {
             if (eventLimit == 1 && _interpreter.IsSuspended)
             {
                 // Preserve flush-on-park when an async callback uses the last event in this batch.
@@ -456,7 +476,23 @@ namespace Akka.Streams.Implementation.Fusing
                         _shortCircuitOwner.EnqueueAsyncToShortCircuit(asyncInput);
                     else
                         _enqueueToShortCircuit(asyncInput);
-                }, _settings.IsFuzzingMode, Self);
+                }, _settings.IsFuzzingMode, Self)
+            {
+                CallbackDispatcher = DispatchAsyncCallbackInput
+            };
+        }
+
+        private void DispatchAsyncCallbackInput(IAsyncCallbackTarget target, AsyncCallbackArguments arguments,
+            TaskCompletionSource<Done> promise)
+        {
+            var input = new AsyncCallbackInput(this, target, arguments, promise);
+            var current = CurrentInterpreterOrNull;
+            if (current == null || !Equals(current.Context, Self))
+                Self.Tell(input);
+            else if (_shortCircuitOwner != null)
+                _shortCircuitOwner.EnqueueAsyncCallbackToShortCircuit(input);
+            else
+                _enqueueToShortCircuit(input);
         }
 
         private ILoggingAdapter GetLogger()
@@ -1598,24 +1634,57 @@ namespace Akka.Streams.Implementation.Fusing
         private Queue<ShortCircuitEvent> _shortCircuitBuffer;
 
 #nullable enable
-        // One FIFO retains the ordering of async inputs, resumes, and shell registrations.
-        // A non-null async shell marks the inline AsyncInput; default/null controls stay ignorable.
+        // Compatibility boundary messages and registered callbacks share the same FIFO.
+        private enum ShortCircuitEventKind : byte
+        {
+            Boundary,
+            LegacyAsyncInput,
+            CallbackInput
+        }
+
         private readonly struct ShortCircuitEvent
         {
+            public readonly ShortCircuitEventKind Kind;
             public readonly object? Boundary;
-            public readonly AsyncInput AsyncInput;
+            private readonly GraphInterpreterShell? _shell;
+            private readonly object? _targetOrLogic;
+            private readonly object? _argumentOrPromise;
+            private readonly object? _promiseOrHandler;
 
             public ShortCircuitEvent(object boundary)
             {
+                Kind = ShortCircuitEventKind.Boundary;
                 Boundary = boundary;
-                AsyncInput = default;
+                _shell = null;
+                _targetOrLogic = null;
+                _argumentOrPromise = null;
+                _promiseOrHandler = null;
             }
 
             public ShortCircuitEvent(AsyncInput input)
             {
-                Boundary = null;
-                AsyncInput = input;
+                Kind = ShortCircuitEventKind.LegacyAsyncInput;
+                Boundary = input.Event;
+                _shell = input.Shell;
+                _targetOrLogic = input.Logic;
+                _argumentOrPromise = input.Promise;
+                _promiseOrHandler = input.Handler;
             }
+
+            public ShortCircuitEvent(AsyncCallbackInput input)
+            {
+                Kind = ShortCircuitEventKind.CallbackInput;
+                Boundary = input.Arguments.First;
+                _shell = input.Shell;
+                _targetOrLogic = input.Target;
+                _argumentOrPromise = input.Arguments.Second;
+                _promiseOrHandler = input.Promise;
+            }
+
+            public AsyncInput AsyncInput => new(_shell!, (GraphStageLogic)_targetOrLogic!, Boundary!,
+                (TaskCompletionSource<Done>)_argumentOrPromise!, (Action<object>)_promiseOrHandler!);
+            public AsyncCallbackInput CallbackInput => new(_shell!, (IAsyncCallbackTarget)_targetOrLogic!,
+                new AsyncCallbackArguments(Boundary, _argumentOrPromise), (TaskCompletionSource<Done>)_promiseOrHandler!);
         }
 #nullable restore
 
@@ -1651,6 +1720,13 @@ namespace Akka.Streams.Implementation.Fusing
             if (_shortCircuitBuffer == null)
                 _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
 
+            _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
+        }
+
+        internal void EnqueueAsyncCallbackToShortCircuit(AsyncCallbackInput input)
+        {
+            if (_shortCircuitBuffer == null)
+                _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
             _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
         }
 
@@ -1731,7 +1807,9 @@ namespace Akka.Streams.Implementation.Fusing
             while (_shortCircuitBuffer.Count != 0 && _currentLimit > 0 && _activeInterpreters.Count != 0)
             {
                 var element = _shortCircuitBuffer.Dequeue();
-                if (element.AsyncInput.Shell != null)
+                if (element.Kind == ShortCircuitEventKind.CallbackInput)
+                    ProcessAsyncCallbackInput(element.CallbackInput);
+                else if (element.Kind == ShortCircuitEventKind.LegacyAsyncInput)
                     ProcessAsyncInput(element.AsyncInput);
                 else if (element.Boundary is IBoundaryEvent boundary)
                     ProcessEvent(boundary);
@@ -1769,6 +1847,23 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _currentLimit = shell.ReceiveAsyncInput(input, _currentLimit);
+                }
+                catch (Exception ex)
+                {
+                    shell.TryAbort(ex);
+                }
+                AfterShellEvent(shell);
+            }
+        }
+
+        private void ProcessAsyncCallbackInput(AsyncCallbackInput input)
+        {
+            var shell = input.Shell;
+            if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
+            {
+                try
+                {
+                    _currentLimit = shell.ReceiveAsyncCallbackInput(input, _currentLimit);
                 }
                 catch (Exception ex)
                 {

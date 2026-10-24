@@ -507,6 +507,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// Callback used to deliver asynchronous stage input from stage logics.
         /// </summary>
         public readonly Action<GraphStageLogic, object, TaskCompletionSource<Done>, Action<object>> OnAsyncInput;
+#nullable enable annotations
+        internal Action<IAsyncCallbackTarget, AsyncCallbackArguments, TaskCompletionSource<Done>>? CallbackDispatcher { get; set; }
+#nullable restore annotations
         /// <summary>
         /// Whether event processing uses randomized connection order for fuzzing.
         /// </summary>
@@ -891,6 +894,13 @@ namespace Akka.Streams.Implementation.Fusing
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         public void RunAsyncInput(GraphStageLogic logic, object evt, TaskCompletionSource<Done> promise, Action<object> handler)
+            => RunAsyncInputCore(logic, evt, promise, handler);
+
+        internal void RunAsyncCallbackInput(AsyncCallbackInput input)
+            => RunAsyncInputCore(input.Target.Logic, input, input.Promise,
+                static state => state.Target.Invoke(state.Arguments));
+
+        private void RunAsyncInputCore<T>(GraphStageLogic logic, T evt, TaskCompletionSource<Done> promise, Action<T> handler)
         {
             if (!IsStageCompleted(logic))
             {
