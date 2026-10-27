@@ -76,6 +76,14 @@ add `Wire` when the bytes on the wire change.
 
 ### Not breaking, for the record
 
+* **Proposed #8857, `Akka.Remote` / Artery (behavior):** a failed stream with no
+  queued traffic or unacknowledged system messages becomes dormant instead of retrying a
+  departed peer forever. Channels and reliable delivery state stay intact; normal sends and
+  `ActorSelection.ResolveOne` wake the association with a fresh handshake. Pending reliable
+  work still retries until acknowledged or its existing give-up policy applies. There is no
+  public API or wire change. Callers observing idle peer reincarnations must initiate demand
+  rather than expect background re-handshakes without any traffic.
+
 * **Artery** is new in v1.6 (v1.5.71 has no Artery), so changes to its behavior and settings
   are not listed. Remote.conf always registers its `artery-control` serializer (id 23, inside
   Akka.NET's reserved 1-100 range), even with Artery off.

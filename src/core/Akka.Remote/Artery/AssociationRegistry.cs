@@ -732,7 +732,7 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Whether the ORDINARY outbound stream should be (re-)materialized right now (design.md
+        /// Whether the ORDINARY outbound stream is permitted to (re-)materialize (design.md
         /// group 9): <see langword="false"/> once this stream has been shut down for good
         /// (<see cref="IsOutboundShutDown"/>), OR while the CURRENT peer uid is quarantined --
         /// <see cref="RemoteTransport.Send"/> already gates every ordinary send for a quarantined
@@ -746,11 +746,12 @@ namespace Akka.Remote.Artery
             !_outboundShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
 
         /// <summary>
-        /// Whether the CONTROL outbound stream should be (re-)materialized right now. Unlike
+        /// Whether the CONTROL outbound stream is permitted to (re-)materialize. Unlike
         /// <see cref="ShouldRestartOutbound"/>, quarantine status is irrelevant here -- the
         /// control stream restarts regardless of quarantine (design.md: "quarantined associations
         /// still restart their CONTROL stream -- piercing requires a live control channel"). The
-        /// only thing that ever permanently stops it is this stream's own shutdown.
+        /// only thing that permanently stops it is this stream's own shutdown. A failed stream
+        /// with no pending work may remain dormant until the next producer checks its gate.
         /// </summary>
         public bool ShouldRestartControl() => !_controlShutDown;
 
@@ -762,6 +763,43 @@ namespace Akka.Remote.Artery
         /// </summary>
         public bool ShouldRestartLargeOutbound() =>
             !_largeShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
+
+        /// <summary>
+        /// Discards obsolete best-effort control traffic before a failed control stream is
+        /// restarted. Called only after its previous materialization stopped and while its gate
+        /// is still held, so delivery state has no active stream owner. Reliable envelopes and
+        /// their original sequence numbers remain intact; a queued local clear is applied in order.
+        /// </summary>
+        /// <returns>Whether unacknowledged reliable messages still require a consumer.</returns>
+        public bool PrepareControlRestart()
+        {
+            while (_controlChannel.Reader.TryPeek(out var element))
+            {
+                if (element.Message is ClearSystemMessageDelivery clear)
+                {
+                    _controlChannel.Reader.TryRead(out _);
+                    if (clear.Incarnation >= _systemMessageDeliveryState.CurrentIncarnation)
+                    {
+                        _systemMessageDeliveryState.Buffer.Clear();
+                        _systemMessageDeliveryState.NextSeq = 1;
+                        _systemMessageDeliveryState.CurrentIncarnation = clear.Incarnation;
+                    }
+                }
+                else if (IsBestEffortControlMessage(element.Message))
+                    _controlChannel.Reader.TryRead(out _);
+                else
+                    break;
+            }
+
+            return _systemMessageDeliveryState.Buffer.Count > 0;
+        }
+
+        /// <summary>Housekeeping traffic must not keep a departed peer's restart loop alive.</summary>
+        public static bool IsBestEffortControlMessage(object message) => message is
+            HandshakeReq or HandshakeRsp or ArteryHeartbeat or ArteryHeartbeatRsp or Ack or Nack or ArteryQuarantined;
+
+        /// <summary>Whether any ordinary lane still contains accepted user traffic.</summary>
+        public bool HasQueuedOutbound => Array.Exists(_laneChannels, channel => channel.Reader.Count > 0);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE 0. Non-blocking
@@ -830,9 +868,9 @@ namespace Akka.Remote.Artery
         /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
         /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
         /// cheap enough to sample repeatedly from a test without perturbing the property under
-        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/> /
-        /// dead-letter-on-<see langword="false"/> pattern is capacity-agnostic), so this exists
-        /// purely for tests to assert the bound is never exceeded. See <see cref="LaneQueueCount"/>
+        /// test. Restart callbacks also sample queued demand after releasing a stopped stream's
+        /// gate; producers enqueue before checking that gate so no accepted work is stranded.
+        /// See <see cref="LaneQueueCount"/>
         /// for lanes 1..N-1.
         /// </summary>
         public int OutboundQueueCount => _laneChannels[0].Reader.Count;

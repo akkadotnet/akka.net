@@ -171,19 +171,16 @@ namespace Akka.Remote.Tests.Artery
                 var newUid = AddressUidExtension.Uid(systemB2);
                 newUid.Should().NotBe(oldUid);
 
-                // A must re-associate on its own (group 9's automatic outbound-stream restart).
-                // Wait for the registry to actually show the NEW incarnation (handshake complete)
-                // before sending -- while a stream is mid-reconnect, a held-but-not-yet-flushed
-                // ordinary envelope can still be lost if THAT SAME materialization has to restart
-                // AGAIN before its own handshake completes (an accepted best-effort characteristic
-                // of the ordinary stream, same as design.md's pinned invariant 5: only elements
-                // already dequeued from the association-owned channel are at risk, and only across
-                // a SECOND restart of the same stream instance) -- this test's "the new incarnation
-                // is visible via the registry" assertion below is exactly that stable point, so
-                // check it first, THEN send.
+                // A failed idle association waits for demand instead of reconnecting forever.
+                // Resolve through a fresh selection to wake it and complete the new handshake
+                // before asserting incarnation state or sending ordinary at-most-once traffic.
+                var echoSelectionAfter = systemA.ActorSelection(SelectionPath(peerSystemName, boundPort, "echo"));
+                await AwaitAssertAsync(async () =>
+                {
+                    await echoSelectionAfter.ResolveOne(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+                }, TimeSpan.FromSeconds(30), cancellationToken: TestContext.Current.CancellationToken);
                 var transportA = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
                 var associationToB = transportA.Registry.AssociationFor(bAddress);
-                await AwaitConditionAsync(() => Task.FromResult(associationToB.CurrentState.Incarnation > 1), TimeSpan.FromSeconds(30));
 
                 // The new incarnation must be visible via the registry.
                 associationToB.CurrentState.UniqueRemoteAddress.Should().NotBeNull();
@@ -210,7 +207,6 @@ namespace Akka.Remote.Tests.Artery
                 // best-effort characteristic invariant 5 documents. A well-behaved caller that
                 // cares about confirmation retries; this loop does exactly that.
                 var probeAfter = CreateTestProbe(systemA);
-                var echoSelectionAfter = systemA.ActorSelection(SelectionPath(peerSystemName, boundPort, "echo"));
                 var delivered = false;
                 for (var attempt = 0; attempt < 10 && !delivered; attempt++)
                 {
