@@ -70,6 +70,9 @@ namespace Akka.Remote.Tests.Artery
             var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
             var remoteAddress = DeadPeerAddress();
             var association = transport.Registry.AssociationFor(remoteAddress);
+            // A real PostStop return comes from a materialized stream whose gate remains held
+            // until its backoff expires; keep that consumer inert for these queue-only assertions.
+            association.EnsureOutboundMaterialized(_ => { });
 
             var held = new OutboundEnvelope("held-ordinary-payload", null, null);
 
@@ -92,6 +95,9 @@ namespace Akka.Remote.Tests.Artery
             var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
             var remoteAddress = DeadPeerAddress();
             var association = transport.Registry.AssociationFor(remoteAddress);
+            // A real PostStop return comes from a materialized stream whose gate remains held
+            // until its backoff expires; keep that consumer inert for these queue-only assertions.
+            association.EnsureOutboundMaterialized(_ => { });
 
             // outbound-message-queue-size = 1 above -- this single TryEnqueueOutbound call already
             // fills lane 0 to capacity, so the return-undelivered attempt below has no room.

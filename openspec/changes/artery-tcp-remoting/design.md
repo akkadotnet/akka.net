@@ -201,13 +201,18 @@ restart-with-new-UID scenario. Group 9 implements it:
   reset, `HandshakeTimeoutException`, write failure), the association's materialize-once gate for
   that stream RESETS, and re-materialization is scheduled after `outbound-restart-backoff` (new
   `advanced` key, default 1s). Applies independently per stream (ordinary, control).
-- **Retry policy — MVP-simple, termination via existing mechanisms:** unlimited restarts with the
-  fixed backoff. There is deliberately NO restart-count give-up: the association's *reliability*
-  give-up already exists where it matters — `give-up-system-message-after` quarantines when
-  unacked system messages age out, and quarantine gates ordinary sends. An unreachable peer with
-  no pending system messages costs one bounded queue + one backoff timer — same cost class as
-  Pekko's idle associations. Buffered ordinary messages persist until delivery or process
-  shutdown (bounded at queue capacity; overflow policy unchanged).
+- **Retry policy — demand-aware idle quiescence (#8857):** failed streams retry after the
+  fixed backoff while queued user/control work or unacknowledged reliable system messages
+  need delivery. With no remaining work they release their materialization gate and wait
+  for a new producer rather than retrying a departed peer forever. Channels and incarnation
+  state stay intact. Producers enqueue before checking the gate, and the backoff callback
+  resets the gate before checking queued demand, so an accepted send racing quiescence is
+  observed by one of them. Old best-effort handshake/heartbeat/Ack/Nack/quarantine traffic
+  cannot keep the retry loop alive; fresh control sends still initiate a connection attempt.
+  Reliable delivery keeps its original buffer, sequence numbers, and send timestamps across
+  stream restarts, until acknowledgment, incarnation change, explicit clear, or the existing
+  `give-up-system-message-after` policy. Buffered ordinary messages remain bounded and survive
+  stream restart as before.
 - **Handshake across restart is free:** the handshake stages are per-materialization; a fresh
   stream re-injects `HandshakeReq`; the peer's reply is idempotent (`CompleteHandshake` same-uid
   no-op) or installs a new incarnation (peer restarted with new UID) — exactly the G2 semantics.

@@ -7,7 +7,9 @@
 
 #nullable enable
 
+using System;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Remote.Artery;
 using FluentAssertions;
 using Xunit;
@@ -136,6 +138,78 @@ namespace Akka.Remote.Tests.Artery
             var second = registry.AssociationFor(remote).SystemMessageDeliveryState;
 
             second.Should().BeSameAs(first);
+        }
+
+        [Fact(DisplayName = "8857: failed control restart discards stale housekeeping without losing queued system messages")]
+        public void Should_Discard_Housekeeping_But_Preserve_Queued_System_Messages()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var peer = new UniqueAddress(NewRemote(), 1L);
+            object[] housekeeping =
+            {
+                new HandshakeReq(peer, NewRemote()), new HandshakeRsp(peer),
+                new ArteryHeartbeat(), new ArteryHeartbeatRsp(),
+                new Akka.Remote.Artery.Ack(1L, peer), new Akka.Remote.Artery.Nack(1L, peer), new ArteryQuarantined(peer, 1L)
+            };
+            foreach (var message in housekeeping)
+                association.TryEnqueueControl(new OutboundEnvelope(message, null, null)).Should().BeTrue();
+            var watch = new OutboundEnvelope(new Watch(ActorRefs.Nobody, ActorRefs.Nobody), null, "/user/target");
+            association.TryEnqueueControl(watch).Should().BeTrue();
+
+            association.PrepareControlRestart().Should().BeFalse("no message has been wrapped into reliable state yet");
+            association.ControlQueueCount.Should().Be(1);
+            association.ControlReader.TryRead(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(watch);
+        }
+
+        [Fact(DisplayName = "8857: unacknowledged delivery state survives an idle-control decision unchanged")]
+        public void Should_Preserve_Unacknowledged_Delivery_State()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var state = association.SystemMessageDeliveryState;
+            var envelope = new OutboundEnvelope("unacknowledged", null, "/user/target");
+            var sentAt = DateTime.UtcNow;
+            state.Buffer.Enqueue((7L, envelope, sentAt));
+            state.NextSeq = 8;
+            state.CurrentIncarnation = 2;
+
+            association.PrepareControlRestart().Should().BeTrue("reliable work remains even with an empty channel");
+            state.Buffer.Peek().Should().Be((7L, envelope, sentAt));
+            state.NextSeq.Should().Be(8);
+            state.CurrentIncarnation.Should().Be(2);
+            association.IsControlShutDown.Should().BeFalse();
+        }
+
+        [Fact(DisplayName = "8857: failed-control cleanup applies local delivery clears but ignores stale incarnations")]
+        public void Should_Apply_Current_Delivery_Clear_Without_Reviving_Stale_State()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var state = association.SystemMessageDeliveryState;
+            state.Buffer.Enqueue((1L, new OutboundEnvelope("pending", null, null), DateTime.UtcNow));
+            state.NextSeq = 2;
+            state.CurrentIncarnation = 2;
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(1), null, null));
+            association.PrepareControlRestart().Should().BeTrue();
+            state.Buffer.Count.Should().Be(1);
+            state.NextSeq.Should().Be(2);
+
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(2), null, null));
+            association.PrepareControlRestart().Should().BeFalse();
+            state.Buffer.Should().BeEmpty();
+            state.NextSeq.Should().Be(1);
+            state.CurrentIncarnation.Should().Be(2);
+            association.ControlQueueCount.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "8857: pending traffic in any ordinary lane prevents quiescence")]
+        public void Should_Find_Pending_Traffic_In_All_Ordinary_Lanes()
+        {
+            var association = new AssociationRegistry(outboundLanes: 3).AssociationFor(NewRemote());
+            association.HasQueuedOutbound.Should().BeFalse();
+            association.TryEnqueueOutbound(new OutboundEnvelope("last-lane", null, null), 2).Should().BeTrue();
+            association.HasQueuedOutbound.Should().BeTrue();
+            association.LaneReader(2).TryRead(out _).Should().BeTrue();
+            association.HasQueuedOutbound.Should().BeFalse();
         }
     }
 }
