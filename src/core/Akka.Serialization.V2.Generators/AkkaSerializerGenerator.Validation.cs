@@ -833,7 +833,6 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        // Retain a diagnostic for the unlikely collision of stable type-identity suffixes.
         foreach (var collision in reachableMessages
                      .GroupBy(GetMessageMethodName, StringComparer.Ordinal)
                      .Where(group => group.Select(m => m.Key).Distinct().Count() > 1))

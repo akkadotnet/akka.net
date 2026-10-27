@@ -2790,14 +2790,6 @@ public sealed partial class AkkaSerializerGenerator
         return GetGeneratedMethodName(mapping.Key);
     }
 
-    /// <summary>
-    /// Folds a fully-qualified type name into a compact generated-member identifier the way
-    /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
-    /// identifier keeps only its simple name, and generic type arguments are concatenated --
-    /// <c>Ns.Wrapper&lt;Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
-    /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
-    /// Generated message helpers append a stable type-identity suffix to distinguish folded names.
-    /// </summary>
     private static string FoldTypeName(string typeFullName)
     {
         var sb = new StringBuilder(typeFullName.Length);
@@ -2853,16 +2845,11 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
     {
-        return "_akkaFormatter_" + SanitizeTypeName(formatter.TargetTypeFullName);
+        return "_akkaFormatter_" + SanitizeNonGenericFormatterTypeName(formatter.TargetTypeFullName);
     }
 
-    private static string SanitizeTypeName(string typeFullName)
+    private static string SanitizeNonGenericFormatterTypeName(string typeFullName)
     {
-        // Used only for formatter field names, whose target types are validated non-generic
-        // (AKKASG011) -- generated METHOD names go through GetGeneratedMethodName instead. Escape literal
-        // underscores FIRST so sanitization is collision-free: 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar'
-        // and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay distinct instead of both collapsing to
-        // 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
             .Replace("_", "__")
