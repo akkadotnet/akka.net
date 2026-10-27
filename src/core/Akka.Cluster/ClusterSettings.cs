@@ -284,7 +284,7 @@ namespace Akka.Cluster
         public bool VerboseGossipReceivedLogging { get; }
 
         /// <summary>
-        /// The type of the configured downing provider, selected from configuration and legacy auto-down settings.
+        /// The type of the configured downing provider, selected from <c>akka.cluster.downing-provider-class</c>, or <see cref="NoDowning"/> when unset.
         /// </summary>
         public Type DowningProviderType { get; }
 

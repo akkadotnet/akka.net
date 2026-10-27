@@ -46,7 +46,6 @@
     <PackageReference Include="PublicApiGenerator" Version="11.5.4" />
     <PackageReference Include="Verify.Xunit" Version="25.0.2" />
     <PackageReference Include="Verify.DiffPlex" Version="3.0.0" />
-    <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" Aliases="XunitV3" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
