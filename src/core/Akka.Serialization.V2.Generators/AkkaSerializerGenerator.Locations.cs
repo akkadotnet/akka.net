@@ -223,7 +223,10 @@ public sealed partial class AkkaSerializerGenerator
     internal readonly record struct ExtractedSerializer(SerializerInfo? Info, LocationBag Locations);
 
     /// <summary>The message extraction transform's counterpart to <see cref="ExtractedSerializer"/>.</summary>
-    internal readonly record struct ExtractedMessage(MessageInfo? Info, LocationBag Locations);
+    internal readonly record struct ExtractedMessage(
+        MessageInfo? Info,
+        LocationBag Locations,
+        ImmutableArray<DiagnosticSpec> DeclarationDiagnostics);
 
     /// <summary>
     /// Merges every extracted serializer's and message's location bag, plus (S7) the ManifestPrefix

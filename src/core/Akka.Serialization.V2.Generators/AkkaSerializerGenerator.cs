@@ -209,6 +209,17 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
             .WithTrackingName(TrackingNames.ExtractedMessages);
 
+        context.RegisterSourceOutput(extractedMessages.Collect(), static (ctx, declarations) =>
+        {
+            var reported = new HashSet<DiagnosticSpec>();
+            foreach (var declaration in declarations)
+            foreach (var diagnostic in declaration.DeclarationDiagnostics)
+            {
+                if (reported.Add(diagnostic))
+                    ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations));
+            }
+        });
+
         var messageSchemas = extractedMessages
             .Select(static (extracted, _) => extracted.Info)
             .WithTrackingName(TrackingNames.MessageSchemas);
@@ -359,8 +370,8 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // code emission's own cache key. Diagnostic id, text, and trigger conditions are unchanged --
         // only WHERE they are reported from, and now WITH a real Location, has moved.
         context.RegisterSourceOutput(
-            resolvedSerializers.Combine(allLocations),
-            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left, pair.Right));
+            resolvedSerializers.Combine(allLocations).Combine(messages),
+            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
 
         // The cross-serializer diagnostics (AKKASG013 duplicate ids, AKKASG031 duplicate protocol
         // bindings, AKKASG037 manifest ignored on a generic definition) cannot be attached to any

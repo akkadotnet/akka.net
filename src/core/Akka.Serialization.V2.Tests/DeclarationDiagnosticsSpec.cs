@@ -1,6 +1,5 @@
 #nullable enable
 
-using System.Linq;
 using Akka.Serialization.V2.Tests.Harness;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
@@ -16,11 +15,13 @@ public sealed class DeclarationDiagnosticsSpec
     [InlineData("[AkkaSerializable] public sealed record Message<T>([property: AkkaField(0)] T A, [property: AkkaField(0)] T B);", "AKKASG005")]
     [InlineData("[AkkaSerializable] public sealed record Message<T>(T Value);", "AKKASG004")]
     [InlineData("[AkkaSerializable] public sealed class Message { [AkkaField(0)] public static int Value => 1; }", "AKKASG028")]
+    [InlineData("public class Outer { [AkkaSerializable(AllowEmpty = true)] private sealed record Message; }", "AKKASG045")]
     public void Should_ReportDeclarationError_When_NoSerializerExists(string declaration, string id)
     {
         var result = GeneratorTestHarness.Run("using Akka.Serialization.V2;\n" + declaration);
         var diagnostic = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == id).Subject;
-        diagnostic.Location.IsInSource.Should().BeTrue();
+        diagnostic.Location.GetLineSpan().Path.Should().Be("Source.cs");
+        diagnostic.Location.SourceSpan.Length.Should().BeGreaterThan(0);
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
     }
 
@@ -56,4 +57,21 @@ public sealed class DeclarationDiagnosticsSpec
         result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG004");
         result.GeneratedSources.Should().BeEmpty();
     }
+    [Fact(DisplayName = "Should report generic declaration errors once across registered constructions")]
+    public void Should_ReportOnce_When_GenericConstructionsAreRegistered()
+    {
+        var result = GeneratorTestHarness.Run("""
+            using Akka.Serialization.V2;
+            public interface IProtocol { }
+            [AkkaSerializable]
+            public sealed record Message<T>([property: AkkaField(0)] T A, [property: AkkaField(0)] T B) : IProtocol;
+            [AkkaSerializer<IProtocol>("sample", 120902)]
+            [AkkaSerializable<Message<int>>(Manifest = "int")]
+            [AkkaSerializable<Message<string>>(Manifest = "string")]
+            public sealed partial class SampleSerializer : AkkaSerializer { }
+            """);
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG005");
+        result.GeneratedSources.Should().BeEmpty();
+    }
+
 }

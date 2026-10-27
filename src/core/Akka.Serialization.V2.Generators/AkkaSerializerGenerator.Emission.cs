@@ -374,7 +374,7 @@ public sealed partial class AkkaSerializerGenerator
     /// contract); <see cref="ResolvedSerializer.ValidationDiagnostics"/> only when the serializer
     /// cleared the gate (a serializer with no message table has nothing to validate).
     /// </summary>
-    private static void ReportResolvedSerializerDiagnostics(SourceProductionContext context, ResolvedSerializer resolved, LocationBag locations)
+    private static void ReportResolvedSerializerDiagnostics(SourceProductionContext context, ResolvedSerializer resolved, LocationBag locations, ImmutableArray<MessageInfo?> declarations)
     {
         foreach (var gateDiagnostic in resolved.GateDiagnostics)
             context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic, locations));
@@ -383,7 +383,10 @@ public sealed partial class AkkaSerializerGenerator
             return;
 
         foreach (var diagnostic in resolved.ValidationDiagnostics)
-            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
+        {
+            if (!IsLocallyReportedShapeDiagnostic(diagnostic, resolved, declarations))
+                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
+        }
     }
 
     /// <summary>
