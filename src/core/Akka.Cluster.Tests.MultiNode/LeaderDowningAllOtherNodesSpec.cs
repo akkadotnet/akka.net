@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -39,8 +40,8 @@ public class LeaderDowningAllOtherNodesConfig : MultiNodeConfig
 
         CommonConfig = DebugConfig(false)
             .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.cluster.failure-detector.monitored-by-nr-of-members = 2
-                    akka.cluster.auto-down-unreachable-after = 1s"))
+                    akka.cluster.failure-detector.monitored-by-nr-of-members = 2"))
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.FromSeconds(1)))
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
     }
 }

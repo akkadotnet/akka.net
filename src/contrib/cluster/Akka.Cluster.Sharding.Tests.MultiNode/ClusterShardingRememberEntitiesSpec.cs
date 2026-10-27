@@ -9,6 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
@@ -32,7 +33,7 @@ public class ClusterShardingRememberEntitiesSpecConfig : MultiNodeClusterShardin
             loglevel: "DEBUG", additionalConfig: @"
               akka.testconductor.barrier-timeout = 60 s
               akka.test.single-expect-default = 60 s
-            ")
+            ", configurationOverride: AutoDowning.GetConfig(TimeSpan.Zero))
     {
         First = Role("first");
         Second = Role("second");

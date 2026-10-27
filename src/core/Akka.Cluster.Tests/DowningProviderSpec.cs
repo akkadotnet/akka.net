@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -14,6 +15,7 @@ using Akka.TestKit.Xunit.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using TestAutoDowning = Akka.Cluster.TestKit.AutoDowning;
 
 namespace Akka.Cluster.Tests
 {
@@ -55,6 +57,11 @@ namespace Akka.Cluster.Tests
 
     public class DowningProviderSpec : AkkaSpec
     {
+        public DowningProviderSpec(ITestOutputHelper output)
+            : base(output)
+        {
+        }
+
         public readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
           akka {
             loglevel = WARNING
@@ -78,15 +85,70 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void Downing_provider_should_ignore_AutoDowning_if_auto_down_unreachable_after_is_configured()
+        public void Downing_provider_should_ignore_removed_auto_down_setting()
         {
             var config = ConfigurationFactory.ParseString(@"
                 akka.cluster.downing-provider-class = """"
                 akka.cluster.auto-down-unreachable-after=18s");
             using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
             {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<AutoDowning>();
+                Cluster.Get(system).DowningProvider.Should().BeOfType<NoDowning>();
             }
+        }
+
+        [Fact(DisplayName = "Active removed auto-down setting must produce migration warning text")]
+        public void Downing_provider_should_produce_warning_when_removed_auto_down_setting_is_active()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.cluster.auto-down-unreachable-after = 18s");
+
+            Cluster.GetRemovedAutoDownWarning(config).Should()
+                .Contain("`akka.cluster.auto-down-unreachable-after` was removed in Akka.NET v1.6 and is ignored.");
+        }
+
+        [Theory(DisplayName = "Disabled removed auto-down setting must not log a warning")]
+        [InlineData("off")]
+        [InlineData("false")]
+        [InlineData("no")]
+        public void Downing_provider_should_not_warn_when_removed_auto_down_setting_is_disabled(string configuredValue)
+        {
+            var config = ConfigurationFactory.ParseString($@"
+                akka.cluster.auto-down-unreachable-after = {configuredValue}");
+
+            Cluster.GetRemovedAutoDownWarning(config).Should().BeNull();
+        }
+
+        [Fact(DisplayName = "TestKit AutoDowning configuration must load the TestKit provider")]
+        public async Task Downing_provider_should_load_testkit_auto_downing_from_generated_config()
+        {
+            var delay = TimeSpan.FromSeconds(18);
+            var config = TestAutoDowning.GetConfig(delay).WithFallback(BaseConfig);
+
+            config.GetString("akka.cluster.downing-provider-class")
+                .Should().Be(typeof(TestAutoDowning).AssemblyQualifiedName);
+            config.GetTimeSpan("akka.cluster.testkit.auto-down-unreachable-after", null)
+                .Should().Be(delay);
+
+            var system = ActorSystem.Create("testkit-auto-downing", config);
+            try
+            {
+                var provider = Cluster.Get(system).DowningProvider;
+                provider.Should().BeOfType<TestAutoDowning>();
+                provider.DowningActorProps.Should().NotBeNull();
+                provider.DowningActorProps!.NewActor().Should().NotBeNull();
+            }
+            finally
+            {
+                await system.Terminate().WaitAsync(TimeSpan.FromSeconds(15));
+            }
+        }
+
+        [Fact(DisplayName = "TestKit AutoDowning configuration must reject a negative delay")]
+        public void Downing_provider_should_reject_negative_testkit_auto_down_delay()
+        {
+            var getConfig = () => TestAutoDowning.GetConfig(TimeSpan.FromMilliseconds(-1));
+
+            getConfig.Should().Throw<ArgumentOutOfRangeException>();
         }
 
         [Fact]
@@ -121,4 +183,3 @@ namespace Akka.Cluster.Tests
         }
     }
 }
-

@@ -54,7 +54,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         public ClusterSingletonLeavingSpeedSpec() : base(@"
               akka.loglevel = INFO
               akka.actor.provider = ""cluster""
-              akka.cluster.auto-down-unreachable-after = 2s
 
               # With 10 systems and setting min-number-of-hand-over-retries to 5 and gossip-interval to 2s it's possible to
               # reproduce the ClusterSingletonManagerIsStuck and slow hand over in issue #25639

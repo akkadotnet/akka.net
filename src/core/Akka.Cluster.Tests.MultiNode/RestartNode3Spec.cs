@@ -33,7 +33,6 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.cluster.auto-down-unreachable-after = off
                     akka.cluster.allow-weakly-up-members = off"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 

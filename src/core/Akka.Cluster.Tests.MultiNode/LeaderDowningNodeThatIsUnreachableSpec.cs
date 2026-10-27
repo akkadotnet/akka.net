@@ -36,7 +36,7 @@ public class LeaderDowningNodeThatIsUnreachableConfig : MultiNodeConfig
         Fourth = Role("fourth");
 
         CommonConfig = DebugConfig(false)
-            .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after = 2s"))
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.FromSeconds(2)))
             .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
     }
 }

@@ -139,6 +139,12 @@ The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.
 The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.
 ```
 
+Starting with Akka.NET v1.6, the setting has been removed. An active
+`akka.cluster.auto-down-unreachable-after` value is ignored and produces a migration warning;
+`off`, `false`, and `no` remain quiet. Remove the setting and use the default Split Brain Resolver
+or configure another production `IDowningProvider`. An auto-down duration does not map directly to
+an SBR `stable-after` value because the two mechanisms make different partition decisions.
+
 #### Disabling the Default Downing Provider
 
 To disable the default Akka.Cluster downing provider, simply configure the following in your HOCON:
