@@ -263,10 +263,10 @@ namespace Akka.Routing
     internal sealed class ConsistentRoutee
     {
         /// <summary>
-        /// TBD
+        /// Creates a routee wrapper whose string identity includes a full actor address when needed.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <param name="selfAddress">TBD</param>
+        /// <param name="routee">The routee represented on the consistent hash ring.</param>
+        /// <param name="selfAddress">The local system address used to qualify paths without a host and port.</param>
         public ConsistentRoutee(Routee routee, Address selfAddress)
         {
             SelfAddress = selfAddress;
@@ -274,12 +274,12 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The routee represented by this ring node.
         /// </summary>
         public Routee Routee { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The local address used to qualify local actor paths for the ring identity.
         /// </summary>
         public Address SelfAddress { get; private set; }
 

@@ -23,9 +23,9 @@ namespace Akka.Util
         /// Returns true if <paramref name="type" /> implements/inherits <typeparamref name="T" />.
         /// <example><para>typeof(object[]).Implements&lt;IEnumerable&gt;() --&gt; true</para></example>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The type that <paramref name="type"/> is checked against.</typeparam>
         /// <param name="type">The type.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c> if <paramref name="type"/> is assignable to <typeparamref name="T"/>; otherwise, <c>false</c>.</returns>
         public static bool Implements<T>(this Type type)
         {
             return Implements(type, typeof(T));
@@ -206,7 +206,7 @@ namespace Akka.Util
         /// Utility to be used by implementers to create a manifest from the type.
         /// The manifest is used to look up the type on deserialization.
         /// </summary>
-        /// <param name="type">TBD</param>
+        /// <param name="type">The type whose qualified name is formatted.</param>
         /// <returns>Returns the type qualified name including namespace and assembly, but not assembly version.</returns>
         [InternalApi]
         public static string TypeQualifiedName(this Type type)
@@ -223,4 +223,3 @@ namespace Akka.Util
         }
     }
 }
-

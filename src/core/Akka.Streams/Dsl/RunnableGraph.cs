@@ -14,29 +14,29 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// Flow with attached input and output, can be executed.
     /// </summary>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TMat">The type of value returned when the graph is materialized.</typeparam>
     public interface IRunnableGraph<out TMat> : IGraph<ClosedShape, TMat>
     {
         /// <summary>
         /// Transform only the materialized value of this RunnableGraph, leaving all other properties as they were.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="func">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The replacement materialized value type.</typeparam>
+        /// <param name="func">Maps the graph's materialized value to the replacement value.</param>
+        /// <returns>A runnable graph with the same graph structure and the mapped materialized value.</returns>
         IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> func);
 
         /// <summary>
         /// Run this flow and return the materialized instance from the flow.
         /// </summary>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="materializer">The materializer used to run the graph.</param>
+        /// <returns>The value produced when this graph is materialized.</returns>
         TMat Run(IMaterializer materializer);
         
         /// <summary>
         /// Run this flow and return the materialized instance from the flow.
         /// </summary>
-        /// <param name="actorSystem">The actorSystem</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorSystem">The actor system whose materializer runs the graph.</param>
+        /// <returns>The value produced when this graph is materialized.</returns>
         TMat Run(ActorSystem actorSystem);
 
 
@@ -47,8 +47,8 @@ namespace Akka.Streams.Dsl
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply to the graph's stages.</param>
+        /// <returns>This runnable graph with the supplied attributes.</returns>
         new IRunnableGraph<TMat> WithAttributes(Attributes attributes);
 
         /// <summary>
@@ -58,28 +58,28 @@ namespace Akka.Streams.Dsl
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to add to those already attached to the graph.</param>
+        /// <returns>This runnable graph with the added attributes.</returns>
         new IRunnableGraph<TMat> AddAttributes(Attributes attributes);
 
         /// <summary>
         /// Add a name attribute to this Graph.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The graph name.</param>
+        /// <returns>This runnable graph with the name attribute.</returns>
         new IRunnableGraph<TMat> Named(string name);
     }
 
     /// <summary>
-    /// A completed Akka.Streams graph that can be executed.
+    /// A closed stream graph that can be materialized and run.
     /// </summary>
     /// <typeparam name="TMat">The type of materialized value.</typeparam>
     public sealed class RunnableGraph<TMat> : IRunnableGraph<TMat>
     {
         /// <summary>
-        /// TBD
+        /// Creates a runnable graph from its graph module.
         /// </summary>
-        /// <param name="module">TBD</param>
+        /// <param name="module">The module containing the graph and its materialized value.</param>
         public RunnableGraph(IModule module)
         {
             Module = module;
@@ -87,12 +87,12 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// The closed shape of this runnable graph.
         /// </summary>
         public ClosedShape Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The module containing this graph's stages and materialized value.
         /// </summary>
         public IModule Module { get; }
 
@@ -100,33 +100,33 @@ namespace Akka.Streams.Dsl
             => WithAttributes(attributes);
 
         /// <summary>
-        /// TBD
+        /// Adds attributes to those already attached to this graph.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to add.</param>
+        /// <returns>This runnable graph with the added attributes.</returns>
         public IRunnableGraph<TMat> AddAttributes(Attributes attributes)
             => WithAttributes(Module.Attributes.And(attributes));
 
         /// <summary>
-        /// TBD
+        /// Adds a name attribute to this graph.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The graph name.</param>
+        /// <returns>This runnable graph with the name attribute.</returns>
         public IRunnableGraph<TMat> Named(string name)
             => AddAttributes(Attributes.CreateName(name));
 
         /// <summary>
-        /// TBD
+        /// Adds an asynchronous boundary to this graph.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This runnable graph with an async-boundary attribute.</returns>
         public IRunnableGraph<TMat> Async()
            => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         /// <summary>
-        /// TBD
+        /// Replaces the attributes attached to this graph module.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A runnable graph with the supplied attributes.</returns>
         public IRunnableGraph<TMat> WithAttributes(Attributes attributes)
             => new RunnableGraph<TMat>(Module.WithAttributes(attributes));
 
@@ -139,11 +139,11 @@ namespace Akka.Streams.Dsl
         IGraph<ClosedShape, TMat> IGraph<ClosedShape, TMat>.Async() => Async();
 
         /// <summary>
-        /// TBD
+        /// Transforms this graph's materialized value, leaving its graph structure unchanged.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="func">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The replacement materialized value type.</typeparam>
+        /// <param name="func">Maps this graph's materialized value to the replacement value.</param>
+        /// <returns>A runnable graph with the mapped materialized value.</returns>
         public IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> func)
             => new RunnableGraph<TMat2>(Module.TransformMaterializedValue(func));
 
@@ -164,7 +164,7 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// Factory methods for runnable graphs.
     /// </summary>
     public static class RunnableGraph
     {
@@ -172,9 +172,9 @@ namespace Akka.Streams.Dsl
         /// A graph with a closed shape is logically a runnable graph, this method makes
         /// it so also in type.
         /// </summary>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="g">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat">The graph's materialized value type.</typeparam>
+        /// <param name="g">The graph with a closed shape to wrap.</param>
+        /// <returns>The graph represented as a <see cref="RunnableGraph{TMat}"/>.</returns>
         public static RunnableGraph<TMat> FromGraph<TMat>(IGraph<ClosedShape, TMat> g)
             => g as RunnableGraph<TMat> ?? new RunnableGraph<TMat>(g.Module);
     }

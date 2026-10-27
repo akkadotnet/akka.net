@@ -29,8 +29,8 @@ namespace Akka.Remote.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteRouterConfig"/> class.
         /// </summary>
-        /// <param name="local">TBD</param>
-        /// <param name="nodes">TBD</param>
+        /// <param name="local">The local pool configuration that supplies routing and supervision behavior.</param>
+        /// <param name="nodes">The non-empty sequence of addresses across which routees are deployed, in selection order.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the enumeration of specified nodes is empty.
         /// </exception>
@@ -45,12 +45,12 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local pool configuration used by this remote router.
         /// </summary>
         internal Pool Local { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote addresses selected for routee deployment.
         /// </summary>
         internal IList<Address> Nodes { get; }
 
@@ -65,21 +65,21 @@ namespace Akka.Remote.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the number of routees requested by the wrapped local pool configuration.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the router.</param>
+        /// <returns>The routee count requested by the local pool.</returns>
         public override int GetNrOfInstances(ActorSystem system)
         {
             return Local.GetNrOfInstances(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a routee using the next address in the configured sequence.
         /// </summary>
-        /// <param name="routeeProps">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="routeeProps">The properties used to create the routee.</param>
+        /// <param name="context">The actor context that attaches the routee to the router.</param>
+        /// <returns>A routee wrapping the actor reference created for the selected address; it may be local if that address belongs to this system.</returns>
         internal override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
             var name = "c" + _childNameCounter.IncrementAndGet();
@@ -184,11 +184,11 @@ namespace Akka.Remote.Routing
         public class RemoteRouterConfigSurrogate : ISurrogate
         {
             /// <summary>
-            /// TBD
+            /// Gets or sets the local pool configuration represented by this surrogate.
             /// </summary>
             public Pool Local { get; set; }
             /// <summary>
-            /// TBD
+            /// Gets or sets the remote addresses used to deploy routees.
             /// </summary>
             public Address[] Nodes { get; set; }
 

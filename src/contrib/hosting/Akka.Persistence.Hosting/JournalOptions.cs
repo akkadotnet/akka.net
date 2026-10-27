@@ -17,8 +17,8 @@ using Akka.Persistence.Journal;
 namespace Akka.Persistence.Hosting
 {
     /// <summary>
-    /// Base class for all journal options class. If you're writing an options class for SQL plugins, use
-    /// <see cref="SqlJournalOptions"/> instead.
+    /// Base class for all journal options class. To name the plugin's types in code, derive from
+    /// <see cref="JournalOptions{TJournal}"/> or <see cref="JournalOptions{TJournal, TReadJournalProvider}"/> instead.
     /// </summary>
     public abstract class JournalOptions
     {
@@ -71,14 +71,19 @@ namespace Akka.Persistence.Hosting
         /// </summary>
         public Config DefaultConfig => InternalDefaultConfig.MoveTo(PluginId);
         
-        /// <summary>
-        /// The journal adapter builder, use this builder to add custom journal
-        /// <see cref="IEventAdapter"/>, <see cref="IWriteEventAdapter"/>, or <see cref="IReadEventAdapter"/>
-        /// </summary>
-        [Obsolete("Use the configureBuilder callback parameter in WithJournal() instead. This property will be removed in v1.6.0. See https://github.com/akkadotnet/Akka.Hosting/issues/665")]
-        public AkkaPersistenceJournalBuilder Adapters { get; set; } = new ("", null!);
-
         public string PluginId => $"akka.persistence.journal.{Identifier}";
+
+        /// <summary>
+        /// INTERNAL API. The journal's registration, when the options class names its type in code
+        /// (<see cref="JournalOptions{TJournal}"/>); <c>null</c> leaves the journal on its HOCON <c>class</c>.
+        /// </summary>
+        internal virtual JournalDetails? CreateJournalDetails() => null;
+
+        /// <summary>
+        /// INTERNAL API. The plugin's default read journal, when the options class names it in code
+        /// (<see cref="JournalOptions{TJournal, TReadJournalProvider}"/>).
+        /// </summary>
+        internal virtual Akka.Persistence.Query.ReadJournalDetails? CreateReadJournalDetails() => null;
         
         /// <summary>
         /// The chain config builder.
@@ -103,8 +108,6 @@ namespace Akka.Persistence.Hosting
             sb.Insert(0, $"{PluginId} {{{Environment.NewLine}");
             sb.AppendLine($"auto-initialize = {AutoInitialize.ToHocon()}");
             sb.AppendLine($"serializer = {Serializer.ToHocon()}");
-            // Adapters property is deprecated - use the callback pattern in WithJournal() instead
-            // See https://github.com/akkadotnet/Akka.Hosting/issues/665
             sb.AppendLine("}");
             
             if (IsDefaultPlugin)

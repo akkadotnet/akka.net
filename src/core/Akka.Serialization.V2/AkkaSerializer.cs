@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Globalization;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using MessagePack;
@@ -208,6 +209,10 @@ public abstract class AkkaSerializer : SerializerV2
 
     protected static int SizeOfInt64(long value) => MessagePackSizes.SizeOfInt64(value);
 
+    protected static int SizeOfUInt64(ulong value) => MessagePackSizes.SizeOfUInt64(value);
+
+    protected static int SizeOfSingle(float value) => MessagePackSizes.SizeOfSingle(value);
+
     protected static int SizeOfEnum(int value) => MessagePackSizes.SizeOfEnum(value);
 
     protected static int SizeOfMapHeader(int count) => MessagePackSizes.SizeOfMapHeader(count);
@@ -385,5 +390,144 @@ public abstract class AkkaSerializer : SerializerV2
         writer.WriteBinHeader(16);
         value.TryWriteBytes(writer.GetSpan(16));
         writer.Advance(16);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Small-scalar readers (short, sbyte, byte, ushort, uint, ulong, float, char).
+    //
+    // Writers need no helper: the generator calls MessagePackWriter.Write(...) directly, which picks
+    // the smallest MessagePack integer encoding for the value, exactly as it does for int and long.
+    // Readers DO need one: the wire carries "an integer" with no width, so a value written by a wider
+    // peer (or a corrupt/hostile frame) can exceed the target type. Every reader below range-checks
+    // and throws a MessagePackSerializationException naming the target type, never truncating.
+    // ---------------------------------------------------------------------------------------------
+
+    private static long ReadSignedInteger(ref MessagePackReader reader, string targetType)
+    {
+        try
+        {
+            return reader.ReadInt64();
+        }
+        catch (OverflowException ex)
+        {
+            throw new MessagePackSerializationException(
+                $"The integer on the wire does not fit in a signed 64-bit integer, so it cannot be read as [{targetType}].", ex);
+        }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [{targetType}]: {ex.Message}", ex);
+        }
+    }
+
+    private static ulong ReadUnsignedInteger(ref MessagePackReader reader, string targetType)
+    {
+        try
+        {
+            return reader.ReadUInt64();
+        }
+        catch (OverflowException ex)
+        {
+            throw new MessagePackSerializationException(
+                $"The integer on the wire is negative or too large for an unsigned 64-bit integer, so it cannot be read as [{targetType}].", ex);
+        }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [{targetType}]: {ex.Message}", ex);
+        }
+    }
+
+    private static MessagePackSerializationException OutOfRange(string targetType, string value, string range)
+        => new($"The integer [{value}] on the wire is outside the range of [{targetType}] ({range}).");
+
+    /// <summary>
+    /// Reads a <see cref="TimeSpan"/> written as the signed integer of its <see cref="TimeSpan.Ticks"/>.
+    /// Every int64 is a valid tick count, so only a value beyond int64 (or a non-integer) is rejected.
+    /// </summary>
+    protected static TimeSpan ReadTimeSpan(ref MessagePackReader reader)
+        => new(ReadSignedInteger(ref reader, "System.TimeSpan"));
+
+    protected static short ReadInt16(ref MessagePackReader reader)
+    {
+        var value = ReadSignedInteger(ref reader, "System.Int16");
+        if (value < short.MinValue || value > short.MaxValue)
+            throw OutOfRange("System.Int16", value.ToString(CultureInfo.InvariantCulture), $"{short.MinValue} to {short.MaxValue}");
+
+        return (short)value;
+    }
+
+    protected static sbyte ReadSByte(ref MessagePackReader reader)
+    {
+        var value = ReadSignedInteger(ref reader, "System.SByte");
+        if (value < sbyte.MinValue || value > sbyte.MaxValue)
+            throw OutOfRange("System.SByte", value.ToString(CultureInfo.InvariantCulture), $"{sbyte.MinValue} to {sbyte.MaxValue}");
+
+        return (sbyte)value;
+    }
+
+    protected static byte ReadByte(ref MessagePackReader reader)
+    {
+        var value = ReadUnsignedInteger(ref reader, "System.Byte");
+        if (value > byte.MaxValue)
+            throw OutOfRange("System.Byte", value.ToString(CultureInfo.InvariantCulture), $"0 to {byte.MaxValue}");
+
+        return (byte)value;
+    }
+
+    protected static ushort ReadUInt16(ref MessagePackReader reader)
+    {
+        var value = ReadUnsignedInteger(ref reader, "System.UInt16");
+        if (value > ushort.MaxValue)
+            throw OutOfRange("System.UInt16", value.ToString(CultureInfo.InvariantCulture), $"0 to {ushort.MaxValue}");
+
+        return (ushort)value;
+    }
+
+    protected static uint ReadUInt32(ref MessagePackReader reader)
+    {
+        var value = ReadUnsignedInteger(ref reader, "System.UInt32");
+        if (value > uint.MaxValue)
+            throw OutOfRange("System.UInt32", value.ToString(CultureInfo.InvariantCulture), $"0 to {uint.MaxValue}");
+
+        return (uint)value;
+    }
+
+    protected static ulong ReadUInt64(ref MessagePackReader reader)
+        => ReadUnsignedInteger(ref reader, "System.UInt64");
+
+    /// <summary>
+    /// Reads a <see cref="char"/> written as the unsigned integer of its UTF-16 code unit.
+    /// </summary>
+    protected static char ReadChar(ref MessagePackReader reader)
+    {
+        var value = ReadUnsignedInteger(ref reader, "System.Char");
+        if (value > char.MaxValue)
+            throw OutOfRange("System.Char", value.ToString(CultureInfo.InvariantCulture), $"0 to {(int)char.MaxValue}");
+
+        return (char)value;
+    }
+
+    /// <summary>
+    /// Reads a <see cref="float"/>. MessagePack float32 (what the generator writes) is read exactly;
+    /// a float64 on the wire is accepted only when it fits in a float32, so a too-large double is
+    /// rejected instead of silently becoming infinity.
+    /// </summary>
+    protected static float ReadSingle(ref MessagePackReader reader)
+    {
+        double wide;
+        try
+        {
+            wide = reader.ReadDouble();
+        }
+        catch (MessagePackSerializationException ex)
+        {
+            throw new MessagePackSerializationException($"The value on the wire cannot be read as [System.Single]: {ex.Message}", ex);
+        }
+
+        var narrow = (float)wide;
+        if (float.IsInfinity(narrow) && !double.IsInfinity(wide))
+            throw new MessagePackSerializationException(
+                $"The floating-point value [{wide.ToString("R", CultureInfo.InvariantCulture)}] on the wire is outside the range of [System.Single].");
+
+        return narrow;
     }
 }

@@ -19,10 +19,10 @@ namespace Akka.Dispatch
     internal static class DedicatedThreadPoolConfigHelpers
     {
         /// <summary>
-        /// TBD
+        /// Reads the configured deadlock-detection timeout, treating negative values as disabled.
         /// </summary>
-        /// <param name="cfg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="cfg">The configuration containing the <c>deadlock-timeout</c> setting.</param>
+        /// <returns>The configured timeout, or <c>null</c> when the setting is negative.</returns>
         internal static TimeSpan? GetSafeDeadlockTimeout(Config cfg)
         {
             var timespan = cfg.GetTimeSpan("deadlock-timeout", TimeSpan.FromSeconds(-1));
@@ -32,10 +32,10 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Parses a thread type, defaulting to background unless the value names the foreground type.
         /// </summary>
-        /// <param name="threadType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="threadType">The configured thread type name.</param>
+        /// <returns><see cref="ThreadType.Foreground"/> for a case-insensitive "Foreground" value; otherwise, <see cref="ThreadType.Background"/>.</returns>
         internal static ThreadType ConfigureThreadType(string threadType)
         {
             return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.OrdinalIgnoreCase) == 0 ?
@@ -57,16 +57,16 @@ namespace Akka.Dispatch
         private readonly Config _config;
 
         /// <summary>
-        /// TBD
+        /// Creates a thread-pool configuration reader for the supplied settings.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The configuration containing pool-size settings.</param>
         public ThreadPoolConfig(Config config)
         {
             _config = config;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the configured minimum thread-pool size, or zero when the setting is absent.
         /// </summary>
         public int PoolSizeMin
         {
@@ -74,7 +74,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the configured processor-count multiplier for calculating the pool size, or zero when absent.
         /// </summary>
         public double PoolSizeFactor
         {
@@ -82,7 +82,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the configured maximum thread-pool size, or zero when the setting is absent.
         /// </summary>
         public int PoolSizeMax
         {
@@ -92,12 +92,12 @@ namespace Akka.Dispatch
         #region Static methods
 
         /// <summary>
-        /// TBD
+        /// Calculates a processor-based pool size and clamps it to the supplied bounds.
         /// </summary>
-        /// <param name="floor">TBD</param>
-        /// <param name="scalar">TBD</param>
-        /// <param name="ceiling">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="floor">The lower bound for the result.</param>
+        /// <param name="scalar">The multiplier applied to <see cref="Environment.ProcessorCount"/> before conversion to an integer.</param>
+        /// <param name="ceiling">The upper bound for the result.</param>
+        /// <returns>The processor count multiplied by <paramref name="scalar"/> and converted to an integer, then bounded by the supplied floor and ceiling. When <paramref name="floor"/> is greater than <paramref name="ceiling"/>, the result is <paramref name="ceiling"/>.</returns>
         public static int ScaledPoolSize(int floor, double scalar, int ceiling)
         {
             return Math.Min(Math.Max((int) (Environment.ProcessorCount*scalar), floor), ceiling);
@@ -106,4 +106,3 @@ namespace Akka.Dispatch
         #endregion
     }
 }
-

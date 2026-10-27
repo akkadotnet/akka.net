@@ -15,7 +15,7 @@ namespace Akka.Actor
 {
     #nullable enable
     /// <summary>
-    /// TBD
+    /// An actor whose message behavior is assembled from typed and untyped receive handlers.
     /// </summary>
     public abstract class ReceiveActor : UntypedActor, IInitializableActor
     {
@@ -26,7 +26,7 @@ namespace Akka.Actor
         private bool _hasBeenInitialized;
 
         /// <summary>
-        /// TBD
+        /// Initializes a receive actor and prepares its initial handler configuration.
         /// </summary>
         protected ReceiveActor()
         {
@@ -58,9 +58,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Dispatches a message to the handlers registered for the current behavior.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message received by this actor.</param>
         protected sealed override void OnReceive(object message)
         {
             //Seal the method so that implementors cannot use it. They should only use Receive and Become

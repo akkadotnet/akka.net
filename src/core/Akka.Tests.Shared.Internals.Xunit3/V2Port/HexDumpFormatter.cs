@@ -10,20 +10,22 @@ using System;
 using System.Linq;
 using System.Text;
 
-namespace Akka.Serialization.V2.Tests;
+// ReSharper disable once CheckNamespace
+namespace Akka.TestKit;
 
 /// <summary>
 /// Renders a wire-format snapshot as a human-reviewable annotated hex dump: a header block
 /// (case name, CLR message type, manifest, serializer id, byte count) followed by a
-/// classic <c>offset | hex | ascii</c> hex dump body. Used exclusively by
-/// <see cref="WireFormatSnapshotSpec"/> to produce the committed <c>WireSnapshots/*.verified.txt</c>
-/// artifacts -- NOT raw <c>.bin</c> files -- so a wire-format change shows up as a reviewable text
-/// diff in a pull request instead of an opaque binary diff.
+/// classic <c>offset | hex | ascii</c> hex dump body. Feeds Verify to produce committed
+/// <c>*.verified.txt</c> snapshots -- NOT raw <c>.bin</c> files -- so a wire-format change shows up as a
+/// reviewable text diff in a pull request instead of an opaque binary diff. Used by <c>V2PortSpec</c> and by
+/// <c>Akka.Serialization.V2.Tests</c>' <c>WireFormatSnapshotSpec</c>; the output format must not change.
 /// </summary>
-internal static class HexDumpFormatter
+public static class HexDumpFormatter
 {
     private const int BytesPerRow = 16;
 
+    /// <summary>Renders the header block and the hex dump of <paramref name="bytes"/>.</summary>
     public static string Format(string caseName, string messageType, string manifest, int serializerId, byte[] bytes)
     {
         var builder = new StringBuilder();

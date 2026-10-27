@@ -266,14 +266,14 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="AddressTerminated" /> class.
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The remote address that has been detected as terminated or unreachable.</param>
         public AddressTerminated(Address address)
         {
             Address = address;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote address associated with the termination event.
         /// </summary>
         public Address Address { get; }
 

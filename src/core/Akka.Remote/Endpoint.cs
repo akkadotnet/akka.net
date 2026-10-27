@@ -37,12 +37,12 @@ namespace Akka.Remote
     internal interface IInboundMessageDispatcher
     {
         /// <summary>
-        /// TBD
+        /// Deserializes and dispatches an inbound message to its local or remote recipient.
         /// </summary>
-        /// <param name="recipient">TBD</param>
-        /// <param name="recipientAddress">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="senderOption">TBD</param>
+        /// <param name="recipient">The actor reference resolved for the message recipient.</param>
+        /// <param name="recipientAddress">The address associated with the resolved recipient path.</param>
+        /// <param name="message">The serialized message payload.</param>
+        /// <param name="senderOption">The sender actor reference, if the message has one.</param>
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null);
     }
@@ -59,11 +59,11 @@ namespace Akka.Remote
         private readonly RemoteSettings _settings;
 
         /// <summary>
-        /// TBD
+        /// Creates a dispatcher that applies remoting security and routes deserialized inbound messages.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="provider">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="system">The actor system used to deserialize messages and resolve dead letters.</param>
+        /// <param name="provider">The remoting actor reference provider.</param>
+        /// <param name="log">The logger used for dispatch diagnostics.</param>
         public DefaultMessageDispatcher(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
             _system = system;
@@ -74,12 +74,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Deserializes a payload and dispatches it according to recipient locality and untrusted-mode settings.
         /// </summary>
-        /// <param name="recipient">TBD</param>
-        /// <param name="recipientAddress">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="senderOption">TBD</param>
+        /// <param name="recipient">The actor reference resolved for the message recipient.</param>
+        /// <param name="recipientAddress">The address associated with the resolved recipient path.</param>
+        /// <param name="message">The serialized message payload.</param>
+        /// <param name="senderOption">The sender actor reference, if the message has one.</param>
         public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null)
         {
@@ -218,12 +218,12 @@ namespace Akka.Remote
     internal sealed class ShutDownAssociation : EndpointException, IAssociationProblem
     {
         /// <summary>
-        /// TBD
+        /// Creates an exception for an association terminated because a system is shutting down.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">The reason the association was shut down.</param>
+        /// <param name="localAddress">The local system address.</param>
+        /// <param name="remoteAddress">The remote system address.</param>
+        /// <param name="cause">The exception that caused shutdown, if any.</param>
         public ShutDownAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null)
             : base(message, cause)
         {
@@ -232,29 +232,29 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local address of the shut-down association.
         /// </summary>
         public Address LocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote address of the shut-down association.
         /// </summary>
         public Address RemoteAddress { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Describes an association that cannot be established or used because of invalid state or a rejected remote identity.
     /// </summary>
     internal sealed class InvalidAssociation : EndpointException, IAssociationProblem
     {
         /// <summary>
-        /// TBD
+        /// Creates an exception describing an invalid association.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TbD</param>
-        /// <param name="cause">TBD</param>
-        /// <param name="disassociateInfo">TBD</param>
+        /// <param name="message">The reason the association is invalid.</param>
+        /// <param name="localAddress">The local system address.</param>
+        /// <param name="remoteAddress">The remote system address.</param>
+        /// <param name="cause">The exception that caused the invalid association, if any.</param>
+        /// <param name="disassociateInfo">The disassociation reason to report, if one is specified.</param>
         public InvalidAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null, DisassociateInfo? disassociateInfo = null)
             : base(message, cause)
         {
@@ -264,17 +264,17 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local address of the invalid association.
         /// </summary>
         public Address LocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote address of the invalid association.
         /// </summary>
         public Address RemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the optional reason used to disassociate the connection.
         /// </summary>
         public DisassociateInfo? DisassociationInfo { get; private set; }
     }
@@ -285,12 +285,12 @@ namespace Akka.Remote
     internal sealed class HopelessAssociation : EndpointException, IAssociationProblem
     {
         /// <summary>
-        /// TBD
+        /// Creates an exception for an association whose reliable system-message delivery cannot recover.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="localAddress">The local system address.</param>
+        /// <param name="remoteAddress">The remote system address.</param>
+        /// <param name="uid">The remote system UID, if it has been confirmed.</param>
+        /// <param name="cause">The failure that made the association unrecoverable.</param>
         public HopelessAssociation(Address localAddress, Address remoteAddress, long? uid = null, Exception cause = null)
             : base("Catastrophic association error.", cause)
         {
@@ -300,17 +300,17 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the local address of the hopeless association.
         /// </summary>
         public Address LocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote address of the hopeless association.
         /// </summary>
         public Address RemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the confirmed UID of the remote system, if known.
         /// </summary>
         public long? Uid { get; private set; }
     }
@@ -511,9 +511,9 @@ namespace Akka.Remote
         private Deadline _bailoutAt = null;
 
         /// <summary>
-        /// TBD
+        /// Selects how the reliable delivery supervisor handles failures in its receive behavior.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A strategy that escalates association problems and stops the writer after other failures.</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(ex =>
@@ -557,7 +557,7 @@ namespace Akka.Remote
         #region ActorBase methods and Behaviors
 
         /// <summary>
-        /// TBD
+        /// Dead-letters pending system messages, removes receive buffers, and cancels timers when the supervisor stops.
         /// </summary>
         protected override void PostStop()
         {
@@ -591,9 +591,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Handles messages while the association is active, including acknowledgements and resend requests.
         /// </summary>
-        /// <exception cref="HopelessAssociation">TBD</exception>
+        /// <exception cref="HopelessAssociation">Acknowledgement handling or buffering fails, or the system-message buffer cannot be recovered.</exception>
         private void Receiving()
         {
             Receive<EndpointWriter.FlushAndStop>(_ =>
@@ -676,11 +676,11 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Buffers system messages while the remote address is gated and waits for the writer to terminate before retrying.
         /// </summary>
-        /// <param name="writerTerminated">TBD</param>
-        /// <param name="earlyUngateRequested">TBD</param>
-        /// <exception cref="HopelessAssociation">TBD</exception>
+        /// <param name="writerTerminated"><c>true</c> when the previous writer has terminated.</param>
+        /// <param name="earlyUngateRequested"><c>true</c> when an ungate request arrived before writer termination.</param>
+        /// <exception cref="HopelessAssociation">Pending system messages exceed their initial delivery deadline.</exception>
         private void Gated(bool writerTerminated, bool earlyUngateRequested)
         {
             Receive<Terminated>(_ =>
@@ -739,7 +739,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Handles an idle association and reconnects when new work or a resend attempt requires a writer.
         /// </summary>
         private void IdleBehavior()
         {
@@ -771,7 +771,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Waits for the endpoint writer to stop after flushing, ignoring other messages during shutdown.
         /// </summary>
         private void FlushWait()
         {
@@ -791,25 +791,25 @@ namespace Akka.Remote
         #region Static methods and Internal Message Types
 
         /// <summary>
-        /// TBD
+        /// Requests another attempt to deliver buffered system messages.
         /// </summary>
         public class AttemptSysMsgRedelivery { }
 
         /// <summary>
-        /// TBD
+        /// Requests that a gated association resume after its retry delay.
         /// </summary>
         public class Ungate { }
 
         /// <summary>
-        /// TBD
+        /// Identifies the remote actor system after an association handshake.
         /// </summary>
         public sealed class GotUid
         {
             /// <summary>
-            /// TBD
+            /// Creates a message containing the remote system UID and address.
             /// </summary>
-            /// <param name="uid">TBD</param>
-            /// <param name="remoteAddress">TBD</param>
+            /// <param name="uid">The UID announced by the remote system.</param>
+            /// <param name="remoteAddress">The address of the remote system.</param>
             public GotUid(long uid, Address remoteAddress)
             {
                 Uid = uid;
@@ -817,29 +817,29 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the UID announced by the remote system.
             /// </summary>
             public long Uid { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// Gets the address of the remote system that announced the UID.
             /// </summary>
             public Address RemoteAddress { get; private set; }
         }
 
         /// <summary>
-        /// TBD
+        /// Creates props for a reliable-delivery supervisor for one remoting association.
         /// </summary>
-        /// <param name="handleOrActive">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handleOrActive">An existing protocol handle, or <c>null</c> to establish an outbound association.</param>
+        /// <param name="localAddress">The local address used by this association.</param>
+        /// <param name="remoteAddress">The remote address of the peer.</param>
+        /// <param name="refuseUid">A remote UID to reject, if the association must not connect to that incarnation.</param>
+        /// <param name="transport">The transport used to establish and manage the association.</param>
+        /// <param name="settings">The remoting settings that control delivery and retries.</param>
+        /// <param name="codec">The protocol codec used by the endpoint writer.</param>
+        /// <param name="receiveBuffers">Shared inbound sequence buffers keyed by association addresses.</param>
+        /// <param name="dispatcher">The dispatcher ID assigned to the supervisor.</param>
+        /// <returns>Props for creating the reliable-delivery supervisor actor.</returns>
         public static Props ReliableDeliverySupervisorProps(
                     AkkaProtocolHandle handleOrActive,
                     Address localAddress,
@@ -933,40 +933,40 @@ namespace Akka.Remote
     internal abstract class EndpointActor : ReceiveActor
     {
         /// <summary>
-        /// TBD
+        /// Gets the local address of this endpoint actor.
         /// </summary>
         protected readonly Address LocalAddress;
         /// <summary>
-        /// TBD
+        /// Gets the remote address of this endpoint actor.
         /// </summary>
         protected Address RemoteAddress;
         /// <summary>
-        /// TBD
+        /// Gets the remoting settings used by this endpoint actor.
         /// </summary>
         protected RemoteSettings Settings;
         /// <summary>
-        /// TBD
+        /// Gets the protocol transport used by this endpoint actor.
         /// </summary>
         protected AkkaProtocolTransport Transport;
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Gets the publisher for association lifecycle events.
         /// </summary>
         protected readonly EventPublisher EventPublisher;
         /// <summary>
-        /// TBD
+        /// Gets or sets whether this endpoint represents an inbound association.
         /// </summary>
         protected bool Inbound { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Initializes an endpoint actor with its addresses, transport, and remoting settings.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
+        /// <param name="localAddress">The local transport address.</param>
+        /// <param name="remoteAddress">The remote transport address.</param>
+        /// <param name="transport">The protocol transport associated with the endpoint.</param>
+        /// <param name="settings">The remoting settings used by the endpoint.</param>
         protected EndpointActor(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings)
         {
@@ -980,17 +980,17 @@ namespace Akka.Remote
         #region Event publishing methods
 
         /// <summary>
-        /// TBD
+        /// Publishes an association error with its log level to remoting lifecycle listeners.
         /// </summary>
-        /// <param name="ex">TBD</param>
-        /// <param name="level">TBD</param>
+        /// <param name="ex">The exception describing the association error.</param>
+        /// <param name="level">The log level assigned to the event.</param>
         protected void PublishError(Exception ex, LogLevel level)
         {
             TryPublish(new AssociationErrorEvent(ex, LocalAddress, RemoteAddress, Inbound, level));
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes that the association between the local and remote addresses has ended.
         /// </summary>
         protected void PublishDisassociated()
         {
@@ -1235,9 +1235,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Handles endpoint-writer messages not consumed by the current writing behavior.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message not handled by the active receive behavior.</param>
         protected override void Unhandled(object message)
         {
             switch (message)

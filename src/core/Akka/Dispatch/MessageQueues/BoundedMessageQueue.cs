@@ -32,8 +32,8 @@ namespace Akka.Dispatch.MessageQueues
         /// <summary>
         /// Initializes a new instance of the <see cref="BoundedMessageQueue"/> class.
         /// </summary>
-        /// <param name="boundedCapacity">TBD</param>
-        /// <param name="pushTimeOut">TBD</param>
+        /// <param name="boundedCapacity">The maximum number of messages; zero creates an unbounded queue.</param>
+        /// <param name="pushTimeOut">How long an enqueue waits for capacity before forwarding the message to dead letters.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="boundedCapacity"/> is negative.
         /// </exception>
@@ -90,4 +90,3 @@ namespace Akka.Dispatch.MessageQueues
         public TimeSpan PushTimeOut { get; set; }
     }
 }
-

@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -147,6 +148,90 @@ public class DynamicTypeLoadingOffLoggerSetupSpec
     }
 }
 
+/// <summary>
+/// Not generic on purpose: a generic type's name carries its arguments' assembly identities, which no
+/// HOCON author writes by hand.
+/// Constructions are counted per <see cref="ActorSystem"/> rather than process-wide: a spec that expects
+/// <c>ActorSystem.Create</c> to throw leaves its logger to be constructed in the background, and that
+/// late construction must not be counted against another spec's system (see #8772).
+/// </summary>
+public sealed class NamedInHoconLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    private sealed class Counter
+    {
+        public int Value;
+    }
+
+    private static readonly ConditionalWeakTable<ActorSystem, Counter> Counts = new();
+
+    public static int InstancesIn(ActorSystem system) =>
+        Counts.TryGetValue(system, out var counter) ? Volatile.Read(ref counter.Value) : 0;
+
+    public NamedInHoconLogger() => Interlocked.Increment(ref Counts.GetOrCreateValue(Context.System).Value);
+
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+[Collection(DynamicTypeLoadingCollection.Name)]
+public class DynamicTypeLoadingOffLoggerSetupNamedInHoconSpec
+{
+    private static ActorSystemSetup SetupFor(string hoconTypeName)
+    {
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{hoconTypeName}""]");
+        return ActorSystemSetup.Create(
+            BootstrapSetup.Create().WithConfig(config),
+            LoggerSetup.Create(Props.Create<NamedInHoconLogger>()));
+    }
+
+    [Theory(DisplayName = "Should_StartLoggerOnce_When_HoconNamesATypeLoggerSetupRegisters_AndDynamicTypeLoadingIsDisabled")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger,akka.tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Tests, Version=99.0.0.0, Culture=neutral, PublicKeyToken=null")]
+    public async Task Should_StartLoggerOnce_When_HoconNamesATypeLoggerSetupRegisters_AndDynamicTypeLoadingIsDisabled(
+        string hoconTypeName)
+    {
+        ActorSystem? sys = null;
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            sys = ActorSystem.Create("NamedInHocon", SetupFor(hoconTypeName));
+            return Task.CompletedTask;
+        });
+
+        try
+        {
+            NamedInHoconLogger.InstancesIn(sys!).Should().Be(1);
+        }
+        finally
+        {
+            if (sys != null)
+                await sys.Terminate();
+        }
+    }
+
+    [Theory(DisplayName = "Should_Throw_When_HoconNamesATypeLoggerSetupDoesNotRegister_AndDynamicTypeLoadingIsDisabled")]
+    [InlineData("Akka.Tests.Loggers.NoSuchLogger, Akka.Tests")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger, Akka.Remote")]
+    [InlineData("Akka.Tests.Loggers.NamedInHoconLogger")]
+    public async Task Should_Throw_When_HoconNamesATypeLoggerSetupDoesNotRegister_AndDynamicTypeLoadingIsDisabled(
+        string hoconTypeName)
+    {
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            Action create = () => ActorSystem.Create("NamedInHoconRejected", SetupFor(hoconTypeName));
+            create.Should().Throw<ConfigurationException>().WithMessage("*not built in*");
+            return Task.CompletedTask;
+        });
+    }
+}
+
 public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
 {
     private static readonly MarkerLogMessageFormatter SetupFormatter = new();
@@ -169,5 +254,66 @@ public class LoggerSetupFormatterPrecedenceSpec : AkkaSpec
     public void Should_PreferLoggerSetupFormatter_When_AkkaLoggerFormatterIsAlsoSet()
     {
         Sys.Settings.LogFormatter.Should().BeSameAs(SetupFormatter);
+    }
+}
+
+/// <summary>A minimal resolvable logger for specs that only need a valid logger to be named.</summary>
+public sealed class UnresolvableNameTestLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
+{
+    protected override bool Receive(object message)
+    {
+        if (message is not InitializeLogger)
+            return false;
+
+        Sender.Tell(new LoggerInitialized());
+        return true;
+    }
+}
+
+/// <summary>
+/// A bad <c>akka.loggers</c> entry must fail <c>ActorSystem.Create</c> before any logger starts. Each spec
+/// also points <c>akka.loggers-dispatcher</c> at a dispatcher that does not exist, which makes starting any
+/// logger throw synchronously, so the exception message shows which happened first: the name check (the
+/// fix) or the first logger start (the old order).
+/// </summary>
+[Collection(DynamicTypeLoadingCollection.Name)]
+public class UnresolvableLoggerNameSpec
+{
+    private const string MissingTypeName = "Akka.Tests.Loggers.NoSuchLoggerAnywhere, Akka.Tests";
+    private const string BogusDispatcherConfig = @"akka.loggers-dispatcher = ""no-such-loggers-dispatcher""";
+
+    [Fact(DisplayName = "Should_ThrowUnresolvableNameBeforeStartingLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled")]
+    public async Task Should_ThrowUnresolvableNameBeforeStartingLoggerSetupLoggers_When_AkkaLoggersNamesUnresolvableType_AndDynamicTypeLoadingIsDisabled()
+    {
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{MissingTypeName}""]")
+            .WithFallback(ConfigurationFactory.ParseString(BogusDispatcherConfig));
+        var setup = ActorSystemSetup.Create(
+            BootstrapSetup.Create().WithConfig(config),
+            LoggerSetup.Create(Props.Create<UnresolvableNameTestLogger>()));
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(false, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerSetupOff", setup);
+            var thrown = create.Should().Throw<ConfigurationException>().WithMessage("*not built in*");
+            thrown.Which.Message.Should().NotContain("not configured");
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact(DisplayName = "Should_ThrowUnresolvableNameBeforeStartingEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType")]
+    public async Task Should_ThrowUnresolvableNameBeforeStartingEarlierLoggers_When_AkkaLoggersHasLaterUnresolvableType()
+    {
+        var goodName = $"{typeof(UnresolvableNameTestLogger).FullName}, {typeof(UnresolvableNameTestLogger).Assembly.GetName().Name}";
+        var config = ConfigurationFactory.ParseString($@"akka.loggers = [""{goodName}"", ""{MissingTypeName}""]")
+            .WithFallback(ConfigurationFactory.ParseString(BogusDispatcherConfig));
+
+        await AkkaFeaturesSpec.WithDynamicTypeLoading(true, () =>
+        {
+            Action create = () => ActorSystem.Create("UnresolvableLoggerHocon", config);
+            var thrown = create.Should().Throw<ConfigurationException>()
+                .WithMessage("*Logger specified in config cannot be found*");
+            thrown.Which.Message.Should().NotContain("not configured");
+            return Task.CompletedTask;
+        });
     }
 }

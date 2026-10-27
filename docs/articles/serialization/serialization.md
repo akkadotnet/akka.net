@@ -194,6 +194,8 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+When dynamic type loading is enabled and a custom serializer is configured by type name under `akka.actor.serializers`, Akka.NET uses the constructor taking `(ExtendedActorSystem, Config)` when `akka.actor.serialization-settings.<alias>` is non-empty, and the constructor taking only `ExtendedActorSystem` otherwise. It does not fall back to a parameterless constructor. With `SerializationSetup`, the setup factory supplies the serializer instances in `SerializerDetails` instead.
+
 ### Serializer Ids
 
 Serializer ids are part of the wire format: two nodes that disagree about an id cannot read each other's messages. Ids from 0 to 40 are reserved for Akka.NET.

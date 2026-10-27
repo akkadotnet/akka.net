@@ -18,28 +18,28 @@ public class ContainsString : IStringMatcher
     private readonly string _part;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher that looks for a case-insensitive substring.
     /// </summary>
-    /// <param name="part">TBD</param>
+    /// <param name="part">The substring to find.</param>
     public ContainsString(string part)
     {
         _part = part;
     }
 
     /// <summary>
-    /// TBD
+    /// Checks whether a string contains the configured substring, ignoring case.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns><c>true</c> if the string contains the substring; otherwise, <c>false</c>.</returns>
     public bool IsMatch(string s)
     {
         return s.IndexOf(_part, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the substring criterion in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description of the substring match.</returns>
     public override string ToString()
     {
         return "contains \"" + _part + "\"";

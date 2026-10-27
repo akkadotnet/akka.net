@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence
@@ -49,6 +51,7 @@ namespace Akka.Persistence
         private readonly ExtendedActorSystem _system;
 
         private readonly ILoggingAdapter _log;
+        private readonly PersistencePluginRegistry _registry;
         // all defaults are lazy, so that they don't need to be configured if they're not used
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
@@ -78,6 +81,7 @@ namespace Akka.Persistence
                 throw ConfigurationException.NullOrEmptyConfig<PersistenceExtension>("akka.persistence");
 
             _log = Logging.GetLogger(_system, this);
+            _registry = PersistencePluginRegistry.For(_system);
 
             _defaultJournalPluginId = new Lazy<string>(() =>
             {
@@ -103,11 +107,18 @@ namespace Akka.Persistence
             _defaultInternalStashOverflowStrategy = new Lazy<IStashOverflowStrategy>(() =>
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
-                var configuratorType = Type.GetType(configuratorTypeName);
-                if (configuratorType is null)
-                    throw new ConfigurationException(
-                        $"Could not resolve internal-stash-overflow-strategy type [{configuratorTypeName}]. Ensure the type name is fully qualified.");
-                return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
+
+                // reflection on the HOCON type name as always; with the switch off, the built-ins, then the guard
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    return CreateStashOverflowConfiguratorByReflection(configuratorTypeName).Create(_system.Settings.Config);
+
+                if (BuiltInPersistencePlugins.TryCreateStashOverflowConfigurator(configuratorTypeName, out var builtIn))
+                    return builtIn.Create(_system.Settings.Config);
+
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    "akka.persistence.internal-stash-overflow-strategy",
+                    configuratorTypeName,
+                    "ThrowExceptionConfigurator or DiscardConfigurator, or override InternalStashOverflowStrategy on the persistent actor"));
             });
 
             Settings = new PersistenceSettings(_system, _config);
@@ -128,7 +139,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Default overflow strategy used when an internal persistence stash exceeds its capacity.
         /// </summary>
         public IStashOverflowStrategy DefaultInternalStashOverflowStrategy => _defaultInternalStashOverflowStrategy.Value;
 
@@ -138,10 +149,10 @@ namespace Akka.Persistence
         public PersistenceSettings Settings { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns the persistence identifier derived from an actor reference.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">Actor whose path is used to derive the persistence identifier.</param>
+        /// <returns>The actor path without its address.</returns>
         public string PersistenceId(IActorRef actor)
         {
             return actor.Path.ToStringWithoutAddress();
@@ -162,11 +173,11 @@ namespace Akka.Persistence
         /// If no adapters are registered for a given journal the EventAdapters object will simply return the identity adapter for each 
         /// class, otherwise the most specific adapter matching a given class will be returned.
         /// </summary>
-        /// <param name="journalPluginId">TBD</param>
+        /// <param name="journalPluginId">Configuration path of the journal plugin, or an empty string to use the default journal plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The event adapters configured for the journal plugin.</returns>
         public EventAdapters AdaptersFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -177,8 +188,8 @@ namespace Akka.Persistence
         /// <summary>
         /// Looks up <see cref="EventAdapters"/> by journal plugin's ActorRef.
         /// </summary>
-        /// <param name="journalPluginActor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="journalPluginActor">Actor reference of the journal plugin.</param>
+        /// <returns>The event adapters registered for the journal plugin, or the identity adapters if the actor is not registered.</returns>
         internal EventAdapters AdaptersFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
@@ -192,11 +203,11 @@ namespace Akka.Persistence
         /// When empty, looks in `akka.persistence.journal.plugin` to find the configuration entry path.
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// </summary>
-        /// <param name="journalPluginId">TBD</param>
+        /// <param name="journalPluginId">Configuration path of the journal plugin, or an empty string to use the default journal plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The effective configuration for the journal plugin.</returns>
         internal Config JournalConfigFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -208,11 +219,11 @@ namespace Akka.Persistence
         /// When empty, looks in `akka.persistence.snapshot-store.plugin` to find configuration entry path.
         /// When configured, uses <paramref name="snapshotPluginId"/> as absolute path to the journal configuration entry.
         /// </summary>
-        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="snapshotPluginId">Configuration path of the snapshot store plugin, or an empty string to use the default snapshot store plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The effective configuration for the snapshot store plugin.</returns>
         internal Config SnapshotStoreConfigFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
@@ -222,11 +233,11 @@ namespace Akka.Persistence
         /// <summary>
         /// Looks up the plugin config by plugin's ActorRef.
         /// </summary>
-        /// <param name="journalPluginActor">TBD</param>
+        /// <param name="journalPluginActor">Actor reference of a registered persistence plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="journalPluginActor"/> is unknown.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The configuration associated with the plugin actor.</returns>
         internal Config ConfigFor(IActorRef journalPluginActor)
         {
             var extension = _pluginExtensionIds.Values
@@ -243,11 +254,11 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="journalPluginId"/> as absolute path to the journal configuration entry.
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
-        /// <param name="journalPluginId">TBD</param>
+        /// <param name="journalPluginId">Configuration path of the journal plugin, or an empty string to use the default journal plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Actor reference of the journal plugin.</returns>
         [InternalStableApi]
         public IActorRef JournalFor(string journalPluginId)
         {
@@ -296,11 +307,11 @@ namespace Akka.Persistence
         /// When configured, uses <paramref name="snapshotPluginId"/> as absolute path to the snapshot store configuration entry.
         /// Configuration entry must contain few required fields, such as `class`. See `persistence.conf`.
         /// </summary>
-        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="snapshotPluginId">Configuration path of the snapshot store plugin, or an empty string to use the default snapshot store plugin.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Actor reference of the snapshot store plugin.</returns>
         [InternalStableApi]
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
@@ -331,46 +342,115 @@ namespace Akka.Persistence
             return system.SystemActorOf(RecoveryPermitter.Props(maxPermits), $"recoveryPermitter-{configPath}");
         }
 
-        private static IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig)
+        private IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig, Props? registeredProps)
         {
             var pluginActorName = configPath;
             var pluginTypeName = pluginConfig.GetString("class", null);
-            if (string.IsNullOrEmpty(pluginTypeName))
-                throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
-            var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
-            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
-            
+
+            // Switch on: HOCON `class` decides as always, and a registration fills in when there is none.
+            // Switch off: registration (by plugin id), built-in, guard (see AkkaFeatures).
+            Props pluginProps;
+            if (registeredProps is not null && (!AkkaFeatures.IsDynamicTypeLoadingSupported || string.IsNullOrEmpty(pluginTypeName)))
+            {
+                pluginProps = registeredProps;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(pluginTypeName))
+                    throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
+
+                if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    pluginProps = CreatePluginPropsByReflection(pluginTypeName, pluginConfig);
+                else if (BuiltInPersistencePlugins.TryCreatePluginProps(pluginTypeName, pluginConfig, out var builtInProps))
+                    pluginProps = builtInProps;
+                else
+                    throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                        $"{configPath}.class",
+                        pluginTypeName,
+                        "a plugin registered through Akka.Persistence.Hosting (WithJournal or WithSnapshot, with options derived from JournalOptions<TJournal> or SnapshotOptions<TSnapshotStore>)"));
+            }
+
             //todo wrap in backoffsupervisor ?
-            
+
             //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
             var configurator = SupervisorStrategyConfigurator.CreateConfigurator(
                 pluginConfig.GetString("supervisor-strategy"), $"{configPath}.supervisor-strategy");
-            
-            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
-            
+
+            var pluginActorProps = pluginProps.WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
+
             return system.SystemActorOf(pluginActorProps, pluginActorName);
         }
-        
-        private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
-        {
-            var pluginConfig = system.Settings.Config.GetConfig(configPath);
-            if (pluginConfig.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
 
-            return EventAdapters.Create(system, pluginConfig);
+        [RequiresUnreferencedCode("Loads a persistence plugin type named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static Props CreatePluginPropsByReflection(string pluginTypeName, Config pluginConfig)
+        {
+            var pluginType = Type.GetType(pluginTypeName, true);
+            object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
+            return new Props(pluginType, pluginActorArgs);
         }
 
-        private static PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
+        [RequiresUnreferencedCode("Loads a stash overflow configurator named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static IStashOverflowStrategyConfigurator CreateStashOverflowConfiguratorByReflection(string configuratorTypeName)
         {
-            if (string.IsNullOrEmpty(configPath) || !system.Settings.Config.HasPath(configPath))
+            var configuratorType = Type.GetType(configuratorTypeName);
+            if (configuratorType is null)
+                throw new ConfigurationException(
+                    $"Could not resolve internal-stash-overflow-strategy type [{configuratorTypeName}]. Ensure the type name is fully qualified.");
+            return (IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType);
+        }
+
+        private EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath, Config section, PersistencePluginDetails? registered, bool isJournal)
+        {
+            var adapters = isJournal ? _registry.EventAdaptersFor(configPath) : null;
+
+            // a registered plugin, or a journal with adapters added by id, may have no HOCON section at all
+            if (registered is null && (adapters is null || adapters.Count == 0) && section.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
+
+            return EventAdapters.Create(system, section, configPath, adapters);
+        }
+
+        private PluginHolder NewPluginHolder(ExtendedActorSystem system, string configPath, string fallbackPath)
+        {
+            // a registration is keyed by plugin id, and a journal is not a snapshot store
+            PersistencePluginDetails? registered = null;
+            if (!string.IsNullOrEmpty(configPath))
+            {
+                if (fallbackPath == JournalFallbackConfigPath && _registry.TryGet<JournalDetails>(configPath, out var journal))
+                    registered = journal;
+                else if (fallbackPath == SnapshotStoreFallbackConfigPath && _registry.TryGet<SnapshotStoreDetails>(configPath, out var snapshotStore))
+                    registered = snapshotStore;
+            }
+
+            var hasSection = !string.IsNullOrEmpty(configPath) && system.Settings.Config.HasPath(configPath);
+            if (!hasSection && registered is null)
             {
                 throw new ArgumentException($"Persistence config is missing plugin config path for: {configPath}");
             }
 
-            var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
-            var plugin = CreatePlugin(system, configPath, config);
-            var adapters = CreateAdapters(system, configPath);
+            // HOCON first, then the registration's default config, then the shared plugin fallback
+            var section = hasSection ? system.Settings.Config.GetConfig(configPath) : Config.Empty;
+            if (registered?.DefaultConfig is { } defaultConfig)
+                section = section.WithFallback(defaultConfig);
+
+            var config = section.WithFallback(system.Settings.Config.GetConfig(fallbackPath));
+
+            // With reflection off the registration decides, but a HOCON `class` that names another type is a conflict, and
+            // starting the registered type quietly would not be what the HOCON says. With reflection on, HOCON decides.
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported && registered is not null && registered.NamesAnotherType(config.GetString("class", null)))
+                throw new ConfigurationException(
+                    $"[{configPath}.class] names [{config.GetString("class", null)}], but Akka.Persistence.Hosting registered [{registered.TypeName}] for this plugin and " +
+                    "dynamic type loading is disabled. Remove the `class` override, or register options whose generic argument is the type it names.");
+
+            var registeredProps = registered switch
+            {
+                JournalDetails j => j.CreateProps(config),
+                SnapshotStoreDetails s => s.CreateProps(config),
+                _ => null
+            };
+            var plugin = CreatePlugin(system, configPath, config, registeredProps);
+            var adapters = CreateAdapters(system, configPath, section, registered, fallbackPath == JournalFallbackConfigPath);
             var recoveryPermitter = CreateRecoveryPermitter(system, configPath, config);
 
             return new PluginHolder(plugin, adapters, config, recoveryPermitter);
@@ -383,24 +463,24 @@ namespace Akka.Persistence
     public class Persistence : ExtensionIdProvider<PersistenceExtension>
     {
         /// <summary>
-        /// TBD
+        /// Persistence extension identifier used to access the persistence extension for an actor system.
         /// </summary>
         public static Persistence Instance { get; } = new();
 
         /// <summary>
-        /// TBD
+        /// Creates the persistence extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system that owns the extension.</param>
+        /// <returns>The persistence extension initialized for <paramref name="system"/>.</returns>
         public override PersistenceExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistenceExtension(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the default Akka.Persistence configuration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default persistence configuration embedded in the assembly.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<Persistence>("Akka.Persistence.persistence.conf");
@@ -413,19 +493,19 @@ namespace Akka.Persistence
     public sealed class PersistenceSettings : Settings
     {
         /// <summary>
-        /// TBD
+        /// Settings that control persistent view updates.
         /// </summary>
         public ViewSettings View { get; }
 
         /// <summary>
-        /// TBD
+        /// Configuration settings for persistent views.
         /// </summary>
         public sealed class ViewSettings
         {
             /// <summary>
-            /// TBD
+            /// Initializes view settings from configuration.
             /// </summary>
-            /// <param name="config">TBD</param>
+            /// <param name="config">Configuration containing the view settings.</param>
             public ViewSettings(Config config)
             {
                 AutoUpdate = config.GetBoolean("view.auto-update", false);
@@ -435,38 +515,38 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Indicates whether persistent views update automatically.
             /// </summary>
             public bool AutoUpdate { get; }
 
             /// <summary>
-            /// TBD
+            /// Interval between automatic persistent view updates.
             /// </summary>
             public TimeSpan AutoUpdateInterval { get; }
 
             /// <summary>
-            /// TBD
+            /// Maximum number of events replayed during an automatic view update; a negative configured value is treated as unlimited.
             /// </summary>
             public long AutoUpdateReplayMax { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// Settings for at-least-once message delivery.
         /// </summary>
         public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Configuration settings for at-least-once message delivery.
         /// </summary>
         public sealed class AtLeastOnceDeliverySettings
         {
             /// <summary>
-            /// TBD
+            /// Initializes at-least-once delivery settings.
             /// </summary>
-            /// <param name="redeliverInterval">TBD</param>
-            /// <param name="redeliveryBurstLimit">TBD</param>
-            /// <param name="warnAfterNumberOfUnconfirmedAttempts">TBD</param>
-            /// <param name="maxUnconfirmedMessages">TBD</param>
+            /// <param name="redeliverInterval">Interval between redelivery attempts.</param>
+            /// <param name="redeliveryBurstLimit">Maximum number of unconfirmed messages sent in one redelivery burst.</param>
+            /// <param name="warnAfterNumberOfUnconfirmedAttempts">Number of attempts after which an unconfirmed delivery warning is sent.</param>
+            /// <param name="maxUnconfirmedMessages">Maximum number of unconfirmed messages retained by the actor.</param>
             public AtLeastOnceDeliverySettings(TimeSpan redeliverInterval, int redeliveryBurstLimit,
                 int warnAfterNumberOfUnconfirmedAttempts, int maxUnconfirmedMessages)
             {
@@ -477,9 +557,9 @@ namespace Akka.Persistence
             }
 
             /// <summary>
-            /// TBD
+            /// Initializes at-least-once delivery settings from configuration.
             /// </summary>
-            /// <param name="config">TBD</param>
+            /// <param name="config">Configuration containing the at-least-once delivery settings.</param>
             public AtLeastOnceDeliverySettings(Config config)
             {
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval", null);
@@ -517,40 +597,40 @@ namespace Akka.Persistence
 
 
             /// <summary>
-            /// TBD
+            /// Returns a copy with a different redelivery interval.
             /// </summary>
-            /// <param name="redeliverInterval">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="redeliverInterval">Interval between redelivery attempts.</param>
+            /// <returns>A copy of these settings with the specified redelivery interval.</returns>
             public AtLeastOnceDeliverySettings WithRedeliverInterval(TimeSpan redeliverInterval)
             {
                 return Copy(redeliverInterval);
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a copy with a different maximum number of unconfirmed messages.
             /// </summary>
-            /// <param name="maxUnconfirmedMessages">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="maxUnconfirmedMessages">Maximum number of unconfirmed messages retained by the actor.</param>
+            /// <returns>A copy of these settings with the specified maximum.</returns>
             public AtLeastOnceDeliverySettings WithMaxUnconfirmedMessages(int maxUnconfirmedMessages)
             {
                 return Copy(null, null, null, maxUnconfirmedMessages);
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a copy with a different redelivery burst limit.
             /// </summary>
-            /// <param name="redeliveryBurstLimit">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="redeliveryBurstLimit">Maximum number of unconfirmed messages sent in one redelivery burst.</param>
+            /// <returns>A copy of these settings with the specified burst limit.</returns>
             public AtLeastOnceDeliverySettings WithRedeliveryBurstLimit(int redeliveryBurstLimit)
             {
                 return Copy(null, redeliveryBurstLimit);
             }
 
             /// <summary>
-            /// TBD
+            /// Returns a copy with a different warning threshold for unconfirmed deliveries.
             /// </summary>
-            /// <param name="unconfirmedAttemptsToWarn">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="unconfirmedAttemptsToWarn">Number of attempts after which an unconfirmed delivery warning is sent.</param>
+            /// <returns>A copy of these settings with the specified warning threshold.</returns>
             public AtLeastOnceDeliverySettings WithUnconfirmedAttemptsToWarn(int unconfirmedAttemptsToWarn)
             {
                 return Copy(null, null, unconfirmedAttemptsToWarn);
@@ -581,10 +661,10 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes persistence settings from the actor system and configuration.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="config">TBD</param>
+        /// <param name="system">Actor system whose settings are being created.</param>
+        /// <param name="config">Persistence configuration.</param>
         public PersistenceSettings(ActorSystem system, Config config)
             : base(system, config)
         {
@@ -595,7 +675,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Provides a recovery strategy for a persistent actor.
     /// </summary>
     public interface IPersistenceRecovery
     {
@@ -610,7 +690,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Provides an overflow strategy for a persistent actor internal stash.
     /// </summary>
     public interface IPersistenceStash : IWithUnboundedStash
     {
@@ -622,17 +702,17 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// Provides the configuration path and default configuration for a journal plugin.
     /// </summary>
     public interface IJournalPlugin
     {
         /// <summary>
-        /// TBD
+        /// Configuration path of the journal plugin.
         /// </summary>
         string JournalPath { get; }
 
         /// <summary>
-        /// TBD
+        /// Default configuration for the journal plugin.
         /// </summary>
         Config DefaultConfig { get; }
     }

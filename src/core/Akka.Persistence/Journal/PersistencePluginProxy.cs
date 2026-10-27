@@ -16,28 +16,28 @@ using Akka.Util.Internal;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Proxy that forwards persistence plugin requests to a journal or snapshot store on a local or remote actor system.
     /// </summary>
     public class PersistencePluginProxy : ActorBase, IWithUnboundedStash, IWithTimers
     {
         private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
         
         /// <summary>
-        /// TBD
+        /// Message that supplies the remote address of the target persistence plugin.
         /// </summary>
         public sealed class TargetLocation
         {
             /// <summary>
-            /// TBD
+            /// Initializes the remote target location.
             /// </summary>
-            /// <param name="address">TBD</param>
+            /// <param name="address">Address of the actor system hosting the target plugin.</param>
             public TargetLocation(Address address)
             {
                 Address = address;
             }
 
             /// <summary>
-            /// TBD
+            /// Address of the actor system hosting the target plugin.
             /// </summary>
             public Address Address { get; private set; }
         }
@@ -49,10 +49,10 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Sets the address used to locate the default journal and, when no custom snapshot plugin is configured, the default snapshot store.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="address">TBD</param>
+        /// <param name="system">Actor system containing the persistence plugin proxies.</param>
+        /// <param name="address">Address of the actor system hosting the target plugin.</param>
         public static void SetTargetLocation(ActorSystem system, Address address)
         {
             var persistence = Persistence.Instance.Apply(system);
@@ -62,9 +62,9 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the configured default journal and, when no custom snapshot plugin is configured, the default snapshot store.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">Actor system whose persistence plugins should be initialized.</param>
         public static void Start(ActorSystem system)
         {
             var persistence = Persistence.Instance.Apply(system);
@@ -125,14 +125,14 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Stash used to hold requests while the proxy locates its target plugin.
         /// </summary>
         public IStash Stash { get; set; } = null!;
 
         public ITimerScheduler Timers { get; set; } = null!;
 
         /// <summary>
-        /// TBD
+        /// Starts the target plugin locally or begins locating it at the configured remote address.
         /// </summary>
         protected override void PreStart()
         {
@@ -185,10 +185,10 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Handles target location and initialization timeout messages while the proxy is starting.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">Message received by the proxy.</param>
+        /// <returns>true because initialization handles or stashes every message received in this state.</returns>
         protected override bool Receive(object message)
         {
             return Init(message);
@@ -373,19 +373,19 @@ namespace Akka.Persistence.Journal
     public class PersistencePluginProxyExtension : ExtensionIdProvider<PersistencePluginProxyExtension>, IExtension
     {
         /// <summary>
-        /// TBD
+        /// Initializes the proxy extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">Actor system whose persistence plugins should be initialized.</param>
         public PersistencePluginProxyExtension(ActorSystem system)
         {
             PersistencePluginProxy.Start(system);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the persistence plugin proxy extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system that owns the extension.</param>
+        /// <returns>The initialized persistence plugin proxy extension.</returns>
         public override PersistencePluginProxyExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistencePluginProxyExtension(system);

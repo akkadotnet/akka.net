@@ -157,15 +157,32 @@ namespace Akka.DistributedData
         };
     }
 
+    /// <summary>
+    /// Specifies the read consistency level used by a <see cref="Get"/> request.
+    /// See <see cref="Replicator"/> for an overview of the available read consistency levels.
+    /// </summary>
     public interface IReadConsistency
     {
+        /// <summary>
+        /// Gets the maximum time to wait for the requested read consistency level to be reached.
+        /// </summary>
         TimeSpan Timeout { get; }
     }
 
+    /// <summary>
+    /// Reads a value from the local replica only. This is the default consistency level for
+    /// <see cref="DistributedData.GetAsync{T}(IKey{T},IReadConsistency,System.Threading.CancellationToken)"/>.
+    /// </summary>
     public sealed class ReadLocal : IReadConsistency
     {
+        /// <summary>
+        /// Gets the singleton local read consistency level.
+        /// </summary>
         public static readonly ReadLocal Instance = new();
 
+        /// <summary>
+        /// Gets the timeout for this consistency level, which is always zero because it reads only local state.
+        /// </summary>
         public TimeSpan Timeout => TimeSpan.Zero;
 
         private ReadLocal() { }
@@ -179,12 +196,27 @@ namespace Akka.DistributedData
         public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
     }
 
+    /// <summary>
+    /// Reads and merges values from the requested number of replicas in total, including the local replica.
+    /// See <see cref="Replicator"/> for the read consistency overview.
+    /// </summary>
     public sealed class ReadFrom : IReadConsistency, IEquatable<ReadFrom>
     {
+        /// <summary>
+        /// Gets the number of replicas whose values are included in the read, counting the local replica.
+        /// </summary>
         public int N { get; }
 
+        /// <summary>
+        /// Gets the maximum time to wait for the requested replica responses.
+        /// </summary>
         public TimeSpan Timeout { get; }
 
+        /// <summary>
+        /// Initializes a read that waits for values from <paramref name="n"/> replicas, including the local replica.
+        /// </summary>
+        /// <param name="n">The number of replicas whose values are included in the read, counting the local replica.</param>
+        /// <param name="timeout">The maximum time to wait for the requested replica responses.</param>
         public ReadFrom(int n, TimeSpan timeout)
         {
             N = n;
@@ -215,11 +247,29 @@ namespace Akka.DistributedData
         public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
     }
 
+    /// <summary>
+    /// Reads and merges values from a majority of replicas. The required response count is the larger of the
+    /// majority count and <see cref="MinCapacity"/>, capped at the number of replicas selected for the request.
+    /// See <see cref="Replicator"/> for the read consistency overview.
+    /// </summary>
     public sealed class ReadMajority : IReadConsistency, IEquatable<ReadMajority>
     {
+        /// <summary>
+        /// Gets the maximum time to wait for the required replica responses.
+        /// </summary>
         public TimeSpan Timeout { get; }
+
+        /// <summary>
+        /// Gets the minimum response count used in the calculation. The final response count is capped at the
+        /// number of replicas selected for the request.
+        /// </summary>
         public int MinCapacity { get; }
 
+        /// <summary>
+        /// Initializes a majority read.
+        /// </summary>
+        /// <param name="timeout">The maximum time to wait for the required replica responses.</param>
+        /// <param name="minCapacity">The minimum response count used in the calculation; the final response count is capped at the number of replicas selected for the request.</param>
         public ReadMajority(TimeSpan timeout, int minCapacity = 0)
         {
             Timeout = timeout;
@@ -254,16 +304,35 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// <see cref="ReadMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
-    /// all nodes. Exiting nodes are excluded using `ReadMajorityPlus` because those are typically
-    /// about to be removed and will not be able to respond.
+    /// Adjusts the majority response count by <see cref="Additional"/>. The greater of that adjusted count and
+    /// <see cref="MinCapacity"/> is capped at the number of replicas selected for the request. Exiting nodes
+    /// are excluded from this read, since they may not be able to respond.
     /// </summary>
     public sealed class ReadMajorityPlus : IReadConsistency, IEquatable<ReadMajorityPlus>
     {
+        /// <summary>
+        /// Gets the maximum time to wait for the required replica responses.
+        /// </summary>
         public TimeSpan Timeout { get; }
+
+        /// <summary>
+        /// Gets the adjustment applied to the majority response count before <see cref="MinCapacity"/> is applied
+        /// and the result is capped at the number of replicas selected for the request.
+        /// </summary>
         public int Additional { get; }
+
+        /// <summary>
+        /// Gets the minimum response count used in the calculation. The final response count is capped at the
+        /// number of replicas selected for the request.
+        /// </summary>
         public int MinCapacity { get; }
 
+        /// <summary>
+        /// Initializes a majority read with an adjusted response count.
+        /// </summary>
+        /// <param name="timeout">The maximum time to wait for the required replica responses.</param>
+        /// <param name="additional">The adjustment to the majority response count.</param>
+        /// <param name="minCapacity">The minimum response count used in the calculation; the final response count is capped at the number of replicas selected for the request.</param>
         public ReadMajorityPlus(TimeSpan timeout, int additional, int minCapacity = 0)
         {
             Timeout = timeout;
@@ -302,10 +371,21 @@ namespace Akka.DistributedData
         }
     }
 
+    /// <summary>
+    /// Reads and merges values from every replica selected for the request. Exiting nodes are excluded.
+    /// See <see cref="Replicator"/> for the read consistency overview.
+    /// </summary>
     public sealed class ReadAll : IReadConsistency, IEquatable<ReadAll>
     {
+        /// <summary>
+        /// Gets the maximum time to wait for responses from all replicas selected for the request.
+        /// </summary>
         public TimeSpan Timeout { get; }
 
+        /// <summary>
+        /// Initializes a read that waits for responses from all replicas selected for the request.
+        /// </summary>
+        /// <param name="timeout">The maximum time to wait for responses from all replicas selected for the request.</param>
         public ReadAll(TimeSpan timeout)
         {
             Timeout = timeout;

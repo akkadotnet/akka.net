@@ -137,30 +137,20 @@ namespace Akka.Persistence.Journal
         /// events it should reject such writes with a <see cref="NotSupportedException"/>
         /// describing the issue. This limitation should also be documented by the journal plugin.
         /// 
-        /// If there are failures when storing any of the messages in the batch the returned
-        /// <see cref="Task"/> must be completed with failure. The <see cref="Task"/> must only be completed with
-        /// success when all messages in the batch have been confirmed to be stored successfully,
-        /// i.e. they will be readable, and visible, in a subsequent replay. If there is
-        /// uncertainty about if the messages were stored or not the <see cref="Task"/> must be completed
-        /// with failure.
-        /// 
-        /// Data store connection problems must be signaled by completing the <see cref="Task"/> with
-        /// failure.
-        /// 
-        /// The journal can also signal that it rejects individual messages (<see cref="AtomicWrite"/>) by
-        /// the returned <see cref="Task"/>. It is possible but not mandatory to reduce
-        /// number of allocations by returning null for the happy path,
-        /// i.e. when no messages are rejected. Otherwise the returned list must have as many elements
-        /// as the input <paramref name="messages"/>. Each result element signals if the corresponding
-        /// <see cref="AtomicWrite"/> is rejected or not, with an exception describing the problem. Rejecting
-        /// a message means it was not stored, i.e. it must not be included in a later replay.
-        /// Rejecting a message is typically done before attempting to store it, e.g. because of
-        /// serialization error.
-        /// 
-        /// Data store connection problems must not be signaled as rejections.
-        /// 
-        /// It is possible but not mandatory to reduce number of allocations by returning
-        /// null for the happy path, i.e. when no messages are rejected.
+        /// The returned <see cref="Task"/> has separate outcomes for batch-level failures and
+        /// individual <see cref="AtomicWrite"/> rejections. When the task completes successfully,
+        /// every input <see cref="AtomicWrite"/> must have a known outcome. Return <see langword="null"/>
+        /// when all writes were stored, or a result list with exactly one entry per input item in
+        /// <paramref name="messages"/> and in the same order. A <see langword="null"/> entry means that
+        /// the corresponding <see cref="AtomicWrite"/> was stored and will be visible in a later
+        /// replay. An exception entry rejects that entire <see cref="AtomicWrite"/>; none of its
+        /// persistent messages may appear in a later replay. A rejection is a known per-write
+        /// outcome and does not by itself require the task to fail. Other atomic writes in the same
+        /// batch may still be stored, because the batch as a whole is not atomic.
+        ///
+        /// Fault the task for a batch-level storage failure or when the outcome of a write is
+        /// uncertain. Data store connection problems must be signaled this way, not as per-write
+        /// rejections.
         /// 
         /// Calls to this method are serialized by the enclosing journal actor. If you spawn
         /// work in asynchronous tasks it is alright that they complete the futures in any order,

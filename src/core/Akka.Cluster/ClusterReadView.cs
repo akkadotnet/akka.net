@@ -23,7 +23,7 @@ namespace Akka.Cluster
     internal class ClusterReadView : IDisposable
     {
         /// <summary>
-        /// TBD
+        /// The latest cluster state received by this read view.
         /// </summary>
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 
@@ -33,13 +33,13 @@ namespace Akka.Cluster
         internal volatile ClusterEvent.CurrentClusterState _state;
 
         /// <summary>
-        /// TBD
+        /// The latest reachability table received by this read view.
         /// </summary>
         internal Reachability Reachability { get { return _reachability; } }
 
 
         /// <summary>
-        /// TBD
+        /// The reachability table updated from cluster reachability events.
         /// </summary>
         internal volatile Reachability _reachability;
 
@@ -56,7 +56,7 @@ namespace Akka.Cluster
         readonly Address _selfAddress;
 
         /// <summary>
-        /// TBD
+        /// The address of the local cluster node.
         /// </summary>
         public Address SelfAddress
         {
@@ -68,9 +68,9 @@ namespace Akka.Cluster
         private readonly Cluster _cluster;
 
         /// <summary>
-        /// TBD
+        /// Creates a read view and subscribes its listener actor to cluster domain events.
         /// </summary>
-        /// <param name="cluster">TBD</param>
+        /// <param name="cluster">The cluster whose events and local identity this view observes.</param>
         public ClusterReadView(Cluster cluster)
         {
             _cluster = cluster;
@@ -185,7 +185,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The current member entry for this node, or a removed-status tombstone if it is absent from the latest state.
         /// </summary>
         public Member Self
         {
@@ -303,4 +303,3 @@ namespace Akka.Cluster
         }
     }
 }
-

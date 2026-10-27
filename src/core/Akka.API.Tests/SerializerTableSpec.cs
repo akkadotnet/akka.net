@@ -45,7 +45,9 @@ namespace Akka.API.Tests
     {
         private const string SwitchName = "Akka.DynamicTypeLoading";
 
-        private sealed record TableRow(string Module, string Alias, Type Serializer, int Id, IReadOnlyCollection<Type> BoundTypes);
+        /// <param name="Supersedes">The legacy alias this V2 row takes over when the Serialization V2 switch is on; null otherwise.</param>
+        private sealed record TableRow(string Module, string Alias, Type Serializer, int Id, IReadOnlyCollection<Type> BoundTypes,
+            string Supersedes = null);
 
         private static string TypeName(Type type) => $"{type.FullName}, {type.Assembly.GetName().Name}";
 
@@ -64,7 +66,7 @@ namespace Akka.API.Tests
                     // a serializer that read its id from HOCON would throw here, since the system has none of the module rows
                     foreach (var details in module.Create((ExtendedActorSystem)system))
                         rows.Add(new TableRow(assembly, details.Alias, details.Serializer.GetType(), details.Serializer.Identifier,
-                            details.UseFor.ToList()));
+                            details.UseFor.ToList(), module.Supersedes.TryGetValue(details.Alias, out var legacy) ? legacy : null));
                 }
 
                 return rows;
@@ -103,7 +105,11 @@ namespace Akka.API.Tests
                 foreach (var row in module.OrderBy(r => r.Alias, StringComparer.Ordinal))
                 {
                     text.Append("  ").Append(row.Alias).Append(": ").Append(TypeName(row.Serializer))
-                        .Append(" (id ").Append(row.Id).Append(")\n");
+                        .Append(" (id ").Append(row.Id).Append(')');
+                    // only a V2 row declares one, so tables without V2 rows render exactly as before
+                    if (row.Supersedes is not null)
+                        text.Append(" supersedes ").Append(row.Supersedes);
+                    text.Append('\n');
                     foreach (var name in row.BoundTypes.Select(TypeName).OrderBy(n => n, StringComparer.Ordinal))
                         text.Append("    ").Append(name).Append('\n');
                 }
@@ -197,6 +203,70 @@ namespace Akka.API.Tests
                             Assert.True(row.Serializer == serialization.FindSerializerForType(type).GetType(),
                                 $"{type.FullName} ({row.Module}) resolved to {serialization.FindSerializerForType(type).GetType().FullName}, " +
                                 $"not {row.Serializer.FullName}");
+                    }
+                }
+                finally
+                {
+                    AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
+                }
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        /// <summary>
+        /// A V2 row that takes part in the Serialization V2 switch follows the epic's rules: it ships read-only, its
+        /// alias is the legacy alias plus <c>-v2</c>, and its id is the legacy id plus 40, inside the reserved 40-79 block.
+        /// No module declares one yet, so this guards the first one.
+        /// </summary>
+        [Fact(DisplayName = "Should_pair_each_V2_row_with_its_legacy_row_When_a_module_declares_a_takeover")]
+        public async Task Should_pair_each_V2_row_with_its_legacy_row_When_a_module_declares_a_takeover()
+        {
+            var rows = await BuildModuleRowsAsync();
+
+            foreach (var v2 in rows.Where(r => r.Supersedes is not null))
+            {
+                var legacy = rows.SingleOrDefault(r => r.Module == v2.Module && r.Alias == v2.Supersedes);
+                Assert.True(legacy is not null, $"[{v2.Alias}] supersedes [{v2.Supersedes}], which is not a row of {v2.Module}");
+                Assert.True(v2.BoundTypes.Count == 0, $"[{v2.Alias}] is a V2 row and must ship read-only (no bound types)");
+                Assert.Equal(legacy.Alias + "-v2", v2.Alias);
+                Assert.Equal(legacy.Id + 40, v2.Id);
+                Assert.InRange(v2.Id, 40, 79);
+            }
+        }
+
+        /// <summary>
+        /// With the switch on, every type a superseded legacy row binds resolves to the V2 row that supersedes it, and
+        /// every other binding is unchanged. Both ids still resolve, since reads never depend on the switch.
+        /// </summary>
+        [Theory(DisplayName = "Should_resolve_every_table_entry_When_the_serialization_v2_switch_is_on")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_resolve_every_table_entry_When_the_serialization_v2_switch_is_on(bool dynamicTypeLoading)
+        {
+            var rows = await BuildModuleRowsAsync();
+            var supersededBy = rows.Where(r => r.Supersedes is not null).ToDictionary(r => (r.Module, r.Supersedes));
+
+            var system = ActorSystem.Create("serializer-table-v2-switch", "akka.actor.serialization-v2 = on");
+            try
+            {
+                var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
+                AppContext.SetSwitch(SwitchName, dynamicTypeLoading);
+                try
+                {
+                    var serialization = new Akka.Serialization.Serialization((ExtendedActorSystem)system);
+
+                    foreach (var row in rows)
+                    {
+                        Assert.IsType(row.Serializer, serialization.GetSerializerById(row.Id));
+
+                        var expected = supersededBy.TryGetValue((row.Module, row.Alias), out var v2) ? v2.Serializer : row.Serializer;
+                        foreach (var type in row.BoundTypes)
+                            Assert.True(expected == serialization.FindSerializerForType(type).GetType(),
+                                $"{type.FullName} ({row.Module}) resolved to {serialization.FindSerializerForType(type).GetType().FullName}, " +
+                                $"not {expected.FullName}");
                     }
                 }
                 finally

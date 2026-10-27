@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -52,6 +53,12 @@ public class GeneratedMessagePackSerializerBenchmarks
     private string _envelopeManifest = null!;
     private string _nestedEnvelopeManifest = null!;
     private string _jsonManifest = null!;
+    private OrderBenchmarkSerializer _collectionSerializer = null!;
+    private BenchmarkReadOnlyList _collectionList = null!;
+    private BenchmarkReadOnlyList _collectionArray = null!;
+    private ArrayBufferWriter<byte> _collectionWriter = null!;
+    private PooledPayloadWriter _pooledCollectionWriter = null!;
+    private OpaqueBufferWriter _opaqueCollectionWriter = null!;
 
     [GlobalSetup]
     public void Setup()
@@ -117,6 +124,39 @@ public class GeneratedMessagePackSerializerBenchmarks
         if (_envelopeSerializer is not EnvelopeBenchmarkSerializer)
             throw new InvalidOperationException($"Expected generated envelope serializer, got [{_envelopeSerializer.GetType()}].");
 
+        _collectionSerializer = (OrderBenchmarkSerializer)_generatedSerializer;
+        var readings = new BenchmarkCollectionReading[8];
+        for (var i = 0; i < readings.Length; i++)
+            readings[i] = new BenchmarkCollectionReading($"sensor-{i}", i + 0.5, 1_700_000_000_000L + i);
+        _collectionList = new BenchmarkReadOnlyList(new List<BenchmarkCollectionReading>(readings));
+        _collectionArray = new BenchmarkReadOnlyList(readings);
+        _collectionWriter = new ArrayBufferWriter<byte>(4096);
+        _pooledCollectionWriter = new PooledPayloadWriter(4096);
+        _opaqueCollectionWriter = new OpaqueBufferWriter(_collectionWriter);
+        var listBytes = _collectionSerializer.ToBinary(_collectionList);
+        var arrayBytes = _collectionSerializer.ToBinary(_collectionArray);
+        if (!listBytes.AsSpan().SequenceEqual(arrayBytes)
+            || _collectionSerializer.SizeHint(_collectionList) != listBytes.Length
+            || _collectionSerializer.SizeHint(_collectionArray) != arrayBytes.Length)
+            throw new InvalidOperationException("Collection benchmark representations must have identical bytes and exact size hints.");
+
+        // Artery appends payload bytes after a header: the reported count must exclude that prefix.
+        _pooledCollectionWriter.GetSpan(1)[0] = 0xa5;
+        _pooledCollectionWriter.Advance(1);
+        var written = _collectionSerializer.Serialize(_collectionList, _pooledCollectionWriter);
+        if (written != listBytes.Length || _pooledCollectionWriter.WrittenCount != listBytes.Length + 1
+            || _pooledCollectionWriter.WrittenSpan[0] != 0xa5 || !_pooledCollectionWriter.WrittenSpan.Slice(1).SequenceEqual(listBytes))
+            throw new InvalidOperationException("Pooled writer must preserve its prefix, payload bytes and relative count.");
+        _pooledCollectionWriter.Reset();
+
+        _collectionWriter.GetSpan(1)[0] = 0xa5;
+        _collectionWriter.Advance(1);
+        var opaqueWritten = _collectionSerializer.Serialize(_collectionList, _opaqueCollectionWriter);
+        if (opaqueWritten != listBytes.Length || _collectionWriter.WrittenCount != listBytes.Length + 1
+            || _collectionWriter.WrittenSpan[0] != 0xa5 || !_collectionWriter.WrittenSpan.Slice(1).SequenceEqual(listBytes))
+            throw new InvalidOperationException("Opaque writer must preserve its prefix, payload bytes and relative count.");
+        _collectionWriter.ResetWrittenCount();
+
         Console.WriteLine($"Generated MessagePack payload size: {_generatedBytes.Length} bytes");
         Console.WriteLine($"Generated envelope with generated payload size: {_generatedPayloadEnvelopeBytes.Length} bytes");
         Console.WriteLine($"Generated envelope with custom payload size: {_customPayloadEnvelopeBytes.Length} bytes");
@@ -129,6 +169,7 @@ public class GeneratedMessagePackSerializerBenchmarks
     [GlobalCleanup]
     public async Task Cleanup()
     {
+        _pooledCollectionWriter.Dispose();
         await Task.WhenAll(_generatedSystem.Terminate(), _jsonSystem.Terminate());
     }
 
@@ -136,6 +177,58 @@ public class GeneratedMessagePackSerializerBenchmarks
     public byte[] Generated_MessagePack_serialize()
     {
         return _generatedSystem.Serialization.Serialize(_message);
+    }
+
+    // The same eight nested readings are held behind IReadOnlyList in both cases. Construction
+    // and writer capacity are outside measurement; these isolate generated traversal allocations.
+    [Benchmark]
+    public int ReadOnlyList_ListWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionList, _collectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_ListSizeHint() => _collectionSerializer.SizeHint(_collectionList);
+
+    [Benchmark]
+    public int ReadOnlyList_ArrayWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionArray, _collectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_ArraySizeHint() => _collectionSerializer.SizeHint(_collectionArray);
+
+    // Reuse both known writer types so allocation results isolate the counting wrapper.
+    [Benchmark]
+    public int ReadOnlyList_PooledWrite()
+    {
+        _pooledCollectionWriter.Reset();
+        return _collectionSerializer.Serialize(_collectionList, _pooledCollectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_OpaqueWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionList, _opaqueCollectionWriter);
+    }
+
+    // Allocate this adapter once during setup. Its runtime type hides the reusable array writer
+    // so serialization exercises the IBufferWriter fallback without per-invocation adapter churn.
+    private sealed class OpaqueBufferWriter : IBufferWriter<byte>
+    {
+        private readonly IBufferWriter<byte> _inner;
+
+        public OpaqueBufferWriter(IBufferWriter<byte> inner) => _inner = inner;
+
+        public void Advance(int count) => _inner.Advance(count);
+
+        public Memory<byte> GetMemory(int sizeHint = 0) => _inner.GetMemory(sizeHint);
+
+        public Span<byte> GetSpan(int sizeHint = 0) => _inner.GetSpan(sizeHint);
     }
 
     [Benchmark]
@@ -333,6 +426,16 @@ public sealed record SubmitOrder(
     [property: AkkaField(5)] DateTimeOffset CreatedAt,
     [property: AkkaField(6)] OrderPriority Priority,
     [property: AkkaField(7)] IActorRef? ReplyTo) : IOrderBenchmarkProtocol;
+
+[AkkaSerializable(Manifest = "benchmark-readonly-list-v1")]
+public sealed record BenchmarkReadOnlyList(
+    [property: AkkaField(1)] IReadOnlyList<BenchmarkCollectionReading> Readings) : IOrderBenchmarkProtocol;
+
+[AkkaSerializable]
+public sealed record BenchmarkCollectionReading(
+    [property: AkkaField(1)] string SensorId,
+    [property: AkkaField(2)] double Value,
+    [property: AkkaField(3)] long TimestampTicks);
 
 [AkkaSerializable(Manifest = "benchmark-envelope-v1")]
 public sealed record BenchmarkEnvelope(

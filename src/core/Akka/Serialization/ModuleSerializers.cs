@@ -27,6 +27,15 @@ namespace Akka.Serialization
     internal abstract class ModuleSerializers
     {
         public abstract ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system);
+
+        /// <summary>
+        /// The legacy row each of this module's V2 rows supersedes, as V2 alias to legacy alias - for example
+        /// <c>["reliable-delivery-v2"] = "reliable-delivery"</c>. Both rows must come from <see cref="Create"/>, and the
+        /// V2 row ships read-only (empty <see cref="SerializerDetails.UseFor"/>). When the Serialization V2 switch
+        /// (<c>akka.actor.serialization-v2</c>) is on, the V2 row takes over the
+        /// legacy row's default bindings; when it is off, nothing moves. Both ids stay registered either way.
+        /// </summary>
+        public virtual ImmutableDictionary<string, string> Supersedes => ImmutableDictionary<string, string>.Empty;
     }
 
     /// <summary>
@@ -37,10 +46,17 @@ namespace Akka.Serialization
         private readonly Dictionary<string, (SerializerDetails Details, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
+        // V2 row -> the legacy row it supersedes, and the reverse, both by alias
+        private readonly Dictionary<string, SerializerDetails> _supersededBy = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, SerializerDetails> _supersedes = new(StringComparer.Ordinal);
+
         /// <summary>Every row <see cref="ModuleSerializers.Create"/> returned, for registering the module's defaults.</summary>
         internal ImmutableHashSet<SerializerDetails> Details { get; }
 
-        private LoadedModule(ImmutableHashSet<SerializerDetails> details)
+        /// <summary>Each V2 row with the legacy row it supersedes, as <see cref="ModuleSerializers.Supersedes"/> declared them.</summary>
+        internal List<(SerializerDetails V2, SerializerDetails Legacy)> Takeovers { get; } = new();
+
+        private LoadedModule(ImmutableHashSet<SerializerDetails> details, ImmutableDictionary<string, string> supersedes, string moduleName)
         {
             Details = details;
             foreach (var entry in details)
@@ -50,6 +66,46 @@ namespace Akka.Serialization
                 foreach (var type in entry.UseFor)
                     _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
             }
+
+            if (supersedes.IsEmpty)
+                return;
+
+            var byAlias = new Dictionary<string, SerializerDetails>(StringComparer.Ordinal);
+            foreach (var entry in details)
+                byAlias[entry.Alias] = entry;
+
+            // a broken declaration is a first-party bug: fail every system that loads the module, so no test run misses it
+            foreach (var kv in supersedes)
+            {
+                if (!byAlias.TryGetValue(kv.Key, out var v2) || !byAlias.TryGetValue(kv.Value, out var legacy))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but its table has no row for one of them.");
+                // no chains, no self-reference, and one V2 row per legacy row
+                if (supersedes.ContainsKey(kv.Value) || _supersededBy.ContainsKey(kv.Value))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but [{kv.Value}] is a V2 row itself or is already superseded.");
+                if (!v2.UseFor.IsEmpty)
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but [{kv.Key}] binds types of its own; a V2 row ships read-only.");
+
+                _supersedes[kv.Key] = legacy;
+                _supersededBy[kv.Value] = v2;
+                Takeovers.Add((v2, legacy));
+            }
+        }
+
+        /// <summary>
+        /// The types <paramref name="row"/> binds as a module default. With <paramref name="serializationV2"/> off, that is
+        /// its own <see cref="SerializerDetails.UseFor"/>. With it on, a superseded legacy row binds nothing, and the V2
+        /// row that supersedes it binds the legacy row's types.
+        /// </summary>
+        internal ImmutableHashSet<Type> DefaultBindings(SerializerDetails row, bool serializationV2)
+        {
+            if (!serializationV2)
+                return row.UseFor;
+            if (_supersededBy.ContainsKey(row.Alias))
+                return ImmutableHashSet<Type>.Empty;
+            return _supersedes.TryGetValue(row.Alias, out var legacy) ? row.UseFor.Union(legacy.UseFor) : row.UseFor;
         }
 
         /// <summary>
@@ -62,7 +118,7 @@ namespace Akka.Serialization
             try
             {
                 skewError = null;
-                return new LoadedModule(module.Create(system));
+                return new LoadedModule(module.Create(system), module.Supersedes, module.GetType().FullName ?? module.GetType().Name);
             }
             catch (Exception e) when (ModuleSerializerTable.IsVersionSkew(e))
             {

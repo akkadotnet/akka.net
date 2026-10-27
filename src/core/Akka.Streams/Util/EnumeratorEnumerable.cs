@@ -12,9 +12,9 @@ using System.Collections.Generic;
 namespace Akka.Streams.Util
 {
     /// <summary>
-    /// TBD
+    /// Enumerable that creates an enumerator from a supplied factory.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Type of elements produced by the enumerator.</typeparam>
     public class EnumeratorEnumerable<T> : IEnumerable<T>
     {
         private readonly Func<IEnumerator<T>> _enumeratorFactory;
@@ -35,13 +35,13 @@ namespace Akka.Streams.Util
     }
 
     /// <summary>
-    /// TBD
+    /// Enumerable backed by one enumerator that restarts with a factory-created sequence when the current sequence ends.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">Type of elements produced by each enumerator.</typeparam>
     public class ContinuallyEnumerable<T> : IEnumerable<T>
     {
         /// <summary>
-        /// TBD
+        /// Enumerator that starts a new factory-created sequence when the current sequence ends.
         /// </summary>
         public sealed class ContinuallyEnumerator : IEnumerator<T>
         {

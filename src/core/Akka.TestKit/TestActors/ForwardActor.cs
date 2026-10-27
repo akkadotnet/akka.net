@@ -16,7 +16,7 @@ namespace Akka.TestKit.TestActors;
 public class ForwardActor : ReceiveActor
 {
     /// <summary>
-    /// TBD
+    /// Creates an actor that forwards every received message to a target actor.
     /// </summary>
     /// <param name="target">ActorRef to forward messages to</param>
     public ForwardActor(IActorRef target)
@@ -28,6 +28,6 @@ public class ForwardActor : ReceiveActor
     /// Returns a <see cref="Props(Akka.Actor.IActorRef)"/> object that can be used to create an <see cref="ForwardActor"/>.
     /// </summary>
     /// <param name="target">ActorRef to forward messages to</param>
-    /// <returns>TBD</returns>
+    /// <returns>Props for creating the forwarding actor.</returns>
     public static Props Props(IActorRef target) => Actor.Props.Create(() => new ForwardActor(target));
 }

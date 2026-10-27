@@ -599,6 +599,9 @@ public sealed partial class AkkaSerializerGenerator
                     field.Mapping.TypeFullName.Length > 0 &&
                     formattersByTarget.ContainsKey(field.Mapping.Key))
                     return true;
+
+                if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                    return true;
             }
 
             return false;
@@ -641,6 +644,14 @@ public sealed partial class AkkaSerializerGenerator
                 {
                     resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.Key), formatter));
                 }
+                else if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                {
+                    // A formatter serves a collection's element, dictionary key, and dictionary value
+                    // exactly as it serves a field: the position changes where the formatter is called,
+                    // never what it writes, so the wire form is the array/map the collection already
+                    // is, with each element exactly what the formatter writes at field position.
+                    resolvedFields.Add(field.WithMapping(ResolveCollectionFormatters(field.Mapping, formattersByTarget)));
+                }
                 else
                 {
                     resolvedFields.Add(field);
@@ -651,6 +662,69 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return builder?.ToImmutable() ?? allMessagesByType;
+    }
+
+    /// <summary>
+    /// Whether a registered formatter can serve this mapping when it sits in an element, key, or value
+    /// position -- the same rule <see cref="ResolveMessages"/> applies at field position: the mapping
+    /// names a type (<see cref="TypeMapping.TypeFullName"/>), and is not the object-typed envelope
+    /// boundary, which no formatter may claim.
+    /// </summary>
+    private static bool CanBeFormatted(TypeMapping mapping)
+        => mapping.Kind != FieldKind.EnvelopePayload && mapping.TypeFullName.Length > 0;
+
+    /// <summary>
+    /// Whether any element, dictionary key, or dictionary value anywhere inside this collection mapping
+    /// (including nested collections) has a registered formatter. Cheap and allocation-free: it lets
+    /// <see cref="ResolveMessages"/> skip every collection field in the common no-formatter case.
+    /// </summary>
+    private static bool CollectionNeedsFormatter(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    {
+        foreach (var child in collection.TypeArguments)
+        {
+            if (CanBeFormatted(child) && formattersByTarget.ContainsKey(child.Key))
+                return true;
+
+            if (IsCollectionKind(child.Kind) && CollectionNeedsFormatter(child, formattersByTarget))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Rebuilds a collection mapping with every element, key, and value that has a registered formatter
+    /// swapped for a <see cref="FieldKind.Formatted"/> mapping carrying that formatter, recursing into
+    /// nested collections. The replacement keeps the position's declared type name and nullability (the
+    /// read temporaries and the nil handling depend on them) and takes its value-type-ness from the
+    /// formatter's target, mirroring <see cref="FormatterInfo.IsTargetValueType"/> at field position.
+    /// </summary>
+    private static TypeMapping ResolveCollectionFormatters(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    {
+        var resolved = ImmutableArray.CreateBuilder<TypeMapping>(collection.TypeArguments.Length);
+        foreach (var child in collection.TypeArguments)
+        {
+            if (CanBeFormatted(child) && formattersByTarget.TryGetValue(child.Key, out var formatter))
+            {
+                resolved.Add(new TypeMapping(
+                    FieldKind.Formatted,
+                    child.Key,
+                    isValueType: formatter.IsTargetValueType,
+                    declaredTypeName: child.DeclaredTypeName,
+                    isNullable: child.IsNullable,
+                    formatter: formatter));
+            }
+            else if (IsCollectionKind(child.Kind))
+            {
+                resolved.Add(ResolveCollectionFormatters(child, formattersByTarget));
+            }
+            else
+            {
+                resolved.Add(child);
+            }
+        }
+
+        return collection.WithTypeArguments(resolved.ToImmutable());
     }
 
     /// <summary>
@@ -701,7 +775,8 @@ public sealed partial class AkkaSerializerGenerator
             w.BlankLine();
             GenerateRegistration(w, serializer);
             GenerateManifest(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
-            GenerateSerialize(w);
+            GenerateSerialize(w, usedFormatters.IsEmpty && !resolved.ReachableMessages
+                .Any(message => message.Fields.Any(field => ContainsEnvelopePayload(field.Mapping))));
             GenerateSerializeDirect(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
             GenerateDeserialize(w, resolved.TopLevelMessages);
             GenerateSizeHint(w, resolved.TopLevelMessages);
@@ -753,6 +828,9 @@ public sealed partial class AkkaSerializerGenerator
             {
                 if (field.Mapping.Kind == FieldKind.Formatted && field.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
                     used.Add(formatter);
+
+                if (IsCollectionKind(field.Mapping.Kind))
+                    CollectCollectionFormatters(field.Mapping, seen, used);
             }
         }
 
@@ -760,6 +838,17 @@ public sealed partial class AkkaSerializerGenerator
             return ImmutableArray<FormatterInfo>.Empty;
 
         return used.ToImmutable().Sort((a, b) => string.CompareOrdinal(a.TargetTypeFullName, b.TargetTypeFullName));
+    }
+
+    private static void CollectCollectionFormatters(TypeMapping collection, HashSet<string> seen, ImmutableArray<FormatterInfo>.Builder used)
+    {
+        foreach (var child in collection.TypeArguments)
+        {
+            if (child.Kind == FieldKind.Formatted && child.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
+                used.Add(formatter);
+            else if (IsCollectionKind(child.Kind))
+                CollectCollectionFormatters(child, seen, used);
+        }
     }
 
     private static void GenerateFormatterFields(CodeWriter w, ImmutableArray<FormatterInfo> usedFormatters)
@@ -859,11 +948,44 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSerialize(CodeWriter w)
+    private static bool ContainsEnvelopePayload(TypeMapping mapping)
+        => mapping.Kind == FieldKind.EnvelopePayload || mapping.TypeArguments.Any(ContainsEnvelopePayload);
+
+    private static void GenerateSerialize(CodeWriter w, bool useWriterCounts)
     {
         w.Line("public override int Serialize(object obj, IBufferWriter<byte> writer)");
         using (w.Block())
         {
+            // Formatter and envelope callbacks can commit via another alias after Flush;
+            // preserve the original per-wrapper accounting for those serializers.
+            if (useWriterCounts)
+            {
+                // These sealed writers already count successful advances. Read the starting count
+                // after MessagePack acquires its initial buffer, preserving writer-failure ordering.
+                w.Line("if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)");
+                using (w.Block())
+                {
+                    w.Line("var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);");
+                    w.Line("var initialCount = pooledWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref pooledMessagePackWriter);");
+                    w.Line("pooledMessagePackWriter.Flush();");
+                    w.Line("return checked(pooledWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+                w.Line("if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)");
+                using (w.Block())
+                {
+                    w.Line("var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);");
+                    w.Line("var initialCount = arrayWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref arrayMessagePackWriter);");
+                    w.Line("arrayMessagePackWriter.Flush();");
+                    w.Line("return checked(arrayWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+            }
+
             w.Line("var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);");
             w.Line("var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);");
             w.Line("SerializeMessagePack(obj, ref messagePackWriter);");
@@ -1125,6 +1247,27 @@ public sealed partial class AkkaSerializerGenerator
                 break;
             case FieldKind.Double:
                 w.Raw("SizeOfDouble(").Value(value).Raw(")");
+                break;
+            case FieldKind.Single:
+                w.Raw("SizeOfSingle(").Value(value).Raw(")");
+                break;
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.Char:
+                // Every one of these widens to int without loss and encodes exactly as that int does
+                // (a non-negative value uses the unsigned MessagePack codes either way).
+                w.Raw("SizeOfInt32((int)").Value(value).Raw(")");
+                break;
+            case FieldKind.UInt32:
+                w.Raw("SizeOfInt64((long)").Value(value).Raw(")");
+                break;
+            case FieldKind.UInt64:
+                w.Raw("SizeOfUInt64(").Value(value).Raw(")");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("SizeOfInt64(").Value(value).Raw(".Ticks)");
                 break;
             case FieldKind.Decimal:
                 w.Raw("SizeOfDecimal(").Value(value).Raw(")");
@@ -1555,7 +1698,20 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Int64:
             case FieldKind.Boolean:
             case FieldKind.Double:
+            case FieldKind.Single:
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.UInt32:
+            case FieldKind.UInt64:
                 w.Raw("writer.Write(").Value(value).Line(");");
+                break;
+            case FieldKind.Char:
+                w.Raw("writer.Write((ushort)").Value(value).Line(");");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("writer.Write(").Value(value).Line(".Ticks);");
                 break;
             case FieldKind.Decimal:
                 w.Raw("WriteDecimal(ref writer, ").Value(value).Line(");");
@@ -1706,6 +1862,33 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Double:
                 w.Local(target).Line(" = reader.ReadDouble();");
                 break;
+            case FieldKind.Single:
+                w.Local(target).Line(" = ReadSingle(ref reader);");
+                break;
+            case FieldKind.Int16:
+                w.Local(target).Line(" = ReadInt16(ref reader);");
+                break;
+            case FieldKind.SByte:
+                w.Local(target).Line(" = ReadSByte(ref reader);");
+                break;
+            case FieldKind.Byte:
+                w.Local(target).Line(" = ReadByte(ref reader);");
+                break;
+            case FieldKind.UInt16:
+                w.Local(target).Line(" = ReadUInt16(ref reader);");
+                break;
+            case FieldKind.UInt32:
+                w.Local(target).Line(" = ReadUInt32(ref reader);");
+                break;
+            case FieldKind.UInt64:
+                w.Local(target).Line(" = ReadUInt64(ref reader);");
+                break;
+            case FieldKind.Char:
+                w.Local(target).Line(" = ReadChar(ref reader);");
+                break;
+            case FieldKind.TimeSpan:
+                w.Local(target).Line(" = ReadTimeSpan(ref reader);");
+                break;
             case FieldKind.Decimal:
                 w.Local(target).Line(" = ReadDecimal(ref reader);");
                 break;
@@ -1822,6 +2005,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload => true,
             FieldKind.Object => !mapping.IsValueType,
+            FieldKind.Formatted => !mapping.IsValueType,
             _ => false
         };
     }
@@ -1831,7 +2015,9 @@ public sealed partial class AkkaSerializerGenerator
 
     private static bool IsScalarValueKind(FieldKind kind)
         => kind is FieldKind.Int32 or FieldKind.Int64 or FieldKind.Boolean or FieldKind.Double
-            or FieldKind.Decimal or FieldKind.Guid or FieldKind.DateTime or FieldKind.DateTimeOffset or FieldKind.Enum;
+            or FieldKind.Decimal or FieldKind.Guid or FieldKind.DateTime or FieldKind.DateTimeOffset or FieldKind.Enum
+            or FieldKind.Int16 or FieldKind.SByte or FieldKind.Byte or FieldKind.UInt16 or FieldKind.UInt32 or FieldKind.UInt64
+            or FieldKind.Single or FieldKind.Char or FieldKind.TimeSpan;
 
     // ----- WRITE -----
 
@@ -1856,13 +2042,56 @@ public sealed partial class AkkaSerializerGenerator
             }
             else
             {
-                var item = alloc.Next("item");
                 w.Raw("writer.WriteArrayHeader(").Value(value.Member(CollectionCountMember(mapping.Kind))).Line(");");
-                w.Raw("foreach (var ").Local(item).Raw(" in ").Value(value).Line(")");
-                using (w.Block())
-                    EmitWriteElement(w, mapping.TypeArguments[0], item, alloc);
+                EmitCollectionElements(w, mapping, value, alloc,
+                    item => EmitWriteElement(w, mapping.TypeArguments[0], item, alloc));
             }
         }
+    }
+
+    /// <summary>
+    /// Emits a list-like traversal, specializing IReadOnlyList's common runtime representations
+    /// without boxing their enumerators. Other implementations retain interface enumeration.
+    /// </summary>
+    private static void EmitCollectionElements(CodeWriter w, TypeMapping mapping, ValueExpr value,
+        NameAlloc alloc, Action<Local> emitElement)
+    {
+        // Native collection element bodies are emitted inline. Specializing their outer traversal
+        // would multiply nested branches by three at every level; specialize only leaf traversals.
+        if (mapping.Kind != FieldKind.ReadOnlyList || IsCollectionKind(mapping.TypeArguments[0].Kind))
+        {
+            EmitCollectionForeach(w, value, alloc, emitElement);
+            return;
+        }
+
+        var collection = alloc.Next("collection");
+        var list = alloc.Next("list");
+        var array = alloc.Next("array");
+        var elementType = TypeName.Global(mapping.TypeArguments[0].DeclaredTypeName);
+
+        // Evaluate the traversal source once, where the original foreach evaluated it. The header's
+        // Count read stays before this capture, including for properties with observable getters.
+        w.Raw("var ").Local(collection).Raw(" = ").Value(value).Line(";");
+        w.Raw("if (").Local(collection).Raw(" is global::System.Collections.Generic.List<").Type(elementType)
+            .Raw("> ").Local(list).Raw(" && ").Local(list)
+            .Raw(".GetType() == typeof(global::System.Collections.Generic.List<").Type(elementType).Line(">))");
+        using (w.Block())
+            EmitCollectionForeach(w, list, alloc, emitElement);
+        w.Raw("else if (").Local(collection).Raw(" is ").Type(elementType).Raw("[] ").Local(array).Line(")");
+        using (w.Block())
+            EmitCollectionForeach(w, array, alloc, emitElement);
+        w.Line("else");
+        using (w.Block())
+            EmitCollectionForeach(w, collection, alloc, emitElement);
+    }
+
+    private static void EmitCollectionForeach(CodeWriter w, ValueExpr collection, NameAlloc alloc,
+        Action<Local> emitElement)
+    {
+        var item = alloc.Next("item");
+        w.Raw("foreach (var ").Local(item).Raw(" in ").Value(collection).Line(")");
+        using (w.Block())
+            emitElement(item);
     }
 
     private static void EmitWriteElement(CodeWriter w, TypeMapping mapping, ValueExpr value, NameAlloc alloc)
@@ -1901,6 +2130,30 @@ public sealed partial class AkkaSerializerGenerator
             return;
         }
 
+        // A formatter-handled element, dictionary key, or dictionary value: exactly what the formatter
+        // writes at field position, with no wrapper. Nil handling mirrors FieldKind.Object above: a
+        // non-nullable value-type target goes straight to the formatter; anything that can be null (a
+        // reference target, which a collection may hold a null of whatever its annotation says, or a
+        // Nullable<T> value target) writes nil for null, which the formatter itself is never asked to
+        // represent (see the IAkkaMessagePackFormatter Write remarks).
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Identifier(GetFormatterFieldName(mapping.Formatter!)).Raw(".Write(ref writer, ").Value(value).Line(");");
+                return;
+            }
+
+            var formatted = mapping.IsValueType ? value.Member("Value") : value;
+            w.Raw("if (").Value(value).Line(" is null)");
+            using (w.Indented())
+                w.Line("writer.WriteNil();");
+            w.Line("else");
+            using (w.Indented())
+                w.Identifier(GetFormatterFieldName(mapping.Formatter!)).Raw(".Write(ref writer, ").Value(formatted).Line(");");
+            return;
+        }
+
         if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
         {
             w.Raw("if (").Value(value).Line(" is null)");
@@ -1925,7 +2178,20 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.Int64:
             case FieldKind.Boolean:
             case FieldKind.Double:
+            case FieldKind.Single:
+            case FieldKind.Int16:
+            case FieldKind.SByte:
+            case FieldKind.Byte:
+            case FieldKind.UInt16:
+            case FieldKind.UInt32:
+            case FieldKind.UInt64:
                 w.Raw("writer.Write(").Value(value).Line(");");
+                break;
+            case FieldKind.Char:
+                w.Raw("writer.Write((ushort)").Value(value).Line(");");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("writer.Write(").Value(value).Line(".Ticks);");
                 break;
             case FieldKind.Decimal:
                 w.Raw("WriteDecimal(ref writer, ").Value(value).Line(");");
@@ -2184,6 +2450,25 @@ public sealed partial class AkkaSerializerGenerator
             return;
         }
 
+        // Mirrors the Formatted case in EmitWriteElement: a non-nullable value-type target reads
+        // straight through the formatter; anything that can be null checks for nil first.
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Local(resultVar).Raw(" = ").Identifier(GetFormatterFieldName(mapping.Formatter!)).Line(".Read(ref reader);");
+                return;
+            }
+
+            w.Line("if (reader.TryReadNil())");
+            using (w.Indented())
+                w.Local(resultVar).Line(" = null;");
+            w.Line("else");
+            using (w.Indented())
+                w.Local(resultVar).Raw(" = ").Identifier(GetFormatterFieldName(mapping.Formatter!)).Line(".Read(ref reader);");
+            return;
+        }
+
         if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
         {
             w.Line("if (reader.TryReadNil())");
@@ -2226,6 +2511,33 @@ public sealed partial class AkkaSerializerGenerator
                 break;
             case FieldKind.Double:
                 w.Raw("reader.ReadDouble()");
+                break;
+            case FieldKind.Single:
+                w.Raw("ReadSingle(ref reader)");
+                break;
+            case FieldKind.Int16:
+                w.Raw("ReadInt16(ref reader)");
+                break;
+            case FieldKind.SByte:
+                w.Raw("ReadSByte(ref reader)");
+                break;
+            case FieldKind.Byte:
+                w.Raw("ReadByte(ref reader)");
+                break;
+            case FieldKind.UInt16:
+                w.Raw("ReadUInt16(ref reader)");
+                break;
+            case FieldKind.UInt32:
+                w.Raw("ReadUInt32(ref reader)");
+                break;
+            case FieldKind.UInt64:
+                w.Raw("ReadUInt64(ref reader)");
+                break;
+            case FieldKind.Char:
+                w.Raw("ReadChar(ref reader)");
+                break;
+            case FieldKind.TimeSpan:
+                w.Raw("ReadTimeSpan(ref reader)");
                 break;
             case FieldKind.Decimal:
                 w.Raw("ReadDecimal(ref reader)");
@@ -2275,11 +2587,9 @@ public sealed partial class AkkaSerializerGenerator
             }
             else
             {
-                var item = alloc.Next("item");
                 w.Local(sizeVar).Raw(" = SizeOfArrayHeader(").Value(value.Member(CollectionCountMember(mapping.Kind))).Line(");");
-                w.Raw("foreach (var ").Local(item).Raw(" in ").Value(value).Line(")");
-                using (w.Block())
-                    EmitSizeElement(w, mapping.TypeArguments[0], item, sizeVar, alloc);
+                EmitCollectionElements(w, mapping, value, alloc,
+                    item => EmitSizeElement(w, mapping.TypeArguments[0], item, sizeVar, alloc));
             }
         }
     }
@@ -2325,6 +2635,31 @@ public sealed partial class AkkaSerializerGenerator
         {
             var elementSize = alloc.Next("size");
             w.Raw("var ").Local(elementSize).Raw(" = SizeOfEnvelopePayload(").Value(value).Raw(")");
+            w.Line(";");
+            w.Raw("if (").Local(elementSize).Line(" < 0)");
+            using (w.Indented())
+                w.Line("return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            w.Local(sizeVar).Raw(" += ").Local(elementSize).Line(";");
+            return;
+        }
+
+        // Mirrors the Formatted case in EmitWriteElement. A formatter may report UnknownSize, so the
+        // same "< 0" propagation guard as every other sized-by-callee kind applies.
+        if (mapping.Kind == FieldKind.Formatted)
+        {
+            var elementSize = alloc.Next("size");
+            var formatterField = GetFormatterFieldName(mapping.Formatter!);
+            w.Raw("var ").Local(elementSize).Raw(" = ");
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                w.Identifier(formatterField).Raw(".SizeOf(").Value(value).Raw(")");
+            }
+            else
+            {
+                var sizedValue = mapping.IsValueType ? value.Member("Value") : value;
+                w.Value(value).Raw(" is null ? SizeOfNil() : ").Identifier(formatterField).Raw(".SizeOf(").Value(sizedValue).Raw(")");
+            }
+
             w.Line(";");
             w.Raw("if (").Local(elementSize).Line(" < 0)");
             using (w.Indented())

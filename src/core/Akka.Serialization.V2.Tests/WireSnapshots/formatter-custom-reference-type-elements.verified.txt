@@ -1,0 +1,11 @@
+﻿case: formatter-custom-reference-type-elements
+message-type: TagPositions
+manifest: tag-positions-v1
+serializer-id: 122001
+byte-count: 65
+
+0000  86 01 92 a5 74 61 67 3a  61 a5 74 61 67 3a 62 02  |....tag:a.tag:b.|
+0010  91 a5 74 61 67 3a 63 03  81 a5 74 61 67 3a 6b 07  |..tag:c...tag:k.|
+0020  04 81 01 a5 74 61 67 3a  76 05 81 a6 74 61 67 3a  |....tag:v...tag:|
+0030  6b 6b a6 74 61 67 3a 76  76 06 91 a5 74 61 67 3a  |kk.tag:vv...tag:|
+0040  73                                                |s|

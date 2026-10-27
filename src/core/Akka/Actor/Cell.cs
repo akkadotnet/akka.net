@@ -38,11 +38,11 @@ namespace Akka.Actor
         void Suspend();
 
         /// <summary>Recursively resume this actor and all its children. Is only allowed to throw fatal exceptions.</summary>
-        /// <param name="causedByFailure">TBD</param>
+        /// <param name="causedByFailure">The failure that prompted the resume, or <c>null</c> when resuming without an originating failure.</param>
         void Resume(Exception causedByFailure);
 
         /// <summary>Restart this actor (will recursively restart or stop all children). Is only allowed to throw Fatal Throwables.</summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The exception that caused the actor to restart.</param>
         void Restart(Exception cause);
 
 
@@ -73,27 +73,27 @@ namespace Akka.Actor
         int NumberOfMessages { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether this actor cell's mailbox is closed.
         /// </summary>
         bool IsTerminated { get; }
 
         /// <summary>
-        /// TBD
+        /// Sends a user message to the actor cell, using the supplied sender.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="sender">The actor reference to use as the message sender.</param>
+        /// <param name="message">The user message to enqueue for the actor.</param>
         void SendMessage(IActorRef sender, object message);
 
 
         /// <summary>
-        /// TBD
+        /// Returns the child actor references, excluding names that are only reserved.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current child references.</returns>
         [Obsolete("Used ChildrenRefs instead [1.1.0]")]
         IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
         /// <summary>
-        /// TBD
+        /// Gets the container holding this actor's child names and child restart statistics.
         /// </summary>
         IChildrenContainer ChildrenContainer { get; }
 
@@ -101,15 +101,15 @@ namespace Akka.Actor
         /// Method for looking up a single child beneath this actor.
         /// It is racy if called from the outside.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name, optionally including a unique identifier suffix.</param>
+        /// <returns>The matching child reference, or <see cref="Nobody.Instance"/> when no matching child exists.</returns>
         IInternalActorRef GetSingleChild(string name);
 
         /// <summary>
-        /// TBD
+        /// Looks up a child by name without requiring a unique identifier.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name to look up.</param>
+        /// <returns>The matching child reference, or <see cref="Nobody.Instance"/> when the child does not exist.</returns>
         IInternalActorRef GetChildByName(string name);
 
         /// <summary>
@@ -117,9 +117,9 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name to look up.</param>
+        /// <param name="child">When this method returns <c>true</c>, the reservation or restart statistics for that name.</param>
+        /// <returns><c>true</c> if the name is reserved or has child statistics; otherwise, <c>false</c>.</returns>
         bool TryGetChildStatsByName(string name, out IChildStats child); //This is called getChildByName in Akka JVM
 
         /// <summary>
@@ -165,4 +165,3 @@ namespace Akka.Actor
         //    sendMessage(Envelope(message, sender, system))
     }
 }
-

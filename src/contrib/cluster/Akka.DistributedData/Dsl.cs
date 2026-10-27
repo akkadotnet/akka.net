@@ -59,7 +59,7 @@ namespace Akka.DistributedData
         /// <param name="key">Key under which a replicated <paramref name="value"/> will be stored.</param>
         /// <param name="value">Replicated data structure to be updated.</param>
         /// <param name="consistency">Consistency determining how/when response will be emitted.</param>
-        /// <returns></returns>
+        /// <returns>An update message that applies <paramref name="value"/> by merging it with the current value.</returns>
         public static Update Update<T>(IKey<T> key, T value, IWriteConsistency consistency = null) 
             where T : IReplicatedData<T> =>
             new(key, value, consistency ?? WriteLocal, old => old.Merge(value));
@@ -77,7 +77,7 @@ namespace Akka.DistributedData
         /// <param name="key">Key under which a value should be updated.</param>
         /// <param name="consistency">Consistency determining how/when response will be emitted.</param>
         /// <param name="modify">An updating function.</param>
-        /// <returns>TBD</returns>
+        /// <returns>An update message that applies <paramref name="modify"/> to the current value.</returns>
         public static Update Update<T>(IKey<T> key, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
             new(key, consistency, data => modify((T)data));
 
@@ -96,7 +96,7 @@ namespace Akka.DistributedData
         /// <param name="initial">Initial value used, when no value has been stored under the provided <paramref name="key"/> so far.</param>
         /// <param name="consistency">Consistency determining how/when response will be emitted.</param>
         /// <param name="modify">An updating function.</param>
-        /// <returns>TBD</returns>
+        /// <returns>An update message that applies <paramref name="modify"/> to the current value or <paramref name="initial"/> when the key has no value.</returns>
         public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, Func<T, T> modify) where T : IReplicatedData =>
             new(key, initial, consistency, data => modify((T)data));
 
@@ -119,7 +119,7 @@ namespace Akka.DistributedData
         /// <see cref="IUpdateResponse"/>. Can be used i.e. as correlation id.
         /// </param>
         /// <param name="modify">An updating function.</param>
-        /// <returns>TBD</returns>
+        /// <returns>An update message carrying the supplied correlation object.</returns>
         public static Update Update<T>(IKey<T> key, T initial, IWriteConsistency consistency, object request, Func<T, T> modify) where T : IReplicatedData =>
             new(key, initial, consistency, data => modify((T)data), request);
 
@@ -138,7 +138,7 @@ namespace Akka.DistributedData
         /// An object added to both generated <see cref="Akka.DistributedData.Get"/> request and 
         /// <see cref="IGetResponse"/>. Can be used i.e. as correlation id.
         /// </param>
-        /// <returns>TBD</returns>
+        /// <returns>A get message configured with the key, read consistency, and request object.</returns>
         public static Get Get<T>(IKey<T> key, IReadConsistency consistency = null, object request = null) where T : IReplicatedData =>
             new(key, consistency ?? ReadLocal, request);
 
@@ -157,10 +157,9 @@ namespace Akka.DistributedData
         /// <param name="key">Key, for which a value should be retrieved.</param>
         /// <param name="consistency">A consistency level determining when/how response will be retrieved.</param>
         /// <param name="request">
-        /// An object added to both generated <see cref="Akka.DistributedData.Get"/> request and 
-        /// <see cref="IGetResponse"/>. Can be used i.e. as correlation id.
+        /// An object added to both the generated delete request and its <see cref="IDeleteResponse"/>. It can be used as a correlation id.
         /// </param>
-        /// <returns>TBD</returns>
+        /// <returns>A delete message configured with the key, write consistency, and request object.</returns>
         public static Delete Delete<T>(IKey<T> key, IWriteConsistency consistency, object request = null) where T: IReplicatedData =>
             new(key, consistency, request);
 
@@ -175,7 +174,7 @@ namespace Akka.DistributedData
         /// <typeparam name="T">Replicated data type.</typeparam>
         /// <param name="key">Key used to subscribe an actor to all changes occurring in correlated data structure.</param>
         /// <param name="subscriber">Actor subscribing to changes under provided <paramref name="key"/>.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A subscription message for the supplied key and subscriber.</returns>
         public static Subscribe Subscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
             new(key, subscriber);
 
@@ -187,7 +186,7 @@ namespace Akka.DistributedData
         /// <typeparam name="T">Replicated data type.</typeparam>
         /// <param name="key">Key, to which a <paramref name="subscriber"/> has been subscribed previously.</param>
         /// <param name="subscriber">A subscriber for the <paramref name="key"/>ed value changes.</param>
-        /// <returns>TBD</returns>
+        /// <returns>An unsubscription message for the supplied key and subscriber.</returns>
         public static Unsubscribe Unsubscribe<T>(IKey<T> key, IActorRef subscriber) where T : IReplicatedData =>
             new(key, subscriber);
     }

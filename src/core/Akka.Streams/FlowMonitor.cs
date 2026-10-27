@@ -15,18 +15,18 @@ namespace Akka.Streams
     public interface IFlowMonitor
     {
         /// <summary>
-        /// TBD
+        /// The most recently observed state of the monitored stream.
         /// </summary>
         FlowMonitor.IStreamState State { get; }
     }
 
     /// <summary>
-    /// TBD
+    /// State values reported by a monitored stream.
     /// </summary>
     public static class FlowMonitor
     {
         /// <summary>
-        /// TBD
+        /// Represents a state reported by a stream monitor.
         /// </summary>
         public interface IStreamState
         {
@@ -39,7 +39,7 @@ namespace Akka.Streams
         public class Initialized : IStreamState
         {
             /// <summary>
-            /// TBD
+            /// Singleton state value for a stream before it processes a message.
             /// </summary>
             public static Initialized Instance { get; } = new();
 
@@ -52,7 +52,7 @@ namespace Akka.Streams
         /// <summary>
         /// Stream processed a message
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">Type of the processed message.</typeparam>
         public sealed class Received<T> : IStreamState
         {
             /// <summary>
@@ -91,12 +91,12 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// Stream completed successfully
+        /// Upstream completed normally or downstream canceled.
         /// </summary>
         public class Finished : IStreamState
         {
             /// <summary>
-            /// TBD
+            /// Singleton state value for a stream that completed successfully.
             /// </summary>
             public static Finished Instance { get; } = new();
 

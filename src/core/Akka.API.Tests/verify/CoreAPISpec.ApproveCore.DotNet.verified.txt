@@ -20,6 +20,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Docs.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Query")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
@@ -5171,7 +5172,6 @@ namespace Akka.Serialization
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
         public override int Identifier { get; }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
@@ -5316,20 +5316,17 @@ namespace Akka.Serialization
         public override int Identifier { get; }
         public Akka.Serialization.Serializer Inner { get; }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
         public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public abstract class SerializerV2 : Akka.Serialization.Serializer
+    public abstract class SerializerV2 : Akka.Serialization.SerializerWithStringManifest
     {
         public const int UnknownSize = -1;
         protected SerializerV2(Akka.Actor.ExtendedActorSystem system) { }
-        public override sealed bool IncludeManifest { get; }
         public abstract object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest);
-        public override object FromBinary(byte[] bytes, System.Type type) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public abstract override string Manifest(object obj) { }
         public abstract int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer);
@@ -5651,6 +5648,11 @@ namespace Akka.Util.Extensions
     public static class ObjectExtensions
     {
         public static Akka.Util.Option<T> AsOption<T>(this T obj) { }
+    }
+    public static class OptionExtensions
+    {
+        public static void Match<T>(this Akka.Util.Option<T> option, System.Action<T> some, System.Action none) { }
+        public static TOut Match<TIn, TOut>(this Akka.Util.Option<TIn> option, System.Func<TIn, TOut> some, System.Func<TOut> none) { }
     }
 }
 namespace Akka.Util.Internal

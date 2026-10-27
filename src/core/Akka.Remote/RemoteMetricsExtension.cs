@@ -21,10 +21,10 @@ namespace Akka.Remote
     internal sealed class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
     {
         /// <summary>
-        /// TBD
+        /// Creates the enabled or disabled remote metrics implementation according to actor system configuration.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system whose remote metrics configuration is read.</param>
+        /// <returns>A remote metrics implementation.</returns>
         public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
         {
             // TODO: Need to assert that config key exists. 
@@ -41,10 +41,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the remote metrics extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the extension.</param>
+        /// <returns>The actor system's remote metrics extension.</returns>
         public static IRemoteMetrics Create(ExtendedActorSystem system)
         {
             return system.WithExtension<IRemoteMetrics, RemoteMetricsExtension>();
@@ -61,9 +61,9 @@ namespace Akka.Remote
         private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new();
 
         /// <summary>
-        /// TBD
+        /// Creates a metrics implementation that logs large payload sizes.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system whose threshold configuration and logger are used.</param>
         public RemoteMetricsOn(ExtendedActorSystem system)
         {
             // TODO: Need to assert that config key exists
@@ -72,10 +72,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Logs the payload size when it meets the configured threshold and exceeds the previous logged maximum for its message type.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
+        /// <param name="msg">The message whose serialized payload size was measured.</param>
+        /// <param name="payloadBytes">The measured payload size in bytes.</param>
         public void LogPayloadBytes(object msg, long payloadBytes)
         {
             if (payloadBytes >= _logFrameSizeExceeding)
@@ -127,10 +127,10 @@ namespace Akka.Remote
     internal sealed class RemoteMetricsOff : IRemoteMetrics
     {
         /// <summary>
-        /// TBD
+        /// Ignores payload-size logging when remote metrics are disabled.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
+        /// <param name="msg">The message whose serialized payload size was measured.</param>
+        /// <param name="payloadBytes">The measured payload size in bytes.</param>
         public void LogPayloadBytes(object msg, long payloadBytes)
         {
             //do nothing
@@ -147,8 +147,8 @@ namespace Akka.Remote
         ///     Maximum detected size per message type is logged once, with
         ///     and increase threshold of 10%.
         /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
+        /// <param name="msg">The message whose serialized payload size was measured.</param>
+        /// <param name="payloadBytes">The measured payload size in bytes.</param>
         void LogPayloadBytes(object msg, long payloadBytes);
     }
 }

@@ -40,8 +40,8 @@ namespace Akka.Actor
         /// this is exposed so that the ActorRefFactory can use it as lookupRoot, i.e.
         /// for anchoring absolute actor selections.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The address whose root guardian is requested.</param>
+        /// <returns>The root guardian for the provider's address, or dead letters for a different address.</returns>
         IActorRef RootGuardianAt(Address address);
 
         /// <summary> Gets the supervisor used for all top-level user actors.</summary>
@@ -69,14 +69,14 @@ namespace Akka.Actor
         /// and then—when the ActorSystem is constructed—the second phase during
         /// which actors may be created (e.g. the guardians).
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system that is being initialized.</param>
         void Init(ActorSystemImpl system);
 
         /// <summary>Gets the deployer.</summary>
         Deployer Deployer { get; }
 
         /// <summary>Generates and returns a unique actor path below "/temp".</summary>
-        /// <returns>TBD</returns>
+        /// <returns>A unique path beneath the system's temporary actor container.</returns>
         ActorPath TempPath();
 
         /// <summary>Returns the actor reference representing the "/temp" path.</summary>
@@ -104,33 +104,33 @@ namespace Akka.Actor
         FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs);
 
         /// <summary>
-        /// Actor factory with create-only semantics: will create an actor as
+        /// Actor factory with create-only semantics: creates an actor as
         /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different
-        /// in case of remote supervision). If <paramref name="systemService"/> is true, deployment is
-        /// bypassed (local-only). If a value for<paramref name="deploy"/> is passed in, it should be
+        /// in case of remote supervision). System-service status may constrain placement (for example, requiring local creation);
+        /// deployment lookup is controlled independently by <paramref name="lookupDeploy"/>. If a value for <paramref name="deploy"/> is passed in, it should be
         /// regarded as taking precedence over the nominally applicable settings,
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="systemService">TBD</param>
-        /// <param name="deploy">TBD</param>
-        /// <param name="lookupDeploy">TBD</param>
-        /// <param name="async">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the new actor.</param>
+        /// <param name="props">The actor configuration, including any deployment and router settings.</param>
+        /// <param name="supervisor">The actor responsible for supervising the new actor.</param>
+        /// <param name="path">The path assigned to the actor.</param>
+        /// <param name="systemService">Whether this is a system service, which can constrain provider placement behavior.</param>
+        /// <param name="deploy">Deployment settings that take precedence over the values in <paramref name="props"/> before configuration lookup.</param>
+        /// <param name="lookupDeploy">Whether deployment settings should be looked up for the actor path.</param>
+        /// <param name="async">Whether actor initialization should be asynchronous where supported.</param>
+        /// <returns>The created actor reference.</returns>
         IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
-        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <summary>Gets the result of resolving a serialized actor path. The result for missing, empty, or foreign paths depends on the provider implementation.</summary>
+        /// <param name="path">The serialized actor path to parse and resolve.</param>
+        /// <returns>The provider-specific resolution result, which may be an actor reference, an empty local reference, dead letters, or <see cref="ActorRefs.NoSender"/> for an empty path.</returns>
         IActorRef ResolveActorRef(string path);
 
-        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <summary>Gets the actor reference for a path. A valid local path with no actor may resolve to an empty local reference.</summary>
+        /// <param name="actorPath">The actor path to resolve.</param>
+        /// <returns>The actor reference at that path, or an empty reference when no actor exists there.</returns>
         IActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
@@ -145,8 +145,8 @@ namespace Akka.Actor
         /// reached from this system (i.e. no means of communication known; no
         /// attempt is made to verify actual reachability).
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The remote address that will receive a message.</param>
+        /// <returns>The address to advertise to that recipient, or <c>null</c> when this provider cannot reach it.</returns>
         Address GetExternalAddressFor(Address address);
 
         /// <summary>Gets the external address of the default transport. </summary>
@@ -302,8 +302,8 @@ namespace Akka.Actor
         /// Just be careful to complete all this before <see cref="ActorSystemImpl.Start"/> finishes,
         /// or before you start your own auto-spawned actors.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="actor">TBD</param>
+        /// <param name="name">The top-level name under which the reference will be resolved.</param>
+        /// <param name="actor">The synthetic actor reference to register at that name.</param>
         public void RegisterExtraName(string name, IInternalActorRef actor)
         {
             _extraNames.Add(name, actor);
@@ -323,10 +323,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the root guardian when the address matches this provider; otherwise returns dead letters.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The address to compare with this provider's root path.</param>
+        /// <returns>The matching root guardian or the dead-letter reference.</returns>
         public IActorRef RootGuardianAt(Address address)
         {
             return address == _rootPath.Address ? _rootGuardian : _deadLetters;
@@ -437,10 +437,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves a serialized actor path belonging to this provider's address.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The serialized path to parse and resolve.</param>
+        /// <returns>The actor at the path, or dead letters if the path is invalid or belongs to another address.</returns>
         public IActorRef ResolveActorRef(string path)
         {
             if (ActorPath.TryParse(path, out var actorPath) && actorPath.Address == _rootPath.Address)
@@ -508,22 +508,22 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Actor factory with create-only semantics: will create an actor as
+        /// Actor factory with create-only semantics: creates an actor as
         /// described by <paramref name="props" /> with the given <paramref name="supervisor" /> and <paramref name="path" /> (may be different
-        /// in case of remote supervision). If <paramref name="systemService" /> is true, deployment is
-        /// bypassed (local-only). If a value for<paramref name="deploy" /> is passed in, it should be
+        /// in case of remote supervision). System-service status may constrain placement (for example, requiring local creation);
+        /// deployment lookup is controlled independently by <paramref name="lookupDeploy" />. If a value for <paramref name="deploy" /> is passed in, it should be
         /// regarded as taking precedence over the nominally applicable settings,
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="systemService">TBD</param>
-        /// <param name="deploy">TBD</param>
-        /// <param name="lookupDeploy">TBD</param>
-        /// <param name="async">TBD</param>
+        /// <param name="system">The actor system that owns the new actor.</param>
+        /// <param name="props">The actor configuration, including any deployment and router settings.</param>
+        /// <param name="supervisor">The actor responsible for supervising the new actor.</param>
+        /// <param name="path">The path assigned to the actor.</param>
+        /// <param name="systemService">Whether this is a system service, which can constrain provider placement behavior.</param>
+        /// <param name="deploy">Deployment settings that take precedence over the values in <paramref name="props"/> before configuration lookup.</param>
+        /// <param name="lookupDeploy">Whether deployment settings should be looked up for the actor path.</param>
+        /// <param name="async">Whether actor initialization should be asynchronous where supported.</param>
         /// <exception cref="ConfigurationException">
         /// This exception can be thrown for a number of reasons. The following are some examples:
         /// <dl>
@@ -539,7 +539,7 @@ namespace Akka.Actor
         /// <dd>$There was a configuration problem while creating the given <paramref name="path"/> with router dispatcher and mailbox and routee dispatcher and mailbox.</dd>
         /// </dl>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The created local actor reference or router reference.</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (props.Deploy.RouterConfig is NoRouter)
@@ -630,10 +630,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the advertised address when the requested address matches this local provider.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The recipient address for which to obtain an externally usable sender address.</param>
+        /// <returns>The provider's root address when it matches <paramref name="address"/>, or <c>null</c> otherwise.</returns>
         public Address GetExternalAddressFor(Address address)
         {
             return address == _rootPath.Address ? address : null;
@@ -668,4 +668,3 @@ namespace Akka.Actor
         public ILoggingAdapter Log { get { return _log; } }
     }
 }
-

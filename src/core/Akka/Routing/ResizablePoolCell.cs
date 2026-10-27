@@ -35,13 +35,13 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="ResizablePoolCell"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="routerProps">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="routeeProps">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="pool">TBD</param>
+        /// <param name="system">The actor system that owns the router.</param>
+        /// <param name="self">The router actor reference backed by this cell.</param>
+        /// <param name="routerProps">The properties used to create the router actor.</param>
+        /// <param name="dispatcher">The dispatcher used by the router actor.</param>
+        /// <param name="routeeProps">The properties used to create pool routees.</param>
+        /// <param name="supervisor">The actor supervising this router.</param>
+        /// <param name="pool">The pool configuration that supplies the resizer and routee creation behavior.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if pool's resizer is undefined.
         /// </exception>
@@ -62,7 +62,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Performs the initial resize before the router begins processing messages.
         /// </summary>
         protected override void PreSuperStart()
         {
@@ -74,9 +74,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Schedules a resize check when the message count reaches the configured interval, then routes the message.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The message envelope to route or process as management traffic.</param>
         public override void SendMessage(Envelope envelope)
         {
             if (!(RouterConfig.IsManagementMessage(envelope.Message)) &&
@@ -90,9 +90,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Applies the resizer's requested routee-count change.
         /// </summary>
-        /// <param name="initial">TBD</param>
+        /// <param name="initial">Whether this is the initial resize performed before message processing.</param>
         internal void Resize(bool initial)
         {
             if (_resizeInProgress.Value || initial)

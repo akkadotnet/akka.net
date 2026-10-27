@@ -31,8 +31,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements passed to the mapping function.</typeparam>
+    /// <typeparam name="TOut">The type of elements produced by the mapping function.</typeparam>
     [InternalApi]
     public sealed class Select<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -75,9 +75,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TIn, TOut> _func;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that maps each input element with the supplied function.
         /// </summary>
-        /// <param name="func">TBD</param>
+        /// <param name="func">The function applied to each input element.</param>
         public Select(Func<TIn, TOut> func)
         {
             _func = func;
@@ -86,30 +86,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the select stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Select;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to map.
         /// </summary>
         public Inlet<TIn> In { get; } = new("Select.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits mapped elements.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("Select.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that applies the mapping function under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>Logic that emits an output when mapping succeeds and handles mapping failures according to supervision.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -125,7 +125,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements tested by the predicate.</typeparam>
     [InternalApi]
     public sealed class Where<T> : SimpleLinearGraphStage<T>
     {
@@ -174,19 +174,19 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Predicate<T> _predicate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that passes through elements for which the predicate returns true.
         /// </summary>
-        /// <param name="predicate">TBD</param>
+        /// <param name="predicate">The predicate that selects elements to pass through.</param>
         public Where(Predicate<T> predicate)
         {
             _predicate = predicate;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that evaluates the predicate under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that passes through elements for which the predicate returns true.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -202,7 +202,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements tested and emitted by this stage.</typeparam>
     [InternalApi]
     public sealed class TakeWhile<T> : SimpleLinearGraphStage<T>
     {
@@ -258,10 +258,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly bool _inclusive;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that completes when the predicate first returns false.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
+        /// <param name="predicate">The predicate that determines whether to continue emitting elements.</param>
+        /// <param name="inclusive">Whether to emit the first element for which the predicate returns false before completing.</param>
         public TakeWhile(Predicate<T> predicate, bool inclusive)
         {
             _inclusive = inclusive;
@@ -269,15 +269,15 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the take-while stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.TakeWhile;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that evaluates the predicate under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits elements until the predicate returns false.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -293,7 +293,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements tested and emitted by this stage.</typeparam>
     [InternalApi]
     public sealed class SkipWhile<T> : SimpleLinearGraphStage<T>
     {
@@ -347,24 +347,24 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Predicate<T> _predicate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that discards elements while the predicate returns true, then passes through the rest.
         /// </summary>
-        /// <param name="predicate">TBD</param>
+        /// <param name="predicate">The predicate that determines which initial elements to discard.</param>
         public SkipWhile(Predicate<T> predicate) : base("SkipWhile")
         {
             _predicate = predicate;
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the skip-while stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.SkipWhile;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that evaluates the predicate under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that discards matching initial elements and then passes through subsequent elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -378,7 +378,7 @@ namespace Akka.Streams.Implementation.Fusing
     }
 
     /// <summary>
-    /// INTERNAL API
+    /// Base logic that applies the inherited stream supervision strategy to operations that can throw.
     /// </summary>
     [InternalApi]
     public abstract class SupervisedGraphStageLogic : GraphStageLogic
@@ -386,10 +386,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Lazy<Decider> _decider;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that obtains its decider from the inherited attributes.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <param name="shape">TBD</param>
+        /// <param name="inheritedAttributes">Attributes containing the optional supervision strategy.</param>
+        /// <param name="shape">The shape handled by this stage logic.</param>
         protected SupervisedGraphStageLogic(Attributes inheritedAttributes, Shape shape) : base(shape)
         {
             _decider = new Lazy<Decider>(() =>
@@ -400,12 +400,12 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Executes a function and applies the configured supervision directive if it throws.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="function">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The result type of the function.</typeparam>
+        /// <param name="function">The operation to execute under supervision.</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the decider returns an unsupported directive.</exception>
+        /// <returns>The function result when it succeeds, or no value after the decider handles an exception.</returns>
         protected Option<T> WithSupervision<T>(Func<T> function)
         {
             try
@@ -433,31 +433,31 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Handles a restart directive; by default, delegates to <see cref="OnResume"/>.
         /// </summary>
-        /// <param name="ex">TBD</param>
+        /// <param name="ex">The exception that triggered the directive.</param>
         protected virtual void OnRestart(Exception ex) => OnResume(ex);
 
         /// <summary>
-        /// TBD
+        /// Handles a resume directive. The base implementation takes no action.
         /// </summary>
-        /// <param name="ex">TBD</param>
+        /// <param name="ex">The exception that triggered the directive.</param>
         protected virtual void OnResume(Exception ex)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Handles a stop directive by failing the stage with the triggering exception.
         /// </summary>
-        /// <param name="ex">TBD</param>
+        /// <param name="ex">The exception that triggered the directive.</param>
         protected virtual void OnStop(Exception ex) => FailStage(ex);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements inspected by the collector.</typeparam>
+    /// <typeparam name="TOut">The type of defined values emitted by the collector.</typeparam>
     [InternalApi]
     public sealed class Collect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -538,9 +538,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TIn, TOut> _func;
 
         /// <summary>
-        /// TBD
+        /// Creates a collector that treats a null result as an undefined element.
         /// </summary>
-        /// <param name="func">TBD</param>
+        /// <param name="func">The function that maps input elements; returning null means that no output is produced.</param>
         [Obsolete("Deprecated. Please use the .ctor(Func, Func) constructor")]
         public Collect(Func<TIn, TOut> func) : this(null, func)
         { }
@@ -553,30 +553,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the collect stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Collect;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to inspect and collect.
         /// </summary>
         public Inlet<TIn> In { get; } = new("Collect.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits results for input elements selected by the collector.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("Collect.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that applies collection under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits results for defined input elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -592,7 +592,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements emitted by the flow and recovery function.</typeparam>
     [InternalApi]
     public sealed class Recover<T> : SimpleLinearGraphStage<T>
     {
@@ -649,24 +649,24 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<Exception, Option<T>> _recovery;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that maps an upstream failure to an optional final element.
         /// </summary>
-        /// <param name="recovery">TBD</param>
+        /// <param name="recovery">The function that returns a replacement element, or no value to preserve the failure.</param>
         public Recover(Func<Exception, Option<T>> recovery) : base("Recover")
         {
             _recovery = recovery;
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the recovery stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Recover;
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that applies the recovery function when upstream fails.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that emits a replacement element or forwards the failure.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -731,7 +731,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passed through the stage.</typeparam>
     [InternalApi]
     public sealed class Take<T> : SimpleLinearGraphStage<T>
     {
@@ -777,24 +777,24 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly long _count;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits at most the specified number of elements and then completes.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The maximum number of elements to emit; non-positive values emit none.</param>
         public Take(long count)
         {
             _count = count;
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the take stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Take;
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that counts emitted elements and completes at the limit.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that emits no more than the configured count.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -809,7 +809,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passed through the stage.</typeparam>
     [InternalApi]
     public sealed class Skip<T> : SimpleLinearGraphStage<T>
     {
@@ -847,24 +847,24 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly long _count;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that discards the specified number of initial elements.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The number of initial elements to discard; non-positive values discard none.</param>
         public Skip(long count)
         {
             _count = count;
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the skip stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Drop;
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that discards the configured initial elements.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that passes through all elements after the skipped prefix.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -879,8 +879,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements accumulated by the stage.</typeparam>
+    /// <typeparam name="TOut">The type of the initial and accumulated output values.</typeparam>
     [InternalApi]
     public sealed class Scan<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -958,10 +958,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TOut _zero;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits an initial value and each successive accumulated value.
         /// </summary>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
+        /// <param name="zero">The initial accumulator value, also emitted before input elements are processed.</param>
+        /// <param name="aggregate">The function that combines the current accumulator with each input element.</param>
         public Scan(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             _zero = zero;
@@ -971,30 +971,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the scan stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Scan;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to accumulate.
         /// </summary>
         public Inlet<TIn> In { get; } = new("Scan.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits the initial value and accumulated results.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("Scan.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic that accumulates input elements under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits the initial and successive accumulated values.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -1011,8 +1011,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements consumed by the asynchronous scan.</typeparam>
+    /// <typeparam name="TOut">The type of the initial and accumulated values emitted by the scan.</typeparam>
     [InternalApi]
     public sealed class ScanAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -1141,10 +1141,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TOut _zero;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits an initial value and asynchronously accumulated values.
         /// </summary>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
+        /// <param name="zero">The initial accumulator value, emitted before input is processed.</param>
+        /// <param name="aggregate">The asynchronous function that combines the current value with each input element.</param>
         public ScanAsync(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
         {
             _zero = zero;
@@ -1154,30 +1154,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the asynchronous scan stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.ScanAsync;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to accumulate.
         /// </summary>
         public Inlet<TIn> In { get; } = new("ScanAsync.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits the initial value and asynchronous aggregate results.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("ScanAsync.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates asynchronous scan logic that uses the inherited supervision strategy for failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits accumulated values after the aggregate task completes.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -1195,8 +1195,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements combined into the aggregate.</typeparam>
+    /// <typeparam name="TOut">The type of the initial and accumulated aggregate value.</typeparam>
     [InternalApi]
     public sealed class Aggregate<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -1267,10 +1267,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that folds the entire input stream into one value.
         /// </summary>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
+        /// <param name="zero">The initial accumulator value, also used for an empty input stream.</param>
+        /// <param name="aggregate">The function that combines the current accumulator with each input element.</param>
         public Aggregate(TOut zero, Func<TOut, TIn, TOut> aggregate)
         {
             _zero = zero;
@@ -1280,30 +1280,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the aggregate stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Aggregate;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to aggregate.
         /// </summary>
         public Inlet<TIn> In { get; } = new("Aggregate.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits the final aggregate value.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("Aggregate.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that aggregates the stream under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits one final aggregate value.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -1319,8 +1319,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements combined into the aggregate.</typeparam>
+    /// <typeparam name="TOut">The type of the initial and accumulated aggregate value.</typeparam>
     [InternalApi]
     public sealed class AggregateAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -1440,10 +1440,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TOut, TIn, Task<TOut>> _aggregate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that folds the input stream into one value using an asynchronous function.
         /// </summary>
-        /// <param name="zero">TBD</param>
-        /// <param name="aggregate">TBD</param>
+        /// <param name="zero">The initial accumulator value, also used for an empty input stream.</param>
+        /// <param name="aggregate">The asynchronous function that combines the current accumulator with each input element.</param>
         public AggregateAsync(TOut zero, Func<TOut, TIn, Task<TOut>> aggregate)
         {
             _zero = zero;
@@ -1453,30 +1453,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the asynchronous aggregate stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.AggregateAsync;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to aggregate.
         /// </summary>
         public Inlet<TIn> In { get; } = new("AggregateAsync.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits the final aggregate value.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("AggregateAsync.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that aggregates the stream under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits one final aggregate value after asynchronous updates complete.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -1492,7 +1492,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of stream elements and the injected separator values.</typeparam>
     [InternalApi]
     public sealed class Intersperse<T> : SimpleLinearGraphStage<T>
     {
@@ -1569,9 +1569,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly T _end;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits the supplied separator between consecutive input elements.
         /// </summary>
-        /// <param name="inject">TBD</param>
+        /// <param name="inject">The element emitted between each pair of input elements.</param>
         public Intersperse(T inject) : base("Intersperse")
         {
             _inject = inject;
@@ -1579,11 +1579,11 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits a start element, separators between input elements, and an end element.
         /// </summary>
-        /// <param name="start">TBD</param>
-        /// <param name="inject">TBD</param>
-        /// <param name="end">TBD</param>
+        /// <param name="start">The element emitted before the first input element, or before the end element for empty input.</param>
+        /// <param name="inject">The element emitted between consecutive input elements.</param>
+        /// <param name="end">The element emitted after upstream completes.</param>
         public Intersperse(T start, T inject, T end) : base("Intersperse")
         {
             _start = start;
@@ -1593,22 +1593,22 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// Whether this stage emits configured start and end elements around the input.
         /// </summary>
         public bool InjectStartEnd { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that emits separators and optional boundary elements.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that intersperses configured elements into the stream.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements collected into each group.</typeparam>
     [InternalApi]
     public sealed class Grouped<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
@@ -1666,9 +1666,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _count;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that groups input into batches and emits a final partial batch on upstream completion.
         /// </summary>
-        /// <param name="count">TBD</param>
+        /// <param name="count">The number of elements in each full group; must be greater than zero.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="count"/> is less than or equal to zero.
         /// </exception>
@@ -1683,30 +1683,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the grouped stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Grouped;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to group.
         /// </summary>
         public Inlet<T> In { get; } = new("Grouped.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits each completed group.
         /// </summary>
         public Outlet<IEnumerable<T>> Out { get; } = new("Grouped.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting input elements to groups.
         /// </summary>
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that collects elements into groups.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that emits full groups and a final partial group when present.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -1721,7 +1721,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements whose costs are accumulated.</typeparam>
     [InternalApi]
     public sealed class LimitWeighted<T> : SimpleLinearGraphStage<T>
     {
@@ -1784,10 +1784,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<T, long> _costFunc;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that fails when the accumulated cost of passed elements exceeds the configured limit.
         /// </summary>
-        /// <param name="max">TBD</param>
-        /// <param name="costFunc">TBD</param>
+        /// <param name="max">The maximum accumulated cost allowed before the stage fails.</param>
+        /// <param name="costFunc">The function that assigns a cost to each input element.</param>
         public LimitWeighted(long max, Func<T, long> costFunc) : base("LimitWeighted")
         {
             _max = max;
@@ -1795,15 +1795,15 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the weighted-limit stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LimitWeighted;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that evaluates element costs under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that tracks remaining cost and fails when the limit is exceeded.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -1819,7 +1819,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements collected into each window.</typeparam>
     [InternalApi]
     public sealed class Sliding<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
@@ -1883,10 +1883,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _step;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that emits windows of the configured size at the configured interval.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <param name="step">TBD</param>
+        /// <param name="count">The number of elements in each window; must be greater than zero.</param>
+        /// <param name="step">The number of elements between the start of successive windows; must be greater than zero.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="count"/>
         /// or <paramref name="step"/> is less than or equal to zero.
@@ -1905,30 +1905,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the sliding-window stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sliding;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements for the windows.
         /// </summary>
         public Inlet<T> In { get; } = new("Sliding.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits each window.
         /// </summary>
         public Outlet<IEnumerable<T>> Out { get; } = new("Sliding.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting input elements to sliding windows.
         /// </summary>
         public override FlowShape<T, IEnumerable<T>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that collects and emits sliding windows.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that emits full windows and a final partial window when present.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -1943,7 +1943,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements held in the buffer.</typeparam>
     #nullable enable
     [InternalApi]
     public sealed class Buffer<T> : SimpleLinearGraphStage<T>
@@ -2094,13 +2094,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly OverflowStrategy _overflowStrategy;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that buffers elements up to a fixed capacity and applies the selected strategy when full.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <param name="overflowStrategy">TBD</param>
-        /// <exception cref="NotSupportedException">
-        /// This exception is thrown when the specified <paramref name="overflowStrategy"/>  has an unknown <see cref="OverflowStrategy"/>.
-        /// </exception>
+        /// <param name="count">The buffer capacity; it must be at least one.</param>
+        /// <param name="overflowStrategy">The action to take when an element arrives while the buffer is full.</param>
+        /// <exception cref="ArgumentException">Thrown during materialization when <paramref name="count"/> is less than one.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="overflowStrategy"/> is not a recognized strategy.</exception>
         public Buffer(int count, OverflowStrategy overflowStrategy)
         {
             _count = count;
@@ -2180,8 +2179,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements grouped into batches.</typeparam>
+    /// <typeparam name="TOut">The type of the aggregate emitted for each batch.</typeparam>
     [InternalApi]
     public sealed class Batch<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -2408,12 +2407,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TOut, TIn, TOut> _aggregate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that aggregates input elements into batches according to their calculated costs.
         /// </summary>
-        /// <param name="max">TBD</param>
-        /// <param name="costFunc">TBD</param>
-        /// <param name="seed">TBD</param>
-        /// <param name="aggregate">TBD</param>
+        /// <param name="max">The cost budget available for adding elements to the current batch; an element that exceeds the remaining budget starts the next batch.</param>
+        /// <param name="costFunc">The function that calculates the cost of each input element.</param>
+        /// <param name="seed">The function that creates the initial aggregate from the first element of a batch.</param>
+        /// <param name="aggregate">The function that adds each later element in the batch to the current aggregate.</param>
         public Batch(long max, Func<TIn, long> costFunc, Func<TIn, TOut> seed, Func<TOut, TIn, TOut> aggregate)
         {
             _max = max;
@@ -2428,15 +2427,15 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The flow shape that accepts elements and emits their batch aggregates.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates batching logic that applies the inherited supervision strategy to aggregation failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>Logic that separates batches when an element exceeds the remaining cost budget and emits an available aggregate on downstream demand, including after upstream completion.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -2444,8 +2443,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements passed to the expansion function.</typeparam>
+    /// <typeparam name="TOut">The type of elements produced by each returned iterator.</typeparam>
     [InternalApi]
     public sealed class Expand<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -2525,9 +2524,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<TIn, IEnumerator<TOut>> _extrapolate;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that uses an iterator supplied for each input to produce output elements while waiting for newer input.
         /// </summary>
-        /// <param name="extrapolate">TBD</param>
+        /// <param name="extrapolate">The function that supplies an output iterator for an input; the iterator may be replaced when the next input arrives before all its values are emitted.</param>
         public Expand(Func<TIn, IEnumerator<TOut>> extrapolate)
         {
             _extrapolate = extrapolate;
@@ -2536,30 +2535,30 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the expand stage.
         /// </summary>
         protected override Attributes InitialAttributes => DefaultAttributes.Expand;
 
         /// <summary>
-        /// TBD
+        /// The inlet that accepts elements to expand.
         /// </summary>
         public Inlet<TIn> In { get; } = new("expand.in");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits elements produced by the expansion function.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("expand.out");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting input elements to expanded output elements.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that emits iterator elements for each input.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that expands input elements into output elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -2798,20 +2797,20 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the ordered asynchronous-select stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsync");
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting mapped input elements to ordered asynchronous results.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that runs mapping tasks concurrently and emits results in input order.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that limits in-flight tasks to the configured parallelism and preserves result order.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
@@ -2978,7 +2977,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passed through the logging stage.</typeparam>
     [InternalApi]
     public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
@@ -3106,10 +3105,10 @@ namespace Akka.Streams.Implementation.Fusing
 
         // TODO more optimisations can be done here - prepare logOnPush function etc
         /// <summary>
-        /// TBD
+        /// Creates logging logic using the stage name, extractor, adapter, and inherited log and supervision attributes.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including log levels and its supervision strategy.</param>
+        /// <returns>The logic that logs configured stream events and forwards elements unchanged.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(this, inheritedAttributes);
 
@@ -3128,15 +3127,15 @@ namespace Akka.Streams.Implementation.Fusing
     internal enum TimerKeys
     {
         /// <summary>
-        /// TBD
+        /// Timer key used by the take-within stage.
         /// </summary>
         TakeWithin,
         /// <summary>
-        /// TBD
+        /// Timer key used by the drop-within stage.
         /// </summary>
         DropWithin,
         /// <summary>
-        /// TBD
+        /// Timer key used by the grouped-within stage.
         /// </summary>
         GroupedWithin
     }
@@ -3144,7 +3143,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements collected into weighted or time-based groups.</typeparam>
     [InternalApi]
     public sealed class GroupedWeightedWithin<T> : GraphStage<FlowShape<T, IEnumerable<T>>>
     {
@@ -3386,7 +3385,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements delayed by this stage.</typeparam>
     #nullable enable
     [InternalApi]
     public sealed class Delay<T> : SimpleLinearGraphStage<T>
@@ -3566,10 +3565,10 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly DelayOverflowStrategy _strategy;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that delays each buffered element before emitting it.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="strategy">TBD</param>
+        /// <param name="delay">The configured wait before a buffered element can be emitted; <see cref="DelayOverflowStrategy.EmitEarly"/> may emit the oldest element sooner when the buffer is full.</param>
+        /// <param name="strategy">The action to take if the stage's input buffer is full.</param>
         public Delay(TimeSpan delay, DelayOverflowStrategy strategy)
         {
             _delay = delay;
@@ -3577,15 +3576,15 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the delay stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Delay;
 
         /// <summary>
-        /// TBD
+        /// Creates timer-based logic that delays elements and applies the configured overflow strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its input-buffer configuration.</param>
+        /// <returns>The logic that buffers and emits delayed elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(inheritedAttributes, this);
 
         /// <summary>
@@ -3601,7 +3600,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements passed through before the timeout.</typeparam>
     [InternalApi]
     public sealed class TakeWithin<T> : SimpleLinearGraphStage<T>
     {
@@ -3639,26 +3638,26 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly TimeSpan _timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that completes after the specified duration.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The time allowed for the stage to emit input elements.</param>
         public TakeWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that schedules the completion timeout.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that passes through elements until the timeout or upstream completion.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of input and output elements.</typeparam>
     [InternalApi]
     public sealed class SkipWithin<T> : SimpleLinearGraphStage<T>
     {
@@ -3703,26 +3702,26 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that discards elements until the specified duration elapses.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The duration for which incoming elements are discarded.</param>
         public SkipWithin(TimeSpan timeout)
         {
             _timeout = timeout;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that schedules when the stage starts passing through elements.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The logic that discards elements before the timeout and forwards later elements.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of input values and the reduction result.</typeparam>
     [InternalApi]
     public sealed class Sum<T> : SimpleLinearGraphStage<T>
     {
@@ -3795,24 +3794,24 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Func<T, T, T> _reduce;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that reduces a nonempty input stream to one value and fails if the stream is empty.
         /// </summary>
-        /// <param name="reduce">TBD</param>
+        /// <param name="reduce">The function that combines the accumulated value with the next element.</param>
         public Sum(Func<T, T, T> reduce)
         {
             _reduce = reduce;
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the sum stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.Sum;
 
         /// <summary>
-        /// TBD
+        /// Creates logic that reduces elements under the inherited supervision strategy and fails if upstream completes before the first element.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The logic that emits the reduction of a nonempty input stream.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
@@ -3827,8 +3826,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TOut">The element type emitted by the original and replacement sources.</typeparam>
+    /// <typeparam name="TMat">The materialized value type of a replacement source graph.</typeparam>
     [InternalApi]
     public sealed class RecoverWith<TOut, TMat> : SimpleLinearGraphStage<TOut>
     {
@@ -3910,12 +3909,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _maximumRetries;
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that switches to a replacement source when the upstream fails.
         /// </summary>
-        /// <param name="partialFunction">TBD</param>
-        /// <param name="maximumRetries">TBD</param>
+        /// <param name="partialFunction">Maps an upstream failure to a replacement source, or returns <see langword="null"/> when the failure is not handled.</param>
+        /// <param name="maximumRetries">The maximum number of replacement sources to use; use -1 for unlimited retries and 0 to disable retries.</param>
         /// <exception cref="ArgumentException">
-        /// This exception is thrown when the specified <paramref name="maximumRetries"/> is less than zero or not equal to -1.
+        /// Thrown when <paramref name="maximumRetries"/> is less than -1.
         /// </exception>
         public RecoverWith(Func<Exception, IGraph<SourceShape<TOut>, TMat>> partialFunction, int maximumRetries)
         {
@@ -3927,15 +3926,15 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the recover-with stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.RecoverWith;
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that forwards elements and switches to replacement sources after handled failures.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The graph stage logic.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
@@ -4134,8 +4133,8 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of input elements.</typeparam>
+    /// <typeparam name="TOut">The type of elements produced for each input.</typeparam>
     [InternalApi]
     public sealed class StatefulSelectMany<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -4227,9 +4226,9 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Outlet<TOut> _out = new("StatefulSelectMany.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that maps each input to zero or more output elements using a stateful mapper.
         /// </summary>
-        /// <param name="concatFactory">TBD</param>
+        /// <param name="concatFactory">Creates the mapper used for this materialization; the mapper is called once for each input element.</param>
         public StatefulSelectMany(Func<Func<TIn, IEnumerable<TOut>>> concatFactory)
         {
             _concatFactory = concatFactory;
@@ -4238,20 +4237,20 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the stateful select-many stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.StatefulSelectMany;
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates logic that applies the stateful mapper to each input under the inherited supervision strategy.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its supervision strategy.</param>
+        /// <returns>The graph stage logic.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
 
         /// <summary>
@@ -4494,30 +4493,31 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         /// <summary>
-        /// TBD
+        /// The inlet that receives elements for the lazily selected flow.
         /// </summary>
         public Inlet<TIn> In { get; } = new("lazySink.In");
 
         /// <summary>
-        /// TBD
+        /// The outlet that emits elements produced by the selected flow.
         /// </summary>
         public Outlet<TOut> Out { get; } = new("lazySink.Out");
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the lazy-flow stage.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.LazyFlow;
 
         /// <summary>
-        /// TBD
+        /// The flow shape connecting the input and output ports.
         /// </summary>
         public override FlowShape<TIn, TOut> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic and a task for the selected flow's materialized value.
+        /// The task contains the selected flow's materialized value, completes with <see cref="Option{T}.None"/> if upstream completes normally before selection starts or downstream cancels before the selected flow is materialized, and faults if upstream or flow creation fails while the task is unresolved.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage.</param>
+        /// <returns>The stage logic and a task containing the optional materialized value of the selected flow.</returns>
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var promise = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();

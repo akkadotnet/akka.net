@@ -45,7 +45,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Creates a new <see cref="Flag"/> instance with value set to specified parameter.
         /// </summary>
-        /// <param name="enabled">TBD</param>
+        /// <param name="enabled">The initial value of the flag.</param>
         public Flag(bool enabled)
         {
             Enabled = enabled;
@@ -54,8 +54,8 @@ namespace Akka.DistributedData
         /// <summary>
         /// Checks if two flags are equal to each other.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The flag to compare with this instance.</param>
+        /// <returns><see langword="true"/> if both flags have the same value; otherwise, <see langword="false"/>.</returns>
         public bool Equals(Flag other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -76,23 +76,23 @@ namespace Akka.DistributedData
         public override string ToString() => Enabled.ToString();
 
         /// <summary>
-        /// TBD
+        /// Merges this flag with another replicated-data value.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The replicated-data value to merge; it must be a <see cref="Flag"/>.</param>
+        /// <returns>The merged flag.</returns>
         IReplicatedData IReplicatedData.Merge(IReplicatedData other) => Merge((Flag) other);
 
         /// <summary>
-        /// TBD
+        /// Merges two flags, with <see langword="true"/> taking precedence over <see langword="false"/>.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The flag to merge with this instance.</param>
+        /// <returns>The enabled flag if either input is enabled; otherwise, this flag.</returns>
         public Flag Merge(Flag other) => other.Enabled ? other : this;
 
         /// <summary>
-        /// TBD
+        /// Returns an enabled flag, reusing this instance when it is already enabled.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A flag whose <see cref="Enabled"/> value is <see langword="true"/>.</returns>
         public Flag SwitchOn() => Enabled ? this : new Flag(true);
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Creates a new instance of <see cref="FlagKey"/> class.
         /// </summary>
-        /// <param name="id">TBD</param>
+        /// <param name="id">The unique identifier for the flag key.</param>
         public FlagKey(string id) : base(id) { }
     }
 }

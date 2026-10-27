@@ -23,7 +23,7 @@ namespace Akka.Remote
             new Dictionary<IActorRef, IInternalActorRef>();
 
         /// <summary>
-        /// TBD
+        /// Creates a watcher that removes remote-deployed child references after their actors terminate.
         /// </summary>
         public RemoteDeploymentWatcher()
         {
@@ -46,15 +46,15 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Message requesting that a remote-deployed actor be watched on behalf of its supervisor.
         /// </summary>
         internal sealed class WatchRemote
         {
             /// <summary>
-            /// TBD
+            /// Creates a watch request for a remote-deployed actor and its supervisor.
             /// </summary>
-            /// <param name="actor">TBD</param>
-            /// <param name="supervisor">TBD</param>
+            /// <param name="actor">The remote-deployed actor to watch.</param>
+            /// <param name="supervisor">The internal actor reference that supervises the remote actor.</param>
             public WatchRemote(IActorRef actor, IInternalActorRef supervisor)
             {
                 Actor = actor;
@@ -62,11 +62,11 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the remote-deployed actor being watched.
             /// </summary>
             public IActorRef Actor { get; private set; }
             /// <summary>
-            /// TBD
+            /// Gets the supervisor whose child reference should be cleaned up when the actor terminates.
             /// </summary>
             public IInternalActorRef Supervisor { get; private set; }
         }

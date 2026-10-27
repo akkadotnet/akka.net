@@ -363,7 +363,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// user message.
         /// </para>
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Message that may need wrapping before a router forwards it.</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static object WrapIfNeeded(object message)
         {

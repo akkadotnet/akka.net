@@ -15,45 +15,45 @@ using Akka.Util;
 namespace Akka.Cluster.Sharding
 {
     /// <summary>
-    /// TBD
+    /// Timing, buffering, persistence, recovery, and shard-rebalance values used by cluster sharding.
     /// </summary>
     [Serializable]
     public class TuningParameters
     {
         /// <summary>
-        /// TBD
+        /// The backoff duration used when the coordinator is restarted after failure.
         /// </summary>
         public readonly TimeSpan CoordinatorFailureBackoff;
         /// <summary>
-        /// TBD
+        /// The interval at which a shard region retries unanswered coordinator requests.
         /// </summary>
         public readonly TimeSpan RetryInterval;
         /// <summary>
-        /// TBD
+        /// The maximum number of messages buffered by a shard region while waiting for shard location or startup.
         /// </summary>
         public readonly int BufferSize;
         /// <summary>
-        /// TBD
+        /// The timeout for a shard handoff to complete.
         /// </summary>
         public readonly TimeSpan HandOffTimeout;
         /// <summary>
-        /// TBD
+        /// The time a coordinator waits for a region to acknowledge that it is hosting a shard.
         /// </summary>
         public readonly TimeSpan ShardStartTimeout;
         /// <summary>
-        /// TBD
+        /// The backoff duration before restarting a shard after a failure while remembering entity state.
         /// </summary>
         public readonly TimeSpan ShardFailureBackoff;
         /// <summary>
-        /// TBD
+        /// The delay before a remembered entity that stopped without passivating is restarted, unless a message for it arrives first.
         /// </summary>
         public readonly TimeSpan EntityRestartBackoff;
         /// <summary>
-        /// TBD
+        /// The interval between coordinator checks for shards that may need rebalancing.
         /// </summary>
         public readonly TimeSpan RebalanceInterval;
         /// <summary>
-        /// TBD
+        /// The number of persisted events after which a snapshot is attempted for persistence-backed sharding state.
         /// </summary>
         public readonly int SnapshotAfter;
         /// <summary>
@@ -65,11 +65,11 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly int KeepNrOfBatches;
         /// <summary>
-        /// TBD
+        /// The shard-count difference that the legacy least-shard strategy must exceed before it selects shards for rebalance.
         /// </summary>
         public readonly int LeastShardAllocationRebalanceThreshold;
         /// <summary>
-        /// TBD
+        /// The maximum number of shards that the legacy least-shard strategy permits to rebalance concurrently.
         /// </summary>
         public readonly int LeastShardAllocationMaxSimultaneousRebalance;
 
@@ -88,29 +88,29 @@ namespace Akka.Cluster.Sharding
         public readonly double LeastShardAllocationRelativeLimit;
 
         /// <summary>
-        /// TBD
+        /// Creates tuning parameters for shard-region buffering, coordinator and shard timing, entity recovery, snapshots, and rebalance behavior.
         /// </summary>
-        /// <param name="coordinatorFailureBackoff">TBD</param>
-        /// <param name="retryInterval">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="handOffTimeout">TBD</param>
-        /// <param name="shardStartTimeout">TBD</param>
-        /// <param name="shardFailureBackoff">TBD</param>
-        /// <param name="entityRestartBackoff">TBD</param>
-        /// <param name="rebalanceInterval">TBD</param>
-        /// <param name="snapshotAfter">TBD</param>
+        /// <param name="coordinatorFailureBackoff">The backoff duration used when restarting a failed coordinator.</param>
+        /// <param name="retryInterval">The interval between retries of unanswered coordinator requests.</param>
+        /// <param name="bufferSize">The maximum number of messages a shard region buffers while resolving shard locations.</param>
+        /// <param name="handOffTimeout">The timeout for shard handoff.</param>
+        /// <param name="shardStartTimeout">The time allowed for a region to acknowledge hosting a shard.</param>
+        /// <param name="shardFailureBackoff">The delay before a shard is restarted after it terminates outside handoff when remembered entities are enabled.</param>
+        /// <param name="entityRestartBackoff">The delay before restarting a remembered entity that stopped without passivating, if no message for it arrives first.</param>
+        /// <param name="rebalanceInterval">The interval between checks for shards to rebalance.</param>
+        /// <param name="snapshotAfter">The number of persisted events after which sharding state snapshotting is attempted.</param>
         /// <param name="keepNrOfBatches">Keep this number of old persistent batches</param>
-        /// <param name="leastShardAllocationRebalanceThreshold">TBD</param>
-        /// <param name="leastShardAllocationMaxSimultaneousRebalance">TBD</param>
-        /// <param name="waitingForStateTimeout">TBD</param>
-        /// <param name="updatingStateTimeout">TBD</param>
-        /// <param name="entityRecoveryStrategy">TBD</param>
-        /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
-        /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
-        /// <param name="coordinatorStateWriteMajorityPlus">TBD</param>
-        /// <param name="coordinatorStateReadMajorityPlus">TBD</param>
-        /// <param name="leastShardAllocationAbsoluteLimit">TBD</param>
-        /// <param name="leastShardAllocationRelativeLimit">TBD</param>
+        /// <param name="leastShardAllocationRebalanceThreshold">The eligible shard-count difference that the legacy strategy must exceed before selecting shards.</param>
+        /// <param name="leastShardAllocationMaxSimultaneousRebalance">The maximum number of concurrent shard rebalances allowed by the legacy strategy.</param>
+        /// <param name="waitingForStateTimeout">The timeout for reading initial distributed sharding state and shard state.</param>
+        /// <param name="updatingStateTimeout">The timeout for updating distributed sharding state and writing remembered-entity state.</param>
+        /// <param name="entityRecoveryStrategy">The recovery strategy for remembered entities: <c>all</c> starts them together, while <c>constant</c> starts them in batches.</param>
+        /// <param name="entityRecoveryConstantRateStrategyFrequency">The interval between batches when <paramref name="entityRecoveryStrategy"/> is <c>constant</c>.</param>
+        /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">The number of entities started in each batch when <paramref name="entityRecoveryStrategy"/> is <c>constant</c>.</param>
+        /// <param name="coordinatorStateWriteMajorityPlus">The number of replicas beyond a majority required for a coordinator-state write; <see cref="int.MaxValue"/> selects all replicas.</param>
+        /// <param name="coordinatorStateReadMajorityPlus">The number of replicas beyond a majority required for a coordinator-state read; <see cref="int.MaxValue"/> selects all replicas.</param>
+        /// <param name="leastShardAllocationAbsoluteLimit">The absolute per-round shard-move limit used by the bounded least-shard strategy.</param>
+        /// <param name="leastShardAllocationRelativeLimit">The fraction of known shards used to calculate the per-round limit for the bounded least-shard strategy.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="entityRecoveryStrategy"/> is invalid.
         /// Acceptable values include: all | constant
@@ -278,7 +278,7 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// TBD
+    /// Settings that control shard placement, coordinator state storage, entity passivation, and shard-region behavior.
     /// </summary>
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
@@ -329,12 +329,12 @@ namespace Akka.Cluster.Sharding
         public readonly TuningParameters TuningParameters;
 
         /// <summary>
-        /// TBD
+        /// The settings used to run the sharding coordinator as a cluster singleton.
         /// </summary>
         public readonly ClusterSingletonManagerSettings CoordinatorSingletonSettings;
 
         /// <summary>
-        /// TBD
+        /// The optional lease configuration used by the coordinator singleton.
         /// </summary>
         public readonly LeaseUsageSettings LeaseSettings;
 
@@ -343,8 +343,8 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.sharding`.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system whose <c>akka.cluster.sharding</c> and singleton configuration are read.</param>
+        /// <returns>Settings populated from the actor system configuration.</returns>
         public static ClusterShardingSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
@@ -357,11 +357,11 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings from the supplied sharding and coordinator-singleton configuration objects.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="singletonConfig">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">The <c>akka.cluster.sharding</c> configuration.</param>
+        /// <param name="singletonConfig">The configuration for the coordinator singleton.</param>
+        /// <returns>Settings populated from the supplied configurations.</returns>
         public static ClusterShardingSettings Create(Config config, Config singletonConfig)
         {
             if (config.IsNullOrEmpty())
@@ -430,16 +430,16 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings with the selected role, entity memory behavior, persistence plugins, state-store mode, tuning values, and singleton configuration.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <param name="rememberEntities">TBD</param>
-        /// <param name="journalPluginId">TBD</param>
-        /// <param name="snapshotPluginId">TBD</param>
-        /// <param name="passivateIdleEntityAfter">TBD</param>
-        /// <param name="stateStoreMode">TBD</param>
-        /// <param name="tuningParameters">TBD</param>
-        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="role">The cluster role required for nodes that host shard regions, or <see langword="null"/> to allow any role.</param>
+        /// <param name="rememberEntities">Whether shards restore their previously active entities after restart or rebalance.</param>
+        /// <param name="journalPluginId">The journal plugin id used for persistence-backed sharding state.</param>
+        /// <param name="snapshotPluginId">The snapshot plugin id used for persistence-backed sharding state.</param>
+        /// <param name="passivateIdleEntityAfter">The idle period before automatic entity passivation; a non-positive value disables it, and remembered entities are not passivated this way.</param>
+        /// <param name="stateStoreMode">The storage mode used for coordinator and shard state.</param>
+        /// <param name="tuningParameters">Timeouts, buffer limits, recovery options, snapshot settings, and rebalance limits.</param>
+        /// <param name="coordinatorSingletonSettings">The settings for the coordinator singleton.</param>
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -454,17 +454,17 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings with an optional lease for the coordinator singleton.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <param name="rememberEntities">TBD</param>
-        /// <param name="journalPluginId">TBD</param>
-        /// <param name="snapshotPluginId">TBD</param>
-        /// <param name="passivateIdleEntityAfter">TBD</param>
-        /// <param name="stateStoreMode">TBD</param>
-        /// <param name="tuningParameters">TBD</param>
-        /// <param name="coordinatorSingletonSettings">TBD</param>
-        /// <param name="leaseSettings">TBD</param>
+        /// <param name="role">The cluster role required for nodes that host shard regions, or <see langword="null"/> to allow any role.</param>
+        /// <param name="rememberEntities">Whether shards restore their previously active entities after restart or rebalance.</param>
+        /// <param name="journalPluginId">The journal plugin id used for persistence-backed sharding state.</param>
+        /// <param name="snapshotPluginId">The snapshot plugin id used for persistence-backed sharding state.</param>
+        /// <param name="passivateIdleEntityAfter">The idle period before automatic entity passivation; a non-positive value disables it, and remembered entities are not passivated this way.</param>
+        /// <param name="stateStoreMode">The storage mode used for coordinator and shard state.</param>
+        /// <param name="tuningParameters">Timeouts, buffer limits, recovery options, snapshot settings, and rebalance limits.</param>
+        /// <param name="coordinatorSingletonSettings">The settings for the coordinator singleton.</param>
+        /// <param name="leaseSettings">Optional lease settings for the coordinator singleton.</param>
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -480,19 +480,19 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings with explicit remembered-entity storage and shard-region query timeout values.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <param name="rememberEntities">TBD</param>
-        /// <param name="journalPluginId">TBD</param>
-        /// <param name="snapshotPluginId">TBD</param>
-        /// <param name="passivateIdleEntityAfter">TBD</param>
-        /// <param name="stateStoreMode">TBD</param>
-        /// <param name="rememberEntitiesStore">TBD</param>
-        /// <param name="shardRegionQueryTimeout">TBD</param>
-        /// <param name="tuningParameters">TBD</param>
-        /// <param name="coordinatorSingletonSettings">TBD</param>
-        /// <param name="leaseSettings">TBD</param>
+        /// <param name="role">The cluster role required for nodes that host shard regions, or <see langword="null"/> to allow any role.</param>
+        /// <param name="rememberEntities">Whether shards restore their previously active entities after restart or rebalance.</param>
+        /// <param name="journalPluginId">The journal plugin id used for persistence-backed sharding state.</param>
+        /// <param name="snapshotPluginId">The snapshot plugin id used for persistence-backed sharding state.</param>
+        /// <param name="passivateIdleEntityAfter">The idle period before automatic entity passivation; a non-positive value disables it, and remembered entities are not passivated this way.</param>
+        /// <param name="stateStoreMode">The storage mode used for coordinator and shard state.</param>
+        /// <param name="rememberEntitiesStore">The store used to remember entity ids when <paramref name="rememberEntities"/> is enabled.</param>
+        /// <param name="shardRegionQueryTimeout">The timeout for queries that collect information from shard regions.</param>
+        /// <param name="tuningParameters">Timeouts, buffer limits, recovery options, snapshot settings, and rebalance limits.</param>
+        /// <param name="coordinatorSingletonSettings">The settings for the coordinator singleton.</param>
+        /// <param name="leaseSettings">Optional lease settings for the coordinator singleton.</param>
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -563,40 +563,40 @@ namespace Akka.Cluster.Sharding
         internal bool ShouldPassivateIdleEntities => PassivateIdleEntityAfter > TimeSpan.Zero && !RememberEntities;
 
         /// <summary>
-        /// TBD
+        /// Returns a copy configured to host shard regions only on nodes with the specified cluster role.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="role">The required cluster role, or <see langword="null"/> to retain the current role.</param>
+        /// <returns>A copy of these settings with the specified role.</returns>
         public ClusterShardingSettings WithRole(string role)
         {
             return Copy(role: role);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the selected remembered-entity behavior.
         /// </summary>
-        /// <param name="rememberEntities">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="rememberEntities">Whether active entity ids are remembered for shard restart and rebalance recovery.</param>
+        /// <returns>A copy of these settings with the specified entity-memory behavior.</returns>
         public ClusterShardingSettings WithRememberEntities(bool rememberEntities)
         {
             return Copy(rememberEntities: rememberEntities);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the journal plugin id used for persistence-backed sharding state.
         /// </summary>
-        /// <param name="journalPluginId">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="journalPluginId">The plugin id, or <see langword="null"/> to use an empty plugin id.</param>
+        /// <returns>A copy of these settings with the specified journal plugin id.</returns>
         public ClusterShardingSettings WithJournalPluginId(string journalPluginId)
         {
             return Copy(journalPluginId: journalPluginId ?? string.Empty);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the snapshot plugin id used for persistence-backed sharding state.
         /// </summary>
-        /// <param name="snapshotPluginId">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="snapshotPluginId">The plugin id, or <see langword="null"/> to use an empty plugin id.</param>
+        /// <returns>A copy of these settings with the specified snapshot plugin id.</returns>
         public ClusterShardingSettings WithSnapshotPluginId(string snapshotPluginId)
         {
             return Copy(snapshotPluginId: snapshotPluginId ?? string.Empty);
@@ -608,13 +608,13 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with updated shard timing, buffering, recovery, persistence, and allocation parameters.
         /// </summary>
-        /// <param name="tuningParameters">TBD</param>
+        /// <param name="tuningParameters">The tuning parameters to use.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="tuningParameters"/> is undefined.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of these settings with the supplied tuning parameters.</returns>
         public ClusterShardingSettings WithTuningParameters(TuningParameters tuningParameters)
         {
             if (tuningParameters == null)
@@ -639,13 +639,13 @@ namespace Akka.Cluster.Sharding
         }
         
         /// <summary>
-        /// TBD
+        /// Returns a copy with the selected coordinator-singleton settings.
         /// </summary>
-        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="coordinatorSingletonSettings">The settings to use for the coordinator singleton.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="coordinatorSingletonSettings"/> is undefined.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of these settings with the supplied coordinator-singleton settings.</returns>
         public ClusterShardingSettings WithCoordinatorSingletonSettings(ClusterSingletonManagerSettings coordinatorSingletonSettings)
         {
             if (coordinatorSingletonSettings == null)

@@ -15,7 +15,7 @@ using Nito.AsyncEx.Synchronous;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Methods for retrying assertions until they pass or a timeout expires.
     /// </summary>
     public abstract partial class TestKitBase
     {

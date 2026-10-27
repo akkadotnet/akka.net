@@ -186,10 +186,10 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        /// Serializes a snapshot to a temporary file and moves it to its final snapshot file.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="metadata">Metadata used to identify the snapshot file.</param>
+        /// <param name="snapshot">Snapshot data to save.</param>
         protected virtual void Save(SnapshotMetadata metadata, object snapshot)
         {
             var tempFile = WithOutputStream(metadata, stream =>
@@ -214,10 +214,10 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        /// Serializes a snapshot wrapper to a stream.
         /// </summary>
-        /// <param name="stream">TBD</param>
-        /// <param name="snapshot">TBD</param>
+        /// <param name="stream">Stream to receive the serialized snapshot.</param>
+        /// <param name="snapshot">Snapshot wrapper to serialize.</param>
         protected void Serialize(Stream stream, Serialization.Snapshot snapshot)
         {
             var bytes = _wrapperSerializer.ToBinary(snapshot);
@@ -225,11 +225,11 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a temporary snapshot file, writes to its stream, and returns the file.
         /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="p">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="metadata">Metadata used to name the temporary snapshot file.</param>
+        /// <param name="p">Action that writes snapshot data to the stream.</param>
+        /// <returns>The temporary snapshot file.</returns>
         protected FileInfo WithOutputStream(SnapshotMetadata metadata, Action<Stream> p)
         {
             var tmpFile = GetSnapshotFileForWrite(metadata, ".tmp");
@@ -301,7 +301,7 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the snapshot directory before the store begins processing messages.
         /// </summary>
         protected override void PreStart()
         {

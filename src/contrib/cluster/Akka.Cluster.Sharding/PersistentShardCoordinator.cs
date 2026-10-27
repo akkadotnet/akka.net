@@ -30,10 +30,10 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="PersistentShardCoordinator"/> actor.
         /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="allocationStrategy">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="typeName">The sharding entity type name coordinated by this actor.</param>
+        /// <param name="settings">The settings used by the coordinator.</param>
+        /// <param name="allocationStrategy">The strategy used to allocate and rebalance shards.</param>
+        /// <returns>Local actor properties that construct a persistent coordinator with these arguments.</returns>
         internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
             return Actor.Props.Create(() => new PersistentShardCoordinator(typeName, settings, allocationStrategy))
@@ -69,10 +69,10 @@ namespace Akka.Cluster.Sharding
         public override string PersistenceId { get; }
 
         /// <summary>
-        /// TBD
+        /// Applies recognized coordinator events and snapshots during recovery, and initializes recovery-dependent state when recovery completes.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">A persisted coordinator event, snapshot offer, or recovery lifecycle message.</param>
+        /// <returns><c>true</c> when this method handles the recovery message; <c>false</c> for an unsupported message.</returns>
         protected override bool ReceiveRecover(object message)
         {
             switch (message)
@@ -146,10 +146,10 @@ namespace Akka.Cluster.Sharding
 
 
         /// <summary>
-        /// TBD
+        /// Handles commands received before coordinator state initialization completes.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">A coordinator command or persistence result received during initialization.</param>
+        /// <returns><c>true</c> when initialization handling recognizes the message; otherwise <c>false</c>.</returns>
         protected override bool ReceiveCommand(object message)
         {
             return WaitingForStateInitialized(message);
@@ -213,12 +213,11 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Requests a snapshot when due, then persists a coordinator event and invokes its handler after persistence.
         /// </summary>
-        /// <typeparam name="TEvent">TBD</typeparam>
-        /// <param name="e">TBD</param>
-        /// <param name="handler">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TEvent">The coordinator domain-event type being persisted.</typeparam>
+        /// <param name="e">The event to persist.</param>
+        /// <param name="handler">The callback passed to persistence for the persisted event.</param>
         private void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
             SaveSnapshotWhenNeeded();

@@ -314,7 +314,19 @@ namespace Akka.Streams
     }
     public static class Construct
     {
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not " +
+            "have compiled it.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which " +
+            "constructor is needed.")]
+        [System.Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT;" +
+            " will be removed in 1.7. Obsolete since v1.6.0")]
         public static object Instantiate(this System.Type genericType, System.Type genericParam, params object[] constructorArgs) { }
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not " +
+            "have compiled it.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which " +
+            "constructor is needed.")]
+        [System.Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT;" +
+            " will be removed in 1.7. Obsolete since v1.6.0")]
         public static object Instantiate(this System.Type genericType, System.Type[] genericParams, params object[] constructorArgs) { }
     }
     public enum DelayOverflowStrategy
@@ -5284,7 +5296,11 @@ namespace Akka.Streams.Util
     }
     public static class TypeExtensions
     {
-        public static System.Type GetPublishedType(this System.Type type) { }
-        public static System.Type GetSubscribedType(this System.Type type) { }
+        [System.Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type\'s int" +
+            "erfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static System.Type GetPublishedType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] this System.Type type) { }
+        [System.Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type\'s int" +
+            "erfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static System.Type GetSubscribedType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] this System.Type type) { }
     }
 }

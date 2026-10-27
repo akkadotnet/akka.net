@@ -29,19 +29,19 @@ namespace Akka.DistributedData
     public static class GSet
     {
         /// <summary>
-        /// TBD
+        /// Creates a grow-only set initialized with the supplied elements.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="elements">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements stored in the set.</typeparam>
+        /// <param name="elements">The initial elements.</param>
+        /// <returns>A set containing the supplied elements.</returns>
         public static GSet<T> Create<T>(params T[] elements) => new(ImmutableHashSet.Create(elements));
 
         /// <summary>
-        /// TBD
+        /// Creates a grow-only set from an immutable set of elements.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="elements">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The type of elements stored in the set.</typeparam>
+        /// <param name="elements">The initial immutable set of elements.</param>
+        /// <returns>A grow-only set containing those elements.</returns>
         public static GSet<T> Create<T>(IImmutableSet<T> elements) => new(elements);
     }
 
@@ -56,7 +56,7 @@ namespace Akka.DistributedData
     /// 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements stored in the set.</typeparam>
     [Serializable]
     public sealed class GSet<T> :
         FastMerge<GSet<T>>,
@@ -68,31 +68,31 @@ namespace Akka.DistributedData
         IReplicatedDelta
     {
         /// <summary>
-        /// TBD
+        /// Gets an empty grow-only set.
         /// </summary>
         public static readonly GSet<T> Empty = new();
 
         /// <summary>
-        /// TBD
+        /// Gets the elements in this set.
         /// </summary>
         public IImmutableSet<T> Elements { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates an empty grow-only set.
         /// </summary>
         public GSet() : this(ImmutableHashSet<T>.Empty) { }
 
         /// <summary>
-        /// TBD
+        /// Creates a grow-only set containing the supplied immutable set.
         /// </summary>
-        /// <param name="elements">TBD</param>
+        /// <param name="elements">The initial elements.</param>
         public GSet(IImmutableSet<T> elements) : this(elements, null) { }
 
         /// <summary>
-        /// TBD
+        /// Creates a grow-only set from its elements and optional delta state.
         /// </summary>
-        /// <param name="elements">TBD</param>
-        /// <param name="delta"></param>
+        /// <param name="elements">The complete set of elements.</param>
+        /// <param name="delta">The optional delta state accumulated for replication.</param>
         public GSet(IImmutableSet<T> elements, GSet<T> delta)
         {
             Elements = elements;
@@ -100,10 +100,10 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Merges two grow-only sets by taking the union of their elements.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The set to merge with this instance.</param>
+        /// <returns>A set containing elements from both sets.</returns>
         public override GSet<T> Merge(GSet<T> other)
         {
             if (ReferenceEquals(this, other) || other.IsAncestorOf(this)) return ClearAncestor();
@@ -116,27 +116,27 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Checks whether this set contains an element.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element to look for.</param>
+        /// <returns><see langword="true"/> if the element is present; otherwise, <see langword="false"/>.</returns>
         public bool Contains(T element) => Elements.Contains(element);
 
         /// <summary>
-        /// TBD
+        /// Gets whether the set contains no elements.
         /// </summary>
         public bool IsEmpty => Elements.Count == 0;
 
         /// <summary>
-        /// TBD
+        /// Gets the number of elements in the set.
         /// </summary>
         public int Count => Elements.Count;
 
         /// <summary>
-        /// TBD
+        /// Returns a set with <paramref name="element"/> added.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="element">The element to add.</param>
+        /// <returns>A set containing the existing elements and <paramref name="element"/>.</returns>
         public GSet<T> Add(T element)
         {
             var newDelta = Delta != null
@@ -146,10 +146,10 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Checks whether two grow-only sets contain the same elements.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The set to compare with this instance.</param>
+        /// <returns><see langword="true"/> if both sets contain the same elements; otherwise, <see langword="false"/>.</returns>
         public bool Equals(GSet<T> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -217,15 +217,15 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// TBD
+    /// A typed key for a grow-only set CRDT.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements stored in the set.</typeparam>
     public sealed class GSetKey<T> : Key<GSet<T>>, IGSetKey, IReplicatedDataSerialization
     {
         /// <summary>
-        /// TBD
+        /// Creates a key for a grow-only set.
         /// </summary>
-        /// <param name="id">TBD</param>
+        /// <param name="id">The unique identifier for the set key.</param>
         public GSetKey(string id)
             : base(id)
         {

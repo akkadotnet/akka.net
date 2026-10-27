@@ -23,17 +23,17 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// The shared container installed after the last child terminates while the parent is shutting down.
         /// </summary>
         public new static IChildrenContainer Instance { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
             = new TerminatedChildrenContainer();
 
         /// <summary>
-        /// TBD
+        /// Ignores child additions because this container represents a completed termination state.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name that was requested.</param>
+        /// <param name="stats">The child statistics that would have been stored.</param>
+        /// <returns>This terminated container.</returns>
         public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return this;
@@ -51,23 +51,22 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Always <c>true</c> because this container represents a parent that is terminating.
         /// </summary>
         public override bool IsTerminating { get { return true; } }
 
         /// <summary>
-        /// TBD
+        /// Always <c>false</c> because this container is no longer in its normal state.
         /// </summary>
         public override bool IsNormal { get { return false; } }
 
         /// <summary>
-        /// TBD
+        /// A description of this terminated container.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>Terminated</c>.</returns>
         public override string ToString()
         {
             return "Terminated";
         }
     }
 }
-

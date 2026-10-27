@@ -10,7 +10,7 @@ using Akka.Actor;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// An envelope containing a received message and its sender.
     /// </summary>
     public class RealMessageEnvelope : MessageEnvelope
     {
@@ -18,10 +18,10 @@ namespace Akka.TestKit
         private readonly IActorRef _sender;
 
         /// <summary>
-        /// TBD
+        /// Creates an envelope for a message and its sender.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The received message.</param>
+        /// <param name="sender">The actor that sent the message.</param>
         public RealMessageEnvelope(object message, IActorRef sender)
         {
             _message = message;
@@ -29,18 +29,18 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the received message.
         /// </summary>
         public override object Message { get { return _message; } }
         /// <summary>
-        /// TBD
+        /// Gets the actor that sent the message.
         /// </summary>
         public override IActorRef Sender{get { return _sender; }}
 
         /// <summary>
-        /// TBD
+        /// Returns the message and sender in diagnostic form.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A string containing the message and sender.</returns>
         public override string ToString()
         {
             return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());

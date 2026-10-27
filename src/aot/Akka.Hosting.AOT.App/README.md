@@ -5,8 +5,12 @@ through `Host.CreateApplicationBuilder` + `AddAkka(...)` and proves, against a r
 publish: a custom `WithExtension<T>` was registered by boot, not lazily created; a plain actor and a
 DI-constructed one both round-trip through `Ask`; `WithActorSystemLivenessCheck()` reports through
 `Microsoft.Extensions.Diagnostics.HealthChecks`; `ConfigureLoggers`'s `AddLoggerFactory` actually
-routes Akka's logs through `Microsoft.Extensions.Logging`; and `Watch`/`Terminated` (DeathWatch)
-works. A `WatchdogLoggerProvider` fails the run on any Warning/Error logged anywhere in the host.
+routes Akka's logs through `Microsoft.Extensions.Logging`; `Watch`/`Terminated` (DeathWatch)
+works; and Akka.Streams graphs that cross island boundaries run (`StreamsScenarios.cs`: `.Async()`,
+`Sink.AsPublisher` into `Source.FromPublisher`, a fan-out publisher, `Source.ActorPublisher` and a
+graph that reads its own materialized value, each with an `int` and a `string` element). The streams part needs no `TrimmerRootDescriptor`; if Akka.Streams ever
+builds a boundary type reflectively again, the run fails with `MissingMethodException` (#8731). A
+`WatchdogLoggerProvider` fails the run on any Warning/Error logged anywhere in the host.
 
 The app terminates itself once every assertion passes (`OK`, exit 0) instead of waiting on
 `host.WaitForShutdownAsync()`, so CI gets a deterministic exit.
@@ -27,6 +31,7 @@ with the AOT switch off.
 
 `aot-warnings.baseline.txt` in this directory tracks known `IL2xxx`/`IL3xxx` warnings under
 `src/contrib/hosting/`, `src/contrib/dependencyinjection/`, and `src/core/Akka.Streams/` (Hosting
-registers the stream-ref serializer at startup; see #8667). `src/core/Akka/` is out of scope - the
+registers the stream-ref serializer at startup; see #8667, and the streams scenarios reach the
+materializer's island-boundary code; see #8731). `src/core/Akka/` is out of scope - the
 plain-core canary's own baseline already covers it. Checked by the Hosting steps of the `AotCanary` job in
 `build-system/pr-validation.yaml`, which also documents how to reproduce the check locally.

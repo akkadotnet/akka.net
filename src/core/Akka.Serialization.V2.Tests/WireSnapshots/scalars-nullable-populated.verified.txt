@@ -1,0 +1,9 @@
+﻿case: scalars-nullable-populated
+message-type: NullableScalarsMessage
+manifest: nullable-scalars-v1
+serializer-id: 122003
+byte-count: 42
+
+0000  89 01 cd 01 2c 02 ca 3f  c0 00 00 03 d1 ff 38 04  |....,..?......8.|
+0010  cc c8 05 fb 06 cd 9c 40  07 ce b2 d0 5e 00 08 cf  |.......@....^...|
+0020  ff ff ff ff ff ff ff ff  09 41                    |.........A|

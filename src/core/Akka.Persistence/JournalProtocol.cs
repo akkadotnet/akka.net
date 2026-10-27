@@ -228,7 +228,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="messages">Messages to be written.</param>
         /// <param name="persistentActor">Write requester.</param>
-        /// <param name="actorInstanceId">TBD</param>
+        /// <param name="actorInstanceId">Instance identifier of the persistent actor that sent the request.</param>
         public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor, int actorInstanceId)
         {
             Messages = messages;
@@ -247,7 +247,7 @@ namespace Akka.Persistence
         public IActorRef PersistentActor { get; }
 
         /// <summary>
-        /// TBD
+        /// Instance identifier of the persistent actor that sent the request.
         /// </summary>
         public int ActorInstanceId { get; }
         
@@ -349,7 +349,7 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="WriteMessageSuccess"/> class.
         /// </summary>
         /// <param name="persistent">Successfully written message.</param>
-        /// <param name="actorInstanceId">TBD</param>
+        /// <param name="actorInstanceId">Instance identifier of the persistent actor that sent the request.</param>
         public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
         {
             Persistent = persistent;
@@ -362,7 +362,7 @@ namespace Akka.Persistence
         public IPersistentRepresentation Persistent { get; }
 
         /// <summary>
-        /// TBD
+        /// Instance identifier of the persistent actor that sent the request.
         /// </summary>
         public int ActorInstanceId { get; }
         
@@ -401,7 +401,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="persistent">Message rejected to be written.</param>
         /// <param name="cause">Failure cause.</param>
-        /// <param name="actorInstanceId">TBD</param>
+        /// <param name="actorInstanceId">Instance identifier of the persistent actor that sent the request.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
@@ -423,7 +423,7 @@ namespace Akka.Persistence
         public Exception Cause { get; }
 
         /// <summary>
-        /// TBD
+        /// Instance identifier of the persistent actor that sent the request.
         /// </summary>
         public int ActorInstanceId { get; }
         
@@ -465,7 +465,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="persistent">Message failed to be written.</param>
         /// <param name="cause">Failure cause.</param>
-        /// <param name="actorInstanceId">TBD</param>
+        /// <param name="actorInstanceId">Instance identifier of the persistent actor that sent the request.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
@@ -487,7 +487,7 @@ namespace Akka.Persistence
         public Exception Cause { get; }
 
         /// <summary>
-        /// TBD
+        /// Instance identifier of the persistent actor that sent the request.
         /// </summary>
         public int ActorInstanceId { get; }
         
@@ -528,7 +528,7 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="LoopMessageSuccess"/> class.
         /// </summary>
         /// <param name="message">A looped message.</param>
-        /// <param name="actorInstanceId">TBD</param>
+        /// <param name="actorInstanceId">Instance identifier of the persistent actor that sent the request.</param>
         public LoopMessageSuccess(object message, int actorInstanceId)
         {
             Message = message;
@@ -541,7 +541,7 @@ namespace Akka.Persistence
         public object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Instance identifier of the persistent actor that sent the request.
         /// </summary>
         public int ActorInstanceId { get; }
         

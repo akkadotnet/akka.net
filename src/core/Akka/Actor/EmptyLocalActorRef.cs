@@ -13,7 +13,7 @@ using Akka.Event;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Represents a local actor path that has no live actor and routes ordinary messages to dead letters.
     /// </summary>
     public class EmptyLocalActorRef : MinimalActorRef
     {
@@ -22,11 +22,11 @@ namespace Akka.Actor
         private readonly EventStream _eventStream;
 
         /// <summary>
-        /// TBD
+        /// Creates an empty reference for the specified path.
         /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="eventStream">TBD</param>
+        /// <param name="provider">The provider used for dead letters and actor resolution.</param>
+        /// <param name="path">The path whose actor is absent.</param>
+        /// <param name="eventStream">The event stream used to publish dead letters.</param>
         public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             _provider = provider;
@@ -35,27 +35,27 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The path for which no live actor exists.
         /// </summary>
         public override ActorPath Path { get { return _path; } }
 
         /// <summary>
-        /// TBD
+        /// The provider that owns this reference.
         /// </summary>
         public override IActorRefProvider Provider { get { return _provider; } }        
 
         /// <summary>
-        /// TBD
+        /// Always <c>true</c>, because this reference does not represent a live actor.
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
 #pragma warning disable CS0809
         public override bool IsTerminated { get { return true; } }
 #pragma warning restore CS0809
         /// <summary>
-        /// TBD
+        /// Handles messages sent to this absent actor path.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to deliver or publish as a dead letter.</param>
+        /// <param name="sender">The message sender.</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -68,9 +68,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Offers an incoming system message to the supported control-message handler; an unhandled system message is ignored.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to handle.</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
@@ -78,11 +78,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Handles supported control messages and suppressed messages without a live actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to handle.</param>
+        /// <param name="sender">The sender that should receive an identity response, when applicable.</param>
+        /// <returns><c>true</c> if the message was handled or suppressed; otherwise, <c>false</c> for an ordinary unsuppressed message. <see cref="TellInternal"/> publishes such an unhandled user message as a dead letter, while <see cref="SendSystemMessage"/> ignores an unhandled system message.</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             if (message is Watch watch)

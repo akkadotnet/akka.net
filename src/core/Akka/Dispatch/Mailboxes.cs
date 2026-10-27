@@ -34,11 +34,11 @@ namespace Akka.Dispatch
 
         private readonly DeadLetterMailbox _deadLetterMailbox;
         /// <summary>
-        /// TBD
+        /// Configuration path for the mailbox used when no actor or dispatcher mailbox is selected.
         /// </summary>
         public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
         /// <summary>
-        /// TBD
+        /// Empty string sentinel indicating that a dispatcher has no mailbox queue requirement.
         /// </summary>
         public static readonly string NoMailboxRequirement = "";
         private readonly Dictionary<Type, string> _mailboxBindings;
@@ -130,7 +130,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the mailbox used to immediately forward messages to the system's dead-letters reference.
         /// </summary>
         public DeadLetterMailbox DeadLetterMailbox { get { return _deadLetterMailbox; } }
 
@@ -391,14 +391,14 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Selects and validates a mailbox type using the actor's, deployment's, and dispatcher configuration.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcherConfig">TBD</param>
+        /// <param name="props">The actor properties, including any mailbox override or required queue type.</param>
+        /// <param name="dispatcherConfig">The resolved dispatcher configuration, or <c>null</c> to use empty configuration.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the 'mailbox-requirement' in the given <paramref name="dispatcherConfig"/> isn't met.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A mailbox type whose produced queue satisfies the applicable actor and dispatcher requirements.</returns>
         public MailboxType GetMailboxType(Props props, Config dispatcherConfig)
         {
             if (dispatcherConfig == null)
@@ -500,4 +500,3 @@ namespace Akka.Dispatch
         }
     }
 }
-

@@ -18,13 +18,13 @@ using Akka.Routing;
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
     /// <summary>
-    /// TBD
+    /// Periodic message that asks a topic or group actor to check whether it should be pruned.
     /// </summary>
     [Serializable]
     internal sealed class Prune
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the prune tick.
         /// </summary>
         public static Prune Instance { get; } = new();
         private Prune() { }
@@ -32,12 +32,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
     // Only for testing purposes, to poll/await replication
     /// <summary>
-    /// TBD
+    /// Test-only request that returns the number of subscribers held by an actor.
     /// </summary>
     internal sealed class Count
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the subscriber-count request.
         /// </summary>
         public static Count Instance { get; } = new();
         private Count() { }
@@ -58,40 +58,40 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Versioned set of publish-subscribe registrations owned by one cluster member.
     /// </summary>
     [Serializable]
     internal class Bucket : IEquatable<Bucket>
     {
         /// <summary>
-        /// TBD
+        /// Address of the member that owns this registry bucket.
         /// </summary>
         public Address Owner { get; }
 
         /// <summary>
-        /// TBD
+        /// Version of the owner's registry represented by this bucket.
         /// </summary>
         public long Version { get; }
 
         /// <summary>
-        /// TBD
+        /// Registered actor paths and their versioned actor references for this owner.
         /// </summary>
         public IImmutableDictionary<string, ValueHolder> Content { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates an empty registry bucket owned by the specified member.
         /// </summary>
-        /// <param name="owner">TBD</param>
+        /// <param name="owner">Address of the member that owns the bucket.</param>
         public Bucket(Address owner) : this(owner, 0L, ImmutableDictionary<string, ValueHolder>.Empty)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a registry bucket with the supplied version and contents.
         /// </summary>
-        /// <param name="owner">TBD</param>
-        /// <param name="version">TBD</param>
-        /// <param name="content">TBD</param>
+        /// <param name="owner">Address of the member that owns the bucket.</param>
+        /// <param name="version">Version of the owner's registry.</param>
+        /// <param name="content">Actor path registrations and their versioned values.</param>
         public Bucket(Address owner, long version, IImmutableDictionary<string, ValueHolder> content)
         {
             Owner = owner;
@@ -130,18 +130,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Versioned registration of an actor reference in an owner's registry bucket.
     /// </summary>
     [Serializable]
     internal sealed class ValueHolder : IEquatable<ValueHolder>
     {
         /// <summary>
-        /// TBD
+        /// Version assigned to this registration.
         /// </summary>
         public long Version { get; }
 
         /// <summary>
-        /// TBD
+        /// Actor reference registered at the corresponding path.
         /// </summary>
         public IActorRef Ref { get; }
 
@@ -149,10 +149,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         private Routee _routee;
 
         /// <summary>
-        /// TBD
+        /// Creates a versioned registration value.
         /// </summary>
-        /// <param name="version">TBD</param>
-        /// <param name="ref">TBD</param>
+        /// <param name="version">Version assigned to this registration.</param>
+        /// <param name="ref">Actor reference registered at the path.</param>
         public ValueHolder(long version, IActorRef @ref)
         {
             Version = version;
@@ -160,7 +160,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Lazily created routee for the registered actor, or <see langword="null"/> when no actor reference is available.
         /// </summary>
         public Routee Routee { get { return _routee ??= Ref != null ? new ActorRefRoutee(Ref) : null; } }
 
@@ -192,16 +192,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Version summary exchanged between mediators to determine which registry buckets need synchronization.
     /// </summary>
     [Serializable]
     internal sealed class Status : IDistributedPubSubMessage, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Creates a status message with owner versions and its request/reply flag.
         /// </summary>
-        /// <param name="versions">TBD</param>
-        /// <param name="isReplyToStatus">TBD</param>
+        /// <param name="versions">Latest registry version observed for each owner.</param>
+        /// <param name="isReplyToStatus">Whether this status is a reply to another mediator's status message.</param>
         public Status(IImmutableDictionary<Address, long> versions, bool isReplyToStatus)
         {
             Versions = versions ?? ImmutableDictionary<Address, long>.Empty;
@@ -209,12 +209,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Latest registry version observed for each owner; a null value is treated as an empty map.
         /// </summary>
         public IImmutableDictionary<Address, long> Versions { get; }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether this status replies to a status request.
         /// </summary>
         public bool IsReplyToStatus { get; }
 
@@ -251,20 +251,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Registry bucket updates replicated between distributed publish-subscribe mediators.
     /// </summary>
     [Serializable]
     internal sealed class Delta : IDistributedPubSubMessage, IEquatable<Delta>, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Buckets carrying the registry updates in this delta.
         /// </summary>
         public IImmutableList<Bucket> Buckets { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a delta with registry updates.
         /// </summary>
-        /// <param name="buckets">TBD</param>
+        /// <param name="buckets">Buckets to include; a null value is treated as an empty list.</param>
         public Delta(IImmutableList<Bucket> buckets)
         {
             Buckets = buckets ?? ImmutableList<Bucket>.Empty;
@@ -294,13 +294,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
     // Only for testing purposes, to verify replication
     /// <summary>
-    /// TBD
+    /// Test-only message that returns the number of delta updates sent during replication.
     /// </summary>
     [Serializable]
     internal sealed class DeltaCount
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the delta-count request.
         /// </summary>
         public static readonly DeltaCount Instance = new();
 
@@ -308,7 +308,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Periodic message that triggers registry gossip between mediators.
     /// </summary>
     [Serializable]
     internal sealed class GossipTick: IDeadLetterSuppression
@@ -338,20 +338,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
     
     /// <summary>
-    /// TBD
+    /// Registers a topic or group child actor with its mediator parent.
     /// </summary>
     [Serializable]
     internal sealed class RegisterTopic
     {
         /// <summary>
-        /// TBD
+        /// Topic or group actor to register with the parent mediator.
         /// </summary>
         public IActorRef TopicRef { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a registration message for a topic or group actor.
         /// </summary>
-        /// <param name="topicRef">TBD</param>
+        /// <param name="topicRef">Topic or group actor reference to register.</param>
         public RegisterTopic(IActorRef topicRef)
         {
             TopicRef = topicRef;
@@ -359,26 +359,26 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Child-to-parent message carrying a subscription acknowledgement and its original requester.
     /// </summary>
     [Serializable]
     internal sealed class Subscribed
     {
         /// <summary>
-        /// TBD
+        /// Acknowledgement produced for the subscription.
         /// </summary>
         public SubscribeAck Ack { get; }
 
         /// <summary>
-        /// TBD
+        /// Original requester to which the mediator forwards the acknowledgement.
         /// </summary>
         public IActorRef Subscriber { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a message reporting a processed subscription.
         /// </summary>
-        /// <param name="ack">TBD</param>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="ack">Acknowledgement for the subscription.</param>
+        /// <param name="subscriber">Original requester that should receive the acknowledgement.</param>
         public Subscribed(SubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
@@ -387,26 +387,26 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Child-to-parent message carrying an unsubscription acknowledgement and its original requester.
     /// </summary>
     [Serializable]
     internal sealed class Unsubscribed
     {
         /// <summary>
-        /// TBD
+        /// Acknowledgement produced for the unsubscription.
         /// </summary>
         public UnsubscribeAck Ack { get; }
 
         /// <summary>
-        /// TBD
+        /// Original requester to which the mediator forwards the acknowledgement.
         /// </summary>
         public IActorRef Subscriber { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a message reporting a processed unsubscription.
         /// </summary>
-        /// <param name="ack">TBD</param>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="ack">Acknowledgement for the unsubscription.</param>
+        /// <param name="subscriber">Original requester that should receive the acknowledgement.</param>
         public Unsubscribed(UnsubscribeAck ack, IActorRef subscriber)
         {
             Ack = ack;
@@ -415,20 +415,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Wraps a publication so a group actor routes it to one of its subscribers.
     /// </summary>
     [Serializable]
     internal sealed class SendToOneSubscriber
     {
         /// <summary>
-        /// TBD
+        /// Message forwarded to the selected group subscriber.
         /// </summary>
         public object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates an envelope for delivery to one subscriber in a group.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">Published message to forward.</param>
         public SendToOneSubscriber(object message)
         {
             Message = message;
@@ -475,7 +475,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     internal sealed class NoMoreSubscribers : IChildActorTerminationProtocol
     {
         /// <summary>
-        /// TBD
+        /// Singleton signal that a child topic or group has no subscribers and no children.
         /// </summary>
         public static NoMoreSubscribers Instance { get; } = new();
         private NoMoreSubscribers() {}
@@ -488,7 +488,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     internal sealed class TerminateRequest : IChildActorTerminationProtocol
     {
         /// <summary>
-        /// TBD
+        /// Singleton request from a parent asking a child to stop after a passivation signal.
         /// </summary>
         public static TerminateRequest Instance { get; } = new();
         private TerminateRequest() {}
@@ -502,22 +502,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     internal sealed class NewSubscriberArrived : IChildActorTerminationProtocol
     {
         /// <summary>
-        /// TBD
+        /// Singleton response indicating that a subscriber arrived before a child terminated.
         /// </summary>
         public static NewSubscriberArrived Instance { get; } = new();
         private NewSubscriberArrived() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Envelope that prevents a router from unwrapping a user-supplied router envelope prematurely.
     /// </summary>
     [Serializable]
     internal sealed class MediatorRouterEnvelope : RouterEnvelope
     {
         /// <summary>
-        /// TBD
+        /// Creates a mediator-specific wrapper for a user message.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">User message to wrap before router delivery.</param>
         public MediatorRouterEnvelope(object message) : base(message) { }
     }
 }

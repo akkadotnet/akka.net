@@ -14,9 +14,9 @@ namespace Akka.TestKit.Internal.StringMatcher;
 public interface IStringMatcher
 {
     /// <summary>
-    /// TBD
+    /// Checks whether a string satisfies this matching criterion.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns><c>true</c> if the string matches; otherwise, <c>false</c>.</returns>
     bool IsMatch(string s);
 }

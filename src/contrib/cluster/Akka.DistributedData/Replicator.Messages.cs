@@ -997,7 +997,7 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// TBD
+    /// Exception raised by the asynchronous distributed-data API when an operation targets a permanently deleted key.
     /// </summary>
     [Serializable]
     public class DataDeletedException : Exception

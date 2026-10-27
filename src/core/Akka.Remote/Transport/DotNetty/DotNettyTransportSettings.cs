@@ -60,10 +60,10 @@ namespace Akka.Remote.Transport.DotNetty
     ///     transport, which might be different than the physical port
     ///     this is designed to make it easy to support private / public addressing schemes
     /// </param>
-    /// <param name="ServerSocketWorkerPoolSize">TBD</param>
-    /// <param name="ClientSocketWorkerPoolSize">TBD</param>
-    /// <param name="MaxFrameSize">TBD</param>
-    /// <param name="Ssl">TBD</param>
+    /// <param name="ServerSocketWorkerPoolSize">Number of I/O worker threads used by server sockets.</param>
+    /// <param name="ClientSocketWorkerPoolSize">Number of I/O worker threads used by client sockets.</param>
+    /// <param name="MaxFrameSize">Maximum size, in bytes, of a frame accepted by the transport.</param>
+    /// <param name="Ssl">SSL settings used when SSL is enabled; otherwise, the empty settings.</param>
     /// <param name="DnsUseIpv6">
     ///     If set to true, we will use IPv6 addresses upon DNS resolution for
     ///     host names. Otherwise IPv4 will be used.
@@ -92,8 +92,8 @@ namespace Akka.Remote.Transport.DotNetty
     /// <param name="SendBufferSize">
     ///     Sets the default send buffer size of the Sockets.
     /// </param>
-    /// <param name="WriteBufferHighWaterMark">TBD</param>
-    /// <param name="WriteBufferLowWaterMark">TBD</param>
+    /// <param name="WriteBufferHighWaterMark">Optional high water mark, in bytes, for socket write buffers; <c>null</c> uses the platform default.</param>
+    /// <param name="WriteBufferLowWaterMark">Optional low water mark, in bytes, for socket write buffers; <c>null</c> uses the platform default.</param>
     /// <param name="BackwardsCompatibilityModeEnabled">
     ///     Enables backwards compatibility with Akka.Remote clients running Helios 1.*
     /// </param>

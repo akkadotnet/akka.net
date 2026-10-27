@@ -559,10 +559,10 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// TBD
+        /// Reads an include directive and returns its quoted path as an include token.
         /// </summary>
         /// <exception cref="FormatException">This exception is thrown if an unknown escape code is encountered.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>The include token containing the path from the directive.</returns>
         public Token PullInclude()
         {
             Take("include".Length);

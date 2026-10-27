@@ -21,21 +21,14 @@ namespace Akka.Serialization
     /// <summary>
     /// A Serializer represents a bimap between an object and an array of bytes representing that object.
     ///
-    /// Serializers are loaded using reflection during <see cref="ActorSystem"/>
-    /// start-up, where two constructors are tried in order:
-    ///
-    /// <ul>
-    /// <li>taking exactly one argument of type <see cref="ExtendedActorSystem"/>;
-    /// this should be the preferred one because all reflective loading of classes
-    /// during deserialization should use ExtendedActorSystem.dynamicAccess (see
-    /// [[akka.actor.DynamicAccess]]), and</li>
-    /// <li>without arguments, which is only an option if the serializer does not
-    /// load classes using reflection.</li>
-    /// </ul>
-    ///
-    /// <b>Be sure to always use the PropertyManager for loading classes!</b> This is necessary to
-    /// avoid strange match errors and inequalities which arise from different class loaders loading
-    /// the same class.
+    /// When dynamic type loading is enabled, a custom serializer named by type in
+    /// <c>akka.actor.serializers</c> is created during serialization initialization. When
+    /// <c>akka.actor.serialization-settings.&lt;alias&gt;</c>
+    /// contains configuration, the loader invokes a constructor taking <see cref="ExtendedActorSystem"/>
+    /// and <see cref="Config"/>; otherwise it invokes a constructor taking only
+    /// <see cref="ExtendedActorSystem"/>. There is no parameterless-constructor fallback.
+    /// <see cref="SerializationSetup"/> registers serializer instances returned by its factory,
+    /// and those registrations are applied after the HOCON serializer entries.
     /// </summary>
     public abstract class Serializer
     {
@@ -190,7 +183,9 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public sealed override object FromBinary(byte[] bytes, Type type)
         {
-            var manifest = type.TypeQualifiedName();
+            // A null type maps to the empty manifest - the same thing SerializerV2 did before it derived from
+            // this class - so FromBinary(bytes, string) decides what an empty manifest means.
+            var manifest = type is null ? string.Empty : type.TypeQualifiedName();
             return FromBinary(bytes, manifest);
         }
 

@@ -1,0 +1,11 @@
+﻿case: formatter-custom-value-type-nullable-elements
+message-type: CelsiusPositions
+manifest: celsius-positions-v1
+serializer-id: 122001
+byte-count: 80
+
+0000  86 01 92 cb c0 71 12 66  66 66 66 66 cb 00 00 00  |.....q.fffff....|
+0010  00 00 00 00 00 02 91 cb  3f f8 00 00 00 00 00 00  |........?.......|
+0020  03 92 cb 40 00 00 00 00  00 00 00 c0 04 92 c0 cb  |...@............|
+0030  40 10 00 00 00 00 00 00  05 81 cb 40 14 00 00 00  |@..........@....|
+0040  00 00 00 a4 66 69 76 65  06 81 a4 6e 6f 6e 65 c0  |....five...none.|

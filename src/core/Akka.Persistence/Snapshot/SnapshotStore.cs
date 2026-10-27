@@ -313,11 +313,10 @@ namespace Akka.Persistence.Snapshot
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
-        /// and handle additional messages for implementing advanced features
+        /// Plugin hook called for save and delete success or failure responses before they are forwarded to the persistent actor, and for messages not handled by the built-in protocol, such as plugin replies piped back to the store.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">Message received by the snapshot store.</param>
+        /// <returns><c>true</c> if a message not handled by the built-in protocol was handled by the plugin; otherwise, <c>false</c>. The result is ignored for save and delete success or failure responses.</returns>
         protected virtual bool ReceivePluginInternal(object message)
         {
             return false;

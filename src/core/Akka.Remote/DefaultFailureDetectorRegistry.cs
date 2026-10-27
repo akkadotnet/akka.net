@@ -15,13 +15,13 @@ namespace Akka.Remote
     /// <summary>
     /// A lock-less, thread-safe implementation of <see cref="IFailureDetectorRegistry{T}"/>.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type used to identify a monitored resource.</typeparam>
     public class DefaultFailureDetectorRegistry<T> : IFailureDetectorRegistry<T>
     {
         /// <summary>
         /// Instantiates the DefaultFailureDetectorRegistry an uses a factory method for creating new instances
         /// </summary>
-        /// <param name="factory">TBD</param>
+        /// <param name="factory">Creates a failure detector when a resource is first registered.</param>
         public DefaultFailureDetectorRegistry(Func<FailureDetector> factory)
         {
             _factory = factory;
@@ -46,10 +46,10 @@ namespace Akka.Remote
         #region IFailureDetectorRegistry<T> members
 
         /// <summary>
-        /// TBD
+        /// Determines whether a resource is considered available by its registered failure detector.
         /// </summary>
-        /// <param name="resource">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resource">The resource whose health is being checked.</param>
+        /// <returns><c>true</c> if the resource is available or is not registered; otherwise, <c>false</c>.</returns>
         public bool IsAvailable(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
@@ -58,10 +58,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether a failure detector has started monitoring a resource.
         /// </summary>
-        /// <param name="resource">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resource">The resource whose monitoring state is being checked.</param>
+        /// <returns><c>true</c> if its failure detector has received a heartbeat; otherwise, <c>false</c>.</returns>
         public bool IsMonitoring(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
@@ -70,9 +70,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Records a heartbeat, creating and registering a failure detector for a resource on its first heartbeat.
         /// </summary>
-        /// <param name="resource">TBD</param>
+        /// <param name="resource">The resource for which to record a heartbeat.</param>
         public void Heartbeat(T resource)
         {
             if (ResourceToFailureDetector.TryGetValue(resource, out var failureDetector))
@@ -107,9 +107,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Removes a resource and its failure detector from the registry.
         /// </summary>
-        /// <param name="resource">TBD</param>
+        /// <param name="resource">The resource to remove.</param>
         public void Remove(T resource)
         {
             while (true)
@@ -125,7 +125,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Removes all registered resources and their failure detector state.
         /// </summary>
         public void Reset()
         {
@@ -145,8 +145,8 @@ namespace Akka.Remote
         /// <summary>
         /// Get the underlying <see cref="FailureDetector"/> for a resource.
         /// </summary>
-        /// <param name="resource">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resource">The resource whose registered failure detector is requested.</param>
+        /// <returns>The registered detector, or <c>null</c> if the resource is not registered.</returns>
         internal FailureDetector GetFailureDetector(T resource)
         {
             ResourceToFailureDetector.TryGetValue(resource, out var f);

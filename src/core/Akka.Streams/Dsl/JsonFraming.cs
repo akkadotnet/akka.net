@@ -43,8 +43,8 @@ namespace Akka.Streams.Dsl
         /// (and does not impact the emitting frame) to the JSON object's internal formatting.
         /// 
         /// </summary>
-        /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
-        /// <returns>TBD</returns>
+        /// <param name="maximumObjectLength">The maximum number of bytes scanned while locating an object, including leading separators and whitespace. If the limit is reached, this flow fails the stream.</param>
+        /// <returns>A flow that frames object-shaped byte sequences by scanning JSON delimiters; it does not validate the complete JSON syntax.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
         {
             return Flow.Create<ReadOnlySequence<byte>>().Via(new Scanner(maximumObjectLength));
@@ -105,24 +105,24 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumObjectLength;
 
             /// <summary>
-            /// TBD
+            /// Creates a framing stage that scans for object-shaped byte sequences up to the specified byte limit.
             /// </summary>
-            /// <param name="maximumObjectLength">TBD</param>
+            /// <param name="maximumObjectLength">The maximum number of bytes scanned while locating an object, including leading separators and whitespace.</param>
             public Scanner(int maximumObjectLength)
             {
                 _maximumObjectLength = maximumObjectLength;
             }
 
             /// <summary>
-            /// TBD
+            /// The default name attribute for this JSON framing stage.
             /// </summary>
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("JsonFraming.objectScanner");
 
             /// <summary>
-            /// TBD
+            /// Creates the stage logic that parses incoming byte sequences.
             /// </summary>
-            /// <param name="inheritedAttributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="inheritedAttributes">Attributes inherited from the enclosing graph.</param>
+            /// <returns>The logic instance for this JSON scanner stage.</returns>
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
     }

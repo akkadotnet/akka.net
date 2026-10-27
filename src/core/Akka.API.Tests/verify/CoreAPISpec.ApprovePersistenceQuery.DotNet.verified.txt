@@ -1,4 +1,7 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Hosting")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Hosting.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Query.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]

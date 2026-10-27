@@ -283,14 +283,14 @@ namespace Akka.Cluster.Tools.Singleton
     internal sealed class StoppingData : IClusterSingletonData
     {
         /// <summary>
-        /// TBD
+        /// Singleton actor that is being stopped as this manager leaves the active state.
         /// </summary>
         public IActorRef Singleton { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates state data for the singleton actor being stopped.
         /// </summary>
-        /// <param name="singleton">TBD</param>
+        /// <param name="singleton">Singleton actor reference to stop.</param>
         public StoppingData(IActorRef singleton)
         {
             Singleton = singleton;
@@ -298,13 +298,13 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
-    /// TBD
+    /// Terminal data marker used after the singleton manager has completed its stopping sequence.
     /// </summary>
     [Serializable]
     internal sealed class EndData : IClusterSingletonData
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the terminal state data.
         /// </summary>
         public static EndData Instance { get; } = new();
 
@@ -534,7 +534,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Default HOCON configuration loaded from the cluster singleton reference resource.</returns>
         [Obsolete("Deprecated and will be removed in v1.6, please use ClusterSingleton.DefaultConfig() instead. Since 1.5.32.")]
         public static Config DefaultConfig()
         {

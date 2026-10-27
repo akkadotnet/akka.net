@@ -192,12 +192,12 @@ namespace Akka.Cluster
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
             /// to specify different values for the outgoing objects
             /// </summary>
-            /// <param name="members">TBD</param>
-            /// <param name="unreachable">TBD</param>
-            /// <param name="seenBy">TBD</param>
-            /// <param name="leader">TBD</param>
-            /// <param name="roleLeaderMap">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="members">Replacement member set, or <c>null</c> to retain the current set.</param>
+            /// <param name="unreachable">Replacement unreachable-member set, or <c>null</c> to retain the current set.</param>
+            /// <param name="seenBy">Replacement set of nodes that have seen the gossip version, or <c>null</c> to retain it.</param>
+            /// <param name="leader">Replacement leader address, or <c>null</c> to retain the current leader.</param>
+            /// <param name="roleLeaderMap">Replacement role-to-leader map, or <c>null</c> to retain the current map.</param>
+            /// <returns>A new state containing the supplied values and retained values for omitted arguments.</returns>
             public CurrentClusterState Copy(
                 ImmutableSortedSet<Member> members = null,
                 ImmutableHashSet<Member> unreachable = null,
@@ -235,7 +235,7 @@ namespace Akka.Cluster
         public abstract class MemberStatusChange : IMemberEvent
         {
             /// <summary>
-            /// TBD
+            /// The member whose status changed.
             /// </summary>
             protected readonly Member _member;
 
@@ -445,9 +445,9 @@ namespace Akka.Cluster
             private readonly Address _leader;
 
             /// <summary>
-            /// TBD
+            /// Creates an event for the new cluster leader, if one is present.
             /// </summary>
-            /// <param name="leader">TBD</param>
+            /// <param name="leader">The new leader address, or <c>null</c> when there is no leader.</param>
             public LeaderChanged(Address leader)
             {
                 _leader = leader;
@@ -497,10 +497,10 @@ namespace Akka.Cluster
             private readonly string _role;
 
             /// <summary>
-            /// TBD
+            /// Creates an event for a role's new leader, if one is present.
             /// </summary>
-            /// <param name="role">TBD</param>
-            /// <param name="leader">TBD</param>
+            /// <param name="role">The role whose leader changed.</param>
+            /// <param name="leader">The new leader address, or <c>null</c> when there is no leader for the role.</param>
             public RoleLeaderChanged(string role, Address leader)
             {
                 _role = role;
@@ -516,7 +516,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The role for which the leader changed.
             /// </summary>
             public string Role
             {
@@ -581,23 +581,23 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Base event carrying a member whose reachability state changed.
         /// </summary>
         public abstract class ReachabilityEvent : IReachabilityEvent
         {
             private readonly Member _member;
 
             /// <summary>
-            /// TBD
+            /// Creates a reachability event for the specified member.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The member whose reachability changed.</param>
             protected ReachabilityEvent(Member member)
             {
                 _member = member;
             }
 
             /// <summary>
-            /// TBD
+            /// The member whose reachability changed.
             /// </summary>
             public Member Member
             {
@@ -636,9 +636,9 @@ namespace Akka.Cluster
         public sealed class UnreachableMember : ReachabilityEvent
         {
             /// <summary>
-            /// TBD
+            /// Creates an event indicating that the member is unreachable.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The member detected as unreachable.</param>
             public UnreachableMember(Member member)
                 : base(member)
             {
@@ -653,9 +653,9 @@ namespace Akka.Cluster
         public sealed class ReachableMember : ReachabilityEvent
         {
             /// <summary>
-            /// TBD
+            /// Creates an event indicating that a previously unreachable member is reachable again.
             /// </summary>
-            /// <param name="member">TBD</param>
+            /// <param name="member">The member detected as reachable again.</param>
             public ReachableMember(Member member)
                 : base(member)
             {
@@ -671,10 +671,10 @@ namespace Akka.Cluster
             private readonly ImmutableHashSet<Address> _seenBy;
 
             /// <summary>
-            /// TBD
+            /// Creates an internal event describing gossip convergence and the nodes that have seen this version.
             /// </summary>
-            /// <param name="convergence">TBD</param>
-            /// <param name="seenBy">TBD</param>
+            /// <param name="convergence">Whether the cluster has converged on the current gossip version.</param>
+            /// <param name="seenBy">The nodes that have seen this gossip version.</param>
             public SeenChanged(bool convergence, ImmutableHashSet<Address> seenBy)
             {
                 _convergence = convergence;
@@ -682,7 +682,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Whether the cluster has converged on the current gossip version.
             /// </summary>
             public bool Convergence
             {
@@ -690,7 +690,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The nodes that have seen the current gossip version.
             /// </summary>
             public ImmutableHashSet<Address> SeenBy
             {
@@ -724,23 +724,23 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal event carrying an updated cluster reachability table.
         /// </summary>
         internal sealed class ReachabilityChanged : IClusterDomainEvent
         {
             private readonly Reachability _reachability;
 
             /// <summary>
-            /// TBD
+            /// Creates an event containing the supplied reachability table.
             /// </summary>
-            /// <param name="reachability">TBD</param>
+            /// <param name="reachability">The current reachability table.</param>
             public ReachabilityChanged(Reachability reachability)
             {
                 _reachability = reachability;
             }
 
             /// <summary>
-            /// TBD
+            /// The reachability table carried by this event.
             /// </summary>
             public Reachability Reachability
             {
@@ -768,7 +768,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal event carrying the latest gossip and vector-clock statistics.
         /// </summary>
         internal sealed class CurrentInternalStats : IClusterDomainEvent
         {
@@ -776,10 +776,10 @@ namespace Akka.Cluster
             private readonly VectorClockStats _vclockStats;
 
             /// <summary>
-            /// TBD
+            /// Creates an event containing the latest internal cluster statistics.
             /// </summary>
-            /// <param name="gossipStats">TBD</param>
-            /// <param name="vclockStats">TBD</param>
+            /// <param name="gossipStats">Statistics about the current gossip state.</param>
+            /// <param name="vclockStats">Statistics about the vector clock used by gossip.</param>
             public CurrentInternalStats(GossipStats gossipStats, VectorClockStats vclockStats)
             {
                 _gossipStats = gossipStats;
@@ -787,7 +787,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Statistics about the current gossip state.
             /// </summary>
             public GossipStats GossipStats
             {
@@ -795,7 +795,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Vector-clock statistics; this property retains the historical <c>SeenBy</c> name.
             /// </summary>
             public VectorClockStats SeenBy
             {

@@ -19,7 +19,7 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Provides factories for stages that combine corresponding elements from multiple inputs.
     /// </summary>
     public partial class ZipWith
     {
@@ -27,14 +27,14 @@ namespace Akka.Streams.Dsl
     var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "TIn" + x));
 #>
         /// <summary>
-        /// Create a new <see cref="ZipWith{<#= typeParams #>, TOut}"/> specialized for 1 inputs.
+        /// Creates a new <see cref="ZipWith{<#= typeParams #>, TOut}"/> specialized for <#= i #> inputs.
         /// </summary>
 <# for (int t = 0; t < i; t++) {  #>
-        /// <typeparam name="TIn<#= t #>">TBD</typeparam>
+        /// <typeparam name="TIn<#= t #>">The element type accepted by input <c>In<#= t #></c>.</typeparam>
 <# } #>
-        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
         /// <param name="zipper">zipping-function from the input values to the output value</param>
-        /// <returns>TBD</returns>
+        /// <returns>A stage that zips elements from the inputs using <paramref name="zipper"/>.</returns>
         public static ZipWith<<#= typeParams #>, TOut> Apply<<#= typeParams #>, TOut>(Func<<#= typeParams #>, TOut> zipper)
         {
             return new ZipWith<<#= typeParams #>, TOut>(zipper);
@@ -47,12 +47,12 @@ namespace Akka.Streams.Dsl
     var fanInShape = "FanInShape<" + typeParams + ", TOut>";
 #>
     /// <summary>
-    /// TBD
+    /// Combines the next element from each input into one output using a zipper function.
     /// </summary>
 <# for (int t = 0; t < i; t++) {  #>
-    /// <typeparam name="TIn<#= t #>">TBD</typeparam>
+    /// <typeparam name="TIn<#= t #>">The element type accepted by input <c>In<#= t #></c>.</typeparam>
 <# } #>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TOut">The element type produced by the zipper function.</typeparam>
     public class ZipWith<<#= typeParams #>, TOut> : GraphStage<<#= fanInShape #>>
     {
         private sealed class Logic : OutGraphStageLogic
@@ -110,9 +110,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a stage that combines input elements using <paramref name="zipper"/>.
         /// </summary>
-        /// <param name="zipper">TBD</param>
+        /// <param name="zipper">A function that maps one element from each input to an output element.</param>
         public ZipWith(Func<<#= typeParams #>, TOut> zipper)
         {
             Zipper = zipper;
@@ -126,37 +126,37 @@ namespace Akka.Streams.Dsl
         }
         
         /// <summary>
-        /// TBD
+        /// The output port that emits values produced by <see cref="Zipper"/>.
         /// </summary>
         public Outlet<TOut> Out { get; }
 
 <# for (int t = 0; t < i; t++) { #>
         /// <summary>
-        /// TBD
+        /// Input port <c>In<#= t #></c>, which supplies one argument to <see cref="Zipper"/>.
         /// </summary>
         public Inlet<TIn<#= t #>> In<#= t #> { get; }
 <# } #>
 
         /// <summary>
-        /// TBD
+        /// The attributes initially assigned to this graph stage.
         /// </summary>
         protected sealed override Attributes InitialAttributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The stage's typed input ports and output port.
         /// </summary>
         public sealed override <#= fanInShape #> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The function applied to the next available element from each input.
         /// </summary>
         public Func<<#= typeParams #>, TOut> Zipper { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the stage logic that waits for all inputs and applies the zipper.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">The attributes inherited from the surrounding graph.</param>
+        /// <returns>The logic that handles this stage's input and output ports.</returns>
         protected sealed override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
             return new Logic(Shape, this);

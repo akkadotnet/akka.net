@@ -8,16 +8,16 @@
 namespace Akka.Streams.Util
 {
     /// <summary>
-    /// TBD
+    /// Bit-counting helpers for 32-bit integers.
     /// </summary>
     public static class Int32Extensions
     {
         // see http://stackoverflow.com/questions/10439242/count-leading-zeroes-in-an-int32
         /// <summary>
-        /// TBD
+        /// Counts the zero bits before the first set bit, starting from the most significant bit.
         /// </summary>
-        /// <param name="x">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="x">The 32-bit integer to inspect.</param>
+        /// <returns>The number of leading zero bits; returns 32 when <paramref name="x"/> is zero.</returns>
         internal static int NumberOfLeadingZeros(this int x)
         {
             x |= (x >> 1);
@@ -37,10 +37,10 @@ namespace Akka.Streams.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Counts the zero bits after the last set bit, starting from the least significant bit.
         /// </summary>
-        /// <param name="i">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="i">The 32-bit integer to inspect.</param>
+        /// <returns>The number of trailing zero bits; returns 32 when <paramref name="i"/> is zero.</returns>
         internal static int NumberOfTrailingZeros(this int i)
         {
             if (i == 0)

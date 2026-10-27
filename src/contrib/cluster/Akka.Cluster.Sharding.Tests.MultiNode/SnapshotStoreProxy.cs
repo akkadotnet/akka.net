@@ -32,7 +32,7 @@ namespace Akka.Cluster.Sharding.Tests
         private IActorRef _store;
 
         /// <summary>
-        /// TBD
+        /// Initializes the snapshot-store proxy in an uninitialized state with no target store actor.
         /// </summary>
         protected SnapshotStoreProxy()
         {
@@ -42,19 +42,19 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// The maximum wait before the proxy stops stashing messages for store initialization.
         /// </summary>
         public abstract TimeSpan Timeout { get; }
 
         /// <summary>
-        /// TBD
+        /// The stash used while waiting for the store actor to be set.
         /// </summary>
         public IStash Stash { get; set; }
 
         public ITimerScheduler Timers { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Starts the initialization timeout before the snapshot store's base startup logic runs.
         /// </summary>
         public override void AroundPreStart()
         {
@@ -63,11 +63,11 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
-        /// TBD
+        /// Stashes messages until a store is supplied or initialization times out, then delegates normal snapshot-store handling.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The snapshot store's receive handler.</param>
+        /// <param name="message">The incoming message to process or stash.</param>
+        /// <returns><c>true</c> when initialization handling consumes the message; otherwise, the base snapshot-store result.</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)

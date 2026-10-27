@@ -7,6 +7,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
@@ -49,6 +50,8 @@ namespace Akka.TestKit
             public ILoggingAdapter Log { get; set; }
             public EventFilterFactory EventFilterFactory { get; set; }
         }
+
+        private const string TestActorDispatcherId = "akka.test.test-actor.dispatcher";
 
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
@@ -124,6 +127,45 @@ namespace Akka.TestKit
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
+        // The default config names TestEventListener by type. With Akka.DynamicTypeLoading off that name does not
+        // resolve, so register the type with LoggerSetup too; LoggingBus accepts a name LoggerSetup already
+        // started. Only when the effective config would start the listener anyway, so a spec that replaces
+        // akka.loggers keeps its own list, and an existing LoggerSetup (and its formatter) is kept.
+        private static ActorSystemSetup WithTestEventListenerSetup(ActorSystemSetup setup, Config config)
+        {
+            var listenerName = typeof(TestEventListener).FullName;
+            if (!config.GetStringList("akka.loggers", Array.Empty<string>())
+                    .Any(logger => string.Equals(TypeNameOf(logger), listenerName, StringComparison.Ordinal)))
+                return setup;
+
+            var listener = Props.Create<TestEventListener>();
+            var existing = setup.Get<LoggerSetup>();
+            if (!existing.HasValue)
+                return setup.WithSetup(LoggerSetup.Create(listener));
+
+            if (existing.Value.Loggers.Any(props => props.Type == typeof(TestEventListener)))
+                return setup;
+
+            var loggers = existing.Value.Loggers.Concat(new[] { listener }).ToArray();
+            return setup.WithSetup(existing.Value.Formatter is { } formatter
+                ? LoggerSetup.Create(formatter, loggers)
+                : LoggerSetup.Create(loggers));
+        }
+
+        private static bool NamesCallingThreadDispatcher(Config config, string dispatcherId)
+        {
+            var type = config.GetString(dispatcherId + ".type", null);
+            return type is not null && string.Equals(TypeNameOf(type),
+                typeof(CallingThreadDispatcherConfigurator).FullName, StringComparison.Ordinal);
+        }
+
+        // "Ns.Type, Assembly" -> "Ns.Type"
+        private static string TypeNameOf(string typeName)
+        {
+            var comma = typeName.IndexOf(',');
+            return (comma < 0 ? typeName : typeName.Substring(0, comma)).Trim();
+        }
+
         /// <summary>
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
@@ -151,7 +193,9 @@ namespace Akka.TestKit
                     newBootstrap =
                         newBootstrap.WithActorRefProvider(bootstrap.FlatSelect(x => x.ActorRefProvider).Value);
                 }
-                system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
+                var systemSetup = WithTestEventListenerSetup(config.WithSetup(newBootstrap),
+                    configWithDefaultFallback.HasValue ? configWithDefaultFallback.Value : _defaultConfig);
+                system = ActorSystem.Create(actorSystemName ?? "test", systemSetup);
             }
             else
             {
@@ -171,6 +215,13 @@ namespace Akka.TestKit
             //register the CallingThreadDispatcherConfigurator
             _testState.System.Dispatchers.RegisterConfigurator(CallingThreadDispatcher.Id,
                 new CallingThreadDispatcherConfigurator(_testState.System.Settings.Config, _testState.System.Dispatchers.Prerequisites));
+
+            // The test actor's dispatcher names the same configurator by type in HOCON, and that name only
+            // resolves through reflection. Register it too, so it works with Akka.DynamicTypeLoading off. Skip it
+            // when the config points the id at some other type, so an override keeps working.
+            if (NamesCallingThreadDispatcher(_testState.System.Settings.Config, TestActorDispatcherId))
+                _testState.System.Dispatchers.RegisterConfigurator(TestActorDispatcherId,
+                    new CallingThreadDispatcherConfigurator(_testState.System.Settings.Config, _testState.System.Dispatchers.Prerequisites));
 
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
@@ -477,9 +528,9 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
-        /// <param name="duration">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="duration">The duration to return when there is no enclosing `within` block.</param>
+        /// <exception cref="InvalidOperationException">Thrown if the current `within` end time is invalid.</exception>
+        /// <returns>The remaining time in the innermost `within` block, or <paramref name="duration"/> when outside one.</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
             // Check AsyncLocal first (async context takes precedence for proper timeout propagation)
@@ -525,8 +576,8 @@ namespace Akka.TestKit
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
         /// i.e. the config value "akka.test.timefactor"
         /// </summary>
-        /// <param name="duration">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="duration">The duration to scale by the configured test time factor.</param>
+        /// <returns>The scaled duration.</returns>
         public TimeSpan Dilated([AutoDilate] TimeSpan duration)
         {
             if (duration < TimeSpan.Zero)
@@ -539,8 +590,8 @@ namespace Akka.TestKit
         /// If <paramref name="timeout"/> is defined it is returned; otherwise
         /// the config value "akka.test.single-expect-default" is returned.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">An optional timeout value.</param>
+        /// <returns>The specified timeout, or the configured single-expect default when null.</returns>
         public TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
         {
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
@@ -553,7 +604,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="TimeoutException">Thrown when shutdown exceeds the timeout and <paramref name="verifySystemShutdown"/> is true.</exception>
         public virtual void Shutdown(
             TimeSpan? duration = null,
             bool verifySystemShutdown = false)
@@ -567,7 +618,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <exception cref="TimeoutException">TBD</exception>
+        /// <exception cref="TimeoutException">Thrown when shutdown exceeds the timeout and <paramref name="verifySystemShutdown"/> is true.</exception>
         protected virtual void Shutdown(
             ActorSystem system,
             TimeSpan? duration = null,
@@ -773,7 +824,7 @@ namespace Akka.TestKit
         /// <para>The default test actor can be retrieved from the <see cref="TestActor"/> property</para>
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
-        /// <returns>TBD</returns>
+        /// <returns>The actor reference for the named test actor.</returns>
         public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_testState.System, name);
@@ -788,7 +839,7 @@ namespace Akka.TestKit
             using var initComplete = new ManualResetEventSlim(false);
 
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue, initComplete))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+                .WithDispatcher(TestActorDispatcherId);
 
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
             // Use the new AttachChildWithAsync method to create TestActor synchronously
@@ -811,7 +862,7 @@ namespace Akka.TestKit
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+                .WithDispatcher(TestActorDispatcherId);
             
             // For additional test actors, always use the standard SystemActorOf
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
@@ -834,7 +885,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="system">For multi-actor system tests, you can specify which system the node is for.</param>
         /// <param name="name">Optional: The name of the probe.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A new probe attached to the specified actor system.</returns>
         public virtual TestProbe CreateTestProbe(ActorSystem system, string name = null)
         {
             return new TestProbe(system, _assertions, name);
@@ -859,8 +910,8 @@ namespace Akka.TestKit
         /// It always uses a timeout when waiting.
         /// Timeouts will always throw an exception. The default timeout is 5 seconds.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="count">The number of participants that must arrive at the barrier.</param>
+        /// <returns>A barrier configured with the test kit's default timeout.</returns>
         public TestBarrier CreateTestBarrier(int count)
         {
             return new TestBarrier(this, count, _testState.TestKitSettings.DefaultTimeout);

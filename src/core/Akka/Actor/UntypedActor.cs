@@ -17,10 +17,11 @@ namespace Akka.Actor
     public abstract class UntypedActor : ActorBase
     {
         /// <summary>
-        /// TBD
+        /// Routes every message to <see cref="OnReceive"/> and reports it as handled.
+        /// Derived actors that need to report unhandled messages must call <see cref="ActorBase.Unhandled"/> themselves.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message received by the actor.</param>
+        /// <returns>Always <c>true</c>, regardless of whether <see cref="OnReceive"/> processes the message.</returns>
         protected sealed override bool Receive(object message)
         {
             OnReceive(message);
@@ -28,18 +29,18 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Runs an action using Akka's actor task scheduler.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">The action to schedule.</param>
         protected void RunTask(Action action)
         {
             ActorTaskScheduler.RunTask(action);
         }
 
         /// <summary>
-        /// TBD
+        /// Runs an asynchronous operation using Akka's actor task scheduler.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">The asynchronous operation to schedule.</param>
         protected void RunTask(Func<Task> action)
         {
             ActorTaskScheduler.RunTask(action);
@@ -74,7 +75,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The untyped actor context for the current actor invocation.
         /// </summary>
         protected new static IUntypedActorContext Context => (IUntypedActorContext) ActorBase.Context;
     }

@@ -170,23 +170,24 @@ namespace Akka.Remote.Artery
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
 
-            return Akka.Serialization.Serialization.WithTransport(serialization.System, () =>
+            return Akka.Serialization.Serialization.WithTransport(serialization.System,
+                (serialization, originUid, senderPath, recipientPath, message, pool), static state =>
             {
-                var serializer = serialization.FindSerializerV2For(message);
-                var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, message) ?? string.Empty;
+                var serializer = state.serialization.FindSerializerV2For(state.message);
+                var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, state.message) ?? string.Empty;
 
                 const int reservedPrefixLength = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
                 var capacityHint = reservedPrefixLength
-                    + LiteralWireSize(senderPath) + LiteralWireSize(recipientPath) + LiteralWireSize(manifest);
+                    + LiteralWireSize(state.senderPath) + LiteralWireSize(state.recipientPath) + LiteralWireSize(manifest);
 
                 // Fold in the serializer's own size hint (a hint only -- the frame length is still
                 // back-patched from actual bytes written below, never predicted) so the pooled
                 // writer's initial rent is sized for the payload too, not just the header/literals.
-                var payloadSizeHint = serializer.SizeHint(message);
+                var payloadSizeHint = serializer.SizeHint(state.message);
                 if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
                     capacityHint += payloadSizeHint;
 
-                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: pool);
+                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: state.pool);
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below
@@ -194,15 +195,15 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, senderPath);
-                    var recipientTag = WriteLiteral(writer, recipientPath);
+                    var senderTag = WriteLiteral(writer, state.senderPath);
+                    var recipientTag = WriteLiteral(writer, state.recipientPath);
                     var manifestTag = WriteLiteral(writer, manifest);
 
                     var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
 
                     // Single-pass: the payload streams directly into the SAME growable buffer --
                     // no intermediate byte[] copy.
-                    serializer.Serialize(message, writer);
+                    serializer.Serialize(state.message, writer);
 
                     var frameLength = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
 
@@ -210,7 +211,7 @@ namespace Akka.Remote.Artery
                         writer.GetPatchSpan(0, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
                     WriteFixedHeader(
                         writer.GetPatchSpan(ArteryEnvelopeHeader.FrameLengthFieldLength, ArteryEnvelopeHeader.HeaderLength),
-                        serializer.Identifier, originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                        serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset);
 
                     return writer;
                 }
@@ -343,12 +344,7 @@ namespace Akka.Remote.Artery
 
             if (byteCount > 0)
             {
-                // PERF: Encoding.GetBytes(string) allocates an intermediate byte[] -- netstandard2.0
-                // has no Encoding.GetBytes(string, Span<byte>) overload. Literals (actor paths /
-                // manifests) are the cold path at G1; ref/manifest compression (deferred) removes
-                // them from the hot path entirely.
-                var bytes = Encoding.UTF8.GetBytes(value);
-                bytes.CopyTo(envelope.Slice(cursor, byteCount));
+                Encoding.UTF8.GetBytes(value.AsSpan(), envelope.Slice(cursor, byteCount));
                 cursor += byteCount;
             }
 
@@ -370,10 +366,7 @@ namespace Akka.Remote.Artery
 
             if (byteCount > 0)
             {
-                // PERF: see the Span<byte> overload above -- same netstandard2.0 limitation.
-                var bytes = Encoding.UTF8.GetBytes(value);
-                var dataSpan = writer.GetSpan(byteCount);
-                bytes.CopyTo(dataSpan);
+                Encoding.UTF8.GetBytes(value.AsSpan(), writer.GetSpan(byteCount));
                 writer.Advance(byteCount);
             }
 

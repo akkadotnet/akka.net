@@ -70,9 +70,9 @@ namespace Akka.Remote
         ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The serialized actor path to resolve.</param>
+        /// <param name="localAddress">The local transport address associated with the incoming message.</param>
+        /// <returns>The local or remote actor reference represented by the path.</returns>
         IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress);
 
         /// <summary>
@@ -84,12 +84,12 @@ namespace Akka.Remote
         IActorRef InternalResolveActorRef(string path);
 
         /// <summary>
-        /// TBD
+        /// Requests creation of a remote actor on its target node and arranges termination watching for cleanup.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="deploy">TBD</param>
-        /// <param name="supervisor">TBD</param>
+        /// <param name="actor">The remote actor reference to instantiate.</param>
+        /// <param name="props">The actor properties used to create the remote actor.</param>
+        /// <param name="deploy">The deployment settings for the actor.</param>
+        /// <param name="supervisor">The actor that supervises the remote actor.</param>
         void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor);
 
         /// <summary>
@@ -289,10 +289,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the remote watcher actor with its configured heartbeat failure detector.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system in which the remote watcher is created.</param>
+        /// <returns>The actor reference of the remote watcher.</returns>
         protected virtual IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
@@ -305,10 +305,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the actor that cleans up references to terminated remote-deployed actors.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system in which the watcher is created.</param>
+        /// <returns>The actor reference of the remote deployment watcher.</returns>
         protected virtual IActorRef CreateRemoteDeploymentWatcher(ActorSystemImpl system)
         {
             return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(Props.Create<RemoteDeploymentWatcher>()),
@@ -316,10 +316,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a registry of remote-address failure detectors using the configured implementation.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system associated with remote watching.</param>
+        /// <returns>A registry that monitors remote addresses.</returns>
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
         {
             return new DefaultFailureDetectorRegistry<Address>(() =>
@@ -328,16 +328,16 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor reference locally or remotely according to the effective deployment scope.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="systemService">TBD</param>
-        /// <param name="deploy">TBD</param>
-        /// <param name="lookupDeploy">TBD</param>
-        /// <param name="async">TBD</param>
+        /// <param name="system">The actor system that creates the actor reference.</param>
+        /// <param name="props">The actor properties for the new actor.</param>
+        /// <param name="supervisor">The parent actor reference responsible for supervision.</param>
+        /// <param name="path">The actor path to assign.</param>
+        /// <param name="systemService"><c>true</c> when creating an actor system service, which is always local.</param>
+        /// <param name="deploy">Deployment settings supplied for this actor.</param>
+        /// <param name="lookupDeploy"><c>true</c> to look up additional deployment settings by logical path.</param>
+        /// <param name="async">Whether local actor creation should use asynchronous initialization.</param>
         /// <exception cref="ActorInitializationException">
         /// This exception is thrown when the remote deployment to the specified <paramref name="path"/> fails.
         /// </exception>
@@ -345,7 +345,7 @@ namespace Akka.Remote
         /// This exception is thrown when either the scope of the deployment is local
         /// or the specified <paramref name="props"/> is invalid for deployment to the specified <paramref name="path"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The internal actor reference for the local or remote actor.</returns>
         public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
@@ -457,10 +457,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the root guardian reference for a local address or a remote root path.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The address of the actor system whose root guardian is requested.</param>
+        /// <returns>The local root guardian when the address belongs to this provider; otherwise, a remote root reference.</returns>
         public IActorRef RootGuardianAt(Address address)
         {
             if (HasAddress(address))
@@ -481,9 +481,9 @@ namespace Akka.Remote
         ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The serialized actor path to resolve.</param>
+        /// <param name="localAddress">The local transport address associated with the incoming message.</param>
+        /// <returns>Dead letters for a null path. When the parsed address does not belong to this provider, a remote reference using <paramref name="localAddress"/>; errors from creating that reference propagate. For an address owned by this provider, the root guardian for a root path, or the result of local path resolution.</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             if (path is null)
@@ -579,10 +579,10 @@ namespace Akka.Remote
 
 
         /// <summary>
-        /// TBD
+        /// Resolves an actor path to a local actor reference or constructs a remote actor reference for its address.
         /// </summary>
-        /// <param name="actorPath">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorPath">The actor path to resolve.</param>
+        /// <returns>The resolved local actor reference, or a reference that sends to the remote path; if a remote reference cannot be created, returns an empty local actor reference.</returns>
         public IActorRef ResolveActorRef(ActorPath actorPath)
         {
             if (HasAddress(actorPath.Address))
@@ -624,12 +624,12 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a remote deployment request to the node hosting the actor and registers the reference for termination cleanup.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="deploy">TBD</param>
-        /// <param name="supervisor">TBD</param>
+        /// <param name="actor">The reference representing the remotely deployed actor.</param>
+        /// <param name="props">The properties used to create the remote actor.</param>
+        /// <param name="deploy">The actor's deployment settings.</param>
+        /// <param name="supervisor">The actor that supervises the remote actor.</param>
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor)
         {
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
@@ -660,11 +660,11 @@ namespace Akka.Remote
         private class Internals : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// Holds the transport, serializer, and remote daemon used by the actor reference provider.
             /// </summary>
-            /// <param name="transport">TBD</param>
-            /// <param name="serialization">TBD</param>
-            /// <param name="remoteDaemon">TBD</param>
+            /// <param name="transport">The remote transport.</param>
+            /// <param name="serialization">The serializer registry used by remoting.</param>
+            /// <param name="remoteDaemon">The daemon actor that handles remote deployment requests.</param>
             public Internals(RemoteTransport transport, Akka.Serialization.Serialization serialization, IInternalActorRef remoteDaemon)
             {
                 Transport = transport;
@@ -673,17 +673,17 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the transport used by this provider.
             /// </summary>
             public RemoteTransport Transport { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// Gets the serializer registry used by this provider.
             /// </summary>
             public Akka.Serialization.Serialization Serialization { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// Gets the remote system daemon actor reference.
             /// </summary>
             public IInternalActorRef RemoteDaemon { get; private set; }
         }

@@ -44,7 +44,7 @@ namespace Akka.Cluster.Metrics
         /// <summary>
         /// Default HOCON settings for cluster metrics.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default cluster-metrics configuration loaded from the embedded reference configuration.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterMetrics>("Akka.Cluster.Metrics.reference.conf");

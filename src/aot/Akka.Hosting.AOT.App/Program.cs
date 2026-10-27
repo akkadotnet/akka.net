@@ -124,6 +124,9 @@ try
     await AssertDeathWatchAsync(system, host.Services);
     await AssertHealthAsync(host.Services);
 
+    // Akka.Streams graphs that cross island boundaries (#8731) - see StreamsScenarios.cs.
+    await StreamsScenarios.RunAsync(system);
+
     system.Log.Info(RoundTripMarker);
 
     // Proves fix for the race between Log.Info above and the watchdog's queue: the logger actor

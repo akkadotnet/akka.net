@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
@@ -13,6 +14,7 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Verify.XunitV3" Version="$(VerifyXunitV3Version)" />
   </ItemGroup>
 
 </Project>

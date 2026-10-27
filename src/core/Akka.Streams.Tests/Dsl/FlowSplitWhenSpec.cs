@@ -16,7 +16,6 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
@@ -336,7 +335,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WaitAsync(RemainingOrDefault);
         }
 
-        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        [Fact(DisplayName = "SplitWhen should fail the substream when it is materialized twice")]
         public async Task SplitWhen_must_fail_substream_if_materialized_twice()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -345,15 +344,11 @@ namespace Akka.Streams.Tests.Dsl
                         await Source.Single(1)
                             .SplitWhen(_ => true)
                             .Lift()
-                            .SelectAsync(1, source =>
+                            .SelectAsync(1, async source =>
                             {
-                                source.RunWith(Sink.Ignore<int>(), Materializer);
-                                // Sink.ignore+mapAsync pipes error back                                                                                 
-                                return Task.Run(() =>
-                                {
-                                    source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
-                                    return 1;
-                                });
+                                await source.RunWith(Sink.Ignore<int>(), Materializer);
+                                await source.RunWith(Sink.Ignore<int>(), Materializer);
+                                return 1;
                             })
                             .RunWith(Sink.Ignore<int>(), Materializer)
                     ).Should().ThrowAsync<IllegalStateException>();

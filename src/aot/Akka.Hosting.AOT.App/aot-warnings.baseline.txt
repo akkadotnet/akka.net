@@ -7,11 +7,13 @@
 #   src/contrib/hosting/             - Akka.Hosting itself
 #   src/contrib/dependencyinjection/ - Akka.DependencyInjection
 #   src/core/Akka.Streams/           - not covered by the core canary, which never references
-#                                       Akka.Streams. Hosting does, and registers the stream-ref
-#                                       serializer unconditionally at startup.
+#                                       Akka.Streams. Hosting does, registers the stream-ref
+#                                       serializer unconditionally at startup, and the canary runs
+#                                       streams across island boundaries (StreamsScenarios.cs).
 #
 # src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
 #
-# Empty since #8671 put the Akka.Streams stream-ref reflection behind Akka.DynamicTypeLoading. Any
+# Empty since #8671 put the Akka.Streams stream-ref reflection behind Akka.DynamicTypeLoading, and
+# #8731 stopped the materializer building island-boundary types with MakeGenericType. Any
 # new entry is a place where Hosting's dependency surface reaches for a type by name, or builds
 # one reflectively, in a way the trimmer cannot see.
