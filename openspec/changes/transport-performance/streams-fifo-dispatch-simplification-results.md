@@ -54,6 +54,8 @@ Current #8826's untraced StageActor median is 293.28 ns/item; the final candidat
 
 The candidate retains RestartFlow's 329→105 and 273→49 B/item observations. Versus current #8826, the untraced queue median is 2.66% higher, and simple-graph allocation is 133 B/run higher (0.45%). Versus the parent, the final candidate's queue timing is 0.63% lower, simple-graph timing 0.42% higher, and restart-graph timing 0.71% lower. These bounded observations do not establish neutrality for all Streams graphs.
 
+BenchmarkDotNet also reports short minimum iterations for the untraced StageActor control (candidate minima 71.762 and 75.244 ms versus its 100 ms recommendation) and multimodal distributions in some cases. The existing configuration reports a duplicate GitHub Markdown exporter; case/sample guards and generated files pass validation. All warnings and detected outliers are retained, with no sample removal. These are additional limits on timing conclusions.
+
 ## Integrated RemotePingPong
 
 All twelve processes and all 36 repetitions are retained. Four processes per role, three repetitions each, one client, 1M requests, window 50, real V2 payload (348 serialized bytes), one inbound and one outbound lane. Processes run sequentially and separately from BDN, builds/tests and native diagnostics. Startup reports server GC, eight heaps, adaptation disabled; retained-array sanity probes and precise cumulative allocation/window checks pass. Startup configuration/probe checks are not a full heap-history trace.
