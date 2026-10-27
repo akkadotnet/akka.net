@@ -1450,6 +1450,7 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ShardCoordinator"/>. If the process takes longer than the `handOffTimeout` it
         /// also sends <see cref="RebalanceDone"/>.
         /// </summary>
+#nullable enable
         internal class RebalanceWorker : ActorBase, IWithTimers
         {
             public sealed class ShardRegionTerminated
@@ -1486,7 +1487,8 @@ namespace Akka.Cluster.Sharding
             private readonly IActorRef _shardRegionFrom;
             private readonly ISet<IActorRef> _remaining;
             private readonly bool _isRebalance;
-            private ILoggingAdapter _log;
+            private bool _shardRegionFromTerminated;
+            private ILoggingAdapter? _log;
 
             private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
@@ -1546,6 +1548,8 @@ namespace Akka.Cluster.Sharding
                         Acked(Sender);
                         return true;
                     case ShardRegionTerminated t:
+                        if (t.Region.Equals(_shardRegionFrom))
+                            _shardRegionFromTerminated = true;
                         if (_remaining.Contains(t.Region))
                         {
                             Log.Debug("{0}: ShardRegion [{1}] terminated while waiting for BeginHandOffAck for shard [{2}].", _typeName, t.Region, _shard);
@@ -1568,6 +1572,12 @@ namespace Akka.Cluster.Sharding
                 _remaining.Remove(shardRegion);
                 if (_remaining.Count == 0)
                 {
+                    if (_shardRegionFromTerminated)
+                    {
+                        Done(true);
+                        return;
+                    }
+
                     Log.Debug("{0}: All shard regions acked, handing off shard [{1}].", _typeName, _shard);
                     _shardRegionFrom.Tell(new HandOff(_shard));
                     Context.Become(StoppingShard);
@@ -1603,6 +1613,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+#nullable restore
         private readonly IActorContext _context;
         private readonly Action<IDomainEvent, Action<IDomainEvent>> _update;
         private readonly Action _unstashOneGetShardHomeRequest;
