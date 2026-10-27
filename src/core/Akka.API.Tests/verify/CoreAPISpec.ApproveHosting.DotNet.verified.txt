@@ -44,6 +44,7 @@ namespace Akka.Hosting
         public Akka.Hosting.AkkaConfigurationBuilder StartActors(Akka.Hosting.ActorStarterWithResolver starter) { }
         public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry> starter) { }
         public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver> starter) { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithCustomSerializer(Akka.Serialization.V2.SerializerRegistration registration) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithCustomSerializer(string serializerIdentifier, System.Collections.Generic.IEnumerable<System.Type> boundTypes, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Serialization.Serializer> serializerFactory) { }
         public Akka.Hosting.AkkaConfigurationBuilder WithExtension<[System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]  T>()
             where T : Akka.Actor.IExtensionId { }

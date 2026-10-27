@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -282,6 +283,21 @@ namespace Akka.Hosting
             return this;
         }
         
+        /// <summary>
+        /// Registers a generated serializer and its message type bindings.
+        /// </summary>
+        /// <param name="registration">The generated serializer registration.</param>
+        /// <returns>This builder for further configuration.</returns>
+        /// <exception cref="ArgumentNullException">The registration is null.</exception>
+        public AkkaConfigurationBuilder WithCustomSerializer(Akka.Serialization.V2.SerializerRegistration registration)
+        {
+            if (registration is null)
+                throw new ArgumentNullException(nameof(registration));
+
+            return WithCustomSerializer(registration.Alias, registration.UseFor,
+                system => registration.CreateDetails(system).Serializer);
+        }
+
         public AkkaConfigurationBuilder WithCustomSerializer(
             string serializerIdentifier, IEnumerable<Type> boundTypes,
             Func<ExtendedActorSystem, Serializer> serializerFactory)
