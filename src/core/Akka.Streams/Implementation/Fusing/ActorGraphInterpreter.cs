@@ -136,8 +136,8 @@ namespace Akka.Streams.Implementation.Fusing
         private int _publishersPending;
         private bool _resumeScheduled;
         private bool _waitingForShutdown;
-        private Action<object> _enqueueToShortCircuit;
-        private ActorGraphInterpreter _shortCircuitOwner;
+        // Normal shells use their owner; the public Init adapter installs its callback instead.
+        private object _shortCircuitTarget;
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
@@ -203,20 +203,18 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="eventLimit">The maximum number of interpreter events to process in the initial batch.</param>
         /// <returns>The remaining event limit after the initial interpreter batch.</returns>
         public int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShourtCircuit, int eventLimit)
-            => Init(self, subMat, enqueueToShourtCircuit, null, eventLimit);
+            => Init(self, subMat, (object)enqueueToShourtCircuit, eventLimit);
 
 #nullable enable
         internal int Init(IActorRef self, SubFusingActorMaterializerImpl subMat,
             ActorGraphInterpreter shortCircuitOwner, int eventLimit)
-            => Init(self, subMat, null, shortCircuitOwner, eventLimit);
+            => Init(self, subMat, (object)shortCircuitOwner, eventLimit);
 
-        private int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object>? enqueueToShortCircuit,
-            ActorGraphInterpreter? shortCircuitOwner, int eventLimit)
+        private int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, object shortCircuitTarget, int eventLimit)
 #nullable restore
         {
             Self = self;
-            _enqueueToShortCircuit = enqueueToShortCircuit;
-            _shortCircuitOwner = shortCircuitOwner;
+            _shortCircuitTarget = shortCircuitTarget;
 
             for (int i = 0; i < _inputs.Length; i++)
             {
@@ -445,10 +443,10 @@ namespace Akka.Streams.Implementation.Fusing
             _resumeScheduled = true;
             if (sendResume)
                 Self.Tell(_resume);
-            else if (_shortCircuitOwner != null)
-                _shortCircuitOwner.EnqueueToShortCircuit(_resume);
+            else if (_shortCircuitTarget is ActorGraphInterpreter owner)
+                owner.EnqueueToShortCircuit(_resume);
             else
-                _enqueueToShortCircuit(_resume);
+                ((Action<object>)_shortCircuitTarget)(_resume);
         }
 
         private GraphInterpreter GetInterpreter()
@@ -460,10 +458,10 @@ namespace Akka.Streams.Implementation.Fusing
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
                         Self.Tell(asyncInput);
-                    else if (_shortCircuitOwner != null)
-                        _shortCircuitOwner.EnqueueAsyncToShortCircuit(asyncInput);
+                    else if (_shortCircuitTarget is ActorGraphInterpreter owner)
+                        owner.EnqueueAsyncToShortCircuit(asyncInput);
                     else
-                        _enqueueToShortCircuit(asyncInput);
+                        ((Action<object>)_shortCircuitTarget)(asyncInput);
                 }, _settings.IsFuzzingMode, Self);
         }
 
