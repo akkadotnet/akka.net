@@ -27,7 +27,7 @@ writes the encoding code for you, at compile time. That buys four things:
   never calls `PropertyInfo.GetValue`. It adds no boxing beyond what MessagePack itself needs. It
   never scans assemblies at runtime to find serializable types.
 * **AOT- and trimming-friendly registration.** Serializers register through a generated static
-  method, `CreateRegistration()`, not runtime type scanning. The generated serializer also
+  method, `CreateSerializerDetails(system)`, not runtime type scanning. The generated serializer also
   satisfies Akka's classic `Serializer` reflection contract. So it works with HOCON registration
   too. See [Getting started](#getting-started).
 * **Exact size hints.** `SizeHint` returns the exact byte count `Serialize` will write, or a
@@ -96,14 +96,14 @@ public sealed record SubmitOrder(
 ### The Serializer Class
 
 Declare a `sealed partial class` that derives from `AkkaSerializer`. Annotate it with
-`[AkkaSerializer<TProtocol>("name", id)]`. Declare a `static partial` `CreateRegistration()`
+`[AkkaSerializer<TProtocol>("name", id)]`. Declare a `static partial` `CreateSerializerDetails(system)`
 method. The generator fills in its body:
 
 ```csharp
 [AkkaSerializer<IOrderBenchmarkProtocol>("order-benchmark", 120001)]
 public sealed partial class OrderBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -120,28 +120,27 @@ dispatch.
 
 ### Registering the Serializer
 
-`CreateRegistration()` returns a
-[`SerializerRegistration`](xref:Akka.Serialization.V2.SerializerRegistration). It is an AOT-safe
-value you compose explicitly. No runtime scanning is involved. Turn one registration into a
-`SerializationSetup` with `CreateSetup()`:
+`CreateSerializerDetails(ExtendedActorSystem)` returns core
+[`SerializerDetails`](xref:Akka.Serialization.SerializerDetails): the serializer instance, alias,
+and message bindings. The generated factory is AOT-safe and uses no runtime scanning.
+
+With Akka.Hosting, pass the generated method directly:
 
 ```csharp
-var setup = OrderBenchmarkSerializer.CreateRegistration().CreateSetup();
+builder.WithCustomSerializer(OrderBenchmarkSerializer.CreateSerializerDetails);
+```
+
+Without Hosting, compose one or more generated factories through core `SerializationSetup`:
+
+```csharp
+var setup = SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(
+    OrderBenchmarkSerializer.CreateSerializerDetails(extendedSystem),
+    EnvelopeBenchmarkSerializer.CreateSerializerDetails(extendedSystem)));
 var bootstrap = BootstrapSetup.Create().And(setup);
 var system = ActorSystem.Create("my-system", bootstrap);
 ```
 
-To register several generated serializers at once, use the static
-`SerializerRegistration.CreateSetup(params SerializerRegistration[])` overload:
-
-```csharp
-var setup = SerializerRegistration.CreateSetup(
-    OrderBenchmarkSerializer.CreateRegistration(),
-    EnvelopeBenchmarkSerializer.CreateRegistration());
-```
-
-Merge that `SerializationSetup` into `ActorSystemSetup` the same way as for a hand-written
-serializer. See
+Import `Akka.Serialization` and `System.Collections.Immutable` for this setup. See
 [Configuring Serialization Bindings Programmatically](xref:serialization#configuring-serialization-bindings-programmatically).
 
 ### HOCON Registration
@@ -167,7 +166,7 @@ it needs no `akka.actor.serialization-identifiers` row. A row for it would be ig
 
 Nothing about this is generator-specific. It is the same two HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use
-`CreateRegistration()` and `CreateSetup()` when you want AOT-safe, compiler-checked composition.
+`CreateSerializerDetails(system)` and `SerializationSetup.Create` when you want AOT-safe, compiler-checked composition.
 Use HOCON when you follow an existing configuration-driven setup.
 
 ### Akka.Hosting
@@ -502,7 +501,7 @@ public sealed record Wrapper<T>(
 [AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
 public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -546,13 +545,13 @@ protocol:
 [AkkaSerializable<AuditStamp>(Manifest = "audit-v1")]                    // an ordinary concrete type
 public sealed partial class CommsSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
 `AuditStamp` implements no protocol at all. The registration still makes it a top-level message of
 `CommsSerializer`: its own dispatch arm, its own private helpers, and its own concrete binding in
-the generated `CreateRegistration()`. That last part matters. A generic wrapper such as
+the generated `CreateSerializerDetails(system)`. That last part matters. A generic wrapper such as
 `Envelope<T>` usually lives in an assembly the protocol interface's own assembly cannot see, so it
 can never implement that protocol. Without its own binding, the runtime would never route a value
 of that exact type to this serializer at all. Three rules remain, checked at build time:
@@ -594,7 +593,7 @@ public sealed record Envelope<T>(
 [AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
 public sealed partial class CommsSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -719,7 +718,7 @@ public interface IOrderEvent { }
 [AkkaSerializer<IOrderEvent>("orders", 4001)]
 public sealed partial class OrderSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 // OrderPlaced and OrderCancelled both get a Manifest dispatch arm, a typeof() binding, and their
 // own Write/Read/SizeOf helpers, even though neither is declared in Wire.dll.
@@ -811,9 +810,9 @@ build-time check diagnosable from the exception alone.
 
 Two serializers declared in assemblies that cannot see each other can both adopt the same top-level
 implementor, and no build-time check can catch it -- neither compilation knows the other exists.
-`SerializerRegistration.CreateSetup` checks for this when registrations are composed, before any
-`ActorSystem` uses them: one pass over every registration's own claimed types, throwing if two
-registrations claim the same one and naming both serializer aliases. This is the last line of
+`SerializationSetup.Create` checks for this at actor-system startup after invoking the factory:
+one pass over the returned details' claimed types, throwing if two different aliases claim the
+same type and naming both serializer aliases. This is the last line of
 defense; a build-time diagnostic (AKKASG031, AKKASG041, or AKKASG043) already catches the case where
 one assembly can see the other.
 
@@ -968,7 +967,7 @@ Register a formatter on the serializer class alongside `[AkkaSerializer<TProtoco
 [AkkaSerializerFormatter<ActorPath, ActorPathFormatter>]
 public sealed partial class ControlMirrorSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 

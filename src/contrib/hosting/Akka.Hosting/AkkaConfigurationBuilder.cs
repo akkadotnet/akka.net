@@ -63,32 +63,11 @@ namespace Akka.Hosting
 
     public delegate Task StartupTask(ActorSystem system, IActorRegistry registry);
     
-    /// <summary>
-    /// Used to help populate a <see cref="SerializationSetup"/> upon starting the <see cref="ActorSystem"/>,
-    /// if any are added to the builder;
-    /// </summary>
-    internal sealed class SerializerRegistration
-    {
-        public SerializerRegistration(string id, ImmutableHashSet<Type> typeBindings,
-            Func<ExtendedActorSystem, Serializer> serializerFactory)
-        {
-            Id = id;
-            TypeBindings = typeBindings;
-            SerializerFactory = serializerFactory;
-        }
-
-        public string Id { get; }
-
-        public Func<ExtendedActorSystem, Serializer> SerializerFactory { get; }
-
-        public ImmutableHashSet<Type> TypeBindings { get; }
-    }
-
     public sealed class AkkaConfigurationBuilder
     {
         internal readonly string ActorSystemName;
         internal readonly IServiceCollection ServiceCollection;
-        internal readonly HashSet<SerializerRegistration> Serializers = new();
+        internal readonly HashSet<Func<ExtendedActorSystem, SerializerDetails>> Serializers = new();
         
         // we use a name / registration dictionary to make health check registrations unique by name
         internal readonly Dictionary<string, AkkaHealthCheckRegistration> HealthChecks = new();
@@ -284,28 +263,27 @@ namespace Akka.Hosting
         }
         
         /// <summary>
-        /// Registers a generated serializer and its message type bindings.
+        /// Registers a serializer and its message type bindings using a factory.
         /// </summary>
-        /// <param name="registration">The generated serializer registration.</param>
+        /// <param name="factory">Creates the serializer and its message type bindings for the actor system.</param>
         /// <returns>This builder for further configuration.</returns>
-        /// <exception cref="ArgumentNullException">The registration is null.</exception>
-        public AkkaConfigurationBuilder WithCustomSerializer(Akka.Serialization.V2.SerializerRegistration registration)
+        /// <exception cref="ArgumentNullException">The factory is null.</exception>
+        public AkkaConfigurationBuilder WithCustomSerializer(Func<ExtendedActorSystem, SerializerDetails> factory)
         {
-            if (registration is null)
-                throw new ArgumentNullException(nameof(registration));
+            if (factory is null)
+                throw new ArgumentNullException(nameof(factory));
 
-            return WithCustomSerializer(registration.Alias, registration.UseFor,
-                system => registration.CreateDetails(system).Serializer);
+            Serializers.Add(factory);
+            return this;
         }
 
         public AkkaConfigurationBuilder WithCustomSerializer(
             string serializerIdentifier, IEnumerable<Type> boundTypes,
             Func<ExtendedActorSystem, Serializer> serializerFactory)
         {
-            var serializerRegistration = new SerializerRegistration(serializerIdentifier,
-                boundTypes.ToImmutableHashSet(), serializerFactory);
-            Serializers.Add(serializerRegistration);
-            return this;
+            var bindings = boundTypes.ToImmutableHashSet();
+            return WithCustomSerializer(system =>
+                SerializerDetails.Create(serializerIdentifier, serializerFactory(system), bindings));
         }
 
         /// <summary>
@@ -489,8 +467,7 @@ namespace Akka.Hosting
                 {
                     var serializationSetup = SerializationSetup.Create(system =>
                         config.Serializers
-                            .Select(r =>
-                                SerializerDetails.Create(r.Id, r.SerializerFactory(system), r.TypeBindings))
+                            .Select(factory => factory(system))
                             .ToImmutableHashSet());
 
                     actorSystemSetup = actorSystemSetup.And(serializationSetup);

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Akka.Hosting.Tests
 {
-    public class SerializerRegistrationSpecs
+    public class SerializerDetailsSpecs
     {
         public interface IUseCustomSerializer
         {
@@ -54,7 +54,7 @@ namespace Akka.Hosting.Tests
             var services = new ServiceCollection();
             services.AddAkka("GeneratedSerializerSys", builder =>
             {
-                builder.WithCustomSerializer(HostingGeneratedSerializer.CreateRegistration())
+                builder.WithCustomSerializer(HostingGeneratedSerializer.CreateSerializerDetails)
                     .Should().BeSameAs(builder);
                 builder.WithCustomSerializer("existing", new[] { typeof(IUseCustomSerializer) },
                     system => new CustomSerializer(system));
@@ -98,6 +98,6 @@ namespace Akka.Hosting.Tests
     [AkkaSerializable<HostingAdditionalMessage>(Manifest = "additional")]
     public sealed partial class HostingGeneratedSerializer : AkkaSerializer
     {
-        public static partial Akka.Serialization.V2.SerializerRegistration CreateRegistration();
+        public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
     }
 }

@@ -59,7 +59,7 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
             [AkkaSerializer<IOrders>("referenced-implementor-golden", 190101)]
             public sealed partial class OrdersSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -111,7 +111,7 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
             [AkkaSerializer<IEnvelopeProtocol>("marked-union-golden", 190102)]
             public sealed partial class EnvelopeSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -161,7 +161,7 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
             [AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
             public sealed partial class CommsSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 

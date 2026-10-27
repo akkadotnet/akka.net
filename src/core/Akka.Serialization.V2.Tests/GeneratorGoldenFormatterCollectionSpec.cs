@@ -87,7 +87,7 @@ public sealed class GeneratorGoldenFormatterCollectionSpec
         [AkkaSerializerFormatter<IActorRef, RefFormatter>]
         public sealed partial class FormatterPositionsSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 

@@ -79,7 +79,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("field-level", 500001)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -117,7 +117,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("type-level", 500002)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable]
@@ -151,7 +151,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("serializer-level", 0)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -188,7 +188,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("coverage", 500003)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         public sealed record Unmarked(string Value) : IProtocol;
@@ -241,7 +241,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IShop>("shop", 500004)]
         public sealed partial class ShopSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -296,7 +296,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializable<EmptyWrapper<int>>(Manifest = "empty-wrapper-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -345,7 +345,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializerFormatter<Foreign, AbstractFormatter>]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -370,7 +370,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializable<int>(Manifest = "int-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -394,7 +394,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("union-member", 500007)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -416,7 +416,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("dup-index", 500008)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "dup-v1")]

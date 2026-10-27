@@ -58,7 +58,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IShop>("shop", 130001)]
             public sealed partial class ShopSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case1.A");
@@ -132,7 +132,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IOrders>("orders", 130002)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case2.A");
@@ -190,7 +190,7 @@ public sealed class CrossAssemblyBaselineSpec
             [AkkaSerializer<IWrap>("wrap", 130003)]
             [AkkaSerializable<Wrapper<int>>(Manifest = "wrap-int-v1")]
             public sealed partial class WrapSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case3.A");
@@ -223,7 +223,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IWrap>("wrap", 130004)]
             public sealed partial class WrapSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var (unregisteredGeneratorDiagnostics, unregisteredCompileDiagnostics, _) =
@@ -277,7 +277,7 @@ public sealed class CrossAssemblyBaselineSpec
             [AkkaSerializer<IComms>("comms", 130005)]
             [AkkaSerializable<Envelope<AcceptCassette>>(Manifest = "env-dmac")]
             public sealed partial class CommsSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case4.A");
@@ -325,7 +325,7 @@ public sealed class CrossAssemblyBaselineSpec
             [AkkaSerializer<IComms>("comms", 130006)]
             [AkkaSerializable<Envelope<object>>(Manifest = "env-any")]
             public sealed partial class CommsSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case5.A");
@@ -368,7 +368,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IOrders>("orders", 130007)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case6.A");
@@ -444,7 +444,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IShop>("shop", 130008)]
             public sealed partial class ShopSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case7.A");
@@ -504,7 +504,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IOrders>("orders", 130009)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case8.A");
@@ -573,7 +573,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializer<IShop>("shop", 130010)]
             public sealed partial class ShopSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = CompileAssemblyAToReference(sourceA, "CrossAssemblyBaseline.Case9.A");

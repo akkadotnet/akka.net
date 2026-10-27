@@ -65,8 +65,8 @@ public class GeneratedMessagePackSerializerBenchmarks
     {
         var generatedSetup = ActorSystemSetup.Create(Akka.Serialization.SerializationSetup.Create(system =>
         {
-            var order = OrderBenchmarkSerializer.CreateRegistration().CreateDetails(system);
-            var envelope = EnvelopeBenchmarkSerializer.CreateRegistration().CreateDetails(system);
+            var order = OrderBenchmarkSerializer.CreateSerializerDetails(system);
+            var envelope = EnvelopeBenchmarkSerializer.CreateSerializerDetails(system);
             var custom = SerializerDetails.Create(
                 "custom-protobuf-benchmark",
                 new CustomBenchmarkPayloadSerializer(system),
@@ -403,7 +403,7 @@ public interface IOrderBenchmarkProtocol
 [AkkaSerializer<IOrderBenchmarkProtocol>("order-benchmark", 120001)]
 public sealed partial class OrderBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface IEnvelopeBenchmarkProtocol
@@ -413,7 +413,7 @@ public interface IEnvelopeBenchmarkProtocol
 [AkkaSerializer<IEnvelopeBenchmarkProtocol>("envelope-benchmark", 120002)]
 public sealed partial class EnvelopeBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable(Manifest = "submit-order-v1")]

@@ -13,10 +13,10 @@ public sealed partial class ScalarGoldenSerializer
 
     public override int Identifier => 150202;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("scalar-golden",
-            system => new ScalarGoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("scalar-golden",
+            new ScalarGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::ScalarGolden.IProtocol))); 
     }

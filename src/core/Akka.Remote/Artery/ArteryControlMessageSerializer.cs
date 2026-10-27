@@ -106,9 +106,9 @@ namespace Akka.Remote.Artery
         /// AOT-safe, explicit alternative to reflection-based (HOCON class-name) construction. Not
         /// used by <c>RemoteSerializers</c>' registration (which constructs this class directly through
         /// the classic <c>Serializer</c> contract), but available for
-        /// <see cref="Akka.Serialization.V2.SerializerRegistration.CreateSetup(Akka.Serialization.V2.SerializerRegistration[])"/>-based
+        /// <see cref="Akka.Serialization.SerializationSetup"/>-based
         /// composition.
         /// </summary>
-        public static partial SerializerRegistration CreateRegistration();
+        public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
     }
 }

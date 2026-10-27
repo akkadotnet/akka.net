@@ -876,13 +876,13 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private static void GenerateRegistration(CodeWriter w, SerializerInfo serializer)
     {
-        w.Line("public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()");
+        w.Line("public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)");
         using (w.Block())
         {
-            w.Raw("return global::Akka.Serialization.V2.SerializerRegistration.Create(").StringLiteral(serializer.Name).Line(",");
+            w.Raw("return global::Akka.Serialization.SerializerDetails.Create(").StringLiteral(serializer.Name).Line(",");
             using (w.Indented())
             {
-                w.Raw("system => new ").Identifier(serializer.ClassName).Line("(system),");
+                w.Raw("new ").Identifier(serializer.ClassName).Line("(system),");
                 w.Line("global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(");
                 using (w.Indented())
                 {
@@ -902,7 +902,7 @@ public sealed partial class AkkaSerializerGenerator
                         w.Raw("typeof(").Type(TypeName.Global(schema.FullyQualifiedName)).Raw(")");
                     }
 
-                    // Only the ImmutableHashSet.Create<Type>(...) and SerializerRegistration.Create(...)
+                    // Only the ImmutableHashSet.Create<Type>(...) and SerializerDetails.Create(...)
                     // calls remain open here -- every typeof(...) above (the protocol's and each
                     // registered construction's) already closed its own parenthesis inline.
                     w.Line(")); ");

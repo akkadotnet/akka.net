@@ -73,7 +73,7 @@ The primary shape is:
 [AkkaSerializer<IOrderProtocol>("orders", 120001)]
 public sealed partial class OrderSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -378,7 +378,12 @@ Measured on the `SourceGeneratorBenchmarks` corpus (which references `Akka.Remot
 
 *Rule 4's runtime text.* `GenerateManifest` and `GenerateSerializeDirect` (`AkkaSerializerGenerator.Emission.cs`) both build their default-case exception text through one shared helper, `BuildUnsupportedTypeExceptionMessage`, naming the failing value's own runtime assembly (`obj.GetType().Assembly.GetName().Name`, known only at run time) and the assembly the serializer was generated in (`SerializerInfo.CompilationAssemblyName`, a new, purely local, build-time fact captured once at extraction via `Compilation.AssemblyName`). This changes existing generated text, so the checked-in golden-output baselines were regenerated; see this file's own task-list entry for why that is the correct call here, not a regression.
 
-*The startup one-owner check.* `SerializerRegistration.CreateSetup(params SerializerRegistration[])` (`src/core/Akka.Serialization.V2/SerializerRegistration.cs`) now validates, before returning the composed `SerializationSetup`, that no two registrations claim the same `Type` in their own `UseFor` set -- one dictionary pass over every registration, run once when registrations are composed, throwing `InvalidOperationException` naming both colliding registrations' aliases. This needs no `ActorSystem` and no serializer instantiation: `UseFor` is already fully known at `SerializerRegistration.Create` time.
+*The startup one-owner check.* Core `SerializationSetup.Create` validates the `SerializerDetails`
+returned by its factory at actor-system startup. No two different aliases may claim the same type
+in their `UseFor` sets; conflicts throw `InvalidOperationException` naming both aliases. Generated
+serializers expose `CreateSerializerDetails(ExtendedActorSystem)` directly, with no registration
+wrapper. Unlike the former wrapper, validation follows serializer construction because core
+`SerializerDetails` holds an instantiated serializer.
 
 *`ManifestPrefix` expansion is cross-assembly-correct, but not yet migrated to the shared stage.* Decision 18's expansion mechanism (`ExpandClosedGenericRegistration`/`TryGetClosedSetMembers`, `AkkaSerializerGenerator.Extraction.cs`) still runs inside the per-serializer-node extraction step, not inside `CompilationFacts` or a new shared stage. It now calls a referenced-assembly counterpart of the local walk (`EnumerateReferencedAssemblyMarkedImplementors`) directly, so a closed set spanning the assembly boundary expands correctly -- proven byte-identically in the golden corpus (a `ManifestPrefix` registration over a protocol whose implementors sit on both sides of the boundary). What this does NOT yet do is share `CompilationFacts`' own cached walk result: `ExtractSerializerCore` (this method's caller) is itself the per-node transform `CompilationFacts` is built FROM (via the collected `serializers` array), so it cannot consume `CompilationFacts`' cached value without a circular pipeline dependency. Hoisting the expansion itself into a new per-compilation stage that consumes `CompilationFacts` and re-resolves each member's symbol (the "construction extraction" the setup instructions describe) is a functionally-motivated but not yet implemented refinement: it would let a `ManifestPrefix` registration's own IDE-performance caching match the ideal `CompilationFacts` already achieves for top-level dispatch and the implicit-union rules, at the cost of a larger pipeline restructuring than this change makes. Flagged here as a deliberate scoping decision, not an oversight.
 

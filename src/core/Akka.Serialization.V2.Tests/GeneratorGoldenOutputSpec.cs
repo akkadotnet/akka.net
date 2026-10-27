@@ -298,7 +298,7 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializable<Pair<int, string>>(Manifest = "pair-int-string-v1")]
         public sealed partial class GoldenSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         // ---- second serializer: internal accessibility keyword path ----
@@ -313,7 +313,7 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializer<IMiniProtocol>("golden-mini", 150102)]
         internal sealed partial class MiniSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -336,7 +336,7 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializer<IRootProtocol>("golden-root", 150103)]
         public sealed partial class RootSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 

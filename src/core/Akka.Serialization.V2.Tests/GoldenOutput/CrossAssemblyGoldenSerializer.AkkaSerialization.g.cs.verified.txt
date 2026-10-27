@@ -13,10 +13,10 @@ public sealed partial class CrossAssemblyGoldenSerializer
 
     public override int Identifier => 190001;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("cross-assembly-golden",
-            system => new CrossAssemblyGoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("cross-assembly-golden",
+            new CrossAssemblyGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::CrossAssemblyGolden.AssemblyB.IComms),
                 typeof(global::CrossAssemblyGolden.AssemblyA.Wrapper<int>))); 

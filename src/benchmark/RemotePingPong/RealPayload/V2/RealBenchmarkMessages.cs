@@ -16,7 +16,7 @@ namespace RemotePingPong.RealPayload.V2
     /// <summary>
     /// Protocol marker for the "real payload" (`--payload real`) benchmark message, MessagePack/V2 arm.
     /// Only used to satisfy <see cref="AkkaSerializerAttribute{TProtocol}"/>'s generic parameter and
-    /// <see cref="RealBenchmarkSerializer.CreateRegistration"/>'s protocol-type registration -- the
+    /// <see cref="RealBenchmarkSerializer.CreateSerializerDetails"/>'s protocol-type registration -- the
     /// harness's actual HOCON wiring binds directly on <see cref="RealBenchmarkMessage"/> (see
     /// RemotePingPong.Program.RealPayloadSerializationConfig), so this interface has no runtime
     /// significance for the classic reflection-based serializer registration this benchmark uses.
@@ -131,6 +131,6 @@ namespace RemotePingPong.RealPayload.V2
         /// <see cref="RealBenchmarkMessage"/> directly by type name), but exercises the generator's
         /// programmatic-registration surface for good measure.
         /// </summary>
-        public static partial SerializerRegistration CreateRegistration();
+        public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
     }
 }

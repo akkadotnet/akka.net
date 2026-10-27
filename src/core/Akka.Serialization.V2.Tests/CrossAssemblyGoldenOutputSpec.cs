@@ -93,7 +93,7 @@ public sealed class CrossAssemblyGoldenOutputSpec
         [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class CrossAssemblyGoldenSerializer : AkkaSerializer
         {{
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }}
         """;
 

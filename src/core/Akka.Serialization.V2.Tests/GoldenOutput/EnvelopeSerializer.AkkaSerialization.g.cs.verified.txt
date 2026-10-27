@@ -13,10 +13,10 @@ public sealed partial class EnvelopeSerializer
 
     public override int Identifier => 190102;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("marked-union-golden",
-            system => new EnvelopeSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("marked-union-golden",
+            new EnvelopeSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::MarkedUnionGolden.AssemblyB.IEnvelopeProtocol))); 
     }

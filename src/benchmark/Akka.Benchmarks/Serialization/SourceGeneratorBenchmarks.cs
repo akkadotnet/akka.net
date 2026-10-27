@@ -315,7 +315,7 @@ internal static class SourceGeneratorBenchmarkCorpus
 
         sb.AppendLine($"public sealed partial class BenchSerializer{s} : AkkaSerializer");
         sb.AppendLine("{");
-        sb.AppendLine("    public static partial SerializerRegistration CreateRegistration();");
+        sb.AppendLine("    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);");
         sb.AppendLine("}");
         sb.AppendLine();
     }

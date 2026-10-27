@@ -19,7 +19,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
-        <ProjectReference Include="..\..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
         <ProjectReference Include="..\..\..\core\Akka.Streams\Akka.Streams.csproj" />
     </ItemGroup>
 

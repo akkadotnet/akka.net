@@ -1,4 +1,5 @@
-﻿//-----------------------------------------------------------------------
+#nullable enable
+//-----------------------------------------------------------------------
 // <copyright file="SerializationSetup.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -8,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using Akka.Actor;
 using Akka.Actor.Setup;
 
@@ -29,12 +29,38 @@ namespace Akka.Serialization
         public Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>> CreateSerializers { get; }
 
         /// <summary>
-        /// create pairs of serializer and the set of classes it should be used for
+        /// Creates a setup whose factory supplies serializers and their message type bindings.
+        /// The returned bindings are validated when the factory runs at actor-system startup:
+        /// different serializer aliases may not claim the same message type.
         /// </summary>
         public static SerializationSetup Create(
             Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>> createSerializers)
         {
-            return new SerializationSetup(createSerializers);
+            if (createSerializers is null)
+                throw new ArgumentNullException(nameof(createSerializers));
+
+            return new SerializationSetup(system =>
+            {
+                var serializers = createSerializers(system);
+                var ownerByType = new Dictionary<Type, string>();
+                foreach (var details in serializers)
+                {
+                    foreach (var type in details.UseFor)
+                    {
+                        if (ownerByType.TryGetValue(type, out var owner) &&
+                            !string.Equals(owner, details.Alias, StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Type '{type}' is claimed by more than one serializer registration: '{owner}' and '{details.Alias}'. " +
+                                "A message type may have only one owner.");
+                        }
+
+                        ownerByType[type] = details.Alias;
+                    }
+                }
+
+                return serializers;
+            });
         }
     }
 
