@@ -522,10 +522,9 @@ public sealed record EventWrapper<T>(
     [property: AkkaField(2)] T Body) : IClosedGenericTestProtocol;
 ```
 
-The generator names each construction's generated Write, Read, and `SizeOf` methods by folding the
-type arguments into the method name. So `Wrapper<int>` becomes `WriteWrapperInt`. And
-`Wrapper<Pair<int, string>>` becomes `WriteWrapperPairIntString`. This is an implementation detail.
-You never write these names yourself.
+Generated Write, Read, and `SizeOf` method names combine a readable type name with a stable suffix
+from the full type identity, including generic arguments. Types can share a simple name across
+namespaces or containing types. These private method names do not affect manifests or wire bytes.
 
 Diagnostics guard this shape. **AKKASG022** fires when a generic definition implements the
 protocol with no closed registrations at all. **AKKASG023** fires when a field uses an
@@ -1125,7 +1124,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG021 | Error | Duplicate closed generic registration | The same closed construction is registered more than once on one serializer. |
 | AKKASG022 | Error | Generic serializable type requires closed generic registrations | A generic `[AkkaSerializable]` type implements the protocol but has no closed registrations. |
 | AKKASG023 | Error | Closed generic field type is not registered | A field uses a closed generic construction that was never registered with `[AkkaSerializable<T>]`. |
-| AKKASG024 | Error | Generated member name collision | Two distinct message types would produce the same generated member name. |
+| AKKASG024 | Error | Generated member name collision | Two distinct type identities produced the same generated member name despite their stable suffixes. Report the generator collision with both declarations. |
 | AKKASG025 | Info | Union member type is not sealed | An undeclared subtype of this (concrete, non-sealed) member will fail serialization if it's ever sent. |
 | AKKASG026 | Error | No matching constructor | No constructor covers every required `[AkkaField]` property, so the type can't be reconstructed. |
 | AKKASG027 | Warning | Constructor parameter not covered by [AkkaField] | A defaulted constructor parameter has no matching `[AkkaField]` property and silently resets on every deserialize. |

@@ -66,46 +66,46 @@ public sealed partial class GoldenSerializer
         switch (obj)
         {
             case global::GoldenSample.ScalarMessage message:
-                WriteScalarMessage(ref writer, message);
+                WriteScalarMessage_0cff499cdb0b31ce(ref writer, message);
                 break;
             case global::GoldenSample.CollectionMessage message:
-                WriteCollectionMessage(ref writer, message);
+                WriteCollectionMessage_c8218f1253c00ea2(ref writer, message);
                 break;
             case global::GoldenSample.UnionMessage message:
-                WriteUnionMessage(ref writer, message);
+                WriteUnionMessage_f4c965afe72b140e(ref writer, message);
                 break;
             case global::GoldenSample.EnvelopeMessage message:
-                WriteEnvelopeMessage(ref writer, message);
+                WriteEnvelopeMessage_c3a85f5c62ed7533(ref writer, message);
                 break;
             case global::GoldenSample.EnvelopeListMessage message:
-                WriteEnvelopeListMessage(ref writer, message);
+                WriteEnvelopeListMessage_a37cb1020f361af1(ref writer, message);
                 break;
             case global::GoldenSample.HybridMessage message:
-                WriteHybridMessage(ref writer, message);
+                WriteHybridMessage_0dae6980678443e5(ref writer, message);
                 break;
             case global::GoldenSample.NestedMessage message:
-                WriteNestedMessage(ref writer, message);
+                WriteNestedMessage_875b410232607e0c(ref writer, message);
                 break;
             case global::GoldenSample.Ping message:
-                WritePing(ref writer, message);
+                WritePing_f8aeaaa9c761e1ea(ref writer, message);
                 break;
             case global::GoldenSample.StructMessage message:
-                WriteStructMessage(ref writer, message);
+                WriteStructMessage_8cba7794b9d04c1d(ref writer, message);
                 break;
             case global::GoldenSample.EscapedManifestMessage message:
-                WriteEscapedManifestMessage(ref writer, message);
+                WriteEscapedManifestMessage_caca4f1f93f7e5f3(ref writer, message);
                 break;
             case global::GoldenSample.Wrapper<int> message:
-                WriteWrapperInt(ref writer, message);
+                WriteWrapperInt_8f156262e28f43c2(ref writer, message);
                 break;
             case global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message:
-                WriteWrapperGeoPoint(ref writer, message);
+                WriteWrapperGeoPoint_7bf1bee1797e06ad(ref writer, message);
                 break;
             case global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message:
-                WriteWrapperPairIntString(ref writer, message);
+                WriteWrapperPairIntString_a9600d95fb2635e5(ref writer, message);
                 break;
             case global::GoldenSample.Pair<int, string> message:
-                WritePairIntString(ref writer, message);
+                WritePairIntString_49e45acef9fbb2c2(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
@@ -117,20 +117,20 @@ public sealed partial class GoldenSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "scalars-v1" => ReadScalarMessage(ref reader),
-            "collections-v1" => ReadCollectionMessage(ref reader),
-            "union-v1" => ReadUnionMessage(ref reader),
-            "envelope-v1" => ReadEnvelopeMessage(ref reader),
-            "envelope-list-v1" => ReadEnvelopeListMessage(ref reader),
-            "hybrid-v1" => ReadHybridMessage(ref reader),
-            "nested-v1" => ReadNestedMessage(ref reader),
-            "ping-v1" => ReadPing(ref reader),
-            "struct-msg-v1" => ReadStructMessage(ref reader),
-            "esc-\"quote\"-\\-v1" => ReadEscapedManifestMessage(ref reader),
-            "wrapper-int-v1" => ReadWrapperInt(ref reader),
-            "wrapper-geo-v1" => ReadWrapperGeoPoint(ref reader),
-            "wrapper-pair-v1" => ReadWrapperPairIntString(ref reader),
-            "pair-int-string-v1" => ReadPairIntString(ref reader),
+            "scalars-v1" => ReadScalarMessage_0cff499cdb0b31ce(ref reader),
+            "collections-v1" => ReadCollectionMessage_c8218f1253c00ea2(ref reader),
+            "union-v1" => ReadUnionMessage_f4c965afe72b140e(ref reader),
+            "envelope-v1" => ReadEnvelopeMessage_c3a85f5c62ed7533(ref reader),
+            "envelope-list-v1" => ReadEnvelopeListMessage_a37cb1020f361af1(ref reader),
+            "hybrid-v1" => ReadHybridMessage_0dae6980678443e5(ref reader),
+            "nested-v1" => ReadNestedMessage_875b410232607e0c(ref reader),
+            "ping-v1" => ReadPing_f8aeaaa9c761e1ea(ref reader),
+            "struct-msg-v1" => ReadStructMessage_8cba7794b9d04c1d(ref reader),
+            "esc-\"quote\"-\\-v1" => ReadEscapedManifestMessage_caca4f1f93f7e5f3(ref reader),
+            "wrapper-int-v1" => ReadWrapperInt_8f156262e28f43c2(ref reader),
+            "wrapper-geo-v1" => ReadWrapperGeoPoint_7bf1bee1797e06ad(ref reader),
+            "wrapper-pair-v1" => ReadWrapperPairIntString_a9600d95fb2635e5(ref reader),
+            "pair-int-string-v1" => ReadPairIntString_49e45acef9fbb2c2(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -139,20 +139,20 @@ public sealed partial class GoldenSerializer
     {
         return obj switch
         {
-            global::GoldenSample.ScalarMessage message => SizeOfScalarMessage(message),
-            global::GoldenSample.CollectionMessage message => SizeOfCollectionMessage(message),
-            global::GoldenSample.UnionMessage message => SizeOfUnionMessage(message),
-            global::GoldenSample.EnvelopeMessage message => SizeOfEnvelopeMessage(message),
-            global::GoldenSample.EnvelopeListMessage message => SizeOfEnvelopeListMessage(message),
-            global::GoldenSample.HybridMessage message => SizeOfHybridMessage(message),
-            global::GoldenSample.NestedMessage message => SizeOfNestedMessage(message),
-            global::GoldenSample.Ping message => SizeOfPing(message),
-            global::GoldenSample.StructMessage message => SizeOfStructMessage(message),
-            global::GoldenSample.EscapedManifestMessage message => SizeOfEscapedManifestMessage(message),
-            global::GoldenSample.Wrapper<int> message => SizeOfWrapperInt(message),
-            global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message => SizeOfWrapperGeoPoint(message),
-            global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message => SizeOfWrapperPairIntString(message),
-            global::GoldenSample.Pair<int, string> message => SizeOfPairIntString(message),
+            global::GoldenSample.ScalarMessage message => SizeOfScalarMessage_0cff499cdb0b31ce(message),
+            global::GoldenSample.CollectionMessage message => SizeOfCollectionMessage_c8218f1253c00ea2(message),
+            global::GoldenSample.UnionMessage message => SizeOfUnionMessage_f4c965afe72b140e(message),
+            global::GoldenSample.EnvelopeMessage message => SizeOfEnvelopeMessage_c3a85f5c62ed7533(message),
+            global::GoldenSample.EnvelopeListMessage message => SizeOfEnvelopeListMessage_a37cb1020f361af1(message),
+            global::GoldenSample.HybridMessage message => SizeOfHybridMessage_0dae6980678443e5(message),
+            global::GoldenSample.NestedMessage message => SizeOfNestedMessage_875b410232607e0c(message),
+            global::GoldenSample.Ping message => SizeOfPing_f8aeaaa9c761e1ea(message),
+            global::GoldenSample.StructMessage message => SizeOfStructMessage_8cba7794b9d04c1d(message),
+            global::GoldenSample.EscapedManifestMessage message => SizeOfEscapedManifestMessage_caca4f1f93f7e5f3(message),
+            global::GoldenSample.Wrapper<int> message => SizeOfWrapperInt_8f156262e28f43c2(message),
+            global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message => SizeOfWrapperGeoPoint_7bf1bee1797e06ad(message),
+            global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message => SizeOfWrapperPairIntString_a9600d95fb2635e5(message),
+            global::GoldenSample.Pair<int, string> message => SizeOfPairIntString_49e45acef9fbb2c2(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -185,7 +185,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private int SizeOfScalarMessage(global::GoldenSample.ScalarMessage message)
+    private int SizeOfScalarMessage_0cff499cdb0b31ce(global::GoldenSample.ScalarMessage message)
     {
         checked
         {
@@ -232,7 +232,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteScalarMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.ScalarMessage message)
+    private void WriteScalarMessage_0cff499cdb0b31ce(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.ScalarMessage message)
     {
         writer.WriteMapHeader(19);
         writer.Write(1);
@@ -284,7 +284,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.HasFoo);
     }
 
-    private global::GoldenSample.ScalarMessage ReadScalarMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.ScalarMessage ReadScalarMessage_0cff499cdb0b31ce(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? name = null;
@@ -447,7 +447,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.ScalarMessage(Name: name!, Event: @event!, Lock: @lock, Params: @params, FieldCount: fieldCount, EntryIndex: entryIndex, Amount: amount, Id: id, CreatedAt: createdAt, UpdatedAt: updatedAt, Sender: sender!, Color: color, Priority: priority, MaybeCount: maybeCount, MaybeId: maybeId, MaybeColor: maybeColor, MaybeName: maybeName, Foo: foo!, HasFoo: hasFoo!);
     }
 
-    private int SizeOfCollectionMessage(global::GoldenSample.CollectionMessage message)
+    private int SizeOfCollectionMessage_c8218f1253c00ea2(global::GoldenSample.CollectionMessage message)
     {
         checked
         {
@@ -558,7 +558,7 @@ public sealed partial class GoldenSerializer
                 foreach (var __kvp16 in message.ReadingsById)
                 {
                     __size15 += SizeOfInt32(__kvp16.Key);
-                    var __size17 = __kvp16.Value is null ? SizeOfNil() : SizeOfReading(__kvp16.Value);
+                    var __size17 = __kvp16.Value is null ? SizeOfNil() : SizeOfReading_bc591f9c394af069(__kvp16.Value);
                     if (__size17 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size15 += __size17;
@@ -591,7 +591,7 @@ public sealed partial class GoldenSerializer
                 __size20 = SizeOfArrayHeader(message.Readings.Count);
                 foreach (var __item21 in message.Readings)
                 {
-                    var __size22 = __item21 is null ? SizeOfNil() : SizeOfReading(__item21);
+                    var __size22 = __item21 is null ? SizeOfNil() : SizeOfReading_bc591f9c394af069(__item21);
                     if (__size22 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size20 += __size22;
@@ -647,7 +647,7 @@ public sealed partial class GoldenSerializer
                     __size28 = SizeOfArrayHeader(message.MaybeTrack.Value.Length);
                     foreach (var __item29 in message.MaybeTrack.Value)
                     {
-                        var __size30 = SizeOfGeoPoint(__item29);
+                        var __size30 = SizeOfGeoPoint_dc8a89e835da1091(__item29);
                         if (__size30 < 0)
                             return global::Akka.Serialization.SerializerV2.UnknownSize;
                         __size28 += __size30;
@@ -721,7 +721,7 @@ public sealed partial class GoldenSerializer
                         __size39 = SizeOfArrayHeader(__kvp38.Value.Count);
                         foreach (var __item40 in __kvp38.Value)
                         {
-                            var __size41 = __item40 is null ? SizeOfNil() : SizeOfReading(__item40);
+                            var __size41 = __item40 is null ? SizeOfNil() : SizeOfReading_bc591f9c394af069(__item40);
                             if (__size41 < 0)
                                 return global::Akka.Serialization.SerializerV2.UnknownSize;
                             __size39 += __size41;
@@ -742,7 +742,7 @@ public sealed partial class GoldenSerializer
                 __size42 = SizeOfArrayHeader(message.SparseReadings.Count);
                 foreach (var __item43 in message.SparseReadings)
                 {
-                    var __size44 = __item43 is null ? SizeOfNil() : SizeOfReading(__item43);
+                    var __size44 = __item43 is null ? SizeOfNil() : SizeOfReading_bc591f9c394af069(__item43);
                     if (__size44 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size42 += __size44;
@@ -760,7 +760,7 @@ public sealed partial class GoldenSerializer
                 __size45 = SizeOfArrayHeader(message.Track.Count);
                 foreach (var __item46 in message.Track)
                 {
-                    var __size47 = SizeOfGeoPoint(__item46);
+                    var __size47 = SizeOfGeoPoint_dc8a89e835da1091(__item46);
                     if (__size47 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size45 += __size47;
@@ -778,7 +778,7 @@ public sealed partial class GoldenSerializer
                 __size48 = SizeOfArrayHeader(message.SparseTrack.Count);
                 foreach (var __item49 in message.SparseTrack)
                 {
-                    var __size50 = __item49 is null ? SizeOfNil() : SizeOfGeoPoint(__item49.Value);
+                    var __size50 = __item49 is null ? SizeOfNil() : SizeOfGeoPoint_dc8a89e835da1091(__item49.Value);
                     if (__size50 < 0)
                         return global::Akka.Serialization.SerializerV2.UnknownSize;
                     __size48 += __size50;
@@ -862,7 +862,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteCollectionMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.CollectionMessage message)
+    private void WriteCollectionMessage_c8218f1253c00ea2(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.CollectionMessage message)
     {
         writer.WriteMapHeader(21);
         writer.Write(1);
@@ -963,7 +963,7 @@ public sealed partial class GoldenSerializer
                 if (__kvp10.Value is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __kvp10.Value);
+                    WriteReading_bc591f9c394af069(ref writer, __kvp10.Value);
             }
         }
         writer.Write(7);
@@ -992,7 +992,7 @@ public sealed partial class GoldenSerializer
                 if (__item12 is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __item12);
+                    WriteReading_bc591f9c394af069(ref writer, __item12);
             }
         }
         writer.Write(9);
@@ -1035,7 +1035,7 @@ public sealed partial class GoldenSerializer
                 writer.WriteArrayHeader(message.MaybeTrack.Value.Length);
                 foreach (var __item15 in message.MaybeTrack.Value)
                 {
-                    WriteGeoPoint(ref writer, __item15);
+                    WriteGeoPoint_dc8a89e835da1091(ref writer, __item15);
                 }
             }
         writer.Write(12);
@@ -1098,7 +1098,7 @@ public sealed partial class GoldenSerializer
                         if (__item20 is null)
                             writer.WriteNil();
                         else
-                            WriteReading(ref writer, __item20);
+                            WriteReading_bc591f9c394af069(ref writer, __item20);
                     }
                 }
             }
@@ -1116,7 +1116,7 @@ public sealed partial class GoldenSerializer
                 if (__item21 is null)
                     writer.WriteNil();
                 else
-                    WriteReading(ref writer, __item21);
+                    WriteReading_bc591f9c394af069(ref writer, __item21);
             }
         }
         writer.Write(16);
@@ -1129,7 +1129,7 @@ public sealed partial class GoldenSerializer
             writer.WriteArrayHeader(message.Track.Count);
             foreach (var __item22 in message.Track)
             {
-                WriteGeoPoint(ref writer, __item22);
+                WriteGeoPoint_dc8a89e835da1091(ref writer, __item22);
             }
         }
         writer.Write(17);
@@ -1145,7 +1145,7 @@ public sealed partial class GoldenSerializer
                 if (__item23 is null)
                     writer.WriteNil();
                 else
-                    WriteGeoPoint(ref writer, __item23.Value);
+                    WriteGeoPoint_dc8a89e835da1091(ref writer, __item23.Value);
             }
         }
         writer.Write(18);
@@ -1216,7 +1216,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private global::GoldenSample.CollectionMessage ReadCollectionMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.CollectionMessage ReadCollectionMessage_c8218f1253c00ea2(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         int[]? codes = default;
@@ -1378,7 +1378,7 @@ public sealed partial class GoldenSerializer
                             if (reader.TryReadNil())
                                 __val25 = null;
                             else
-                                __val25 = ReadReading(ref reader);
+                                __val25 = ReadReading_bc591f9c394af069(ref reader);
                             __col22[__key24] = __val25!;
                         }
                         readingsById = __col22;
@@ -1419,7 +1419,7 @@ public sealed partial class GoldenSerializer
                             if (reader.TryReadNil())
                                 __item33 = null;
                             else
-                                __item33 = ReadReading(ref reader);
+                                __item33 = ReadReading_bc591f9c394af069(ref reader);
                             __col31.Add(__item33!);
                         }
                         readings = __col31.ToImmutable();
@@ -1478,7 +1478,7 @@ public sealed partial class GoldenSerializer
                         for (var __i45 = 0; __i45 < __len43; __i45++)
                         {
                             global::GoldenSample.GeoPoint __item46;
-                            __item46 = ReadGeoPoint(ref reader);
+                            __item46 = ReadGeoPoint_dc8a89e835da1091(ref reader);
                             __col44.Add(__item46);
                         }
                         maybeTrack = __col44.MoveToImmutable();
@@ -1564,7 +1564,7 @@ public sealed partial class GoldenSerializer
                                     if (reader.TryReadNil())
                                         __item67 = null;
                                     else
-                                        __item67 = ReadReading(ref reader);
+                                        __item67 = ReadReading_bc591f9c394af069(ref reader);
                                     __col65.Add(__item67!);
                                 }
                                 __val63 = __col65;
@@ -1590,7 +1590,7 @@ public sealed partial class GoldenSerializer
                             if (reader.TryReadNil())
                                 __item71 = null;
                             else
-                                __item71 = ReadReading(ref reader);
+                                __item71 = ReadReading_bc591f9c394af069(ref reader);
                             __col69.Add(__item71!);
                         }
                         sparseReadings = __col69;
@@ -1609,7 +1609,7 @@ public sealed partial class GoldenSerializer
                         for (var __i74 = 0; __i74 < __len72; __i74++)
                         {
                             global::GoldenSample.GeoPoint __item75;
-                            __item75 = ReadGeoPoint(ref reader);
+                            __item75 = ReadGeoPoint_dc8a89e835da1091(ref reader);
                             __col73.Add(__item75);
                         }
                         track = __col73;
@@ -1631,7 +1631,7 @@ public sealed partial class GoldenSerializer
                             if (reader.TryReadNil())
                                 __item79 = null;
                             else
-                                __item79 = ReadGeoPoint(ref reader);
+                                __item79 = ReadGeoPoint_dc8a89e835da1091(ref reader);
                             __col77.Add(__item79);
                         }
                         sparseTrack = __col77;
@@ -1779,7 +1779,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.CollectionMessage(Codes: codes!, Names: names!, Samples: samples!, Ids: ids!, Tags: tags!, ReadingsById: readingsById!, Points: points, Readings: readings!, Labels: labels!, Counters: counters!, MaybeTrack: maybeTrack, MaybeNumbers: maybeNumbers, Matrix: matrix!, History: history!, SparseReadings: sparseReadings!, Track: track!, SparseTrack: sparseTrack!, SparseCodes: sparseCodes!, SparseNames: sparseNames!, Jagged: jagged!, Palette: palette!);
     }
 
-    private int SizeOfUnionMessage(global::GoldenSample.UnionMessage message)
+    private int SizeOfUnionMessage_f4c965afe72b140e(global::GoldenSample.UnionMessage message)
     {
         checked
         {
@@ -1803,7 +1803,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteUnionMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.UnionMessage message)
+    private void WriteUnionMessage_f4c965afe72b140e(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.UnionMessage message)
     {
         writer.WriteMapHeader(3);
         writer.Write(1);
@@ -1817,7 +1817,7 @@ public sealed partial class GoldenSerializer
         WriteUnion_IOrderEvent(ref writer, message.Narrowed);
     }
 
-    private global::GoldenSample.UnionMessage ReadUnionMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.UnionMessage ReadUnionMessage_f4c965afe72b140e(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::GoldenSample.IOrderEvent? @event = null;
@@ -1857,7 +1857,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.UnionMessage(Event: @event!, MaybeEvent: maybeEvent, Narrowed: narrowed!);
     }
 
-    private int SizeOfEnvelopeMessage(global::GoldenSample.EnvelopeMessage message)
+    private int SizeOfEnvelopeMessage_c3a85f5c62ed7533(global::GoldenSample.EnvelopeMessage message)
     {
         checked
         {
@@ -1878,7 +1878,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteEnvelopeMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EnvelopeMessage message)
+    private void WriteEnvelopeMessage_c3a85f5c62ed7533(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EnvelopeMessage message)
     {
         writer.WriteMapHeader(3);
         writer.Write(1);
@@ -1889,7 +1889,7 @@ public sealed partial class GoldenSerializer
         WriteEnvelopePayload(ref writer, message.MaybePayload);
     }
 
-    private global::GoldenSample.EnvelopeMessage ReadEnvelopeMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.EnvelopeMessage ReadEnvelopeMessage_c3a85f5c62ed7533(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? correlationId = null;
@@ -1929,7 +1929,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.EnvelopeMessage(CorrelationId: correlationId!, Payload: payload!, MaybePayload: maybePayload);
     }
 
-    private int SizeOfEnvelopeListMessage(global::GoldenSample.EnvelopeListMessage message)
+    private int SizeOfEnvelopeListMessage_a37cb1020f361af1(global::GoldenSample.EnvelopeListMessage message)
     {
         checked
         {
@@ -1956,7 +1956,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteEnvelopeListMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EnvelopeListMessage message)
+    private void WriteEnvelopeListMessage_a37cb1020f361af1(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EnvelopeListMessage message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
@@ -1974,7 +1974,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private global::GoldenSample.EnvelopeListMessage ReadEnvelopeListMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.EnvelopeListMessage ReadEnvelopeListMessage_a37cb1020f361af1(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::System.Collections.Generic.List<object>? items = default;
@@ -2014,7 +2014,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.EnvelopeListMessage(Items: items!);
     }
 
-    private int SizeOfHybridMessage(global::GoldenSample.HybridMessage message)
+    private int SizeOfHybridMessage_0dae6980678443e5(global::GoldenSample.HybridMessage message)
     {
         checked
         {
@@ -2028,7 +2028,7 @@ public sealed partial class GoldenSerializer
             size += SizeOfInt32(4);
             size += SizeOfString(message.Note);
             size += SizeOfInt32(5);
-            var originSize = SizeOfGeoPoint(message.Origin);
+            var originSize = SizeOfGeoPoint_dc8a89e835da1091(message.Origin);
             if (originSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += originSize;
@@ -2036,7 +2036,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteHybridMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.HybridMessage message)
+    private void WriteHybridMessage_0dae6980678443e5(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.HybridMessage message)
     {
         writer.WriteMapHeader(5);
         writer.Write(1);
@@ -2048,10 +2048,10 @@ public sealed partial class GoldenSerializer
         writer.Write(4);
         writer.Write(message.Note);
         writer.Write(5);
-        WriteGeoPoint(ref writer, message.Origin);
+        WriteGeoPoint_dc8a89e835da1091(ref writer, message.Origin);
     }
 
-    private global::GoldenSample.HybridMessage ReadHybridMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.HybridMessage ReadHybridMessage_0dae6980678443e5(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? id = null;
@@ -2084,7 +2084,7 @@ public sealed partial class GoldenSerializer
                     note = reader.ReadString();
                     break;
                 case 5:
-                    origin = ReadGeoPoint(ref reader);
+                    origin = ReadGeoPoint_dc8a89e835da1091(ref reader);
                     __hasOrigin = true;
                     break;
                 default:
@@ -2104,28 +2104,28 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.HybridMessage(id: id!, count: count, @event: @event!) { Note = note, Origin = origin };
     }
 
-    private int SizeOfNestedMessage(global::GoldenSample.NestedMessage message)
+    private int SizeOfNestedMessage_875b410232607e0c(global::GoldenSample.NestedMessage message)
     {
         checked
         {
             var size = SizeOfMapHeader(9);
             size += SizeOfInt32(1);
-            var primarySize = SizeOfReading(message.Primary);
+            var primarySize = SizeOfReading_bc591f9c394af069(message.Primary);
             if (primarySize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += primarySize;
             size += SizeOfInt32(2);
-            var secondarySize = message.Secondary is null ? SizeOfNil() : SizeOfReading(message.Secondary);
+            var secondarySize = message.Secondary is null ? SizeOfNil() : SizeOfReading_bc591f9c394af069(message.Secondary);
             if (secondarySize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += secondarySize;
             size += SizeOfInt32(3);
-            var locationSize = SizeOfGeoPoint(message.Location);
+            var locationSize = SizeOfGeoPoint_dc8a89e835da1091(message.Location);
             if (locationSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += locationSize;
             size += SizeOfInt32(4);
-            var maybeLocationSize = message.MaybeLocation is null ? SizeOfNil() : SizeOfGeoPoint(message.MaybeLocation.Value);
+            var maybeLocationSize = message.MaybeLocation is null ? SizeOfNil() : SizeOfGeoPoint_dc8a89e835da1091(message.MaybeLocation.Value);
             if (maybeLocationSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += maybeLocationSize;
@@ -2150,7 +2150,7 @@ public sealed partial class GoldenSerializer
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += maybeTemperatureSize;
             size += SizeOfInt32(9);
-            var wrappedCountSize = SizeOfWrapperInt(message.WrappedCount);
+            var wrappedCountSize = SizeOfWrapperInt_8f156262e28f43c2(message.WrappedCount);
             if (wrappedCountSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += wrappedCountSize;
@@ -2158,23 +2158,23 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteNestedMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.NestedMessage message)
+    private void WriteNestedMessage_875b410232607e0c(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.NestedMessage message)
     {
         writer.WriteMapHeader(9);
         writer.Write(1);
-        WriteReading(ref writer, message.Primary);
+        WriteReading_bc591f9c394af069(ref writer, message.Primary);
         writer.Write(2);
         if (message.Secondary is null)
             writer.WriteNil();
         else
-            WriteReading(ref writer, message.Secondary);
+            WriteReading_bc591f9c394af069(ref writer, message.Secondary);
         writer.Write(3);
-        WriteGeoPoint(ref writer, message.Location);
+        WriteGeoPoint_dc8a89e835da1091(ref writer, message.Location);
         writer.Write(4);
         if (message.MaybeLocation is null)
             writer.WriteNil();
         else
-            WriteGeoPoint(ref writer, message.MaybeLocation.Value);
+            WriteGeoPoint_dc8a89e835da1091(ref writer, message.MaybeLocation.Value);
         writer.Write(5);
         _akkaFormatter_GoldenSample_Foreign.Write(ref writer, message.Foreign);
         writer.Write(6);
@@ -2190,10 +2190,10 @@ public sealed partial class GoldenSerializer
         else
             _akkaFormatter_GoldenSample_Temperature.Write(ref writer, message.MaybeTemperature.Value);
         writer.Write(9);
-        WriteWrapperInt(ref writer, message.WrappedCount);
+        WriteWrapperInt_8f156262e28f43c2(ref writer, message.WrappedCount);
     }
 
-    private global::GoldenSample.NestedMessage ReadNestedMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.NestedMessage ReadNestedMessage_875b410232607e0c(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::GoldenSample.Reading? primary = null;
@@ -2216,24 +2216,24 @@ public sealed partial class GoldenSerializer
             switch (__fieldId)
             {
                 case 1:
-                    primary = ReadReading(ref reader);
+                    primary = ReadReading_bc591f9c394af069(ref reader);
                     __hasPrimary = true;
                     break;
                 case 2:
                     if (reader.TryReadNil())
                         secondary = null;
                     else
-                        secondary = ReadReading(ref reader);
+                        secondary = ReadReading_bc591f9c394af069(ref reader);
                     break;
                 case 3:
-                    location = ReadGeoPoint(ref reader);
+                    location = ReadGeoPoint_dc8a89e835da1091(ref reader);
                     __hasLocation = true;
                     break;
                 case 4:
                     if (reader.TryReadNil())
                         maybeLocation = null;
                     else
-                        maybeLocation = ReadGeoPoint(ref reader);
+                        maybeLocation = ReadGeoPoint_dc8a89e835da1091(ref reader);
                     break;
                 case 5:
                     foreign = _akkaFormatter_GoldenSample_Foreign.Read(ref reader);
@@ -2256,7 +2256,7 @@ public sealed partial class GoldenSerializer
                         maybeTemperature = _akkaFormatter_GoldenSample_Temperature.Read(ref reader);
                     break;
                 case 9:
-                    wrappedCount = ReadWrapperInt(ref reader);
+                    wrappedCount = ReadWrapperInt_8f156262e28f43c2(ref reader);
                     __hasWrappedCount = true;
                     break;
                 default:
@@ -2278,7 +2278,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.NestedMessage(Primary: primary!, Secondary: secondary, Location: location, MaybeLocation: maybeLocation, Foreign: foreign!, MaybeForeign: maybeForeign, Temperature: temperature, MaybeTemperature: maybeTemperature, WrappedCount: wrappedCount!);
     }
 
-    private int SizeOfPing(global::GoldenSample.Ping message)
+    private int SizeOfPing_f8aeaaa9c761e1ea(global::GoldenSample.Ping message)
     {
         checked
         {
@@ -2287,12 +2287,12 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WritePing(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Ping message)
+    private void WritePing_f8aeaaa9c761e1ea(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Ping message)
     {
         writer.WriteMapHeader(0);
     }
 
-    private global::GoldenSample.Ping ReadPing(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Ping ReadPing_f8aeaaa9c761e1ea(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
@@ -2309,7 +2309,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Ping();
     }
 
-    private int SizeOfStructMessage(global::GoldenSample.StructMessage message)
+    private int SizeOfStructMessage_8cba7794b9d04c1d(global::GoldenSample.StructMessage message)
     {
         checked
         {
@@ -2322,7 +2322,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteStructMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.StructMessage message)
+    private void WriteStructMessage_8cba7794b9d04c1d(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.StructMessage message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2331,7 +2331,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.B);
     }
 
-    private global::GoldenSample.StructMessage ReadStructMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.StructMessage ReadStructMessage_8cba7794b9d04c1d(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         int a = 0;
@@ -2364,7 +2364,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.StructMessage(A: a, B: b!);
     }
 
-    private int SizeOfEscapedManifestMessage(global::GoldenSample.EscapedManifestMessage message)
+    private int SizeOfEscapedManifestMessage_caca4f1f93f7e5f3(global::GoldenSample.EscapedManifestMessage message)
     {
         checked
         {
@@ -2375,14 +2375,14 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteEscapedManifestMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EscapedManifestMessage message)
+    private void WriteEscapedManifestMessage_caca4f1f93f7e5f3(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EscapedManifestMessage message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Text);
     }
 
-    private global::GoldenSample.EscapedManifestMessage ReadEscapedManifestMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.EscapedManifestMessage ReadEscapedManifestMessage_caca4f1f93f7e5f3(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? text = null;
@@ -2407,7 +2407,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.EscapedManifestMessage(Text: text!);
     }
 
-    private int SizeOfWrapperInt(global::GoldenSample.Wrapper<int> message)
+    private int SizeOfWrapperInt_8f156262e28f43c2(global::GoldenSample.Wrapper<int> message)
     {
         checked
         {
@@ -2420,7 +2420,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteWrapperInt(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<int> message)
+    private void WriteWrapperInt_8f156262e28f43c2(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<int> message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2429,7 +2429,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.Payload);
     }
 
-    private global::GoldenSample.Wrapper<int> ReadWrapperInt(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Wrapper<int> ReadWrapperInt_8f156262e28f43c2(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? id = null;
@@ -2462,7 +2462,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Wrapper<int>(Id: id!, Payload: payload);
     }
 
-    private int SizeOfWrapperGeoPoint(global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message)
+    private int SizeOfWrapperGeoPoint_7bf1bee1797e06ad(global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message)
     {
         checked
         {
@@ -2470,7 +2470,7 @@ public sealed partial class GoldenSerializer
             size += SizeOfInt32(1);
             size += SizeOfString(message.Id);
             size += SizeOfInt32(2);
-            var payloadSize = SizeOfGeoPoint(message.Payload);
+            var payloadSize = SizeOfGeoPoint_dc8a89e835da1091(message.Payload);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += payloadSize;
@@ -2478,16 +2478,16 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteWrapperGeoPoint(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message)
+    private void WriteWrapperGeoPoint_7bf1bee1797e06ad(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
         writer.Write(message.Id);
         writer.Write(2);
-        WriteGeoPoint(ref writer, message.Payload);
+        WriteGeoPoint_dc8a89e835da1091(ref writer, message.Payload);
     }
 
-    private global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> ReadWrapperGeoPoint(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> ReadWrapperGeoPoint_7bf1bee1797e06ad(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? id = null;
@@ -2504,7 +2504,7 @@ public sealed partial class GoldenSerializer
                     __hasId = true;
                     break;
                 case 2:
-                    payload = ReadGeoPoint(ref reader);
+                    payload = ReadGeoPoint_dc8a89e835da1091(ref reader);
                     __hasPayload = true;
                     break;
                 default:
@@ -2520,7 +2520,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>(Id: id!, Payload: payload);
     }
 
-    private int SizeOfWrapperPairIntString(global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message)
+    private int SizeOfWrapperPairIntString_a9600d95fb2635e5(global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message)
     {
         checked
         {
@@ -2528,7 +2528,7 @@ public sealed partial class GoldenSerializer
             size += SizeOfInt32(1);
             size += SizeOfString(message.Id);
             size += SizeOfInt32(2);
-            var payloadSize = SizeOfPairIntString(message.Payload);
+            var payloadSize = SizeOfPairIntString_49e45acef9fbb2c2(message.Payload);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += payloadSize;
@@ -2536,16 +2536,16 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteWrapperPairIntString(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message)
+    private void WriteWrapperPairIntString_a9600d95fb2635e5(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
         writer.Write(message.Id);
         writer.Write(2);
-        WritePairIntString(ref writer, message.Payload);
+        WritePairIntString_49e45acef9fbb2c2(ref writer, message.Payload);
     }
 
-    private global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> ReadWrapperPairIntString(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> ReadWrapperPairIntString_a9600d95fb2635e5(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? id = null;
@@ -2562,7 +2562,7 @@ public sealed partial class GoldenSerializer
                     __hasId = true;
                     break;
                 case 2:
-                    payload = ReadPairIntString(ref reader);
+                    payload = ReadPairIntString_49e45acef9fbb2c2(ref reader);
                     __hasPayload = true;
                     break;
                 default:
@@ -2578,7 +2578,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>(Id: id!, Payload: payload!);
     }
 
-    private int SizeOfPairIntString(global::GoldenSample.Pair<int, string> message)
+    private int SizeOfPairIntString_49e45acef9fbb2c2(global::GoldenSample.Pair<int, string> message)
     {
         checked
         {
@@ -2591,7 +2591,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WritePairIntString(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Pair<int, string> message)
+    private void WritePairIntString_49e45acef9fbb2c2(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Pair<int, string> message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2600,7 +2600,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.Second);
     }
 
-    private global::GoldenSample.Pair<int, string> ReadPairIntString(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Pair<int, string> ReadPairIntString_49e45acef9fbb2c2(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         int first = 0;
@@ -2633,7 +2633,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Pair<int, string>(First: first, Second: second!);
     }
 
-    private int SizeOfReading(global::GoldenSample.Reading message)
+    private int SizeOfReading_bc591f9c394af069(global::GoldenSample.Reading message)
     {
         checked
         {
@@ -2646,7 +2646,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteReading(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Reading message)
+    private void WriteReading_bc591f9c394af069(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Reading message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2655,7 +2655,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.Value);
     }
 
-    private global::GoldenSample.Reading ReadReading(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.Reading ReadReading_bc591f9c394af069(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? sensor = null;
@@ -2688,7 +2688,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Reading(Sensor: sensor!, Value: value);
     }
 
-    private int SizeOfGeoPoint(global::GoldenSample.GeoPoint message)
+    private int SizeOfGeoPoint_dc8a89e835da1091(global::GoldenSample.GeoPoint message)
     {
         checked
         {
@@ -2701,7 +2701,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteGeoPoint(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.GeoPoint message)
+    private void WriteGeoPoint_dc8a89e835da1091(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.GeoPoint message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2710,7 +2710,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.Lon);
     }
 
-    private global::GoldenSample.GeoPoint ReadGeoPoint(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.GeoPoint ReadGeoPoint_dc8a89e835da1091(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         double lat = 0.0;
@@ -2743,7 +2743,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.GeoPoint(Lat: lat, Lon: lon);
     }
 
-    private int SizeOfOrderPlaced(global::GoldenSample.OrderPlaced message)
+    private int SizeOfOrderPlaced_52bdf597a009434f(global::GoldenSample.OrderPlaced message)
     {
         checked
         {
@@ -2754,14 +2754,14 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteOrderPlaced(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderPlaced message)
+    private void WriteOrderPlaced_52bdf597a009434f(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderPlaced message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.OrderId);
     }
 
-    private global::GoldenSample.OrderPlaced ReadOrderPlaced(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.OrderPlaced ReadOrderPlaced_52bdf597a009434f(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;
@@ -2786,7 +2786,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.OrderPlaced(OrderId: orderId!);
     }
 
-    private int SizeOfOrderCancelled(global::GoldenSample.OrderCancelled message)
+    private int SizeOfOrderCancelled_76715fe24db6852f(global::GoldenSample.OrderCancelled message)
     {
         checked
         {
@@ -2799,7 +2799,7 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteOrderCancelled(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderCancelled message)
+    private void WriteOrderCancelled_76715fe24db6852f(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderCancelled message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -2808,7 +2808,7 @@ public sealed partial class GoldenSerializer
         writer.Write(message.Reason);
     }
 
-    private global::GoldenSample.OrderCancelled ReadOrderCancelled(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.OrderCancelled ReadOrderCancelled_76715fe24db6852f(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;
@@ -2837,7 +2837,7 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.OrderCancelled(OrderId: orderId!, Reason: reason);
     }
 
-    private int SizeOfOrderExpired(global::GoldenSample.OrderExpired message)
+    private int SizeOfOrderExpired_229d90eb12e6b0fb(global::GoldenSample.OrderExpired message)
     {
         checked
         {
@@ -2848,14 +2848,14 @@ public sealed partial class GoldenSerializer
         }
     }
 
-    private void WriteOrderExpired(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderExpired message)
+    private void WriteOrderExpired_229d90eb12e6b0fb(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.OrderExpired message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.ExpiredAtTicks);
     }
 
-    private global::GoldenSample.OrderExpired ReadOrderExpired(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.OrderExpired ReadOrderExpired_229d90eb12e6b0fb(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         long expiredAtTicks = 0L;
@@ -2889,7 +2889,7 @@ public sealed partial class GoldenSerializer
             writer.Write(1);
             writer.Write("order-placed-v1");
             writer.Write(2);
-            WriteOrderPlaced(ref writer, (global::GoldenSample.OrderPlaced)value);
+            WriteOrderPlaced_52bdf597a009434f(ref writer, (global::GoldenSample.OrderPlaced)value);
             return;
         }
 
@@ -2914,7 +2914,7 @@ public sealed partial class GoldenSerializer
                     switch (manifest)
                     {
                         case "order-placed-v1":
-                            result = ReadOrderPlaced(ref reader);
+                            result = ReadOrderPlaced_52bdf597a009434f(ref reader);
                             break;
                         case null:
                             throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::GoldenSample.IOrderEvent].");
@@ -2940,7 +2940,7 @@ public sealed partial class GoldenSerializer
         var runtimeType = value.GetType();
         if (runtimeType == typeof(global::GoldenSample.OrderPlaced))
         {
-            var payloadSize = SizeOfOrderPlaced((global::GoldenSample.OrderPlaced)value);
+            var payloadSize = SizeOfOrderPlaced_52bdf597a009434f((global::GoldenSample.OrderPlaced)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("order-placed-v1") + SizeOfInt32(2) + payloadSize);
@@ -2958,7 +2958,7 @@ public sealed partial class GoldenSerializer
             writer.Write(1);
             writer.Write("order-placed-v1");
             writer.Write(2);
-            WriteOrderPlaced(ref writer, (global::GoldenSample.OrderPlaced)value);
+            WriteOrderPlaced_52bdf597a009434f(ref writer, (global::GoldenSample.OrderPlaced)value);
             return;
         }
 
@@ -2968,7 +2968,7 @@ public sealed partial class GoldenSerializer
             writer.Write(1);
             writer.Write("order-cancelled-v1");
             writer.Write(2);
-            WriteOrderCancelled(ref writer, (global::GoldenSample.OrderCancelled)value);
+            WriteOrderCancelled_76715fe24db6852f(ref writer, (global::GoldenSample.OrderCancelled)value);
             return;
         }
 
@@ -2978,7 +2978,7 @@ public sealed partial class GoldenSerializer
             writer.Write(1);
             writer.Write("order-expired-v1");
             writer.Write(2);
-            WriteOrderExpired(ref writer, (global::GoldenSample.OrderExpired)value);
+            WriteOrderExpired_229d90eb12e6b0fb(ref writer, (global::GoldenSample.OrderExpired)value);
             return;
         }
 
@@ -3003,13 +3003,13 @@ public sealed partial class GoldenSerializer
                     switch (manifest)
                     {
                         case "order-placed-v1":
-                            result = ReadOrderPlaced(ref reader);
+                            result = ReadOrderPlaced_52bdf597a009434f(ref reader);
                             break;
                         case "order-cancelled-v1":
-                            result = ReadOrderCancelled(ref reader);
+                            result = ReadOrderCancelled_76715fe24db6852f(ref reader);
                             break;
                         case "order-expired-v1":
-                            result = ReadOrderExpired(ref reader);
+                            result = ReadOrderExpired_229d90eb12e6b0fb(ref reader);
                             break;
                         case null:
                             throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::GoldenSample.IOrderEvent].");
@@ -3035,7 +3035,7 @@ public sealed partial class GoldenSerializer
         var runtimeType = value.GetType();
         if (runtimeType == typeof(global::GoldenSample.OrderPlaced))
         {
-            var payloadSize = SizeOfOrderPlaced((global::GoldenSample.OrderPlaced)value);
+            var payloadSize = SizeOfOrderPlaced_52bdf597a009434f((global::GoldenSample.OrderPlaced)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("order-placed-v1") + SizeOfInt32(2) + payloadSize);
@@ -3043,7 +3043,7 @@ public sealed partial class GoldenSerializer
 
         if (runtimeType == typeof(global::GoldenSample.OrderCancelled))
         {
-            var payloadSize = SizeOfOrderCancelled((global::GoldenSample.OrderCancelled)value);
+            var payloadSize = SizeOfOrderCancelled_76715fe24db6852f((global::GoldenSample.OrderCancelled)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("order-cancelled-v1") + SizeOfInt32(2) + payloadSize);
@@ -3051,7 +3051,7 @@ public sealed partial class GoldenSerializer
 
         if (runtimeType == typeof(global::GoldenSample.OrderExpired))
         {
-            var payloadSize = SizeOfOrderExpired((global::GoldenSample.OrderExpired)value);
+            var payloadSize = SizeOfOrderExpired_229d90eb12e6b0fb((global::GoldenSample.OrderExpired)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("order-expired-v1") + SizeOfInt32(2) + payloadSize);
