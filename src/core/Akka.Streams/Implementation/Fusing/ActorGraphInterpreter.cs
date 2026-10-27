@@ -205,8 +205,14 @@ namespace Akka.Streams.Implementation.Fusing
         public int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShourtCircuit, int eventLimit)
             => Init(self, subMat, enqueueToShourtCircuit, null, eventLimit);
 
-        internal int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object> enqueueToShortCircuit,
+#nullable enable
+        internal int Init(IActorRef self, SubFusingActorMaterializerImpl subMat,
             ActorGraphInterpreter shortCircuitOwner, int eventLimit)
+            => Init(self, subMat, null, shortCircuitOwner, eventLimit);
+
+        private int Init(IActorRef self, SubFusingActorMaterializerImpl subMat, Action<object>? enqueueToShortCircuit,
+            ActorGraphInterpreter? shortCircuitOwner, int eventLimit)
+#nullable restore
         {
             Self = self;
             _enqueueToShortCircuit = enqueueToShortCircuit;
@@ -439,6 +445,8 @@ namespace Akka.Streams.Implementation.Fusing
             _resumeScheduled = true;
             if (sendResume)
                 Self.Tell(_resume);
+            else if (_shortCircuitOwner != null)
+                _shortCircuitOwner.EnqueueToShortCircuit(_resume);
             else
                 _enqueueToShortCircuit(_resume);
         }
@@ -1638,7 +1646,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
-        private void EnqueueToShortCircuit(object input)
+        internal void EnqueueToShortCircuit(object input)
         {
             if(_shortCircuitBuffer == null)
                 _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
@@ -1659,8 +1667,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             try
             {
-                _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, EnqueueToShortCircuit,
-                    this, _currentLimit);
+                _currentLimit = shell.Init(Self, _subFusingMaterializerImpl, this, _currentLimit);
                 if (IsDebug)
                     Console.WriteLine($"registering new shell in {_initial}\n  {shell.ToString().Replace("\n", "\n  ")}");
                 if (shell.IsTerminated)

@@ -26,6 +26,25 @@ public sealed class ShortCircuitCallbackSpec : AkkaSpec
 {
     public ShortCircuitCallbackSpec(ITestOutputHelper output) : base(output) { }
 
+    [Theory(DisplayName = "Should_ResumeAndDeliverEveryElement_When_ShellOrActorQuotaIsReached")]
+    [InlineData(1)]
+    [InlineData(1000)]
+    public async Task Should_resume_and_deliver_every_element_when_shell_or_actor_quota_is_reached(int limit)
+    {
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1)
+                .WithSyncProcessingLimit(limit).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var expected = Enumerable.Range(1, 4096).ToArray();
+            var result = await Source.From(Enumerable.Range(0, expected.Length))
+                .Select(static value => value + 1)
+                .RunWith(Sink.Seq<int>(), materializer).WaitAsync(TimeSpan.FromSeconds(3));
+
+            result.Should().Equal(expected);
+        }, materializer);
+    }
+
     [Theory(DisplayName = "Should_QueueCallbacksInOrderAndCompleteFeedback_When_ActorEventLimitIsReached")]
     [InlineData(1)]
     [InlineData(2)]
