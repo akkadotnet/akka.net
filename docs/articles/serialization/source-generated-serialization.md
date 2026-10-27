@@ -806,15 +806,11 @@ assemblies: the value's own runtime assembly (`obj.GetType().Assembly`) and the 
 serializer was generated in. Naming both makes a placement mistake that slipped past every
 build-time check diagnosable from the exception alone.
 
-### The Startup One-Owner Check
+### Cross-Assembly Ownership
 
-Two serializers declared in assemblies that cannot see each other can both adopt the same top-level
-implementor, and no build-time check can catch it -- neither compilation knows the other exists.
-`SerializationSetup.Create` checks for this at actor-system startup after invoking the factory:
-one pass over the returned details' claimed types, throwing if two different aliases claim the
-same type and naming both serializer aliases. This is the last line of
-defense; a build-time diagnostic (AKKASG031, AKKASG041, or AKKASG043) already catches the case where
-one assembly can see the other.
+The generator detects conflicting ownership when the serializers are visible to the same
+compilation. Serializers in assemblies that cannot see each other need explicitly coordinated
+bindings; core `SerializationSetup` does not enforce the generator's ownership rule.
 
 ## Envelope Payloads
 

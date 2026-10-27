@@ -245,9 +245,7 @@ akkaBuilder.WithCustomSerializer(OrderSerializer.CreateSerializerDetails);
 ```
 
 One message type can belong to only one serializer. The generator's analyzer catches a
-conflict at compile time (for example, two serializers binding the same protocol interface);
-`SerializationSetup.Create` catches the same conflict at startup when serializer details
-come from more than one assembly.
+conflict at compile time (for example, two serializers binding the same protocol interface).
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 

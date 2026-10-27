@@ -411,17 +411,15 @@ Decision 19 addendum).
       serializer type" exception) carries no id; its text now names both the failing value's own
       runtime assembly and the assembly the serializer was generated in
       (`SerializerInfo.CompilationAssemblyName`, new)
-- [x] 15.7 Add the startup one-owner check to core `SerializationSetup.Create` (`src/core/Akka/Serialization/SerializationSetup.cs`):
-      one dictionary pass over the returned details' `UseFor` sets, throwing naming both
-      colliding aliases, run once when the factory is invoked at startup
+- [x] 15.7 Retire the wrapper's startup ownership check when switching to core `SerializerDetails`;
+      preserve core `SerializationSetup` behavior and the generator's compile-time diagnostics
 - [x] 15.8 Flip `CrossAssemblyBaselineSpec`'s case 6 (`Protocol_implementor_declared_only_in_referenced_assembly`)
       from a pinned "invisible, no dispatch arm" failure to a pinned success: the referenced-assembly
       implementor now gets a Manifest dispatch arm, a `typeof()` binding, and its own generated helpers
 - [x] 15.9 Add `MarkedUnionBaseSpec.cs` (local discovery, cross-assembly discovery, the empty-set
       exemption, and the explicit list's regression coverage), `PlacementDiagnosticsSpec.cs`
       (AKKASG043, AKKASG044, the extended AKKASG031, the widened AKKASG029, and the improved runtime
-      exception text), and `SerializerDetailsOneOwnerSpec.cs` (the startup check, disjoint and
-      colliding registrations, three-or-more registrations)
+      exception text)
 - [x] 15.10 Add `ReferencedAssemblyImplementorGoldenOutputSpec.cs`: three golden cases pinned against
       checked-in baselines -- a referenced-assembly top-level implementor, a marked union base with
       implementors on both sides of the boundary, and a `ManifestPrefix` expansion whose closed set
