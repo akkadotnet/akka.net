@@ -222,6 +222,73 @@ namespace Akka.Remote.Tests.Artery
             association.ControlQueueCount.Should().Be(0);
         }
 
+        [Fact(DisplayName = "Quarantine clears pending reliable replay before an earlier retained control frame")]
+        public void Should_Clear_Quarantined_Reliable_State_Before_Queued_Control()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var state = association.SystemMessageDeliveryState;
+            state.CurrentIncarnation = association.CurrentState.Incarnation;
+            var watch = new OutboundEnvelope(new Watch(ActorRefs.Nobody, ActorRefs.Nobody), null, "/user/target");
+            state.Buffer.Enqueue((1L, watch, DateTime.UtcNow));
+            state.NextSeq = 2;
+            var earlier = new OutboundEnvelope("earlier-retained-control", null, null);
+            association.TryEnqueueControl(earlier).Should().BeTrue();
+            association.Quarantine(42L).Should().BeTrue();
+            association.TryEnqueueControl(new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null));
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(state.CurrentIncarnation), null, null));
+
+            association.PrepareControlRestart().Should().BeFalse("quarantine resets reliable state before any queue-head barrier");
+            state.Buffer.Should().BeEmpty();
+            state.NextSeq.Should().Be(1);
+            association.ControlReader.TryPeek(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(earlier);
+        }
+
+        [Fact(DisplayName = "Stale quarantine and clear do not reset replacement incarnation reliable state")]
+        public void Should_Preserve_Replacement_Reliable_State_After_Stale_Quarantine()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var oldIncarnation = association.CurrentState.Incarnation;
+            association.Quarantine(42L).Should().BeTrue();
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 43L));
+            var state = association.SystemMessageDeliveryState;
+            state.CurrentIncarnation = association.CurrentState.Incarnation;
+            var envelope = new OutboundEnvelope("replacement-pending", null, null);
+            state.Buffer.Enqueue((7L, envelope, DateTime.UtcNow));
+            state.NextSeq = 8;
+            association.Quarantine(42L).Should().BeFalse();
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(oldIncarnation), null, null));
+
+            association.PrepareControlRestart().Should().BeTrue();
+            state.Buffer.Peek().Envelope.Should().BeSameAs(envelope);
+            state.NextSeq.Should().Be(8);
+            state.CurrentIncarnation.Should().Be(association.CurrentState.Incarnation);
+        }
+
+        [Fact(DisplayName = "The final control gate rejects reliable replay already held downstream when quarantined")]
+        public void Should_Filter_Handshake_Held_Reliable_Replay_After_Quarantine()
+        {
+            var remote = NewRemote();
+            var local = new UniqueAddress(new Address("akka", "local", "localhost", 2551), 99L);
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var held = new OutboundEnvelope(new SystemMessageEnvelope(
+                new Watch(ActorRefs.Nobody, ActorRefs.Nobody), 1L, local, "/user/target"), null, null);
+            association.ShouldSendControl(held).Should().BeTrue();
+            association.Quarantine(42L).Should().BeTrue();
+
+            association.ShouldSendControl(held).Should().BeFalse();
+            association.ShouldSendControl(new OutboundEnvelope(new ArteryQuarantined(local, 42L), null, null)).Should().BeTrue();
+            association.ShouldSendControl(new OutboundEnvelope(new ArteryHeartbeat(), null, null)).Should().BeTrue();
+        }
+
         [Fact(DisplayName = "8857: unacknowledged delivery state survives an idle-control decision unchanged")]
         public void Should_Preserve_Unacknowledged_Delivery_State()
         {

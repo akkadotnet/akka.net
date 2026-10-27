@@ -134,8 +134,8 @@ namespace Akka.Remote.Tests.Artery
                 association.ControlReader.TryPeek(out var queued).Should().BeTrue();
                 queued!.Message.Should().BeOfType<ArteryQuarantined>()
                     .Which.QuarantinedUid.Should().Be(peerUid);
-                association.ControlQueueCount.Should().BeGreaterOrEqualTo(2,
-                    "both the accepted notification and its delivery-state clear are queued behind the blocked encode");
+                association.ControlQueueCount.Should().BeGreaterOrEqualTo(1,
+                    "the accepted notification is queued behind the blocked encode");
 
                 Task<IActorRef>? incomingConnection = null;
                 if (replacePeer)

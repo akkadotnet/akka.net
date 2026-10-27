@@ -790,6 +790,7 @@ namespace Akka.Remote.Artery
         /// <returns>Whether unacknowledged reliable messages still require a consumer.</returns>
         public bool PrepareControlRestart()
         {
+            _systemMessageDeliveryState.ClearQuarantined(CurrentState);
             while (_controlChannel.Reader.TryPeek(out var element))
             {
                 if (element.Message is ClearSystemMessageDelivery clear)
@@ -880,9 +881,17 @@ namespace Akka.Remote.Artery
         /// Retain them for one handshake-timeout window from the first enqueue attempt, never renewed by
         /// a failed stream returning the same envelope. A replacement UID retires the old notice.
         /// Also checked after handshake, before encoding, since reconnect may discover that UID.
+        /// Reliable envelopes already held downstream are also filtered for a quarantined current UID.
         /// </summary>
         public bool ShouldSendControl(IOutboundEnvelope element)
         {
+            // A handshake can already hold a reliable envelope when quarantine is published.
+            // The delivery owner cannot retract that element; reject it at the final wire gate.
+            if (element.Message is SystemMessageEnvelope)
+            {
+                var association = CurrentState;
+                return !(association.UniqueRemoteAddress is { } current && association.IsQuarantined(current.Uid));
+            }
             if (element.Message is not ArteryQuarantined notification)
                 return true;
             var deadline = _quarantineNotifications.GetValue(element,

@@ -791,10 +791,9 @@ namespace Akka.Remote.Artery
             // EnqueueControl -- so this gate cannot affect them; that is how the control channel
             // "pierces quarantine", not an exception carved out here.
             //
-            // GROUP7 RESOLVED: ClearSystemMessageDelivery does NOT need a Send()-level pierce in
-            // this implementation -- it is issued directly by Quarantine() via EnqueueControl (the
-            // SAME path ArteryQuarantined already uses), never through Send, so it is unaffected by
-            // this gate by construction. System messages do NOT pierce quarantine either (unlike
+            // Local quarantine resets reliable state through the delivery owner's observation of
+            // association state, independently of control-queue ordering. System messages do NOT
+            // pierce quarantine either (unlike
             // control housekeeping traffic): once an incarnation's system-message delivery has been
             // quarantined (whether by an external Quarantine() call or by
             // SystemMessageDeliveryStage's own give-up), further Watch/Unwatch/DeathWatchNotification/
@@ -919,14 +918,10 @@ namespace Akka.Remote.Artery
                     // though ordinary sends to `address` are now gated off in Send().
                     EnqueueControl(address, new ArteryQuarantined(_localUniqueAddress, u));
 
-                    // GROUP7 RESOLVED: design.md's "Quarantine (UID-scoped)" calls for sending
-                    // ClearSystemMessageDelivery(incarnation) alongside the quarantine notice --
-                    // this resets THIS association's OWN outbound SystemMessageDeliveryStage
-                    // (seqNo back to 1, unacked buffer emptied) via the SAME control-queue plumbing
-                    // ArteryQuarantined just used. It is local-only in this implementation (consumed
-                    // by that stage, never forwarded to the wire) -- see ClearSystemMessageDelivery's
-                    // type-level remarks for the full rationale/simplification.
-                    EnqueueControl(address, new ClearSystemMessageDelivery(association.CurrentState.Incarnation));
+                    // Reliable state is reset by its stage owner (or stopped-stream cleanup)
+                    // observing the quarantined current UID, before replay. A queued clear could
+                    // be obstructed by retained frames or accidentally tagged with a replacement
+                    // incarnation if a new handshake completes here.
                 }
             }
             else
@@ -2267,8 +2262,8 @@ namespace Akka.Remote.Artery
             if (isControlStream && _testState is { } controlTestState)
                 beforeEncode = beforeEncode.Via(Flow.FromGraph(new OutboundTestStage(outboundContext, controlTestState)));
 
-            // A reconnect can discover a replacement UID while the notice is held in handshake.
-            // Retire obsolete or expired notices before any bytes are encoded for that peer.
+            // Recheck after handshake: it may hold a notice for a replaced UID or reliable
+            // replay emitted before local quarantine. Neither belongs on this peer's wire.
             if (isControlStream)
                 beforeEncode = beforeEncode.Where(association.ShouldSendControl);
 
