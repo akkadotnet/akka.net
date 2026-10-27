@@ -149,7 +149,7 @@ namespace Akka.Remote.Tests.Artery
             {
                 new HandshakeReq(peer, NewRemote()), new HandshakeRsp(peer),
                 new ArteryHeartbeat(), new ArteryHeartbeatRsp(),
-                new Akka.Remote.Artery.Ack(1L, peer), new Akka.Remote.Artery.Nack(1L, peer), new ArteryQuarantined(peer, 1L)
+                new Akka.Remote.Artery.Ack(1L, peer), new Akka.Remote.Artery.Nack(1L, peer)
             };
             foreach (var message in housekeeping)
                 association.TryEnqueueControl(new OutboundEnvelope(message, null, null)).Should().BeTrue();
@@ -160,6 +160,66 @@ namespace Akka.Remote.Tests.Artery
             association.ControlQueueCount.Should().Be(1);
             association.ControlReader.TryRead(out var retained).Should().BeTrue();
             retained.Should().BeSameAs(watch);
+        }
+
+        [Fact(DisplayName = "8857: control restart must not discard a pending quarantine notification")]
+        public void Should_Preserve_Quarantine_Notification_Across_Restart()
+        {
+            var remote = NewRemote();
+            var association = new AssociationRegistry().AssociationFor(remote);
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 42L), 42L), null, null);
+            association.TryEnqueueControl(new OutboundEnvelope(new ArteryHeartbeat(), null, null)).Should().BeTrue();
+            association.TryEnqueueControl(notification).Should().BeTrue();
+
+            association.PrepareControlRestart();
+
+            association.ControlQueueCount.Should().Be(1);
+            association.ControlReader.TryRead(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(notification);
+        }
+
+        [Fact(DisplayName = "Quarantine notification expiry is bounded and never renewed by requeue")]
+        public void Should_Expire_Quarantine_Notification_Without_Renewing_On_Return()
+        {
+            var now = TimeSpan.Zero;
+            var remote = NewRemote();
+            var association = new Association(remote, quarantineNotificationTimeout: TimeSpan.FromSeconds(20), monotonicClock: () => now);
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null);
+            association.TryEnqueueControl(notification).Should().BeTrue();
+            association.ControlReader.TryRead(out var held).Should().BeTrue();
+            now = TimeSpan.FromSeconds(19);
+            association.TryEnqueueControl(held!).Should().BeTrue();
+            association.PrepareControlRestart().Should().BeFalse();
+            association.ControlQueueCount.Should().Be(1);
+
+            now = TimeSpan.FromSeconds(20);
+            association.PrepareControlRestart().Should().BeFalse();
+            association.ControlQueueCount.Should().Be(0, "the last expired notice must no longer drive retries");
+            association.ShouldSendControl(notification).Should().BeFalse();
+
+            var fresh = new OutboundEnvelope(notification.Message, null, null);
+            association.TryEnqueueControl(fresh).Should().BeTrue();
+            association.ShouldSendControl(fresh).Should().BeTrue("a genuinely new notice has its own deadline");
+            now = TimeSpan.FromSeconds(40);
+            association.PrepareControlRestart();
+            association.ControlQueueCount.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "Quarantine notice target UID, rather than originating UID, controls retirement")]
+        public void Should_Retire_Notification_When_Target_Uid_Is_Replaced()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(NewRemote(), 99L), 42L), null, null);
+            association.TryEnqueueControl(notification).Should().BeTrue();
+            association.ShouldSendControl(notification).Should().BeTrue();
+
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 43L));
+            association.ShouldSendControl(notification).Should().BeFalse("the notice concerns the previous incarnation");
+            association.PrepareControlRestart();
+            association.ControlQueueCount.Should().Be(0);
         }
 
         [Fact(DisplayName = "8857: unacknowledged delivery state survives an idle-control decision unchanged")]

@@ -64,6 +64,64 @@ namespace Akka.Remote.Tests.Artery
             typeof(ArteryRemoting).GetMethod("ReturnUndeliveredOutboundElement", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("ArteryRemoting.ReturnUndeliveredOutboundElement not found -- has it been renamed?");
 
+        [Fact(DisplayName = "8857: quarantine notifications held during handshake must survive stream failure")]
+        public void Should_Return_Undelivered_Quarantine_Notification()
+        {
+            var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
+            var remote = DeadPeerAddress();
+            var association = transport.Registry.AssociationFor(remote);
+            association.EnsureControlOutboundMaterialized(_ => { });
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null);
+
+            ReturnUndeliveredOutboundElementMethod.Invoke(transport,
+                new object[] { remote, association, ArteryStreamId.Control, notification, 0 });
+
+            association.ControlReader.TryRead(out var returned).Should().BeTrue();
+            returned.Should().BeSameAs(notification);
+        }
+
+        [Fact(DisplayName = "Expired quarantine notice returned after backoff must not wake a dormant consumer")]
+        public void Should_Not_Return_Expired_Quarantine_Notification()
+        {
+            var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
+            var remote = DeadPeerAddress();
+            var now = TimeSpan.Zero;
+            var association = new Association(remote, quarantineNotificationTimeout: TimeSpan.FromSeconds(20), monotonicClock: () => now);
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null);
+            association.TryEnqueueControl(notification).Should().BeTrue();
+            association.ControlReader.TryRead(out _).Should().BeTrue();
+            now = TimeSpan.FromSeconds(20);
+
+            ReturnUndeliveredOutboundElementMethod.Invoke(transport,
+                new object[] { remote, association, ArteryStreamId.Control, notification, 0 });
+
+            association.ControlQueueCount.Should().Be(0);
+            association.IsControlOutboundMaterialized.Should().BeFalse();
+        }
+
+        [Fact(DisplayName = "An expired last quarantine notice releases the restart gate instead of reconnecting")]
+        public async Task Should_Stop_Retrying_When_Last_Quarantine_Notification_Expires()
+        {
+            var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
+            var remote = DeadPeerAddress();
+            var now = TimeSpan.Zero;
+            var association = new Association(remote, quarantineNotificationTimeout: TimeSpan.FromSeconds(20), monotonicClock: () => now);
+            association.EnsureControlOutboundMaterialized(_ => { });
+            association.TryEnqueueControl(new OutboundEnvelope(
+                new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null)).Should().BeTrue();
+            now = TimeSpan.FromSeconds(20);
+
+            typeof(ArteryRemoting).GetMethod("ScheduleOutboundRestart", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .Invoke(transport, new object[] { remote, association, ArteryStreamId.Control });
+
+            await AwaitAssertAsync(() =>
+            {
+                association.ControlQueueCount.Should().Be(0);
+                association.IsControlOutboundMaterialized.Should().BeFalse();
+            }, TimeSpan.FromSeconds(5), cancellationToken: TestContext.Current.CancellationToken);
+            association.IsControlShutDown.Should().BeFalse("expiry only makes the association dormant");
+        }
+
         [Fact(DisplayName = "P2: the production ReturnUndelivered wiring must return an ORDINARY-lane element to that SAME lane's channel, not lane 0")]
         public void ReturnUndeliveredOutboundElement_should_requeue_to_the_correct_ordinary_lane()
         {

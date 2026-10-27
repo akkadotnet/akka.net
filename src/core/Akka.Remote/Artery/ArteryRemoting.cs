@@ -310,7 +310,7 @@ namespace Akka.Remote.Artery
             // OutboundControlQueueSize / OutboundLargeMessageQueueSize (task 10.2).
             _registry = new AssociationRegistry(
                 _settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize, _settings.OutboundLargeMessageQueueSize,
-                _settings.OutboundLanes);
+                _settings.OutboundLanes, _settings.HandshakeTimeout);
 
             // advanced.test-mode (Pekko ArteryTransport parity): the shared blackhole state the
             // failure-injection test stages consult. Deliberately NULL (not merely empty) when
@@ -1679,7 +1679,8 @@ namespace Akka.Remote.Artery
             // what this method's own doc comment on IOutboundContext.ReturnUndelivered already
             // says is covered elsewhere; skip it here so the code agrees with that rationale.
             if (envelope.Message is SystemMessageEnvelope ||
-                streamId == ArteryStreamId.Control && Association.IsBestEffortControlMessage(envelope.Message))
+                streamId == ArteryStreamId.Control &&
+                (Association.IsBestEffortControlMessage(envelope.Message) || !association.ShouldSendControl(envelope)))
                 return;
 
             var requeued = streamId switch
@@ -2265,6 +2266,11 @@ namespace Akka.Remote.Artery
             // the link. Same materialization gating as the ordinary/large insertion above.
             if (isControlStream && _testState is { } controlTestState)
                 beforeEncode = beforeEncode.Via(Flow.FromGraph(new OutboundTestStage(outboundContext, controlTestState)));
+
+            // A reconnect can discover a replacement UID while the notice is held in handshake.
+            // Retire obsolete or expired notices before any bytes are encoded for that peer.
+            if (isControlStream)
+                beforeEncode = beforeEncode.Where(association.ShouldSendControl);
 
             var frames = beforeEncode.Via(Flow.FromGraph(encodeStage));
 

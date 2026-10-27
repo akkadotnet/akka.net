@@ -207,8 +207,16 @@ restart-with-new-UID scenario. Group 9 implements it:
   for a new producer rather than retrying a departed peer forever. Channels and incarnation
   state stay intact. Producers enqueue before checking the gate, and the backoff callback
   resets the gate before checking queued demand, so an accepted send racing quiescence is
-  observed by one of them. Old best-effort handshake/heartbeat/Ack/Nack/quarantine traffic
-  cannot keep the retry loop alive; fresh control sends still initiate a connection attempt.
+  observed by one of them. Old regenerating handshake/heartbeat/Ack/Nack traffic cannot keep
+  the retry loop alive; fresh control sends still initiate a connection attempt. One-time `ArteryQuarantined` notices
+  instead retain their exact accepted envelope across queued cleanup and handshake failure.
+  Their best-effort retry window is bounded by `handshake-timeout`, measured monotonically from
+  the first enqueue attempt (just before acceptance) and never renewed by requeue. A notice is
+  retired after being handed downstream, when its target `QuarantinedUid` is superseded, or when
+  that original deadline expires; shutdown also ends retries. Target/deadline checks run after
+  handshake immediately before encoding: notices targeting an observed superseded incarnation
+  are filtered, and the receiver also ignores notices targeting another UID. This does not add
+  reliable delivery or acknowledgments for quarantine notices, nor change their wire format.
   Reliable delivery keeps its original buffer, sequence numbers, and send timestamps across
   stream restarts, until acknowledgment, incarnation change, explicit clear, or the existing
   `give-up-system-message-after` policy. Buffered ordinary messages remain bounded and survive
