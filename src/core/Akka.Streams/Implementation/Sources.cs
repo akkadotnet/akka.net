@@ -881,10 +881,9 @@ namespace Akka.Streams.Implementation
                 CompleteStage();
             }
 
-
+#nullable enable
             public override void OnPull()
             {
-                var source = _stage._sourceFactory();
                 var subSink = new SubSinkInlet<TOut>(this, "LazySource");
                 subSink.Pull();
 
@@ -898,6 +897,7 @@ namespace Akka.Streams.Implementation
 
                 try
                 {
+                    var source = _stage._sourceFactory();
                     var value = SubFusingMaterializer.Materialize(source.ToMaterialized(subSink.Sink, Keep.Left),
                         _inheritedAttributes);
                     _completion.SetResult(value);
@@ -909,6 +909,7 @@ namespace Akka.Streams.Implementation
                     _completion.TrySetException(e);
                 }
             }
+#nullable restore
 
             public override void PostStop() => _completion.TrySetException(
                 new Exception("LazySource stopped without completing the materialized task"));
