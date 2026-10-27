@@ -64,10 +64,10 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         switch (obj)
         {
             case global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message:
-                WritePing(ref writer, message);
+                WritePing_fb0b5d4b5f2cc776(ref writer, message);
                 break;
             case global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message:
-                WriteAuditStamp(ref writer, message);
+                WriteAuditStamp_408ed35f688734b8(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -79,8 +79,8 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "ping-v1" => ReadPing(ref reader),
-            "audit-override-v1" => ReadAuditStamp(ref reader),
+            "ping-v1" => ReadPing_fb0b5d4b5f2cc776(ref reader),
+            "audit-override-v1" => ReadAuditStamp_408ed35f688734b8(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -89,8 +89,8 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
     {
         return obj switch
         {
-            global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message => SizeOfPing(message),
-            global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message => SizeOfAuditStamp(message),
+            global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message => SizeOfPing_fb0b5d4b5f2cc776(message),
+            global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message => SizeOfAuditStamp_408ed35f688734b8(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -123,7 +123,7 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         }
     }
 
-    private int SizeOfPing(global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
+    private int SizeOfPing_fb0b5d4b5f2cc776(global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
     {
         checked
         {
@@ -134,14 +134,14 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         }
     }
 
-    private void WritePing(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
+    private void WritePing_fb0b5d4b5f2cc776(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Value);
     }
 
-    private global::ExpansionGoldenCrossAssembly.AssemblyB.Ping ReadPing(ref global::MessagePack.MessagePackReader reader)
+    private global::ExpansionGoldenCrossAssembly.AssemblyB.Ping ReadPing_fb0b5d4b5f2cc776(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         int value = 0;
@@ -166,7 +166,7 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         return new global::ExpansionGoldenCrossAssembly.AssemblyB.Ping(Value: value);
     }
 
-    private int SizeOfAuditStamp(global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
+    private int SizeOfAuditStamp_408ed35f688734b8(global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
     {
         checked
         {
@@ -177,14 +177,14 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         }
     }
 
-    private void WriteAuditStamp(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
+    private void WriteAuditStamp_408ed35f688734b8(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.ActorPath);
     }
 
-    private global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp ReadAuditStamp(ref global::MessagePack.MessagePackReader reader)
+    private global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp ReadAuditStamp_408ed35f688734b8(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? actorPath = null;

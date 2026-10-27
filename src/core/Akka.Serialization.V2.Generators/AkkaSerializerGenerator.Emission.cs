@@ -10,7 +10,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -2785,20 +2787,9 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetObjectMethodName(TypeMapping mapping)
     {
-        return FoldTypeName(mapping.TypeFullName);
+        return GetGeneratedMethodName(mapping.Key);
     }
 
-    /// <summary>
-    /// Folds a fully-qualified type name into a compact generated-member identifier the way
-    /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
-    /// identifier keeps only its simple name, and generic type arguments are concatenated --
-    /// <c>Ns.Wrapper&lt;Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
-    /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
-    /// Flattening is collision-prone by construction (same simple name in two namespaces, marker
-    /// ambiguity); AKKASG024 detects collisions among generated members and fails compilation
-    /// instead of silently emitting duplicates -- the same trade System.Text.Json makes with its
-    /// DuplicateTypeName diagnostic.
-    /// </summary>
     private static string FoldTypeName(string typeFullName)
     {
         var sb = new StringBuilder(typeFullName.Length);
@@ -2854,16 +2845,11 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
     {
-        return "_akkaFormatter_" + SanitizeTypeName(formatter.TargetTypeFullName);
+        return "_akkaFormatter_" + SanitizeNonGenericFormatterTypeName(formatter.TargetTypeFullName);
     }
 
-    private static string SanitizeTypeName(string typeFullName)
+    private static string SanitizeNonGenericFormatterTypeName(string typeFullName)
     {
-        // Used only for formatter field names, whose target types are validated non-generic
-        // (AKKASG011) -- generated METHOD names go through FoldTypeName instead. Escape literal
-        // underscores FIRST so sanitization is collision-free: 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar'
-        // and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay distinct instead of both collapsing to
-        // 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
             .Replace("_", "__")
@@ -2873,7 +2859,29 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetMessageMethodName(MessageInfo message)
     {
-        return FoldTypeName(message.FullyQualifiedName);
+        return GetGeneratedMethodName(message.Key);
+    }
+
+    private static string GetGeneratedMethodName(TypeKey key)
+    {
+        var identity = new StringBuilder();
+        AppendIdentity(key, identity);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(identity.ToString()));
+        var name = new StringBuilder(FoldTypeName(key.DisplayName));
+        name.Append('_');
+        for (var i = 0; i < 8; i++)
+            name.Append(hash[i].ToString("x2", CultureInfo.InvariantCulture));
+        return name.ToString();
+    }
+
+    private static void AppendIdentity(TypeKey key, StringBuilder builder)
+    {
+        builder.Append(key.MetadataName.Length.ToString(CultureInfo.InvariantCulture))
+            .Append(':').Append(key.MetadataName)
+            .Append('[').Append(key.TypeArguments.Length.ToString(CultureInfo.InvariantCulture)).Append(']');
+        foreach (var argument in key.TypeArguments)
+            AppendIdentity(argument, builder);
     }
 
     private static string GetAccessibilityKeyword(Accessibility accessibility)

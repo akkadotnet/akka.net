@@ -63,10 +63,10 @@ public sealed partial class OrdersSerializer
         switch (obj)
         {
             case global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message:
-                WriteOrderCancelled(ref writer, message);
+                WriteOrderCancelled_62f3666a0e7cf58b(ref writer, message);
                 break;
             case global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message:
-                WriteOrderPlaced(ref writer, message);
+                WriteOrderPlaced_895260b19dd97303(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -78,8 +78,8 @@ public sealed partial class OrdersSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "cancelled-v1" => ReadOrderCancelled(ref reader),
-            "placed-v1" => ReadOrderPlaced(ref reader),
+            "cancelled-v1" => ReadOrderCancelled_62f3666a0e7cf58b(ref reader),
+            "placed-v1" => ReadOrderPlaced_895260b19dd97303(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -88,8 +88,8 @@ public sealed partial class OrdersSerializer
     {
         return obj switch
         {
-            global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message => SizeOfOrderCancelled(message),
-            global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message => SizeOfOrderPlaced(message),
+            global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message => SizeOfOrderCancelled_62f3666a0e7cf58b(message),
+            global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message => SizeOfOrderPlaced_895260b19dd97303(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -122,7 +122,7 @@ public sealed partial class OrdersSerializer
         }
     }
 
-    private int SizeOfOrderCancelled(global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
+    private int SizeOfOrderCancelled_62f3666a0e7cf58b(global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
     {
         checked
         {
@@ -133,14 +133,14 @@ public sealed partial class OrdersSerializer
         }
     }
 
-    private void WriteOrderCancelled(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
+    private void WriteOrderCancelled_62f3666a0e7cf58b(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.OrderId);
     }
 
-    private global::ReferencedImplementorGolden.AssemblyB.OrderCancelled ReadOrderCancelled(ref global::MessagePack.MessagePackReader reader)
+    private global::ReferencedImplementorGolden.AssemblyB.OrderCancelled ReadOrderCancelled_62f3666a0e7cf58b(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;
@@ -165,7 +165,7 @@ public sealed partial class OrdersSerializer
         return new global::ReferencedImplementorGolden.AssemblyB.OrderCancelled(OrderId: orderId!);
     }
 
-    private int SizeOfOrderPlaced(global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
+    private int SizeOfOrderPlaced_895260b19dd97303(global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
     {
         checked
         {
@@ -176,14 +176,14 @@ public sealed partial class OrdersSerializer
         }
     }
 
-    private void WriteOrderPlaced(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
+    private void WriteOrderPlaced_895260b19dd97303(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.OrderId);
     }
 
-    private global::ReferencedImplementorGolden.AssemblyA.OrderPlaced ReadOrderPlaced(ref global::MessagePack.MessagePackReader reader)
+    private global::ReferencedImplementorGolden.AssemblyA.OrderPlaced ReadOrderPlaced_895260b19dd97303(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;

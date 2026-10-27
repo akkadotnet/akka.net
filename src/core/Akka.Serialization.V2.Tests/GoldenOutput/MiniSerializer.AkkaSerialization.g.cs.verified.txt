@@ -62,7 +62,7 @@ internal sealed partial class MiniSerializer
         switch (obj)
         {
             case global::GoldenSample.MiniMessage message:
-                WriteMiniMessage(ref writer, message);
+                WriteMiniMessage_3541da1b354a69dd(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
@@ -74,7 +74,7 @@ internal sealed partial class MiniSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "mini-v1" => ReadMiniMessage(ref reader),
+            "mini-v1" => ReadMiniMessage_3541da1b354a69dd(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -83,7 +83,7 @@ internal sealed partial class MiniSerializer
     {
         return obj switch
         {
-            global::GoldenSample.MiniMessage message => SizeOfMiniMessage(message),
+            global::GoldenSample.MiniMessage message => SizeOfMiniMessage_3541da1b354a69dd(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -116,7 +116,7 @@ internal sealed partial class MiniSerializer
         }
     }
 
-    private int SizeOfMiniMessage(global::GoldenSample.MiniMessage message)
+    private int SizeOfMiniMessage_3541da1b354a69dd(global::GoldenSample.MiniMessage message)
     {
         checked
         {
@@ -127,14 +127,14 @@ internal sealed partial class MiniSerializer
         }
     }
 
-    private void WriteMiniMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.MiniMessage message)
+    private void WriteMiniMessage_3541da1b354a69dd(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.MiniMessage message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Text);
     }
 
-    private global::GoldenSample.MiniMessage ReadMiniMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.MiniMessage ReadMiniMessage_3541da1b354a69dd(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? text = null;
