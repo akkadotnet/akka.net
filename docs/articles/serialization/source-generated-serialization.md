@@ -688,8 +688,8 @@ there by implementing a protocol or by an explicit `[AkkaSerializable<T>]` adopt
 claiming the same type -- two adoptions, or one adoption colliding with the other serializer's own
 protocol membership -- is **AKKASG041**, reported at both serializers' own declarations. Across
 compilations that cannot see each other, a build-time check cannot run at all: neither compilation
-sees the other's serializer. A startup check catches it instead, when registrations are composed --
-see [The Startup One-Owner Check](#the-startup-one-owner-check).
+sees the other's serializer. Applications must coordinate those bindings explicitly --
+see [Cross-Assembly Ownership](#cross-assembly-ownership).
 
 The protocol set `ManifestPrefix` expands over spans referenced assemblies too, the same set
 [top-level dispatch](#cross-assembly-types) uses: every `[AkkaSerializable]` implementor this
