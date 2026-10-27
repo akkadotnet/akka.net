@@ -10,8 +10,8 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.Artery;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
@@ -69,19 +69,15 @@ namespace Akka.Remote.Tests.Artery
         public async Task Should_Stop_Idle_Reconnects_When_Unwatched_Peer_Shuts_Down_After_Leave_Acknowledgement()
         {
             var cancellation = TestContext.Current.CancellationToken;
-            var unwatchAcknowledged = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(SpecConfig),
-                new ArteryTransportSetup(dropOutboundControlMessage: message =>
-                {
-                    if (message is Akka.Remote.Artery.Ack { SeqNo: >= 2 })
-                        unwatchAcknowledged.TrySetResult(true);
-                    return false;
-                }));
-            var peer = ActorSystem.Create("GracefullyLeavingPeer", setup);
+            var peerConfig = ConfigurationFactory.ParseString("akka.actor.debug.lifecycle = on")
+                .WithFallback(SpecConfig);
+            var peer = ActorSystem.Create("GracefullyLeavingPeer", peerConfig);
             try
             {
                 var room = Sys.ActorOf(Props.Create(() => new ChatRoom()), "chat");
                 var peerProbe = CreateTestProbe(peer);
+                var lifecycleProbe = CreateTestProbe(peer);
+                peer.EventStream.Subscribe(lifecycleProbe.Ref, typeof(Debug));
                 var serverAddress = RARP.For(Sys).Provider.DefaultAddress;
                 var remoteRoom = await peer.ActorSelection($"{serverAddress}/user/chat")
                     .ResolveOne(10.Seconds(), cancellation);
@@ -108,9 +104,12 @@ namespace Akka.Remote.Tests.Artery
                     stats.WatchingRefs.Count.Should().Be(0);
                 }, 10.Seconds(), cancellationToken: cancellation);
 
-                // Seeing the peer generate Ack(2) proves Watch and Unwatch were wrapped and
-                // delivered; queue/buffer emptiness alone could pass during their stage handoff.
-                await unwatchAcknowledged.Task.WaitAsync(10.Seconds(), cancellation);
+                // The peer actor's lifecycle event proves this exact Unwatch was processed.
+                // An Ack sequence threshold could also be satisfied by RemoteWatcher's ReWatch.
+                await lifecycleProbe.FishForMessageAsync(message =>
+                    message is Debug lifecycle && lifecycle.LogSource == peerProbe.Ref.Path.ToString()
+                    && lifecycle.Message is string text && text.StartsWith("no longer watched by ", StringComparison.Ordinal),
+                    10.Seconds(), cancellationToken: cancellation);
                 var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
                 var association = transport.Registry.AssociationFor(RARP.For(peer).Provider.DefaultAddress);
                 await AwaitAssertAsync(() =>
