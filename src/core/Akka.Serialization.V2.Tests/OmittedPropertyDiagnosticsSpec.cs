@@ -1,9 +1,11 @@
 #nullable enable
 
 using System.Linq;
+using Akka.Serialization.V2.Generators;
 using Akka.Serialization.V2.Tests.Harness;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Xunit;
 
@@ -101,5 +103,37 @@ public sealed class OmittedPropertyDiagnosticsSpec
             """);
         result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG046");
     }
+
+    [Theory(DisplayName = "Should not treat computed partial properties as omitted stored state")]
+    [InlineData("", "public partial int Value => 42;")]
+    [InlineData("", "public partial int Value { get { return 42; } }")]
+    [InlineData("<T>", "public partial int Value => 42;")]
+    [InlineData("<T>", "public partial int Value { get { return 42; } }")]
+    public void Should_NotWarn_When_PartialPropertyImplementationIsComputed(string typeParameters, string implementation)
+    {
+        var source = $$"""
+            using Akka.Serialization.V2;
+            [AkkaSerializable(AllowEmpty = true)]
+            public sealed partial class Message{{typeParameters}}
+            {
+                public partial int Value { get; }
+            }
+            public sealed partial class Message{{typeParameters}}
+            {
+                {{implementation}}
+            }
+            """;
+        var options = GeneratorTestHarness.ParseOptions.WithLanguageVersion(LanguageVersion.CSharp13);
+        var compilation = CSharpCompilation.Create("ComputedPartialProperty",
+            new[] { CSharpSyntaxTree.ParseText(source, options) },
+            GeneratorTestHarness.BaseReferences,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var driver = CSharpGeneratorDriver.Create(new[] { new AkkaSerializerGenerator().AsSourceGenerator() }, parseOptions: options);
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
+
+        output.GetDiagnostics().Should().NotContain(d => d.Severity == DiagnosticSeverity.Error);
+        diagnostics.Should().NotContain(d => d.Id == "AKKASG046");
+    }
+
 
 }
