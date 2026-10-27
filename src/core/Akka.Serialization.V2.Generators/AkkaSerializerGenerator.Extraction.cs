@@ -752,7 +752,8 @@ public sealed partial class AkkaSerializerGenerator
         if (property.IsStatic || property.IsIndexer || property.IsAbstract || property.GetMethod?.IsExtern == true
             || property.DeclaredAccessibility != Accessibility.Public)
             return;
-        var hasStorage = property.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() switch
+        var implementation = property.PartialImplementationPart ?? property;
+        var hasStorage = implementation.DeclaringSyntaxReferences.Any(reference => reference.GetSyntax() switch
         {
             ParameterSyntax => true,
             PropertyDeclarationSyntax declaration => declaration.AccessorList?.Accessors.Any(accessor =>
