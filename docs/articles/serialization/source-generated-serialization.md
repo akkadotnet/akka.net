@@ -1158,6 +1158,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG044 | Warning | Serializer has no messages | A serializer has no messages here, in any referenced assembly, or in its own registrations -- often a sign the serializer is placed upstream of its messages. See [Serializer Placement](#serializer-placement). |
 | AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
 | AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
+| AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 
 ## Limitations Today and Planned Changes
 

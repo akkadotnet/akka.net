@@ -1800,7 +1800,8 @@ public sealed partial class AkkaSerializerGenerator
         SerializerHasNoMessages,
         DuplicateProtocolBindingCrossAssembly,
         MessageTypeNotAccessible,
-        PropertyNotSerialized
+        PropertyNotSerialized,
+        IgnoredFieldAnnotations
     }
 
     /// <summary>

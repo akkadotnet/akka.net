@@ -186,6 +186,26 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // directly and reading .Locations inside MergeExtractedLocations gets the same merged bag one
         // Select cheaper. The schemas-only projections below are NOT removed the same way: Resolve and
         // Emit depend on them directly, so they earn their keep as separate nodes.
+        var ignoredFieldDeclarations = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => node is PropertyDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or IndexerDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or ParameterSyntax { AttributeLists.Count: > 0, Parent.Parent: RecordDeclarationSyntax },
+                static (ctx, cancellationToken) => ExtractIgnoredFieldDeclaration(ctx, cancellationToken))
+            .Where(static declaration => declaration.HasValue)
+            .Select(static (declaration, _) => declaration!.Value)
+            .Collect();
+
+        context.RegisterSourceOutput(ignoredFieldDeclarations.Combine(context.CompilationProvider), static (ctx, pair) =>
+        {
+            foreach (var declaration in pair.Left.GroupBy(d => d.Key).Select(group => group.First()))
+            {
+                var diagnostic = new DiagnosticSpec(DiagnosticKey.IgnoredFieldAnnotations,
+                    new LocationKey(declaration.Key, string.Empty), ToDisplayName(declaration.Key.DisplayName));
+                ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
+            }
+        });
+
         var extractedSerializers = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializerAttributeFullName,
