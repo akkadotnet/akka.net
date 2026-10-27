@@ -111,5 +111,15 @@ public sealed class GeneratedMemberNamingSpec
         result.GeneratorDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         result.GeneratedSources.Keys.Should().Contain("SampleSerializer.AkkaSerialization.g.cs");
+        GeneratorTestHarness.Run(source + "\npublic sealed class Unrelated { }")
+            .GeneratedSources["SampleSerializer.AkkaSerialization.g.cs"]
+            .Should().Be(result.GeneratedSources["SampleSerializer.AkkaSerialization.g.cs"]);
+
+        if (scenario == "namespaces")
+        {
+            var duplicateManifest = GeneratorTestHarness.Run(source.Replace("Manifest = \"second\"", "Manifest = \"first\""));
+            duplicateManifest.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG012");
+            duplicateManifest.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG024");
+        }
     }
 }

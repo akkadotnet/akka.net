@@ -205,7 +205,7 @@ public sealed partial class AkkaSerializerGenerator
         /// <summary>The exact fully-qualified display string the generator has always rendered for this type. Carried verbatim; never compared.</summary>
         public string DisplayName { get; }
 
-        /// <summary>The compact, collision-checked (AKKASG024) generated-member-name folding of <see cref="DisplayName"/>. See <see cref="FoldTypeName"/>.</summary>
+        /// <summary>The compact type-name folding used as a readable prefix for generated member names. See <see cref="FoldTypeName"/>.</summary>
         public string Fold() => FoldTypeName(DisplayName ?? string.Empty);
 
         public override string ToString() => DisplayName ?? string.Empty;

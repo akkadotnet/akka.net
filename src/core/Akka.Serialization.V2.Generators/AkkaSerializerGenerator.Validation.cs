@@ -833,12 +833,10 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        // Flattening generic constructions into generated member names is collision-prone in
-        // principle (mirrors System.Text.Json's DuplicateTypeName handling): detect and fail
-        // instead of silently emitting duplicate members.
+        // Retain a diagnostic for the unlikely collision of stable type-identity suffixes.
         foreach (var collision in reachableMessages
                      .GroupBy(GetMessageMethodName, StringComparer.Ordinal)
-                     .Where(group => group.Select(m => m.FullyQualifiedName).Distinct(StringComparer.Ordinal).Count() > 1))
+                     .Where(group => group.Select(m => m.Key).Distinct().Count() > 1))
         {
             var typeNames = string.Join(", ", collision.Select(m => ToDisplayName(m.FullyQualifiedName)));
 

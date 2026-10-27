@@ -68,7 +68,7 @@ public sealed class GeneratorResolveSpec
         resolved.TopLevelMessages.Members.Select(m => m.TypeFullName).Should().ContainInOrder(
             third.FullyQualifiedName, first.FullyQualifiedName, second.FullyQualifiedName);
         resolved.TopLevelMessages.Members.Select(m => m.Manifest).Should().ContainInOrder("third-v1", "first-v1", "second-v1");
-        resolved.TopLevelMessages.Members.Select(m => m.MethodName).Should().ContainInOrder("Third", "First", "Second");
+        resolved.TopLevelMessages.Members.Select(m => m.MethodName).Should().ContainInOrder("Third_fc5f5e50474de629", "First_7fce4d8e86fa101e", "Second_1ff7ef9189b6d511");
     }
 
     [Fact(DisplayName = "ResolveSerializer should compute the reachable set, including a nested message that is not itself top-level")]
@@ -151,7 +151,7 @@ public sealed class GeneratorResolveSpec
         // order.
         helper.Members.Members.Select(m => m.TypeFullName).Should().ContainInOrder(memberB.FullyQualifiedName, memberA.FullyQualifiedName);
         helper.Members.Members.Select(m => m.Manifest).Should().ContainInOrder("member-b-v1", "member-a-v1");
-        helper.Members.Members.Select(m => m.MethodName).Should().ContainInOrder("MemberB", "MemberA");
+        helper.Members.Members.Select(m => m.MethodName).Should().ContainInOrder("MemberB_51f02894bb93d7ef", "MemberA_2653f0ef73512927");
     }
 
     [Fact(DisplayName = "Two resolves over equal inputs should be equal")]

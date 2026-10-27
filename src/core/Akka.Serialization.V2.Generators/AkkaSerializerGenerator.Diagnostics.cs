@@ -261,7 +261,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor DuplicateGeneratedName = new(
         "AKKASG024",
         "Generated member name collision",
-        "Serializer '{0}' produces the same generated member name '{1}' for distinct message types {2}; rename one of the types to disambiguate",
+        "Serializer '{0}' produces the same generated member name '{1}' for distinct message types {2}; report this generator collision with both type declarations",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
