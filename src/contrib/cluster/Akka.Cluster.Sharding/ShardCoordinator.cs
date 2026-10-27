@@ -1309,7 +1309,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// End of rebalance process performed by <see cref="RebalanceWorker"/>.
         /// </summary>
-        private sealed class RebalanceDone
+        internal sealed class RebalanceDone
         {
             /// <summary>
             /// Gets the id of the shard processed by the rebalance worker.
