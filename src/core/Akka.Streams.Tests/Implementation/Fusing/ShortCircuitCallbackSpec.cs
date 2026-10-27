@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
@@ -25,6 +26,74 @@ namespace Akka.Streams.Tests.Implementation.Fusing;
 public sealed class ShortCircuitCallbackSpec : AkkaSpec
 {
     public ShortCircuitCallbackSpec(ITestOutputHelper output) : base(output) { }
+
+    [Fact(DisplayName = "Should_UseSuppliedCallback_When_PublicShellInitAdapterQueuesLocalInput")]
+    public void Should_use_supplied_callback_when_public_shell_init_adapter_queues_local_input()
+    {
+        using var materializer = ActorMaterializer.Create(Sys);
+        var extendedMaterializer = (ExtendedActorMaterializer)materializer;
+        var stage = new AdapterStage();
+        var assembly = new GraphAssembly(
+            new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
+            Array.Empty<Inlet>(), Array.Empty<int>(), Array.Empty<Outlet>(), Array.Empty<int>());
+        var (connections, logics) = assembly.Materialize(Attributes.None,
+            assembly.Stages.Select(value => value.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
+        var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape,
+            ActorMaterializerSettings.Create(Sys), extendedMaterializer);
+        var probe = CreateTestProbe();
+        var queued = new Queue<object>();
+        var delivered = false;
+        try
+        {
+            shell.Init(probe.Ref, new SubFusingActorMaterializerImpl(extendedMaterializer, _ => probe.Ref), queued.Enqueue, 1000);
+            shell.Receive(new ActorGraphInterpreter.AsyncInput(shell, logics[0], 0, GraphStageLogic.NoPromise,
+                _ => shell.Interpreter.OnAsyncInput(logics[0], 42, GraphStageLogic.NoPromise,
+                    value => delivered = (int)value == 42)), 1000);
+
+            delivered.Should().BeFalse("a local callback must be queued rather than invoked recursively");
+            queued.Should().ContainSingle();
+            var input = queued.Dequeue().Should().BeOfType<ActorGraphInterpreter.AsyncInput>().Subject;
+            input.Shell.Should().BeSameAs(shell);
+            input.Event.Should().Be(42);
+            shell.Receive(input, 1000);
+            delivered.Should().BeTrue();
+        }
+        finally
+        {
+            shell.Interpreter.Finish();
+        }
+    }
+
+    private sealed class AdapterStage : GraphStage<ClosedShape>
+    {
+        public override ClosedShape Shape => ClosedShape.Instance;
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic();
+
+        private sealed class Logic : GraphStageLogic
+        {
+            public Logic() : base(ClosedShape.Instance) { }
+            public override void PreStart() => SetKeepGoing(true);
+        }
+    }
+
+    [Theory(DisplayName = "Should_ResumeAndDeliverEveryElement_When_ShellOrActorQuotaIsReached")]
+    [InlineData(1)]
+    [InlineData(1000)]
+    public async Task Should_resume_and_deliver_every_element_when_shell_or_actor_quota_is_reached(int limit)
+    {
+        using var materializer = ActorMaterializer.Create(Sys,
+            ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1)
+                .WithSyncProcessingLimit(limit).WithFuzzingMode(false));
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var expected = Enumerable.Range(1, 4096).ToArray();
+            var result = await Source.From(Enumerable.Range(0, expected.Length))
+                .Select(static value => value + 1)
+                .RunWith(Sink.Seq<int>(), materializer).WaitAsync(TimeSpan.FromSeconds(3));
+
+            result.Should().Equal(expected);
+        }, materializer);
+    }
 
     [Theory(DisplayName = "Should_QueueCallbacksInOrderAndCompleteFeedback_When_ActorEventLimitIsReached")]
     [InlineData(1)]
