@@ -74,4 +74,23 @@ public sealed class DeclarationDiagnosticsSpec
         result.GeneratedSources.Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Should retain contextual shape diagnostics for malformed referenced schemas")]
+    public void Should_ReportMetadataShapeError_When_NoLocalDeclarationOwnsIt()
+    {
+        var reference = GeneratorTestHarness.CompileToReference("""
+            using Akka.Serialization.V2;
+            namespace ForeignMessages;
+            public interface IProtocol { }
+            [AkkaSerializable(Manifest = "message")]
+            public sealed record Message([property: AkkaField(0)] int A, [property: AkkaField(0)] int B) : IProtocol;
+            """, "MalformedForeignSchema");
+        var result = GeneratorTestHarness.Run("""
+            using Akka.Serialization.V2;
+            [AkkaSerializer<ForeignMessages.IProtocol>("foreign", 120904)]
+            public sealed partial class ForeignSerializer : AkkaSerializer { }
+            """, reference);
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG005");
+        result.GeneratedSources.Should().BeEmpty();
+    }
+
 }

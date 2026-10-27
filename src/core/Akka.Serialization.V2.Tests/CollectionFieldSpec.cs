@@ -662,7 +662,9 @@ public sealed class CollectionMutationValue
 
     public CollectionMutationValue(int value) => _value = value;
 
+#pragma warning disable AKKASG046
     public Action? OnRead { get; set; }
+#pragma warning restore AKKASG046
 
     [AkkaField(1)]
     public int Value

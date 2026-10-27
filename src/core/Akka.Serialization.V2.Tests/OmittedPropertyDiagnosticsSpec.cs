@@ -88,7 +88,18 @@ public sealed class OmittedPropertyDiagnosticsSpec
             }
             """);
         var effective = CompilationWithAnalyzers.GetEffectiveDiagnostics(result.GeneratorDiagnostics, result.OutputCompilation);
-        var warning = effective.Should().ContainSingle(d => d.Id == "AKKASG046").Subject;
+        var warning = effective.Should().ContainSingle(d => d.Id == "AKKASG046" && !d.IsSuppressed).Subject;
         warning.GetMessage().Should().Contain("Recipient").And.NotContain("Author");
     }
+    [Fact(DisplayName = "Should not treat abstract getters as omitted stored state")]
+    public void Should_NotWarn_When_PropertyIsAbstract()
+    {
+        var result = GeneratorTestHarness.Run("""
+            using Akka.Serialization.V2;
+            [AkkaSerializable(AllowEmpty = true)]
+            public abstract class Message { public abstract int Id { get; } }
+            """);
+        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG046");
+    }
+
 }

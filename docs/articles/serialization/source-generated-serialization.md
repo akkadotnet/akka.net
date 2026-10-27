@@ -288,6 +288,14 @@ public readonly record struct GapUniqueAddress(
     [property: AkkaField(2)] long Uid);
 ```
 
+Public auto-properties and positional record properties without `[AkkaField]` produce
+AKKASG046 at the property declaration, even without a serializer. Such properties are not
+serialized. Constructors or initializers can restore their initial values during deserialization.
+Add `[AkkaField(n)]` to preserve the state, or use standard diagnostic suppression for an
+intentional omission. `AllowEmpty` permits fieldless messages but does not suppress AKKASG046.
+Computed properties and public fields are outside this diagnostic. `[AkkaField]` supports
+properties only.
+
 Type-shape checks run as soon as you mark a type with `[AkkaSerializable]`, even before
 its serializer exists. Missing fields, duplicate indices, inaccessible marked getters, and
 inaccessible declarations report once at their source declarations. The same checks apply to
@@ -1149,6 +1157,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG043 | Error | Protocol is owned by an upstream serializer | A type declared here implements a protocol that a serializer in a referenced assembly already binds; that assembly can never see this type. See [Serializer Placement](#serializer-placement). |
 | AKKASG044 | Warning | Serializer has no messages | A serializer has no messages here, in any referenced assembly, or in its own registrations -- often a sign the serializer is placed upstream of its messages. See [Serializer Placement](#serializer-placement). |
 | AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
+| AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
 
 ## Limitations Today and Planned Changes
 

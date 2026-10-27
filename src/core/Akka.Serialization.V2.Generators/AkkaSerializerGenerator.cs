@@ -209,14 +209,14 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
             .WithTrackingName(TrackingNames.ExtractedMessages);
 
-        context.RegisterSourceOutput(extractedMessages.Collect(), static (ctx, declarations) =>
+        context.RegisterSourceOutput(extractedMessages.Collect().Combine(context.CompilationProvider), static (ctx, pair) =>
         {
             var reported = new HashSet<DiagnosticSpec>();
-            foreach (var declaration in declarations)
+            foreach (var declaration in pair.Left)
             foreach (var diagnostic in declaration.DeclarationDiagnostics)
             {
                 if (reported.Add(diagnostic))
-                    ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations));
+                    ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
             }
         });
 

@@ -1799,7 +1799,8 @@ public sealed partial class AkkaSerializerGenerator
         ProtocolOwnedUpstream,
         SerializerHasNoMessages,
         DuplicateProtocolBindingCrossAssembly,
-        MessageTypeNotAccessible
+        MessageTypeNotAccessible,
+        PropertyNotSerialized
     }
 
     /// <summary>
