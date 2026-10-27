@@ -22,10 +22,10 @@ public sealed partial class FormatterPositionsSerializer
 
     public override int Identifier => 150201;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("formatter-positions",
-            system => new FormatterPositionsSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("formatter-positions",
+            new FormatterPositionsSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::FormatterGolden.IProtocol))); 
     }

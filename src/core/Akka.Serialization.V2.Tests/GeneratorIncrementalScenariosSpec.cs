@@ -47,7 +47,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializer<IAlphaProtocol>("scenario-alpha", 170001)]
         public sealed partial class AlphaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "beta-one-v1")]
@@ -62,7 +62,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializer<IBetaProtocol>("scenario-beta", 170002)]
         public sealed partial class BetaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -570,7 +570,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializer<IAlphaProtocol>("scenario-alpha-money", 170003)]
         public sealed partial class AlphaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "beta-one-v1")]
@@ -579,7 +579,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializer<IBetaProtocol>("scenario-beta-money", 170004)]
         public sealed partial class BetaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -701,7 +701,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializable<Envelope<IGammaProtocol>>(ManifestPrefix = "gamma")]
         public sealed partial class GammaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         public interface IDeltaProtocol
@@ -714,7 +714,7 @@ public sealed class GeneratorIncrementalScenariosSpec
         [AkkaSerializer<IDeltaProtocol>("scenario-delta", 170102)]
         public sealed partial class DeltaSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 

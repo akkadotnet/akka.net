@@ -190,7 +190,7 @@ public sealed class GeneratorCompilationFactsSpec
         }
 
         // Hand-written, not partial: CompileToReference never runs the generator against this
-        // compilation, so there is no partial CreateRegistration to implement. Only the
+        // compilation, so there is no partial CreateSerializerDetails to implement. Only the
         // [AkkaSerializer<IRemoteProtocol>] declaration matters here -- it is what forces this
         // assembly's own AssemblyRef table to name Akka.Serialization.V2 (qualifying it for
         // ReferencedAssembliesUsingV2), and it is the one thing ComputeUpstreamSerializerBindings'

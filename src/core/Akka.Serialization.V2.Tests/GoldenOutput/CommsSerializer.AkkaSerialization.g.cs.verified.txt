@@ -13,10 +13,10 @@ public sealed partial class CommsSerializer
 
     public override int Identifier => 190103;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("prefix-expansion-golden",
-            system => new CommsSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("prefix-expansion-golden",
+            new CommsSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::PrefixExpansionGolden.AssemblyA.ICommsMessage),
                 typeof(global::PrefixExpansionGolden.AssemblyB.Envelope<global::PrefixExpansionGolden.AssemblyA.OrderPlaced>),

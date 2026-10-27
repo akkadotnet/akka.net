@@ -72,7 +72,7 @@ public sealed class GeneratorGoldenNativeScalarSpec
         [AkkaSerializer<IProtocol>("scalar-golden", 150202)]
         public sealed partial class ScalarGoldenSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 

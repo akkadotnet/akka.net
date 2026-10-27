@@ -51,7 +51,7 @@ public sealed class MarkedUnionBaseSpec
 
             [AkkaSerializer<IOrderProtocol>("orders", 140101)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var result = GeneratorTestHarness.Run(source);
@@ -85,7 +85,7 @@ public sealed class MarkedUnionBaseSpec
 
             [AkkaSerializer<IOrderProtocol>("orders", 140102)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var result = GeneratorTestHarness.Run(source);
@@ -128,7 +128,7 @@ public sealed class MarkedUnionBaseSpec
 
             [AkkaSerializer<IEnvelopeProtocol>("envelope", 140103)]
             public sealed partial class EnvelopeSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = GeneratorTestHarness.CompileToReference(sourceA, "MarkedUnion.Case2.A");
@@ -177,7 +177,7 @@ public sealed class MarkedUnionBaseSpec
 
             [AkkaSerializer<IOrderProtocol>("orders", 140104)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var result = GeneratorTestHarness.Run(source);

@@ -374,7 +374,7 @@ public sealed record MirrorActorPathMessage(
 [AkkaSerializerFormatter<ActorPath, ActorPathFormatter>]
 public sealed partial class ControlMirrorSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface ISystemFormatterProtocol
@@ -431,7 +431,7 @@ public sealed record SystemTaggedMessage(
 [AkkaSerializerFormatter<SystemTaggedValue, SystemTaggedValueFormatter>]
 public sealed partial class SystemFormatterSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 internal interface IInternalMirrorProtocol
@@ -448,5 +448,5 @@ internal sealed record InternalMirrorMessage(
 [AkkaSerializer<IInternalMirrorProtocol>("internal-mirror", 120104)]
 internal sealed partial class InternalMirrorSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }

@@ -18,10 +18,10 @@ public sealed partial class GoldenSerializer
 
     public override int Identifier => 150101;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("golden-sample",
-            system => new GoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("golden-sample",
+            new GoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::GoldenSample.IProtocol),
                 typeof(global::GoldenSample.Pair<int, string>),

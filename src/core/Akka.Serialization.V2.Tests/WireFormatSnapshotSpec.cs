@@ -119,7 +119,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         // system.Serialization.FindSerializerFor to the SAME generated serializer instead of the
         // system's default fallback. Every other case in this corpus is unaffected: none of them route
         // an IGeneratedTestProtocol-typed value through FindSerializerFor.
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(GeneratedTestSerializer.CreateSerializerDetails(system))));
         _system = ActorSystem.Create("wire-format-snapshot-spec", setup);
         var extendedSystem = (ExtendedActorSystem)_system;
         _generatedSerializer = new GeneratedTestSerializer(extendedSystem);

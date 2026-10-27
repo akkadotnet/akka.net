@@ -11,10 +11,10 @@ public sealed partial class RootSerializer
 
     public override int Identifier => 150103;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("golden-root",
-            system => new RootSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("golden-root",
+            new RootSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::IRootProtocol))); 
     }

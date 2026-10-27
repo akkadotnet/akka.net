@@ -275,7 +275,7 @@ public sealed record WriterCountMessage([property: AkkaField(1)] byte[] Bytes) :
 [AkkaSerializer<IWriterCountProtocol>("writer-count", 128101)]
 public sealed partial class WriterCountSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface IWriterCountFormattedProtocol
@@ -289,7 +289,7 @@ public sealed record WriterCountFormattedMessage([property: AkkaField(1)] Writer
 [AkkaSerializerFormatter<WriterCountValue, WriterCountValueFormatter>]
 public sealed partial class WriterCountFormattedSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface IWriterCountCollectionProtocol
@@ -303,7 +303,7 @@ public sealed record WriterCountCollectionMessage([property: AkkaField(1)] Write
 [AkkaSerializerFormatter<WriterCountValue, WriterCountValueFormatter>]
 public sealed partial class WriterCountCollectionSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public sealed class WriterCountValue(byte first, byte second)

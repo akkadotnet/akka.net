@@ -623,7 +623,7 @@ public interface ICollectionProtocol
 [AkkaSerializer<ICollectionProtocol>("collection-test", 120105)]
 public sealed partial class CollectionTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable]

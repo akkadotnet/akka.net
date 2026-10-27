@@ -13,10 +13,10 @@ public sealed partial class OrdersSerializer
 
     public override int Identifier => 190101;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("referenced-implementor-golden",
-            system => new OrdersSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("referenced-implementor-golden",
+            new OrdersSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::ReferencedImplementorGolden.AssemblyA.IOrders))); 
     }

@@ -13,10 +13,10 @@ public sealed partial class ExpansionGoldenSerializer
 
     public override int Identifier => 190101;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("expansion-golden",
-            system => new ExpansionGoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("expansion-golden",
+            new ExpansionGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::ExpansionGolden.IComms),
                 typeof(global::ExpansionGolden.Envelope<global::ExpansionGolden.Cassette>),

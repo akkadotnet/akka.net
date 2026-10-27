@@ -57,7 +57,7 @@ internal static class DiagnosticSource
             {{serializerAttributes}}
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializable(Manifest = "outer-v1")]

@@ -13,10 +13,10 @@ internal sealed partial class MiniSerializer
 
     public override int Identifier => 150102;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("golden-mini",
-            system => new MiniSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("golden-mini",
+            new MiniSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::GoldenSample.IMiniProtocol))); 
     }
