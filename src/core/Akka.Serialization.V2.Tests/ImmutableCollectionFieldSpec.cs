@@ -441,7 +441,7 @@ public interface IImmutableCollectionProtocol
 [AkkaSerializer<IImmutableCollectionProtocol>("immutable-collection-test", 120106)]
 public sealed partial class ImmutableCollectionTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable]

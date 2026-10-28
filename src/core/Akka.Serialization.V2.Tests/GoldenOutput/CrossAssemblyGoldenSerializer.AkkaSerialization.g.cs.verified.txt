@@ -13,10 +13,10 @@ public sealed partial class CrossAssemblyGoldenSerializer
 
     public override int Identifier => 190001;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("cross-assembly-golden",
-            system => new CrossAssemblyGoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("cross-assembly-golden",
+            new CrossAssemblyGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::CrossAssemblyGolden.AssemblyB.IComms),
                 typeof(global::CrossAssemblyGolden.AssemblyA.Wrapper<int>))); 
@@ -36,6 +36,24 @@ public sealed partial class CrossAssemblyGoldenSerializer
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)
+        {
+            var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);
+            var initialCount = pooledWriter.WrittenCount;
+            SerializeMessagePack(obj, ref pooledMessagePackWriter);
+            pooledMessagePackWriter.Flush();
+            return checked(pooledWriter.WrittenCount - initialCount);
+        }
+
+        if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)
+        {
+            var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);
+            var initialCount = arrayWriter.WrittenCount;
+            SerializeMessagePack(obj, ref arrayMessagePackWriter);
+            arrayMessagePackWriter.Flush();
+            return checked(arrayWriter.WrittenCount - initialCount);
+        }
+
         var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);
         var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);
         SerializeMessagePack(obj, ref messagePackWriter);
@@ -48,16 +66,16 @@ public sealed partial class CrossAssemblyGoldenSerializer
         switch (obj)
         {
             case global::CrossAssemblyGolden.AssemblyB.Pay message:
-                WritePay(ref writer, message);
+                WritePay_384df7fd858f6f7f(ref writer, message);
                 break;
             case global::CrossAssemblyGolden.AssemblyB.OrderNotice message:
-                WriteOrderNotice(ref writer, message);
+                WriteOrderNotice_3def97761e06e807(ref writer, message);
                 break;
             case global::CrossAssemblyGolden.AssemblyB.Holder message:
-                WriteHolder(ref writer, message);
+                WriteHolder_cb3017c4c200fc62(ref writer, message);
                 break;
             case global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message:
-                WriteWrapperInt(ref writer, message);
+                WriteWrapperInt_caa436395c8a15b6(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -69,10 +87,10 @@ public sealed partial class CrossAssemblyGoldenSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "pay-v1" => ReadPay(ref reader),
-            "order-notice-v1" => ReadOrderNotice(ref reader),
-            "holder-v1" => ReadHolder(ref reader),
-            "wrapper-int-v1" => ReadWrapperInt(ref reader),
+            "pay-v1" => ReadPay_384df7fd858f6f7f(ref reader),
+            "order-notice-v1" => ReadOrderNotice_3def97761e06e807(ref reader),
+            "holder-v1" => ReadHolder_cb3017c4c200fc62(ref reader),
+            "wrapper-int-v1" => ReadWrapperInt_caa436395c8a15b6(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -81,10 +99,10 @@ public sealed partial class CrossAssemblyGoldenSerializer
     {
         return obj switch
         {
-            global::CrossAssemblyGolden.AssemblyB.Pay message => SizeOfPay(message),
-            global::CrossAssemblyGolden.AssemblyB.OrderNotice message => SizeOfOrderNotice(message),
-            global::CrossAssemblyGolden.AssemblyB.Holder message => SizeOfHolder(message),
-            global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message => SizeOfWrapperInt(message),
+            global::CrossAssemblyGolden.AssemblyB.Pay message => SizeOfPay_384df7fd858f6f7f(message),
+            global::CrossAssemblyGolden.AssemblyB.OrderNotice message => SizeOfOrderNotice_3def97761e06e807(message),
+            global::CrossAssemblyGolden.AssemblyB.Holder message => SizeOfHolder_cb3017c4c200fc62(message),
+            global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message => SizeOfWrapperInt_caa436395c8a15b6(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -117,13 +135,13 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private int SizeOfPay(global::CrossAssemblyGolden.AssemblyB.Pay message)
+    private int SizeOfPay_384df7fd858f6f7f(global::CrossAssemblyGolden.AssemblyB.Pay message)
     {
         checked
         {
             var size = SizeOfMapHeader(1);
             size += SizeOfInt32(1);
-            var amountSize = SizeOfMoney(message.Amount);
+            var amountSize = SizeOfMoney_03727203466ac988(message.Amount);
             if (amountSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += amountSize;
@@ -131,14 +149,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WritePay(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.Pay message)
+    private void WritePay_384df7fd858f6f7f(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.Pay message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
-        WriteMoney(ref writer, message.Amount);
+        WriteMoney_03727203466ac988(ref writer, message.Amount);
     }
 
-    private global::CrossAssemblyGolden.AssemblyB.Pay ReadPay(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyB.Pay ReadPay_384df7fd858f6f7f(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::CrossAssemblyGolden.AssemblyA.Money? amount = null;
@@ -149,7 +167,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             switch (__fieldId)
             {
                 case 1:
-                    amount = ReadMoney(ref reader);
+                    amount = ReadMoney_03727203466ac988(ref reader);
                     __hasAmount = true;
                     break;
                 default:
@@ -163,7 +181,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyB.Pay(Amount: amount!);
     }
 
-    private int SizeOfOrderNotice(global::CrossAssemblyGolden.AssemblyB.OrderNotice message)
+    private int SizeOfOrderNotice_3def97761e06e807(global::CrossAssemblyGolden.AssemblyB.OrderNotice message)
     {
         checked
         {
@@ -177,14 +195,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WriteOrderNotice(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.OrderNotice message)
+    private void WriteOrderNotice_3def97761e06e807(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.OrderNotice message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         WriteUnion_IOrderEvent(ref writer, message.Event);
     }
 
-    private global::CrossAssemblyGolden.AssemblyB.OrderNotice ReadOrderNotice(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyB.OrderNotice ReadOrderNotice_3def97761e06e807(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::CrossAssemblyGolden.AssemblyA.IOrderEvent? @event = null;
@@ -209,13 +227,13 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyB.OrderNotice(Event: @event!);
     }
 
-    private int SizeOfHolder(global::CrossAssemblyGolden.AssemblyB.Holder message)
+    private int SizeOfHolder_cb3017c4c200fc62(global::CrossAssemblyGolden.AssemblyB.Holder message)
     {
         checked
         {
             var size = SizeOfMapHeader(1);
             size += SizeOfInt32(1);
-            var countSize = SizeOfWrapperInt(message.Count);
+            var countSize = SizeOfWrapperInt_caa436395c8a15b6(message.Count);
             if (countSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += countSize;
@@ -223,14 +241,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WriteHolder(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.Holder message)
+    private void WriteHolder_cb3017c4c200fc62(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyB.Holder message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
-        WriteWrapperInt(ref writer, message.Count);
+        WriteWrapperInt_caa436395c8a15b6(ref writer, message.Count);
     }
 
-    private global::CrossAssemblyGolden.AssemblyB.Holder ReadHolder(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyB.Holder ReadHolder_cb3017c4c200fc62(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::CrossAssemblyGolden.AssemblyA.Wrapper<int>? count = null;
@@ -241,7 +259,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             switch (__fieldId)
             {
                 case 1:
-                    count = ReadWrapperInt(ref reader);
+                    count = ReadWrapperInt_caa436395c8a15b6(ref reader);
                     __hasCount = true;
                     break;
                 default:
@@ -255,7 +273,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyB.Holder(Count: count!);
     }
 
-    private int SizeOfWrapperInt(global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
+    private int SizeOfWrapperInt_caa436395c8a15b6(global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
     {
         checked
         {
@@ -268,7 +286,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WriteWrapperInt(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
+    private void WriteWrapperInt_caa436395c8a15b6(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
     {
         writer.WriteMapHeader(2);
         writer.Write(1);
@@ -277,7 +295,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         writer.Write(message.Payload);
     }
 
-    private global::CrossAssemblyGolden.AssemblyA.Wrapper<int> ReadWrapperInt(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyA.Wrapper<int> ReadWrapperInt_caa436395c8a15b6(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? id = null;
@@ -310,7 +328,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyA.Wrapper<int>(Id: id!, Payload: payload);
     }
 
-    private int SizeOfMoney(global::CrossAssemblyGolden.AssemblyA.Money message)
+    private int SizeOfMoney_03727203466ac988(global::CrossAssemblyGolden.AssemblyA.Money message)
     {
         checked
         {
@@ -321,14 +339,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WriteMoney(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Money message)
+    private void WriteMoney_03727203466ac988(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Money message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Cents);
     }
 
-    private global::CrossAssemblyGolden.AssemblyA.Money ReadMoney(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyA.Money ReadMoney_03727203466ac988(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         long cents = 0L;
@@ -353,7 +371,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyA.Money(Cents: cents);
     }
 
-    private int SizeOfPlaced(global::CrossAssemblyGolden.AssemblyA.Placed message)
+    private int SizeOfPlaced_319e66f54b337f1f(global::CrossAssemblyGolden.AssemblyA.Placed message)
     {
         checked
         {
@@ -364,14 +382,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WritePlaced(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Placed message)
+    private void WritePlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Placed message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.OrderId);
     }
 
-    private global::CrossAssemblyGolden.AssemblyA.Placed ReadPlaced(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyA.Placed ReadPlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;
@@ -396,7 +414,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyA.Placed(OrderId: orderId!);
     }
 
-    private int SizeOfCancelled(global::CrossAssemblyGolden.AssemblyA.Cancelled message)
+    private int SizeOfCancelled_d37c74148d117549(global::CrossAssemblyGolden.AssemblyA.Cancelled message)
     {
         checked
         {
@@ -407,14 +425,14 @@ public sealed partial class CrossAssemblyGoldenSerializer
         }
     }
 
-    private void WriteCancelled(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Cancelled message)
+    private void WriteCancelled_d37c74148d117549(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Cancelled message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.OrderId);
     }
 
-    private global::CrossAssemblyGolden.AssemblyA.Cancelled ReadCancelled(ref global::MessagePack.MessagePackReader reader)
+    private global::CrossAssemblyGolden.AssemblyA.Cancelled ReadCancelled_d37c74148d117549(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? orderId = null;
@@ -448,7 +466,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             writer.Write(1);
             writer.Write("placed-v1");
             writer.Write(2);
-            WritePlaced(ref writer, (global::CrossAssemblyGolden.AssemblyA.Placed)value);
+            WritePlaced_319e66f54b337f1f(ref writer, (global::CrossAssemblyGolden.AssemblyA.Placed)value);
             return;
         }
 
@@ -458,7 +476,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             writer.Write(1);
             writer.Write("cancelled-v1");
             writer.Write(2);
-            WriteCancelled(ref writer, (global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
+            WriteCancelled_d37c74148d117549(ref writer, (global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
             return;
         }
 
@@ -483,10 +501,10 @@ public sealed partial class CrossAssemblyGoldenSerializer
                     switch (manifest)
                     {
                         case "placed-v1":
-                            result = ReadPlaced(ref reader);
+                            result = ReadPlaced_319e66f54b337f1f(ref reader);
                             break;
                         case "cancelled-v1":
-                            result = ReadCancelled(ref reader);
+                            result = ReadCancelled_d37c74148d117549(ref reader);
                             break;
                         case null:
                             throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::CrossAssemblyGolden.AssemblyA.IOrderEvent].");
@@ -512,7 +530,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
         var runtimeType = value.GetType();
         if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Placed))
         {
-            var payloadSize = SizeOfPlaced((global::CrossAssemblyGolden.AssemblyA.Placed)value);
+            var payloadSize = SizeOfPlaced_319e66f54b337f1f((global::CrossAssemblyGolden.AssemblyA.Placed)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("placed-v1") + SizeOfInt32(2) + payloadSize);
@@ -520,7 +538,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
 
         if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Cancelled))
         {
-            var payloadSize = SizeOfCancelled((global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
+            var payloadSize = SizeOfCancelled_d37c74148d117549((global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("cancelled-v1") + SizeOfInt32(2) + payloadSize);

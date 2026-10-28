@@ -186,6 +186,26 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // directly and reading .Locations inside MergeExtractedLocations gets the same merged bag one
         // Select cheaper. The schemas-only projections below are NOT removed the same way: Resolve and
         // Emit depend on them directly, so they earn their keep as separate nodes.
+        var ignoredFieldDeclarations = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => node is PropertyDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or IndexerDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or ParameterSyntax { AttributeLists.Count: > 0, Parent.Parent: RecordDeclarationSyntax },
+                static (ctx, cancellationToken) => ExtractIgnoredFieldDeclaration(ctx, cancellationToken))
+            .Where(static declaration => declaration.HasValue)
+            .Select(static (declaration, _) => declaration!.Value)
+            .Collect();
+
+        context.RegisterSourceOutput(ignoredFieldDeclarations.Combine(context.CompilationProvider), static (ctx, pair) =>
+        {
+            foreach (var declaration in pair.Left.GroupBy(d => d.Key).Select(group => group.First()))
+            {
+                var diagnostic = new DiagnosticSpec(DiagnosticKey.IgnoredFieldAnnotations,
+                    new LocationKey(declaration.Key, string.Empty), ToDisplayName(declaration.Key.DisplayName));
+                ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
+            }
+        });
+
         var extractedSerializers = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializerAttributeFullName,
@@ -208,6 +228,17 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
                 static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax,
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
             .WithTrackingName(TrackingNames.ExtractedMessages);
+
+        context.RegisterSourceOutput(extractedMessages.Collect().Combine(context.CompilationProvider), static (ctx, pair) =>
+        {
+            var reported = new HashSet<DiagnosticSpec>();
+            foreach (var declaration in pair.Left)
+            foreach (var diagnostic in declaration.DeclarationDiagnostics)
+            {
+                if (reported.Add(diagnostic))
+                    ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
+            }
+        });
 
         var messageSchemas = extractedMessages
             .Select(static (extracted, _) => extracted.Info)
@@ -359,8 +390,8 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // code emission's own cache key. Diagnostic id, text, and trigger conditions are unchanged --
         // only WHERE they are reported from, and now WITH a real Location, has moved.
         context.RegisterSourceOutput(
-            resolvedSerializers.Combine(allLocations),
-            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left, pair.Right));
+            resolvedSerializers.Combine(allLocations).Combine(messages),
+            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
 
         // The cross-serializer diagnostics (AKKASG013 duplicate ids, AKKASG031 duplicate protocol
         // bindings, AKKASG037 manifest ignored on a generic definition) cannot be attached to any

@@ -71,7 +71,7 @@ public sealed class ClosedGenericExpansionGoldenOutputSpec
         [AkkaSerializable<Pair<IComms, Envelope<Cassette>>>(ManifestPrefix = "pair")]
         public sealed partial class ExpansionGoldenSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -114,7 +114,7 @@ public sealed class ClosedGenericExpansionGoldenOutputSpec
         [AkkaSerializable<AuditStamp>(Manifest = "audit-override-v1")]
         public sealed partial class ExpansionGoldenCrossAssemblySerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 

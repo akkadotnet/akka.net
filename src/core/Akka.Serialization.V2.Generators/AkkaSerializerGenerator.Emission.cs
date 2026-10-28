@@ -10,7 +10,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -372,7 +374,7 @@ public sealed partial class AkkaSerializerGenerator
     /// contract); <see cref="ResolvedSerializer.ValidationDiagnostics"/> only when the serializer
     /// cleared the gate (a serializer with no message table has nothing to validate).
     /// </summary>
-    private static void ReportResolvedSerializerDiagnostics(SourceProductionContext context, ResolvedSerializer resolved, LocationBag locations)
+    private static void ReportResolvedSerializerDiagnostics(SourceProductionContext context, ResolvedSerializer resolved, LocationBag locations, ImmutableArray<MessageInfo?> declarations)
     {
         foreach (var gateDiagnostic in resolved.GateDiagnostics)
             context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic, locations));
@@ -381,7 +383,10 @@ public sealed partial class AkkaSerializerGenerator
             return;
 
         foreach (var diagnostic in resolved.ValidationDiagnostics)
-            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
+        {
+            if (!IsLocallyReportedShapeDiagnostic(diagnostic, resolved, declarations))
+                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
+        }
     }
 
     /// <summary>
@@ -775,7 +780,8 @@ public sealed partial class AkkaSerializerGenerator
             w.BlankLine();
             GenerateRegistration(w, serializer);
             GenerateManifest(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
-            GenerateSerialize(w);
+            GenerateSerialize(w, usedFormatters.IsEmpty && !resolved.ReachableMessages
+                .Any(message => message.Fields.Any(field => ContainsEnvelopePayload(field.Mapping))));
             GenerateSerializeDirect(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
             GenerateDeserialize(w, resolved.TopLevelMessages);
             GenerateSizeHint(w, resolved.TopLevelMessages);
@@ -875,13 +881,13 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private static void GenerateRegistration(CodeWriter w, SerializerInfo serializer)
     {
-        w.Line("public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()");
+        w.Line("public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)");
         using (w.Block())
         {
-            w.Raw("return global::Akka.Serialization.V2.SerializerRegistration.Create(").StringLiteral(serializer.Name).Line(",");
+            w.Raw("return global::Akka.Serialization.SerializerDetails.Create(").StringLiteral(serializer.Name).Line(",");
             using (w.Indented())
             {
-                w.Raw("system => new ").Identifier(serializer.ClassName).Line("(system),");
+                w.Raw("new ").Identifier(serializer.ClassName).Line("(system),");
                 w.Line("global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(");
                 using (w.Indented())
                 {
@@ -901,7 +907,7 @@ public sealed partial class AkkaSerializerGenerator
                         w.Raw("typeof(").Type(TypeName.Global(schema.FullyQualifiedName)).Raw(")");
                     }
 
-                    // Only the ImmutableHashSet.Create<Type>(...) and SerializerRegistration.Create(...)
+                    // Only the ImmutableHashSet.Create<Type>(...) and SerializerDetails.Create(...)
                     // calls remain open here -- every typeof(...) above (the protocol's and each
                     // registered construction's) already closed its own parenthesis inline.
                     w.Line(")); ");
@@ -947,11 +953,44 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSerialize(CodeWriter w)
+    private static bool ContainsEnvelopePayload(TypeMapping mapping)
+        => mapping.Kind == FieldKind.EnvelopePayload || mapping.TypeArguments.Any(ContainsEnvelopePayload);
+
+    private static void GenerateSerialize(CodeWriter w, bool useWriterCounts)
     {
         w.Line("public override int Serialize(object obj, IBufferWriter<byte> writer)");
         using (w.Block())
         {
+            // Formatter and envelope callbacks can commit via another alias after Flush;
+            // preserve the original per-wrapper accounting for those serializers.
+            if (useWriterCounts)
+            {
+                // These sealed writers already count successful advances. Read the starting count
+                // after MessagePack acquires its initial buffer, preserving writer-failure ordering.
+                w.Line("if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)");
+                using (w.Block())
+                {
+                    w.Line("var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);");
+                    w.Line("var initialCount = pooledWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref pooledMessagePackWriter);");
+                    w.Line("pooledMessagePackWriter.Flush();");
+                    w.Line("return checked(pooledWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+                w.Line("if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)");
+                using (w.Block())
+                {
+                    w.Line("var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);");
+                    w.Line("var initialCount = arrayWriter.WrittenCount;");
+                    w.Line("SerializeMessagePack(obj, ref arrayMessagePackWriter);");
+                    w.Line("arrayMessagePackWriter.Flush();");
+                    w.Line("return checked(arrayWriter.WrittenCount - initialCount);");
+                }
+
+                w.BlankLine();
+            }
+
             w.Line("var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);");
             w.Line("var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);");
             w.Line("SerializeMessagePack(obj, ref messagePackWriter);");
@@ -2751,20 +2790,9 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetObjectMethodName(TypeMapping mapping)
     {
-        return FoldTypeName(mapping.TypeFullName);
+        return GetGeneratedMethodName(mapping.Key);
     }
 
-    /// <summary>
-    /// Folds a fully-qualified type name into a compact generated-member identifier the way
-    /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
-    /// identifier keeps only its simple name, and generic type arguments are concatenated --
-    /// <c>Ns.Wrapper&lt;Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
-    /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
-    /// Flattening is collision-prone by construction (same simple name in two namespaces, marker
-    /// ambiguity); AKKASG024 detects collisions among generated members and fails compilation
-    /// instead of silently emitting duplicates -- the same trade System.Text.Json makes with its
-    /// DuplicateTypeName diagnostic.
-    /// </summary>
     private static string FoldTypeName(string typeFullName)
     {
         var sb = new StringBuilder(typeFullName.Length);
@@ -2820,16 +2848,11 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
     {
-        return "_akkaFormatter_" + SanitizeTypeName(formatter.TargetTypeFullName);
+        return "_akkaFormatter_" + SanitizeNonGenericFormatterTypeName(formatter.TargetTypeFullName);
     }
 
-    private static string SanitizeTypeName(string typeFullName)
+    private static string SanitizeNonGenericFormatterTypeName(string typeFullName)
     {
-        // Used only for formatter field names, whose target types are validated non-generic
-        // (AKKASG011) -- generated METHOD names go through FoldTypeName instead. Escape literal
-        // underscores FIRST so sanitization is collision-free: 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar'
-        // and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay distinct instead of both collapsing to
-        // 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
             .Replace("_", "__")
@@ -2839,7 +2862,29 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetMessageMethodName(MessageInfo message)
     {
-        return FoldTypeName(message.FullyQualifiedName);
+        return GetGeneratedMethodName(message.Key);
+    }
+
+    private static string GetGeneratedMethodName(TypeKey key)
+    {
+        var identity = new StringBuilder();
+        AppendIdentity(key, identity);
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(identity.ToString()));
+        var name = new StringBuilder(FoldTypeName(key.DisplayName));
+        name.Append('_');
+        for (var i = 0; i < 8; i++)
+            name.Append(hash[i].ToString("x2", CultureInfo.InvariantCulture));
+        return name.ToString();
+    }
+
+    private static void AppendIdentity(TypeKey key, StringBuilder builder)
+    {
+        builder.Append(key.MetadataName.Length.ToString(CultureInfo.InvariantCulture))
+            .Append(':').Append(key.MetadataName)
+            .Append('[').Append(key.TypeArguments.Length.ToString(CultureInfo.InvariantCulture)).Append(']');
+        foreach (var argument in key.TypeArguments)
+            AppendIdentity(argument, builder);
     }
 
     private static string GetAccessibilityKeyword(Accessibility accessibility)

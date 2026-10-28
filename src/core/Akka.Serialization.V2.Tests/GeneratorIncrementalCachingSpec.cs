@@ -82,7 +82,7 @@ public sealed class GeneratorIncrementalCachingSpec
         [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -217,7 +217,7 @@ public sealed class GeneratorIncrementalCachingSpec
             [AkkaSerializer<IProtocol>("coverage-sample", 150002)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializable(Manifest = "outer-v1")]

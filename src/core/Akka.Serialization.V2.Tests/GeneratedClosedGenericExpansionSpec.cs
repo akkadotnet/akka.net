@@ -199,5 +199,5 @@ public sealed record ExpansionCurveball([property: AkkaField(1)] string Note);
 [AkkaSerializable<ExpansionAuditStamp>(Manifest = "audit-override-v1")]
 public sealed partial class ExpansionSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }

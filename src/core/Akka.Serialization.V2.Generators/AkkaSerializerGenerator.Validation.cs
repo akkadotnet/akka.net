@@ -679,6 +679,46 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
+    private static ImmutableArray<DiagnosticSpec> ValidateMessageShape(
+        TypeKey key, LocationKey at, IEnumerable<int> indices, bool allowEmpty,
+        string inaccessibleReason, ImmutableArray<InvalidFieldInfo> invalidFields)
+    {
+        var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
+        var fieldIndices = indices.ToArray();
+        var name = ToDisplayName(key.DisplayName);
+        if (inaccessibleReason.Length > 0)
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MessageTypeNotAccessible, at, name, inaccessibleReason));
+        if (fieldIndices.Length == 0 && !allowEmpty)
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingFields, at, name));
+        foreach (var duplicate in fieldIndices.GroupBy(index => index).Where(group => group.Count() > 1))
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFieldIndex, at, name, duplicate.Key.ToString()));
+        foreach (var field in invalidFields)
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FieldPropertyNotAccessible,
+                new LocationKey(key, field.PropertyName), field.PropertyName, name, field.Reason));
+        return diagnostics.ToImmutable();
+    }
+
+    private static bool IsLocallyReportedShapeDiagnostic(
+        DiagnosticSpec diagnostic, ResolvedSerializer resolved, ImmutableArray<MessageInfo?> declarations)
+    {
+        if (diagnostic.Key is not (DiagnosticKey.MissingFields or DiagnosticKey.DuplicateFieldIndex
+            or DiagnosticKey.MessageTypeNotAccessible or DiagnosticKey.FieldPropertyNotAccessible))
+            return false;
+
+        foreach (var message in resolved.ReachableMessages)
+        {
+            var at = diagnostic.Key == DiagnosticKey.FieldPropertyNotAccessible
+                ? new LocationKey(message.Key, diagnostic.At?.Member ?? string.Empty)
+                : MessageTypeLocationKey(resolved.Serializer, message);
+            if (diagnostic.At != at)
+                continue;
+            return declarations.Any(declaration => declaration != null &&
+                (declaration.Key.Equals(message.Key) || declaration.IsGenericDefinition &&
+                    string.Equals(declaration.Key.MetadataName, message.Key.MetadataName, StringComparison.Ordinal)));
+        }
+        return false;
+    }
+
     private static bool ValidateMessages(
         SerializerInfo serializer,
         ImmutableArray<MessageInfo> topLevelMessages,
@@ -717,36 +757,12 @@ public sealed partial class AkkaSerializerGenerator
             // construction's own registration attribute -- see MessageTypeLocationKey's doc comment.
             var messageAt = MessageTypeLocationKey(serializer, message);
 
-            // A private (or protected) nested message cannot be named by the generated serializer
-            // class, so its emitted helpers would not compile (CS0122). Report it here instead.
-            if (message.InaccessibleReason.Length > 0)
-            {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MessageTypeNotAccessible, messageAt, ToDisplayName(message.FullyQualifiedName), message.InaccessibleReason));
+            var shapeDiagnostics = ValidateMessageShape(message.Key, messageAt,
+                message.Fields.Select(field => field.Index), message.AllowEmpty,
+                message.InaccessibleReason, message.InvalidFields);
+            diagnostics.AddRange(shapeDiagnostics);
+            if (!shapeDiagnostics.IsEmpty)
                 isValid = false;
-            }
-
-            if (message.Fields.Length == 0 && !message.AllowEmpty)
-            {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingFields, messageAt, ToDisplayName(message.FullyQualifiedName)));
-                isValid = false;
-            }
-
-            foreach (var duplicate in message.Fields.GroupBy(field => field.Index).Where(group => group.Count() > 1))
-            {
-                // Spans multiple fields of the same message -- reports at the message type itself.
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFieldIndex, messageAt, ToDisplayName(message.FullyQualifiedName), duplicate.Key.ToString()));
-                isValid = false;
-            }
-
-            // Structural [AkkaField] problems found during extraction (static property, or a
-            // getter the generated Write path could not call): these properties never made it into
-            // message.Fields, so they cannot double-report through any of the checks below.
-            foreach (var invalidField in message.InvalidFields)
-            {
-                var at = new LocationKey(message.Key, invalidField.PropertyName);
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FieldPropertyNotAccessible, at, invalidField.PropertyName, ToDisplayName(message.FullyQualifiedName), invalidField.Reason));
-                isValid = false;
-            }
 
             // Read-side reconstruction: either no constructor could be selected, or the selected
             // constructor leaves [AkkaField] properties uncovered with no accessible setter to fall
@@ -833,12 +849,9 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        // Flattening generic constructions into generated member names is collision-prone in
-        // principle (mirrors System.Text.Json's DuplicateTypeName handling): detect and fail
-        // instead of silently emitting duplicate members.
         foreach (var collision in reachableMessages
                      .GroupBy(GetMessageMethodName, StringComparer.Ordinal)
-                     .Where(group => group.Select(m => m.FullyQualifiedName).Distinct(StringComparer.Ordinal).Count() > 1))
+                     .Where(group => group.Select(m => m.Key).Distinct().Count() > 1))
         {
             var typeNames = string.Join(", ", collision.Select(m => ToDisplayName(m.FullyQualifiedName)));
 

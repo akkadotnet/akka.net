@@ -298,7 +298,7 @@ public interface IOrderEvent
 [AkkaSerializer<IUnionTestProtocol>("union-test", 120303)]
 public sealed partial class UnionTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 /// <summary>Inherits the full member set from the type-level union on <see cref="IOrderEvent"/>.</summary>

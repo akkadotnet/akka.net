@@ -7,7 +7,9 @@
 
 #nullable enable
 
+using System;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Remote.Artery;
 using FluentAssertions;
 using Xunit;
@@ -136,6 +138,205 @@ namespace Akka.Remote.Tests.Artery
             var second = registry.AssociationFor(remote).SystemMessageDeliveryState;
 
             second.Should().BeSameAs(first);
+        }
+
+        [Fact(DisplayName = "8857: failed control restart discards stale housekeeping without losing queued system messages")]
+        public void Should_Discard_Housekeeping_But_Preserve_Queued_System_Messages()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var peer = new UniqueAddress(NewRemote(), 1L);
+            object[] housekeeping =
+            {
+                new HandshakeReq(peer, NewRemote()), new HandshakeRsp(peer),
+                new ArteryHeartbeat(), new ArteryHeartbeatRsp(),
+                new Akka.Remote.Artery.Ack(1L, peer), new Akka.Remote.Artery.Nack(1L, peer)
+            };
+            foreach (var message in housekeeping)
+                association.TryEnqueueControl(new OutboundEnvelope(message, null, null)).Should().BeTrue();
+            var watch = new OutboundEnvelope(new Watch(ActorRefs.Nobody, ActorRefs.Nobody), null, "/user/target");
+            association.TryEnqueueControl(watch).Should().BeTrue();
+
+            association.PrepareControlRestart().Should().BeFalse("no message has been wrapped into reliable state yet");
+            association.ControlQueueCount.Should().Be(1);
+            association.ControlReader.TryRead(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(watch);
+        }
+
+        [Fact(DisplayName = "8857: control restart must not discard a pending quarantine notification")]
+        public void Should_Preserve_Quarantine_Notification_Across_Restart()
+        {
+            var remote = NewRemote();
+            var association = new AssociationRegistry().AssociationFor(remote);
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 42L), 42L), null, null);
+            association.TryEnqueueControl(new OutboundEnvelope(new ArteryHeartbeat(), null, null)).Should().BeTrue();
+            association.TryEnqueueControl(notification).Should().BeTrue();
+
+            association.PrepareControlRestart();
+
+            association.ControlQueueCount.Should().Be(1);
+            association.ControlReader.TryRead(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(notification);
+        }
+
+        [Fact(DisplayName = "Quarantine notification expiry is bounded and never renewed by requeue")]
+        public void Should_Expire_Quarantine_Notification_Without_Renewing_On_Return()
+        {
+            var now = TimeSpan.Zero;
+            var remote = NewRemote();
+            var association = new Association(remote, quarantineNotificationTimeout: TimeSpan.FromSeconds(20), monotonicClock: () => now);
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null);
+            association.TryEnqueueControl(notification).Should().BeTrue();
+            association.ControlReader.TryRead(out var held).Should().BeTrue();
+            now = TimeSpan.FromSeconds(19);
+            association.TryEnqueueControl(held!).Should().BeTrue();
+            association.PrepareControlRestart().Should().BeFalse();
+            association.ControlQueueCount.Should().Be(1);
+
+            now = TimeSpan.FromSeconds(20);
+            association.PrepareControlRestart().Should().BeFalse();
+            association.ControlQueueCount.Should().Be(0, "the last expired notice must no longer drive retries");
+            association.ShouldSendControl(notification).Should().BeFalse();
+
+            var fresh = new OutboundEnvelope(notification.Message, null, null);
+            association.TryEnqueueControl(fresh).Should().BeTrue();
+            association.ShouldSendControl(fresh).Should().BeTrue("a genuinely new notice has its own deadline");
+            now = TimeSpan.FromSeconds(40);
+            association.PrepareControlRestart();
+            association.ControlQueueCount.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "Quarantine notice target UID, rather than originating UID, controls retirement")]
+        public void Should_Retire_Notification_When_Target_Uid_Is_Replaced()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var notification = new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(NewRemote(), 99L), 42L), null, null);
+            association.TryEnqueueControl(notification).Should().BeTrue();
+            association.ShouldSendControl(notification).Should().BeTrue();
+
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 43L));
+            association.ShouldSendControl(notification).Should().BeFalse("the notice concerns the previous incarnation");
+            association.PrepareControlRestart();
+            association.ControlQueueCount.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "Quarantine clears pending reliable replay before an earlier retained control frame")]
+        public void Should_Clear_Quarantined_Reliable_State_Before_Queued_Control()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var state = association.SystemMessageDeliveryState;
+            state.CurrentIncarnation = association.CurrentState.Incarnation;
+            var watch = new OutboundEnvelope(new Watch(ActorRefs.Nobody, ActorRefs.Nobody), null, "/user/target");
+            state.Buffer.Enqueue((1L, watch, DateTime.UtcNow));
+            state.NextSeq = 2;
+            var earlier = new OutboundEnvelope("earlier-retained-control", null, null);
+            association.TryEnqueueControl(earlier).Should().BeTrue();
+            association.Quarantine(42L).Should().BeTrue();
+            association.TryEnqueueControl(new OutboundEnvelope(new ArteryQuarantined(new UniqueAddress(remote, 99L), 42L), null, null));
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(state.CurrentIncarnation), null, null));
+
+            association.PrepareControlRestart().Should().BeFalse("quarantine resets reliable state before any queue-head barrier");
+            state.Buffer.Should().BeEmpty();
+            state.NextSeq.Should().Be(1);
+            association.ControlReader.TryPeek(out var retained).Should().BeTrue();
+            retained.Should().BeSameAs(earlier);
+        }
+
+        [Fact(DisplayName = "Stale quarantine and clear do not reset replacement incarnation reliable state")]
+        public void Should_Preserve_Replacement_Reliable_State_After_Stale_Quarantine()
+        {
+            var remote = NewRemote();
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var oldIncarnation = association.CurrentState.Incarnation;
+            association.Quarantine(42L).Should().BeTrue();
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 43L));
+            var state = association.SystemMessageDeliveryState;
+            state.CurrentIncarnation = association.CurrentState.Incarnation;
+            var envelope = new OutboundEnvelope("replacement-pending", null, null);
+            state.Buffer.Enqueue((7L, envelope, DateTime.UtcNow));
+            state.NextSeq = 8;
+            association.Quarantine(42L).Should().BeFalse();
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(oldIncarnation), null, null));
+
+            association.PrepareControlRestart().Should().BeTrue();
+            state.Buffer.Peek().Envelope.Should().BeSameAs(envelope);
+            state.NextSeq.Should().Be(8);
+            state.CurrentIncarnation.Should().Be(association.CurrentState.Incarnation);
+        }
+
+        [Fact(DisplayName = "The final control gate rejects reliable replay already held downstream when quarantined")]
+        public void Should_Filter_Handshake_Held_Reliable_Replay_After_Quarantine()
+        {
+            var remote = NewRemote();
+            var local = new UniqueAddress(new Address("akka", "local", "localhost", 2551), 99L);
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(remote);
+            registry.CompleteHandshake(remote, new UniqueAddress(remote, 42L));
+            var held = new OutboundEnvelope(new SystemMessageEnvelope(
+                new Watch(ActorRefs.Nobody, ActorRefs.Nobody), 1L, local, "/user/target"), null, null);
+            association.ShouldSendControl(held).Should().BeTrue();
+            association.Quarantine(42L).Should().BeTrue();
+
+            association.ShouldSendControl(held).Should().BeFalse();
+            association.ShouldSendControl(new OutboundEnvelope(new ArteryQuarantined(local, 42L), null, null)).Should().BeTrue();
+            association.ShouldSendControl(new OutboundEnvelope(new ArteryHeartbeat(), null, null)).Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "8857: unacknowledged delivery state survives an idle-control decision unchanged")]
+        public void Should_Preserve_Unacknowledged_Delivery_State()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var state = association.SystemMessageDeliveryState;
+            var envelope = new OutboundEnvelope("unacknowledged", null, "/user/target");
+            var sentAt = DateTime.UtcNow;
+            state.Buffer.Enqueue((7L, envelope, sentAt));
+            state.NextSeq = 8;
+            state.CurrentIncarnation = 2;
+
+            association.PrepareControlRestart().Should().BeTrue("reliable work remains even with an empty channel");
+            state.Buffer.Peek().Should().Be((7L, envelope, sentAt));
+            state.NextSeq.Should().Be(8);
+            state.CurrentIncarnation.Should().Be(2);
+            association.IsControlShutDown.Should().BeFalse();
+        }
+
+        [Fact(DisplayName = "8857: failed-control cleanup applies local delivery clears but ignores stale incarnations")]
+        public void Should_Apply_Current_Delivery_Clear_Without_Reviving_Stale_State()
+        {
+            var association = new AssociationRegistry().AssociationFor(NewRemote());
+            var state = association.SystemMessageDeliveryState;
+            state.Buffer.Enqueue((1L, new OutboundEnvelope("pending", null, null), DateTime.UtcNow));
+            state.NextSeq = 2;
+            state.CurrentIncarnation = 2;
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(1), null, null));
+            association.PrepareControlRestart().Should().BeTrue();
+            state.Buffer.Count.Should().Be(1);
+            state.NextSeq.Should().Be(2);
+
+            association.TryEnqueueControl(new OutboundEnvelope(new ClearSystemMessageDelivery(2), null, null));
+            association.PrepareControlRestart().Should().BeFalse();
+            state.Buffer.Should().BeEmpty();
+            state.NextSeq.Should().Be(1);
+            state.CurrentIncarnation.Should().Be(2);
+            association.ControlQueueCount.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "8857: pending traffic in any ordinary lane prevents quiescence")]
+        public void Should_Find_Pending_Traffic_In_All_Ordinary_Lanes()
+        {
+            var association = new AssociationRegistry(outboundLanes: 3).AssociationFor(NewRemote());
+            association.HasQueuedOutbound.Should().BeFalse();
+            association.TryEnqueueOutbound(new OutboundEnvelope("last-lane", null, null), 2).Should().BeTrue();
+            association.HasQueuedOutbound.Should().BeTrue();
+            association.LaneReader(2).TryRead(out _).Should().BeTrue();
+            association.HasQueuedOutbound.Should().BeFalse();
         }
     }
 }

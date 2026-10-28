@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -225,7 +226,7 @@ namespace Akka.Hosting
         /// over the bindings of the legacy serializer it replaces; the legacy serializers stay registered for reads.
         /// <para>
         /// Turn it on only once every node runs a version of Akka.NET that can read the V2 formats. A binding you
-        /// register yourself (HOCON or <see cref="AkkaConfigurationBuilder.WithCustomSerializer"/>) still wins.
+        /// register yourself (HOCON or <see cref="AkkaConfigurationBuilder.WithCustomSerializer(string, IEnumerable{Type}, Func{ExtendedActorSystem, Serializer})"/>) still wins.
         /// </para>
         /// </summary>
         /// <param name="builder">The builder instance being configured.</param>
