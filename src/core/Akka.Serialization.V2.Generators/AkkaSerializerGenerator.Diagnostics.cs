@@ -513,6 +513,14 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor IgnoredFieldAnnotations = new(
+        "AKKASG047",
+        "Field annotations on an unmarked type are ignored",
+        "Type '{0}' declares [AkkaField] properties but has no [AkkaSerializable] attribute. Generated serialization ignores these field annotations. Add [AkkaSerializable], or remove the unused [AkkaField] annotations if a custom formatter handles the type.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
@@ -573,6 +581,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.DuplicateProtocolBindingCrossAssembly => DuplicateProtocolBindingCrossAssembly,
             DiagnosticKey.MessageTypeNotAccessible => MessageTypeNotAccessible,
             DiagnosticKey.PropertyNotSerialized => PropertyNotSerialized,
+            DiagnosticKey.IgnoredFieldAnnotations => IgnoredFieldAnnotations,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 
