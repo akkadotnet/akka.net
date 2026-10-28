@@ -1590,9 +1590,8 @@ namespace Akka.Remote.Artery
         ///
         /// <para>
         /// <b>Re-entrancy guard.</b> <see cref="Quarantine"/> itself calls back into
-        /// <see cref="EnqueueControl"/> (to send <see cref="ArteryQuarantined"/> +
-        /// <see cref="ClearSystemMessageDelivery"/>) -- onto the SAME already-full channel, which
-        /// would otherwise recurse straight back into this method forever. Only calling
+        /// <see cref="EnqueueControl"/> (to send <see cref="ArteryQuarantined"/>) -- onto the SAME
+        /// already-full channel, which would otherwise recurse straight back into this method forever. Only calling
         /// <see cref="Quarantine"/> when the uid is NOT already quarantined breaks the cycle: by the
         /// time <c>Quarantine</c>'s own follow-up <c>EnqueueControl</c> calls (possibly) overflow in
         /// turn, the CAS state flip has already happened, so the second re-entry's guard is false.
