@@ -17,6 +17,7 @@ using Akka.Benchmarks.Configurations;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using BenchmarkDotNet.Attributes;
 
@@ -130,6 +131,23 @@ namespace Akka.Benchmarks.Streams
         }
 
         [Benchmark(OperationsPerInvoke = ElementCount)]
+        public async Task StageActor_Local_Reference_Ingress_Throughput()
+        {
+            if (Activity.Current is not null || StreamsDiagnostics.ActivitySource.HasListeners())
+                throw new InvalidOperationException("Untraced StageActor control requires no activity or Streams listener.");
+
+            var count = await Source.FromGraph(new LocalStageActorSource(_orderedPayloads))
+                .RunWith(Sink.Aggregate<object, int>(0, (index, element) =>
+                {
+                    if (index >= _orderedPayloads.Length || !ReferenceEquals(element, _orderedPayloads[index]))
+                        throw new InvalidOperationException("Local StageActor lost reference identity or delivery order.");
+                    return index + 1;
+                }), _materializer);
+            if (count != ElementCount)
+                throw new InvalidOperationException("Incomplete local StageActor delivery.");
+        }
+
+        [Benchmark(OperationsPerInvoke = ElementCount)]
         public async Task StageActor_Traced_Reference_Ingress_Throughput()
         {
             var expectedParent = default(ActivityContext);
@@ -240,6 +258,66 @@ namespace Akka.Benchmarks.Streams
                         Push(_stage._out, _buffer.Dequeue());
                     if (_completed && _buffer.Count == 0)
                         CompleteStage();
+                }
+            }
+        }
+
+        private sealed class LocalStageActorSource : GraphStage<SourceShape<object>>
+        {
+            private readonly Outlet<object> _out = new("local-stage-actor.out");
+            private readonly object[] _payloads;
+
+            public LocalStageActorSource(object[] payloads)
+            {
+                _payloads = payloads;
+                Shape = new SourceShape<object>(_out);
+            }
+
+            public override SourceShape<object> Shape { get; }
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly LocalStageActorSource _stage;
+                private IActorRef _actor = null!;
+                private GraphInterpreter? _interpreter;
+                private int _sent;
+                private int _received;
+                private bool _sending;
+
+                public Logic(LocalStageActorSource stage) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    SetHandler(stage._out, this);
+                }
+
+                public override void PreStart()
+                {
+                    _actor = GetStageActor(pair =>
+                    {
+                        if (_sending || !ReferenceEquals(GraphInterpreter.CurrentInterpreterOrNull, _interpreter) ||
+                            !ReferenceEquals(pair.Item1, _actor) || _sent != _received + 1 ||
+                            !ReferenceEquals(pair.Item2, _stage._payloads[_received]) || !IsAvailable(_stage._out))
+                            throw new InvalidOperationException("Local StageActor changed interpreter, sender, delivery or demand.");
+
+                        _received++;
+                        Push(_stage._out, pair.Item2);
+                        if (_received == _stage._payloads.Length)
+                            CompleteStage();
+                    }).Ref;
+                }
+
+                public override void OnPull()
+                {
+                    var current = GraphInterpreter.CurrentInterpreterOrNull
+                        ?? throw new InvalidOperationException("Local StageActor send has no interpreter.");
+                    _interpreter ??= current;
+                    if (!ReferenceEquals(current, _interpreter) || _sent != _received || _sent >= _stage._payloads.Length)
+                        throw new InvalidOperationException("Local StageActor send changed interpreter or demand.");
+
+                    _sending = true;
+                    _actor.Tell(_stage._payloads[_sent++], _actor);
+                    _sending = false;
                 }
             }
         }
