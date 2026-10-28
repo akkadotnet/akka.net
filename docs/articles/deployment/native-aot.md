@@ -224,4 +224,4 @@ the way core names its first-party extensions, and registers nothing when Akka.C
   then trimmed away as a result - that is the consequence, not the cause.
   [Source-generated MessagePack serialization](xref:source-generated-serialization) is built for
   trimming and Native AOT instead - no reflection, registration through a generated
-  `CreateRegistration()`/`CreateSetup()` - though no AOT canary covers it yet.
+  `CreateSerializerDetails(system)`/`SerializationSetup.Create` - though no AOT canary covers it yet.

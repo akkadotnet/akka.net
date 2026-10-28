@@ -40,6 +40,7 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | [#8856](https://github.com/akkadotnet/akka.net/issues/8856) | `Akka.Serialization.V2` | Source | AKKASG047 now warns when a type declares `[AkkaField]` properties without `[AkkaSerializable]`, including public and nested payload types. Builds that treat warnings as errors now reject these ignored annotations. | Add `[AkkaSerializable]` to opt into generated serialization, remove unused annotations when a custom formatter handles the type, or suppress AKKASG047. |
 | Merged | link | `Akka.Xyz` | Behavior | one-line summary | what users must do |
 
 ---
@@ -48,6 +49,9 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | [#8854](https://github.com/akkadotnet/akka.net/issues/8854) | `Akka.Serialization.V2` generator | Source | AKKASG046 now warns when a marked type declares public stored properties without `[AkkaField]`, including before serializer registration. This can fail warnings-as-errors builds. Serialization remains opt-in and wire bytes are unchanged. | Add `[AkkaField(n)]` to state that must round-trip, or suppress AKKASG046 for intentional omissions. `AllowEmpty` does not suppress this warning. |
+| Proposed | [#8853](https://github.com/akkadotnet/akka.net/issues/8853) | `Akka.Serialization.V2` generator | Source | Type-shape errors AKKASG004/005/028/045 now report at marked declarations, including open generic definitions, before any serializer reaches them. Previously unused malformed types could compile. | Correct missing fields, duplicate indices, and inaccessible declarations or getters. Use `AllowEmpty = true` for deliberately fieldless messages. |
+| Proposed | [#8852](https://github.com/akkadotnet/akka.net/pull/8852) | `Akka.Serialization.V2`, `Akka.Hosting` | Binary + Source | Removed `Akka.Serialization.V2.SerializerRegistration`; generated serializers return core `SerializerDetails`. | Declare `CreateSerializerDetails(ExtendedActorSystem)` returning `SerializerDetails`; pass its method group to Hosting’s `WithCustomSerializer` or invoke it inside `SerializationSetup.Create`. |
 | Merged | [#8785](https://github.com/akkadotnet/akka.net/pull/8785) | `Akka` (serialization) | Binary + Source + Behavior | `ByteArraySerializer` now derives (through `SerializerV2`) from `SerializerWithStringManifest`, which seals `FromBinary(byte[], Type)`: a v1.5 `ByteArraySerializer` subclass that overrides it no longer compiles or loads. `SerializerWithStringManifest.FromBinary(bytes, (Type)null)` now passes `""` to `FromBinary(bytes, string)` instead of throwing `ArgumentNullException`. | Move a `ByteArraySerializer` subclass's `FromBinary(byte[], Type)` logic into `FromBinary(byte[], string)`. |
 | Merged | [#8702](https://github.com/akkadotnet/akka.net/pull/8702) | `Akka`, `Akka.Remote`, `Akka.Cluster` and other modules (serialization) | Behavior + Wire | Every deployed first-party module's serializers and bindings are registered at startup as defaults (HOCON and `SerializationSetup` still override them). A local-provider system that ships Akka.Remote now writes `string`/`int`/`long` with `primitive` (17), `Google.Protobuf.IMessage` with `proto` (2) and `IActorRef`, `Status.*`, `PoisonPill`, router pools, `Config` and other Akka.dll types with `akka-misc` (16); with Akka.Cluster, `IDeliverySerializable` goes to `reliable-delivery` (36). These used to go to `json` or your `System.Object` serializer, so persisted events and snapshots change serializer: old data still reads, but 1.5 can't read the new rows unless it loads Akka.Remote's (or Akka.Cluster's) config. A type matching a user binding and one of these bindings now has two matches, and which one wins isn't defined. | To keep the old serializer for a type, bind that type explicitly in HOCON or a `SerializationSetup`. |
 | Merged | [#8698](https://github.com/akkadotnet/akka.net/pull/8698) | `Akka.Remote`, `Akka.Cluster` and other modules (serialization) | Behavior + Wire | A user `serializers` row that names a built-in Akka.Remote/Akka.Cluster/... serializer type under a second alias now gets the shared built-in instance, and that alias's own `serialization-settings` block is ignored. For `PrimitiveSerializers` this can change the manifests it writes. | Put the settings on the built-in alias's block (e.g. `serialization-settings.primitive`) instead of a second alias. |
@@ -74,6 +78,14 @@ add `Wire` when the bytes on the wire change.
 | Merged | [#7456](https://github.com/akkadotnet/akka.net/pull/7456) (landed via [#7761](https://github.com/akkadotnet/akka.net/pull/7761)) | `Akka`, `Akka.FSharp` | Binary + Source | Loading HOCON from `App.config`/`Web.config` is gone: `ConfigurationFactory.Load()`, `AkkaConfigurationSection`, `HoconConfigurationElement`, `CDataConfigurationElement` and Akka.FSharp's `Configuration.load` are removed. | Keep the HOCON in a string or file and load it with `ConfigurationFactory.ParseString`, or configure through Akka.Hosting. |
 
 ### Not breaking, for the record
+
+* **Proposed #8857, `Akka.Remote` / Artery (behavior):** a failed stream with no
+  queued traffic or unacknowledged system messages becomes dormant instead of retrying a
+  departed peer forever. Channels and reliable delivery state stay intact; normal sends and
+  `ActorSelection.ResolveOne` wake the association with a fresh handshake. Pending reliable
+  work still retries until acknowledged or its existing give-up policy applies. There is no
+  public API or wire change. Callers observing idle peer reincarnations must initiate demand
+  rather than expect background re-handshakes without any traffic.
 
 * **Artery** is new in v1.6 (v1.5.71 has no Artery), so changes to its behavior and settings
   are not listed. Remote.conf always registers its `artery-control` serializer (id 23, inside

@@ -27,7 +27,7 @@ writes the encoding code for you, at compile time. That buys four things:
   never calls `PropertyInfo.GetValue`. It adds no boxing beyond what MessagePack itself needs. It
   never scans assemblies at runtime to find serializable types.
 * **AOT- and trimming-friendly registration.** Serializers register through a generated static
-  method, `CreateRegistration()`, not runtime type scanning. The generated serializer also
+  method, `CreateSerializerDetails(system)`, not runtime type scanning. The generated serializer also
   satisfies Akka's classic `Serializer` reflection contract. So it works with HOCON registration
   too. See [Getting started](#getting-started).
 * **Exact size hints.** `SizeHint` returns the exact byte count `Serialize` will write, or a
@@ -96,14 +96,14 @@ public sealed record SubmitOrder(
 ### The Serializer Class
 
 Declare a `sealed partial class` that derives from `AkkaSerializer`. Annotate it with
-`[AkkaSerializer<TProtocol>("name", id)]`. Declare a `static partial` `CreateRegistration()`
+`[AkkaSerializer<TProtocol>("name", id)]`. Declare a `static partial` `CreateSerializerDetails(system)`
 method. The generator fills in its body:
 
 ```csharp
 [AkkaSerializer<IOrderBenchmarkProtocol>("order-benchmark", 120001)]
 public sealed partial class OrderBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -120,28 +120,27 @@ dispatch.
 
 ### Registering the Serializer
 
-`CreateRegistration()` returns a
-[`SerializerRegistration`](xref:Akka.Serialization.V2.SerializerRegistration). It is an AOT-safe
-value you compose explicitly. No runtime scanning is involved. Turn one registration into a
-`SerializationSetup` with `CreateSetup()`:
+`CreateSerializerDetails(ExtendedActorSystem)` returns core
+[`SerializerDetails`](xref:Akka.Serialization.SerializerDetails): the serializer instance, alias,
+and message bindings. The generated factory is AOT-safe and uses no runtime scanning.
+
+With Akka.Hosting, pass the generated method directly:
 
 ```csharp
-var setup = OrderBenchmarkSerializer.CreateRegistration().CreateSetup();
+builder.WithCustomSerializer(OrderBenchmarkSerializer.CreateSerializerDetails);
+```
+
+Without Hosting, compose one or more generated factories through core `SerializationSetup`:
+
+```csharp
+var setup = SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(
+    OrderBenchmarkSerializer.CreateSerializerDetails(extendedSystem),
+    EnvelopeBenchmarkSerializer.CreateSerializerDetails(extendedSystem)));
 var bootstrap = BootstrapSetup.Create().And(setup);
 var system = ActorSystem.Create("my-system", bootstrap);
 ```
 
-To register several generated serializers at once, use the static
-`SerializerRegistration.CreateSetup(params SerializerRegistration[])` overload:
-
-```csharp
-var setup = SerializerRegistration.CreateSetup(
-    OrderBenchmarkSerializer.CreateRegistration(),
-    EnvelopeBenchmarkSerializer.CreateRegistration());
-```
-
-Merge that `SerializationSetup` into `ActorSystemSetup` the same way as for a hand-written
-serializer. See
+Import `Akka.Serialization` and `System.Collections.Immutable` for this setup. See
 [Configuring Serialization Bindings Programmatically](xref:serialization#configuring-serialization-bindings-programmatically).
 
 ### HOCON Registration
@@ -167,7 +166,7 @@ it needs no `akka.actor.serialization-identifiers` row. A row for it would be ig
 
 Nothing about this is generator-specific. It is the same two HOCON blocks the
 [classic serializer documentation](xref:serialization#configuration) already describes. Use
-`CreateRegistration()` and `CreateSetup()` when you want AOT-safe, compiler-checked composition.
+`CreateSerializerDetails(system)` and `SerializationSetup.Create` when you want AOT-safe, compiler-checked composition.
 Use HOCON when you follow an existing configuration-driven setup.
 
 ### Akka.Hosting
@@ -288,6 +287,20 @@ public readonly record struct GapUniqueAddress(
     [property: AkkaField(1)] Address Address,
     [property: AkkaField(2)] long Uid);
 ```
+
+Public auto-properties and positional record properties without `[AkkaField]` produce
+AKKASG046 at the property declaration, even without a serializer. Such properties are not
+serialized. Constructors or initializers can restore their initial values during deserialization.
+Add `[AkkaField(n)]` to preserve the state, or use standard diagnostic suppression for an
+intentional omission. `AllowEmpty` permits fieldless messages but does not suppress AKKASG046.
+Computed properties and public fields are outside this diagnostic. `[AkkaField]` supports
+properties only.
+
+Type-shape checks run as soon as you mark a type with `[AkkaSerializable]`, even before
+its serializer exists. Missing fields, duplicate indices, inaccessible marked getters, and
+inaccessible declarations report once at their source declarations. The same checks apply to
+open generic definitions. Checks that depend on a closed construction or serializer configuration
+continue to report in that context.
 
 ### Fieldless Messages and `AllowEmpty`
 
@@ -502,7 +515,7 @@ public sealed record Wrapper<T>(
 [AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
 public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -523,10 +536,9 @@ public sealed record EventWrapper<T>(
     [property: AkkaField(2)] T Body) : IClosedGenericTestProtocol;
 ```
 
-The generator names each construction's generated Write, Read, and `SizeOf` methods by folding the
-type arguments into the method name. So `Wrapper<int>` becomes `WriteWrapperInt`. And
-`Wrapper<Pair<int, string>>` becomes `WriteWrapperPairIntString`. This is an implementation detail.
-You never write these names yourself.
+Generated Write, Read, and `SizeOf` method names combine a readable type name with a stable suffix
+from the full type identity, including generic arguments. Types can share a simple name across
+namespaces or containing types. These private method names do not affect manifests or wire bytes.
 
 Diagnostics guard this shape. **AKKASG022** fires when a generic definition implements the
 protocol with no closed registrations at all. **AKKASG023** fires when a field uses an
@@ -546,13 +558,13 @@ protocol:
 [AkkaSerializable<AuditStamp>(Manifest = "audit-v1")]                    // an ordinary concrete type
 public sealed partial class CommsSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
 `AuditStamp` implements no protocol at all. The registration still makes it a top-level message of
 `CommsSerializer`: its own dispatch arm, its own private helpers, and its own concrete binding in
-the generated `CreateRegistration()`. That last part matters. A generic wrapper such as
+the generated `CreateSerializerDetails(system)`. That last part matters. A generic wrapper such as
 `Envelope<T>` usually lives in an assembly the protocol interface's own assembly cannot see, so it
 can never implement that protocol. Without its own binding, the runtime would never route a value
 of that exact type to this serializer at all. Three rules remain, checked at build time:
@@ -594,7 +606,7 @@ public sealed record Envelope<T>(
 [AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
 public sealed partial class CommsSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -689,8 +701,8 @@ there by implementing a protocol or by an explicit `[AkkaSerializable<T>]` adopt
 claiming the same type -- two adoptions, or one adoption colliding with the other serializer's own
 protocol membership -- is **AKKASG041**, reported at both serializers' own declarations. Across
 compilations that cannot see each other, a build-time check cannot run at all: neither compilation
-sees the other's serializer. A startup check catches it instead, when registrations are composed --
-see [The Startup One-Owner Check](#the-startup-one-owner-check).
+sees the other's serializer. Applications must coordinate those bindings explicitly --
+see [Cross-Assembly Ownership](#cross-assembly-ownership).
 
 The protocol set `ManifestPrefix` expands over spans referenced assemblies too, the same set
 [top-level dispatch](#cross-assembly-types) uses: every `[AkkaSerializable]` implementor this
@@ -719,7 +731,7 @@ public interface IOrderEvent { }
 [AkkaSerializer<IOrderEvent>("orders", 4001)]
 public sealed partial class OrderSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 // OrderPlaced and OrderCancelled both get a Manifest dispatch arm, a typeof() binding, and their
 // own Write/Read/SizeOf helpers, even though neither is declared in Wire.dll.
@@ -807,15 +819,11 @@ assemblies: the value's own runtime assembly (`obj.GetType().Assembly`) and the 
 serializer was generated in. Naming both makes a placement mistake that slipped past every
 build-time check diagnosable from the exception alone.
 
-### The Startup One-Owner Check
+### Cross-Assembly Ownership
 
-Two serializers declared in assemblies that cannot see each other can both adopt the same top-level
-implementor, and no build-time check can catch it -- neither compilation knows the other exists.
-`SerializerRegistration.CreateSetup` checks for this when registrations are composed, before any
-`ActorSystem` uses them: one pass over every registration's own claimed types, throwing if two
-registrations claim the same one and naming both serializer aliases. This is the last line of
-defense; a build-time diagnostic (AKKASG031, AKKASG041, or AKKASG043) already catches the case where
-one assembly can see the other.
+The generator detects conflicting ownership when the serializers are visible to the same
+compilation. Serializers in assemblies that cannot see each other need explicitly coordinated
+bindings; core `SerializationSetup` does not enforce the generator's ownership rule.
 
 ## Envelope Payloads
 
@@ -968,7 +976,7 @@ Register a formatter on the serializer class alongside `[AkkaSerializer<TProtoco
 [AkkaSerializerFormatter<ActorPath, ActorPathFormatter>]
 public sealed partial class ControlMirrorSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
@@ -1110,7 +1118,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
 | AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode, or it is a collection with an element, key, or value that neither the generator nor a registered formatter can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
-| AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
+| AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. Reports at the type declaration even without a serializer. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
 | AKKASG007 | Error | Nested value object serialization definition is required | A field's type isn't `[AkkaSerializable]` with its own `[AkkaField]`s and has no registered formatter. For a type declared in another assembly (including the BCL), the message names the assembly and offers a formatter, or `[AkkaSerializable]` in the type's own assembly. |
@@ -1130,7 +1138,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG021 | Error | Duplicate closed generic registration | The same closed construction is registered more than once on one serializer. |
 | AKKASG022 | Error | Generic serializable type requires closed generic registrations | A generic `[AkkaSerializable]` type implements the protocol but has no closed registrations. |
 | AKKASG023 | Error | Closed generic field type is not registered | A field uses a closed generic construction that was never registered with `[AkkaSerializable<T>]`. |
-| AKKASG024 | Error | Generated member name collision | Two distinct message types would produce the same generated member name. |
+| AKKASG024 | Error | Generated member name collision | Two distinct type identities produced the same generated member name despite their stable suffixes. Report the generator collision with both declarations. |
 | AKKASG025 | Info | Union member type is not sealed | An undeclared subtype of this (concrete, non-sealed) member will fail serialization if it's ever sent. |
 | AKKASG026 | Error | No matching constructor | No constructor covers every required `[AkkaField]` property, so the type can't be reconstructed. |
 | AKKASG027 | Warning | Constructor parameter not covered by [AkkaField] | A defaulted constructor parameter has no matching `[AkkaField]` property and silently resets on every deserialize. |
@@ -1149,6 +1157,8 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG043 | Error | Protocol is owned by an upstream serializer | A type declared here implements a protocol that a serializer in a referenced assembly already binds; that assembly can never see this type. See [Serializer Placement](#serializer-placement). |
 | AKKASG044 | Warning | Serializer has no messages | A serializer has no messages here, in any referenced assembly, or in its own registrations -- often a sign the serializer is placed upstream of its messages. See [Serializer Placement](#serializer-placement). |
 | AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
+| AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
+| AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 
 ## Limitations Today and Planned Changes
 

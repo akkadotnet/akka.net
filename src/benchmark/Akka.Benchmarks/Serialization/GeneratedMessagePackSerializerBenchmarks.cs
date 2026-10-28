@@ -57,14 +57,16 @@ public class GeneratedMessagePackSerializerBenchmarks
     private BenchmarkReadOnlyList _collectionList = null!;
     private BenchmarkReadOnlyList _collectionArray = null!;
     private ArrayBufferWriter<byte> _collectionWriter = null!;
+    private PooledPayloadWriter _pooledCollectionWriter = null!;
+    private OpaqueBufferWriter _opaqueCollectionWriter = null!;
 
     [GlobalSetup]
     public void Setup()
     {
         var generatedSetup = ActorSystemSetup.Create(Akka.Serialization.SerializationSetup.Create(system =>
         {
-            var order = OrderBenchmarkSerializer.CreateRegistration().CreateDetails(system);
-            var envelope = EnvelopeBenchmarkSerializer.CreateRegistration().CreateDetails(system);
+            var order = OrderBenchmarkSerializer.CreateSerializerDetails(system);
+            var envelope = EnvelopeBenchmarkSerializer.CreateSerializerDetails(system);
             var custom = SerializerDetails.Create(
                 "custom-protobuf-benchmark",
                 new CustomBenchmarkPayloadSerializer(system),
@@ -129,12 +131,31 @@ public class GeneratedMessagePackSerializerBenchmarks
         _collectionList = new BenchmarkReadOnlyList(new List<BenchmarkCollectionReading>(readings));
         _collectionArray = new BenchmarkReadOnlyList(readings);
         _collectionWriter = new ArrayBufferWriter<byte>(4096);
+        _pooledCollectionWriter = new PooledPayloadWriter(4096);
+        _opaqueCollectionWriter = new OpaqueBufferWriter(_collectionWriter);
         var listBytes = _collectionSerializer.ToBinary(_collectionList);
         var arrayBytes = _collectionSerializer.ToBinary(_collectionArray);
         if (!listBytes.AsSpan().SequenceEqual(arrayBytes)
             || _collectionSerializer.SizeHint(_collectionList) != listBytes.Length
             || _collectionSerializer.SizeHint(_collectionArray) != arrayBytes.Length)
             throw new InvalidOperationException("Collection benchmark representations must have identical bytes and exact size hints.");
+
+        // Artery appends payload bytes after a header: the reported count must exclude that prefix.
+        _pooledCollectionWriter.GetSpan(1)[0] = 0xa5;
+        _pooledCollectionWriter.Advance(1);
+        var written = _collectionSerializer.Serialize(_collectionList, _pooledCollectionWriter);
+        if (written != listBytes.Length || _pooledCollectionWriter.WrittenCount != listBytes.Length + 1
+            || _pooledCollectionWriter.WrittenSpan[0] != 0xa5 || !_pooledCollectionWriter.WrittenSpan.Slice(1).SequenceEqual(listBytes))
+            throw new InvalidOperationException("Pooled writer must preserve its prefix, payload bytes and relative count.");
+        _pooledCollectionWriter.Reset();
+
+        _collectionWriter.GetSpan(1)[0] = 0xa5;
+        _collectionWriter.Advance(1);
+        var opaqueWritten = _collectionSerializer.Serialize(_collectionList, _opaqueCollectionWriter);
+        if (opaqueWritten != listBytes.Length || _collectionWriter.WrittenCount != listBytes.Length + 1
+            || _collectionWriter.WrittenSpan[0] != 0xa5 || !_collectionWriter.WrittenSpan.Slice(1).SequenceEqual(listBytes))
+            throw new InvalidOperationException("Opaque writer must preserve its prefix, payload bytes and relative count.");
+        _collectionWriter.ResetWrittenCount();
 
         Console.WriteLine($"Generated MessagePack payload size: {_generatedBytes.Length} bytes");
         Console.WriteLine($"Generated envelope with generated payload size: {_generatedPayloadEnvelopeBytes.Length} bytes");
@@ -148,6 +169,7 @@ public class GeneratedMessagePackSerializerBenchmarks
     [GlobalCleanup]
     public async Task Cleanup()
     {
+        _pooledCollectionWriter.Dispose();
         await Task.WhenAll(_generatedSystem.Terminate(), _jsonSystem.Terminate());
     }
 
@@ -178,6 +200,36 @@ public class GeneratedMessagePackSerializerBenchmarks
 
     [Benchmark]
     public int ReadOnlyList_ArraySizeHint() => _collectionSerializer.SizeHint(_collectionArray);
+
+    // Reuse both known writer types so allocation results isolate the counting wrapper.
+    [Benchmark]
+    public int ReadOnlyList_PooledWrite()
+    {
+        _pooledCollectionWriter.Reset();
+        return _collectionSerializer.Serialize(_collectionList, _pooledCollectionWriter);
+    }
+
+    [Benchmark]
+    public int ReadOnlyList_OpaqueWrite()
+    {
+        _collectionWriter.ResetWrittenCount();
+        return _collectionSerializer.Serialize(_collectionList, _opaqueCollectionWriter);
+    }
+
+    // Allocate this adapter once during setup. Its runtime type hides the reusable array writer
+    // so serialization exercises the IBufferWriter fallback without per-invocation adapter churn.
+    private sealed class OpaqueBufferWriter : IBufferWriter<byte>
+    {
+        private readonly IBufferWriter<byte> _inner;
+
+        public OpaqueBufferWriter(IBufferWriter<byte> inner) => _inner = inner;
+
+        public void Advance(int count) => _inner.Advance(count);
+
+        public Memory<byte> GetMemory(int sizeHint = 0) => _inner.GetMemory(sizeHint);
+
+        public Span<byte> GetSpan(int sizeHint = 0) => _inner.GetSpan(sizeHint);
+    }
 
     [Benchmark]
     public object Generated_MessagePack_deserialize()
@@ -351,7 +403,7 @@ public interface IOrderBenchmarkProtocol
 [AkkaSerializer<IOrderBenchmarkProtocol>("order-benchmark", 120001)]
 public sealed partial class OrderBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface IEnvelopeBenchmarkProtocol
@@ -361,7 +413,7 @@ public interface IEnvelopeBenchmarkProtocol
 [AkkaSerializer<IEnvelopeBenchmarkProtocol>("envelope-benchmark", 120002)]
 public sealed partial class EnvelopeBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable(Manifest = "submit-order-v1")]

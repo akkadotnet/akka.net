@@ -623,7 +623,7 @@ public interface ICollectionProtocol
 [AkkaSerializer<ICollectionProtocol>("collection-test", 120105)]
 public sealed partial class CollectionTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable]
@@ -662,7 +662,9 @@ public sealed class CollectionMutationValue
 
     public CollectionMutationValue(int value) => _value = value;
 
+#pragma warning disable AKKASG046
     public Action? OnRead { get; set; }
+#pragma warning restore AKKASG046
 
     [AkkaField(1)]
     public int Value

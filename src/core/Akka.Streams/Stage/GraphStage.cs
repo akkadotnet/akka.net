@@ -971,6 +971,7 @@ namespace Akka.Streams.Stage
                 }
             }
 
+#nullable enable
             private void OnAsyncInput(T e, TaskCompletionSource<Done> promise, ActivityContext? ingressContext)
             {
                 if (!ingressContext.HasValue)
@@ -980,9 +981,13 @@ namespace Akka.Streams.Stage
                     return;
                 }
 
+                OnAsyncInputWithContext(e, promise, ingressContext.Value);
+            }
+
+            private void OnAsyncInputWithContext(T e, TaskCompletionSource<Done> promise, ActivityContext capturedContext)
+            {
                 // Start an ingress Activity on the interpreter thread so Push captures
                 // the producer's trace into Connection.SlotContext.
-                var capturedContext = ingressContext.Value;
                 var owner = _ownedStage;
                 var realHandler = _wrappedHandler;
                 var ingressOpName = StreamsDiagnostics.GetIngressOperationName(owner);
@@ -996,6 +1001,7 @@ namespace Akka.Streams.Stage
                 };
                 _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, contextAwareHandler);
             }
+#nullable restore
 
             // External call
             public void Invoke(T input)

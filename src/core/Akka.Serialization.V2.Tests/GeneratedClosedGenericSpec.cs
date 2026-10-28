@@ -142,7 +142,7 @@ public interface IClosedGenericTestProtocol
 [AkkaSerializable<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
 public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 /// <summary>

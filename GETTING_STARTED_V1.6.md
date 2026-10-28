@@ -158,7 +158,7 @@ using Akka.Serialization;
 var setup = ActorSystemSetup.Create(BootstrapSetup.Create())
     .And(LoggerSetup.Create(Props.Create<ConsoleLogger>()))
     .And(ExtensionsSetup.Create(CounterExtensionProvider.Instance))
-    .And(SerializationSetup.Create(system => ImmutableHashSet.Create(
+    .And(SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(
         SerializerDetails.Create(
             "counter",
             new CounterMessageSerializer(system),
@@ -202,10 +202,12 @@ No separate generator package - the generator ships inside `Akka.Serialization.V
 NuGet wires it in automatically.
 
 ```csharp
+using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Serialization;
 using Akka.Serialization.V2;
 
-var setup = OrderSerializer.CreateRegistration().CreateSetup();
+var setup = SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(OrderSerializer.CreateSerializerDetails(extendedSystem)));
 var bootstrap = BootstrapSetup.Create().And(setup);
 var system = ActorSystem.Create("order-system", bootstrap);
 
@@ -223,30 +225,27 @@ public sealed record SubmitOrder(
     [property: AkkaField(1)] Guid CustomerId,
     [property: AkkaField(2)] decimal Total) : IOrderProtocol;
 
-// A sealed partial class. The generator fills in CreateRegistration(). Name and id are
+// A sealed partial class. The generator fills in CreateSerializerDetails(). Name and id are
 // always explicit - ids 1-100 are reserved for Akka's own built-in serializers.
 [AkkaSerializer<IOrderProtocol>("order-serializer", 120001)]
 public sealed partial class OrderSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
-To register several generated serializers at once, use
-`SerializerRegistration.CreateSetup(params SerializerRegistration[])` and merge the result into
-`ActorSystemSetup` the same way. A generated serializer also satisfies Akka's classic
-`Serializer` contract, so you can register it through HOCON instead, exactly like a
-hand-written one.
+To register several generated serializers, return their `SerializerDetails` in the same
+`SerializationSetup.Create` factory. A generated serializer also satisfies Akka's classic
+`Serializer` contract, so you can register it through HOCON instead.
 
-Using Akka.Hosting? `akkaBuilder.AddSetup(registration.CreateSetup())` works. Don't also call
-`WithCustomSerializer` on the same builder - it builds its own `SerializationSetup` and adds
-it last, which replaces yours instead of merging with it (the same one-setup-per-type rule as
-above).
+Using Akka.Hosting? Pass the generated factory directly:
+
+```csharp
+akkaBuilder.WithCustomSerializer(OrderSerializer.CreateSerializerDetails);
+```
 
 One message type can belong to only one serializer. The generator's analyzer catches a
-conflict at compile time (for example, two serializers binding the same protocol interface);
-`SerializerRegistration.CreateSetup` catches the same conflict at startup when registrations
-come from more than one assembly.
+conflict at compile time (for example, two serializers binding the same protocol interface).
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 

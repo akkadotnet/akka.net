@@ -51,7 +51,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Envelope<Member>>(ManifestPrefix = "env")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -84,7 +84,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Plain>(ManifestPrefix = "no-op")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -123,7 +123,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Envelope<IProtocol>>(ManifestPrefix = "env")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -160,14 +160,14 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Shared>(Manifest = "shared-a-v1")]
             public sealed partial class SerializerA : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializer<IProtocolB>("sample-b", 140405)]
             [AkkaSerializable<Shared>(Manifest = "shared-b-v1")]
             public sealed partial class SerializerB : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -204,7 +204,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializer<IProtocolA>("sample-a", 140406)]
             public sealed partial class SerializerA : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             // SerializerB adopts Member directly, even though it already belongs to SerializerA
@@ -213,7 +213,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Member>(Manifest = "member-b-v1")]
             public sealed partial class SerializerB : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -253,7 +253,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializable<Box<int>>(Manifest = "env/b")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 
@@ -288,7 +288,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             [AkkaSerializer<IProtocol>("sample", 140409)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
             """;
 

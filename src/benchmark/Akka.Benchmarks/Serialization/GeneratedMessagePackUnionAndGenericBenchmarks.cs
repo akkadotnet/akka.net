@@ -60,8 +60,8 @@ public class GeneratedMessagePackUnionAndGenericBenchmarks
     {
         var setup = ActorSystemSetup.Create(Akka.Serialization.SerializationSetup.Create(system =>
         {
-            var union = UnionBenchmarkSerializer.CreateRegistration().CreateDetails(system);
-            var generic = GenericBenchmarkSerializer.CreateRegistration().CreateDetails(system);
+            var union = UnionBenchmarkSerializer.CreateSerializerDetails(system);
+            var generic = GenericBenchmarkSerializer.CreateSerializerDetails(system);
             return ImmutableHashSet.Create(union, generic);
         }));
         _system = (ExtendedActorSystem)ActorSystem.Create("generated-messagepack-union-generic-bench", setup);
@@ -189,7 +189,7 @@ public interface IUnionBenchmarkProtocol
 [AkkaSerializer<IUnionBenchmarkProtocol>("union-benchmark", 120004)]
 public sealed partial class UnionBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public interface IGenericBenchmarkProtocol
@@ -201,7 +201,7 @@ public interface IGenericBenchmarkProtocol
 [AkkaSerializable<GenericBenchmarkWrapper<IOrderEventBenchmark>>(Manifest = "generic-wrapper-order-event-v1")]
 public sealed partial class GenericBenchmarkSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 /// <summary>

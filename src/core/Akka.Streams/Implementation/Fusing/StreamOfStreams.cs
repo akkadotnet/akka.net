@@ -1224,9 +1224,19 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">The type of elements emitted by the substream source.</typeparam>
+    #nullable enable
     internal sealed class SubSource<T> : GraphStage<SourceShape<T>>
     {
         #region internal classes 
+
+        // Keep value elements inside the callback message instead of boxing them into OnNext.Element.
+        // Reference elements continue to use the existing actor-subscriber message.
+        private sealed class TypedOnNext : IActorSubscriberMessage
+        {
+            public readonly T Element;
+
+            public TypedOnNext(T element) => Element = element;
+        }
 
         private sealed class Logic : OutGraphStageLogic
         {
@@ -1284,6 +1294,9 @@ namespace Akka.Streams.Implementation.Fusing
                         case OnNext next:
                             Push(_stage._out, (T) next.Element);
                             break;
+                        case TypedOnNext typed:
+                            Push(_stage._out, typed.Element);
+                            break;
                     }
                 });
                 SetCallback(ourOwnCallback);
@@ -1294,7 +1307,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly string _name;
         private readonly Outlet<T> _out = new("SubSource.out");
-        private readonly AtomicReference<object> _status = new();
+        private readonly AtomicReference<object?> _status = new();
 
         /// <summary>
         /// Creates a source stage that forwards downstream demand and cancellation to its owner.
@@ -1337,7 +1350,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (f == null)
                 throw new IllegalStateException("cannot push to uninitialized substream");
-            f(new OnNext(elem));
+            if (typeof(T).IsValueType)
+                f(new TypedOnNext(elem));
+            else
+                f(new OnNext(elem!));
         }
 
         /// <summary>
@@ -1351,7 +1367,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (f != null)
                 f(OnComplete.Instance);
             else if (!_status.CompareAndSet(null, OnComplete.Instance))
-                ((Action<IActorSubscriberMessage>) _status.Value)(OnComplete.Instance);
+                ((Action<IActorSubscriberMessage>) _status.Value!)(OnComplete.Instance);
         }
 
         /// <summary>
@@ -1367,7 +1383,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (f != null)
                 f(failure);
             else if (!_status.CompareAndSet(null, failure))
-                ((Action<IActorSubscriberMessage>) _status.Value)(failure);
+                ((Action<IActorSubscriberMessage>) _status.Value!)(failure);
         }
 
         /// <summary>
@@ -1390,4 +1406,5 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>The name supplied to the constructor.</returns>
         public override string ToString() => _name;
     }
+    #nullable restore
 }
