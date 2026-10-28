@@ -16,6 +16,7 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Akka.Serialization.V2.Generators;
 public sealed partial class AkkaSerializerGenerator
@@ -82,6 +83,14 @@ public sealed partial class AkkaSerializerGenerator
         "[AkkaSerializable] top-level protocol message '{0}' must specify Manifest for serializer dispatch",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor PropertyNotSerialized = new(
+        "AKKASG046",
+        "Stored property is not serialized",
+        "Public stored property '{0}' on [AkkaSerializable] type '{1}' has no [AkkaField] and is not serialized. Add [AkkaField(n)], or suppress AKKASG046 if the omission is intentional.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor MissingNestedSerializableDefinition = new(
@@ -563,6 +572,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.SerializerHasNoMessages => SerializerHasNoMessages,
             DiagnosticKey.DuplicateProtocolBindingCrossAssembly => DuplicateProtocolBindingCrossAssembly,
             DiagnosticKey.MessageTypeNotAccessible => MessageTypeNotAccessible,
+            DiagnosticKey.PropertyNotSerialized => PropertyNotSerialized,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 
@@ -574,7 +584,7 @@ public sealed partial class AkkaSerializerGenerator
         /// <paramref name="locations"/> has no entry for it (a site this generator could not resolve,
         /// for example because the underlying syntax reference could not be re-materialized).
         /// </summary>
-        public static Diagnostic ToDiagnostic(DiagnosticSpec spec, LocationBag locations)
+        public static Diagnostic ToDiagnostic(DiagnosticSpec spec, LocationBag locations, Compilation? compilation = null)
         {
             var args = new object[spec.MessageArgs.Length];
             for (var i = 0; i < spec.MessageArgs.Length; i++)
@@ -583,6 +593,10 @@ public sealed partial class AkkaSerializerGenerator
             var location = spec.At is { } key && locations.TryGetLocation(key, out var found)
                 ? found.ToLocation()
                 : Location.None;
+
+            if (spec.At is { } sourceKey && locations.TryGetLocation(sourceKey, out var sourceLocation)
+                && compilation?.SyntaxTrees.FirstOrDefault(tree => tree.FilePath == sourceLocation.FilePath) is { } sourceTree)
+                location = Location.Create(sourceTree, new TextSpan(sourceLocation.Start, sourceLocation.Length));
 
             return Diagnostic.Create(Resolve(spec.Key), location, args);
         }
