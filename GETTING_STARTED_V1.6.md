@@ -4,9 +4,9 @@ The [Akka.NET website](https://getakka.net) is frozen on v1.5 until v1.6 stabili
 is the guide for the v1.6 beta until the website catches up. It's current against the `dev`
 branch.
 
-**No v1.6 package is on NuGet yet.** Every `Version="1.6.0-beta*"` reference below fails to
-restore (`NU1102`) until the first beta ships. Until then, build Akka.NET from source and
-reference the projects you need with a `ProjectReference` instead.
+**The v1.6 betas are on NuGet.** `1.6.0-beta1` through `1.6.0-beta3` are published, so the
+`Version="1.6.0-beta*"` references below restore. Pin an exact beta rather than the wildcard if
+you need a reproducible build.
 
 ## What's in v1.6
 
@@ -218,7 +218,9 @@ public interface IOrderProtocol
 
 // Index every field with [AkkaField(n)]. Two fields sharing an index is a build error
 // (AKKASG005); on a positional record, a constructor parameter with no matching [AkkaField]
-// is too (AKKASG026). Gaps in the numbering are fine.
+// is too (AKKASG026). Gaps in the numbering are fine. A public stored property with no
+// [AkkaField] warns (AKKASG046) - it is not serialized - and [AkkaField] on a type without
+// [AkkaSerializable] warns too (AKKASG047). Both fail a warnings-as-errors build.
 [AkkaSerializable(Manifest = "submit-order-v1")]
 public sealed record SubmitOrder(
     [property: AkkaField(0)] string OrderId,

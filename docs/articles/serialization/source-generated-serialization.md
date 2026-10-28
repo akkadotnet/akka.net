@@ -171,9 +171,9 @@ Use HOCON when you follow an existing configuration-driven setup.
 
 ### Akka.Hosting
 
-There is no `Akka.Hosting` integration for `Akka.Serialization.V2` yet. No extension method wires
-generated registrations into an `AkkaConfigurationBuilder`. Compose registrations through
-`SerializationSetup` and `ActorSystemSetup` as shown above, or through HOCON, until one ships.
+`Akka.Hosting` wires generated registrations into an `AkkaConfigurationBuilder` through
+`WithCustomSerializer`, as shown above. Without Hosting, compose registrations through
+`SerializationSetup` and `ActorSystemSetup`, or through HOCON.
 
 ## Messages and Fields
 
