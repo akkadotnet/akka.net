@@ -31,6 +31,10 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArterySettings
     {
+        internal bool RefCompressionSpike { get; }
+        internal int RefCompressionMaximum { get; }
+        internal TimeSpan RefCompressionInterval { get; }
+
         /// <summary>
         /// Whether the Artery TCP remoting transport is enabled. When <see langword="false"/>
         /// (the default), classic DotNetty remoting is used and every other setting on this
@@ -306,6 +310,11 @@ namespace Akka.Remote.Artery
                 throw ConfigurationException.NullOrEmptyConfig<ArterySettings>("akka.remote.artery");
 
             Enabled = arteryConfig.GetBoolean("enabled");
+            RefCompressionSpike = arteryConfig.GetBoolean("advanced.ref-compression-spike.enabled", false);
+            RefCompressionMaximum = arteryConfig.GetInt("advanced.ref-compression-spike.maximum", 256);
+            RefCompressionInterval = arteryConfig.GetTimeSpan("advanced.ref-compression-spike.interval", TimeSpan.FromMinutes(1));
+            if (RefCompressionMaximum < 1 || RefCompressionMaximum > ushort.MaxValue || RefCompressionInterval <= TimeSpan.Zero)
+                throw new ConfigurationException("ref-compression-spike requires maximum in 1..65535 and a positive interval.");
 
             Transport = arteryConfig.GetString("transport", "tcp");
             if (Transport != "tcp")

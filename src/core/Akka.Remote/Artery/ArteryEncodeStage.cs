@@ -68,17 +68,24 @@ namespace Akka.Remote.Artery
         /// substitute a pool that scribbles over a returned array -- the "poison pool" regression
         /// suite -- turning a lifetime-safety bug into a loud, deterministic assertion failure.
         /// </param>
-        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null)
+        /// <param name="association">Experimental incarnation-owned compression state, or null when disabled.</param>
+        /// <param name="compressionMaximum">Maximum refs in an advertised table.</param>
+        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null,
+            Association? association = null, int compressionMaximum = 256)
         {
             Serialization = serialization ?? throw new ArgumentNullException(nameof(serialization));
             OriginUid = originUid;
             Pool = pool;
+            Association = association;
+            CompressionMaximum = compressionMaximum;
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
         public Akka.Serialization.Serialization Serialization { get; }
         public long OriginUid { get; }
         public ArrayPool<byte>? Pool { get; }
+        private Association? Association { get; }
+        private int CompressionMaximum { get; }
 
         public Inlet<IOutboundEnvelope> In { get; } = new("ArteryEncode.in");
         public Outlet<ReadOnlySequence<byte>> Out { get; } = new("ArteryEncode.out");
@@ -107,8 +114,13 @@ namespace Akka.Remote.Artery
                 // try/catch already disposes its writer on failure before rethrowing, and an
                 // exception escaping OnPush fails this stage (matching the old .Select(...)
                 // behavior of failing the whole outbound stream on an encode error).
-                using var writer = ArteryEnvelopeCodec.Encode(
-                    _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool);
+                var table = _stage.Association?.CurrentState.UniqueRemoteAddress is { } peer
+                    ? _stage.Association.GetRefCompression(peer.Uid, _stage.CompressionMaximum)?.Outbound
+                    : null;
+                using var writer = elem is RefOutboundEnvelope refs
+                    ? ArteryEnvelopeCodec.EncodeRefs(_stage.Serialization, _stage.OriginUid, refs, _stage.Pool, table)
+                    : ArteryEnvelopeCodec.Encode(
+                        _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool);
 
                 // One object carries both the producer segment and detachable owner. Coalescing
                 // transfers that owner through IOwnedSequenceSegment as before. The writer's
