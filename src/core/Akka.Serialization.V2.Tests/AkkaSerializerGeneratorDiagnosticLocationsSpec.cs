@@ -270,12 +270,6 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         lineSpan.StartLinePosition.Line.Should().Be(expectedLine);
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Closed-generic construction, TYPE-LEVEL: a construction has no syntax of its own (only its
-    // GENERIC DEFINITION does), so a type-level diagnostic on it (MissingFields here) must redirect
-    // to that construction's own [AkkaSerializable<T>] registration attribute on the serializer --
-    // see MessageTypeLocationKey's doc comment in AkkaSerializerGenerator.Locations.cs.
-    // ------------------------------------------------------------------------------------------
     private const string ClosedGenericMissingFieldsSource = """
         #nullable enable
         using Akka.Actor;
@@ -300,21 +294,16 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         }
         """;
 
-    [Fact(DisplayName = "AKKASG004 on a closed-generic construction should report at its own registration attribute, not the generic definition or the serializer's main attribute")]
-    public void Closed_generic_type_level_diagnostic_should_report_at_registration_attribute_line()
+    [Fact(DisplayName = "AKKASG004 should report once at a generic definition even when a construction is registered")]
+    public void Closed_generic_shape_diagnostic_should_report_at_definition_line()
     {
         var diagnostics = GeneratorTestHarness.Run(ClosedGenericMissingFieldsSource).GeneratorDiagnostics;
 
         var diagnostic = diagnostics.Should().ContainSingle(d => d.Id == "AKKASG004").Subject;
         diagnostic.Location.Should().NotBe(Location.None);
 
-        var expectedLine = LineIndexOf(ClosedGenericMissingFieldsSource, "[AkkaSerializable<EmptyWrapper<int>>");
-        var definitionLine = LineIndexOf(ClosedGenericMissingFieldsSource, "public sealed class EmptyWrapper<T>");
-        var serializerAttributeLine = LineIndexOf(ClosedGenericMissingFieldsSource, "[AkkaSerializer<IProtocol>");
-
+        var expectedLine = LineIndexOf(ClosedGenericMissingFieldsSource, "public sealed class EmptyWrapper<T>");
         diagnostic.Location.GetLineSpan().StartLinePosition.Line.Should().Be(expectedLine);
-        expectedLine.Should().NotBe(definitionLine, "the construction has no syntax of its own -- the generic definition's own declaration is the wrong site");
-        expectedLine.Should().NotBe(serializerAttributeLine, "this diagnostic is about ONE registration, not the serializer as a whole");
     }
 
     // ------------------------------------------------------------------------------------------

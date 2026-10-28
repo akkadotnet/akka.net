@@ -692,9 +692,10 @@ public sealed partial class AkkaSerializerGenerator
                 invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
                 constructionPlan: ConstructionPlan.Empty);
 
-            // A generic definition has no fields (see above), so it needs only its own type-level
-            // location entry -- no property walk at all.
-            return new ExtractedMessage(definitionInfo, BuildTypeOnlyLocationBag(symbol, definitionKey));
+            var declarationLocations = ImmutableArray.CreateBuilder<LocationEntry>();
+            AddLocationEntry(declarationLocations, new LocationKey(definitionKey, string.Empty), FirstLocationOrNull(symbol.Locations));
+            var declarationDiagnostics = ExtractDeclarationDiagnostics(symbol, definitionKey, allowEmpty, knownTypes, declarationLocations);
+            return new ExtractedMessage(definitionInfo, new LocationBag(declarationLocations.ToImmutable()), declarationDiagnostics);
         }
 
         var key = TypeKey.FromSymbol(symbol);
@@ -705,7 +706,43 @@ public sealed partial class AkkaSerializerGenerator
         var locationEntries = ImmutableArray.CreateBuilder<LocationEntry>();
         AddLocationEntry(locationEntries, new LocationKey(key, string.Empty), FirstLocationOrNull(symbol.Locations));
         var info = ExtractMessageCore(symbol, key, manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty, locationEntries);
-        return new ExtractedMessage(info, new LocationBag(locationEntries.ToImmutable()));
+        var diagnostics = ValidateMessageShape(info.Key, new LocationKey(info.Key, string.Empty),
+            info.Fields.Select(field => field.Index), info.AllowEmpty, info.InaccessibleReason, info.InvalidFields);
+        return new ExtractedMessage(info, new LocationBag(locationEntries.ToImmutable()), diagnostics);
+    }
+
+    private static ImmutableArray<DiagnosticSpec> ExtractDeclarationDiagnostics(
+        INamedTypeSymbol symbol, TypeKey key, bool allowEmpty, KnownTypes knownTypes,
+        ImmutableArray<LocationEntry>.Builder locations)
+    {
+        var indices = new List<int>();
+        var invalidFields = ImmutableArray.CreateBuilder<InvalidFieldInfo>();
+        foreach (var property in symbol.GetMembers().OfType<IPropertySymbol>())
+        {
+            var attribute = property.GetAttributes().FirstOrDefault(attr =>
+                SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute));
+            if (attribute == null || attribute.ConstructorArguments.Length != 1)
+                continue;
+
+            AddLocationEntry(locations, new LocationKey(key, property.Name), FirstLocationOrNull(property.Locations));
+            var invalidReason = GetInvalidFieldReason(property);
+            if (invalidReason.Length > 0)
+                invalidFields.Add(new InvalidFieldInfo(property.Name, invalidReason));
+            else
+                indices.Add((int)attribute.ConstructorArguments[0].Value!);
+        }
+
+        return ValidateMessageShape(key, new LocationKey(key, string.Empty), indices, allowEmpty,
+            DescribeInaccessibleDeclaration(symbol), invalidFields.ToImmutable());
+    }
+
+    private static string GetInvalidFieldReason(IPropertySymbol property)
+    {
+        if (property.IsStatic)
+            return "is static; [AkkaField] requires an instance property";
+        return property.GetMethod == null || !IsAccessibleFromGeneratedCode(property.GetMethod.DeclaredAccessibility)
+            ? "has no accessible getter"
+            : string.Empty;
     }
 
     /// <summary>
@@ -819,15 +856,10 @@ public sealed partial class AkkaSerializerGenerator
             // generated Write path (`message.Property`) -- record it as invalid (AKKASG028) instead
             // of emitting uncompilable code, and exclude it from both ordinary field extraction and
             // constructor selection below.
-            if (member.IsStatic)
+            var invalidReason = GetInvalidFieldReason(member);
+            if (invalidReason.Length > 0)
             {
-                invalidFields.Add(new InvalidFieldInfo(member.Name, "is static; [AkkaField] requires an instance property"));
-                continue;
-            }
-
-            if (member.GetMethod == null || !IsAccessibleFromGeneratedCode(member.GetMethod.DeclaredAccessibility))
-            {
-                invalidFields.Add(new InvalidFieldInfo(member.Name, "has no accessible getter"));
+                invalidFields.Add(new InvalidFieldInfo(member.Name, invalidReason));
                 continue;
             }
 

@@ -288,6 +288,12 @@ public readonly record struct GapUniqueAddress(
     [property: AkkaField(2)] long Uid);
 ```
 
+Type-shape checks run as soon as you mark a type with `[AkkaSerializable]`, even before
+its serializer exists. Missing fields, duplicate indices, inaccessible marked getters, and
+inaccessible declarations report once at their source declarations. The same checks apply to
+open generic definitions. Checks that depend on a closed construction or serializer configuration
+continue to report in that context.
+
 ### Fieldless Messages and `AllowEmpty`
 
 By default, an `[AkkaSerializable]` type with no `[AkkaField]` properties is rejected at compile
@@ -1104,7 +1110,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
 | AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode, or it is a collection with an element, key, or value that neither the generator nor a registered formatter can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
-| AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
+| AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. Reports at the type declaration even without a serializer. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
 | AKKASG007 | Error | Nested value object serialization definition is required | A field's type isn't `[AkkaSerializable]` with its own `[AkkaField]`s and has no registered formatter. For a type declared in another assembly (including the BCL), the message names the assembly and offers a formatter, or `[AkkaSerializable]` in the type's own assembly. |
