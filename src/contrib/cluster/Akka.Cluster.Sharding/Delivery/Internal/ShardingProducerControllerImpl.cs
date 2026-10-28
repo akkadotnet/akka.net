@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ShardingProducerControllerImpl.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -247,6 +247,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         Receive<CleanupUnused>(_ => ReceiveCleanupUnused());
 
+        Receive<Terminated>(ReceiveTerminated);
+
         Receive<Start<T>>(ReceiveStart);
 
         Receive<AskTimeout>(t =>
@@ -273,6 +275,16 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var outKey = $"{ProducerId}-{entityId}";
         if (CurrentState.OutStates.TryGetValue(outKey, out var outState))
         {
+            if (outState.Stopping)
+            {
+                // The per-entity ProducerController is terminating. Its name is still reserved in
+                // this actor's children container, so a replacement cannot be created yet - doing
+                // so throws InvalidActorNameException and takes the whole controller down. Buffer
+                // instead; the Terminated handler replays once the name is free.
+                BufferWhileStopping(outKey, outState, msg, replyTo, totalSeqNr, newReplyAfterStore);
+                return;
+            }
+
             // there is demand, send immediately
             if (outState.NextTo.HasValue)
             {
@@ -317,16 +329,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         else
         {
             _log.Debug("Creating ProducerController for entityId [{0}]", entityId);
-            Action<ConsumerController.SequencedMessage<T>> customSend = s =>
-            {
-                ShardRegion.Tell(new ShardingEnvelope(entityId, s));
-            };
-
-            var producer =
-                Context.ActorOf(
-                    Props.Create(() => new ProducerController<T>(outKey, Option<Props>.None, customSend,
-                        Settings.ProducerControllerSettings, _timeProvider, null)), Uri.EscapeDataString(entityId));
-            producer.Tell(new ProducerController.Start<T>(RequestNextAdapter));
+            var producer = CreateProducerController(entityId, outKey);
             CurrentState = CurrentState with
             {
                 OutStates = CurrentState.OutStates.SetItem(outKey,
@@ -336,6 +339,48 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 ReplyAfterStore = newReplyAfterStore
             };
         }
+    }
+
+    /// <summary>
+    /// Creates the per-entity <see cref="ProducerController{T}"/> child and starts watching it, so
+    /// that a name-reuse collision can never be attempted while it is still terminating.
+    /// </summary>
+    private IActorRef CreateProducerController(EntityId entityId, string outKey)
+    {
+        Action<ConsumerController.SequencedMessage<T>> customSend = s =>
+        {
+            ShardRegion.Tell(new ShardingEnvelope(entityId, s));
+        };
+
+        var producer =
+            Context.ActorOf(
+                Props.Create(() => new ProducerController<T>(outKey, Option<Props>.None, customSend,
+                    Settings.ProducerControllerSettings, _timeProvider, null)), Uri.EscapeDataString(entityId));
+        producer.Tell(new ProducerController.Start<T>(RequestNextAdapter));
+        Context.Watch(producer);
+        return producer;
+    }
+
+    /// <summary>
+    /// Buffers a message for an entity whose child is stopping. Unlike the normal buffering path we
+    /// do not send a RequestNext, because there is no live ProducerController to consume it.
+    /// </summary>
+    private void BufferWhileStopping(string outKey, OutState<T> outState, T msg, Option<IActorRef> replyTo,
+        TotalSeqNr totalSeqNr, ImmutableDictionary<TotalSeqNr, IActorRef> newReplyAfterStore)
+    {
+        if (CurrentState.BufferSize >= Settings.BufferSize)
+            throw new IllegalStateException(
+                $"Buffer overflow, current size [{CurrentState.BufferSize}] >= max [{Settings.BufferSize}]");
+
+        _log.Debug("Buffering message to stopping entityId [{0}], buffer size for entityId [{1}]",
+            outState.EntityId, outState.Buffered.Count + 1);
+
+        var newBuffered = outState.Buffered.Add(new Buffered<T>(totalSeqNr, msg, replyTo));
+        CurrentState = CurrentState with
+        {
+            OutStates = CurrentState.OutStates.SetItem(outKey, outState with { Buffered = newBuffered }),
+            ReplyAfterStore = newReplyAfterStore
+        };
     }
 
     private ImmutableList<Unconfirmed<T>> OnAck(OutState<T> outState, long confirmedSeqNr)
@@ -494,6 +539,9 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var now = _timeProvider.Now.Ticks;
         foreach (var (outKey, outState) in CurrentState.OutStates)
         {
+            if (outState.Stopping)
+                continue;
+
             var idleDurationMs = (now - outState.LastUsed) / TimeSpan.TicksPerMillisecond;
             if (outState.Unconfirmed.Any() &&
                 idleDurationMs >= Settings.ResendFirstUnconfirmedIdleTimeout.TotalMilliseconds)
@@ -508,27 +556,71 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
     private void ReceiveCleanupUnused()
     {
         var now = _timeProvider.Now.Ticks;
-        var removeOutKeys = CurrentState.OutStates.Select(c =>
+        ImmutableDictionary<string, OutState<T>>? newOutStates = null;
+
+        foreach (var (outKey, outState) in CurrentState.OutStates)
         {
-            var outKey = c.Key;
-            var outState = c.Value;
+            // Already stopping - its Terminated handler owns the rest of the lifecycle.
+            if (outState.Stopping)
+                continue;
+
             var idleDurationMs = (now - outState.LastUsed) / TimeSpan.TicksPerMillisecond;
             if (outState.Unconfirmed.IsEmpty && outState.Buffered.IsEmpty &&
                 idleDurationMs >= Settings.CleanupUnusedAfter.TotalMilliseconds)
             {
                 _log.Debug("Cleanup unused [{0}], because it was idle for [{1}] ms", outKey, idleDurationMs);
-                Context.Stop(outState.ProducerController);
-                return outKey.AsOption();
-            }
-            else
-            {
-                return Option<string>.None;
-            }
-        }).Where(c => c.HasValue).Select(c => c.Value).ToImmutableList();
 
-        if (removeOutKeys.Any())
+                // Do NOT remove the entry here. Context.Stop only marks the child for termination;
+                // its name stays in this actor's children container until the ChildTerminated system
+                // message is processed. Dropping the entry now would let OnMsg attempt
+                // Context.ActorOf with the same name and throw InvalidActorNameException.
+                newOutStates ??= CurrentState.OutStates;
+                newOutStates = newOutStates.SetItem(outKey, outState with { Stopping = true });
+                Context.Stop(outState.ProducerController);
+            }
+        }
+
+        if (newOutStates is not null)
         {
-            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.RemoveRange(removeOutKeys) };
+            CurrentState = CurrentState with { OutStates = newOutStates };
+        }
+    }
+
+    /// <summary>
+    /// A watched per-entity <see cref="ProducerController{T}"/> terminated. Only now is its name free
+    /// in this actor's children container, so this is the earliest point at which a replacement can
+    /// safely be created.
+    /// </summary>
+    private void ReceiveTerminated(Terminated terminated)
+    {
+        var deadRef = terminated.ActorRef;
+
+        var deadKeys = CurrentState.OutStates
+            .Where(c => c.Value.ProducerController.Equals(deadRef))
+            .Select(c => c.Key)
+            .ToImmutableList();
+
+        if (deadKeys.IsEmpty)
+            return;
+
+        foreach (var outKey in deadKeys)
+        {
+            var outState = CurrentState.OutStates[outKey];
+
+            if (outState.Buffered.IsEmpty)
+            {
+                _log.Debug("ProducerController for [{0}] terminated, no buffered messages", outKey);
+                CurrentState = CurrentState with { OutStates = CurrentState.OutStates.Remove(outKey) };
+                continue;
+            }
+
+            _log.Debug("ProducerController for [{0}] terminated, recreating for [{1}] buffered messages",
+                outKey, outState.Buffered.Count);
+
+            var producer = CreateProducerController(outState.EntityId, outKey);
+            var newOutState = new OutState<T>(outState.EntityId, producer, Option<IActorRef>.None,
+                outState.Buffered, 1L, ImmutableList<Unconfirmed<T>>.Empty, _timeProvider.Now.Ticks);
+            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.SetItem(outKey, newOutState) };
         }
     }
 
