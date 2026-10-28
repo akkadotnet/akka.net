@@ -239,7 +239,8 @@ public static class ShardingProducerController
     internal record struct OutState<T>
     {
         public OutState(EntityId EntityId, IActorRef ProducerController, Option<IActorRef> NextTo,
-            ImmutableList<Buffered<T>> Buffered, long SeqNr, ImmutableList<Unconfirmed<T>> Unconfirmed, long LastUsed)
+            ImmutableList<Buffered<T>> Buffered, long SeqNr, ImmutableList<Unconfirmed<T>> Unconfirmed, long LastUsed,
+            bool Stopping = false)
         {
             this.EntityId = EntityId;
             this.ProducerController = ProducerController;
@@ -248,6 +249,7 @@ public static class ShardingProducerController
             this.SeqNr = SeqNr;
             this.Unconfirmed = Unconfirmed;
             this.LastUsed = LastUsed;
+            this.Stopping = Stopping;
 
             if (NextTo.HasValue && Buffered.Any())
                 throw new IllegalStateException("NextTo and Buffered shouldn't both be nonEmpty");
@@ -260,6 +262,14 @@ public static class ShardingProducerController
         public long SeqNr { get; init; }
         public ImmutableList<Unconfirmed<T>> Unconfirmed { get; init; }
         public long LastUsed { get; init; }
+
+        /// <summary>
+        /// The per-entity <see cref="ProducerController"/> has been stopped but has not reported
+        /// termination yet. Its name is still reserved in this actor's children container, so a
+        /// replacement cannot be created until <see cref="Terminated"/> arrives. Messages arriving
+        /// in the meantime are buffered.
+        /// </summary>
+        public bool Stopping { get; init; }
     };
 
     internal readonly record struct State<T>(long CurrentSeqNr, IActorRef Producer,
