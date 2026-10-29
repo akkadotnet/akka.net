@@ -231,6 +231,7 @@ namespace Akka.IO
 
         // Reading flow control — all state managed in actor thread, no synchronization needed
         private bool _readingAllowed;
+        private PipeReadToActor? _pipeReader;
         private bool _readPending; // true when a PipeReader.ReadAsync is in flight
 
         // Actor references
@@ -852,7 +853,8 @@ namespace Akka.IO
 
             if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
-            _ = ReadPipeAndSendAsync(_transport.Input, _cts.Token, Self);
+            _pipeReader ??= new PipeReadToActor(_transport.Input, _cts.Token, Self);
+            _pipeReader.Start();
         }
 
         /// <summary>
@@ -930,45 +932,80 @@ namespace Akka.IO
                 Log.Debug("Pipe read cancelled");
         }
 
-        private static async Task ReadPipeAndSendAsync(PipeReader reader, CancellationToken ct, IActorRef self)
+        /// <summary>
+        /// Reads the input pipe until it yields data (or completes) and tells the result to the actor. One instance
+        /// per connection with one cached continuation, so a read that has to wait allocates no async state machine.
+        /// At most one read is in flight (<see cref="_readPending"/>).
+        /// </summary>
+        private sealed class PipeReadToActor
         {
-            try
+            private readonly PipeReader _reader;
+            private readonly CancellationToken _ct;
+            private readonly IActorRef _self;
+            private readonly Action _onCompleted;
+            private ValueTask<ReadResult> _pending;
+
+            public PipeReadToActor(PipeReader reader, CancellationToken ct, IActorRef self)
             {
-                while (true)
+                _reader = reader;
+                _ct = ct;
+                _self = self;
+                _onCompleted = () => Read(resumed: true);
+            }
+
+            public void Start() => Read(resumed: false);
+
+            private void Read(bool resumed)
+            {
+                try
                 {
-                    var result = await reader.ReadAsync(ct).ConfigureAwait(false);
-                    var buffer = result.Buffer;
-
-                    // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
-                    // returns the pipe's segments to its pool. Keep this copy on the ordinary TCP path.
-                    ReadOnlySequence<byte> data;
-                    if (buffer.Length > 0)
+                    while (true)
                     {
-                        var array = new byte[checked((int)buffer.Length)];
-                        buffer.CopyTo(array);
-                        data = new ReadOnlySequence<byte>(array);
-                    }
-                    else
-                    {
-                        data = ReadOnlySequence<byte>.Empty;
-                    }
+                        if (!resumed)
+                        {
+                            _pending = _reader.ReadAsync(_ct);
+                            if (!_pending.IsCompleted)
+                            {
+                                _pending.ConfigureAwait(false).GetAwaiter().UnsafeOnCompleted(_onCompleted);
+                                return;
+                            }
+                        }
+                        resumed = false;
 
-                    reader.AdvanceTo(buffer.End);
+                        var result = _pending.GetAwaiter().GetResult();
+                        var buffer = result.Buffer;
 
-                    if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
-                    {
-                        self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
-                        return;
+                        // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
+                        // returns the pipe's segments to its pool. Keep this copy on the ordinary TCP path.
+                        ReadOnlySequence<byte> data;
+                        if (buffer.Length > 0)
+                        {
+                            var array = new byte[checked((int)buffer.Length)];
+                            buffer.CopyTo(array);
+                            data = new ReadOnlySequence<byte>(array);
+                        }
+                        else
+                        {
+                            data = ReadOnlySequence<byte>.Empty;
+                        }
+
+                        _reader.AdvanceTo(buffer.End);
+
+                        if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
+                        {
+                            _self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
+                            return;
+                        }
                     }
                 }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                self.Tell(PipeReadCanceled.Instance);
-            }
-            catch (Exception ex)
-            {
-                self.Tell(new IoTaskFailed(ex));
+                catch (OperationCanceledException) when (_ct.IsCancellationRequested)
+                {
+                    _self.Tell(PipeReadCanceled.Instance);
+                }
+                catch (Exception ex)
+                {
+                    _self.Tell(new IoTaskFailed(ex));
+                }
             }
         }
 
