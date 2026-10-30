@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\xunitSettings.props" />
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="Always" />
+  </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
