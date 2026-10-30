@@ -77,6 +77,14 @@ To learn more, see:
 * [OpenTelemetry Trace Correlation](xref:hosting-opentelemetry)
 * [Microsoft.Extensions.Diagnostics.HealthChecks Integration](xref:hosting-health-checks)
 
+## Implicit senders in xUnit2 tests
+
+In `Akka.Hosting.TestKit.Xunit2`, sender-less `Tell` calls use the current fixture's `TestActor`. This sender flows with execution context through awaits, `Task.Run`, and `ConfigureAwait(false)`. Implement `INoImplicitSender` to disable the test sender, or pass `ActorRefs.NoSender` explicitly when a reply should go to dead letters. A running actor's own cell takes precedence over the test sender.
+
+In both Hosting.TestKit variants, reading `Sys` or `Host` does not change `ActorCell.Current`. The xUnit2 TestKit keeps the logical test sender separate from that physical actor cell. Use the fixture's `TestActor` when you need the test's actor reference.
+
+Disposing a fixture revokes its sender in already-captured work. When manually nesting fixtures, dispose a child whose initialization failed before resuming the parent. Captured work from the failed child resolves to no sender rather than inheriting the parent's sender. Suppressing execution-context flow also prevents the test sender from flowing into background work.
+
 ## Supported Packages
 
 ### Akka.NET Core Packages
