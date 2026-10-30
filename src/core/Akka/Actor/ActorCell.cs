@@ -552,13 +552,13 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Returns the active actor's self reference, or <see cref="ActorRefs.NoSender"/> when called outside an actor.
+        /// Returns the active actor's self reference, or the logical implicit sender when one is in scope.
         /// </summary>
-        /// <returns>The current actor reference, or <c>null</c> when there is no current actor cell.</returns>
+        /// <returns>The current sender reference, or <c>null</c> when none is available.</returns>
         public static IActorRef? GetCurrentSelfOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Self : ActorRefs.NoSender;
+            return current != null ? current.Self : ImplicitSenderScope.Current;
         }
 
         /// <summary>
