@@ -10,6 +10,7 @@ using System;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.StreamRef;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
@@ -588,6 +589,81 @@ namespace Akka.Streams.Tests
             {
                 var failedTask = results.First(t => t.Status == TaskStatus.Faulted);
                 failedTask.Exception.InnerException.Should().BeOfType<RemoteStreamRefActorTerminatedException>();
+            }
+        }
+
+        // The tests below use a TestProbe as the SourceRef's partner, so they can observe the demand the
+        // stage sends and terminate the partner without a final RemoteStreamCompleted/RemoteStreamFailure.
+        // That makes per-stream StreamRefAttributes observable without any remoting. See issue #8878.
+
+        [Fact(DisplayName = "Should_use_BufferCapacity_attribute_When_SourceRef_requests_demand")]
+        public async Task Should_use_BufferCapacity_attribute_When_SourceRef_requests_demand()
+        {
+            var partner = CreateTestProbe();
+            var source = new SourceRefImpl<string>(partner.Ref).Source
+                .WithAttributes(StreamRefAttributes.CreateBufferCapacity(4));
+
+            var sink = source.RunWith(this.SinkProbe<string>(), Materializer);
+            await sink.RequestAsync(1);
+
+            // the initial demand fills the receive buffer, whose size comes from the attribute (default is 32)
+            var demand = await partner.ExpectMsgAsync<CumulativeDemand>();
+            demand.SeqNr.Should().Be(4);
+
+            await sink.CancelAsync();
+        }
+
+        [Fact(DisplayName = "Should_use_DemandRedeliveryInterval_attribute_When_SourceRef_redelivers_demand")]
+        public async Task Should_use_DemandRedeliveryInterval_attribute_When_SourceRef_redelivers_demand()
+        {
+            var partner = CreateTestProbe();
+            var source = new SourceRefImpl<string>(partner.Ref).Source
+                .WithAttributes(StreamRefAttributes.CreateDemandRedeliveryInterval(TimeSpan.FromMilliseconds(100)));
+
+            var sink = source.RunWith(this.SinkProbe<string>(), Materializer);
+            await sink.RequestAsync(1);
+
+            var first = await partner.ExpectMsgAsync<CumulativeDemand>();
+            // with the 1s default from reference.conf, several redeliveries would not arrive this quickly
+            for (var i = 0; i < 3; i++)
+            {
+                var redelivered = await partner.ExpectMsgAsync<CumulativeDemand>(TimeSpan.FromMilliseconds(800));
+                redelivered.SeqNr.Should().Be(first.SeqNr);
+            }
+
+            await sink.CancelAsync();
+        }
+
+        [Fact(DisplayName = "Should_use_FinalTerminationSignalDeadline_attribute_When_SourceRef_partner_terminates_without_final_signal")]
+        public async Task Should_use_FinalTerminationSignalDeadline_attribute_When_SourceRef_partner_terminates_without_final_signal()
+        {
+            // the materializer-level deadline is short; the per-stream attribute must win over it
+            var materializer = Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithStreamRefSettings(
+                StreamRefSettings.Create(ConfigurationFactory.ParseString("final-termination-signal-deadline = 100ms"))));
+            try
+            {
+                var partner = CreateTestProbe();
+                var source = new SourceRefImpl<string>(partner.Ref).Source
+                    .WithAttributes(StreamRefAttributes.CreateFinalTerminationSignalDeadline(TimeSpan.FromSeconds(2)));
+
+                var sink = source.RunWith(this.SinkProbe<string>(), materializer);
+                await sink.EnsureSubscriptionAsync();
+                await sink.RequestAsync(1);
+                await partner.ExpectMsgAsync<CumulativeDemand>();
+
+                // partner dies without sending RemoteStreamCompleted/RemoteStreamFailure (e.g. network partition)
+                Sys.Stop(partner.Ref);
+
+                // the stage must wait for the attribute's 2s deadline, not the materializer's 100ms
+                await sink.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+
+                var ex = await sink.ExpectErrorAsync();
+                ex.Should().BeOfType<RemoteStreamRefActorTerminatedException>();
+                ex.Message.Should().Contain("has terminated unexpectedly");
+            }
+            finally
+            {
+                materializer.Dispose();
             }
         }
     }
