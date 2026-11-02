@@ -478,7 +478,13 @@ namespace Akka.Streams.Implementation.IO
                         // Reading has stopped before, either because of cancel, or PeerClosed, so just Close now
                         // (or half-close is turned off)
                         if (IsClosed(_bytesOut) || !_role.HalfClose)
-                            _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                        {
+                            if (_connection != null)
+                                _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            else
+                                // Not yet connected (_connection null) when upstream finished -- nothing to flush.
+                                CompleteStage();
+                        }
                         // We still read, so we only close the write side
                         else if (_connection != null)
                             _connection.Tell(Tcp.ConfirmedClose.Instance, StageActor.Ref);
