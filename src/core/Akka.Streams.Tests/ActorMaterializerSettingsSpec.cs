@@ -10,11 +10,10 @@ using System.Linq;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests;
 
-public class ActorMaterializerSettingsSpec: Akka.TestKit.Xunit2.TestKit
+public sealed class ActorMaterializerSettingsSpec : Akka.TestKit.Xunit.TestKit
 {
     private readonly ActorMaterializer _materializer;
     public ActorMaterializerSettingsSpec(ITestOutputHelper output) : base(Config.Empty, nameof(ActorMaterializerSettingsSpec), output)
@@ -70,5 +69,20 @@ public class ActorMaterializerSettingsSpec: Akka.TestKit.Xunit2.TestKit
         
         // Serializer should have correct id
         Assert.Equal(30, config.GetInt("serialization-identifiers.\"Akka.Streams.Serialization.StreamRefSerializer, Akka.Streams\""));
+    }
+
+    [Fact(DisplayName = "Should_read_FinalTerminationSignalDeadline_from_config_and_preserve_it_When_settings_are_copied")]
+    public void Should_read_FinalTerminationSignalDeadline_from_config_and_preserve_it_When_settings_are_copied()
+    {
+        var settings = StreamRefSettings.Create(ConfigurationFactory.ParseString("final-termination-signal-deadline = 7s"));
+        Assert.Equal(TimeSpan.FromSeconds(7), settings.FinalTerminationSignalDeadline);
+
+        // Copy/With* must carry the value over
+        Assert.Equal(TimeSpan.FromSeconds(7), settings.WithBufferCapacity(8).FinalTerminationSignalDeadline);
+        Assert.Equal(TimeSpan.FromSeconds(3), settings.WithFinalTerminationSignalDeadline(TimeSpan.FromSeconds(3)).FinalTerminationSignalDeadline);
+
+        // and so must ActorMaterializerSettings
+        var materializerSettings = ActorMaterializerSettings.Create(Sys).WithStreamRefSettings(settings);
+        Assert.Equal(TimeSpan.FromSeconds(7), materializerSettings.StreamRefSettings.FinalTerminationSignalDeadline);
     }
 }
