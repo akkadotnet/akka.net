@@ -20,11 +20,10 @@ using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -68,7 +67,7 @@ namespace Akka.Streams.Tests.IO
                 var s = await probe.ExpectSubscriptionAsync();
 
                 await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length)
-                    .ShouldCompleteWithin(Timeout);
+                    .WaitAsync(Timeout);
                 s.Request(1);
                 await probe.ExpectNextAsync(_byteString);
                 outputStream.Dispose();
@@ -90,14 +89,14 @@ namespace Akka.Streams.Tests.IO
                     var s = await probe.ExpectSubscriptionAsync();
                     
                     await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length)
-                        .ShouldCompleteWithin(Timeout);
+                        .WaitAsync(Timeout);
                     var f = outputStream.FlushAsync();
 
                     await ExpectTimeout(f, Timeout);
                     await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(1);
-                    await f.ShouldCompleteWithin(Timeout);
+                    await f.WaitAsync(Timeout);
                     await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
                 }
 
@@ -119,14 +118,14 @@ namespace Akka.Streams.Tests.IO
                     var s = await probe.ExpectSubscriptionAsync();
 
                     await outputStream.WriteAsync(_bytesArray, 0, _byteString.Count)
-                        .ShouldCompleteWithin(Timeout);
+                        .WaitAsync(Timeout);
                     var f = outputStream.FlushAsync();
                     s.Request(1);
-                    await f.ShouldCompleteWithin(Timeout);
+                    await f.WaitAsync(Timeout);
                     await probe.ExpectNextAsync(_byteString);
 
                     var f2 = outputStream.FlushAsync();
-                    await f2.ShouldCompleteWithin(Timeout);
+                    await f2.WaitAsync(Timeout);
                 }
 
                 await probe.ExpectCompleteAsync();
@@ -149,7 +148,7 @@ namespace Akka.Streams.Tests.IO
 
                     foreach (var _ in Enumerable.Range(1, 16))
                         await outputStream.WriteAsync(_bytesArray, 0, _byteString.Count)
-                            .ShouldCompleteWithin(Timeout);
+                            .WaitAsync(Timeout);
 
                     //blocked call
                     var f = outputStream.WriteAsync(_bytesArray, 0, _byteString.Count);
@@ -158,7 +157,7 @@ namespace Akka.Streams.Tests.IO
                     await probe.ExpectNoMsgAsync(TimeSpan.Zero);
 
                     s.Request(17);
-                    await f.ShouldCompleteWithin(Timeout);
+                    await f.WaitAsync(Timeout);
                     await probe.ExpectNextNAsync(Enumerable.Repeat(_byteString, 17).ToList());
                 }
 
@@ -179,8 +178,8 @@ namespace Akka.Streams.Tests.IO
                 outputStream.Dispose();
                 await probe.ExpectCompleteAsync();
 
-                await outputStream.WriteAsync(_bytesArray, 0, _byteString.Count)
-                    .ShouldThrowWithin<IOException>(Timeout);
+                await AssertThrowsAsync<IOException>(() => outputStream.WriteAsync(_bytesArray, 0, _byteString.Count))
+                    .WaitAsync(Timeout);
             }, _materializer);
         }
 
@@ -220,7 +219,7 @@ namespace Akka.Streams.Tests.IO
                 var s = await probe.ExpectSubscriptionAsync();
 
                 await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length)
-                    .ShouldCompleteWithin(Timeout);
+                    .WaitAsync(Timeout);
                 s.Request(1);
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.Pull>();
 
@@ -230,8 +229,8 @@ namespace Akka.Streams.Tests.IO
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.DownstreamFinish>();
 
                 await Task.Delay(500);
-                await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length)
-                    .ShouldThrowWithin<IOException>(Timeout);
+                await AssertThrowsAsync<IOException>(() => outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length))
+                    .WaitAsync(Timeout);
             }, _materializer);
         }
 

@@ -10,13 +10,12 @@ using System.IO;
 using Akka.Actor;
 using Akka.Remote.Serialization;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization;
 
-public class Bugfix7215Spec: TestKit.Xunit2.TestKit
+public class Bugfix7215Spec: TestKit.Xunit.TestKit
 {
     public Bugfix7215Spec(ITestOutputHelper output) : base(nameof(Bugfix7215Spec), output)
     {

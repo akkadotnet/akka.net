@@ -30,6 +30,28 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_VectorClock_must_handle_null_equality_correctly()
+        {
+            VectorClock nullClock = null;
+            var clock = VectorClock.Create();
+
+            // null == null should be true
+            (nullClock == null).Should().BeTrue();
+            (null == nullClock).Should().BeTrue();
+
+            // null != null should be false
+            (nullClock != null).Should().BeFalse();
+
+            // clock == null and null == clock should be false
+            (clock == null).Should().BeFalse();
+            (null == clock).Should().BeFalse();
+
+            // clock != null and null != clock should be true
+            (clock != null).Should().BeTrue();
+            (null != clock).Should().BeTrue();
+        }
+
+        [Fact]
         public void A_VectorClock_must_pass_misc_comparison_test1()
         {
             var clock1_1 = VectorClock.Create();
@@ -60,6 +82,7 @@ namespace Akka.Cluster.Tests
             var clock5_2 = clock4_2.Increment(VectorClock.Node.Create("3"));
 
             (clock4_1 < clock5_2).Should().BeTrue();
+            (clock4_1 != clock5_2).Should().BeTrue("before relationship means not equal");
         }
 
         [Fact]
@@ -106,6 +129,8 @@ namespace Akka.Cluster.Tests
             
             (clock3_1 < clock5_2).Should().BeTrue();
             (clock5_2 > clock3_1).Should().BeTrue();
+            (clock3_1 != clock5_2).Should().BeTrue("before relationship means not equal");
+            (clock5_2 != clock3_1).Should().BeTrue("after relationship means not equal");
         }
 
         [Fact]

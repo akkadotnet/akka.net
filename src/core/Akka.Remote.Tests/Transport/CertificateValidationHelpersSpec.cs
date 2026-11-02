@@ -8,11 +8,11 @@
 using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -72,7 +72,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_filter_empty_thumbprints()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             // Include some empty/null values that should be filtered out
@@ -89,7 +89,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_be_case_insensitive()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             // Test with lowercase thumbprint in allowed list
@@ -106,7 +106,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_accept_from_multiple_allowed()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             var validator = CertificateValidation.PinnedCertificate(
@@ -125,7 +125,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_reject_non_matching_thumbprint()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var validator = CertificateValidation.PinnedCertificate(
                 "1111111111111111111111111111111111111111",
                 "2222222222222222222222222222222222222222");
@@ -135,6 +135,24 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(cert, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
+            });
+        }
+
+        #endregion
+
+        #region ValidateHostname Tests
+
+        [Fact(DisplayName = "ValidateHostname should warn once when an explicit expected hostname is not enforced")]
+        public async Task ValidateHostname_should_warn_once_when_explicit_expected_hostname_is_not_enforced()
+        {
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("expected.example");
+
+            await EventFilter.Warning(contains: "does not enforce the explicit expected hostname").ExpectOneAsync(() =>
+            {
+                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
             });
         }
 
@@ -230,7 +248,7 @@ namespace Akka.Remote.Tests.Transport
             };
 
             var combined = CertificateValidation.Combine(validator1, validator2);
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Act & Assert
             EventFilter.Error(contains: "First validator failed").ExpectOne(() =>

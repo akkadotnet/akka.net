@@ -12,7 +12,6 @@ using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {

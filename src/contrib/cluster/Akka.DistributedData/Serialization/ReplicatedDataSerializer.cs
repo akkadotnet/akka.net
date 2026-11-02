@@ -246,7 +246,9 @@ namespace Akka.DistributedData.Serialization
                     return typeof(IActorRef);
                 case ValType.Other:
                     {
-                        var type = Type.GetType(t.TypeName);
+                        var type = Type.GetType(t.TypeName)
+                            ?? throw new SerializationException(
+                                $"Could not resolve type [{t.TypeName}] during replicated data deserialization.");
                         return type;
                     }
                 default:
@@ -366,7 +368,9 @@ namespace Akka.DistributedData.Serialization
 
             // runtime type - enter horrible dynamic serialization stuff
 
-            var setContentType = Type.GetType(orset.TypeInfo.TypeName);
+            var setContentType = Type.GetType(orset.TypeInfo.TypeName)
+                ?? throw new SerializationException(
+                    $"Could not resolve ORSet element type [{orset.TypeInfo.TypeName}] during deserialization.");
 
             var eOther = orset.OtherElements.Zip(dots,
                 (i, versionVector) => (_ser.OtherMessageFromProto(i), versionVector))
@@ -514,7 +518,9 @@ namespace Akka.DistributedData.Serialization
             // if we made it this far, we're working with an object type
             // enter reflection magic
 
-            var type = Type.GetType(deltaGroup.TypeInfo.TypeName);
+            var type = Type.GetType(deltaGroup.TypeInfo.TypeName)
+                ?? throw new SerializationException(
+                    $"Could not resolve ORSet.DeltaGroup element type [{deltaGroup.TypeInfo.TypeName}] during deserialization.");
             var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
             return (ORSet.IDeltaGroupOperation)Activator.CreateInstance(orDeltaGroupType, arr);
         }
@@ -623,7 +629,9 @@ namespace Akka.DistributedData.Serialization
                     {
                         // runtime type - enter horrible dynamic serialization stuff
 
-                        var setContentType = Type.GetType(gset.TypeInfo.TypeName);
+                        var setContentType = Type.GetType(gset.TypeInfo.TypeName)
+                            ?? throw new SerializationException(
+                                $"Could not resolve GSet element type [{gset.TypeInfo.TypeName}] during deserialization.");
 
                         var eOther = gset.OtherElements.Select(x => _ser.OtherMessageFromProto(x));
 
@@ -781,7 +789,9 @@ namespace Akka.DistributedData.Serialization
                             typeName = "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding";
                         
                         // runtime type - enter horrible dynamic serialization stuff
-                        var setContentType = Type.GetType(typeName);
+                        var setContentType = Type.GetType(typeName)
+                            ?? throw new SerializationException(
+                                $"Could not resolve LWWRegister element type [{typeName}] during deserialization.");
 
                         var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
                         return (ILWWRegister)setType.Invoke(this, new object[] { proto });

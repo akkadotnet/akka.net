@@ -21,11 +21,23 @@
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting\Akka.Hosting.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting.TestKit\Akka.Hosting.TestKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <!--
+      Akka.Hosting.TestKit is built on xUnit v3, so its assemblies flow in transitively. This
+      project itself is an xUnit v2 test project, so alias the v3 assemblies to keep
+      Xunit.FactAttribute (and friends) unambiguous.
+    -->
+    <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" Aliases="xunitv3" />
+    <PackageReference Include="xunit.v3.assert" Version="$(Xunit3Version)" Aliases="xunitv3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="PublicApiGenerator" Version="9.3.0" />
     <PackageReference Include="Verify.Xunit" Version="25.0.2" />

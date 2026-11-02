@@ -15,11 +15,10 @@ using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests.Internal
 {

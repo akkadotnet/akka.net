@@ -724,6 +724,7 @@ namespace Akka.Streams
     public interface ISourceQueue<in T>
     {
         System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element);
+        System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task WatchCompletionAsync();
     }
     public interface ISourceRef<TOut> : Akka.Util.ISurrogated
@@ -1296,6 +1297,7 @@ namespace Akka.Streams.Dsl
     {
         public BroadcastHub() { }
         public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>(int bufferSize) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>(int startAfterNrOfConsumers, int bufferSize) { }
         public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>() { }
     }
     public sealed class Broadcast<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
@@ -3572,6 +3574,7 @@ namespace Akka.Streams.Implementation
             public void Complete() { }
             public void Fail(System.Exception ex) { }
             public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element) { }
+            public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element, System.Threading.CancellationToken cancellationToken) { }
             public System.Threading.Tasks.Task WatchCompletionAsync() { }
         }
     }
@@ -3805,6 +3808,13 @@ namespace Akka.Streams.Implementation
         {
             public static readonly Akka.Streams.Implementation.StreamSupervisor.StoppedChildren Instance;
         }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class static StreamsDiagnostics
+    {
+        public static readonly System.Diagnostics.ActivitySource ActivitySource;
+        public const string ActivitySourceName = "Akka.Streams";
+        public static string GetStageName(Akka.Streams.Stage.GraphStageLogic stage) { }
     }
     public sealed class StructuralInfoModule : Akka.Streams.Implementation.Module
     {

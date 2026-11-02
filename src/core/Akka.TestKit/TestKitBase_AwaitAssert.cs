@@ -34,26 +34,26 @@ namespace Akka.TestKit
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         /// <param name="cancellationToken"></param>
-        public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public void AwaitAssert(Action assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             AwaitAssertAsync(assertion, duration, interval, cancellationToken)
-                .WaitAndUnwrapException();
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>
-        public async Task AwaitAssertAsync(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public async Task AwaitAssertAsync(Action assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite(nameof(interval));
-            var start = Now;
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
-            var t = max.Min(intervalValue);
             var attempts = 0;
+            var start = Now;
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                attempts++;
                 try
                 {
                     // TODO: assertion can run forever, need a way to stop this if this happens.
@@ -62,7 +62,7 @@ namespace Akka.TestKit
                 }
                 catch(Exception)
                 {
-                    var stopped = Now + t;
+                    var stopped = Now;
                     if (stopped >= stop)
                     {
                         Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, stopped - start);
@@ -70,9 +70,9 @@ namespace Akka.TestKit
                     }
                         
                 }
-                attempts++;
+                
+                var t = (stop - Now).Min(intervalValue);
                 await Task.Delay(t, cancellationToken);
-                t = (stop - Now).Min(intervalValue);
             }
         }
 
@@ -91,17 +91,19 @@ namespace Akka.TestKit
         /// <param name="duration">The timeout.</param>
         /// <param name="interval">The interval to wait between executing the assertion.</param>
         /// <param name="cancellationToken"></param>
-        public async Task AwaitAssertAsync(Func<Task> assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
+        public async Task AwaitAssertAsync(Func<Task> assertion, [AutoDilate] TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite("interval");
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
-            var t = max.Min(intervalValue);
+            var attempts = 0;
+            var start = Now;
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                attempts++;
                 try
                 {
                     await assertion();
@@ -109,11 +111,16 @@ namespace Akka.TestKit
                 }
                 catch(Exception)
                 {
-                    if(Now + t >= stop)
+                    var stopped = Now;
+                    if (stopped >= stop)
+                    {
+                        Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, stopped - start);
                         throw;
+                    }
                 }
+                
+                var t = (stop - Now).Min(intervalValue);
                 await Task.Delay(t, cancellationToken);
-                t = (stop - Now).Min(intervalValue);
             }
         }
     }

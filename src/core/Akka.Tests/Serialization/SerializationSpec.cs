@@ -770,5 +770,117 @@ namespace Akka.Tests.Serialization
             public object MyObject { get; set; }
         }
     }
+
+    public class DisallowUnregisteredTypesSpec : AkkaSpec
+    {
+        private static readonly Config StrictConfig = ConfigurationFactory.ParseString(@"
+            akka.actor.serialization-settings.allow-unregistered-types = false
+        ");
+
+        public DisallowUnregisteredTypesSpec() : base(StrictConfig) { }
+
+        [Fact(DisplayName = "Should throw for unregistered type when fallback disabled")]
+        public void Should_throw_for_unregistered_type_when_fallback_disabled()
+        {
+            var serialization = Sys.Serialization;
+            var unregisteredType = new UnregisteredMessage("test");
+
+            var ex = Assert.Throws<SerializationException>(() =>
+                serialization.FindSerializerFor(unregisteredType));
+
+            ex.Message.Should().Contain("No serializer binding found");
+            ex.Message.Should().Contain("allow-unregistered-types");
+        }
+
+        [Fact(DisplayName = "Should still work for explicitly bound types when fallback disabled")]
+        public void Should_still_work_for_explicitly_bound_types_when_fallback_disabled()
+        {
+            var serialization = Sys.Serialization;
+            // byte[] is explicitly bound in default config
+            var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
+            serializer.Should().BeOfType<ByteArraySerializer>();
+        }
+
+        private sealed class UnregisteredMessage
+        {
+            public string Value { get; }
+            public UnregisteredMessage(string value) => Value = value;
+        }
+    }
+
+    public class AllowUnregisteredTypesSpec : AkkaSpec
+    {
+        [Fact(DisplayName = "Should have allow-unregistered-types enabled by default")]
+        public void Should_have_allow_unregistered_types_enabled_by_default()
+        {
+            var config = Sys.Settings.Config;
+            var allowUnregisteredTypes = config.GetBoolean("akka.actor.serialization-settings.allow-unregistered-types");
+            allowUnregisteredTypes.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "Should use object fallback by default")]
+        public void Should_use_object_fallback_by_default()
+        {
+            var serialization = Sys.Serialization;
+            var unregisteredType = new SomeRandomType();
+
+            // Should not throw, should return json serializer
+            var serializer = serialization.FindSerializerFor(unregisteredType);
+            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+        }
+
+        private sealed class SomeRandomType { }
+    }
+
+    /// <summary>
+    /// Regression coverage for #8354, the mirror image of #6502/#6503: instead of a member
+    /// statically typed as <c>object</c>, the member here is statically typed as a concrete
+    /// <see cref="ISurrogated"/> type (<see cref="Address"/>). When the JSON for that member
+    /// carries no `$type` metadata (`encode-type-names = false`, or an external producer),
+    /// <see cref="NewtonSoftJsonSerializer.SurrogateConverter"/> used to hand the resulting
+    /// <see cref="JObject"/> straight back to itself for the same type, recursing forever and
+    /// crashing the process with a native, uncatchable <see cref="StackOverflowException"/>.
+    /// </summary>
+    public class SurrogatedMemberWithoutTypeNamesSpec : AkkaSpec
+    {
+        private static readonly Config Conf = ConfigurationFactory.ParseString(@"
+            akka.actor {
+                serialization-settings.json {
+                    encode-type-names = false
+                }
+            }
+        ");
+
+        public SurrogatedMemberWithoutTypeNamesSpec() : base(Conf)
+        {
+        }
+
+        [Fact(DisplayName = "Should deserialize a member statically typed as a concrete ISurrogated type when the JSON carries no $type metadata (#8354)")]
+        public void Should_deserialize_ISurrogated_typed_member_without_type_metadata()
+        {
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object))
+                .Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+
+            var message = new MessageWithAddress
+            {
+                TargetAddress = new Address("akka.tcp", "sys", "localhost", 8081)
+            };
+
+            var serialized = serializer.ToBinary(message);
+
+            // Used to trigger unbounded recursion between SurrogateConverter and
+            // TranslateSurrogate, crashing the process with a native, uncatchable
+            // StackOverflowException before the #8354 fix.
+            var deserialized = serializer.FromBinary<MessageWithAddress>(serialized);
+
+            deserialized.Should().NotBeNull();
+            deserialized.TargetAddress.Should().Be(message.TargetAddress);
+        }
+
+        public sealed class MessageWithAddress
+        {
+            public Address TargetAddress { get; set; }
+        }
+    }
 }
 

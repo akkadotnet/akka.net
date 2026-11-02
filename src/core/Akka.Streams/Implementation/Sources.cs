@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -98,6 +99,33 @@ namespace Akka.Streams.Implementation
             public Exception Ex { get; }
         }
 
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal sealed class CancelOffer : IInput
+        {
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            /// <param name="target">The offer to cancel if it is still pending.</param>
+            /// <param name="cancellationToken">The token that canceled the offer.</param>
+            public CancelOffer(Offer<TOut> target, CancellationToken cancellationToken)
+            {
+                Target = target;
+                CancellationToken = cancellationToken;
+            }
+
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            public Offer<TOut> Target { get; }
+
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            public CancellationToken CancellationToken { get; }
+        }
+
         #endregion
 
         private sealed class Logic : GraphStageLogicWithCallbackWrapper<IInput>, IOutHandler
@@ -158,6 +186,7 @@ namespace Akka.Streams.Implementation
                     _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.QueueClosed.Instance);
                     _pendingOffer = null;
                 }
+                _terminating = true;
                 _completion.SetResult(new object());
                 CompleteStage();
             }
@@ -172,7 +201,12 @@ namespace Akka.Streams.Implementation
             public override void PostStop()
             {
                 var exception = new StreamDetachedException();
-                _completion.TrySetException(exception);
+                if (_completion.TrySetException(exception))
+                {
+                    // See #8210: Source.Queue can fault this internal task even when WatchCompletionAsync() was never called.
+                    // Observe the fault here so shutdown does not leak an UnobservedTaskException.
+                    _ = _completion.Task.Exception;
+                }
                 StopCallback(input =>
                 {
                     if (!(input is Offer<TOut> offer)) return;
@@ -218,6 +252,7 @@ namespace Akka.Streams.Implementation
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                             offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            _terminating = true;
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
@@ -242,6 +277,12 @@ namespace Akka.Streams.Implementation
                     {
                         if (input is Offer<TOut> offer)
                         {
+                            if (_terminating)
+                            {
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
+                                return;
+                            }
+
                             if (_buffer is not null)
                             {
                                 BufferElement(offer);
@@ -278,6 +319,7 @@ namespace Akka.Streams.Implementation
                                             new BufferOverflowException(
                                                 $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                                         offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        _terminating = true;
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
                                         break;
@@ -300,8 +342,18 @@ namespace Akka.Streams.Implementation
 
                         if (input is Failure failure)
                         {
+                            _terminating = true;
                             _completion.SetException(failure.Ex);
                             FailStage(failure.Ex);
+                        }
+
+                        if (input is CancelOffer cancelOffer)
+                        {
+                            if (!_terminating && _pendingOffer != null && ReferenceEquals(_pendingOffer, cancelOffer.Target))
+                            {
+                                _pendingOffer.CompletionSource.NonBlockingTrySetCanceled(cancelOffer.CancellationToken);
+                                _pendingOffer = null;
+                            }
                         }
                     });
             }
@@ -334,9 +386,29 @@ namespace Akka.Streams.Implementation
             /// <param name="element">TBD</param>
             /// <returns>TBD</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
+                => OfferAsync(element, CancellationToken.None);
+
+            /// <summary>
+            /// Cancellable variant of <see cref="OfferAsync(TOut)"/>.
+            /// </summary>
+            /// <param name="element">Element to send to a stream.</param>
+            /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
+            /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
+            public Task<IQueueOfferResult> OfferAsync(TOut element, CancellationToken cancellationToken)
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return Task.FromCanceled<IQueueOfferResult>(cancellationToken);
+
                 var promise = TaskEx.NonBlockingTaskCompletionSource<IQueueOfferResult>(); // new TaskCompletionSource<IQueueOfferResult>();
-                _invokeLogic(new Offer<TOut>(element, promise));
+                var offer = new Offer<TOut>(element, promise);
+                _invokeLogic(offer);
+
+                if (cancellationToken.CanBeCanceled)
+                {
+                    var registration = cancellationToken.Register(() => _invokeLogic(new CancelOffer(offer, cancellationToken)));
+                    promise.Task.ContinueWith(_ => registration.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                }
+
                 return promise.Task;
             }
 
@@ -390,7 +462,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<object>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<object>();
             var logic = new Logic(this, completion);
             return new LogicAndMaterializedValue<ISourceQueueWithComplete<TOut>>(logic, new Materialized(t => logic.Invoke(t), completion));
         }
@@ -564,6 +636,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly UnfoldResourceSourceAsync<TOut, TSource> _stage;
             private readonly Lazy<Decider> _decider;
+            private readonly Lazy<IAsyncCallback<Try<TSource>>> _createdCallback;
             private Option<TSource> _state = Option<TSource>.None;
 
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> stage, Attributes inheritedAttributes)
@@ -576,18 +649,21 @@ namespace Akka.Streams.Implementation
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
+                _createdCallback = new Lazy<IAsyncCallback<Try<TSource>>>(() =>
+                    GetTypedAsyncCallback<Try<TSource>>(resource =>
+                    {
+                        if (resource.IsSuccess)
+                        {
+                            _state = resource.Success;
+                            if (IsAvailable(_stage.Out)) OnPull();
+                        }
+                        else FailStage(resource.Failure.Value);
+                    }));
+
                 SetHandler(_stage.Out, this);
             }
 
-            private Action<Try<TSource>> CreatedCallback => GetAsyncCallback<Try<TSource>>(resource =>
-            {
-                if (resource.IsSuccess)
-                {
-                    _state = resource.Success;
-                    if (IsAvailable(_stage.Out)) OnPull();
-                }
-                else FailStage(resource.Failure.Value);
-            });
+            private IAsyncCallback<Try<TSource>> CreatedCallback => _createdCallback.Value;
 
             private void ErrorHandler(Exception ex)
             {
@@ -697,24 +773,31 @@ namespace Akka.Streams.Implementation
             {
                 _stage._create().OnComplete(resource =>
                 {
-                    try
+                    async Task InvokeCallback()
                     {
-                        CreatedCallback(resource);
-                    }
-                    catch (StreamDetachedException)
-                    {
-                        // stream stopped before created callback could be invoked, we need
-                        // to close the resource if it is was opened, to not leak it
-                        if (resource.IsSuccess)
+                        try
                         {
-                            _stage._close(resource.Success.Value);
+                            await CreatedCallback.InvokeWithFeedback(resource);
                         }
-                        else
+                        catch (StreamDetachedException)
                         {
-                            // failed to open but stream is stopped already
-                            throw resource.Failure.Value;
+                            // stream stopped before created callback could be invoked, we need
+                            // to close the resource if it is was opened, to not leak it
+                            if (resource.IsSuccess)
+                            {
+#pragma warning disable CS4014 // Because this call is not awaited - fire-and-forget is intentional for cleanup
+                                _stage._close(resource.Success.Value);
+#pragma warning restore CS4014
+                            }
+                            else
+                            {
+                                // failed to open but stream is stopped already
+                                throw resource.Failure.Value;
+                            }
                         }
                     }
+
+                    _ = InvokeCallback();
                 });
             }
         }
@@ -865,7 +948,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<TMat>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<TMat>();
             var logic = new Logic(this, completion, inheritedAttributes);
 
             return new LogicAndMaterializedValue<Task<TMat>>(logic, completion.Task);

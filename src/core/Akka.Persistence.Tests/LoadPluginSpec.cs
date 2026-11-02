@@ -9,7 +9,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {

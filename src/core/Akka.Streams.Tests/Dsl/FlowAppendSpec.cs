@@ -14,7 +14,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.FlowAppendSpec.River;
 
 namespace Akka.Streams.Tests.Dsl

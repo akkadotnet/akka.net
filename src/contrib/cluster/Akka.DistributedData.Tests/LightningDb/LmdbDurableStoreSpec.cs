@@ -11,7 +11,6 @@ using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.LightningDb
 {
@@ -28,7 +27,7 @@ namespace Akka.DistributedData.Tests.LightningDb
                 map-size = 100 MiB
                 write-behind-interval = off
             }}").WithFallback(DistributedData.DefaultConfig())
-            .WithFallback(TestKit.Xunit2.TestKit.DefaultConfig);
+            .WithFallback(TestKit.Xunit.TestKit.DefaultConfig);
 
         public LmdbDurableStoreSpec(ITestOutputHelper output)
         {
@@ -44,7 +43,7 @@ namespace Akka.DistributedData.Tests.LightningDb
                 di.Delete(true);
             }
             Directory.CreateDirectory(DDataDir);
-            var testKit = new TestKit.Xunit2.TestKit(BaseConfig, nameof(LmdbDurableStoreSpec), _output);
+            var testKit = new TestKit.Xunit.TestKit(BaseConfig, nameof(LmdbDurableStoreSpec), _output);
             var probe = testKit.CreateTestProbe();
             var config = testKit.Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
             var lmdb = testKit.Sys.ActorOf(LmdbDurableStore.Props(config));

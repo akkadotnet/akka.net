@@ -13,7 +13,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Streams.Tests;

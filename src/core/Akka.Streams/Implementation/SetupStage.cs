@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation
 {
@@ -94,7 +95,7 @@ namespace Akka.Streams.Implementation
 
         public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var matPromise = new TaskCompletionSource<TMat>();
+            var matPromise = TaskEx.NonBlockingTaskCompletionSource<TMat>();
             var logic = new Logic(this, matPromise, inheritedAttributes);
             return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
         }
@@ -168,7 +169,7 @@ namespace Akka.Streams.Implementation
 
         public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var matPromise = new TaskCompletionSource<TMat>();
+            var matPromise = TaskEx.NonBlockingTaskCompletionSource<TMat>();
             var logic = new Logic(this, matPromise, inheritedAttributes);
             return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
         }

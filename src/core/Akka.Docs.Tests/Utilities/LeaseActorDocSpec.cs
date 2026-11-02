@@ -9,12 +9,11 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Coordination;
-using Akka.Coordination.Tests;
 using Akka.Event;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit;
+using Akka.TestKit.Xunit;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 #nullable enable
 namespace DocsExamples.Utilities.Leases;

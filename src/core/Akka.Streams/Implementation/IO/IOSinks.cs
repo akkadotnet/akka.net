@@ -13,6 +13,7 @@ using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.IO
 {
@@ -89,7 +90,7 @@ namespace Akka.Streams.Implementation.IO
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
-            var ioResultPromise = new TaskCompletionSource<IOResult>();
+            var ioResultPromise = TaskEx.NonBlockingTaskCompletionSource<IOResult>();
             var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _startPosition, _fileMode, _autoFlush, _flushSignaler);
 
             var actorRef = mat.ActorOf(
@@ -158,7 +159,7 @@ namespace Akka.Streams.Implementation.IO
         {
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
-            var ioResultPromise = new TaskCompletionSource<IOResult>();
+            var ioResultPromise = TaskEx.NonBlockingTaskCompletionSource<IOResult>();
 
             var os = _createOutput();
             var maxInputBufferSize = context

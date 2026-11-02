@@ -8,10 +8,11 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Event;
+using Xunit;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
+    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit
     {
         /// <summary>
         /// Used to signal that the test was successful and that we should ensure no more messages were logged
@@ -21,12 +22,23 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         protected EventFilterTestBase(string config)
             : base(@"akka.loggers = [""" + typeof(ForwardAllEventsTestEventListener).AssemblyQualifiedName + @"""], " + (string.IsNullOrEmpty(config) ? "" : config))
         {
+        }
+
+        public override async ValueTask InitializeAsync()
+        {
+            await base.InitializeAsync();
+
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            
-            SendRawLogEventMessage(initLoggerMessage);
-            ExpectMsg("OK");
+
+            // Retry logger initialization to handle race conditions where logging system isn't ready yet
+            await AwaitAssertAsync(async () =>
+            {
+                SendRawLogEventMessage(initLoggerMessage);
+                await ExpectMsgAsync("OK", TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
+
             //From now on we know that all messages will be forwarded to TestActor
         }
 

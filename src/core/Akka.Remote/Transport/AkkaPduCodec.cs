@@ -127,7 +127,7 @@ namespace Akka.Remote.Transport
         /// <param name="serializedMessage">TBD</param>
         /// <param name="senderOptional">TBD</param>
         /// <param name="seq">TBD</param>
-        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo seq = null)
+        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo? seq = null)
         {
             Seq = seq;
             SenderOptional = senderOptional;
@@ -162,9 +162,12 @@ namespace Akka.Remote.Transport
         public bool ReliableDeliveryEnabled { get { return Seq != null; } }
 
         /// <summary>
-        /// TBD
+        /// The optional sequence number for reliable delivery. Null when reliable delivery is not used.
         /// </summary>
-        public SeqNo Seq { get; private set; }
+        public SeqNo? Seq { get; private set; }
+
+        /// <inheritdoc/>
+        SeqNo IHasSequenceNumber.Seq => Seq!.Value;
     }
 
     /// <summary>
@@ -288,7 +291,7 @@ namespace Akka.Remote.Transport
         /// <param name="ackOption">TBD</param>
         /// <returns>TBD</returns>
         public abstract ByteString ConstructMessage(Address localAddress, IActorRef recipient,
-            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null);
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null);
 
         /// <summary>
         /// TBD
@@ -435,7 +438,7 @@ namespace Akka.Remote.Transport
                     if (envelopeContainer.Sender != null)
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
                     
-                    SeqNo seqOption = null;
+                    SeqNo? seqOption = null;
                     if (envelopeContainer.Seq != SeqUndefined)
                     {
                         unchecked
@@ -472,12 +475,12 @@ namespace Akka.Remote.Transport
         /// <param name="ackOption">TBD</param>
         /// <returns>TBD</returns>
         public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
-            IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
+            IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
         {
             var ackAndEnvelope = new AckAndEnvelopeContainer();
             var envelope = new RemoteEnvelope() { Recipient = SerializeActorRef(recipient.Path.Address, recipient) };
             if (senderOption != null && senderOption.Path != null) { envelope.Sender = SerializeActorRef(localAddress, senderOption); }
-            if (seqOption != null) { envelope.Seq = (ulong)seqOption.RawValue; } else envelope.Seq = SeqUndefined;
+            if (seqOption is { } seq) { envelope.Seq = (ulong)seq.RawValue; } else envelope.Seq = SeqUndefined;
             if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
             envelope.Message = serializedMessage;
             ackAndEnvelope.Envelope = envelope;

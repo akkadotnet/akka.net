@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers;
 

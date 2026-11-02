@@ -23,7 +23,7 @@ namespace Akka.Cluster.Sharding.Internal
         public static Props Props(
             string typeName,
             ClusterShardingSettings settings,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap)
         {
             return Actor.Props.Create(() => new DDataRememberEntitiesCoordinatorStore(typeName, settings, replicator, majorityMinCap));
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly string _typeName;
-        private readonly IActorRef _replicator;
+        private readonly ICanTell _replicator;
 
         private readonly Cluster _node;
         private readonly UniqueAddress _selfUniqueAddress;
@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding.Internal
         public DDataRememberEntitiesCoordinatorStore(
             string typeName,
             ClusterShardingSettings settings,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap)
         {
             _typeName = typeName;
@@ -64,7 +64,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         private void GetAllShards()
         {
-            _replicator.Tell(Dsl.Get(_allShardsKey, _readMajority));
+            _replicator.Tell(Dsl.Get(_allShardsKey, _readMajority), Self);
         }
 
         protected override bool Receive(object message)
@@ -101,7 +101,7 @@ namespace Akka.Cluster.Sharding.Internal
                     return true;
 
                 case RememberEntitiesCoordinatorStore.AddShard m:
-                    _replicator.Tell(Dsl.Update(_allShardsKey, GSet<string>.Empty, _writeMajority, (Sender, m.ShardId), reg => reg.Add(m.ShardId)));
+                    _replicator.Tell(Dsl.Update(_allShardsKey, GSet<string>.Empty, _writeMajority, (Sender, m.ShardId), reg => reg.Add(m.ShardId)), Self);
                     return true;
 
                 case UpdateSuccess m when m.Key.Equals(_allShardsKey) && m.Request is ValueTuple<IActorRef, ShardId> r:

@@ -1,0 +1,230 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Hosting.Tests")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+namespace Akka.Cluster.Hosting
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static AkkaClusterHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithAkkaClusterReadinessCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClient<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Collections.Generic.IList<Akka.Actor.ActorPath> initialContacts) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClient<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Collections.Generic.IEnumerable<Akka.Actor.Address> initialContactAddresses, string receptionistActorName = "receptionist") { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClient<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Collections.Generic.IEnumerable<string> initialContacts) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClientDiscovery<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string serviceName, Akka.Hosting.IDiscoveryOptions discoveryOptions, [System.Runtime.CompilerServices.NullableAttribute(2)] string portName = null, System.Nullable<System.TimeSpan> retryInterval = null, System.Nullable<System.TimeSpan> timeout = null, System.Nullable<int> numberOfContacts = null, [System.Runtime.CompilerServices.NullableAttribute(2)] string clientActorName = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClientDiscovery<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Cluster.Hosting.ClusterClientDiscoveryOptions> configure) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClientDiscovery<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Cluster.Hosting.ClusterClientDiscoveryOptions options) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClusterClientReceptionist(this Akka.Hosting.AkkaConfigurationBuilder builder, string name = "receptionist", [System.Runtime.CompilerServices.NullableAttribute(2)] string role = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithClustering(this Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterOptions options = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithDistributedData(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Cluster.Hosting.DDataOptions> configurator) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithDistributedData(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Cluster.Hosting.DDataOptions options) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithDistributedPubSub(this Akka.Hosting.AkkaConfigurationBuilder builder, string role) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        [System.ObsoleteAttribute("Use IMessageExtractor instead of the ExtractEntityId and ExtractShardId delegates" +
+            ".")]
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, System.Func<string, Akka.Actor.Props>> entityPropsFactory, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        [System.ObsoleteAttribute("Use IMessageExtractor instead of the ExtractEntityId and ExtractShardId delegates" +
+            ".")]
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, System.Func<string, Akka.Actor.Props>> entityPropsFactory, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver, System.Func<string, Akka.Actor.Props>> entityPropsFactory, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        [System.ObsoleteAttribute("Use IMessageExtractor instead of the ExtractEntityId and ExtractShardId delegates" +
+            ".")]
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegion<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver, System.Func<string, Akka.Actor.Props>> entityPropsFactory, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Hosting.ShardOptions shardOptions) { }
+        [System.ObsoleteAttribute("Use IMessageExtractor instead of the ExtractEntityId and ExtractShardId delegates" +
+            ".")]
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegionProxy<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, string roleName, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardRegionProxy<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string typeName, string roleName, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardedDaemonProcess<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, int numberOfInstances, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver, System.Func<int, Akka.Actor.Props>> entityPropsFactory, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterDaemonOptions options = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardedDaemonProcessProxy<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, int numberOfInstances, string role) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardingDistributedData(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Cluster.Hosting.ShardingDDataOptions> configure) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithShardingDistributedData(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Cluster.Hosting.ShardingDDataOptions options) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingleton<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver, Akka.Actor.Props> propsFactory, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null, bool createProxyToo = True) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingleton<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonManagerName, string singletonName, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver, Akka.Actor.Props> propsFactory, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null, bool createProxyToo = True) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingleton<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonManagerName, string singletonName, Akka.Actor.Props actorProps, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null, bool createProxyToo = True) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingleton<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonName, Akka.Actor.Props actorProps, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null, bool createProxyToo = True) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingletonProxy<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonManagerName, string singletonName, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithSingletonProxy<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(this Akka.Hosting.AkkaConfigurationBuilder builder, string singletonName, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Hosting.ClusterSingletonOptions options = null, [System.Runtime.CompilerServices.NullableAttribute(2)] string singletonManagerPath = null) { }
+    }
+    public sealed class AkkaClusterReadinessCheck : Akka.Hosting.IAkkaHealthCheck
+    {
+        public AkkaClusterReadinessCheck() { }
+        public System.DateTime BeganJoining { get; }
+        public System.Nullable<System.DateTime> FinishedJoining { get; }
+        public bool WeHaveJoined { get; }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
+        public Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult HealthyResult(System.DateTime finishedJoining) { }
+        public Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult UnhealthyResult(System.DateTime now, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus failureStatus) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterClientDiscoveryOptions
+    {
+        public ClusterClientDiscoveryOptions() { }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public string ClientActorName { get; set; }
+        public Akka.Hosting.IDiscoveryOptions DiscoveryOptions { get; set; }
+        public System.Nullable<int> NumberOfContacts { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public string PortName { get; set; }
+        public System.Nullable<System.TimeSpan> RetryInterval { get; set; }
+        public string ServiceName { get; set; }
+        public System.Nullable<System.TimeSpan> Timeout { get; set; }
+        public override string ToString() { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterDaemonOptions
+    {
+        public ClusterDaemonOptions() { }
+        public object HandoffStopMessage { get; set; }
+        public System.Nullable<System.TimeSpan> KeepAliveInterval { get; set; }
+        public string Role { get; set; }
+        public Akka.Cluster.Sharding.ClusterShardingSettings ShardingSettings { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterOptions
+    {
+        public ClusterOptions() { }
+        public string AppVersion { get; set; }
+        public bool ClusterReadyCheck { get; set; }
+        public Akka.Remote.Hosting.PhiAccrualFailureDetectorOptions FailureDetector { get; set; }
+        public System.Nullable<bool> LogInfo { get; set; }
+        public System.Nullable<bool> LogInfoVerbose { get; set; }
+        public System.Nullable<int> MinimumNumberOfMembers { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})]
+        public System.Collections.Generic.Dictionary<string, int> MinimumNumberOfMembersPerRole { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})]
+        public string[] Roles { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})]
+        public string[] SeedNodes { get; set; }
+        public Akka.Cluster.Hosting.SBR.SplitBrainResolverOption SplitBrainResolver { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterSingletonOptions
+    {
+        public ClusterSingletonOptions() { }
+        public System.Nullable<int> BufferSize { get; set; }
+        public Akka.Hosting.Coordination.LeaseOptionBase LeaseImplementation { get; set; }
+        public System.Nullable<System.TimeSpan> LeaseRetryInterval { get; set; }
+        public System.Nullable<bool> LogSingletonIdentificationFailure { get; set; }
+        public string Role { get; set; }
+        public System.Nullable<System.TimeSpan> SingletonIdentificationFailurePeriod { get; set; }
+        public System.Nullable<System.TimeSpan> SingletonIdentificationInterval { get; set; }
+        public object TerminationMessage { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class DDataOptions
+    {
+        public DDataOptions() { }
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.Cluster.Hosting.DurableOptions Durable { get; set; }
+        public string Name { get; set; }
+        public System.Nullable<bool> PreferOldest { get; set; }
+        public System.Nullable<bool> RecreateOnFailure { get; set; }
+        public string Role { get; set; }
+        public System.Nullable<bool> VerboseDebugLogging { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class DurableOptions
+    {
+        public DurableOptions() { }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})]
+        public string[] Keys { get; set; }
+        public Akka.Cluster.Hosting.LmdbOptions Lmdb { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class LmdbOptions
+    {
+        public LmdbOptions() { }
+        public string Directory { get; set; }
+        public System.Nullable<long> MapSize { get; set; }
+        public System.Nullable<System.TimeSpan> WriteBehindInterval { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ShardOptions
+    {
+        public ShardOptions() { }
+        [System.ObsoleteAttribute("This property is not being applied to the ActorSystem anymore. Use `WithShardingD" +
+            "istributedData()` extension method or set them using manual HOCON configuration " +
+            "to set \"akka.cluster.sharding.distributed-data\" values. Since v1.5.27")]
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.Cluster.Hosting.ShardingDDataOptions DistributedData { get; }
+        public System.Nullable<bool> FailOnInvalidEntityStateTransition { get; set; }
+        public object HandOffStopMessage { get; set; }
+        public Akka.Persistence.Hosting.JournalOptions JournalOptions { get; set; }
+        public string JournalPluginId { get; set; }
+        public Akka.Hosting.Coordination.LeaseOptionBase LeaseImplementation { get; set; }
+        public System.Nullable<System.TimeSpan> LeaseRetryInterval { get; set; }
+        public System.Nullable<System.TimeSpan> PassivateIdleEntityAfter { get; set; }
+        public System.Nullable<bool> RememberEntities { get; set; }
+        public System.Nullable<Akka.Cluster.Sharding.RememberEntitiesStore> RememberEntitiesStore { get; set; }
+        public string Role { get; set; }
+        public System.Nullable<System.TimeSpan> ShardRegionQueryTimeout { get; set; }
+        public System.Nullable<bool> ShouldPassivateIdleEntities { get; set; }
+        public Akka.Persistence.Hosting.SnapshotOptions SnapshotOptions { get; set; }
+        public string SnapshotPluginId { get; set; }
+        public System.Nullable<Akka.Cluster.Sharding.StateStoreMode> StateStoreMode { get; set; }
+        public override string ToString() { }
+    }
+    public sealed class ShardingDDataOptions : Akka.Cluster.Hosting.DDataOptions
+    {
+        public ShardingDDataOptions() { }
+        public System.Nullable<int> MajorityMinimumCapacity { get; set; }
+        public System.Nullable<int> MaxDeltaElements { get; set; }
+    }
+}
+namespace Akka.Cluster.Hosting.SBR
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class KeepMajorityOption : Akka.Cluster.Hosting.SBR.SplitBrainResolverOption
+    {
+        public KeepMajorityOption() { }
+        public override string ConfigPath { get; }
+        public override void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class KeepOldestOption : Akka.Cluster.Hosting.SBR.SplitBrainResolverOption
+    {
+        public KeepOldestOption() { }
+        public override string ConfigPath { get; }
+        public System.Nullable<bool> DownIfAlone { get; set; }
+        public override void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class LeaseMajorityOption : Akka.Cluster.Hosting.SBR.SplitBrainResolverOption
+    {
+        public LeaseMajorityOption() { }
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public override string ConfigPath { get; }
+        public Akka.Hosting.Coordination.LeaseOptionBase LeaseImplementation { get; set; }
+        public string LeaseName { get; set; }
+        public override void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public abstract class SplitBrainResolverOption : Akka.Hosting.IHoconOption
+    {
+        public static readonly Akka.Cluster.Hosting.SBR.SplitBrainResolverOption Default;
+        protected SplitBrainResolverOption() { }
+        public System.Type Class { get; }
+        public abstract string ConfigPath { get; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public string Role { get; set; }
+        public abstract void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null);
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class StaticQuorumOption : Akka.Cluster.Hosting.SBR.SplitBrainResolverOption
+    {
+        public StaticQuorumOption() { }
+        public override string ConfigPath { get; }
+        public System.Nullable<int> QuorumSize { get; set; }
+        public override void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null) { }
+    }
+}

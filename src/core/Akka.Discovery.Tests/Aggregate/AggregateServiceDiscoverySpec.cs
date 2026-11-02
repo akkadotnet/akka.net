@@ -13,7 +13,6 @@ using Akka.Configuration;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Discovery.Tests.Aggregate
 {
@@ -34,7 +33,7 @@ namespace Akka.Discovery.Tests.Aggregate
         }
     }
 
-    public class AggregateServiceDiscoverySpec : TestKit.Xunit2.TestKit
+    public class AggregateServiceDiscoverySpec : TestKit.Xunit.TestKit
     {
         private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
             akka {

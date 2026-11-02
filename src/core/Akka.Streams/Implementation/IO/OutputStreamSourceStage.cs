@@ -16,6 +16,7 @@ using Akka.IO;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 using static Akka.Streams.Implementation.IO.OutputStreamSourceStage;
 
 namespace Akka.Streams.Implementation.IO
@@ -217,7 +218,7 @@ namespace Akka.Streams.Implementation.IO
 
             public Task WakeUp(IAdapterToStageMessage msg)
             {
-                var p = new TaskCompletionSource<NotUsed>();
+                var p = TaskEx.NonBlockingTaskCompletionSource<NotUsed>();
                 _upstreamCallback((msg, p));
                 return p.Task;
             }

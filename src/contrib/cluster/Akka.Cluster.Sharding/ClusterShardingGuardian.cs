@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.DistributedData;
+using Akka.Event;
 using Akka.Pattern;
 
 namespace Akka.Cluster.Sharding
@@ -22,6 +23,9 @@ namespace Akka.Cluster.Sharding
     internal sealed class ClusterShardingGuardian : ReceiveActor
     {
         #region messages
+
+        private sealed record ReplicatorTerminated(string Role, IActorRef Replicator)
+            : INoSerializationVerificationNeeded;
 
         /// <summary>
         /// TBD
@@ -148,9 +152,11 @@ namespace Akka.Cluster.Sharding
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly ClusterSharding _sharding = ClusterSharding.Get(Context.System);
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap", 0);
         private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
+        private ImmutableDictionary<string, ReplicatorSettings> _replicatorSettingsByRole = ImmutableDictionary<string, ReplicatorSettings>.Empty;
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions;
         private readonly ConcurrentDictionary<string, IActorRef> _proxies;
@@ -278,6 +284,8 @@ namespace Akka.Cluster.Sharding
                 }
             });
 
+            Receive<ReplicatorTerminated>(HandleReplicatorTermination);
+
             Receive<Terminated>(msg =>
             {
                 if (!_typeLookup.TryGetValue(msg.ActorRef, out var typeName)) 
@@ -294,6 +302,7 @@ namespace Akka.Cluster.Sharding
                 if(_proxies.TryGetValue(typeName, out var proxyActor) && proxyActor.Equals(msg.ActorRef))
                     _proxies.TryRemove(typeName, out _);
             });
+
         }
 
         internal static ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
@@ -308,25 +317,56 @@ namespace Akka.Cluster.Sharding
                 return settingsWithRoles.WithDurableKeys(ImmutableHashSet<string>.Empty);
         }
 
-        private IActorRef Replicator(ClusterShardingSettings settings)
+        private ICanTell Replicator(ClusterShardingSettings settings)
         {
             if (settings.StateStoreMode is StateStoreMode.DData or StateStoreMode.Custom)
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;
-                if (_replicatorsByRole.TryGetValue(role, out var aref)) return aref;
-                else
+                var name = ReplicatorName(role);
+                if (!_replicatorSettingsByRole.ContainsKey(role))
                 {
-                    var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
-                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(GetReplicatorSettings(settings)), name);
-
-                    _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
-                    return replicatorRef;
+                    var replicatorSettings = GetReplicatorSettings(settings);
+                    _replicatorSettingsByRole = _replicatorSettingsByRole.SetItem(role, replicatorSettings);
+                    CreateReplicator(role, replicatorSettings);
                 }
+
+                return Context.ActorSelection(Self.Path / name);
             }
             else
                 return Context.System.DeadLetters;
         }
+
+        private IActorRef CreateReplicator(string role, ReplicatorSettings settings)
+        {
+            var replicator = Context.ActorOf(DistributedData.Replicator.Props(settings), ReplicatorName(role));
+            Context.WatchWith(replicator, new ReplicatorTerminated(role, replicator));
+            _replicatorsByRole = _replicatorsByRole.SetItem(role, replicator);
+            return replicator;
+        }
+
+        private void HandleReplicatorTermination(ReplicatorTerminated terminated)
+        {
+            if (!_replicatorsByRole.TryGetValue(terminated.Role, out var current)
+                || !current.Equals(terminated.Replicator))
+                return;
+
+            _replicatorsByRole = _replicatorsByRole.Remove(terminated.Role);
+            if (_cluster.IsTerminated || CoordinatedShutdown.Get(Context.System).ShutdownReason is not null)
+                return;
+
+            _log.Error(
+                "Cluster Sharding DData replicator [{0}] for role [{1}] terminated; recreating it at the same path",
+                terminated.Replicator.Path, DisplayRole(terminated.Role));
+            var replacement = CreateReplicator(terminated.Role, _replicatorSettingsByRole[terminated.Role]);
+            _log.Info("Recreated Cluster Sharding DData replicator [{0}] for role [{1}]",
+                replacement.Path, DisplayRole(terminated.Role));
+        }
+
+        private static string ReplicatorName(string role) =>
+            string.IsNullOrEmpty(role) ? "replicator" : Uri.EscapeDataString(role) + "Replicator";
+
+        private static string DisplayRole(string role) => string.IsNullOrEmpty(role) ? "<all>" : role;
 
         private string CoordinatorPath(string encName)
         {
@@ -337,5 +377,6 @@ namespace Akka.Cluster.Sharding
         {
             return encName + "Coordinator";
         }
+
     }
 }

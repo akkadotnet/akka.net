@@ -19,7 +19,6 @@ using Akka.Util;
 using Akka.Util.Internal;
 using MathNet.Numerics.Statistics;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Performance
 {
@@ -32,7 +31,7 @@ namespace Akka.Persistence.TestKit.Performance
     /// 
     /// In case your journal plugin needs some kind of teardown, override the `AfterAll` method (don't forget to call `base` in your overridden methods).
     /// </summary>
-    public abstract class JournalPerfSpec : Akka.TestKit.Xunit2.TestKit
+    public abstract class JournalPerfSpec : XTestKit
     {
         private readonly TestProbe _testProbe;
 

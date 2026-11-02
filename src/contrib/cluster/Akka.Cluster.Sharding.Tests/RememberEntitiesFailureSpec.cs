@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
+
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
@@ -19,7 +19,6 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -120,6 +119,23 @@ namespace Akka.Cluster.Sharding.Tests
             public TimeSpan HowLong { get; }
 
             public override string ToString() => $"Delay{HowLong.TotalMilliseconds}";
+        }
+
+        // Unlike Delay (whose delayed reply on the update-entity path carries the wrong payload type,
+        // so it's stashed as unrecognized and the write always times out, no matter how short the
+        // delay is - that's fine, every existing Delay fact below only wants "eventually fails"), this
+        // acknowledges the write correctly with RememberEntitiesShardStore.UpdateDone once the delay
+        // elapses, so a write can genuinely complete late but within its timeout.
+        private class DelayedSuccess : IFail
+        {
+            public DelayedSuccess(TimeSpan howLong)
+            {
+                HowLong = howLong;
+            }
+
+            public TimeSpan HowLong { get; }
+
+            public override string ToString() => $"DelayedSuccess{HowLong.TotalMilliseconds}";
         }
 
         // outside store since we need to be able to set them before sharding initializes
@@ -258,6 +274,13 @@ namespace Akka.Cluster.Sharding.Tests
                             case Delay f:
                                 log.Debug("Delaying response for AddEntity with {0}", f.HowLong);
                                 Timers.StartSingleTimer("add-entity-delay", new Delayed(Sender, ImmutableHashSet<string>.Empty), f.HowLong);
+                                return true;
+                            case DelayedSuccess f:
+                                log.Debug("Delaying but eventually acknowledging AddEntity with {0}", f.HowLong);
+                                Timers.StartSingleTimer(
+                                    "add-entity-delay",
+                                    new Delayed(Sender, new RememberEntitiesShardStore.UpdateDone(m.Started, m.Stopped)),
+                                    f.HowLong);
                                 return true;
                         }
                         return true;
@@ -622,36 +645,36 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_NoResponse()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_NoResponse()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new NoResponse());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new NoResponse());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_CrashStore()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_CrashStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new CrashStore());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new CrashStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_StopStore()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_StopStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new StopStore());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new StopStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_500()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_500()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromMilliseconds(500)));
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromMilliseconds(500)));
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_1000()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_1000()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromSeconds(1)));
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromSeconds(1)));
         }
 
-        private void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(IFail wayToFail)
+        private async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(IFail wayToFail)
         {
             var storeProbe = CreateTestProbe();
             Sys.EventStream.Subscribe(storeProbe.Ref, typeof(ShardStoreCreated));
@@ -668,29 +691,34 @@ namespace Akka.Cluster.Sharding.Tests
 
             // trigger shard start and store creation
             sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
-            var shard1Store = storeProbe.ExpectMsg<ShardStoreCreated>().Store;
-            probe.ExpectMsg("hello-1");
+            var shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            await probe.ExpectMsgAsync("hello-1");
 
             // fail it when stopping
             shard1Store.Tell(new FakeShardStoreActor.FailUpdateEntity(wayToFail), storeProbe.Ref);
-            storeProbe.ExpectMsg<Done>();
+            await storeProbe.ExpectMsgAsync<Done>();
 
             sharding.Tell(new EntityEnvelope(1, "graceful-stop"));
 
-            if (!(wayToFail is CrashStore) && !(wayToFail is StopStore))
+            if (wayToFail is StopStore or CrashStore)
             {
-                // race, give the shard some time to see the passivation before restoring the fake shard store
-                Thread.Sleep(250);
-                shard1Store.Tell(new FakeShardStoreActor.ClearFail(), probe.Ref);
-                probe.ExpectMsg<Done>();
+                shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
             }
 
-            // it takes a while?
-            AwaitAssert(() =>
+            if (wayToFail is NoResponse or Delay or CrashStore)
+            {
+                shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            }
+
+            shard1Store.Tell(new FakeShardStoreActor.ClearFail(), probe.Ref);
+            await probe.ExpectMsgAsync<Done>();
+
+            // it takes a while - timeout hits and then backoff
+            await AwaitAssertAsync(async () =>
             {
                 sharding.Tell(new EntityEnvelope(1, "hello-2"), probe.Ref);
-                probe.ExpectMsg("hello-2");
-            }, TimeSpan.FromSeconds(5));
+                await probe.ExpectMsgAsync("hello-2");
+            }, TimeSpan.FromSeconds(10));
             Sys.Stop(sharding);
         }
 
@@ -762,6 +790,47 @@ namespace Akka.Cluster.Sharding.Tests
                 sharding.Tell(new EntityEnvelope(1, "hello-2"), probe.Ref);
                 await probe.ExpectMsgAsync("hello-2"); // should now work again
             }, TimeSpan.FromSeconds(5));
+
+            Sys.Stop(sharding);
+        }
+
+        [Fact(DisplayName =
+            "Shard must not restart a remember-entities write that finishes within updating-state-timeout " +
+            "even though it is slower than waiting-for-state-timeout, and must deliver the buffered message")]
+        public async Task Remember_entities_handling_in_sharding_must_not_restart_for_a_write_slower_than_waiting_for_state_timeout_but_within_updating_state_timeout()
+        {
+            var storeProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe(storeProbe.Ref, typeof(ShardStoreCreated));
+
+            // Class config shortens updating-state-timeout to 1s for the other facts; restore it here,
+            // for this shard type only, to its reference.conf default (5s), alongside the untouched
+            // waiting-for-state-timeout default (2s). A 3s write delay then sits strictly between: 2s < 3s < 5s.
+            var settings = ClusterShardingSettings.Create(Sys).WithRememberEntities(true);
+            settings = settings.WithTuningParameters(settings.TuningParameters.WithUpdatingStateTimeout(TimeSpan.FromSeconds(5)));
+
+            var sharding = ClusterSharding.Get(Sys).Start(
+                "shardStoreSlowWrite", Props.Create(() => new EntityActor()), settings, new MessageExtractor());
+            var probe = CreateTestProbe();
+
+            // trigger shard start and store creation
+            sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
+            var shardStore = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            await probe.ExpectMsgAsync("hello-1");
+
+            // delay-but-still-acknowledge the *next* remember-entities write by 3s
+            shardStore.Tell(new FakeShardStoreActor.FailUpdateEntity(new DelayedSuccess(TimeSpan.FromSeconds(3))), storeProbe.Ref);
+            await storeProbe.ExpectMsgAsync<Done>();
+
+            // new entity in the same shard (11 % 10 == 1 == 1 % 10): its start-event write is delayed
+            sharding.Tell(new EntityEnvelope(11, "hello-11"), probe.Ref);
+
+            // 5s updating-state-timeout + 3s margin for CI jitter: fixed code lets the delayed-but-valid
+            // ack (at 3s) land and delivers the buffered message; pre-fix code arms the timer with the
+            // 2s waiting-for-state-timeout instead, restarts the shard at ~2s, and drops it (no redelivery).
+            await probe.ExpectMsgAsync("hello-11", TimeSpan.FromSeconds(8));
+
+            // no second store should have been created - the shard must not have restarted
+            await storeProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
             Sys.Stop(sharding);
         }

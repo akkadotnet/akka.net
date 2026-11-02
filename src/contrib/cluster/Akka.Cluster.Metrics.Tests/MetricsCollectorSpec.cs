@@ -11,11 +11,10 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Metrics.Tests
 {
@@ -52,7 +51,9 @@ namespace Akka.Cluster.Metrics.Tests
             NodeMetrics sample;
             try
             {
-                sample = await CreateTestDataAsync(30.Seconds(), [
+                // Increase timeout to handle slow CI environments and collector initialization
+                // DefaultCollector needs time for first sample (500ms sleep + process access)
+                sample = await CreateTestDataAsync(60.Seconds(), [
                     StandardMetrics.MemoryAvailable,
                     StandardMetrics.MemoryUsed
                 ]);

@@ -15,11 +15,10 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Decider = Akka.Streams.Supervision.Decider;
 using FluentAssertions.Extensions;
 
@@ -68,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
             var eventualActual = Source.From(elements)
                 .ScanAsync(0L, (l, l1) => Task.FromResult(l + l1))
                 .RunWith(Sink.Last<long>(), Materializer);
-            var complete = await eventualActual.ShouldCompleteWithin(3.Seconds());
+            var complete = await eventualActual.WaitAsync(3.Seconds());
             complete.ShouldBe(expectedSum);
         }
 

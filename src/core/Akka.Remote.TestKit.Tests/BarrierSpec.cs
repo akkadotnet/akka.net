@@ -343,6 +343,28 @@ namespace Akka.Remote.TestKit.Tests
                 , nodeB), msg.Exception);
         }
 
+        [Fact(DisplayName = "BarrierCoordinator should fail an arrival from an unregistered client while waiting")]
+        public async Task A_BarrierCoordinator_must_fail_an_arrival_from_an_unregistered_client_while_waiting()
+        {
+            var barrier = GetBarrier();
+            var a = CreateTestProbe();
+            var b = CreateTestProbe();
+            var stranger = CreateTestProbe();
+            barrier.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), a.Ref));
+            barrier.Tell(new Controller.NodeInfo(B, Address.Parse("akka://sys"), b.Ref));
+            a.Send(barrier, new EnterBarrier("bar12", null, A));
+
+            // A client the coordinator holds no registration for cannot be counted towards the
+            // barrier, so it has to be told that rather than left hanging on its ask.
+            stranger.Send(barrier, new EnterBarrier("bar12", null, C));
+            await stranger.ExpectMsgAsync(new ToClient<BarrierResult>(new BarrierResult("bar12", false)));
+
+            // The stray arrival leaves the barrier itself alone.
+            b.Send(barrier, new EnterBarrier("bar12", null, B));
+            await a.ExpectMsgAsync(new ToClient<BarrierResult>(new BarrierResult("bar12", true)));
+            await b.ExpectMsgAsync(new ToClient<BarrierResult>(new BarrierResult("bar12", true)));
+        }
+
         //TODO: Controller tests.
 
         private IActorRef GetBarrier()

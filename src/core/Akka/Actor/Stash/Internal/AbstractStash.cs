@@ -177,7 +177,7 @@ namespace Akka.Actor.Internal
         /// Prepends `others` to this stash. This method is optimized for a large stash and
         /// small `others`.
         /// </summary>
-        /// <param name="envelopes">TBD</param>
+        /// <param name="envelopes">The collection of <see cref="Envelope"/> messages to insert at the front of the stash.</param>
         public void Prepend(IEnumerable<Envelope> envelopes)
         {
             // since we want to save the order of messages, but still prepending using AddFirst,

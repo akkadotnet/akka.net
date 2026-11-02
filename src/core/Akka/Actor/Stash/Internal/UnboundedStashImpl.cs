@@ -17,7 +17,7 @@ namespace Akka.Actor.Internal
         /// A stash implementation that is bounded
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        /// <param name="context">TBD</param>
+        /// <param name="context">The actor context. Must use a deque-based mailbox; otherwise an <see cref="ActorInitializationException"/> is thrown.</param>
         public UnboundedStashImpl(IActorContext context)
             : base(context)
         {

@@ -16,7 +16,7 @@ using Xunit;
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
     // <ClusterSingletonConfigSpec>
-    public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
+    public class ClusterSingletonConfigSpec : TestKit.Xunit.TestKit
     {
         public ClusterSingletonConfigSpec() : base(GetConfig())
         {

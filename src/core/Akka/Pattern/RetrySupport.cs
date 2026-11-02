@@ -45,12 +45,12 @@ namespace Akka.Pattern
         /// <param name="maxBackoff">the exponential back-off is capped to this duration.</param>
         /// <param name="randomFactor">after calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
         /// <param name="scheduler">The scheduler instance to use.</param>
-        public static Task<T> Retry<T>(Func<Task<T>> attempt, int attempts, TimeSpan minBackoff, TimeSpan maxBackoff, int randomFactor, IScheduler scheduler)
+        public static Task<T> Retry<T>(Func<Task<T>> attempt, int attempts, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, IScheduler scheduler)
         {
-            if (attempt == null) throw new ArgumentNullException("Parameter attempt should not be null.");
-            if (minBackoff <= TimeSpan.Zero) throw new ArgumentException("Parameter minBackoff must be > 0");
-            if (maxBackoff < minBackoff) throw new ArgumentException("Parameter maxBackoff must be >= minBackoff");
-            if (randomFactor < 0.0 || randomFactor > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
+            if (attempt == null) throw new ArgumentNullException(nameof(attempt), "Parameter attempt should not be null.");
+            if (minBackoff <= TimeSpan.Zero) throw new ArgumentException("Parameter minBackoff must be > 0", nameof(minBackoff));
+            if (maxBackoff < minBackoff) throw new ArgumentException("Parameter maxBackoff must be >= minBackoff", nameof(maxBackoff));
+            if (randomFactor is < 0.0 or > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0", nameof(randomFactor));
 
             return Retry(attempt, attempts, attempted => BackoffSupervisor.CalculateDelay(attempted, minBackoff, maxBackoff, randomFactor), scheduler);
         }

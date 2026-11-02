@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.DotNetty;
@@ -126,9 +127,17 @@ namespace Akka.Remote.TestKit
 
         public static async Task ReleaseAll()
         {
-            Task tc = _clientPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
-            Task ts = _serverPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
-            await Task.WhenAll(tc, ts).ConfigureAwait(false);
+            // Detach the pools before shutting them down. A shut down event loop group cannot
+            // serve another connection, so leaving the fields set hands every later
+            // CreateConnection call a dead pool and the connection never completes.
+            var clientPool = Interlocked.Exchange(ref _clientPool, null);
+            var serverPool = Interlocked.Exchange(ref _serverPool, null);
+            var serverWorkerPool = Interlocked.Exchange(ref _serverWorkerPool, null);
+
+            Task tc = clientPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
+            Task ts = serverPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
+            Task tsw = serverWorkerPool?.ShutdownGracefullyAsync() ?? TaskEx.Completed;
+            await Task.WhenAll(tc, ts, tsw).ConfigureAwait(false);
         }
 
         #endregion

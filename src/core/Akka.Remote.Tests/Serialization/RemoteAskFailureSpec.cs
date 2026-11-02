@@ -14,12 +14,11 @@ using Akka.Event;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static  FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization
 {
-    public class RemoteAskFailureSpec: TestKit.Xunit2.TestKit
+    public class RemoteAskFailureSpec: TestKit.Xunit.TestKit
     {
         private static Config Config(int port) => @$"
 akka.actor.ask-timeout = 5s

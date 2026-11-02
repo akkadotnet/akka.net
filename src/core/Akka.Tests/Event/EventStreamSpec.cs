@@ -17,7 +17,6 @@ using Xunit;
 using System.Threading.Tasks;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Event
 {
@@ -106,7 +105,7 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Be_able_to_log_unhandled_messages()
         {
-            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            var testKit = new TestKit.Xunit.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
             try
             {
                 var msg = new UnhandledMessage(42, testKit.Sys.DeadLetters, testKit.Sys.DeadLetters);
@@ -129,7 +128,7 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Bugfix3267_able_to_log_unhandled_messages_with_nosender()
         {
-            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            var testKit = new TestKit.Xunit.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
             try
             {
                 // sender is NoSender

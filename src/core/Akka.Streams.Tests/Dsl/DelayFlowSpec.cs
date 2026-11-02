@@ -9,13 +9,13 @@ using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class DelayFlowSpec : Akka.TestKit.Xunit2.TestKit
+    public class DelayFlowSpec : Akka.TestKit.Xunit.TestKit
     {
         [Fact]
         public void DelayFlow_should_work_with_empty_source()

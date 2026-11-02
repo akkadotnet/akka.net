@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -18,7 +19,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Akka.TestKit.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.From(Enumerable.Range(0, 11)).RunWith(lazySink, Materializer);
-                var probe = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var probe = await taskProbe.WaitAsync(RemainingOrDefault);
                 probe.Value.Request(100);
                 foreach (var i in Enumerable.Range(0, 11)) 
                 {
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
 
                 p.SetResult(this.SinkProbe<int>());
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 probe.Request(100);
                 await probe.ExpectNextAsync(0);
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)));
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 complete.ShouldBe(Option<Task<int>>.None);
             }, Materializer);
         }
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.Single(1).RunWith(lazySink, Materializer);
-                var taskResult = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var taskResult = await taskProbe.WaitAsync(RemainingOrDefault);
                 await taskResult.Value.Request(1).ExpectNext(1).ExpectCompleteAsync();
             }, Materializer);
         }
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 await probe.Request(1).ExpectNextAsync(0);
                 sourceSub.SendError(Ex);
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
                 await sourceSub.ExpectRequestAsync(1);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 await probe.Request(1).ExpectNextAsync(0);
                 probe.Cancel();
@@ -209,6 +209,30 @@ namespace Akka.Streams.Tests.Dsl
                 task.Exception.ShouldNotBe(null);
                 task.Exception.Flatten().InnerException.Should().BeEquivalentTo(matFail);
                 return Task.CompletedTask;
+            }, Materializer);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private Task RunLazySinkUnobservedReproAsync()
+        {
+            Source.Single(1)
+                .ToMaterialized(
+                    Sink.LazyInitAsync<int, TestSubscriber.Probe<int>>(() => Task.FromException<Sink<int, TestSubscriber.Probe<int>>>(Ex)),
+                    Keep.Left)
+                .Run(Materializer);
+
+            return Task.CompletedTask;
+        }
+
+        [Fact]
+        public async Task A_LazySink_with_discarded_materialized_task_must_not_trigger_UnobservedTaskException()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                await UnobservedTaskExceptionAssertions.ShouldNotRaiseAsync(
+                    RunLazySinkUnobservedReproAsync,
+                    aggregate => aggregate.InnerExceptions.Any(e => ReferenceEquals(e, Ex)),
+                    "discarding LazySink's materialized task should not leave a hidden faulted task unobserved");
             }, Materializer);
         }
 

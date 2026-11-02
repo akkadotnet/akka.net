@@ -7,7 +7,7 @@
 
 using Akka.Configuration;
 using Akka.TestKit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Cluster.Tests
 {

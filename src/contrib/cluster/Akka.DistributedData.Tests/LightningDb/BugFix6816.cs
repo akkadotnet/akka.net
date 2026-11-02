@@ -14,19 +14,18 @@ using Akka.DistributedData.LightningDB;
 using Akka.Event;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.LightningDb;
 
 [Collection("DistributedDataSpec")]
-public class BugFix6816: Akka.TestKit.Xunit2.TestKit
+public class BugFix6816: Akka.TestKit.Xunit.TestKit
 {
     private const string DDataDir = "thatdir";
     private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.dot-netty.tcp.port = 0")
         .WithFallback(DistributedData.DefaultConfig())
-        .WithFallback(TestKit.Xunit2.TestKit.DefaultConfig);
+        .WithFallback(TestKit.Xunit.TestKit.DefaultConfig);
 
     private static readonly Config LmdbDefaultConfig = ConfigurationFactory.ParseString($@"
         lmdb {{

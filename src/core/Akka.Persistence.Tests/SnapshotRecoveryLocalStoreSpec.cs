@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Xunit;
 
@@ -12,13 +13,20 @@ namespace Akka.Persistence.Tests
 {
     public class SnapshotRecoveryLocalStoreSpec : PersistenceSpec
     {
-        private const string PersistenceId = "europe";
-        private const string ExtendedName = PersistenceId + "italy";
+        // Use unique persistence IDs per test run to avoid collisions with stale data
+        private readonly string _persistenceId = "europe-" + Guid.NewGuid().ToString("N");
+        private readonly string _extendedName;
 
         public sealed class TakeSnapshot
         {
             private TakeSnapshot() {}
             public static readonly TakeSnapshot Instance = new();
+        }
+
+        public sealed class Ready
+        {
+            public static readonly Ready Instance = new();
+            private Ready() {}
         }
 
         internal class SaveSnapshotTestPersistentActor : NamedPersistentActor
@@ -32,10 +40,15 @@ namespace Akka.Persistence.Tests
                 _state = "State for actor " + name;
             }
 
-
             protected override bool ReceiveRecover(object message)
             {
-                return false;
+                // Handle RecoveryCompleted to signal we are ready
+                if (message is RecoveryCompleted)
+                {
+                    _probe.Tell(Ready.Instance);
+                    return true;
+                }
+                return true;
             }
 
             protected override bool ReceiveCommand(object message)
@@ -74,20 +87,28 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public SnapshotRecoveryLocalStoreSpec() : base(Configuration("SnapshotRecoveryLocalStoreSpec")) { }
+        public SnapshotRecoveryLocalStoreSpec() : base(Configuration("SnapshotRecoveryLocalStoreSpec"))
+        {
+            _extendedName = _persistenceId + "italy";
+        }
 
         [Fact]
         public void PersistentActor_which_is_persisted_at_the_same_time_as_another_actor_whose_PersistenceId_is_an_extension_of_the_first_should_recover_state_only_from_its_own_correct_snapshot_file()
         {
-            var pref1 = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestPersistentActor(PersistenceId, TestActor)));
-            var pref2 = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestPersistentActor(ExtendedName, TestActor)));
+            var pref1 = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestPersistentActor(_persistenceId, TestActor)));
+            var pref2 = Sys.ActorOf(Props.Create(() => new SaveSnapshotTestPersistentActor(_extendedName, TestActor)));
+
+            // Wait for both actors to complete recovery before sending commands
+            ExpectMsg<Ready>();
+            ExpectMsg<Ready>();
+
             pref1.Tell(TakeSnapshot.Instance);
             pref2.Tell(TakeSnapshot.Instance);
             ExpectMsg(0L);
             ExpectMsg(0L);
 
-            var recoveringActor = Sys.ActorOf(Props.Create(() => new LoadSnapshotTestPersistentActor(PersistenceId, TestActor)));
-            ExpectMsg<SnapshotOffer>(m => m.Metadata.PersistenceId.Equals(PersistenceId));
+            var recoveringActor = Sys.ActorOf(Props.Create(() => new LoadSnapshotTestPersistentActor(_persistenceId, TestActor)));
+            ExpectMsg<SnapshotOffer>(m => m.Metadata.PersistenceId.Equals(_persistenceId));
             ExpectMsg<RecoveryCompleted>();
         }
     }

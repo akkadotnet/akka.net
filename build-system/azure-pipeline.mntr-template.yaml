@@ -7,6 +7,10 @@ parameters:
   command: ''
   outputDirectory: ''
   timeoutInMinutes: 120
+  # Extra environment variables injected into the test-execution step, e.g.
+  # MNTR_STRESSSPEC_NODECOUNT to shrink StressSpec's node count on smaller hosted agents
+  # (see src/core/Akka.Cluster.Tests.MultiNode/StressSpec.cs).
+  env: {}
 
 jobs:
   - job: ${{ parameters.name }}
@@ -20,6 +24,8 @@ jobs:
         inputs:
           packageType: 'sdk'
           useGlobalJson: true
+          installationPath: '$(Agent.TempDirectory)/dotnet'
+          performMultiLevelLookup: false
       
       # Set the Incrementalist base branch based on PR target branch
       - pwsh: |
@@ -49,6 +55,7 @@ jobs:
 
       - script: ${{ parameters.command }}
         continueOnError: true
+        env: ${{ parameters.env }}
 
       - task: PublishTestResults@2
         inputs:

@@ -188,5 +188,129 @@ namespace Akka.Tests.Pattern
                 Assert.Equal(5, remaining);
             });
         }
+
+        [Fact]
+        public async Task Pattern_Retry_with_backoff_must_run_a_successful_task_immediately()
+        {
+            await WithinAsync(TimeSpan.FromSeconds(3), async () =>
+            {
+                var remaining = await Retry(
+                    () => Task.FromResult(5), 5,
+                    TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), 0.2, Sys.Scheduler);
+                Assert.Equal(5, remaining);
+            });
+        }
+
+        [Fact]
+        public async Task Pattern_Retry_with_backoff_must_return_a_success_for_a_task_that_succeeds_eventually()
+        {
+            var failCount = 0;
+
+            Task<int> Attempt()
+            {
+                if (failCount < 3)
+                {
+                    failCount += 1;
+                    return Task.FromException<int>(new InvalidOperationException(failCount.ToString()));
+                }
+                return Task.FromResult(5);
+            }
+
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                var remaining = await Retry(
+                    Attempt, 5,
+                    TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(500), 0.0, Sys.Scheduler);
+                Assert.Equal(5, remaining);
+            });
+        }
+
+        [Fact]
+        public async Task Pattern_Retry_with_backoff_must_return_a_failure_when_retries_exhausted()
+        {
+            var failCount = 0;
+
+            Task<int> Attempt()
+            {
+                failCount += 1;
+                return Task.FromException<int>(new InvalidOperationException(failCount.ToString()));
+            }
+
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    await Retry(
+                        Attempt, 3,
+                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(200), 0.0, Sys.Scheduler));
+                Assert.Equal("4", exception.Message);
+            });
+        }
+
+        [Fact]
+        public async Task Pattern_Retry_with_backoff_must_accept_double_randomFactor()
+        {
+            var failCount = 0;
+
+            Task<int> Attempt()
+            {
+                if (failCount < 2)
+                {
+                    failCount += 1;
+                    return Task.FromException<int>(new InvalidOperationException(failCount.ToString()));
+                }
+                return Task.FromResult(42);
+            }
+
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                // This verifies the fix: randomFactor is now double, allowing fractional values like 0.2
+                var remaining = await Retry(
+                    Attempt, 5,
+                    TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(500), 0.2, Sys.Scheduler);
+                Assert.Equal(42, remaining);
+            });
+        }
+
+        [Fact]
+        public void Pattern_Retry_with_backoff_must_throw_on_null_attempt()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+            {
+                _ = Retry<int>(null, 5,
+                    TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), 0.2, Sys.Scheduler);
+            });
+        }
+
+        [Fact]
+        public void Pattern_Retry_with_backoff_must_throw_on_invalid_minBackoff()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+                _ = Retry(() => Task.FromResult(1), 5,
+                    TimeSpan.Zero, TimeSpan.FromSeconds(1), 0.2, Sys.Scheduler);
+            });
+        }
+
+        [Fact]
+        public void Pattern_Retry_with_backoff_must_throw_when_maxBackoff_less_than_minBackoff()
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+                _ = Retry(() => Task.FromResult(1), 5,
+                    TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(1), 0.2, Sys.Scheduler);
+            });
+        }
+
+        [Theory]
+        [InlineData(-0.1)]
+        [InlineData(1.1)]
+        public void Pattern_Retry_with_backoff_must_throw_on_invalid_randomFactor(double randomFactor)
+        {
+            Assert.Throws<ArgumentException>(() =>
+            {
+                _ = Retry(() => Task.FromResult(1), 5,
+                    TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), randomFactor, Sys.Scheduler);
+            });
+        }
     }
 }

@@ -16,11 +16,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class ChannelSourceSpec : Akka.TestKit.Xunit2.TestKit
+    public class ChannelSourceSpec : Akka.TestKit.Xunit.TestKit
     {
         private readonly ActorMaterializer _materializer;
 

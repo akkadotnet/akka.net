@@ -33,7 +33,7 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public object FishForMessage(
             Predicate<object> isMessage,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -44,7 +44,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<object> FishForMessageAsync(
             Predicate<object> isMessage,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -63,7 +63,7 @@ namespace Akka.TestKit
         /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
         public T FishForMessage<T>(
             Predicate<T> isMessage,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -74,7 +74,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> FishForMessageAsync<T>(
             Predicate<T> isMessage,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -95,7 +95,7 @@ namespace Akka.TestKit
         public T FishForMessage<T>(
             Predicate<T> isMessage,
             ArrayList allMessages,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -107,7 +107,7 @@ namespace Akka.TestKit
         public async ValueTask<T> FishForMessageAsync<T>(
             Predicate<T> isMessage,
             ArrayList allMessages, 
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
@@ -139,7 +139,7 @@ namespace Akka.TestKit
         /// <typeparam name="T">The type that the message is not supposed to be.</typeparam>
         /// <param name="max">Optional. The maximum wait duration. Defaults to <see cref="RemainingOrDefault"/> when unset.</param>
         /// <param name="cancellationToken"></param>
-        public async Task FishUntilMessageAsync<T>(TimeSpan? max = null, CancellationToken cancellationToken = default)
+        public async Task FishUntilMessageAsync<T>([AutoDilate] TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
             var enumerable = ReceiveWhileAsync<object>(
                 max: max, 
@@ -485,7 +485,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
-            TimeSpan? max,
+            [AutoDilate] TimeSpan? max,
             Func<object, T> filter, 
             int msgs = int.MaxValue,
             CancellationToken cancellationToken = default)
@@ -497,7 +497,7 @@ namespace Akka.TestKit
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int, CancellationToken)"/>
         public async IAsyncEnumerable<T> ReceiveWhileAsync<T>(
-            TimeSpan? max,
+            [AutoDilate] TimeSpan? max,
             Func<object, T> filter,
             int msgs = int.MaxValue,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -526,7 +526,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
-            TimeSpan? max,
+            [AutoDilate] TimeSpan? max,
             TimeSpan? idle,
             Func<object, T> filter, 
             int msgs = int.MaxValue,
@@ -539,7 +539,7 @@ namespace Akka.TestKit
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int, CancellationToken)"/>
         public async IAsyncEnumerable<T> ReceiveWhileAsync<T>(
-            TimeSpan? max,
+            [AutoDilate] TimeSpan? max,
             TimeSpan? idle,
             Func<object, T> filter,
             int msgs = int.MaxValue,
@@ -570,7 +570,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             Func<object, T> filter,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             TimeSpan? idle = null,
             int msgs = int.MaxValue,
             CancellationToken cancellationToken = default)
@@ -583,7 +583,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveWhile{T}(Func{object, T}, TimeSpan?, TimeSpan?, int, CancellationToken)"/>
         public async IAsyncEnumerable<T> ReceiveWhileAsync<T>(
             Func<object, T> filter,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             TimeSpan? idle = null,
             int msgs = int.MaxValue,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -663,7 +663,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(
             Predicate<T> shouldContinue, 
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             TimeSpan? idle = null,
             int msgs = int.MaxValue,
             bool shouldIgnoreOtherMessageTypes = true, 
@@ -677,7 +677,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveWhile{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool, CancellationToken)"/>
         public async IAsyncEnumerable<T> ReceiveWhileAsync<T>(
             Predicate<T> shouldContinue,
-            TimeSpan? max = null,
+            [AutoDilate] TimeSpan? max = null,
             TimeSpan? idle = null,
             int msgs = int.MaxValue,
             bool shouldIgnoreOtherMessageTypes = true,
@@ -789,7 +789,7 @@ namespace Akka.TestKit
         /// <returns>The received messages</returns>
         public IReadOnlyCollection<object> ReceiveN(
             int numberOfMessages,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             CancellationToken cancellationToken = default)
         {
             return ReceiveNAsync(numberOfMessages, max, cancellationToken)
@@ -800,7 +800,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ReceiveN(int, TimeSpan, CancellationToken)"/>
         public async IAsyncEnumerable<object> ReceiveNAsync(
             int numberOfMessages, 
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             max.EnsureIsPositiveFinite("max");

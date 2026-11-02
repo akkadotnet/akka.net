@@ -22,6 +22,18 @@ Use the `Debug`, `Info`, `Warning` and `Error` methods to log.
 _log.Debug("Some message");
 ```
 
+## Context Enrichment and Scopes
+
+You can enrich a logger with additional structured context or create a temporary scope. Context values are appended to the rendered output and are also available to semantic logging sinks.
+
+[!code-csharp[LoggingContextExample](../../../src/core/Akka.Tests/Loggers/LoggingContextSpecs.cs?name=LoggingContextExample)]
+
+Example output:
+
+```text
+[INFO][...][Thread 0007][akka://sys/user/a][Tenant=foo][Partition=12] Processing 42
+```
+
 ## Standard Loggers
 
 Akka.NET comes with two built in loggers.
@@ -59,7 +71,7 @@ These loggers are also available as separate nuget packages
 
 * __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
 * __Akka.Logger.NLog__  which logs using [NLog](http://nlog-project.org/)
-* __Microsoft.Extensions.Logging__ - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
+* __Microsoft.Extensions.Logging__ - which is [built into Akka.Hosting](xref:hosting-logging).
 
 Note that you need to modify the config as explained below.
 
@@ -85,7 +97,7 @@ akka {
 }
 ```
 
-Or using [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting), you can configure loggers programmatically using strongly typed references to the underlying logging classes:
+Or using [Akka.Hosting](xref:hosting-logging), you can configure loggers programmatically using strongly typed references to the underlying logging classes:
 
 ```csharp
 builder.Services.AddAkka("MyActorSystem", configurationBuilder =>

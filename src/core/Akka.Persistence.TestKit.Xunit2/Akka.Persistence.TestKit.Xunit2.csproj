@@ -13,6 +13,12 @@
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Akka.Persistence.TestKit.Xunit\PersistenceTestKit.cs">
+      <Link>PersistenceTestKit.cs</Link>
+    </Compile>
+  </ItemGroup>
+
   <PropertyGroup>
     <!-- WORKAROUND: for some reason starting at Akka.NET 1.3.2 this package was determined as "unpackable" by default via DOTNET CLI -->
     <IsPackable>true</IsPackable> 

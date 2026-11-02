@@ -15,7 +15,7 @@ namespace Akka.Remote.Transport.DotNetty;
 /// Programmatic setup for DotNetty SSL/TLS configuration.
 /// Provides a fluent API alternative to HOCON configuration.
 /// </summary>
-public sealed class DotNettySslSetup: Setup
+public sealed class DotNettySslSetup : Setup
 {
     /// <summary>
     /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true, ValidateCertificateHostname = false
@@ -44,7 +44,7 @@ public sealed class DotNettySslSetup: Setup
     /// <param name="certificate">X509 certificate used to establish SSL/TLS</param>
     /// <param name="suppressValidation">When true, suppresses certificate chain validation (use only for development/testing)</param>
     /// <param name="requireMutualAuthentication">When true, requires mutual TLS authentication (both client and server present certificates)</param>
-    /// <param name="validateCertificateHostname">When true, enables hostname validation (certificate CN/SAN must match target hostname)</param>
+    /// <param name="validateCertificateHostname">When true, enables outbound hostname validation (server certificate CN/SAN must match target hostname)</param>
     public DotNettySslSetup(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
     {
@@ -68,7 +68,7 @@ public sealed class DotNettySslSetup: Setup
     /// <param name="certificate">X509 certificate used to establish SSL/TLS</param>
     /// <param name="suppressValidation">When true, suppresses certificate chain validation (use only for development/testing)</param>
     /// <param name="requireMutualAuthentication">When true, requires mutual TLS authentication (both client and server present certificates)</param>
-    /// <param name="validateCertificateHostname">When true, enables hostname validation (certificate CN/SAN must match target hostname)</param>
+    /// <param name="validateCertificateHostname">When true, enables outbound hostname validation (server certificate CN/SAN must match target hostname)</param>
     /// <param name="customValidator">Custom certificate validation callback (overrides config-based validation when provided)</param>
     public DotNettySslSetup(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
     {
@@ -97,7 +97,8 @@ public sealed class DotNettySslSetup: Setup
     public bool RequireMutualAuthentication { get; }
 
     /// <summary>
-    /// When true, enables traditional TLS hostname validation (certificate CN/SAN must match target hostname).
+    /// When true, enables traditional outbound TLS hostname validation
+    /// (the server certificate CN/SAN must match the connection target hostname).
     /// When false, only validates certificate chain against CA, ignores hostname mismatches.
     /// Default is false for backward compatibility and to support mutual TLS scenarios with per-node certificates,
     /// IP-based connections, or dynamic service discovery.

@@ -35,13 +35,22 @@ steps:
 
   - script: dotnet nuget push "$(Build.ArtifactStagingDirectory)\nuget\*.nupkg" --api-key $(nugetKey) --source https://api.nuget.org/v3/index.json --skip-duplicate
     displayName: 'Publish to NuGet.org'
-    
+
+  - powershell: |
+      $content = Get-Content RELEASE_NOTES.md -Raw
+      if ($content -match '(?s)(####.+?)(?=\n####|\z)') {
+        $Matches[1].Trim() | Set-Content RELEASE_NOTES_LATEST.md
+      } else {
+        $content | Set-Content RELEASE_NOTES_LATEST.md
+      }
+    displayName: 'Extract latest release notes'
+
   - task: GitHubRelease@0
     displayName: 'GitHub release (create)'
     inputs:
       gitHubConnection: $(githubConnectionName)
       repositoryName: $(githubRepositoryName)
       title: '$(projectName) v$(Build.SourceBranchName)'
-      releaseNotesFile: 'RELEASE_NOTES.md'
+      releaseNotesFile: 'RELEASE_NOTES_LATEST.md'
       assets: |
         $(Build.ArtifactStagingDirectory)/nuget/*.nupkg

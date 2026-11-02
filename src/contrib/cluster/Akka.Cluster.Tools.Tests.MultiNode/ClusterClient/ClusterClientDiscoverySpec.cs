@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -164,19 +165,54 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
         await EnterBarrierAsync("discovery-entry-added");
     }
 
+    /// <summary>
+    /// Wait — driven by the ClusterClient's own contact-point change events, not by polling
+    /// GetContactPoints — until the client's contact points settle to exactly the single expected node.
+    /// SubscribeContactPoints delivers the current snapshot first and then ContactPointAdded/Removed
+    /// events, so we track the running set and stop when it matches. There is no per-attempt reply
+    /// timeout to race under load, only the outer <paramref name="max"/> bound on reaching the state.
+    /// </summary>
+    private async Task AwaitSingleContactPointAsync(RoleName expected, TimeSpan max)
+    {
+        var expectedAddress = (await NodeAsync(expected)).Address;
+        _clusterClient.Tell(SubscribeContactPoints.Instance, TestActor);
+        try
+        {
+            var contacts = new HashSet<ActorPath>();
+            await FishForMessageAsync(msg =>
+            {
+                switch (msg)
+                {
+                    case ContactPoints cp:
+                        contacts.Clear();
+                        contacts.UnionWith(cp.ContactPointsList);
+                        break;
+                    case ContactPointAdded added:
+                        contacts.Add(added.ContactPoint);
+                        break;
+                    case ContactPointRemoved removed:
+                        contacts.Remove(removed.ContactPoint);
+                        break;
+                    default:
+                        return false;
+                }
+
+                return contacts.Count == 1 && contacts.First().Address.Equals(expectedAddress);
+            }, max);
+        }
+        finally
+        {
+            _clusterClient.Tell(UnsubscribeContactPoints.Instance, TestActor);
+        }
+    }
+
     private async Task ClusterClient_must_establish_connection_to_first_node()
     {
         await RunOnAsync(async () =>
         {
             _clusterClient = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys)), "client1");
                     
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.First)).Address);
-            }, 10.Seconds());
+            await AwaitSingleContactPointAsync(_config.First, 10.Seconds());
                     
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity:true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");
@@ -241,13 +277,7 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
     {
         await RunOnAsync(async () =>
         {
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.Second)).Address);
-            }, 10.Seconds());
+            await AwaitSingleContactPointAsync(_config.Second, 10.Seconds());
 
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");
@@ -300,13 +330,7 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
     {
         await RunOnAsync(async () =>
         {
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.Third)).Address);
-            }, 20.Seconds());
+            await AwaitSingleContactPointAsync(_config.Third, 20.Seconds());
 
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");

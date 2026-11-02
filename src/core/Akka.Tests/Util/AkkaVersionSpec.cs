@@ -66,8 +66,11 @@ namespace Akka.Tests.Util
             AppVersion.Create("1.2.0-M1").Should().Be(AppVersion.Create("1.2-M1"));
             AppVersion.Create("1.2.3-M1").Should().NotBe(AppVersion.Create("1.2.3-M2"));
             AppVersion.Create("1.2-M1").Should().BeLessThan(AppVersion.Create("1.2.0"));
-            AppVersion.Create("1.2.0-M1").Should().BeLessThan(AppVersion.Create("1.2.0"));
             AppVersion.Create("1.2.3-M2").Should().BeGreaterThan(AppVersion.Create("1.2.3-M1"));
+
+            // ensure comparisons are symmetrical
+            AppVersion.Create("1.2.0-M1").Should().BeLessThan(AppVersion.Create("1.2.0"));
+            AppVersion.Create("1.2.0").Should().BeGreaterThan(AppVersion.Create("1.2.0-M1"));
         }
 
         [Fact]

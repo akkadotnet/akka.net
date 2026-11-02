@@ -9,7 +9,7 @@ using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
             53, 160, 80, 40, 20, 10, 5, 16, 8, 4, 2
         };
 
-        public class WithSimpleFlow : Akka.TestKit.Xunit2.TestKit
+        public class WithSimpleFlow : Akka.TestKit.Xunit.TestKit
         {
             private readonly Exception _done = new("done");
             private readonly Source<int, (TestSubscriber.Probe<int>, TestPublisher.Probe<(int, int)>)> _source;
@@ -280,7 +280,7 @@ namespace Akka.Streams.Tests.Dsl
             }
         }
 
-        public class WithFunction : Akka.TestKit.Xunit2.TestKit
+        public class WithFunction : Akka.TestKit.Xunit.TestKit
         {
             private readonly Source<int, (TestSubscriber.Probe<int>, TestPublisher.Probe<int>)> _source;
 

@@ -7,15 +7,14 @@
 
 using System.Threading;
 using FluentAssertions.Extensions;
+using System;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using System.Threading.Tasks;
-    using FluentAssertions;
-    using Xunit;
-    using static FluentAssertions.FluentActions;
-
     public class SnapshotStoreInterceptorsSpec
     {
         [Fact]

@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Util;
 using FsCheck;
+using FsCheck.Fluent;
 using FsCheck.Xunit;
 
 #pragma warning disable xUnit1028

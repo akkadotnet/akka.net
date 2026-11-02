@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ProxyShardingSpec : Akka.TestKit.Xunit2.TestKit
+    public class ProxyShardingSpec : Akka.TestKit.Xunit.TestKit
     {
         private ClusterSharding clusterSharding;
         private ClusterShardingSettings shardingSettings;

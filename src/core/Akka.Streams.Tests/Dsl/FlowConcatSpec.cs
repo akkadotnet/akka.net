@@ -15,7 +15,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 
 // ReSharper disable InvokeAsExtensionMethod
 namespace Akka.Streams.Tests.Dsl

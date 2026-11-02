@@ -5,11 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
@@ -85,6 +85,16 @@ namespace Akka.Cluster.Tests
         {
             var ring = new HeartbeatNodeRing(cc, ImmutableHashSet.Create(cc), ImmutableHashSet<UniqueAddress>.Empty, 3);
             ring.MyReceivers.Value.Should().BeEquivalentTo(ImmutableHashSet<UniqueAddress>.Empty);
+        }
+
+        [Fact]
+        public void HeartbeatNodeRing_must_not_have_stray_dollar_in_error_message()
+        {
+            var notInNodes = new UniqueAddress(new Address("akka.tcp", "sys", "zz", 2552), 99);
+            var ex = Assert.Throws<ArgumentException>(() =>
+                new HeartbeatNodeRing(notInNodes, ImmutableHashSet<UniqueAddress>.Empty, ImmutableHashSet<UniqueAddress>.Empty, 3));
+
+            ex.Message.Should().Be("Nodes [] must contain selfAddress [UniqueAddress: (akka.tcp://sys@zz:2552, 99)]");
         }
     }
 }

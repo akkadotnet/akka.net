@@ -7,7 +7,6 @@
 
 using Akka.Cluster;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {

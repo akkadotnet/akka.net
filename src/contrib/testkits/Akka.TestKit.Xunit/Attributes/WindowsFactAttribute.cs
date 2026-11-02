@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using Xunit.v3;
 
 namespace Akka.TestKit.Xunit.Attributes
@@ -20,7 +21,9 @@ namespace Akka.TestKit.Xunit.Attributes
     /// set will always be skipped, regardless of the environment variable content.
     /// </para>
     /// </summary>
-    public class WindowsFactAttribute : Attribute, IFactAttribute
+    public class WindowsFactAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1) : Attribute, IFactAttribute
     {
         private string? _skip;
 
@@ -42,6 +45,12 @@ namespace Akka.TestKit.Xunit.Attributes
 
         /// <inheritdoc/>
         public string? SkipWhen { get; set; }
+
+        /// <inheritdoc/>
+        public string? SourceFilePath { get; } = sourceFilePath;
+        
+        /// <inheritdoc/>
+        public int? SourceLineNumber { get; } = sourceLineNumber < 1 ? null : sourceLineNumber;
 
         /// <inheritdoc/>
         public int Timeout { get; set; }

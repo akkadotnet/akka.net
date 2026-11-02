@@ -16,7 +16,6 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Cluster.ClusterEvent;
 using static FluentAssertions.FluentActions;
 

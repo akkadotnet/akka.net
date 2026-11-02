@@ -18,12 +18,11 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.Util.Internal;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod
@@ -240,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().Be("happy");
             }, Materializer);
         }

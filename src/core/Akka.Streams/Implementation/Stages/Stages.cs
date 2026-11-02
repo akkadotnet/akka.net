@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Stages
 {
@@ -548,7 +549,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly FirstOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new();
+            private readonly TaskCompletionSource<TIn> _promise = TaskEx.NonBlockingTaskCompletionSource<TIn>();
 
             public Task<TIn> Task => _promise.Task;
 
@@ -632,7 +633,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly LastOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new();
+            private readonly TaskCompletionSource<TIn> _promise = TaskEx.NonBlockingTaskCompletionSource<TIn>();
             private TIn _prev;
             private bool _foundAtLeastOne;
 

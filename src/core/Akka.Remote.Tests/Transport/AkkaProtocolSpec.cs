@@ -19,7 +19,6 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using static FluentAssertions.FluentActions;
 

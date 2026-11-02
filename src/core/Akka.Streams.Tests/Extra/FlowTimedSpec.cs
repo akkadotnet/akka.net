@@ -14,7 +14,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Extra;
 using Akka.Streams.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Extra
 {

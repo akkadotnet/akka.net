@@ -17,7 +17,7 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class SampleSpec : Akka.TestKit.Xunit2.TestKit
+    public class SampleSpec : Akka.TestKit.Xunit.TestKit
     {
         [Fact]
         public async Task Sample_Stage_should_return_every_Nth_element_in_stream()
@@ -32,7 +32,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var expected = list.Where(x => x % n == 0);
 
-                var complete = await future.ShouldCompleteWithin(3.Seconds());
+                var complete = await future.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
             }
         }
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(new Sample<int>(next))
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-            var complete = await future.ShouldCompleteWithin(3.Seconds());
+            var complete = await future.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 3, 6, 10 }, o => o.WithStrictOrdering());
         }
 

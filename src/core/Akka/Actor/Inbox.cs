@@ -578,6 +578,16 @@ namespace Akka.Actor
                 throw new TimeoutException(
                     $"Inbox {Receiver.Path} didn't receive a response message in specified timeout {timeout}");
 
+            // Handle faulted tasks to avoid AggregateException when accessing task.Result
+            if (task.IsFaulted)
+            {
+                var exception = task.Exception?.InnerException ?? task.Exception;
+                if (exception is TimeoutException timeoutEx)
+                    throw new TimeoutException(
+                        $"Inbox {Receiver.Path} received a timeout: {timeoutEx.Message}", timeoutEx);
+                throw exception!;
+            }
+
             if (task.Result is Status.Failure received && received.Cause is TimeoutException)
             {
                 throw new TimeoutException(

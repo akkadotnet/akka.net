@@ -37,6 +37,7 @@ namespace Akka.Cluster.Tests
             settings.PeriodicTasksInitialDelay.Should().Be(1.Seconds());
             settings.GossipInterval.Should().Be(1.Seconds());
             settings.GossipTimeToLive.Should().Be(2.Seconds());
+            settings.PruneGossipTombstonesAfter.Should().Be(TimeSpan.FromHours(24));
             settings.HeartbeatInterval.Should().Be(1.Seconds());
             settings.MonitoredByNrOfMembers.Should().Be(9);
             settings.HeartbeatExpectedResponseAfter.Should().Be(1.Seconds());

@@ -12,7 +12,6 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {

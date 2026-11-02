@@ -21,6 +21,7 @@ using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Extensions;
+using Akka.Util.Internal;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
@@ -704,7 +705,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
+        public static Source<T, NotUsed> Never<T>() => FromTask(TaskEx.NonBlockingTaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
 
         /// <summary>
         /// Streams the elements of the given future source once it successfully completes.
@@ -1036,13 +1037,13 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> returns <see cref="Task"/>
+        /// <see cref="ISourceQueue{T}.OfferAsync(T)">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> returns <see cref="Task"/>
         /// which completes with <see cref="QueueOfferResult.Enqueued"/> if element was added to buffer or sent downstream.
         /// It completes with <see cref="QueueOfferResult.Dropped"/> if element was dropped.
         /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
         /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> when buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync(T)">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> when buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
         /// for downstream demand unless there is another message waiting for downstream demand, in that case

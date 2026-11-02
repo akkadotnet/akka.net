@@ -13,7 +13,6 @@ using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading.Tasks;
 using FluentAssertions.Extensions;
 
@@ -38,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.Seq<int>();
 
-            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
+            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
@@ -50,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.Seq<int>();
 
-            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
+            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 4, 5, 6 });
         }
 

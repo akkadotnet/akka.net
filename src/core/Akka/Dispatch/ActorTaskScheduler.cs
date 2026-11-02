@@ -37,10 +37,23 @@ namespace Akka.Dispatch
         protected virtual void OnAfterTaskCompleted() { }
         
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ActorTaskScheduler"/> bound to the given
+        /// <see cref="ActorCell"/>.
+        ///
+        /// Exposed as <c>protected internal</c> so external libraries (notably
+        /// Phobos, the Akka.NET observability plugin) can subclass
+        /// <see cref="ActorTaskScheduler"/> and override
+        /// <see cref="OnBeforeTaskStarted"/> / <see cref="OnAfterTaskCompleted"/>
+        /// to observe async message handler lifetimes without reflection or
+        /// runtime codegen. The two virtual hooks have always been
+        /// <c>protected</c>, so widening the constructor to match finishes an
+        /// extension point that was already half-exposed. The <c>internal</c>
+        /// portion preserves the existing <c>new ActorTaskScheduler(this)</c>
+        /// call site inside <see cref="ActorCell"/> without requiring a
+        /// derived type.
         /// </summary>
-        /// <param name="actorCell">TBD</param>
-        internal ActorTaskScheduler(ActorCell actorCell)
+        /// <param name="actorCell">The cell this scheduler is bound to.</param>
+        protected internal ActorTaskScheduler(ActorCell actorCell)
         {
             _actorCell = actorCell;
         }

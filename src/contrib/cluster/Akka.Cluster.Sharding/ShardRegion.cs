@@ -1073,7 +1073,7 @@ namespace Akka.Cluster.Sharding
             {
                 var qr = ShardsQueryResult<T>.Create(tasks, _shards.Count, timeout);
                 if (qr.Failed.Count > 0)
-                    _log.Warning($"{0}: {qr}", _typeName);
+                    _log.Warning("{0}: {1}", _typeName, qr);
                 return qr;
             });
         }
@@ -1410,6 +1410,12 @@ namespace Akka.Cluster.Sharding
                 {
                     _handingOff = _handingOff.Remove(terminated.ActorRef);
                     _log.Debug("{0}: Shard [{1}] handoff complete", _typeName, shard);
+
+                    // Send backup ShardStopped to coordinator in case the RebalanceWorker
+                    // has already timed out and missed the ShardStopped from HandOffStopper.
+                    // The coordinator's Active handler will only deallocate if no rebalance
+                    // is currently in progress for this shard.
+                    _coordinator?.Tell(new ShardCoordinator.ShardStopped(shard));
                 }
                 else
                 {

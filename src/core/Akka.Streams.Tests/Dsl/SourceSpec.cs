@@ -20,7 +20,6 @@ using Akka.Util.Extensions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -111,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
 
                 subs.Cancel();
-                var complete = await f.Task.ShouldCompleteWithin(3.Seconds());
+                var complete = await f.Task.WaitAsync(3.Seconds());
                 complete.Should().Be(null);
             }, Materializer);
         }
@@ -131,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.TrySetResult(0).Should().BeTrue();
                 
-                var counter = await counterFuture.ShouldCompleteWithin(3.Seconds());
+                var counter = await counterFuture.WaitAsync(3.Seconds());
                 counter.Should().Be(0);
             }, Materializer);
         }
@@ -150,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 //external cancellation
                 neverPromise.TrySetResult(6).Should().BeTrue();
-                var complete = await counterFuture.ShouldCompleteWithin(3.Seconds());
+                var complete = await counterFuture.WaitAsync(3.Seconds());
                 complete.Should().Be(6);
             }, Materializer);
         }
@@ -416,7 +415,7 @@ namespace Akka.Streams.Tests.Dsl
             var complete = await Source.Cycle(() => new[] {1, 2, 3}.AsEnumerable().GetEnumerator())
                 .Grouped(9)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(3.Seconds());
             
             complete.Should().BeEquivalentTo(expected);
         }
@@ -463,7 +462,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var complete = await Source.ZipN(sources)
                  .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
-                 .ShouldCompleteWithin(3.Seconds());
+                 .WaitAsync(3.Seconds());
 
                complete.Should().BeEquivalentTo(new[]
                 {
@@ -485,7 +484,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var complete = await Source.ZipWithN(list => list.Sum(), sources)
                  .RunWith(Sink.Seq<int>(), Materializer)
-                 .ShouldCompleteWithin(3.Seconds());
+                 .WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] {111, 222, 333});
         }
 

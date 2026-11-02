@@ -7,22 +7,24 @@
 
 using Akka.Configuration;
 using Akka.Persistence.TCK.Query;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
-            akka.persistence.journal.inmem {
-                event-adapters {
-                  color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
+        private static Config Config() => ConfigurationFactory.ParseString(
+                $$"""
+                akka.loglevel = INFO
+                akka.persistence.journal.inmem {
+                    event-adapters {
+                      color-tagger  = "{{typeof(ColorFruitTagger).FullName}}, {{typeof(ColorFruitTagger).Assembly.GetName().Name}}"
+                    }
+                    event-adapter-bindings = {
+                      "System.String" = color-tagger
+                    }
                 }
-                event-adapter-bindings = {
-                  ""System.String"" = color-tagger
-                }
-            }")
+                """)
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryCurrentEventsByTagSpec(ITestOutputHelper output) : 

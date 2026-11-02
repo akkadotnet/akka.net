@@ -140,7 +140,7 @@ namespace Akka.Tests.Actor
                 // manager + all workers should be restarted by only killing a worker
                 // manager doesn't trap exits, so boss will restart manager
 
-                await countDown.WaitAsync().ShouldCompleteWithin(5.Seconds());
+                await countDown.WaitAsync().WaitAsync(5.Seconds());
                 //countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
             });
 
@@ -176,8 +176,8 @@ namespace Akka.Tests.Actor
                 boss.Tell("killCrasher");
                 return Task.CompletedTask;
             });
-            await countDownMessages.WaitAsync().ShouldCompleteWithin(2.Seconds());
-            await countDownMax.WaitAsync().ShouldCompleteWithin(2.Seconds());
+            await countDownMessages.WaitAsync().WaitAsync(2.Seconds());
+            await countDownMax.WaitAsync().WaitAsync(2.Seconds());
         }
 
         private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests;
 

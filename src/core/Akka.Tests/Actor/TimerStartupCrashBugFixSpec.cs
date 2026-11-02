@@ -16,7 +16,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using FsCheck;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor;
 

@@ -11,7 +11,6 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Cancel = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.Cancel;
 using PreStart = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.PreStart;
 using PostStop = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.PostStop;

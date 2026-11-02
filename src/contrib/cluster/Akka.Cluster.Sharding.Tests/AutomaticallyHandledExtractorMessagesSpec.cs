@@ -49,11 +49,11 @@ public class AutomaticallyHandledExtractorMessagesSpec
     }
 
     public static readonly TheoryData<(object shardingInput, object realMsg, string entityId, string shardId)>
-        Messages = new()
-        {
-            // (new ShardRegion.StartEntity("foo"), new ShardRegion.StartEntity("foo"), "foo", "foo"),
-            (new ShardingEnvelope("bar", "baz"), "baz", "bar", "bar"), ("bar", "bar", "bar", "bar"),
-        };
+        Messages =
+        [
+            new TheoryDataRow<(object shardingInput, object realMsg, string entityId, string shardId)>((new ShardingEnvelope("bar", "baz"), "baz", "bar", "bar")),
+            new TheoryDataRow<(object shardingInput, object realMsg, string entityId, string shardId)>(("bar", "bar", "bar", "bar"))
+        ];
 
     [Theory]
     [MemberData(nameof(Messages))]

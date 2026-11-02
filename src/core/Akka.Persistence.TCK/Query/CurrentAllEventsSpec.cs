@@ -8,17 +8,18 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
+using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public class CurrentAllEventsSpec : Akka.TestKit.Xunit2.TestKit
+    public class CurrentAllEventsSpec : XTestKit
     {
         // Expect should be passing by default, need to make them less sencitive to timing
         private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";
@@ -59,6 +60,14 @@ namespace Akka.Persistence.TCK.Query
             ExpectMsg("world-done");
             b.Tell("test");
             ExpectMsg("test-done");
+
+            // Poll until all events are visible (tolerates eventually-consistent backends)
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 3;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
             var eventSrc = queries.CurrentAllEvents(NoOffset.Instance);
             var probe = eventSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -123,6 +132,13 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("test");
             ExpectMsg("test-done");
 
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 3;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+
             var eventSrc1 = queries.CurrentAllEvents(NoOffset.Instance);
             var probe1 = eventSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe1.Request(2);
@@ -149,6 +165,13 @@ namespace Akka.Persistence.TCK.Query
                 a.Tell("a green apple");
                 ExpectMsg("a green apple-done");
             }
+
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 150;
+            }, TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
 
             var greenSrc = queries.CurrentAllEvents(NoOffset.Instance);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);

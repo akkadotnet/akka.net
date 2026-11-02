@@ -41,14 +41,51 @@ namespace Akka.Event
             this LogEvent evt,
             out IReadOnlyDictionary<string, object>? properties)
         {
+            var hasContext = !evt.ContextProperties.IsEmpty;
+
             if (evt.Message is LogMessage msg)
             {
-                properties = msg.GetProperties();
+                var messageProperties = msg.GetProperties();
+                if (!hasContext)
+                {
+                    properties = messageProperties;
+                    return true;
+                }
+
+                properties = MergeProperties(messageProperties, evt.ContextProperties);
+                return true;
+            }
+
+            if (hasContext)
+            {
+                properties = MergeProperties(null, evt.ContextProperties);
                 return true;
             }
 
             properties = null;
             return false;
+        }
+
+        private static IReadOnlyDictionary<string, object> MergeProperties(
+            IReadOnlyDictionary<string, object>? messageProperties,
+            LogContextProperties contextProperties)
+        {
+            var messageCount = messageProperties?.Count ?? 0;
+            var merged = new Dictionary<string, object>(messageCount + contextProperties.Count);
+
+            if (messageProperties != null)
+            {
+                foreach (var kvp in messageProperties)
+                    merged[kvp.Key] = kvp.Value;
+            }
+
+            for (var i = 0; i < contextProperties.Count; i++)
+            {
+                var contextProperty = contextProperties[i];
+                merged[contextProperty.Key] = contextProperty.Value;
+            }
+
+            return merged;
         }
 
         /// <summary>
@@ -107,5 +144,6 @@ namespace Akka.Event
                 ? msg.Parameters()
                 : Enumerable.Empty<object>();
         }
+
     }
 }

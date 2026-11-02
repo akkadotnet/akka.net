@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Cluster.Sharding.Shard;
 
 namespace Akka.Cluster.Sharding.Tests

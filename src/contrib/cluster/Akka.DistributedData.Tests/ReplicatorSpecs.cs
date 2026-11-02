@@ -21,7 +21,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.DistributedData.Tests

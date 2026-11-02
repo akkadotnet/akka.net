@@ -17,6 +17,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Serialization;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
@@ -201,8 +202,8 @@ namespace Akka.Streams.Implementation.StreamRef
                 if ((string)timerKey == SubscriptionTimeoutKey)
                 {
                     // we know the future has been competed by now, since it is in preStart
-                    var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [${_promise.Task.Result}], " +
-                                                                       $"within subscription timeout: ${SubscriptionTimeout.Timeout}!");
+                    var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [{_promise.Task.Result}], " +
+                                                                       $"within subscription timeout: {SubscriptionTimeout.Timeout}!");
 
                     throw ex; // this will also log the exception, unlike failStage; this should fail rarely, but would be good to have it "loud"
                 }
@@ -298,7 +299,7 @@ namespace Akka.Streams.Implementation.StreamRef
         public override SinkShape<TIn> Shape { get; }
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<ISourceRef<TIn>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<ISourceRef<TIn>>();
             return new LogicAndMaterializedValue<Task<ISourceRef<TIn>>>(new Logic(this, promise, inheritedAttributes), promise.Task);
         }
     }

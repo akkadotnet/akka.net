@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
@@ -84,5 +85,25 @@ public class XunitAssertions : ITestKitAssertions
     {
         if(!comparer(expected, actual))
             throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
+    }
+
+    public Exception AssertThrows(Action action)
+    {
+        return Assert.ThrowsAny<Exception>(action);
+    }
+    
+    public TException AssertThrows<TException>(Action action) where TException : Exception
+    {
+        return Assert.ThrowsAny<TException>(action);
+    }
+
+    public async Task<Exception> AssertThrowsAsync(Func<Task> action)
+    {
+        return await Assert.ThrowsAnyAsync<Exception>(action);
+    }
+    
+    public async Task<TException> AssertThrowsAsync<TException>(Func<Task> action) where TException : Exception
+    {
+        return await Assert.ThrowsAnyAsync<TException>(action);
     }
 }

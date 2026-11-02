@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Delivery;
 using Akka.Configuration;
@@ -189,73 +191,81 @@ akka.reliable-delivery.sharding.consumer-controller.allow-bypass = true
         #endregion
 
         [MultiNodeFact]
-        public void ClusterShardingDeliveryGracefulShutdownSpecs()
+        public async Task ClusterShardingDeliveryGracefulShutdownSpecs()
         {
-            Cluster_sharding_must_join_cluster();
-            Cluster_sharding_must_start_some_shards_in_both_regions();
-            Cluster_sharding_must_gracefully_shutdown_the_oldest_region();
+            await Cluster_sharding_must_join_cluster();
+            await Cluster_sharding_must_start_some_shards_in_both_regions();
+            await Cluster_sharding_must_gracefully_shutdown_the_oldest_region();
         }
 
-        private void Cluster_sharding_must_join_cluster()
+        private async Task Cluster_sharding_must_join_cluster()
         {
-            StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
+            await StartPersistenceIfNeededAsync(startOn: Config.First, CancellationToken.None, Config.First, Config.Second);
 
-            Join(Config.First, Config.First);
-            Join(Config.Second, Config.First);
-            
+            await JoinAsync(Config.First, Config.First);
+            await JoinAsync(Config.Second, Config.First);
+
             // make sure all nodes are up
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 Cluster.Get(Sys).SendCurrentClusterState(TestActor);
-                ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Count.Should().Be(2);
+                (await ExpectMsgAsync<ClusterEvent.CurrentClusterState>()).Members.Count.Should().Be(2);
             });
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 StartSharding();
+                await Task.CompletedTask;
             }, Config.First);
-            
-            RunOn(() =>
+
+            await RunOnAsync(async () =>
             {
                 StartSharding();
+                await Task.CompletedTask;
             }, Config.Second);
-            
-            EnterBarrier("sharding started");
+
+            await EnterBarrierAsync("sharding started");
         }
-        
-        private void Cluster_sharding_must_start_some_shards_in_both_regions()
+
+        private async Task Cluster_sharding_must_start_some_shards_in_both_regions()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var producer = CreateProducer("p-1");
-                Within(TimeSpan.FromSeconds(30), () =>
+                // Serial Tell/ExpectMsg loop. Cold-shard allocation on the very first entity
+                // (coordinator journal write + cross-node remote delivery + consumer start +
+                // remote probe reply) can realistically take 2-3 s on CI. The outer 30 s
+                // Within caps the aggregate budget; the per-iteration budget just has to be
+                // wide enough that a single cold round trip never trips it.
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    var regionAddresses = Enumerable.Range(1, 20).Select(n =>
+                    var regionAddresses = ImmutableHashSet<Address>.Empty.ToBuilder();
+                    foreach (var n in Enumerable.Range(1, 20))
                     {
                         producer.Tell(n, TestActor);
-                        ExpectMsg(n, TimeSpan.FromSeconds(1));
-                        return LastSender.Path.Address;
-                    }).ToImmutableHashSet();
+                        await ExpectMsgAsync(n, TimeSpan.FromSeconds(10));
+                        regionAddresses.Add(LastSender.Path.Address);
+                    }
 
                     regionAddresses.Count.Should().Be(2);
                 });
             }, Config.First);
-            
-            EnterBarrier("after-2");
+
+            await EnterBarrierAsync("after-2");
         }
 
-        private void Cluster_sharding_must_gracefully_shutdown_the_oldest_region()
+        private async Task Cluster_sharding_must_gracefully_shutdown_the_oldest_region()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     IActorRef coordinator = null;
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(async () =>
                     {
-                        coordinator = Sys
+                        coordinator = await Sys
                           .ActorSelection($"/system/sharding/{TypeName}Coordinator/singleton/coordinator")
-                          .ResolveOne(RemainingOrDefault).Result;
+                          .ResolveOne(RemainingOrDefault);
                     });
                     var terminationProbe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(TypeName);
@@ -265,27 +275,27 @@ akka.reliable-delivery.sharding.consumer-controller.allow-bypass = true
                     Cluster.Leave(GetAddress(Config.First));
 
                     // region first
-                    terminationProbe.ExpectMsg<TerminationOrderActor.RegionTerminated>();
-                    terminationProbe.ExpectMsg<TerminationOrderActor.CoordinatorTerminated>();
+                    await terminationProbe.ExpectMsgAsync<TerminationOrderActor.RegionTerminated>();
+                    await terminationProbe.ExpectMsgAsync<TerminationOrderActor.CoordinatorTerminated>();
                 }, Config.First);
 
-                EnterBarrier("terminated");
+                await EnterBarrierAsync("terminated");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     var producer = CreateProducer("p-2");
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(async () =>
                     {
                         var maxCount = 20;
-                        foreach(var n in Enumerable.Range(1, maxCount))
+                        foreach (var n in Enumerable.Range(1, maxCount))
                         {
                             producer.Tell(n, TestActor);
                         }
-                        var responses = ReceiveN(maxCount, TimeSpan.FromSeconds(2));
+                        var responses = await ReceiveNAsync(maxCount, TimeSpan.FromSeconds(10)).ToListAsync();
                         responses.Count.Should().Be(20);
                     });
                 }, Config.Second);
-                EnterBarrier("done-o");
+                await EnterBarrierAsync("done-o");
             });
         }
     }

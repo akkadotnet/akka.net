@@ -800,8 +800,8 @@ namespace Akka.Persistence
         ///
         /// This call will NOT result in <paramref name="evt"/> being persisted.
         ///
-        /// If there are no pending persist handler calls, the <paramref name="handler"/> will be called immediately
-        /// via <see cref="RunTask"/>.
+        /// The handler is always queued and will be executed after the current command handler completes.
+        /// This avoids "RunTask calls cannot be nested" errors when called from within CommandAsync handlers.
         ///
         /// If persistence of an earlier event fails, the persistent actor will stop, and the
         /// <paramref name="handler"/> will not be run.
@@ -816,15 +816,14 @@ namespace Akka.Persistence
                 throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
             }
 
-            if (_pendingInvocations.Count == 0)
-            {
-                RunTask(() => handler(evt));
-            }
-            else
-            {
-                _pendingInvocations.AddLast(new AsyncAsyncHandlerInvocation(evt, o => handler((TEvent)o)));
-                _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
-            }
+            // Always queue the async handler - do not use RunTask directly here.
+            // This avoids "RunTask calls cannot be nested" errors when DeferAsync
+            // is called from within a CommandAsync handler (which is already in a RunTask context).
+            // The handler will be executed via PeekApplyHandler when the batch is processed
+            // after the command handler completes.
+            // See: https://github.com/akkadotnet/akka.net/issues/7998
+            _pendingInvocations.AddLast(new AsyncAsyncHandlerInvocation(evt, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
         }
 
         /// <summary>

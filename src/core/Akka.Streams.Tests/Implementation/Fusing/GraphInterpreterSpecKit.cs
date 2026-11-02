@@ -17,7 +17,7 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {

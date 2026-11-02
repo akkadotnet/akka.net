@@ -1609,6 +1609,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly IActorRef _ignoreRef;
         private readonly Cluster _cluster;
+        private readonly CoordinatedShutdown _coordShutdown;
         private readonly TimeSpan _removalMargin;
         private readonly int _minMembers;
         private bool _allRegionsRegistered = false;
@@ -1657,6 +1658,7 @@ namespace Akka.Cluster.Sharding
             _ignoreRef = context.System.IgnoreRef;
 
             _cluster = Cluster.Get(context.System);
+            _coordShutdown = CoordinatedShutdown.Get(context.System);
             _removalMargin = _cluster.DowningProvider.DownRemovalMargin;
 
             if (string.IsNullOrEmpty(settings.Role))
@@ -1790,9 +1792,48 @@ namespace Akka.Cluster.Sharding
                     }
                     return true;
 
+                case ShardStopped m:
+                    // Ported from Pekko: clean up unAckedHostShards when shard reports stopped
+                    if (_unAckedHostShards.TryGetValue(m.Shard, out var stopCancel))
+                    {
+                        stopCancel.Cancel();
+                        _unAckedHostShards = _unAckedHostShards.Remove(m.Shard);
+                    }
+
+                    // Safety net: if no rebalance is in progress for this shard (RebalanceWorker
+                    // already timed out), deallocate the shard so it can be reallocated elsewhere.
+                    // This prevents the shard from being endlessly recreated via GetShardHome/ShardHome.
+                    if (!_rebalanceInProgress.ContainsKey(m.Shard)
+                        && State.Shards.TryGetValue(m.Shard, out var currentOwner))
+                    {
+                        // #8146: only deallocate if the sender is the current owner (legitimate
+                        // late arrival after RebalanceWorker timeout). Ignore stale backups from
+                        // an old region after the shard was successfully reallocated elsewhere.
+                        if (currentOwner.Equals(_context.Sender))
+                        {
+                            Log.Info("{0}: Shard [{1}] stopped - performing late deallocation " +
+                                     "(rebalance worker timed out). Sender [{2}] matches current owner.",
+                                TypeName, m.Shard, _context.Sender);
+                            Update(new ShardHomeDeallocated(m.Shard), evt =>
+                            {
+                                State = State.Updated(evt);
+                                Log.Debug("{0}: Shard [{1}] deallocated (late)", TypeName, m.Shard);
+                                AllocateShardHomesForRememberEntities();
+                                _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
+                            });
+                        }
+                        else
+                        {
+                            Log.Debug("{0}: Ignoring stale ShardStopped for shard [{1}] from [{2}] - " +
+                                      "shard is now allocated to [{3}].",
+                                TypeName, m.Shard, _context.Sender, currentOwner);
+                        }
+                    }
+                    return true;
+
                 case ResendShardHost m:
                     {
-                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(region))
+                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(m.Region))
                             SendHostShardMsg(m.Shard, region);
                         else
                         {
@@ -1930,9 +1971,48 @@ namespace Akka.Cluster.Sharding
             return ReceiveTerminated(message);
         }
 
+        /// <summary>
+        /// <c>true</c> when this node is on its way out of the cluster. A <c>ClusterSingletonManager</c>
+        /// hand-over is not always a shutdown, so the coordinator may only tear the local <see cref="ShardRegion"/>
+        /// down along with itself when the node is leaving.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Cluster.SelfMember"/> reads a snapshot that a separate actor updates, so it can lag by one
+        /// mailbox hop. The only route where that matters is a self <c>MemberDowned</c>, and on a <c>Down</c> the
+        /// <see cref="ShardRegion"/> already skips its own graceful shutdown, so a stale read costs nothing.
+        /// <c>Removed</c> is deliberately not in the list: the read view synthesizes a <c>Removed</c> self member
+        /// whenever self is absent from its snapshot, including before the node has joined, and a real removal
+        /// stops the singleton manager outright, so no termination message is sent in that state.
+        /// </remarks>
+        private bool SelfIsLeavingCluster
+        {
+            get
+            {
+                if (_cluster.IsTerminated)
+                    return true;
+                if (_coordShutdown.ShutdownReason != null)
+                    return true;
+                // Leaving matters on its own: a peer can send HandOverToMe as soon as the leader moves us to
+                // Exiting, and that can beat the gossip that makes us run CoordinatedShutdown. In that window
+                // ShutdownReason is still null.
+                return _cluster.SelfMember.Status
+                    is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down;
+            }
+        }
+
         private void HandleTerminate()
         {
-            if (_aliveRegions.Any(i => i.Path.Address.HasLocalScope) || _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope))
+            // A hand-over is not always a shutdown. While a cluster forms, two members of the same role can both
+            // reach Oldest; the loser hands the singleton over and stays in the cluster. Stopping our own
+            // ShardRegion there is permanent: ClusterShardingGuardian watches the region and drops it from
+            // ClusterSharding's cache, so ClusterSharding.Get(sys).ShardRegion(typeName) throws for the rest
+            // of the process. The region only goes down with the coordinator when it is already handing off
+            // (the coordinated-shutdown path, which runs cluster-sharding-shutdown-region before cluster-exiting)
+            // or when this node is leaving.
+            var localRegionHandingOff = _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope);
+            var localRegionAlive = _aliveRegions.Any(i => i.Path.Address.HasLocalScope);
+
+            if (localRegionHandingOff || (localRegionAlive && SelfIsLeavingCluster))
             {
                 foreach (var region in _aliveRegions.Where(i => i.Path.Address.HasLocalScope))
                 {
@@ -1945,6 +2025,12 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
+                if (localRegionAlive)
+                    Log.Debug(
+                        "{0}: Coordinator singleton is handing over while this node stays in the cluster (self is [{1}]). Leaving the local ShardRegion running.",
+                        TypeName,
+                        _cluster.SelfMember.Status);
+
                 if (_rebalanceInProgress.Count == 0)
                     Log.Debug("{0}: Received termination message.", TypeName);
                 else if (Log.IsDebugEnabled)
@@ -2269,6 +2355,16 @@ namespace Akka.Cluster.Sharding
                         State.Regions.Keys.Union(State.RegionProxies),
                         isRebalance: isRebalance)
                     .WithDispatcher(_context.Props.Dispatcher)));
+            }
+            else if (!isRebalance)
+            {
+                // Graceful shutdown requested for a shard that is already being rebalanced (#8148).
+                // The existing RebalanceWorker will continue; the shutdown intent is deferred
+                // until the current rebalance completes.
+                Log.Info(
+                    "{0}: Graceful shutdown handoff for shard [{1}] from [{2}] skipped - " +
+                    "rebalance already in progress. The existing rebalance worker will complete first.",
+                    TypeName, shard, from);
             }
         }
 

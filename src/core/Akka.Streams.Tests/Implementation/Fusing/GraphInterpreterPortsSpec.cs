@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Cancel = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.Cancel;
 using OnComplete = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnComplete;
 using OnError = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnError;

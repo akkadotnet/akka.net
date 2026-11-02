@@ -591,7 +591,7 @@ namespace Akka.Cluster
             MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
 
             if (!nodes.Contains(selfAddress))
-                throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
+                throw new ArgumentException($"Nodes [{string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
             _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
             _myReceivers = Option<IImmutableSet<UniqueAddress>>.None;

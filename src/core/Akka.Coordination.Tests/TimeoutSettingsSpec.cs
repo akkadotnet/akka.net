@@ -10,7 +10,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Coordination.Tests
 {

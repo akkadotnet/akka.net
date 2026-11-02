@@ -17,11 +17,13 @@ namespace Akka.Actor
     public static class StashFactory
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="IStash"/> for the actor type <typeparamref name="T"/> using the given <paramref name="context"/>.
+        /// The stash type (bounded, unbounded, or unrestricted) is determined by which <see cref="IActorStash"/>
+        /// sub-interface <typeparamref name="T"/> implements.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The actor type. Must implement a sub-interface of <see cref="IActorStash"/>.</typeparam>
+        /// <param name="context">The actor context used to configure the stash and its underlying mailbox.</param>
+        /// <returns>A new <see cref="IStash"/> instance appropriate for the actor type.</returns>
         public static IStash CreateStash<T>(this IActorContext context) where T : ActorBase
         {
             var actorType = typeof(T);
@@ -29,23 +31,27 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="IStash"/> for the given <paramref name="actorInstance"/>.
+        /// The stash type is determined by which <see cref="IActorStash"/> sub-interface the actor implements.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="actorInstance">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The actor context used to configure the stash and its underlying mailbox.</param>
+        /// <param name="actorInstance">The actor instance whose runtime type determines the stash variant.</param>
+        /// <returns>A new <see cref="IStash"/> instance appropriate for the actor type.</returns>
         public static IStash CreateStash(this IActorContext context, IActorStash actorInstance) =>
             CreateStash(context, actorInstance.GetType());
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="IStash"/> for the given <paramref name="actorType"/>.
+        /// Returns a <see cref="BoundedStashImpl"/> for <see cref="IWithBoundedStash"/>,
+        /// an <see cref="UnboundedStashImpl"/> for <see cref="IWithUnboundedStash"/>,
+        /// or an unrestricted stash for <see cref="IWithUnrestrictedStash"/>.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="actorType">TBD</param>
+        /// <param name="context">The actor context used to configure the stash and its underlying mailbox.</param>
+        /// <param name="actorType">The actor <see cref="Type"/>. Must implement a sub-interface of <see cref="IActorStash"/>.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="actorType"/> implements an unrecognized subclass of <see cref="IActorStash"/>.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A new <see cref="IStash"/> instance appropriate for the actor type.</returns>
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
 #pragma warning disable CS0618 // Type or member is obsolete

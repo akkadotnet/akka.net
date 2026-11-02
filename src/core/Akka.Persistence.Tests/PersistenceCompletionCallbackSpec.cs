@@ -12,7 +12,6 @@ using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {

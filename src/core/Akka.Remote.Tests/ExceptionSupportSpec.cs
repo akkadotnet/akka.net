@@ -20,7 +20,6 @@ using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Remote.Tests

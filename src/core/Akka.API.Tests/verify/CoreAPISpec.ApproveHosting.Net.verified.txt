@@ -1,0 +1,333 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Hosting.Maui")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Hosting.Tests")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+namespace Akka.Hosting
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class ActorRegistry : Akka.Actor.IExtension, Akka.Hosting.IActorRegistry, Akka.Hosting.IReadOnlyActorRegistry, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.IActorRef>>, System.Collections.IEnumerable
+    {
+        public ActorRegistry() { }
+        public static Akka.Hosting.ActorRegistry For(Akka.Actor.ActorSystem actorSystem) { }
+        public Akka.Actor.IActorRef Get<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>() { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(System.Threading.CancellationToken ct = null) { }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync(System.Type key, System.Threading.CancellationToken ct = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                1,
+                0,
+                1,
+                1})]
+        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.IActorRef>> GetEnumerator() { }
+        public void Register<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(Akka.Actor.IActorRef actor, bool overwrite = False) { }
+        public bool TryGet<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(out Akka.Actor.IActorRef actor) { }
+        public bool TryGet(System.Type key, out Akka.Actor.IActorRef actor) { }
+        public bool TryRegister<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(Akka.Actor.IActorRef actor, bool overwrite = False) { }
+        public bool TryRegister(System.Type key, Akka.Actor.IActorRef actor, bool overwrite = False) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class ActorRegistryException : System.Exception
+    {
+        public ActorRegistryException(string message) { }
+        public ActorRegistryException(string message, System.Exception innerException) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class ActorRegistryExtension : Akka.Actor.ExtensionIdProvider<Akka.Hosting.ActorRegistry>
+    {
+        public ActorRegistryExtension() { }
+        public override Akka.Hosting.ActorRegistry CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public delegate System.Threading.Tasks.Task ActorStarter(Akka.Actor.ActorSystem system, Akka.Hosting.IActorRegistry registry);
+    public delegate System.Threading.Tasks.Task ActorStarterWithResolver(Akka.Actor.ActorSystem system, Akka.Hosting.IActorRegistry registry, Akka.DependencyInjection.IDependencyResolver resolver);
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class AkkaConfigurationBuilder
+    {
+        [Akka.Annotations.InternalApiAttribute()]
+        public readonly System.Collections.Generic.HashSet<Akka.Actor.Setup.Setup> Setups;
+        public AkkaConfigurationBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, string actorSystemName) { }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public Akka.Util.Option<Akka.Actor.ProviderSelection> ActorRefProvider { get; }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public Akka.Util.Option<Akka.Configuration.Config> Configuration { get; }
+        public Akka.Hosting.AkkaConfigurationBuilder AddStartup(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry> startupTask) { }
+        public Akka.Hosting.AkkaConfigurationBuilder AddStartup(Akka.Hosting.StartupTask startupTask) { }
+        public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry> starter) { }
+        public Akka.Hosting.AkkaConfigurationBuilder StartActors(System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver> starter) { }
+        public Akka.Hosting.AkkaConfigurationBuilder StartActors(Akka.Hosting.ActorStarter starter) { }
+        public Akka.Hosting.AkkaConfigurationBuilder StartActors(Akka.Hosting.ActorStarterWithResolver starter) { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithCustomSerializer(string serializerIdentifier, System.Collections.Generic.IEnumerable<System.Type> boundTypes, System.Func<Akka.Actor.ExtendedActorSystem, Akka.Serialization.Serializer> serializerFactory) { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithExtension<[System.Runtime.CompilerServices.NullableAttribute(0)]  T>()
+            where T : Akka.Actor.IExtensionId { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithExtensions(params System.Type[] extensions) { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(Akka.Hosting.AkkaHealthCheckRegistration registration) { }
+        public Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck<T>(string name, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags = null, System.Nullable<System.TimeSpan> timeout = null)
+            where T :  class, Akka.Hosting.IAkkaHealthCheck { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class AkkaHealthCheckContext
+    {
+        public AkkaHealthCheckContext(Akka.Actor.ActorSystem actorSystem) { }
+        public Akka.Hosting.ActorRegistry ActorRegistry { get; }
+        public Akka.Actor.ActorSystem ActorSystem { get; }
+        public Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration Registration { get; set; }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class AkkaHealthCheckRegistration
+    {
+        public AkkaHealthCheckRegistration(string name, Akka.Hosting.IAkkaHealthCheck instance, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags) { }
+        public AkkaHealthCheckRegistration(string name, Akka.Hosting.IAkkaHealthCheck instance, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags, System.Nullable<System.TimeSpan> timeout) { }
+        public System.Func<System.IServiceProvider, Akka.Hosting.IAkkaHealthCheck> Factory { get; set; }
+        public Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus FailureStatus { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.ISet<string> Tags { get; }
+        public System.TimeSpan Timeout { get; set; }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class AkkaHostedService : Microsoft.Extensions.Hosting.IHostedService
+    {
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        protected Akka.Actor.ActorSystem ActorSystem;
+        protected readonly Akka.Hosting.AkkaConfigurationBuilder ConfigurationBuilder;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        protected Akka.Actor.CoordinatedShutdown CoordinatedShutdown;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        protected readonly Microsoft.Extensions.Hosting.IHostApplicationLifetime HostApplicationLifetime;
+        protected readonly Microsoft.Extensions.Logging.ILogger<Akka.Hosting.AkkaHostedService> Logger;
+        protected readonly System.IServiceProvider ServiceProvider;
+        public AkkaHostedService(Akka.Hosting.AkkaConfigurationBuilder configurationBuilder, System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<Akka.Hosting.AkkaHostedService> logger, [System.Runtime.CompilerServices.NullableAttribute(2)] Microsoft.Extensions.Hosting.IHostApplicationLifetime applicationLifetime) { }
+        public virtual System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken) { }
+        public virtual System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static AkkaHostingExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder> builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddAkka<[System.Runtime.CompilerServices.NullableAttribute(0)]  T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string actorSystemName, System.Action<Akka.Hosting.AkkaConfigurationBuilder, System.IServiceProvider> builder)
+            where T : Akka.Hosting.AkkaHostedService { }
+        public static Akka.Hosting.AkkaConfigurationBuilder AddHocon(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Configuration.Config hocon, Akka.Hosting.HoconAddMode addMode) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder AddHocon(this Akka.Hosting.AkkaConfigurationBuilder builder, Microsoft.Extensions.Configuration.IConfiguration configuration, Akka.Hosting.HoconAddMode addMode, bool normalizeKeys = True) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder AddHoconFile(this Akka.Hosting.AkkaConfigurationBuilder builder, string hoconFilePath, Akka.Hosting.HoconAddMode addMode) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder AddSetup(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Actor.Setup.Setup setup) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActorAskTimeout(this Akka.Hosting.AkkaConfigurationBuilder builder, System.TimeSpan timeout) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActorRefProvider(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Actor.ProviderSelection providerSelection) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActorSystemLivenessCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActors(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry> actorStarter) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActors(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Actor.ActorSystem, Akka.Hosting.IActorRegistry, Akka.DependencyInjection.IDependencyResolver> actorStarter) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActors(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Hosting.ActorStarterWithResolver actorStarter) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithActors(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Hosting.ActorStarter actorStarter) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, Akka.Hosting.IAkkaHealthCheck healthCheck, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags = null, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithHealthCheck(this Akka.Hosting.AkkaConfigurationBuilder builder, string name, System.Func<Akka.Actor.ActorSystem, Akka.Hosting.ActorRegistry, System.Threading.CancellationToken, System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult>> healthCheck, System.Nullable<Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus> failureStatus = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Collections.Generic.IEnumerable<string> tags = null, System.Nullable<System.TimeSpan> timeout = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithStrictSerialization(this Akka.Hosting.AkkaConfigurationBuilder builder, bool enabled = True) { }
+    }
+    public class static AkkaOpenTelemetryExtensions
+    {
+        public static OpenTelemetry.Logs.OpenTelemetryLoggerOptions AddAkkaTraceCorrelation(this OpenTelemetry.Logs.OpenTelemetryLoggerOptions options) { }
+    }
+    public class DeadLetterOptions
+    {
+        public DeadLetterOptions() { }
+        public System.Nullable<int> LogCount { get; set; }
+        public System.Nullable<bool> LogDuringShutdown { get; set; }
+        public System.Nullable<System.TimeSpan> LogSuspendDuration { get; set; }
+        public Akka.Hosting.TriStateValue ShouldLog { get; set; }
+        public override string ToString() { }
+    }
+    public class DebugOptions
+    {
+        public DebugOptions() { }
+        public System.Nullable<bool> AutoReceive { get; set; }
+        public System.Nullable<bool> EventStream { get; set; }
+        public System.Nullable<bool> FiniteStateMachine { get; set; }
+        public System.Nullable<bool> LifeCycle { get; set; }
+        public System.Nullable<bool> Receive { get; set; }
+        public System.Nullable<bool> RouterMisconfiguration { get; set; }
+        public System.Nullable<bool> Unhandled { get; set; }
+        public override string ToString() { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class DuplicateActorRegistryException : Akka.Hosting.ActorRegistryException
+    {
+        public DuplicateActorRegistryException(string message) { }
+        public DuplicateActorRegistryException(string message, System.Exception innerException) { }
+    }
+    public enum HoconAddMode
+    {
+        Append = 0,
+        Prepend = 1,
+        Replace = 2,
+    }
+    public delegate Akka.Configuration.Config HoconConfigurator(Akka.Configuration.Config currentConfig, Akka.Configuration.Config configToAdd);
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static HoconExtensions
+    {
+        public static string ToHocon([System.Runtime.CompilerServices.NullableAttribute(2)] this string text) { }
+        public static string ToHocon(this System.Nullable<bool> value) { }
+        public static string ToHocon(this bool value) { }
+        public static string ToHocon(this System.Nullable<System.TimeSpan> value, bool allowInfinite = False, bool zeroIsInfinite = False) { }
+        public static string ToHocon(this System.TimeSpan value, bool allowInfinite = False, bool zeroIsInfinite = False) { }
+        public static string ToHocon(this System.Nullable<float> value) { }
+        public static string ToHocon(this float value) { }
+        public static string ToHocon(this System.Nullable<double> value) { }
+        public static string ToHocon(this double value) { }
+        public static string ToHocon(this System.Nullable<int> value) { }
+        public static string ToHocon(this int value) { }
+        public static string ToHocon(this System.Nullable<long> value) { }
+        public static string ToHocon(this long value) { }
+    }
+    public interface IActorRegistry : Akka.Hosting.IReadOnlyActorRegistry, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.IActorRef>>, System.Collections.IEnumerable
+    {
+        void Register<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(Akka.Actor.IActorRef actor, bool overwrite = False);
+        bool TryRegister<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(Akka.Actor.IActorRef actor, bool overwrite = False);
+        bool TryRegister(System.Type key, Akka.Actor.IActorRef actor, bool overwrite = False);
+    }
+    public interface IAkkaHealthCheck
+    {
+        System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null);
+    }
+    public interface IDiscoveryOptions : Akka.Hosting.IHoconOption { }
+    public interface IHoconOption
+    {
+        System.Type Class { get; }
+        string ConfigPath { get; }
+        void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null);
+    }
+    public interface IReadOnlyActorRegistry : System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.IActorRef>>, System.Collections.IEnumerable
+    {
+        Akka.Actor.IActorRef Get<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>();
+        System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(System.Threading.CancellationToken ct = null);
+        System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync(System.Type key, System.Threading.CancellationToken ct = null);
+        bool TryGet<[System.Runtime.CompilerServices.NullableAttribute(2)]  TKey>(out Akka.Actor.IActorRef actor);
+        bool TryGet(System.Type key, out Akka.Actor.IActorRef actor);
+    }
+    public interface IRequiredActor<[System.Runtime.CompilerServices.NullableAttribute(2)]  TActor>
+    {
+        Akka.Actor.IActorRef ActorRef { get; }
+        System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync(System.Threading.CancellationToken cancellationToken = null);
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class LoggerConfigBuilder
+    {
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Hosting.DeadLetterOptions DeadLetterOptions { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Hosting.DebugOptions DebugOptions { get; set; }
+        public System.Nullable<bool> LogConfigOnStart { get; set; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Event.LogFilterBuilder LogFilterBuilder { get; set; }
+        public System.Nullable<Akka.Event.LogLevel> LogLevel { get; set; }
+        [System.ObsoleteAttribute("Use the WithDefaultLogMessageFormatter<T> method instead")]
+        public System.Type LogMessageFormatter { get; set; }
+        public Akka.Hosting.LoggerConfigBuilder AddLogger<[System.Runtime.CompilerServices.NullableAttribute(0)]  T>()
+            where T : Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics> { }
+        public Akka.Hosting.LoggerConfigBuilder ClearLoggers() { }
+        [System.ObsoleteAttribute("SemanticLogMessageFormatter is now the default. Only use this method if you have " +
+            "a custom ILogMessageFormatter implementation.")]
+        public Akka.Hosting.LoggerConfigBuilder WithDefaultLogMessageFormatter<[System.Runtime.CompilerServices.NullableAttribute(0)]  T>()
+            where T : Akka.Event.ILogMessageFormatter { }
+        public Akka.Hosting.LoggerConfigBuilder WithLogFilter(System.Action<Akka.Event.LogFilterBuilder> filterBuilder) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static LoggingExtensions
+    {
+        public static Akka.Hosting.LoggerConfigBuilder AddDefaultLogger(this Akka.Hosting.LoggerConfigBuilder configBuilder) { }
+        public static Akka.Hosting.LoggerConfigBuilder AddLoggerFactory(this Akka.Hosting.LoggerConfigBuilder configBuilder) { }
+        public static Akka.Hosting.LoggerConfigBuilder AddLoggerFactory(this Akka.Hosting.LoggerConfigBuilder configBuilder, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder ConfigureLoggers(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Hosting.LoggerConfigBuilder> configurator) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class MissingActorRegistryEntryException : Akka.Hosting.ActorRegistryException
+    {
+        public MissingActorRegistryEntryException(string message) { }
+        public MissingActorRegistryEntryException(string message, System.Exception innerException) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class RequiredActor<[System.Runtime.CompilerServices.NullableAttribute(2)]  TActor> : Akka.Hosting.IRequiredActor<TActor>
+    {
+        public RequiredActor(Akka.Hosting.IReadOnlyActorRegistry registry) { }
+        public Akka.Actor.IActorRef ActorRef { get; }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> GetAsync(System.Threading.CancellationToken cancellationToken = null) { }
+    }
+    public delegate System.Threading.Tasks.Task StartupTask(Akka.Actor.ActorSystem system, Akka.Hosting.IActorRegistry registry);
+    public enum TriStateValue
+    {
+        None = 0,
+        All = 1,
+        Some = 2,
+    }
+    public class static Util
+    {
+        public static Akka.Configuration.Config MoveTo(this Akka.Configuration.Config config, string path) { }
+    }
+}
+namespace Akka.Hosting.Configuration
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static ConfigurationHoconAdapter
+    {
+        public static Akka.Configuration.Config ToHocon(this Microsoft.Extensions.Configuration.IConfiguration config, bool normalizeKeys = True) { }
+    }
+}
+namespace Akka.Hosting.Coordination
+{
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public abstract class LeaseOptionBase : Akka.Hosting.IHoconOption
+    {
+        protected LeaseOptionBase() { }
+        public abstract System.Type Class { get; }
+        public abstract string ConfigPath { get; }
+        public abstract void Apply(Akka.Hosting.AkkaConfigurationBuilder builder, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.Setup.Setup setup = null);
+    }
+}
+namespace Akka.Hosting.HealthChecks
+{
+    public sealed class ActorSystemLivenessCheck : Akka.Hosting.IAkkaHealthCheck
+    {
+        public ActorSystemLivenessCheck() { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Akka.Hosting.AkkaHealthCheckContext context, System.Threading.CancellationToken cancellationToken = null) { }
+    }
+}
+namespace Akka.Hosting.Logging
+{
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class AkkaTraceContextProcessor : OpenTelemetry.BaseProcessor<OpenTelemetry.Logs.LogRecord>
+    {
+        public AkkaTraceContextProcessor() { }
+        public override void OnEnd(OpenTelemetry.Logs.LogRecord data) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class LoggerFactoryLogger : Akka.Actor.ActorBase, Akka.Dispatch.IRequiresMessageQueue<Akka.Event.ILoggerMessageQueueSemantics>
+    {
+        protected readonly Akka.Event.ILoggingAdapter InternalLogger;
+        public LoggerFactoryLogger() { }
+        protected virtual void Log(Akka.Event.LogEvent log, Akka.Actor.ActorPath path) { }
+        protected override void PostStop() { }
+        protected override bool Receive(object message) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class LoggerFactorySetup : Akka.Actor.Setup.Setup
+    {
+        public LoggerFactorySetup(Microsoft.Extensions.Logging.ILoggerFactory loggerFactory) { }
+        public Microsoft.Extensions.Logging.ILoggerFactory LoggerFactory { get; }
+    }
+}

@@ -24,11 +24,12 @@ namespace Akka.Actor
         /// </summary>
         DateTimeOffset Now { get; }
         /// <summary>
-        /// TBD
+        /// Gets the elapsed time since system startup using a monotonic clock that is not affected by wall-clock adjustments.
         /// </summary>
         TimeSpan MonotonicClock { get; }
         /// <summary>
-        /// TBD
+        /// Gets the elapsed time since system startup using a high-resolution monotonic clock,
+        /// suitable for precise interval measurements.
         /// </summary>
         TimeSpan HighResMonotonicClock { get; }
     }

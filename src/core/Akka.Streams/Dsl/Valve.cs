@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Dsl
 {
@@ -52,14 +53,14 @@ namespace Akka.Streams.Dsl
 
         public Task<bool> Flip(SwitchMode flipToMode)
         {
-            var completion = new TaskCompletionSource<bool>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<bool>();
             _flipCallback((flipToMode, completion));
             return completion.Task;
         }
 
         public Task<SwitchMode> GetMode()
         {
-            var completion = new TaskCompletionSource<SwitchMode>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<SwitchMode>();
             _getModeCallback(completion);
             return completion.Task;
         }
@@ -176,7 +177,7 @@ namespace Akka.Streams.Dsl
 
         public override ILogicAndMaterializedValue<Task<IValveSwitch>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<IValveSwitch>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<IValveSwitch>();
             var logic = new ValveGraphStageLogic(this, completion);
 
             return new LogicAndMaterializedValue<Task<IValveSwitch>>(logic, completion.Task);

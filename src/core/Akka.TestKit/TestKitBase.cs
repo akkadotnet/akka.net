@@ -28,6 +28,10 @@ namespace Akka.TestKit
     /// </summary>
     public abstract partial class TestKitBase : IActorRefFactory
     {
+        // AsyncLocal for proper timeout propagation across async boundaries.
+        // This ensures WithinAsync timeout flows correctly to EventFilter and other async operations.
+        private readonly AsyncLocal<TimeSpan?> _asyncLocalEnd = new();
+
         private class TestState
         {
             public TestState()
@@ -204,6 +208,7 @@ namespace Akka.TestKit
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
+        private TimeSpan ExpectNoMessageDefaultTimeout { get { return _testState.TestKitSettings.ExpectNoMessageDefault; } }
 
         /// <summary>
         /// The <see cref="ActorSystem"/> that is recreated and used for each test.
@@ -420,6 +425,20 @@ namespace Akka.TestKit
         /// <para>
         /// Retrieves the time remaining for execution of the innermost enclosing
         /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
+        /// If missing that, then it returns the properly dilated default for this
+        /// case from settings (key: "akka.test.expect-no-message-default").
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
+        /// </summary>
+        public TimeSpan NoMessageRemainingOrDefault
+        {
+            get { return RemainingOr(Dilated(ExpectNoMessageDefaultTimeout)); }
+        }
+
+        /// <summary>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
         /// </para>
         /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
@@ -430,9 +449,21 @@ namespace Akka.TestKit
         {
             get
             {
+                // Check AsyncLocal first (async context takes precedence)
+                var asyncEnd = _asyncLocalEnd.Value;
+                if (asyncEnd.HasValue)
+                {
+                    if (asyncEnd < TimeSpan.Zero)
+                        throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                    var asyncRemaining = asyncEnd.Value - Now;
+                    return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+                }
+
+                // Fallback to instance field
                 if(_testState.End is null)
                     throw new InvalidOperationException(@"Remaining may not be called outside of ""within""");
-                
+
                 if (_testState.End < TimeSpan.Zero)
                     throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
 
@@ -451,6 +482,18 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
+            // Check AsyncLocal first (async context takes precedence for proper timeout propagation)
+            var asyncEnd = _asyncLocalEnd.Value;
+            if (asyncEnd.HasValue)
+            {
+                if (asyncEnd < TimeSpan.Zero)
+                    throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                var asyncRemaining = asyncEnd.Value - Now;
+                return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+            }
+
+            // Fallback to instance field for backward compatibility with sync code paths
             if (!_testState.End.HasValue) return duration;
             if (_testState.End < TimeSpan.Zero)
                 throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
@@ -470,7 +513,7 @@ namespace Akka.TestKit
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
-        public TimeSpan RemainingOrDilated(TimeSpan? duration)
+        public TimeSpan RemainingOrDilated([AutoDilate] TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
             if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
@@ -484,7 +527,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">TBD</param>
         /// <returns>TBD</returns>
-        public TimeSpan Dilated(TimeSpan duration)
+        public TimeSpan Dilated([AutoDilate] TimeSpan duration)
         {
             if (duration < TimeSpan.Zero)
                 throw new ArgumentException("Must not be negative", nameof(duration));
@@ -532,19 +575,82 @@ namespace Akka.TestKit
         {
             system ??= _testState.System;
 
-            var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+            var durationValue = ShutdownDurationOrDefault(duration);
 
             var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
-            if(!wasShutdownDuringWait)
-            {
-                // Forcefully close the ActorSystem to make sure we exit the test cleanly
-                ((ExtendedActorSystem) system).Guardian.Stop();
-                
-                const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
-                if(verifySystemShutdown)
-                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
-                system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
-            }
+            ForceShutdownIfNeeded(system, wasShutdownDuringWait, durationValue, verifySystemShutdown);
+        }
+
+        /// <summary>
+        /// Shuts down this system without blocking the calling thread.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <remarks>
+        /// Prefer this over <see cref="Shutdown(TimeSpan?,bool)"/>. The synchronous form pins a thread pool
+        /// thread for up to the full duration. On a loaded machine that pinned thread can starve the very
+        /// system work the shutdown is waiting on - cluster heartbeats, coordinated shutdown phases - so the
+        /// wait itself makes the timeout more likely.
+        /// </remarks>
+        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">Thrown when the system did not stop in time and <paramref name="verifySystemShutdown"/> is <c>true</c>.</exception>
+        public virtual Task ShutdownAsync(
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+            => ShutdownAsync(_testState.System, duration, verifySystemShutdown);
+
+        /// <summary>
+        /// Shuts down the specified system without blocking the calling thread.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <remarks>
+        /// Prefer this over <see cref="Shutdown(ActorSystem,TimeSpan?,bool)"/>. The synchronous form pins a
+        /// thread pool thread for up to the full duration. On a loaded machine that pinned thread can starve
+        /// the very system work the shutdown is waiting on - cluster heartbeats, coordinated shutdown phases -
+        /// so the wait itself makes the timeout more likely.
+        /// </remarks>
+        /// <param name="system">The system to shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">Thrown when the system did not stop in time and <paramref name="verifySystemShutdown"/> is <c>true</c>.</exception>
+        protected virtual async Task ShutdownAsync(
+            ActorSystem system,
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+        {
+            system ??= _testState.System;
+
+            var durationValue = ShutdownDurationOrDefault(duration);
+
+            // race Terminate() against a timer rather than blocking a thread on it
+            var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue);
+            ForceShutdownIfNeeded(system, wasShutdownDuringWait, durationValue, verifySystemShutdown);
+        }
+
+        private TimeSpan ShutdownDurationOrDefault(TimeSpan? duration)
+            => duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+
+        /// <summary>
+        /// Force-stops a system that failed to terminate on its own inside the timeout.
+        /// </summary>
+        private static void ForceShutdownIfNeeded(
+            ActorSystem system,
+            bool wasShutdownDuringWait,
+            TimeSpan durationValue,
+            bool verifySystemShutdown)
+        {
+            if(wasShutdownDuringWait)
+                return;
+
+            // Forcefully close the ActorSystem to make sure we exit the test cleanly
+            ((ExtendedActorSystem) system).Guardian.Stop();
+
+            const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
+            if(verifySystemShutdown)
+                throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
+            system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
         }
 
         /// <summary>
@@ -678,17 +784,27 @@ namespace Akka.TestKit
             // Fix both serialization and deadlock issues:
             // 1. Use isSystemService=true to skip serialization checks
             // 2. Use isAsync=false to create LocalActorRef synchronously (avoids RepointableActorRef deadlock)
-            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
+            // 3. Use ManualResetEventSlim to ensure PreStart completes before returning (fixes parallel init race)
+            using var initComplete = new ManualResetEventSlim(false);
+
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue, initComplete))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
-            
+
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
             // Use the new AttachChildWithAsync method to create TestActor synchronously
             var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
-                testActorProps, 
+                testActorProps,
                 isSystemService: true,  // Skip serialization checks
                 isAsync: false,         // Create synchronously to avoid deadlock
                 name: name);
-            
+
+            // Wait for TestActor.PreStart() to complete before returning
+            // This ensures the actor is fully initialized and ready to receive messages
+            if (!initComplete.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException($"TestActor '{name}' failed to initialize within 10 seconds");
+            }
+
             return testActor;
         }
         

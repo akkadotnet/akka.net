@@ -16,7 +16,6 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 using Akka.Util;
 
 namespace Akka.Cluster.Tests

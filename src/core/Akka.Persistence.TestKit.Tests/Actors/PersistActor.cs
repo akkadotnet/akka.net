@@ -1,15 +1,15 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="PersistActor.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using Akka.Actor;
+
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using Actor;
-
     public class PersistActor : UntypedPersistentActor
     {
         public PersistActor(IActorRef probe)
@@ -59,9 +59,9 @@ namespace Akka.Persistence.TestKit.Tests
 
         public class WriteMessage
         {
-            public string Data { get; }
+            public object Data { get; }
 
-            public WriteMessage(string data)
+            public WriteMessage(object data)
             {
                 Data = data;
             }

@@ -8,7 +8,6 @@
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Tests.Actor;

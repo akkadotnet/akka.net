@@ -10,9 +10,8 @@ using System.Linq;
 using System.Net.Http;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace DocsExamples.Streams
 {

@@ -14,11 +14,10 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Dsl

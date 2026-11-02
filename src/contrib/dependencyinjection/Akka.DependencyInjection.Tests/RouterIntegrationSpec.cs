@@ -15,7 +15,6 @@ using Akka.Routing;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DependencyInjection.Tests
 {
@@ -24,7 +23,7 @@ namespace Akka.DependencyInjection.Tests
         private readonly IServiceProvider _serviceProvider;
         private readonly AkkaService _akkaService;
         private readonly ITestOutputHelper _output;
-        private TestKit.Xunit2.TestKit _testKit;
+        private TestKit.Xunit.TestKit _testKit;
         
         public RouterIntegrationSpec(ITestOutputHelper output)
         {
@@ -117,13 +116,13 @@ namespace Akka.DependencyInjection.Tests
             counterHash.Count.Should().BeGreaterOrEqualTo(50); // at least half of the 100 possible routes have to be hit
         }
         
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await _akkaService.StartAsync(default);
-            _testKit = new TestKit.Xunit2.TestKit(_akkaService.ActorSystem, _output);
+            _testKit = new TestKit.Xunit.TestKit(_akkaService.ActorSystem, _output);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await _akkaService.StopAsync();
         }

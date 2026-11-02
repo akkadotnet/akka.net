@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
-    public class ExceptionHandling: TestKit.Xunit2.TestKit
+    public class ExceptionHandling: TestKit.Xunit.TestKit
     {
         private class GiveError
         { }

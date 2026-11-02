@@ -12,9 +12,8 @@ using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Xunit;
-using Xunit.Abstractions;
 using Akka.Actor;
 
 namespace DocsExamples.Streams

@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class LastElementSpec : Akka.TestKit.Xunit2.TestKit
+    public class LastElementSpec : Akka.TestKit.Xunit.TestKit
     {
         [Fact]
         public async Task A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_finite_nonempty_successful_source()
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(TimeSpan.FromSeconds(1));
+            var complete = await lastElement.WaitAsync(TimeSpan.FromSeconds(1));
             complete.Should().Be(Option<int>.Create(3));
         }
 
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.Request(3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(1.Seconds());
+            var complete = await lastElement.WaitAsync(1.Seconds());
             complete.Should().Be(Option<int>.None);
         }
 

@@ -14,11 +14,10 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
-    public class LoggerStartupSpec : TestKit.Xunit2.TestKit
+    public class LoggerStartupSpec : TestKit.Xunit.TestKit
     {
         private const int LoggerResponseDelayMs = 1_000;
 

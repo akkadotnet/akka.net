@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
             await eventFilter.Info().ExpectAsync(0, () => { system.Start(); return Task.CompletedTask; });
@@ -117,13 +117,41 @@ namespace Akka.Tests.Actor
 
             try
             {
+                var testKit = new TestKit.Xunit.TestKit(sys);
+
+                // The system's DeadLetterListener (which produces the "not delivered" Info log) is started via
+                // a fire-and-forget SystemActorOf call in ActorSystemImpl.Start() - unlike the configured
+                // akka.loggers (TestEventListener), it does NOT go through a synchronous startup handshake
+                // before ActorSystem.Create returns. That leaves a real window, right after system creation,
+                // where the first dead letter published can race DeadLetterListener's own PreStart() (which
+                // subscribes to DeadLetter on the EventStream) and be silently dropped - never reaching
+                // DeadLetterListener at all, so no "not delivered" log is ever produced. This is a genuine,
+                // reproducible race (confirmed independently, not just theorized), not merely a tight timeout.
+                //
+                // Resolving /system/deadLetterListener via Identify/ActorIdentity forces a real happens-before:
+                // an actor's Create system message (which triggers PreStart) is always fully processed before
+                // any user message, Identify included. A successful ResolveOne here is proof that
+                // DeadLetterListener's DeadLetter subscription has already happened.
+                await sys.ActorSelection("/system/deadLetterListener")
+                    .ResolveOne(testKit.TestKitSettings.TestKitStartupTimeout);
+
+                var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
-                var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () => {
+                // Watch for actor termination to ensure proper synchronization
+                await probe.WatchAsync(a);
+
+                var eventFilter = new EventFilterFactory(testKit);
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, async () => {
+                    // Tell the actor to stop
                     a.Tell("run");
+
+                    // Wait for the actor to fully terminate - this ensures the mailbox
+                    // is swapped to DeadLetterMailbox before we send the next message
+                    await probe.ExpectTerminatedAsync(a);
+
+                    // Now send the message that should become a dead letter
                     a.Tell("boom");
-                    return Task.CompletedTask;
                 });
             }
             finally { Shutdown(sys); }

@@ -556,9 +556,17 @@ namespace Akka.Remote.TestKit
                     case EnterBarrier barrier:
                         if (barrier.Name != currentBarrier)
                             throw new WrongBarrierException(barrier.Name, Sender, barrier.Role, @event.StateData);
-                        var together = clients.Any(x => Equals(x.FSM, Sender))
-                            ? @event.StateData.Arrived.Add(Sender)
-                            : @event.StateData.Arrived;
+
+                        // An arrival from a client we hold no registration for can never be
+                        // counted towards this barrier, so failing it is the only honest answer.
+                        // Staying silent leaves that client blocked on an ask nothing will ever
+                        // complete: it reports a 60 second ask timeout long after the barrier
+                        // itself timed out on another node, which buries the real cause. Idle
+                        // already answers an unregistered sender this way.
+                        if (!clients.Any(x => Equals(x.FSM, Sender)))
+                            return Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
+
+                        var together = @event.StateData.Arrived.Add(Sender);
                         var enterDeadline = GetDeadline(barrier.Timeout);
                         //we only allow the deadlines to get shorter
                         if (enterDeadline.TimeLeft < @event.StateData.Deadline.TimeLeft)

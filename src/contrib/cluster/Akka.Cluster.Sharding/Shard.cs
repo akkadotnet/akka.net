@@ -1007,7 +1007,7 @@ namespace Akka.Cluster.Sharding
             var failOnInvalidStateTransition =
                 Context.System.Settings.Config.GetBoolean(
                     "akka.cluster.sharding.fail-on-invalid-entity-state-transition");
-            _entities = new Entities(Log, settings.RememberEntities, _verboseDebug, failOnInvalidStateTransition);
+            _entities = new Entities(Log, _rememberEntities, _verboseDebug, failOnInvalidStateTransition);
 
             var idleInterval = TimeSpan.FromTicks(_settings.PassivateIdleEntityAfter.Ticks / 2);
             _passivateIdleTask = _settings.ShouldPassivateIdleEntities
@@ -1128,6 +1128,20 @@ namespace Akka.Cluster.Sharding
 
                 case LeaseLost ll:
                     ReceiveLeaseLost(ll);
+                    return true;
+
+                // #8147: safe to stop immediately — no entities started before lease acquisition
+                case HandOff ho when ho.Shard == _shardId:
+                    Log.Info("{0}: HandOff shard [{1}] received while awaiting lease. " +
+                             "No active entities, replying ShardStopped immediately.",
+                        _typeName, _shardId);
+                    Sender.Tell(new ShardStopped(_shardId));
+                    Context.Stop(Self);
+                    return true;
+
+                case HandOff ho:
+                    Log.Warning("{0}: Shard [{1}] can not hand off for another Shard [{2}]",
+                        _typeName, _shardId, ho.Shard);
                     return true;
             }
 
@@ -1323,10 +1337,13 @@ namespace Akka.Cluster.Sharding
             var startTime = DateTime.UtcNow;
             var update = new RememberEntitiesShardStore.Update(started: storingStarts, stopped: storingStops);
             store.Tell(update);
+            // `updating-state-timeout` is documented (reference.conf) as also being the timeout for
+            // remember-entities writes, and DDataRememberEntitiesShardStore sizes its write-majority
+            // retries (3 retries at updating-state-timeout / 4) against that same value.
             Timers.StartSingleTimer(
                 RememberEntityTimeoutKey,
                 new RememberEntityTimeout(update),
-                _settings.TuningParameters.WaitingForStateTimeout);
+                _settings.TuningParameters.UpdatingStateTimeout);
 
             Context.Become(WaitingForRememberEntitiesStore(update, startTime));
         }
@@ -1856,21 +1873,31 @@ namespace Akka.Cluster.Sharding
             // We only have to do this if we have R-E enabled
             if (!_rememberEntities)
                 return;
-            
+
             var id = _entities.EntityId(msg.Child);
             // Just return if the child actor is not a recorded shard entity
-            if (id is null) 
+            if (id is null)
                 return;
-            
-            // Remove the child actor from the entity list
-            _entities.RemoveEntity(id);
-                
+
+            // Only transition to Passivating if entity is Active.
+            // If already Passivating (entity requested passivation then threw), the normal flow handles it.
+            //
+            // Using Passivating state (instead of RemoveEntity which sets NoState):
+            // 1. Buffers messages arriving during termination (fixes race condition crash)
+            // 2. Persists removal from store when EntityTerminated arrives
+            // 3. Restarts entity if messages arrive (transient failure, try again)
+            // 4. Stays forgotten if no messages arrive
+            if (_entities.EntityState(id) is Active)
+            {
+                _entities.EntityPassivating(id);
+            }
+
             // Force stop the child actor, it might have been restarted
             Context.Stop(msg.Child);
-            
+
             Log.Error(
-                msg.LastCause, 
-                "{0}: Remembered entity {1} was stopped: {2}", 
+                msg.LastCause,
+                "{0}: Remembered entity {1} was stopped: {2}",
                 _typeName, id, msg.Reason);
         }
 

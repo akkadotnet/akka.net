@@ -9,7 +9,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
-using FluentAssertions.Extensions;
 using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
@@ -31,7 +30,7 @@ namespace Akka.TestKit
         /// <param name="epsilonValue">TBD</param>
         /// <param name="cancellationToken"></param>
         public void Within(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Action action,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -55,7 +54,7 @@ namespace Akka.TestKit
         /// that takes a <see cref="Func{Task}"/> instead of an <see cref="Action"/>
         /// </summary>
         public async Task WithinAsync(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task> actionAsync,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -89,7 +88,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void Within(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Action action,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -115,7 +114,7 @@ namespace Akka.TestKit
         /// </summary>
         public async Task WithinAsync(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task> actionAsync,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -149,7 +148,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public T Within<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<T> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -178,7 +177,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public Task<T> WithinAsync<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task<T>> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -209,7 +208,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T Within<T>(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<T> function,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -251,7 +250,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public async Task<T> WithinAsync<T>(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task<T>> function,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -294,9 +293,13 @@ namespace Akka.TestKit
 
             var maxDiff = max.Min(rem);
             var prevEnd = _testState.End;
+            var prevAsyncEnd = _asyncLocalEnd.Value; // Save previous AsyncLocal value for nesting support
+
             _testState.End = start + maxDiff;
+            _asyncLocalEnd.Value = start + maxDiff; // Set AsyncLocal for proper async propagation
 
             T ret = default;
+            var blockStillRunning = false;
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             {
                 try
@@ -304,7 +307,7 @@ namespace Akka.TestKit
                     var executionTask = function();
                     // Limit the execution time block to the maximum allowed execution time.
                     // 200 milliseconds is added because Task.Delay() timer is not precise and can return prematurely.
-                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + 200.Milliseconds(), cts.Token));
+                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token));
 
                     if (resultTask == executionTask)
                     {
@@ -314,6 +317,20 @@ namespace Akka.TestKit
                     {
                         // Just throw if the calling code cancels the cancellation token
                         cancellationToken.ThrowIfCancellationRequested();
+
+                        // The deadline won the race. Observe the block instead of discarding its outcome.
+                        if (executionTask.IsCompleted)
+                        {
+                            // The block finished as the deadline fired. Awaiting a completed Task does not block.
+                            // A faulted or cancelled block rethrows here, with its original stack trace intact.
+                            ret = await executionTask;
+                        }
+                        else
+                        {
+                            // The block is still running. A running Task cannot be stopped, so report the overrun
+                            // instead of returning as if the block had succeeded.
+                            blockStillRunning = true;
+                        }
                     }
                 }
                 finally
@@ -321,10 +338,19 @@ namespace Akka.TestKit
                     // Make sure we stop the delay task
                     cts.Cancel();
                     _testState.End = prevEnd;
+                    _asyncLocalEnd.Value = prevAsyncEnd; // Restore previous AsyncLocal value
                 }
             }
 
             var elapsed = Now - start;
+
+            if (blockStillRunning)
+            {
+                const string failMessage = "Failed: Block was still running after {0}, exceeding the maximum allowed duration of {1}. Its result and any exception it throws from now on are lost. {2}";
+                ConditionalLog(failMessage, elapsed, max, hint ?? "");
+                _assertions.Fail(failMessage, elapsed, max, hint ?? "");
+            }
+
             var wasTooFast = elapsed < min;
             if(wasTooFast)
             {

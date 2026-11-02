@@ -1,0 +1,2 @@
+﻿[INFO][DateTime][Thread 0001][ActorSystem(test)][Tenant=foo][Partition=12] Contexted 42
+[INFO][DateTime][Thread 0001][ActorSystem(test)][RequestId=REQ-123] Scoped 7

@@ -20,7 +20,7 @@ using Akka.TestKit.Extensions;
 using Akka.Util;
 using FluentAssertions.Extensions;
 using Reactive.Streams;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Streams.Tests
 {
@@ -341,7 +341,7 @@ namespace Akka.Streams.Tests
             else
             {
                 // guard against deadlocks, assuming that a test would not take more than 30 seconds.
-                await Run().ShouldCompleteWithin(30.Seconds()); 
+                await Run().WaitAsync(30.Seconds()); 
             }
         }
 

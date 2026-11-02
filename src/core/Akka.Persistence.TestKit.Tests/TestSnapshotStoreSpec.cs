@@ -5,16 +5,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Xunit.Abstractions;
+using System;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using System.Threading.Tasks;
-    using Actor;
-    using Akka.TestKit;
-    using Xunit;
-
     public sealed class TestSnapshotStoreSpec : PersistenceTestKit
     {
         public TestSnapshotStoreSpec(ITestOutputHelper output) : base(nameof(TestSnapshotStoreSpec), output)

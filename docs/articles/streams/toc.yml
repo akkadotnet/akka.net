@@ -30,6 +30,8 @@
   href: pipeliningandparallelism.md
 - name: Testing streams
   href: testingstreams.md
+- name: Stream Tracing with OpenTelemetry
+  href: stream-tracing.md
 - name: Overview of built-in stages and their semantics
   href: builtinstages.md
 - name: Streams Cookbook

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\xunitSettings.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Hosting.TestKit\Akka.Hosting.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
+    <ProjectReference Include="..\..\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
+  </ItemGroup>
+</Project>

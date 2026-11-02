@@ -1,6 +1,7 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
@@ -1032,22 +1033,31 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : Akka.Persistence.Journal.AsyncWriteJournal
     {
         public MemoryJournal() { }
-        protected virtual System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected virtual Akka.Persistence.Journal.MemoryJournal.JournalStorage Storage { get; }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         public long HighestSequenceNr(string pid) { }
-        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max) { }
+        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long from, long to, long max) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override bool ReceivePluginInternal(object message) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater) { }
         protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken) { }
         public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
         {
             public readonly System.Collections.Generic.IEnumerable<string> AllPersistenceIds;
             public readonly int HighestOrderingNumber;
             public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds, int highestOrderingNumber) { }
+        }
+        public sealed class EventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCount(int count) { }
+            public int Count { get; }
+        }
+        public sealed class EventCountFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCountFailure(System.Exception cause) { }
+            public System.Exception Cause { get; }
         }
         public sealed class EventReplayFailure
         {
@@ -1066,6 +1076,10 @@ namespace Akka.Persistence.Journal
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
             public override string ToString() { }
+        }
+        protected sealed class JournalStorage
+        {
+            public JournalStorage() { }
         }
         public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
         {
@@ -1108,6 +1122,12 @@ namespace Akka.Persistence.Journal
             public SelectCurrentPersistenceIds(int offset, Akka.Actor.IActorRef replyTo) { }
             public int Offset { get; }
             public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        public sealed class SelectEventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+        {
+            public SelectEventCount(string tag, Akka.Actor.IActorRef replyTo) { }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+            public string Tag { get; }
         }
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
@@ -1156,7 +1176,7 @@ namespace Akka.Persistence.Journal
     public class SharedMemoryJournal : Akka.Persistence.Journal.MemoryJournal
     {
         public SharedMemoryJournal() { }
-        protected override System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected override Akka.Persistence.Journal.MemoryJournal.JournalStorage Storage { get; }
     }
     public struct SingleEventSequence : Akka.Persistence.Journal.IEventSequence, System.IEquatable<Akka.Persistence.Journal.IEventSequence>
     {
@@ -1228,11 +1248,15 @@ namespace Akka.Persistence.Snapshot
     public class MemorySnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
     {
         public MemorySnapshotStore() { }
-        protected virtual System.Collections.Generic.List<Akka.Persistence.Snapshot.SnapshotEntry> Snapshots { get; }
+        protected virtual Akka.Persistence.Snapshot.MemorySnapshotStore.SnapshotStorage Storage { get; }
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken) { }
+        protected sealed class SnapshotStorage
+        {
+            public SnapshotStorage() { }
+        }
     }
     public sealed class NoSnapshotStore : Akka.Persistence.Snapshot.SnapshotStore
     {
@@ -1249,14 +1273,14 @@ namespace Akka.Persistence.Snapshot
             protected NoSnapshotStoreException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         }
     }
-    public class SnapshotEntry
+    public sealed class SnapshotEntry
     {
-        public SnapshotEntry() { }
-        public string Id { get; set; }
-        public string PersistenceId { get; set; }
-        public long SequenceNr { get; set; }
-        public object Snapshot { get; set; }
-        public long Timestamp { get; set; }
+        public SnapshotEntry(string id, string persistenceId, long sequenceNr, long timestamp, object snapshot) { }
+        public string Id { get; }
+        public string PersistenceId { get; }
+        public long SequenceNr { get; }
+        public object Snapshot { get; }
+        public long Timestamp { get; }
     }
     public abstract class SnapshotStore : Akka.Actor.ActorBase
     {

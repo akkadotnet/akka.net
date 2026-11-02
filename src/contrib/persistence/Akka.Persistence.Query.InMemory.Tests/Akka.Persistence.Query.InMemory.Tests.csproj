@@ -4,6 +4,8 @@
     <PropertyGroup>
         <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
         <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,8 +15,8 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-      <PackageReference Include="xunit" Version="$(XunitVersion)" />
-      <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+      <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+      <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
       <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
     </ItemGroup>
 

@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -32,13 +33,15 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Props_must_create_actor_by_producer()
+        public async Task Props_must_create_actor_by_producer()
         {
             TestLatch latchProducer = new TestLatch();
             TestLatch latchActor = new TestLatch();
             var props = Props.CreateBy(new TestProducer(latchProducer, latchActor));
             IActorRef actor = Sys.ActorOf(props);
-            latchActor.Ready(TimeSpan.FromSeconds(1));
+            // 3s matches akka.test.single-expect-default, the dilated budget ExpectMsg gives a single
+            // dispatcher hop; the old 1s flat, undilated, blocking wait could be exhausted by one pool stall.
+            await AwaitConditionAsync(() => latchActor.IsOpen, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(50), "the producer's Produce() must run when the actor is created");
         }
 
         [Fact]

@@ -12,7 +12,6 @@ using Akka.Actor;
 using Akka.Cluster;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Akka.DistributedData.Internal;
 using Akka.DistributedData.Serialization;
 using Akka.DistributedData;

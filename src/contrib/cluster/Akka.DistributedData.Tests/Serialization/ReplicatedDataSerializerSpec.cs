@@ -13,12 +13,11 @@ using Akka.DistributedData.Internal;
 using Akka.DistributedData.Serialization;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.Serialization
 {
     [Collection("DistributedDataSpec")]
-    public class ReplicatedDataSerializerSpec : TestKit.Xunit2.TestKit
+    public class ReplicatedDataSerializerSpec : TestKit.Xunit.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {

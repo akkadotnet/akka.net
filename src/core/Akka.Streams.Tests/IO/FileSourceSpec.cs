@@ -23,7 +23,6 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -242,7 +241,7 @@ namespace Akka.Streams.Tests.IO
 
                 c.ExpectSubscription();
                 c.ExpectError();
-                var complete = await r.ShouldCompleteWithin(Dilated(TimeSpan.FromSeconds(3)));
+                var complete = await r.WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
                 complete.WasSuccessful.ShouldBeFalse();
             }, _materializer);
         }

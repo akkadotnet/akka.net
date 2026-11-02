@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,11 +7,13 @@
 
 #nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -21,6 +23,8 @@ using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
+using ByteOrder = DotNetty.Buffers.ByteOrder;
+using DotNetty.Common.Concurrency;
 using DotNetty.Common.Utilities;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
@@ -126,6 +130,11 @@ namespace Akka.Remote.Transport.DotNetty
 
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
+        private readonly TimeSpan _flushWait;
+        private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
+
+        internal static readonly FieldInfo? SocketField =
+            typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic);
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -148,6 +157,9 @@ namespace Akka.Remote.Transport.DotNetty
             _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            _flushWait = system.Settings.Config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", TimeSpan.FromSeconds(2));
+            if (SocketField == null)
+                Log.Warning("DotNetty's AbstractSocketChannel.Socket field was not found; disassociate falls back to a full close, which can reset the connection.");
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
         }
@@ -249,10 +261,82 @@ namespace Akka.Remote.Transport.DotNetty
 
         protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
 
+        // Half-close once lastWrite is in the kernel, then read until the peer's FIN. Closing with unread
+        // inbound data sends an RST, and a Windows peer then drops our last frames (#8589).
+        internal void BeginGracefulClose(TcpSocketChannel channel, Task lastWrite)
+        {
+            // register before any async hop, so a Shutdown that follows the disassociate waits for this close
+            _draining[channel] = channel.CloseCompletion;
+            channel.CloseCompletion.ContinueWith(_ => _draining.TryRemove(channel, out Task? _), TaskContinuationOptions.ExecuteSynchronously);
+
+            try
+            {
+                // not the ActorSystem scheduler: it may already be shutting down
+                channel.EventLoop.Schedule(() => channel.CloseAsync(), _flushWait);
+            }
+            catch (RejectedExecutionException)
+            {
+                channel.CloseAsync();
+                return;
+            }
+
+            lastWrite.ContinueWith(_ =>
+            {
+                try
+                {
+                    channel.EventLoop.Execute(() => HalfClose(channel));
+                }
+                catch (RejectedExecutionException)
+                {
+                    channel.CloseAsync(); // event loop already shut down
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        private void HalfClose(TcpSocketChannel channel)
+        {
+            if (!channel.Active)
+                return;
+
+            channel.Pipeline.FireUserEventTriggered(DrainInbound.Instance);
+            channel.Configuration.AutoRead = true;
+            try
+            {
+#if NET6_0_OR_GREATER
+                // Not channel.ShutdownOutputAsync(): Socket.Shutdown clears Socket.Connected, which DotNetty reads as
+                // EOF, so it would close over unread data. Shut down through a second Socket on the same handle.
+                if (SocketField?.GetValue(channel) is not Socket socket)
+                {
+                    channel.CloseAsync();
+                    return;
+                }
+
+                using var alias = new Socket(new SafeSocketHandle(socket.Handle, ownsHandle: false));
+                // Shutdown re-applies the alias's blocking mode to the shared handle, and on Windows the
+                // handle constructor assumes blocking; DotNetty's socket must stay non-blocking.
+                alias.Blocking = false;
+                alias.Shutdown(SocketShutdown.Send);
+#else
+                // Socket(SafeSocketHandle) is unavailable on netstandard2.0. Preserve the legacy full-close
+                // behavior for that target while net6.0 uses the graceful half-close above.
+                channel.CloseAsync();
+#endif
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Half-close failed on channel [{0}->{1}]; closing it outright", channel.LocalAddress, channel.RemoteAddress);
+                channel.CloseAsync();
+            }
+        }
+
         public override async Task<bool> Shutdown()
         {
             try
             {
+                // give graceful closes up to flush-wait to finish before the force-close below
+                if (!_draining.IsEmpty)
+                    await Task.WhenAny(Task.WhenAll(_draining.Values), Task.Delay(_flushWait)).ConfigureAwait(false);
+
                 var tasks = new List<Task>();
                 foreach (var channel in ConnectionGroup)
                 {
@@ -367,7 +451,11 @@ namespace Akka.Remote.Transport.DotNetty
                 RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
                 {
                     // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                    var x509Cert = cert as X509Certificate2 ?? (cert != null ? X509CertificateLoader.LoadCertificate(cert.GetRawCertData()) : null);
+#else
                     var x509Cert = cert as X509Certificate2 ?? (cert != null ? new X509Certificate2(cert) : null);
+#endif
                     return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
                 };
 
@@ -432,7 +520,11 @@ namespace Akka.Remote.Transport.DotNetty
                         // Extract client address from channel
                         var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
                         // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                        var x509Cert = certificate as X509Certificate2 ?? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+#else
                         var x509Cert = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+#endif
                         return validator(x509Cert, chain, remoteAddress, errors, Log);
                     };
 
@@ -517,20 +609,71 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             //NOTE: for some reason while Helios takes first element from resolved address list
-            // on the DotNetty side we need to take the last one in order to be compatible
-            return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
+            // on the DotNetty side we need to take the last one in order to be compatible.
+            // We filter link-local addresses first, but fallback to the original list if filtering
+            // eliminates everything, preserving backward compatibility.
+            var filtered = FilterLinkLocalAddresses(resolved.AddressList).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < resolved.AddressList.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}'",
+                    resolved.AddressList.Length - filtered.Length, address.Host);
+
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
+            var selected = filtered.FirstOrDefault() ?? resolved.AddressList.LastOrDefault();
+            return new IPEndPoint(selected!, address.Port);
         }
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
-            var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
+            var matching = resolved.AddressList.Where(a => a.AddressFamily == addressFamily).ToArray();
+
+            // Filter out link-local addresses (169.254.0.0/16, fe80::/10) which break cluster formation
+            // on multi-NIC hosts where APIPA addresses appear in DNS results.
+            // Fallback to unfiltered list to preserve backward compatibility if filtering eliminates all candidates.
+            var filtered = FilterLinkLocalAddresses(matching).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < matching.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}' with address family '{2}'",
+                    matching.Length - filtered.Length, address.Host, addressFamily);
+
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
+            var found = filtered.FirstOrDefault() ?? matching.FirstOrDefault();
+
             if (found == null)
             {
                 throw new KeyNotFoundException($"Couldn't resolve IP endpoint from provided DNS name '{address}' with address family of '{addressFamily}'");
             }
 
             return new IPEndPoint(found, address.Port);
+        }
+
+        /// <summary>
+        /// Filters out IPv4 link-local (169.254.0.0/16) and IPv6 link-local (fe80::/10) addresses.
+        /// These addresses are not routable and can break cluster formation on multi-NIC hosts
+        /// where APIPA addresses appear in DNS results.
+        /// </summary>
+        internal static IEnumerable<IPAddress> FilterLinkLocalAddresses(IEnumerable<IPAddress> addresses)
+        {
+            return addresses.Where(a => !IsIPv4LinkLocal(a) && !IsIPv6LinkLocal(a));
+        }
+
+        private static bool IsIPv4LinkLocal(IPAddress ip)
+        {
+            if (ip.AddressFamily != AddressFamily.InterNetwork) return false;
+            var bytes = ip.GetAddressBytes();
+            return bytes[0] == 169 && bytes[1] == 254;
+        }
+
+        private static bool IsIPv6LinkLocal(IPAddress ip)
+        {
+            return ip.AddressFamily == AddressFamily.InterNetworkV6 && ip.IsIPv6LinkLocal;
         }
 
         #endregion

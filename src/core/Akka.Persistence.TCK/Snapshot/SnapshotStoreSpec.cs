@@ -14,10 +14,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Snapshot
 {
@@ -27,23 +24,25 @@ namespace Akka.Persistence.TCK.Snapshot
     /// </summary>
     public abstract class SnapshotStoreSpec : PluginSpec
     {
-        private static readonly string _specConfigTemplate = @"
-            akka.persistence.publish-plugin-commands = on
-            akka.persistence.snapshot-store {
-                plugin = ""akka.persistence.snapshot-store.my""
-                my {
-                    class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
-                    plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
-                }
-            }
-            akka.actor{
-                serializers{
-                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
-                }
-                serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
-                }
-            }";
+        private static readonly string _specConfigTemplate = 
+            $$"""
+              akka.persistence.publish-plugin-commands = on
+              akka.persistence.snapshot-store {
+                  plugin = "akka.persistence.snapshot-store.my"
+                  my {
+                      class = "TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin"
+                      plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
+                  }
+              }
+              akka.actor{
+                  serializers{
+                      persistence-tck-test="{{typeof(TestSerializer).FullName}}, {{typeof(TestSerializer).Assembly.GetName().Name}}"
+                  }
+                  serialization-bindings {
+                      "{{typeof(TestPayload).FullName}}, {{typeof(TestPayload).Assembly.GetName().Name}}" = persistence-tck-test
+                  }
+              }
+              """;
 
         protected static readonly Config Config = 
             ConfigurationFactory.ParseString(_specConfigTemplate);
@@ -233,7 +232,7 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             var md = Metadata[2];
             // timestamp argument is less than the actual metadata data stored in the database, no deletion occured
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, md.Timestamp - 2.Seconds());
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, md.Timestamp - TimeSpan.FromSeconds(2));
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 

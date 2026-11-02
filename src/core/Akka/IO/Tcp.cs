@@ -1034,58 +1034,58 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.NoAck"/> instance indicating that no write acknowledgment is needed.
         /// </summary>
-        /// <param name="token">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="token">An optional correlation token used to identify a specific write when receiving a <see cref="Tcp.CommandFailed"/> message.</param>
+        /// <returns>A new <see cref="Tcp.NoAck"/> instance.</returns>
         public static Tcp.NoAck NoAck(object token = null)
         {
             return new Tcp.NoAck(token);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.Write"/> command to send data over a TCP connection.
         /// </summary>
-        /// <param name="data">TBD</param>
-        /// <param name="ack">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="data">The data to write to the TCP connection.</param>
+        /// <param name="ack">An optional acknowledgment event to be sent back when the write completes. If <see langword="null"/>, <see cref="Tcp.NoAck"/> is used.</param>
+        /// <returns>A <see cref="Tcp.Command"/> representing the write operation.</returns>
         public static Tcp.Command Write(ByteString data, Tcp.Event ack = null)
         {
             return Tcp.Write.Create(data, ack);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.ResumeWriting"/> command to re-enable writing after a <see cref="Tcp.CommandFailed"/> event.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="Tcp.Command"/> that resumes writing on the connection.</returns>
         public static Tcp.Command ResumeWriting()
         {
             return Tcp.ResumeWriting.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.SuspendReading"/> command to temporarily stop reading from the TCP socket.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="Tcp.Command"/> that suspends reading on the connection.</returns>
         public static Tcp.Command SuspendReading()
         {
             return Tcp.SuspendReading.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.ResumeReading"/> command to resume reading from the TCP socket after a <see cref="Tcp.SuspendReading"/> command.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A <see cref="Tcp.Command"/> that resumes reading on the connection.</returns>
         public static Tcp.Command ResumeReading()
         {
             return Tcp.ResumeReading.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Tcp.ResumeAccepting"/> command to resume accepting new connections when read throttling is enabled.
         /// </summary>
-        /// <param name="batchSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="batchSize">The number of connections to accept before pausing again.</param>
+        /// <returns>A <see cref="Tcp.Command"/> that resumes accepting connections.</returns>
         public static Tcp.Command ResumeAccepting(int batchSize)
         {
             return new Tcp.ResumeAccepting(batchSize);

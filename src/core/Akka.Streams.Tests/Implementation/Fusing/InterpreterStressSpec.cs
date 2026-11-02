@@ -12,7 +12,6 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using OnNext = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.OneBoundedSetup.OnNext;
 using Cancel = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.OneBoundedSetup.Cancel;
 using OnComplete = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.OneBoundedSetup.OnComplete;

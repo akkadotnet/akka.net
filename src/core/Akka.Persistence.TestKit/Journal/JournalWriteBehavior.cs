@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="JournalWriteBehavior.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -31,7 +31,7 @@ namespace Akka.Persistence.TestKit
         ///     </para>
         /// </remarks>
         public Task Reject() => SetInterceptorAsync(JournalInterceptors.Rejection.Instance);
-
+        
         /// <summary>
         ///     Reject message during processing message of type <typeparamref name="TMessage"/>.
         /// </summary>
@@ -52,7 +52,7 @@ namespace Akka.Persistence.TestKit
         ///     </para>
         /// </remarks>
         /// <typeparam name="TMessage"></typeparam>
-        public Task RejectOnType<TMessage>() => FailOnType(typeof(TMessage));
+        public Task RejectOnType<TMessage>() => RejectOnType(typeof(TMessage));
 
         /// <summary>
         ///     Reject message during processing message of type <paramref name="messageType"/>.

@@ -612,6 +612,12 @@ namespace Akka.Remote
                     try
                     {
                         _resendBuffer = _resendBuffer.Acknowledge(ack);
+                        if (ack.CumulativeAck > _resendBuffer.MaxSeq)
+                        {
+                            _log.Warning(
+                                "Ignoring stale ACK [{0}] for send buffer [{1}] - likely from a previous association to [{2}]",
+                                ack, _resendBuffer, _remoteAddress);
+                        }
                     }
                     catch (Exception ex)
                     {

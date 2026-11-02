@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Helper classes for combining the Akka.Remote.TestKit with Akka.Cluster</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network;cluster;testkit</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Remote.TestKit.Xunit2\Akka.Remote.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Cluster.TestKit\FailureDetectorPuppet.cs">
+      <Link>FailureDetectorPuppet.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Cluster.TestKit\MultiNodeClusterSpec.cs">
+      <Link>MultiNodeClusterSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Cluster.TestKit\MultiNodeLoggingConfig.cs">
+      <Link>MultiNodeLoggingConfig.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+</Project>

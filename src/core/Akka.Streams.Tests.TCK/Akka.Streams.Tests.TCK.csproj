@@ -2,6 +2,7 @@
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <Description>This is just our test suite to ensure Reactive.Streams spec compliance.</Description>
   </PropertyGroup>
  
   <ItemGroup>
@@ -9,8 +10,8 @@
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
   </ItemGroup>
 
   <ItemGroup>

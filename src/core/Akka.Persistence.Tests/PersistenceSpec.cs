@@ -14,7 +14,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Persistence.Tests
 {
@@ -73,6 +73,12 @@ namespace Akka.Persistence.Tests
             var msg = ExpectMsg<object[]>();
             msg
                 .ShouldOnlyContainInOrder(ordered);
+        }
+
+        protected async Task ExpectMsgInOrderAsync(params object[] ordered)
+        {
+            var msg = await ExpectMsgAsync<object[]>();
+            msg.ShouldOnlyContainInOrder(ordered);
         }
 
         protected void ExpectAnyMsgInOrder(params IEnumerable<object>[] expected)

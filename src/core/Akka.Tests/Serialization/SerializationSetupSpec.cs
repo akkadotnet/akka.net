@@ -17,7 +17,6 @@ using Akka.TestKit.Configs;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {

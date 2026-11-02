@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Routing;
-using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -28,7 +27,8 @@ namespace Akka.Actor
     {
         private readonly Config _userConfig;
         //internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-        private readonly AtomicReference<Config> _fallbackConfig;
+        private Config _fallbackConfig;
+        private readonly object _configLock = new();
 
         private void RebuildConfig()
         {
@@ -49,15 +49,11 @@ namespace Akka.Actor
             if (Config.Contains(config)) 
                 return;
 
-            while(true)
+            lock (_configLock)
             {
-                var oldConfig = _fallbackConfig.Value;
-                var newConfig = config.SafeWithFallback(oldConfig);
-                if (_fallbackConfig.CompareAndSet(oldConfig, newConfig))
-                    break;
+                _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
+                RebuildConfig();
             }
-    
-            RebuildConfig();
         }
 
         /// <summary>
@@ -85,7 +81,7 @@ namespace Akka.Actor
         {
             Setup = setup;
             _userConfig = config;
-            _fallbackConfig = new AtomicReference<Config>(ConfigurationFactory.Default());
+            _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;

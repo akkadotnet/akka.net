@@ -14,10 +14,7 @@ using Akka.Configuration;
 using Akka.Persistence.Snapshot;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Snapshot;
 
@@ -31,7 +28,8 @@ public class SnapshotStoreSaveSnapshotSpec : PluginSpec
 {
     private const int RepeatCount = 200;
 
-    private const string SpecConfigTemplate = """
+    private static readonly string SpecConfigTemplate = 
+        $$"""
 akka.persistence.publish-plugin-commands = on
 akka.persistence.snapshot-store {
     plugin = "akka.persistence.snapshot-store.my"
@@ -42,10 +40,10 @@ akka.persistence.snapshot-store {
 }
 akka.actor {
     serializers {
-        persistence-tck-test="Akka.Persistence.TCK.Serialization.TestSerializer, Akka.Persistence.TCK"
+        persistence-tck-test="{{typeof(TestSerializer).FullName}}, {{typeof(TestSerializer).Assembly.GetName().Name}}"
     }
     serialization-bindings {
-        "Akka.Persistence.TCK.Serialization.TestPayload, Akka.Persistence.TCK" = persistence-tck-test
+        "{{typeof(TestPayload).FullName}}, {{typeof(TestPayload).Assembly.GetName().Name}}" = persistence-tck-test
     }
 }
 """;
@@ -89,8 +87,8 @@ akka.actor {
             var result = await SenderProbe.ExpectMsgAsync<int[]>();
             await StopActorAsync(persistenceActor);
             
-            result.Length.Should().Be(1, $"expecting an array with length 1 (on iteration {iteration}/{RepeatCount})");
-            result[0].Should().Be(3, $"recovered snapshot should be the last snapshot (on iteration {iteration}/{RepeatCount})");
+            Assert.Single(result); // expecting an array with length 1
+            Assert.Equal(3, result[0]); // recovered snapshot should be the last snapshot
             
             Output.WriteLine($"Iteration: {iteration}");
         }
@@ -124,8 +122,8 @@ akka.actor {
             var result = await SenderProbe.ExpectMsgAsync<int[]>();
             await StopActorAsync(persistenceActor);
             
-            result.Length.Should().Be(1, $"expecting an array with length 1 (on iteration {iteration}/{RepeatCount})");
-            result[0].Should().Be(3, $"recovered snapshot should be the last snapshot (on iteration {iteration}/{RepeatCount})");
+            Assert.Single(result); // expecting an array with length 1
+            Assert.Equal(3, result[0]); // recovered snapshot should be the last snapshot
             
             Output.WriteLine($"Iteration: {iteration}");
         }
@@ -140,17 +138,17 @@ akka.actor {
         
         var metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
         snapshotStore.Tell(new SaveSnapshot(metadata, snap), SenderProbe);
-        var success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>(10.Minutes());
-        success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
-        success.Metadata.Timestamp.Should().Be(metadata.Timestamp);
-        success.Metadata.SequenceNr.Should().Be(metadata.SequenceNr);
+        var success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>(TimeSpan.FromMinutes(10));
+        Assert.Equal(success.Metadata.PersistenceId, metadata.PersistenceId);
+        Assert.Equal(success.Metadata.Timestamp, metadata.Timestamp);
+        Assert.Equal(success.Metadata.SequenceNr, metadata.SequenceNr);
         
         metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
         snapshotStore.Tell(new SaveSnapshot(metadata, 3), SenderProbe);
         success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>();
-        success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
-        success.Metadata.Timestamp.Should().Be(metadata.Timestamp);
-        success.Metadata.SequenceNr.Should().Be(metadata.SequenceNr);
+        Assert.Equal(success.Metadata.PersistenceId, metadata.PersistenceId);
+        Assert.Equal(success.Metadata.Timestamp, metadata.Timestamp);
+        Assert.Equal(success.Metadata.SequenceNr, metadata.SequenceNr);
     }
     
     #region Utility
@@ -160,8 +158,12 @@ akka.actor {
         _guid = Guid.NewGuid().ToString("N")[^8..];
     }
     
+    private int _actorCounter;
+
+    // A fresh name per incarnation: the parent frees a stopped child's name after the watcher saw Terminated,
+    // so reusing one name right after ExpectTerminated races with that cleanup.
     private IActorRef CreatePersistenceActor(ActorSystem sys)
-        => sys.ActorOf(Props.Create(() => new MyPersistenceActor(PersistenceId)), "persistence-actor-1");
+        => sys.ActorOf(Props.Create(() => new MyPersistenceActor(PersistenceId)), $"persistence-actor-{++_actorCounter}");
 
     private async Task StopActorAsync(IActorRef actor)
     {

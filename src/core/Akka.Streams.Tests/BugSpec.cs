@@ -18,7 +18,6 @@ using Akka.TestKit.Extensions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests
 {
@@ -53,7 +52,7 @@ namespace Akka.Streams.Tests
             var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
                 .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
 
-            await Task.WhenAll(writeToStreamTask, readFromStreamTask).ShouldCompleteWithin(3.Seconds());
+            await Task.WhenAll(writeToStreamTask, readFromStreamTask).WaitAsync(3.Seconds());
 
             var expected = Enumerable.Range(0, 100)
                 .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));

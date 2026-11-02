@@ -8,7 +8,8 @@
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Primary scheduler interface combining message-based scheduling via <see cref="ITellScheduler"/>
+    /// and time access via <see cref="ITimeProvider"/>. Accessed through <see cref="ActorSystem.Scheduler"/>.
     /// </summary>
     public interface IScheduler : ITellScheduler, ITimeProvider
     {

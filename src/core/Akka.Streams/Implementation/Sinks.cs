@@ -21,6 +21,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 using Reactive.Streams;
 using Decider = Akka.Streams.Supervision.Decider;
 using Directive = Akka.Streams.Supervision.Directive;
@@ -509,7 +510,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<T>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
@@ -594,7 +595,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<T>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
@@ -685,7 +686,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<IImmutableList<T>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<IImmutableList<T>>();
             return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new Logic(this, promise), promise.Task);
         }
 
@@ -743,8 +744,16 @@ namespace Akka.Streams.Implementation
                 Pull(_stage.In);
             }
 
-            public override void PostStop() => 
+            public override void PostStop()
+            {
+                // Complete any pending request before shutting down to prevent orphaned Tasks
+                if (_currentRequest.HasValue)
+                {
+                    _currentRequest.Value.SetException(new StreamDetachedException());
+                    _currentRequest = Option<TaskCompletionSource<Option<T>>>.None;
+                }
                 StopCallback(promise => promise.SetException(new StreamDetachedException()));
+            }
 
             private Action<TaskCompletionSource<Option<T>>> Callback()
             {
@@ -815,7 +824,7 @@ namespace Akka.Streams.Implementation
 
             public Task<Option<T>> PullAsync()
             {
-                var promise = new TaskCompletionSource<Option<T>>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<Option<T>>();
                 _invokeLogic(promise);
                 return promise.Task;
             }
@@ -918,14 +927,24 @@ namespace Akka.Streams.Implementation
                             }
                             catch (Exception ex)
                             {
-                                _completion.TrySetException(ex);
+                                if (_completion.TrySetException(ex))
+                                {
+                                    // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                                    // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
+                                    _ = _completion.Task.Exception;
+                                }
                                 FailStage(ex);
                             }
                         }
                     }
                     else
                     {
-                        _completion.TrySetException(result.Exception);
+                        if (_completion.TrySetException(result.Exception))
+                        {
+                            // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                            // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
+                            _ = _completion.Task.Exception;
+                        }
                         FailStage(result.Exception);
                     }
                 });
@@ -937,7 +956,12 @@ namespace Akka.Streams.Implementation
                 }
                 catch (Exception ex)
                 {
-                    _completion.TrySetException(ex);
+                    if (_completion.TrySetException(ex))
+                    {
+                        // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                        // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
+                        _ = _completion.Task.Exception;
+                    }
                     FailStage(ex);
                 }
             }
@@ -959,7 +983,12 @@ namespace Akka.Streams.Implementation
 
             public override void OnUpstreamFailure(Exception ex)
             {
-                _completion.TrySetException(ex);
+                if (_completion.TrySetException(ex))
+                {
+                    // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                    // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
+                    _ = _completion.Task.Exception;
+                }
                 base.OnUpstreamFailure(ex);
             }
 
@@ -1062,7 +1091,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<Option<TMat>>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();
             var stageLogic = new Logic(this, inheritedAttributes, completion);
             return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, completion.Task);
         }

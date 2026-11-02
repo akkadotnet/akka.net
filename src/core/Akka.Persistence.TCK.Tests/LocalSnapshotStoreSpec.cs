@@ -10,7 +10,6 @@ using Akka.Configuration;
 using Akka.Persistence.TCK.Snapshot;
 using Akka.Persistence.TestKit.Tests;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Tests
 {

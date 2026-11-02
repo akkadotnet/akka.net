@@ -15,7 +15,6 @@ using Akka.IO;
 using Akka.IO.Buffers;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;

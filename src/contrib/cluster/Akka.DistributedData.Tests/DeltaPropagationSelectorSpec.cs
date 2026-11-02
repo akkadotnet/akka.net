@@ -39,6 +39,9 @@ namespace Akka.DistributedData.Tests
                 new(selfUniqueAddress, false, deltas
                     .Select(kv => new KeyValuePair<string, Delta>(kv.Key, new Delta(new DataEnvelope(kv.Value.Item1), kv.Value.Item2, kv.Value.Item3)))
                     .ToImmutableDictionary());
+
+            public DataEnvelope CreateEnvelope(DataEnvelope currentEnvelope, IReplicatedData delta) =>
+                CreateDeltaEnvelope(currentEnvelope, delta);
         }
 
         private class TestSelector2 : TestSelector
@@ -251,6 +254,21 @@ namespace Akka.DistributedData.Tests
             {
                 { nodes[0], expected }
             });
+        }
+
+        [Fact]
+        public void DeltaPropagationSelector_must_use_full_envelope_when_pruning_has_been_performed()
+        {
+            var selector = new TestSelector(selfUniqueAddress, nodes.Take(1).ToImmutableArray());
+            var pruning = ImmutableDictionary<UniqueAddress, IPruningState>.Empty
+                .Add(selfUniqueAddress, new PruningPerformed(DateTime.UtcNow.AddMinutes(1)));
+            var currentEnvelope = new DataEnvelope(
+                GSet<string>.Empty.Add("full-state"),
+                pruning,
+                VersionVector.Create(selfUniqueAddress, 1L));
+            var delta = GSet<string>.Empty.Add("delta-only");
+
+            selector.CreateEnvelope(currentEnvelope, delta).Should().BeSameAs(currentEnvelope);
         }
     }
 }

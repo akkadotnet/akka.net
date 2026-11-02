@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.57-beta2</VersionPrefix>
+    <VersionPrefix>1.5.73</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -10,7 +10,10 @@
       xUnit1031 is a temporary fix, we will need to pay this technical debt 
       and make everything fully async in the future 
     -->
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632</NoWarn>
+    <!-- 
+      xUnit1051 is to suppress xUnit oppinionated cancellation token warning. 
+    -->
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
@@ -19,8 +22,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.8.1</XunitVersion>
-    <Xunit3Version>2.0.1</Xunit3Version>
-    <Xunit3RunnerVersion>3.0.2</Xunit3RunnerVersion>
+    <Xunit3Version>3.2.2</Xunit3Version>
+    <Xunit3RunnerVersion>3.1.5</Xunit3RunnerVersion>
     <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
     <TestSdkVersion>17.9.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
@@ -28,8 +31,8 @@
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.26.1</ProtobufVersion>
     <GrpcToolsVersion>2.60.0</GrpcToolsVersion>
-    <BenchmarkDotNetVersion>0.13.12</BenchmarkDotNetVersion>
-    <NetTestVersion>net8.0</NetTestVersion>
+    <BenchmarkDotNetVersion>0.15.4</BenchmarkDotNetVersion>
+    <NetTestVersion>net10.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
     <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
@@ -37,11 +40,15 @@
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>2.16.6</FsCheckVersion>
+    <FsCheck3Version>3.3.2</FsCheck3Version>
+    <CsCheckVersion>4.8.0</CsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.5.25</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
+    <MsExtTestVersion>10.0.5</MsExtTestVersion>
+    <MsExtHostingVersion>[9.0.0,)</MsExtHostingVersion>
+    <OpenTelemetryVersion>[1.12.0,)</OpenTelemetryVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
@@ -50,69 +57,25 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.57-beta2 is a beta release containing significant new APIs for Akka.Persistence that add completion callbacks and async handler support.
+    <PackageReleaseNotes>Akka.NET v1.5.73 restores the Microsoft.Extensions dependency ranges to their pre-1.5.72 width. 1.5.72 raised the minimum to 10.0 across core and Hosting during the Akka.Hosting import; this release rolls that back to keep applications on older Microsoft.Extensions versions working.
 
-**New Features:**
+**Dependencies**
+* Microsoft.Extensions minimums restored - `Akka` and `Akka.DependencyInjection` return to `[6.0.*,)` and all `Akka.Hosting.*` packages return to `[9.0.0,)`. The ranges still allow newer versions, so applications on the latest Microsoft.Extensions remain covered. Akka.Hosting continues to permit OpenTelemetry SDK 1.12.0 or later while explicitly requiring `OpenTelemetry.Api` 1.15.3 or later, which preserves the fix for [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j) without forcing Microsoft.Extensions 10.
 
-* [Persistence completion callbacks via Defer - simplified alternative](https://github.com/akkadotnet/akka.net/pull/7957) - This release adds completion callback and async handler support to `Persist`, `PersistAsync`, `PersistAll`, and `PersistAllAsync` methods in Akka.Persistence. Key improvements include:
-  - **Async Handler Support**: All persist methods now support `Func&lt;TEvent, Task&gt;` handlers for async event processing
-  - **Completion Callbacks**: `PersistAll` and `PersistAllAsync` now accept optional completion callbacks (both sync `Action` and async `Func&lt;Task&gt;`) that execute after all events are persisted and handled
-  - **Ordering Guarantees**: Completion callbacks use `Defer`/`DeferAsync` internally to maintain strict ordering guarantees
-  - **Zero Breaking Changes**: All new APIs are additive overloads
-
-**Code Examples:**
-
-```csharp
-// Async handler support - process events asynchronously
-Persist(new OrderPlaced(orderId), async evt =&gt;
-{
-    await _orderService.ProcessOrderAsync(evt);
-});
-
-// PersistAll with completion callback - know when all events are done
-PersistAll(orderEvents, evt =&gt;
-{
-    _state.Apply(evt);
-}, onComplete: () =&gt;
-{
-    // All events persisted and handlers executed
-    _logger.Info("Order batch completed");
-    Sender.Tell(new BatchComplete());
-});
-
-// PersistAll with async handler AND async completion callback
-PersistAll(events,
-    handler: async evt =&gt; await ProcessEventAsync(evt),
-    onCompleteAsync: async () =&gt;
-    {
-        await NotifyCompletionAsync();
-        Sender.Tell(Done.Instance);
-    });
-
-// PersistAllAsync with completion - allows commands between handlers
-PersistAllAsync(largeEventBatch,
-    handler: evt =&gt; _state.Apply(evt),
-    onComplete: () =&gt; Sender.Tell(new BatchProcessed()));
-```
-
-**Technical Details:**
-
-The implementation maintains Akka.Persistence's strict ordering guarantees by using `Defer`/`DeferAsync` for completion callbacks, ensuring they execute in order even when called with empty event collections. The new async handler invocations (`IAsyncHandlerInvocation`) are processed via `RunTask` to preserve the actor's single-threaded execution model.
-
-1 contributor since release 1.5.57-beta1
+1 contributors since release 1.5.72
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 1 | 1386 | 67 | Aaron Stannard |
+| 5 | 330 | 121 | Aaron Stannard |
 
-To [see the full set of changes in Akka.NET v1.5.57-beta2, click here](https://github.com/akkadotnet/akka.net/milestone/141?closed=1)</PackageReleaseNotes>
+To see the full set of changes in Akka.NET v1.5.73, [click here](https://github.com/akkadotnet/akka.net/milestone/156?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.303" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />

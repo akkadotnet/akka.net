@@ -21,7 +21,6 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {

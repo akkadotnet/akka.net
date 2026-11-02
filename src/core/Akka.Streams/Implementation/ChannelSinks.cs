@@ -21,6 +21,8 @@ namespace Akka.Streams.Implementation
         private readonly Action<Task<bool>> _onWriteReady;
         private T _awaitingElement;
         private readonly bool _isOwner;
+        private bool _writeInFlight;
+        private bool _finishPending;
 
         public ChannelSinkLogic(SinkShape<T> shape, Inlet<T> inlet,
             ChannelWriter<T> writer, bool isOwner) : base(shape)
@@ -39,9 +41,23 @@ namespace Akka.Streams.Implementation
         private void OnWriteAvailable(bool available)
         {
             if (available && _writer.TryWrite(_awaitingElement))
-                Pull(_inlet);
+            {
+                _writeInFlight = false;
+                _awaitingElement = default;
+                if (_finishPending)
+                    TryComplete();
+                else
+                    Pull(_inlet);
+            }
+            else if (available)
+            {
+                _writer.WaitToWriteAsync().AsTask().ContinueWith(_onWriteReady);
+            }
             else
+            {
+                _writeInFlight = false;
                 TryComplete();
+            }
         }
 
         private void TryComplete()
@@ -60,6 +76,13 @@ namespace Akka.Streams.Implementation
 
         public override void OnUpstreamFinish()
         {
+            if (_writeInFlight)
+            {
+                _finishPending = true;
+                SetKeepGoing(true);
+                return;
+            }
+
             base.OnUpstreamFinish();
             if (_isOwner)
                 _writer.TryComplete();
@@ -104,6 +127,7 @@ namespace Akka.Streams.Implementation
                 {
                     var task = continuation.AsTask();
                     _awaitingElement = element;
+                    _writeInFlight = true;
                     task.ContinueWith(_onWriteReady);
                 }
             }

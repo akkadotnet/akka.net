@@ -6,11 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
@@ -20,7 +22,8 @@ namespace Akka.TestKit.Xunit;
 /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
 /// as its testing framework.
 /// </summary>
-public class TestKit : TestKitBase, IDisposable
+[AkkaCleanAmbientContext]
+public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
 {
     private class PrefixedOutput : ITestOutputHelper
     {
@@ -81,8 +84,7 @@ public class TestKit : TestKitBase, IDisposable
     protected readonly ITestOutputHelper? Output;
 
     private bool _disposed;
-    private bool _disposing;
-        
+
     /// <summary>
     /// <para>
     /// Initializes a new instance of the <see cref="TestKit"/> class.
@@ -137,6 +139,47 @@ public class TestKit : TestKitBase, IDisposable
     {
         Output = output;
         InitializeLogger(Sys);
+    }
+
+    /// <summary>
+    /// Ensures the implicit sender (<see cref="InternalCurrentActorCellKeeper.Current"/>) is set
+    /// on the current thread. This is needed because the <c>[ThreadStatic]</c> value can be lost
+    /// when <c>IAsyncLifetime.InitializeAsync</c> contains an <c>await</c> that causes a thread switch.
+    /// Called automatically when accessing <see cref="Sys"/> or <see cref="TestActor"/>.
+    /// </summary>
+    private void EnsureImplicitSender()
+    {
+        // Only set the implicit sender if Current is not already set.
+        // During actor message processing, Mailbox.Run() sets Current to the actor's cell.
+        // Overwriting it here would corrupt the actor context for the rest of that mailbox run.
+        if (this is not INoImplicitSender && InternalCurrentActorCellKeeper.Current == null)
+            InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)base.TestActor).Underlying;
+    }
+
+    /// <summary>
+    /// The <see cref="ActorSystem"/> used for testing. Accessing this property ensures the
+    /// implicit sender is set on the current thread.
+    /// </summary>
+    public new ActorSystem Sys
+    {
+        get
+        {
+            EnsureImplicitSender();
+            return base.Sys;
+        }
+    }
+
+    /// <summary>
+    /// The default test actor. Accessing this property ensures the implicit sender
+    /// is set on the current thread.
+    /// </summary>
+    public new IActorRef TestActor
+    {
+        get
+        {
+            EnsureImplicitSender();
+            return base.TestActor;
+        }
     }
 
     /// <summary>
@@ -207,7 +250,20 @@ public class TestKit : TestKitBase, IDisposable
     }
 
     /// <summary>
+    /// xUnit lifecycle hook, invoked once before the test method runs. The default
+    /// implementation does nothing. Override to perform asynchronous test setup, and
+    /// call <c>await base.InitializeAsync()</c> from your override.
+    /// </summary>
+    public virtual ValueTask InitializeAsync()
+        => default;
+
+    /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// Runs <see cref="AfterAll"/>; this is the one place the dispose chain and any derived override run.
+    /// Overriders must not depend on the <see cref="ActorSystem"/> having been terminated when this method
+    /// returns — that happens afterward, in whichever public entry point invoked the chain
+    /// (<see cref="Dispose()"/> via <see cref="Akka.TestKit.TestKitBase.Shutdown(System.Nullable{System.TimeSpan},System.Boolean)"/>,
+    /// or <see cref="DisposeAsync"/> via <see cref="Akka.TestKit.TestKitBase.ShutdownAsync(System.Nullable{System.TimeSpan},System.Boolean)"/>).
     /// </summary>
     /// <param name="disposing">
     /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
@@ -217,23 +273,60 @@ public class TestKit : TestKitBase, IDisposable
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposing || _disposed)
+        AfterAll();
+    }
+
+    /// <summary>
+    /// Runs the dispose chain (<see cref="Dispose(bool)"/>, and therefore <see cref="AfterAll"/> and any
+    /// override) exactly once, then synchronously terminates the <see cref="ActorSystem"/> via
+    /// <see cref="Akka.TestKit.TestKitBase.Shutdown(System.Nullable{System.TimeSpan},System.Boolean)"/> —
+    /// even if the chain throws. Calling this again, including after <see cref="DisposeAsync"/> has
+    /// already run the chain, is a no-op.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
             return;
-            
-        _disposing = true;
+        _disposed = true;
+
         try
         {
-            AfterAll();
+            Dispose(true);
         }
         finally
         {
             Shutdown();
-            _disposed = true;
         }
     }
 
-    public void Dispose()
+    /// <summary>
+    /// xUnit lifecycle hook, invoked once after the test method completes. Runs the dispose chain
+    /// (<see cref="Dispose(bool)"/>, and therefore <see cref="AfterAll"/> and any override) exactly
+    /// once, then asynchronously terminates the <see cref="ActorSystem"/> via
+    /// <see cref="Akka.TestKit.TestKitBase.ShutdownAsync(System.Nullable{System.TimeSpan},System.Boolean)"/>,
+    /// without blocking the calling thread — even if the chain throws. Calling this again, including
+    /// after <see cref="Dispose()"/> has already run the chain, is a no-op.
+    /// <para>
+    /// Override this for asynchronous teardown, and always call <c>await base.DisposeAsync()</c>
+    /// from your override. xUnit v3 invokes <see cref="System.IAsyncDisposable.DisposeAsync"/> in
+    /// preference to <see cref="IDisposable.Dispose"/> for any type that implements both
+    /// interfaces, so an override that does not chain to the base will skip shutdown and leak
+    /// the <see cref="ActorSystem"/>.
+    /// </para>
+    /// </summary>
+    public virtual async ValueTask DisposeAsync()
     {
-        Dispose(true);
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        try
+        {
+            Dispose(true);
+        }
+        finally
+        {
+            await ShutdownAsync();
+        }
     }
 }

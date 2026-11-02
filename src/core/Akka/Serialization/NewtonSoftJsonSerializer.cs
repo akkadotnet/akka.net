@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
@@ -142,7 +143,18 @@ namespace Akka.Serialization
     public class NewtonSoftJsonSerializer : Serializer
     {
         private readonly JsonSerializer _serializer;
-        
+
+        /// <summary>
+        /// A copy of <see cref="_serializer"/> with the <see cref="SurrogateConverter"/> removed.
+        /// Used to break the infinite recursion described in #8354: when a message member is
+        /// statically typed as a concrete <see cref="ISurrogated"/> type (e.g. <see cref="Address"/>)
+        /// but the JSON for that member carries no `$type` metadata, <see cref="SurrogateConverter"/>
+        /// would otherwise hand the resulting <see cref="JObject"/> straight back to itself for the
+        /// very same type, looping forever and crashing the process with an uncatchable native
+        /// <see cref="StackOverflowException"/>.
+        /// </summary>
+        private readonly JsonSerializer _surrogateExcludedSerializer;
+
         private readonly ObjectPool<StringBuilder> _sbPool;
         /// <summary>
         /// TBD
@@ -214,6 +226,16 @@ namespace Akka.Serialization
             Settings.ContractResolver = new AkkaContractResolver();
 
             _serializer = JsonSerializer.Create(Settings);
+
+            // Build the fallback serializer from the same fully-configured Settings so every user
+            // customization (SerializationBinder, DateParseHandling, Culture, MaxDepth, etc.) applied
+            // via NewtonSoftJsonSerializerSetup is preserved. JsonSerializer.Create copies the
+            // converters into the serializer's own collection, so removing the SurrogateConverter
+            // here affects neither Settings nor _serializer.
+            _surrogateExcludedSerializer = JsonSerializer.Create(Settings);
+            var surrogateConverter = _surrogateExcludedSerializer.Converters.FirstOrDefault(c => c is SurrogateConverter);
+            if (surrogateConverter != null)
+                _surrogateExcludedSerializer.Converters.Remove(surrogateConverter);
         }
 
 
@@ -343,7 +365,32 @@ namespace Akka.Serialization
                 {
                     return RestoreJToken(j);
                 }
-                
+
+                // Bug: #8354 mirror of #6502 - `type` here is the member's static type, which can
+                // itself be a concrete ISurrogated type (e.g. Address). If the JSON for that member
+                // carries no `$type` metadata (encode-type-names off, or an external producer),
+                // calling `j.ToObject(type, parent._serializer)` would hand this same JObject back
+                // to SurrogateConverter for the very same type, which produces the same untyped
+                // JObject again, looping forever until the native stack overflows and kills the
+                // process. Deserialize with the SurrogateConverter excluded so plain reflection-based
+                // binding is used instead, and surface a catchable, descriptive exception if that
+                // still can't produce a value.
+                if (typeof(ISurrogated).IsAssignableFrom(type))
+                {
+                    try
+                    {
+                        return j.ToObject(type, parent._surrogateExcludedSerializer);
+                    }
+                    catch (JsonException ex)
+                    {
+                        throw new SerializationException(
+                            $"Unable to deserialize a value of type [{type}] from JSON that does not carry " +
+                            "`$type` metadata. This can happen when `encode-type-names` is disabled, or when " +
+                            "the payload was produced by a non-Akka.NET producer. Ensure the JSON contains " +
+                            $"enough information to construct [{type}] directly.", ex);
+                    }
+                }
+
                 //The JObject is not of our concern, let Json.NET deserialize it.
                 return j.ToObject(type, parent._serializer);
             }

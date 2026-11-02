@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -85,7 +86,9 @@ namespace Akka.Remote.Serialization
 
         private Props PropsFromProto(Proto.Msg.PropsData protoProps)
         {
-            var actorClass = Type.GetType(protoProps.Clazz);
+            var actorClass = Type.GetType(protoProps.Clazz)
+                ?? throw new SerializationException(
+                    $"Could not resolve actor type [{protoProps.Clazz}] during DaemonMsgCreate deserialization.");
             var args = new object[protoProps.Args.Count];
             for (int i = 0; i < args.Length; i++)
             {

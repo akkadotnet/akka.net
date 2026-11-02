@@ -322,7 +322,9 @@ namespace Akka.Cluster
         /// <returns><c>true</c> if both vector clocks are equal; otherwise <c>false</c></returns>
         public static bool operator ==(VectorClock left, VectorClock right)
         {
-            if (ReferenceEquals(left, null))
+            if (ReferenceEquals(left, right))
+                return true;
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
                 return false;
 
             return left.IsSameAs(right);
@@ -336,10 +338,7 @@ namespace Akka.Cluster
         /// <returns><c>true</c> if both vector clocks are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(VectorClock left, VectorClock right)
         {
-            if (ReferenceEquals(left, null))
-                return false;
-
-            return left.IsConcurrentWith(right);
+            return !(left == right);
         }
 
         private static readonly (Node, long) CmpEndMarker = (Node.Create("endmarker"), Timestamp.EndMarker);

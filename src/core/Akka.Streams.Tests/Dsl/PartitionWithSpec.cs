@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class PartitionWithSpec : Akka.TestKit.Xunit2.TestKit
+    public class PartitionWithSpec : Akka.TestKit.Xunit.TestKit
     {
         private Flow<int, int, NotUsed> _flow = Flow.FromGraph(GraphDsl.Create(b =>
         {

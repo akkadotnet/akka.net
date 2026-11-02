@@ -368,7 +368,26 @@ namespace Akka.Cluster.Serialization
                 
                 membersProtos.Add(MemberToProto(m));
             }
-            
+
+            // A tombstoned node is never a member, so its address is missing from the table the
+            // member loop just built. Append it, so the tombstone can index into the same table.
+            var tombstoneProtos = new List<Proto.Msg.Tombstone>(gossip.Tombstones.Count);
+            foreach (var t in gossip.Tombstones)
+            {
+                if (!addressMapping.ContainsKey(t.Key))
+                {
+                    addressMapping.Add(t.Key, addrIndex);
+                    addrIndex += 1;
+                    addressesToProto.Add(UniqueAddressToProto(t.Key));
+                }
+
+                tombstoneProtos.Add(new Proto.Msg.Tombstone
+                {
+                    AddressIndex = MapUniqueAddress(t.Key),
+                    Timestamp = t.Value
+                });
+            }
+
             //var addressMapping = allAddresses.ZipWithIndex();
             //var roleMapping = allRoles.ZipWithIndex();
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToArray();
@@ -389,6 +408,7 @@ namespace Akka.Cluster.Serialization
             message.Members.AddRange(membersProtos);
             message.Overview = overview;
             message.Version = VectorClockToProto(gossip.Version, hashMapping);
+            message.Tombstones.AddRange(tombstoneProtos);
             message.AllAppVersions.AddRange(allAppVersions);
             return message;
 
@@ -420,7 +440,19 @@ namespace Akka.Cluster.Serialization
             var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
             var overview = new GossipOverview(seen, reachability);
 
-            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping));
+            // gossip written before tombstones existed simply carries none
+            var tombstones = ImmutableDictionary<UniqueAddress, long>.Empty;
+            if (gossip.Tombstones.Count > 0)
+            {
+                var builder = tombstones.ToBuilder();
+                foreach (var t in gossip.Tombstones)
+                {
+                    builder[addressMapping[t.AddressIndex]] = t.Timestamp;
+                }
+                tombstones = builder.ToImmutable();
+            }
+
+            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping), tombstones);
 
             Member MemberFromProto(Proto.Msg.Member member) =>
                 Member.Create(

@@ -104,6 +104,9 @@ namespace Akka.Persistence
             {
                 var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
                 var configuratorType = Type.GetType(configuratorTypeName);
+                if (configuratorType is null)
+                    throw new ConfigurationException(
+                        $"Could not resolve internal-stash-overflow-strategy type [{configuratorTypeName}]. Ensure the type name is fully qualified.");
                 return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
             });
 

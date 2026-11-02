@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class AccumulateWhileUnchangedSpec : Akka.TestKit.Xunit2.TestKit
+    public class AccumulateWhileUnchangedSpec : Akka.TestKit.Xunit.TestKit
     {
         private struct Element
         {

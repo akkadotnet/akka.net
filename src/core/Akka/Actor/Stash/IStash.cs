@@ -36,7 +36,7 @@ namespace Akka.Actor
         /// Unstashes all messages selected by the predicate function. Other messages are discarded.
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
-        /// <param name="predicate">TBD</param>
+        /// <param name="predicate">A filter applied to each stashed <see cref="Envelope"/>. Only messages for which this returns <see langword="true"/> are prepended to the mailbox; the rest are discarded.</param>
         void UnstashAll(Func<Envelope, bool> predicate);
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace Akka.Actor
         /// <summary>
         /// Prepend a set of envelopes to the front of the stash.
         /// </summary>
-        /// <param name="envelopes">TBD</param>
+        /// <param name="envelopes">The collection of <see cref="Envelope"/> messages to insert at the front of the stash.</param>
         void Prepend(IEnumerable<Envelope> envelopes);
         
         /// <summary>
@@ -58,20 +58,20 @@ namespace Akka.Actor
         public int Count { get; }
         
         /// <summary>
-        /// Returns <c>true</c> when <see cref="Count"/> is zero.
+        /// Returns <see langword="true"/> when <see cref="Count"/> is zero.
         /// </summary>
         public bool IsEmpty { get; }
         
         /// <summary>
-        /// Returns <c>true</c> when <see cref="Count"/> is greater than zero.
+        /// Returns <see langword="true"/> when <see cref="Count"/> is greater than zero.
         /// </summary>
         public bool NonEmpty { get; }
         
         /// <summary>
-        /// When using a bounded stash, this returns <c>true</c> when the stash is full.
+        /// When using a bounded stash, this returns <see langword="true"/> when the stash is full.
         /// </summary>
         /// <remarks>
-        /// Always returns <c>false</c> when using an unbounded stash.
+        /// Always returns <see langword="false"/> when using an unbounded stash.
         /// </remarks>
         public bool IsFull { get; }
         

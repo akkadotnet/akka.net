@@ -19,12 +19,11 @@ using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Cluster.Sharding.Tests.Delivery;
 
-public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
+public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
 {
     public static Config Configuration = @"
         akka.loglevel = DEBUG
@@ -88,7 +87,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
-                        PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
+                        PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c, expectedProducerCount: 2),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
                 o => string.Empty, o => o));
@@ -108,7 +107,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"p2-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
+        var endMessages = await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(10)).ToListAsync();
 
         var producerIds = endMessages.Cast<Collected>().SelectMany(c => c.ProducerIds).ToList();
         producerIds

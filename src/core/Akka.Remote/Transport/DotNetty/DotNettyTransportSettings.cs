@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -113,10 +114,10 @@ namespace Akka.Remote.Transport.DotNetty
     ///     Used for performance-tuning the DotNetty channels to maximize I/O performance.
     /// </param>
     internal sealed record DotNettyTransportSettings(
-        TransportMode TransportMode, 
+        TransportMode TransportMode,
         bool EnableSsl,
         TimeSpan ConnectTimeout,
-        string Hostname, 
+        string Hostname,
         string PublicHostname,
         int Port,
         int? PublicPort,
@@ -131,7 +132,7 @@ namespace Akka.Remote.Transport.DotNetty
         int Backlog,
         bool EnforceIpFamily,
         int? ReceiveBufferSize,
-        int? SendBufferSize, 
+        int? SendBufferSize,
         int? WriteBufferHighWaterMark,
         int? WriteBufferLowWaterMark,
         bool BackwardsCompatibilityModeEnabled,
@@ -192,7 +193,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");
-            if (string.IsNullOrWhiteSpace(host)) 
+            if (string.IsNullOrWhiteSpace(host))
                 host = IPAddress.Any.ToString();
 
             var publicHost = config.GetString("public-hostname");
@@ -256,7 +257,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         internal DotNettyTransportSettings Validate()
         {
-            if (MaxFrameSize < 32000) 
+            if (MaxFrameSize < 32000)
                 throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(MaxFrameSize));
 
             return this;
@@ -366,7 +367,8 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool RequireMutualAuthentication;
 
         /// <summary>
-        /// When true, enables traditional TLS hostname validation (certificate CN/SAN must match target hostname).
+        /// When true, enables traditional outbound TLS hostname validation
+        /// (the server certificate CN/SAN must match the connection target hostname).
         /// When false, only validates certificate chain against CA, ignores hostname mismatches.
         /// Default is false for backward compatibility and to support mutual TLS scenarios with per-node certificates,
         /// IP-based connections, or dynamic service discovery.
@@ -497,7 +499,11 @@ namespace Akka.Remote.Transport.DotNetty
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
+#if NET10_0_OR_GREATER
+            Certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, certificatePassword, flags);
+#else
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
+#endif
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
@@ -560,16 +566,27 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         /// <summary>
-        /// Validate certificate hostname (CN/SAN) matches expected hostname.
-        /// Use for: Per-node certificates, FQDN-based identity.
-        /// Applies bidirectionally on both client and server.
+        /// Validates the outbound server certificate using the hostname result supplied by <see cref="SslStream"/>.
+        /// The expected hostname is established when the outbound TLS connection is authenticated.
+        /// This helper does not infer or validate a hostname for inbound client certificates.
         /// </summary>
+        /// <param name="expectedHostname">Optional hostname used in validation-failure diagnostics. It does not override the outbound connection target supplied to <see cref="SslStream"/>.</param>
+        /// <param name="log">Optional logger for validation failures.</param>
         public static CertificateValidationCallback ValidateHostname(
             string? expectedHostname = null,
             ILoggingAdapter? log = null)
         {
+            var warnedAboutExpectedHostname = 0;
             return (cert, chain, peer, errors, nonClosureLog) =>
             {
+                if (expectedHostname is not null && Interlocked.Exchange(ref warnedAboutExpectedHostname, 1) == 0)
+                {
+                    (log ?? nonClosureLog).Warning(
+                        "Akka.NET v1.5 does not enforce the explicit expected hostname [{0}]. " +
+                        "The value is used for diagnostics only; upgrade to Akka.NET v1.6 or later to enforce it.",
+                        expectedHostname);
+                }
+
                 if (cert == null)
                 {
                     (log ?? nonClosureLog).Error(

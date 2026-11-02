@@ -41,7 +41,7 @@ Cluster.Bootstrap uses these to dynamically populate the seed nodes list and saf
 
 ## Configuration with Akka.Hosting (Recommended)
 
-> **Recommended:** We strongly encourage users to configure Akka.Discovery using [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) for a modern, type-safe, and composable experience.
+> **Recommended:** We strongly encourage users to configure Akka.Discovery using [Akka.Hosting](xref:akka-hosting) for a modern, type-safe, and composable experience.
 
 Example using Akka.Discovery.Azure with Akka.Hosting, including remoting, clustering, Akka.Management, and Cluster Bootstrap:
 
