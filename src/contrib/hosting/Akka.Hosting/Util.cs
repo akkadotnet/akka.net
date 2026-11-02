@@ -6,7 +6,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
@@ -21,10 +23,42 @@ namespace Akka.Hosting
         {
             get
             {
-                _runningInMaui ??= AppDomain.CurrentDomain.GetAssemblies().Any(asm => asm?.GetName()?.Name?.StartsWith("Microsoft.Maui") ?? false);
+                _runningInMaui ??= DetectMaui(AppDomain.CurrentDomain.GetAssemblies());
                 return _runningInMaui.Value;
             }
         }
+
+        internal static bool DetectMaui(IEnumerable<Assembly> assemblies)
+        {
+            try
+            {
+                return assemblies.Any(IsMauiAssembly);
+            }
+            catch
+            {
+                // detection is best effort - failing to detect means "not MAUI"
+                return false;
+            }
+        }
+
+        internal static bool IsMauiAssembly(Assembly? assembly)
+        {
+            try
+            {
+                // Don't use Assembly.GetName() here: it builds a CultureInfo for satellite assemblies
+                // (e.g. "cs" from Microsoft.Data.SqlClient) and throws CultureNotFoundException
+                // when InvariantGlobalization is enabled. FullName is a plain string that starts
+                // with the simple assembly name.
+                return IsMauiAssemblyName(assembly?.FullName);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        internal static bool IsMauiAssemblyName(string? assemblyFullName)
+            => assemblyFullName?.StartsWith("Microsoft.Maui", StringComparison.Ordinal) ?? false;
 
         public static Config MoveTo(this Config config, string path)
         {

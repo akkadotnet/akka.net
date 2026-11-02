@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Hosting.InvariantGlobalization.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Hosting.Maui")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Hosting.Tests")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
@@ -273,6 +274,7 @@ namespace Akka.Hosting
         All = 1,
         Some = 2,
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class static Util
     {
         public static Akka.Configuration.Config MoveTo(this Akka.Configuration.Config config, string path) { }
