@@ -110,6 +110,9 @@ namespace Akka.Streams.Implementation.StreamRef
             private StreamRefsMaster? _streamRefsMaster;
             private StreamRefSettings? _settings;
             private StreamRefAttributes.SubscriptionTimeout? _subscriptionTimeout;
+            private StreamRefAttributes.BufferCapacity? _bufferCapacity;
+            private StreamRefAttributes.DemandRedeliveryInterval? _demandRedeliveryInterval;
+            private StreamRefAttributes.FinalTerminationSignalDeadline? _finalTerminationSignalDeadline;
             private string? _stageActorName;
 
             private StageActor? _stageActor;
@@ -118,6 +121,10 @@ namespace Akka.Streams.Implementation.StreamRef
             private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ??= StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System);
             private StreamRefSettings Settings => _settings ??= ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings;
             private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout));
+            // Per-stream attributes take precedence over the materializer's StreamRefSettings (as in JVM Akka)
+            private StreamRefAttributes.BufferCapacity BufferCapacity => _bufferCapacity ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.BufferCapacity(Settings.BufferCapacity));
+            private StreamRefAttributes.DemandRedeliveryInterval DemandRedeliveryInterval => _demandRedeliveryInterval ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.DemandRedeliveryInterval(Settings.DemandRedeliveryInterval));
+            private StreamRefAttributes.FinalTerminationSignalDeadline FinalTerminationSignalDeadline => _finalTerminationSignalDeadline ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.FinalTerminationSignalDeadline(Settings.FinalTerminationSignalDeadline));
             protected override string StageActorName => _stageActorName ??= StreamRefsMaster.NextSourceRefName();
 
             public IActorRef Self
@@ -158,7 +165,7 @@ namespace Akka.Streams.Implementation.StreamRef
 
             public override void PreStart()
             {
-                _receiveBuffer = new ModuloFixedSizeBuffer<TOut>(Settings.BufferCapacity);
+                _receiveBuffer = new ModuloFixedSizeBuffer<TOut>(BufferCapacity.Capacity);
                 _requestStrategy = new WatermarkRequestStrategy(highWatermark: _receiveBuffer.Capacity);
 
                 _stageActor = GetStageActor(InitialReceive);
@@ -211,7 +218,7 @@ namespace Akka.Streams.Implementation.StreamRef
             }
 
             private void ScheduleDemandRedelivery() =>
-                ScheduleOnce(DemandRedeliveryTimerKey, Settings.DemandRedeliveryInterval);
+                ScheduleOnce(DemandRedeliveryTimerKey, DemandRedeliveryInterval.Timeout);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -277,7 +284,7 @@ namespace Akka.Streams.Implementation.StreamRef
                             // we need to start a delayed shutdown in case we were network partitioned and the final signal complete/fail
                             // will never reach us; so after the given timeout we need to forcefully terminate this side of the stream ref
                             // the other (sending) side terminates by default once it gets a Terminated signal so no special handling is needed there.
-                            ScheduleOnce(TerminationDeadlineTimerKey, Settings.FinalTerminationSignalDeadline);
+                            ScheduleOnce(TerminationDeadlineTimerKey, FinalTerminationSignalDeadline.Timeout);
                         else
                             FailStage(new RemoteStreamRefActorTerminatedException(
                                 $"Received UNEXPECTED Terminated({terminated.ActorRef}) message! This actor was NOT our trusted remote partner, which was: {_partnerRef}. Tearing down."));
