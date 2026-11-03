@@ -65,8 +65,8 @@ public sealed class MarkedUnionBaseSpec
         generated.Should().Contain("placed-v1").And.Contain("cancelled-v1");
     }
 
-    [Fact(DisplayName = "A parameterless [AkkaUnion] with zero visible implementors compiles clean and emits an (empty) union, rather than failing AKKASG019's empty-set rule")]
-    public void Local_marked_union_base_with_no_implementors_is_not_an_error()
+    [Fact(DisplayName = "A parameterless [AkkaUnion] with zero visible implementors reports AKKASG019 and emits no serializer")]
+    public void Local_marked_union_base_with_no_implementors_reports_AKKASG019()
     {
         const string source = """
             #nullable enable
@@ -90,8 +90,11 @@ public sealed class MarkedUnionBaseSpec
 
         var result = GeneratorTestHarness.Run(source);
 
-        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
-        result.AllDiagnostics.Should().NotContain(d => d.Id == "AKKASG019");
+        // A union with no members can only throw: report it instead of emitting a dispatch helper
+        // with no arms (which also fails the consumer's build with CS0162 in generated code).
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG019" && d.Severity == DiagnosticSeverity.Error)
+            .Which.GetMessage(null).Should().Contain("IOrderEvent");
+        result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("OrdersSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
     }
 
     [Fact(DisplayName = "A parameterless [AkkaUnion] declared upstream discovers implementors on BOTH sides of the assembly boundary")]

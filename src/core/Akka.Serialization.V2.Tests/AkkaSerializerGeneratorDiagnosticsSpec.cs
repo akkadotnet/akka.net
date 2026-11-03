@@ -1209,7 +1209,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG023" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
-    [Fact(DisplayName = "Generator should report advisory AKKASG025 when a union member is not sealed")]
+    [Fact(DisplayName = "Generator should report AKKASG025 as a warning when a union member is not sealed")]
     public void Generator_should_report_AKKASG025_when_union_member_not_sealed()
     {
         const string source = """
@@ -1247,11 +1247,11 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
         var diagnostics = RunGenerator(source);
 
-        // Advisory only: fires for the unsealed member, stays Info severity, and does NOT fail the
-        // build -- the union still generates and no errors are produced.
+        // A warning, so it shows in normal build output, but not an error: the union still
+        // generates and no errors are produced.
         diagnostics.Should().Contain(diagnostic =>
             diagnostic.Id == "AKKASG025" &&
-            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.Severity == DiagnosticSeverity.Warning &&
             diagnostic.GetMessage(null).Contains("OpenMember", StringComparison.Ordinal));
         diagnostics.Should().NotContain(diagnostic =>
             diagnostic.Id == "AKKASG025" &&
@@ -2110,7 +2110,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
         var diagnostics = RunGenerator(source);
 
-        // Exact-runtime-type dispatch can never select an abstract member -- Warning, not Info.
+        // Exact-runtime-type dispatch can never select an abstract member -- Warning.
         // (Other, pre-existing errors fire alongside it here: an abstract record cannot be
         // reconstructed on deserialize either, so AKKASG026 also triggers -- 036 exists precisely
         // to name the root cause of that confusing combination.)
@@ -2126,7 +2126,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             diagnostic.GetMessage(null).Contains("AbstractMember", StringComparison.Ordinal));
         diagnostics.Should().Contain(diagnostic =>
             diagnostic.Id == "AKKASG025" &&
-            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.Severity == DiagnosticSeverity.Warning &&
             diagnostic.GetMessage(null).Contains("OpenMember", StringComparison.Ordinal));
         diagnostics.Should().NotContain(diagnostic =>
             (diagnostic.Id == "AKKASG025" || diagnostic.Id == "AKKASG036") &&

@@ -1287,7 +1287,7 @@ public sealed partial class AkkaSerializerGenerator
 
     internal sealed class FieldInfo : IEquatable<FieldInfo>
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false, bool isDiscoveredUnion = false)
         {
             Index = index;
             Name = name;
@@ -1297,6 +1297,7 @@ public sealed partial class AkkaSerializerGenerator
             Formatter = formatter;
             UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
             UnionDeclaredOnObjectField = unionDeclaredOnObjectField;
+            IsDiscoveredUnion = isDiscoveredUnion;
         }
 
         public int Index { get; }
@@ -1318,18 +1319,28 @@ public sealed partial class AkkaSerializerGenerator
         public bool UnionDeclaredOnObjectField { get; }
 
         /// <summary>
+        /// True when this <see cref="FieldKind.Union"/> field's member set was DISCOVERED (a
+        /// parameterless <c>[AkkaUnion]</c>, Decision 21) rather than listed, after
+        /// <see cref="AkkaSerializerGenerator.ResolveMessages"/> has filled the set in. Validation needs
+        /// the distinction: a discovered set silently drops any implementor that lacks
+        /// <c>[AkkaSerializable]</c> (AKKASG048, an error), while a listed set omitting a case of a
+        /// closed hierarchy may be deliberate (AKKASG049, a warning).
+        /// </summary>
+        public bool IsDiscoveredUnion { get; }
+
+        /// <summary>
         /// Replaces this field's mapping, keeping everything else. Used by formatter resolution when a
         /// registered formatter swaps a collection's element, key, or value mapping for a
         /// <see cref="FieldKind.Formatted"/> one -- the field itself stays an ordinary collection field.
         /// </summary>
         public FieldInfo WithMapping(TypeMapping mapping)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, Formatter, UnionMembers, UnionDeclaredOnObjectField);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, Formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion);
         }
 
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion);
         }
 
         /// <summary>
@@ -1341,9 +1352,14 @@ public sealed partial class AkkaSerializerGenerator
         /// after extraction but the enclosing serializer's protocol (unknown at extraction time) makes
         /// it a valid union after all.
         /// </summary>
-        public FieldInfo WithUnion(ImmutableArray<UnionMemberInfo> unionMembers)
+        /// <remarks>
+        /// <paramref name="isDiscovered"/> marks a set resolved from a parameterless <c>[AkkaUnion]</c>.
+        /// The static-type key (<see cref="TypeMapping.Key"/>) is kept so validation can look the
+        /// closed-set key back up in <see cref="CompilationFacts"/>.
+        /// </remarks>
+        public FieldInfo WithUnion(ImmutableArray<UnionMemberInfo> unionMembers, bool isDiscovered = false)
         {
-            return new FieldInfo(Index, Name, TypeFullName, new TypeMapping(FieldKind.Union), IsNullable, Formatter, unionMembers, unionDeclaredOnObjectField: false);
+            return new FieldInfo(Index, Name, TypeFullName, new TypeMapping(FieldKind.Union, Mapping.Key), IsNullable, Formatter, unionMembers, unionDeclaredOnObjectField: false, isDiscoveredUnion: isDiscovered);
         }
 
         public bool Equals(FieldInfo? other)
@@ -1360,6 +1376,7 @@ public sealed partial class AkkaSerializerGenerator
                 && Mapping.Equals(other.Mapping)
                 && IsNullable == other.IsNullable
                 && UnionDeclaredOnObjectField == other.UnionDeclaredOnObjectField
+                && IsDiscoveredUnion == other.IsDiscoveredUnion
                 && Equals(Formatter, other.Formatter)
                 && ValueEquality.SequenceEquals(UnionMembers, other.UnionMembers);
         }
@@ -1375,6 +1392,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Mapping.GetHashCode());
             hash = ValueEquality.Combine(hash, IsNullable);
             hash = ValueEquality.Combine(hash, UnionDeclaredOnObjectField);
+            hash = ValueEquality.Combine(hash, IsDiscoveredUnion);
             hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
             hash = ValueEquality.Combine(hash, UnionMembers);
             return hash;
@@ -1801,7 +1819,9 @@ public sealed partial class AkkaSerializerGenerator
         DuplicateProtocolBindingCrossAssembly,
         MessageTypeNotAccessible,
         PropertyNotSerialized,
-        IgnoredFieldAnnotations
+        IgnoredFieldAnnotations,
+        UnionImplementorNotSerializable,
+        UnionMemberSetIncomplete
     }
 
     /// <summary>
@@ -2288,8 +2308,10 @@ public sealed partial class AkkaSerializerGenerator
             ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyImplementorsByClosedSetKey,
             ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> referencedAssemblyUnmarkedImplementorsByProtocol,
             ImmutableDictionary<TypeKey, ImmutableArray<UpstreamSerializerBinding>> upstreamSerializerBindingsByProtocol,
-            ImmutableArray<string> referencedAssembliesUsingV2)
+            ImmutableArray<string> referencedAssembliesUsingV2,
+            UnionHierarchyFacts? unionHierarchies = null)
         {
+            UnionHierarchies = unionHierarchies ?? UnionHierarchyFacts.Empty;
             LocalUnmarkedImplementorsByProtocol = localUnmarkedImplementorsByProtocol;
             LocalMarkedImplementorsByClosedSetKey = localMarkedImplementorsByClosedSetKey;
             ReferencedAssemblyImplementorsByProtocol = referencedAssemblyImplementorsByClosedSetKey;
@@ -2361,6 +2383,12 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public ImmutableArray<string> ReferencedAssembliesUsingV2 { get; }
 
+        /// <summary>
+        /// What this compilation's own source says about every union field's static type: the
+        /// input to AKKASG048/AKKASG049 (see <see cref="UnionHierarchyFacts"/>).
+        /// </summary>
+        public UnionHierarchyFacts UnionHierarchies { get; }
+
         public bool Equals(CompilationFacts? other)
         {
             if (ReferenceEquals(this, other))
@@ -2374,7 +2402,8 @@ public sealed partial class AkkaSerializerGenerator
                 && ValueEquality.ArrayDictionaryEquals(LocalMarkedImplementorsByClosedSetKey, other.LocalMarkedImplementorsByClosedSetKey)
                 && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyImplementorsByProtocol, other.ReferencedAssemblyImplementorsByProtocol)
                 && ValueEquality.ArrayDictionaryEquals(ReferencedAssemblyUnmarkedImplementorsByProtocol, other.ReferencedAssemblyUnmarkedImplementorsByProtocol)
-                && ValueEquality.ArrayDictionaryEquals(UpstreamSerializerBindingsByProtocol, other.UpstreamSerializerBindingsByProtocol);
+                && ValueEquality.ArrayDictionaryEquals(UpstreamSerializerBindingsByProtocol, other.UpstreamSerializerBindingsByProtocol)
+                && UnionHierarchies.Equals(other.UnionHierarchies);
         }
 
         public override bool Equals(object? obj) => Equals(obj as CompilationFacts);
@@ -2388,6 +2417,72 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyImplementorsByProtocol);
             hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyUnmarkedImplementorsByProtocol);
             hash = ValueEquality.CombineArrayDictionary(hash, UpstreamSerializerBindingsByProtocol);
+            hash = ValueEquality.Combine(hash, UnionHierarchies.GetHashCode());
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// Per union static type (the type of any <see cref="FieldKind.Union"/> field, whether its member
+    /// set is listed or discovered), the concrete types DECLARED IN THIS COMPILATION that derive from
+    /// or implement it, split by whether they carry <c>[AkkaSerializable]</c>, plus which of those
+    /// static types are closed hierarchies. Symbol-free and value-equatable, so it can ride inside
+    /// <see cref="CompilationFacts"/> without breaking incremental caching. Every implementor list is
+    /// sorted by <see cref="TypeKey.MetadataName"/> (ordinal); a key with no implementors of a kind
+    /// has no entry in that dictionary.
+    /// </summary>
+    internal sealed class UnionHierarchyFacts : IEquatable<UnionHierarchyFacts>
+    {
+        public static readonly UnionHierarchyFacts Empty = new(
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty,
+            ImmutableArray<TypeKey>.Empty);
+
+        public UnionHierarchyFacts(
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> unmarkedImplementorsByKey,
+            ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> markedImplementorsByKey,
+            ImmutableArray<TypeKey> closedKeys)
+        {
+            UnmarkedImplementorsByKey = unmarkedImplementorsByKey;
+            MarkedImplementorsByKey = markedImplementorsByKey;
+            ClosedKeys = closedKeys.IsDefault ? ImmutableArray<TypeKey>.Empty : closedKeys;
+        }
+
+        /// <summary>Concrete local implementors with no <c>[AkkaSerializable]</c>: invisible to generated union dispatch.</summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> UnmarkedImplementorsByKey { get; }
+
+        /// <summary>Concrete, non-generic local implementors that carry <c>[AkkaSerializable]</c>.</summary>
+        public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> MarkedImplementorsByKey { get; }
+
+        /// <summary>
+        /// Union static types whose set of derived types is fixed by their declaration: a class
+        /// carrying <c>System.Runtime.CompilerServices.IsClosedTypeAttribute</c> (a C# 15 <c>closed</c>
+        /// type), or a class whose every constructor is private, so only its own nested types can
+        /// derive from it. Sorted by <see cref="TypeKey.MetadataName"/> (ordinal).
+        /// </summary>
+        public ImmutableArray<TypeKey> ClosedKeys { get; }
+
+        public bool Equals(UnionHierarchyFacts? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(ClosedKeys, other.ClosedKeys)
+                && ValueEquality.ArrayDictionaryEquals(UnmarkedImplementorsByKey, other.UnmarkedImplementorsByKey)
+                && ValueEquality.ArrayDictionaryEquals(MarkedImplementorsByKey, other.MarkedImplementorsByKey);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as UnionHierarchyFacts);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, ClosedKeys);
+            hash = ValueEquality.CombineArrayDictionary(hash, UnmarkedImplementorsByKey);
+            hash = ValueEquality.CombineArrayDictionary(hash, MarkedImplementorsByKey);
             return hash;
         }
     }

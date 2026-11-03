@@ -6,6 +6,10 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
+    <!-- GeneratedUnionSpec's OrderCancelled is unsealed on purpose: a spec proves an undeclared
+         subtype is rejected at write time. Generator diagnostics ignore #pragma, so the expected
+         AKKASG025 warning on the fields that hold it is suppressed here. -->
+    <NoWarn>$(NoWarn);AKKASG025</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

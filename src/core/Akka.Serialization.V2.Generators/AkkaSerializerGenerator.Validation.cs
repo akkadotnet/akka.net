@@ -170,9 +170,10 @@ public sealed partial class AkkaSerializerGenerator
     internal static ImmutableArray<DiagnosticSpec> Validate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages, MetadataSchemaTable? metadataSchemas = null, CompilationFacts? facts = null)
     {
         var schemas = metadataSchemas ?? MetadataSchemaTable.Empty;
-        var resolved = ResolveSerializerMessages(serializer, messages, schemas, facts ?? CompilationFacts.Empty);
+        var effectiveFacts = facts ?? CompilationFacts.Empty;
+        var resolved = ResolveSerializerMessages(serializer, messages, schemas, effectiveFacts);
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, schemas, diagnostics);
+        ValidateResolved(serializer, resolved, schemas, effectiveFacts, diagnostics);
         return diagnostics.ToImmutable();
     }
 
@@ -207,9 +208,9 @@ public sealed partial class AkkaSerializerGenerator
     /// protocol -- the "registration has no effect" condition AKKASG034 used to guard can no longer
     /// occur.
     /// </summary>
-    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, MetadataSchemaTable metadataSchemas, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
+    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, MetadataSchemaTable metadataSchemas, CompilationFacts facts, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, diagnostics);
+        ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, facts.UnionHierarchies, diagnostics);
     }
 
     /// <summary>
@@ -725,6 +726,7 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableArray<MessageInfo> reachableMessages,
         ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
         ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
+        UnionHierarchyFacts unionHierarchies,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         var isValid = true;
@@ -818,7 +820,7 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
             {
-                if (!ValidateUnionField(message, field, messagesByType, accessibilityFailuresByType, serializer.ClassName, diagnostics))
+                if (!ValidateUnionField(message, field, messagesByType, accessibilityFailuresByType, unionHierarchies, serializer.ClassName, diagnostics))
                     isValid = false;
             }
 
@@ -936,6 +938,7 @@ public sealed partial class AkkaSerializerGenerator
         FieldInfo field,
         ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
         ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
+        UnionHierarchyFacts unionHierarchies,
         string serializerClassName,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
@@ -944,13 +947,59 @@ public sealed partial class AkkaSerializerGenerator
         // Every union diagnostic below reports at the FIELD carrying the union -- not at any one
         // member's own declaration, which may not even be in this compilation.
         var at = new LocationKey(message.Key, field.Name);
+        var unionKey = field.Mapping.Key;
+        var unionDisplayName = ToDisplayName(unionKey.DisplayName ?? field.TypeFullName);
 
-        // AkkaUnionAttribute(Type first, params Type[] rest) makes an empty member set
-        // unrepresentable: `first` is a mandatory constructor argument, so [AkkaUnion()] does not
-        // compile and field.UnionMembers can never be empty here. The "at least one member type is
-        // required" half of AKKASG019 that used to guard this is gone along with it. Grouped by
-        // TypeKey (not display text) so two distinct types that happen to render the same display
-        // string are never mistaken for a duplicate declaration of one type.
+        // AKKASG048: a discovered set only sees [AkkaSerializable] types, so a derived type that
+        // forgot the attribute silently drops out of dispatch and fails on its first write.
+        var hasUnmarkedImplementor = false;
+        if (field.IsDiscoveredUnion && unionHierarchies.UnmarkedImplementorsByKey.TryGetValue(unionKey, out var unmarkedImplementors))
+        {
+            foreach (var implementor in unmarkedImplementors)
+            {
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionImplementorNotSerializable, at,
+                    ToDisplayName(implementor.DisplayName ?? string.Empty), unionDisplayName, field.Name, ToDisplayName(message.FullyQualifiedName)));
+                hasUnmarkedImplementor = true;
+            }
+
+            isValid = !hasUnmarkedImplementor;
+        }
+
+        // AKKASG019, empty set: an explicit list always has at least one member (`first` is a
+        // mandatory constructor argument), but a discovered set can resolve to nothing. Generating a
+        // dispatch helper with no arms only produces dead code that throws on every call. When the
+        // set is empty BECAUSE its implementors are unmarked, AKKASG048 above already names the fix.
+        if (field.UnionMembers.IsEmpty)
+        {
+            if (!hasUnmarkedImplementor)
+            {
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, at, field.Name, ToDisplayName(message.FullyQualifiedName),
+                    $"no [AkkaSerializable] type derives from or implements '{unionDisplayName}', so the union has no members"));
+            }
+
+            return false;
+        }
+
+        // AKKASG049: an explicit list on a closed hierarchy that leaves out one of its cases.
+        if (!field.IsDiscoveredUnion && unionHierarchies.ClosedKeys.Contains(unionKey))
+        {
+            var listed = new HashSet<TypeKey>(field.UnionMembers.Select(member => member.Key));
+            var omitted = new List<TypeKey>();
+            if (unionHierarchies.MarkedImplementorsByKey.TryGetValue(unionKey, out var markedCases))
+                omitted.AddRange(markedCases.Where(candidate => !listed.Contains(candidate)));
+            if (unionHierarchies.UnmarkedImplementorsByKey.TryGetValue(unionKey, out var unmarkedCases))
+                omitted.AddRange(unmarkedCases.Where(candidate => !listed.Contains(candidate)));
+
+            if (omitted.Count > 0)
+            {
+                omitted.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+                var omittedNames = string.Join(", ", omitted.Select(candidate => "'" + ToDisplayName(candidate.DisplayName ?? string.Empty) + "'"));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberSetIncomplete, at, field.Name, ToDisplayName(message.FullyQualifiedName), omittedNames, unionDisplayName));
+            }
+        }
+
+        // Grouped by TypeKey (not display text) so two distinct types that happen to render the
+        // same display string are never mistaken for a duplicate declaration of one type.
         foreach (var duplicate in field.UnionMembers
                      .GroupBy(member => member.Key)
                      .Where(group => group.Count() > 1))
@@ -978,8 +1027,8 @@ public sealed partial class AkkaSerializerGenerator
             // Advisory tier for member types whose exact-runtime-type dispatch is compromised:
             //  - abstract member (AKKASG036, Warning): dispatch can NEVER select it -- an abstract
             //    type is never a runtime type, so its branch is dead code;
-            //  - merely unsealed member (AKKASG025, Info): works, but an undeclared subtype of it
-            //    fails at write time -- worth surfacing, not worth failing.
+            //  - merely unsealed member (AKKASG025, Warning): works, but an undeclared subtype of
+            //    it fails at write time -- worth surfacing, not worth failing.
             // An abstract member fires AKKASG036 ONLY: it is definitionally unsealed, and stacking
             // the weaker AKKASG025 on top of it would be noise.
             if (member.IsAbstract)

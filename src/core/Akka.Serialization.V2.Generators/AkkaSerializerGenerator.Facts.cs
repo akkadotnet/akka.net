@@ -56,6 +56,7 @@ public sealed partial class AkkaSerializerGenerator
         var (referencedMarked, referencedUnmarked) = ComputeReferencedAssemblyImplementors(
             compilation, referencedAssembliesUsingV2, closedSetKeys, protocolKeys, knownTypes, cancellationToken);
         var upstreamSerializerBindings = ComputeUpstreamSerializerBindings(compilation, referencedAssembliesUsingV2, knownTypes, cancellationToken);
+        var unionHierarchies = ComputeUnionHierarchyFacts(compilation, ComputeDistinctUnionKeys(messages, serializers), knownTypes, cancellationToken);
 
         return new CompilationFacts(
             localUnmarkedImplementorsByProtocol,
@@ -63,7 +64,173 @@ public sealed partial class AkkaSerializerGenerator
             referencedMarked,
             referencedUnmarked,
             upstreamSerializerBindings,
-            referencedAssembliesUsingV2);
+            referencedAssembliesUsingV2,
+            unionHierarchies);
+    }
+
+    /// <summary>
+    /// Every distinct static-type key of a <see cref="FieldKind.Union"/> field, listed or discovered,
+    /// across ordinary declarations and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>.
+    /// The keys <see cref="ComputeUnionHierarchyFacts"/> answers for.
+    /// </summary>
+    private static ImmutableArray<TypeKey> ComputeDistinctUnionKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers)
+    {
+        var seen = new HashSet<TypeKey>();
+        var builder = ImmutableArray.CreateBuilder<TypeKey>();
+
+        void CollectFrom(MessageInfo message)
+        {
+            foreach (var field in message.Fields)
+            {
+                if (field.Mapping.Kind != FieldKind.Union)
+                    continue;
+
+                var key = field.Mapping.Key;
+                if (key.MetadataName.Length > 0 && seen.Add(key))
+                    builder.Add(key);
+            }
+        }
+
+        foreach (var message in messages)
+        {
+            if (message != null)
+                CollectFrom(message);
+        }
+
+        foreach (var serializer in serializers)
+        {
+            if (serializer == null)
+                continue;
+
+            foreach (var schema in serializer.ClosedGenericSchemas)
+                CollectFrom(schema);
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// The AKKASG048/AKKASG049 input. For each union key, walks this compilation's own source types
+    /// once and buckets every concrete class/struct that derives from or implements it by whether it
+    /// carries <c>[AkkaSerializable]</c>, and records which keys are closed hierarchies (see
+    /// <see cref="UnionHierarchyFacts.ClosedKeys"/>). Costs nothing when no message has a union field.
+    /// Only local types are walked: a closed hierarchy's cases live with its base, and a
+    /// referenced-assembly implementor of an open union base is a follow-up, as it already is for
+    /// AKKASG029's referenced-assembly half of marked union bases.
+    /// </summary>
+    private static UnionHierarchyFacts ComputeUnionHierarchyFacts(
+        Compilation compilation,
+        ImmutableArray<TypeKey> unionKeys,
+        KnownTypes knownTypes,
+        CancellationToken cancellationToken)
+    {
+        if (unionKeys.IsEmpty || knownTypes.SerializableAttribute == null)
+            return UnionHierarchyFacts.Empty;
+
+        var closedKeys = new List<TypeKey>();
+        foreach (var key in unionKeys)
+        {
+            if (ResolveTypeSymbol(compilation, key) is { } symbol
+                && SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly)
+                && IsClosedHierarchy(symbol))
+            {
+                closedKeys.Add(key);
+            }
+        }
+
+        var unmarked = new Dictionary<TypeKey, List<TypeKey>>();
+        var marked = new Dictionary<TypeKey, List<TypeKey>>();
+        foreach (var key in unionKeys)
+        {
+            unmarked[key] = new List<TypeKey>();
+            marked[key] = new List<TypeKey>();
+        }
+
+        foreach (var candidate in GetSourceDeclaredTypes(compilation))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract)
+                continue;
+
+            TypeKey? candidateKey = null;
+            bool? isMarked = null;
+            foreach (var key in unionKeys)
+            {
+                if (!DerivesFromOrImplements(candidate, key))
+                    continue;
+
+                isMarked ??= candidate.GetAttributes()
+                    .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+
+                // A marked generic definition is served through closed-generic registrations, not
+                // through the discovered set, so only a non-generic marked type is a "case".
+                if (isMarked.Value && candidate.IsGenericType)
+                    continue;
+
+                candidateKey ??= TypeKey.FromSymbol(candidate);
+                (isMarked.Value ? marked : unmarked)[key].Add(candidateKey.Value);
+            }
+        }
+
+        closedKeys.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+        return new UnionHierarchyFacts(SortAndBuild(unmarked), SortAndBuild(marked), closedKeys.ToImmutableArray());
+    }
+
+    /// <summary>
+    /// Whether <paramref name="candidate"/> has <paramref name="key"/> anywhere in its base-class chain
+    /// or among its interfaces. Compares by metadata identity, with the same cheap name pre-filter
+    /// <see cref="ImplementsProtocol"/> uses.
+    /// </summary>
+    private static bool DerivesFromOrImplements(INamedTypeSymbol candidate, TypeKey key)
+    {
+        for (var baseType = candidate.BaseType; baseType != null && baseType.SpecialType != SpecialType.System_Object; baseType = baseType.BaseType)
+        {
+            if (CouldMatchByMetadataName(key.MetadataName, baseType.MetadataName)
+                && TypeKey.FromSymbol(baseType, includeDisplayName: false).Equals(key))
+                return true;
+        }
+
+        return ImplementsProtocol(candidate, key);
+    }
+
+    private const string IsClosedTypeAttributeFullName = "System.Runtime.CompilerServices.IsClosedTypeAttribute";
+
+    /// <summary>
+    /// A class whose derived types are fixed by its own declaration: a C# 15 <c>closed</c> class or
+    /// record (lowered to an abstract class carrying <c>IsClosedTypeAttribute</c>; matched by full
+    /// metadata name, so a consumer-side polyfill counts), or a class whose every constructor is
+    /// private, so only its nested types can derive from it. A non-sealed record's compiler-made copy
+    /// constructor is protected; it is ignored here, since deriving through it alone is not a
+    /// realistic way to extend a closed hierarchy.
+    /// </summary>
+    private static bool IsClosedHierarchy(INamedTypeSymbol symbol)
+    {
+        if (symbol.TypeKind != TypeKind.Class || symbol.IsSealed)
+            return false;
+
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (attribute.AttributeClass is { } attributeClass
+                && string.Equals(attributeClass.ToDisplayString(), IsClosedTypeAttributeFullName, StringComparison.Ordinal))
+                return true;
+        }
+
+        var sawConstructor = false;
+        foreach (var constructor in symbol.InstanceConstructors)
+        {
+            var isRecordCopyConstructor = symbol.IsRecord
+                && constructor.Parameters.Length == 1
+                && SymbolEqualityComparer.Default.Equals(constructor.Parameters[0].Type, symbol);
+            if (isRecordCopyConstructor)
+                continue;
+
+            sawConstructor = true;
+            if (constructor.DeclaredAccessibility != Accessibility.Private)
+                return false;
+        }
+
+        return sawConstructor;
     }
 
     /// <summary>

@@ -437,10 +437,10 @@ its manifest is the union's discriminator (**AKKASG016**). That manifest must be
 union (**AKKASG017**). It must be **assignable** to the field's static type (**AKKASG018**). It
 must be **concrete**. An abstract member is dead code, since dispatch matches the exact runtime
 type, and an abstract type is never a runtime type (**AKKASG036**, warning). A merely unsealed
-member is only advisory (**AKKASG025**, info). It works, but an undeclared subtype fails at
-serialize time.
+member gets a warning (**AKKASG025**). It works, but an undeclared subtype fails at serialize time.
 
-**AKKASG019** guards the member set itself, for example a duplicate member type. A field-level
+**AKKASG019** guards the member set itself: a duplicate member type, or a set with no members at
+all. A field-level
 `[AkkaUnion]` on a property typed `object` fails compilation with **AKKASG038**. `object` is
 always an envelope payload boundary, so the union declaration is contradictory.
 
@@ -485,12 +485,46 @@ The explicit list still works everywhere it always did. As a field-level overrid
 compilation. As a type-level form, it works only where every listed member is visible from the
 type's own assembly -- the same direction limit the marker form exists to lift.
 
-An implementor with no `[AkkaSerializable]` attribute is simply invisible to the walk, the same way
-an unmarked protocol implementor is invisible to top-level dispatch. A marked base with zero visible
-implementors compiles clean; it is not the empty-set error **AKKASG019** guards for the explicit
-form. Every other union rule -- **AKKASG015** through **AKKASG018**, **AKKASG025**, **AKKASG036** --
-applies to a discovered member exactly as it does to a listed one. The wire format does not change:
+The walk only finds `[AkkaSerializable]` types. A concrete type in this compilation that derives
+from or implements a marked base but has no `[AkkaSerializable]` would be left out of the dispatch
+and fail the first time it is written, so it fails the build instead (**AKKASG048**), the union
+counterpart of **AKKASG029**. A marked base with no members at all fails with **AKKASG019**: a
+union with no members can only throw. Every other union rule -- **AKKASG015** through
+**AKKASG018**, **AKKASG025**, **AKKASG036** -- applies to a discovered member exactly as it does to
+a listed one. The wire format does not change:
 a union frame carries each member's own manifest, whether the set was listed or found.
+
+### Closed Hierarchies
+
+A record hierarchy whose base has only a private constructor is closed: only the nested types can
+derive from it. A parameterless `[AkkaUnion]` on the base turns it into a typed union, with no
+member list to keep in sync:
+
+```csharp
+[AkkaUnion]
+public abstract record Coverage
+{
+    private Coverage() { }
+
+    [AkkaSerializable(Manifest = "paid-invoice")]
+    public sealed record PaidInvoice([property: AkkaField(1)] long PublisherId, [property: AkkaField(2)] long InvoiceNumber) : Coverage;
+
+    [AkkaSerializable(Manifest = "trial", AllowEmpty = true)]
+    public sealed record Trial : Coverage;
+}
+
+[AkkaSerializable(Manifest = "period-covered")]
+public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId, [property: AkkaField(2)] Coverage Coverage) : ISubscriptionEvent;
+```
+
+A C# 15 `closed record` works the same way: the compiler lowers it to an abstract class carrying
+`System.Runtime.CompilerServices.IsClosedTypeAttribute`, and the generator treats that attribute as
+closed too. A consumer-side polyfill of the attribute counts.
+
+When the field lists its members instead (`[AkkaUnion(typeof(A), typeof(B))]`) and the field's type
+is a closed hierarchy, a case left off the list gets a warning (**AKKASG049**). Leaving a case out of
+the wire contract on purpose is legal, so this is not an error. An interface or a base with a
+non-private constructor is open: anyone can add implementors, so a narrower list is never flagged.
 
 This ships with the same referenced-assembly walk Decision 19 uses for top-level dispatch; see
 [Cross-Assembly Types](#cross-assembly-types) for the walk itself, and
@@ -1133,13 +1167,13 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG016 | Error | Union member manifest is required | A union member has no `Manifest`, so it can't act as the union's discriminator. |
 | AKKASG017 | Error | Union member manifests must be unique | Two members of the same union share a manifest. |
 | AKKASG018 | Error | Union member is not assignable to the field type | A declared member isn't implicitly convertible to the field's static type. |
-| AKKASG019 | Error | Union member set is invalid | The union's member set itself is malformed (for example, a duplicate member type). |
+| AKKASG019 | Error | Union member set is invalid | The union's member set itself is malformed: a duplicate member type, or a set with no members (a parameterless `[AkkaUnion]` that found no `[AkkaSerializable]` implementor). |
 | AKKASG020 | Error | Closed generic registration is invalid | An `[AkkaSerializable<T>]` registration's target isn't a closed type (generic or not) whose definition is `[AkkaSerializable]`. |
 | AKKASG021 | Error | Duplicate closed generic registration | The same closed construction is registered more than once on one serializer. |
 | AKKASG022 | Error | Generic serializable type requires closed generic registrations | A generic `[AkkaSerializable]` type implements the protocol but has no closed registrations. |
 | AKKASG023 | Error | Closed generic field type is not registered | A field uses a closed generic construction that was never registered with `[AkkaSerializable<T>]`. |
 | AKKASG024 | Error | Generated member name collision | Two distinct type identities produced the same generated member name despite their stable suffixes. Report the generator collision with both declarations. |
-| AKKASG025 | Info | Union member type is not sealed | An undeclared subtype of this (concrete, non-sealed) member will fail serialization if it's ever sent. |
+| AKKASG025 | Warning | Union member type is not sealed | An undeclared subtype of this (concrete, non-sealed) member will fail serialization if it's ever sent. |
 | AKKASG026 | Error | No matching constructor | No constructor covers every required `[AkkaField]` property, so the type can't be reconstructed. |
 | AKKASG027 | Warning | Constructor parameter not covered by [AkkaField] | A defaulted constructor parameter has no matching `[AkkaField]` property and silently resets on every deserialize. |
 | AKKASG028 | Error | [AkkaField] must be on an accessible instance property | The property is static, or otherwise unreachable from the generated code. |
@@ -1159,6 +1193,8 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
 | AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
+| AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a parameterless `[AkkaUnion]` base but isn't `[AkkaSerializable]`, so the discovered set leaves it out and it fails when first serialized. See [Closed Hierarchies](#closed-hierarchies). |
+| AKKASG049 | Warning | Union member list omits a case of a closed hierarchy | An explicit `[AkkaUnion(...)]` list on a field typed as a closed hierarchy (private constructors only, or `IsClosedTypeAttribute`) leaves out a derived type. Writing a value of that type fails at runtime. |
 
 ## Limitations Today and Planned Changes
 
