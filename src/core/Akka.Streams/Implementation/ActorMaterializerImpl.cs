@@ -213,9 +213,27 @@ namespace Akka.Streams.Implementation
         private readonly IActorRef _supervisor;
         private readonly AtomicBoolean _haveShutDown;
         private readonly EnumerableActorName _flowNames;
+
+        // Non-null only for the ActorSystem's shared default materializer (see DefaultMaterializer) and the
+        // name-prefixed views derived from it, which share its supervisor. Tracks whether we have already
+        // warned that a Dispose() call on the shared instance was ignored.
+        private readonly AtomicBoolean _sharedDisposeIgnoredLogged;
         private ILoggingAdapter _logger;
         
         public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames)
+            : this(system, settings, dispatchers, supervisor, haveShutDown, flowNames, sharedDisposeIgnoredLogged: null)
+        {
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// Pass a non-null <c>sharedDisposeIgnoredLogged</c> flag only when creating the <see cref="ActorSystem"/>'s
+        /// shared default materializer. <see cref="ActorMaterializer.Dispose"/> is then ignored, because the
+        /// <see cref="ActorSystem"/> owns that instance.
+        /// </remarks>
+        internal ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames, AtomicBoolean sharedDisposeIgnoredLogged)
         {
             _system = system;
             _settings = settings;
@@ -223,6 +241,7 @@ namespace Akka.Streams.Implementation
             _supervisor = supervisor;
             _haveShutDown = haveShutDown;
             _flowNames = flowNames;
+            _sharedDisposeIgnoredLogged = sharedDisposeIgnoredLogged;
 
             _executionContext = new Lazy<MessageDispatcher>(() => _dispatchers.Lookup(_settings.Dispatcher == Deploy.NoDispatcherGiven
                 ? Dispatchers.DefaultDispatcherId
@@ -265,7 +284,27 @@ namespace Akka.Streams.Implementation
         /// <param name="name">The prefix applied to names generated for materialized flows.</param>
         /// <returns>A materializer sharing this materializer's shutdown state and settings with the requested name prefix.</returns>
         public override IMaterializer WithNamePrefix(string name)
-            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name));
+            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name), _sharedDisposeIgnoredLogged);
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal override bool IsSharedSystemMaterializer => _sharedDisposeIgnoredLogged != null;
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal override void OnSharedSystemMaterializerDisposeIgnored()
+        {
+            if (_sharedDisposeIgnoredLogged.CompareAndSet(false, true))
+            {
+                Logger.Warning(
+                    "Ignored Dispose() on the ActorSystem's shared default materializer (returned by ActorSystem.Materializer() " +
+                    "or ActorMaterializer.Create(system) without custom settings). It is owned by the ActorSystem and stops when " +
+                    "the ActorSystem terminates. To own a materializer's lifecycle, create a dedicated one with custom settings, " +
+                    "e.g. system.Materializer(ActorMaterializerSettings.Create(system)). Further ignored Dispose() calls are not logged.");
+            }
+        }
 
         private string CreateFlowName() => _flowNames.Next();
 
