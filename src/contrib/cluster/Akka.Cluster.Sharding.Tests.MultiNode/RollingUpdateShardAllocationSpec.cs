@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -154,7 +155,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private async Task ClusterSharding_must_form_cluster()
         {
-            await AwaitClusterUpAsync(Config.First, Config.Second);
+            await AwaitClusterUpAsync(CancellationToken.None, Config.First, Config.Second);
             await EnterBarrierAsync("cluster-started");
         }
 

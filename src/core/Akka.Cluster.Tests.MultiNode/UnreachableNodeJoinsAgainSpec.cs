@@ -98,7 +98,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public async Task ReachInitialConvergence()
         {
-            await AwaitClusterUpAsync(Roles.ToArray());
+            await AwaitClusterUpAsync(CancellationToken.None, Roles.ToArray());
             await EndBarrierAsync();
         }
 
