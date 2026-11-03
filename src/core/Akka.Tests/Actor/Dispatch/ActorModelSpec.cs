@@ -332,7 +332,7 @@ namespace Akka.Tests.Actor.Dispatch
             {
                 await AwaitAssertAsync(
                     () => dispatcher.Stops.Current.ShouldBe(stops, $"dispatcher [{dispatcher.Id}] stop count"),
-                    dispatcher.ShutdownTimeout * 5,
+                    TimeSpan.FromTicks(dispatcher.ShutdownTimeout.Ticks * 5), // TimeSpan * int is not available on net48
                     TimeSpan.FromMilliseconds(50));
             }
             catch (Exception ex)
