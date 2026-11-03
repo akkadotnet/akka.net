@@ -94,7 +94,15 @@ public class MultiTransportAddressingSpec : TestKit.Xunit.TestKit
             var selection = Sys.ActorSelection($"akka.{scheme}://{secondActorSystemName}@localhost:{port}/user/echo");
             
             // important: https://github.com/akkadotnet/akka.net/issues/7378 only occurs with IActorRefs
-            var actor = await selection.ResolveOne(TimeSpan.FromSeconds(1));
+            //
+            // Generous, dilated liveness bound: the first ResolveOne per scheme races a COLD
+            // association (endpoint actor spin-up + AkkaProtocol handshake + first-use JIT of the
+            // serialization pipeline), which can take multiple seconds on a loaded 2-core CI agent.
+            // ResolveOne is a plain ActorSelection API, so unlike the TestKit Expect* methods it
+            // never routes through akka.test.timefactor on its own -- Dilated() restores that.
+            // Nothing here can be lost while associating (EndpointWriter buffers sends until the
+            // handshake completes), so one long Ask is sufficient; no retry loop needed.
+            var actor = await selection.ResolveOne(Dilated(TimeSpan.FromSeconds(10)));
             
             // assert that the remote actor is using the correct transport
             Assert.Contains(scheme, actor.Path.Address.Protocol);
