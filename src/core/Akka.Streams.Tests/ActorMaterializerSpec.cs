@@ -160,18 +160,6 @@ namespace Akka.Streams.Tests
             (await Source.Single(3).RunWith(Sink.First<int>(), Sys)).Should().Be(3);
         }
 
-        [Fact(DisplayName = "Disposing the shared ActorSystem materializer should log a warning only once")]
-        public async Task Should_warn_once_When_shared_materializer_is_disposed_repeatedly()
-        {
-            await EventFilter.Warning(start: "Ignored Dispose() on the ActorSystem's shared default materializer").ExpectOneAsync(() =>
-            {
-                Sys.Materializer().Dispose();
-                Sys.Materializer().Dispose();
-                Sys.Materializer(namePrefix: "prefixed").Dispose();
-                return Task.CompletedTask;
-            });
-        }
-
         [Fact(DisplayName = "Disposing a materializer created with custom settings should shut it down")]
         public void Should_shut_down_dedicated_materializer_When_it_is_disposed()
         {

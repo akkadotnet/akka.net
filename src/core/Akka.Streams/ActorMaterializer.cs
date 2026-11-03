@@ -64,8 +64,8 @@ namespace Akka.Streams
                 supervisor: system.ActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
                 haveShutDown: haveShutDown,
                 flowNames: EnumerableActorName.Create("Flow"),
-                // marks this as the ActorSystem-owned shared instance: Dispose() on it is ignored (#8885)
-                sharedDisposeIgnoredLogged: new AtomicBoolean());
+                // the ActorSystem-owned shared instance: Dispose() on it is ignored (#8885)
+                isSharedSystemMaterializer: true);
         }
         
         public static DefaultMaterializer Get(ActorSystem system)
@@ -273,13 +273,8 @@ namespace Akka.Streams
         /// </remarks>
         public void Dispose()
         {
-            if (IsSharedSystemMaterializer)
-            {
-                OnSharedSystemMaterializerDisposeIgnored();
-                return;
-            }
-
-            Shutdown();
+            if (!IsSharedSystemMaterializer)
+                Shutdown();
         }
 
         /// <summary>
@@ -289,13 +284,6 @@ namespace Akka.Streams
         /// <c>true</c> for the <see cref="ActorSystem"/>'s shared default materializer and its name-prefixed views.
         /// </remarks>
         internal virtual bool IsSharedSystemMaterializer => false;
-
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
-        internal virtual void OnSharedSystemMaterializerDisposeIgnored()
-        {
-        }
     }
 
     /// <summary>
