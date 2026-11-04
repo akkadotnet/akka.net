@@ -217,6 +217,10 @@ namespace Akka.Streams.Implementation
         // True only for the ActorSystem's shared default materializer (see DefaultMaterializer) and the
         // name-prefixed views derived from it, which share its supervisor.
         private readonly bool _isSharedSystemMaterializer;
+
+        // Shared by the shared materializer and every name-prefixed view of it, so the "Dispose() ignored"
+        // debug log is emitted once per ActorSystem rather than once per view. Null for dedicated materializers.
+        private readonly AtomicBoolean _sharedDisposeIgnoredLogged;
         private ILoggingAdapter _logger;
         
         public ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames)
@@ -233,6 +237,12 @@ namespace Akka.Streams.Implementation
         /// <see cref="ActorSystem"/> owns that instance.
         /// </remarks>
         internal ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames, bool isSharedSystemMaterializer)
+            : this(system, settings, dispatchers, supervisor, haveShutDown, flowNames,
+                isSharedSystemMaterializer ? new AtomicBoolean() : null)
+        {
+        }
+
+        private ActorMaterializerImpl(ActorSystem system, ActorMaterializerSettings settings, Dispatchers dispatchers, IActorRef supervisor, AtomicBoolean haveShutDown, EnumerableActorName flowNames, AtomicBoolean sharedDisposeIgnoredLogged)
         {
             _system = system;
             _settings = settings;
@@ -240,7 +250,8 @@ namespace Akka.Streams.Implementation
             _supervisor = supervisor;
             _haveShutDown = haveShutDown;
             _flowNames = flowNames;
-            _isSharedSystemMaterializer = isSharedSystemMaterializer;
+            _isSharedSystemMaterializer = sharedDisposeIgnoredLogged != null;
+            _sharedDisposeIgnoredLogged = sharedDisposeIgnoredLogged;
 
             _executionContext = new Lazy<MessageDispatcher>(() => _dispatchers.Lookup(_settings.Dispatcher == Deploy.NoDispatcherGiven
                 ? Dispatchers.DefaultDispatcherId
@@ -283,12 +294,29 @@ namespace Akka.Streams.Implementation
         /// <param name="name">The prefix applied to names generated for materialized flows.</param>
         /// <returns>A materializer sharing this materializer's shutdown state and settings with the requested name prefix.</returns>
         public override IMaterializer WithNamePrefix(string name)
-            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name), _isSharedSystemMaterializer);
+            => new ActorMaterializerImpl(_system, _settings, _dispatchers, _supervisor, _haveShutDown, _flowNames.Copy(name), _sharedDisposeIgnoredLogged);
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
         internal override bool IsSharedSystemMaterializer => _isSharedSystemMaterializer;
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal override void OnSharedSystemMaterializerDisposeIgnored()
+        {
+            // Debug, not Warning: disposing the shared materializer is harmless now, and DI containers do it
+            // routinely at shutdown. Logged once per ActorSystem so a misbehaving caller still gets a hint.
+            if (_sharedDisposeIgnoredLogged.CompareAndSet(false, true))
+            {
+                Logger.Debug(
+                    "Ignored Dispose() on the ActorSystem's shared default materializer (returned by ActorSystem.Materializer() " +
+                    "or ActorMaterializer.Create(system) without custom settings). It is owned by the ActorSystem and stops when " +
+                    "the ActorSystem terminates. To own a materializer's lifecycle, create a dedicated one with custom settings, " +
+                    "e.g. system.Materializer(ActorMaterializerSettings.Create(system)). Further ignored Dispose() calls are not logged.");
+            }
+        }
 
         private string CreateFlowName() => _flowNames.Next();
 
