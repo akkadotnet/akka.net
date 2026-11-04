@@ -371,8 +371,10 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
             /*
              * It is possible the ProducerController re-sends msg-3 again before it has processed its acknowledgement.
              * If the ConsumerController restarts between sending the acknowledgement and receiving that re-sent msg-3,
-             * it will deliver msg-3 a second time. We then expect msg-4 next:
+             * it will deliver msg-3 a second time. The ConsumerController holds msg-4 until that duplicate
+             * is confirmed, so confirm it, then expect msg-4 next:
              */
+            delivery3cor4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
             var delivery4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
             delivery4.Message.Should().BeEquivalentTo(new Job("msg-4"));
         }
@@ -388,8 +390,25 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
         // redeliver also when no more messages are sent to the entity
         Sys.Stop(consumerProbes[1]); // don't wait for termination
 
-        var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
-        delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
+        var delivery3cor4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+
+        if (delivery3cor4b.Message.Equals(new Job("msg-3")))
+        {
+            /*
+             * Each SequencedMessage that reaches a new ConsumerController without the First flag makes it send
+             * Resend(0), so a resend of [3-4] can still be in flight when consumerProbes[1] stops, ahead of
+             * the producer seeing msg-3's confirmation. That batch starts the next entity incarnation, which
+             * takes msg-3 as its first message and delivers it again (at-least-once). Confirm it, then
+             * expect msg-4:
+             */
+            delivery3cor4b.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
+            var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+            delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
+        }
+        else if (!delivery3cor4b.Message.Equals(new Job("msg-4")))
+        {
+            throw new Exception($"Unexpected message {delivery3cor4b.Message}");
+        }
     }
 
     [Fact]
