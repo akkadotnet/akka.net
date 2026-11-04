@@ -1,3 +1,39 @@
+#### 1.6.0-beta5 November 4th, 2026 ####
+
+Akka.NET 1.6.0-beta5 removes `[AkkaUnion]` in favor of inferring unions from the property type, teaches the source generator to serialize C# 15 union types, and fixes a sharding producer-controller crash plus four Akka.Streams bugs. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+
+**Serialization V2**
+
+* A property typed as an interface, an abstract class, or a closed hierarchy is now a union over every `[AkkaSerializable]` type that implements or derives from it - no attribute needed. `AkkaUnionAttribute` is deleted, and AKKASG018, AKKASG038, AKKASG049 and AKKASG050 retire with it. Framework types and collection-like types are never inferred. The wire format is unchanged. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
+* C# 15 union types work as field types. The generator detects a union as a struct implementing `IUnion`, uses its public single-parameter constructors as the member set, and dispatches on `Value`. `TUnion?` and `default(TUnion)` both read back as null. ([#8888](https://github.com/akkadotnet/akka.net/pull/8888))
+* `[AkkaSerializable<T>]` is renamed to `[AkkaSerializerIncludes<T>]`. A non-generic included type now takes its manifest from its own `[AkkaSerializable(Manifest = ...)]`; setting `Manifest` on the include of a non-generic type is the new AKKASG053 error. Closed generic constructions keep `Manifest`/`ManifestPrefix` on the include. ([#8891](https://github.com/akkadotnet/akka.net/pull/8891))
+* AKKASG048 fails the build when a concrete implementor in the compilation lacks `[AkkaSerializable]`, and AKKASG019 now fires on an empty discovered union instead of emitting a dispatch helper with no arms. AKKASG025 (unsealed union member) is now a Warning instead of Info. ([#8887](https://github.com/akkadotnet/akka.net/pull/8887))
+* New AKKASG052 catches a property typed as a concrete, non-sealed nested value class that some class in the compilation derives from - the property would be written as the base's own fields and lose the subclass state. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
+
+**Akka.Streams**
+
+* `Dispose()` on the `ActorSystem`'s shared default materializer no longer shuts it down for every user of the system. A `using` block, a scoped DI registration, or an actor disposing it in `PostStop` used to break `system.Materializer()` and every later materialization. The `ActorSystem` still stops it on termination, and `Shutdown()` still stops it explicitly. ([#8895](https://github.com/akkadotnet/akka.net/pull/8895), fixes [#8885](https://github.com/akkadotnet/akka.net/issues/8885))
+* `SourceRef` now honors `StreamRefAttributes` for buffer capacity, demand redelivery interval and final termination signal deadline, falling back to `StreamRefSettings` when no attribute is set. ([#8880](https://github.com/akkadotnet/akka.net/pull/8880), fixes [#8878](https://github.com/akkadotnet/akka.net/issues/8878))
+* `StreamRefSettings` now initializes `FinalTerminationSignalDeadline` from its constructor, and gains a `WithFinalTerminationSignalDeadline` method. ([#8877](https://github.com/akkadotnet/akka.net/pull/8877))
+* Deferred stream operators now pass inherited attributes through when they materialize their inner graph, so attributes set above a `LazySource`, `LazySink` or `Setup` stage reach the stages inside it. ([#8842](https://github.com/akkadotnet/akka.net/pull/8842))
+* `Flow.Setup` forwards its input correctly instead of dropping elements. ([#8839](https://github.com/akkadotnet/akka.net/pull/8839))
+
+**Akka.Cluster.Sharding**
+
+* `ShardingProducerController` no longer throws `InvalidActorNameException` and restarts when a message arrives for an entity whose delivery child is still terminating. Cleanup now marks the entity as stopping and buffers for it, and the entry is removed only once the child's name is free. Producer demand keeps flowing while the child stops. ([#8869](https://github.com/akkadotnet/akka.net/pull/8869), fixes [#8850](https://github.com/akkadotnet/akka.net/issues/8850))
+
+**Internal**
+
+* NuGet publishing moves to GitHub Actions trusted publishing, replacing the Windows release pipeline. ([#8892](https://github.com/akkadotnet/akka.net/pull/8892))
+* `ReliableDeliveryShardingSpec` no longer races on a legal at-least-once duplicate of msg-3. ([#8894](https://github.com/akkadotnet/akka.net/pull/8894))
+
+2 contributors since release 1.6.0-beta4
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 10      | 4482 | 1834 | Aaron Stannard  |
+| 2       | 256  | 10   | Ariel Fischer   |
+
 #### 1.6.0-beta4 October 28th, 2026 ####
 
 Akka.NET 1.6.0-beta4 simplifies source-generated serializer registration, adds three generator diagnostics that catch schema mistakes earlier, and cuts allocations across Artery, TCP and Akka.Streams. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
