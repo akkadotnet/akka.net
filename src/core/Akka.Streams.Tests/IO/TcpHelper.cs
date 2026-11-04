@@ -60,12 +60,15 @@ namespace Akka.Streams.Tests.IO
 
         protected sealed class ClientClose
         {
-            public ClientClose(Tcp.CloseCommand cmd)
+            public ClientClose(Tcp.CloseCommand cmd, IActorRef replyTo)
             {
                 Cmd = cmd;
+                ReplyTo = replyTo;
             }
 
             public Tcp.CloseCommand Cmd { get; }
+
+            public IActorRef ReplyTo { get; }
         }
 
         protected sealed class ReadResult
@@ -180,10 +183,12 @@ namespace Akka.Streams.Tests.IO
                         break;
                     
                     case ClientClose c:
+                        _readTo = c.ReplyTo;
                         if (!_writePending)
                             _connection.Tell(c.Cmd);
                         else
                             _closeAfterWrite = c.Cmd;
+                        _connection.Tell(Tcp.ResumeReading.Instance);
                         break;
                 }
             }
@@ -281,7 +286,7 @@ namespace Akka.Streams.Tests.IO
             
             public async Task<ServerConnection> WaitAcceptAsync()
             {
-                var actor = await ServerProbe.ExpectMsgAsync<IActorRef>();
+                var actor = await ServerProbe.ExpectMsgAsync<IActorRef>(TimeSpan.FromSeconds(10));
                 return new ServerConnection(_testkit, actor);
             }
 
@@ -292,24 +297,33 @@ namespace Akka.Streams.Tests.IO
         {
             private readonly IActorRef _connectionActor;
             private readonly TestProbe _connectionProbe;
+            private readonly TestProbe _watchProbe;
 
             public ServerConnection(TestKitBase testkit, IActorRef connectionActor)
             {
                 _connectionActor = connectionActor;
                 _connectionProbe = testkit.CreateTestProbe();
+                _watchProbe = testkit.CreateTestProbe();
             }
 
             public void Write(ByteString bytes) => _connectionActor.Tell(new ClientWrite(bytes));
 
             public void Read(int count) => _connectionActor.Tell(new ClientRead(count, _connectionProbe.Ref));
 
-            public async Task<ByteString> WaitReadAsync() => (await _connectionProbe.ExpectMsgAsync<ReadResult>()).Bytes;
+            /// <summary>
+            /// Waits for the bytes requested by <see cref="Read"/>. The default is 10 s, not the 3 s single-expect
+            /// default: getting the bytes here takes several thread-pool hops (the client's write pump, the
+            /// server's socket read pump and pipe reader, and two mailboxes), and a starved CI agent has been seen
+            /// to need more than 3 s before the first of them ran.
+            /// </summary>
+            public async Task<ByteString> WaitReadAsync(TimeSpan? max = null)
+                => (await _connectionProbe.ExpectMsgAsync<ReadResult>(max ?? TimeSpan.FromSeconds(10))).Bytes;
 
-            public void ConfirmedClose() => _connectionActor.Tell(new ClientClose(Tcp.ConfirmedClose.Instance));
+            public void ConfirmedClose() => _connectionActor.Tell(new ClientClose(Tcp.ConfirmedClose.Instance, _connectionProbe.Ref));
 
-            public void Close() => _connectionActor.Tell(new ClientClose(Tcp.Close.Instance));
+            public void Close() => _connectionActor.Tell(new ClientClose(Tcp.Close.Instance, _connectionProbe.Ref));
 
-            public void Abort() => _connectionActor.Tell(new ClientClose(Tcp.Abort.Instance));
+            public void Abort() => _connectionActor.Tell(new ClientClose(Tcp.Abort.Instance, _connectionProbe.Ref));
 
             public async Task ExpectClosedAsync(
                 Tcp.ConnectionClosed expected,
@@ -321,7 +335,7 @@ namespace Akka.Streams.Tests.IO
                 TimeSpan? max = null,
                 CancellationToken cancellationToken = default)
             {
-                max ??= TimeSpan.FromSeconds(3);
+                max ??= TimeSpan.FromSeconds(10);
 
                 _connectionActor.Tell(new PingClose(_connectionProbe.Ref));
                 await _connectionProbe.FishForMessageAsync(
@@ -330,9 +344,9 @@ namespace Akka.Streams.Tests.IO
 
             public async Task ExpectTerminatedAsync(CancellationToken cancellationToken = default)
             {
-                await _connectionProbe.WatchAsync(_connectionActor);
-                await _connectionProbe.ExpectTerminatedAsync(_connectionActor, cancellationToken: cancellationToken);
-                await _connectionProbe.UnwatchAsync(_connectionActor);
+                await _watchProbe.WatchAsync(_connectionActor);
+                await _watchProbe.ExpectTerminatedAsync(_connectionActor, cancellationToken: cancellationToken);
+                await _watchProbe.UnwatchAsync(_connectionActor);
             }
         }
 
