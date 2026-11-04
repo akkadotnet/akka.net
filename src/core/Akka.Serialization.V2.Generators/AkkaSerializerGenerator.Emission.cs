@@ -1201,7 +1201,10 @@ public sealed partial class AkkaSerializerGenerator
             case FieldKind.EnvelopePayload:
                 w.Raw("SizeOfEnvelopePayload(").Value(value).Raw(")");
                 break;
-            case FieldKind.Union when field.IsNullable:
+            case FieldKind.Union when field.IsCSharpUnion && field.IsNullable:
+                w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(").Value(value).Raw(".Value)");
+                break;
+            case FieldKind.Union when field.IsNullable && !field.IsCSharpUnion:
                 w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(").Value(value).Raw(")");
                 break;
             case FieldKind.Union:
@@ -1455,7 +1458,7 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private static string BuildUnionSignature(FieldInfo field)
     {
-        return field.TypeFullName + "|" + string.Join("|", field.UnionMembers.Select(member => member.TypeFullName));
+        return field.UnionTypeFullName + "|" + string.Join("|", field.UnionMembers.Select(member => member.TypeFullName));
     }
 
     /// <summary>
@@ -1485,14 +1488,14 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         var helpers = ImmutableArray.CreateBuilder<UnionHelperPlan>();
-        foreach (var group in representatives.GroupBy(pair => FoldTypeName(pair.Value.TypeFullName), StringComparer.Ordinal))
+        foreach (var group in representatives.GroupBy(pair => FoldTypeName(pair.Value.UnionTypeFullName), StringComparer.Ordinal))
         {
             var ordered = group.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToList();
             for (var i = 0; i < ordered.Count; i++)
             {
                 var helperName = i == 0 ? "Union_" + group.Key : "Union_" + group.Key + "_" + (i + 1);
                 var field = ordered[i].Value;
-                helpers.Add(new UnionHelperPlan(ordered[i].Key, helperName, field.TypeFullName, BuildUnionMembers(field, messagesByType)));
+                helpers.Add(new UnionHelperPlan(ordered[i].Key, helperName, field.UnionTypeFullName, BuildUnionMembers(field, messagesByType), field.IsCSharpUnion));
             }
         }
 
@@ -1533,13 +1536,33 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
+    // A C# 15 union field (UnionHelperPlan.IsCSharpUnion) is a struct: the helpers dispatch on the
+    // case held in its public Value property (never on the struct's own type, and never by casting
+    // the struct), build the union back with its case constructor on read, and map
+    // default(TUnion), whose Value is null, to MessagePack nil. The wire shape of a held case is
+    // identical to an [AkkaUnion] member's.
     private static void GenerateUnionWrite(CodeWriter w, UnionHelperPlan helper)
     {
         w.Raw("private void Write").Identifier(helper.HelperName)
             .Raw("(ref global::MessagePack.MessagePackWriter writer, ").Type(TypeName.Global(helper.FieldTypeFullName)).Line(" value)");
         using (w.Block())
         {
-            w.Line("var runtimeType = value.GetType();");
+            var dispatchValue = "value";
+            if (helper.IsCSharpUnion)
+            {
+                dispatchValue = "unionValue";
+                w.Line("var unionValue = value.Value;");
+                w.Line("if (unionValue is null)");
+                using (w.Block())
+                {
+                    w.Line("writer.WriteNil();");
+                    w.Line("return;");
+                }
+
+                w.BlankLine();
+            }
+
+            w.Raw("var runtimeType = ").Raw(dispatchValue).Line(".GetType();");
             foreach (var member in helper.Members.Members)
             {
                 w.Raw("if (runtimeType == typeof(").Type(TypeName.Global(member.TypeFullName)).Line("))");
@@ -1549,7 +1572,7 @@ public sealed partial class AkkaSerializerGenerator
                     w.Line("writer.Write(1);");
                     w.Raw("writer.Write(").StringLiteral(member.Manifest).Line(");");
                     w.Line("writer.Write(2);");
-                    w.Raw("Write").Identifier(member.MethodName).Raw("(ref writer, (").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
+                    w.Raw("Write").Identifier(member.MethodName).Raw("(ref writer, (").Type(TypeName.Global(member.TypeFullName)).Raw(")").Raw(dispatchValue).Line(");");
                     w.Line("return;");
                 }
 
@@ -1569,9 +1592,20 @@ public sealed partial class AkkaSerializerGenerator
             .Line("(ref global::MessagePack.MessagePackReader reader)");
         using (w.Block())
         {
+            if (helper.IsCSharpUnion)
+            {
+                w.Line("if (reader.TryReadNil())");
+                using (w.Indented())
+                    w.Line("return default;");
+                w.BlankLine();
+            }
+
             w.Line("var fieldCount = reader.ReadMapHeader();");
             w.Line("string? manifest = null;");
-            w.Type(TypeName.Global(helper.FieldTypeFullName)).Line("? result = default;");
+            w.Type(TypeName.Global(helper.FieldTypeFullName));
+            if (!helper.IsCSharpUnion)
+                w.Raw("?");
+            w.Line(" result = default;");
             w.Line("var hasPayload = false;");
             w.Line("for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
             using (w.Block())
@@ -1595,7 +1629,10 @@ public sealed partial class AkkaSerializerGenerator
                             {
                                 using (manifestSwitch.CaseStringLiteral(member.Manifest))
                                 {
-                                    w.Raw("result = Read").Identifier(member.MethodName).Line("(ref reader);");
+                                    if (helper.IsCSharpUnion)
+                                        w.Raw("result = new ").Type(TypeName.Global(helper.FieldTypeFullName)).Raw("(Read").Identifier(member.MethodName).Line("(ref reader));");
+                                    else
+                                        w.Raw("result = Read").Identifier(member.MethodName).Line("(ref reader);");
                                     w.Line("break;");
                                 }
                             }
@@ -1627,7 +1664,7 @@ public sealed partial class AkkaSerializerGenerator
             }
 
             w.BlankLine();
-            w.Line("if (!hasPayload || result is null)");
+            w.Line(helper.IsCSharpUnion ? "if (!hasPayload)" : "if (!hasPayload || result is null)");
             using (w.Indented())
             {
                 w.Raw("throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for union [")
@@ -1646,13 +1683,24 @@ public sealed partial class AkkaSerializerGenerator
             .Raw("(").Type(TypeName.Global(helper.FieldTypeFullName)).Line(" value)");
         using (w.Block())
         {
-            w.Line("var runtimeType = value.GetType();");
+            var dispatchValue = "value";
+            if (helper.IsCSharpUnion)
+            {
+                dispatchValue = "unionValue";
+                w.Line("var unionValue = value.Value;");
+                w.Line("if (unionValue is null)");
+                using (w.Indented())
+                    w.Line("return SizeOfNil();");
+                w.BlankLine();
+            }
+
+            w.Raw("var runtimeType = ").Raw(dispatchValue).Line(".GetType();");
             foreach (var member in helper.Members.Members)
             {
                 w.Raw("if (runtimeType == typeof(").Type(TypeName.Global(member.TypeFullName)).Line("))");
                 using (w.Block())
                 {
-                    w.Raw("var payloadSize = SizeOf").Identifier(member.MethodName).Raw("((").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
+                    w.Raw("var payloadSize = SizeOf").Identifier(member.MethodName).Raw("((").Type(TypeName.Global(member.TypeFullName)).Raw(")").Raw(dispatchValue).Line(");");
                     w.Line("if (payloadSize < 0)");
                     using (w.Indented())
                         w.Line("return global::Akka.Serialization.SerializerV2.UnknownSize;");
@@ -1775,9 +1823,11 @@ public sealed partial class AkkaSerializerGenerator
                 }
                 break;
             case FieldKind.Union:
-                // Union fields are always reference-like (the static type is an interface or
-                // abstract base), so only the nullable-reference guard is needed here.
-                if (field.IsNullable)
+                // An [AkkaUnion] field is reference-like (its static type is an interface or abstract
+                // base), so only the nullable-reference guard is needed here. A C# union is a struct:
+                // its helper writes nil for default(TUnion) itself, and GenerateWriteField already
+                // unwrapped a Nullable<TUnion>.
+                if (field.IsNullable && !field.IsCSharpUnion)
                 {
                     w.Raw("if (").Value(value).Line(" is null)");
                     using (w.Indented())
@@ -1820,7 +1870,7 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         var isNullableReferenceLikeSlot = field.Mapping.Kind == FieldKind.EnvelopePayload
-            || field.Mapping.Kind == FieldKind.Union
+            || (field.Mapping.Kind == FieldKind.Union && IsReferenceLike(field))
             || (field.Mapping.Kind == FieldKind.Object && IsReferenceLike(field))
             || (field.Mapping.Kind == FieldKind.Formatted && IsReferenceLike(field));
 
@@ -2724,7 +2774,7 @@ public sealed partial class AkkaSerializerGenerator
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
             FieldKind.EnvelopePayload => "null",
-            FieldKind.Union => "null",
+            FieldKind.Union => IsReferenceLike(field) ? "null" : "default",
             // A required (non-nullable) [AkkaSerializable] struct nested field gets a non-nullable
             // local (see GenerateReadMessage's local declaration/IsReferenceLike): "null" would not
             // compile for it, so fall back to "default" the same way every other non-reference-like
@@ -2761,9 +2811,12 @@ public sealed partial class AkkaSerializerGenerator
         if (field.Mapping.Kind == FieldKind.Object)
             return !field.Mapping.IsValueType;
 
-        // Union fields are always reference-like: the static type is an interface or abstract base
-        // (a struct cannot be the static type of a multi-member union).
-        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload or FieldKind.Union;
+        // An [AkkaUnion] field is reference-like (its static type is an interface or abstract base);
+        // a C# 15 union is a struct, so it behaves like any other non-nullable struct kind.
+        if (field.Mapping.Kind == FieldKind.Union)
+            return !field.IsCSharpUnion;
+
+        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload;
     }
 
     private static bool IsNullableValueField(FieldInfo field)

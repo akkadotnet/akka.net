@@ -1287,7 +1287,7 @@ public sealed partial class AkkaSerializerGenerator
 
     internal sealed class FieldInfo : IEquatable<FieldInfo>
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false, bool isDiscoveredUnion = false)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false, bool isDiscoveredUnion = false, string unionDeclarationConflict = "")
         {
             Index = index;
             Name = name;
@@ -1298,6 +1298,7 @@ public sealed partial class AkkaSerializerGenerator
             UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
             UnionDeclaredOnObjectField = unionDeclaredOnObjectField;
             IsDiscoveredUnion = isDiscoveredUnion;
+            UnionDeclarationConflict = unionDeclarationConflict;
         }
 
         public int Index { get; }
@@ -1328,6 +1329,25 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public bool IsDiscoveredUnion { get; }
 
+        /// For a C# union field (see <see cref="IsCSharpUnion"/>) that also carries an
+        /// <c>[AkkaUnion(typeof(...))]</c> list: a description of how that list disagrees with the
+        /// union's own case set, or empty when it agrees or there is no list. Drives AKKASG050.
+        /// </summary>
+        public string UnionDeclarationConflict { get; }
+
+        /// <summary>
+        /// True for a field whose type is a C# 15 <c>union</c> (a struct implementing
+        /// <c>System.Runtime.CompilerServices.IUnion</c>): its members are the union's cases, and
+        /// generated code dispatches on the union's <c>Value</c> instead of on the field value itself.
+        /// </summary>
+        public bool IsCSharpUnion => Mapping.Kind == FieldKind.Union && Mapping.IsValueType;
+
+        /// <summary>
+        /// The union's own static type: for a C# union, the union struct even when the field is a
+        /// <c>Nullable&lt;TUnion&gt;</c>; otherwise the field's declared type.
+        /// </summary>
+        public string UnionTypeFullName => IsCSharpUnion ? Mapping.TypeFullName : TypeFullName;
+
         /// <summary>
         /// Replaces this field's mapping, keeping everything else. Used by formatter resolution when a
         /// registered formatter swaps a collection's element, key, or value mapping for a
@@ -1335,12 +1355,12 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public FieldInfo WithMapping(TypeMapping mapping)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, Formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, Formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion, UnionDeclarationConflict);
         }
 
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField, IsDiscoveredUnion, UnionDeclarationConflict);
         }
 
         /// <summary>
@@ -1377,6 +1397,7 @@ public sealed partial class AkkaSerializerGenerator
                 && IsNullable == other.IsNullable
                 && UnionDeclaredOnObjectField == other.UnionDeclaredOnObjectField
                 && IsDiscoveredUnion == other.IsDiscoveredUnion
+                && string.Equals(UnionDeclarationConflict, other.UnionDeclarationConflict, StringComparison.Ordinal)
                 && Equals(Formatter, other.Formatter)
                 && ValueEquality.SequenceEquals(UnionMembers, other.UnionMembers);
         }
@@ -1393,6 +1414,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, IsNullable);
             hash = ValueEquality.Combine(hash, UnionDeclaredOnObjectField);
             hash = ValueEquality.Combine(hash, IsDiscoveredUnion);
+            hash = ValueEquality.Combine(hash, UnionDeclarationConflict);
             hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
             hash = ValueEquality.Combine(hash, UnionMembers);
             return hash;
@@ -1821,7 +1843,8 @@ public sealed partial class AkkaSerializerGenerator
         PropertyNotSerialized,
         IgnoredFieldAnnotations,
         UnionImplementorNotSerializable,
-        UnionMemberSetIncomplete
+        UnionMemberSetIncomplete,
+        UnionDeclarationConflictsWithCSharpUnion
     }
 
     /// <summary>
@@ -1991,13 +2014,20 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     internal sealed class UnionHelperPlan : IEquatable<UnionHelperPlan>
     {
-        public UnionHelperPlan(string signature, string helperName, string fieldTypeFullName, ClosedSet members)
+        public UnionHelperPlan(string signature, string helperName, string fieldTypeFullName, ClosedSet members, bool isCSharpUnion = false)
         {
             Signature = signature;
             HelperName = helperName;
             FieldTypeFullName = fieldTypeFullName;
             Members = members;
+            IsCSharpUnion = isCSharpUnion;
         }
+
+        /// <summary>
+        /// True when <see cref="FieldTypeFullName"/> is a C# 15 union struct: the helpers dispatch on
+        /// its <c>Value</c>, construct it from the case on read, and map <c>default</c> to nil.
+        /// </summary>
+        public bool IsCSharpUnion { get; }
 
         /// <summary>The union's dedup identity: static type plus ordered member set. See <see cref="BuildUnionSignature"/>.</summary>
         public string Signature { get; }
@@ -2017,6 +2047,7 @@ public sealed partial class AkkaSerializerGenerator
             return string.Equals(Signature, other.Signature, StringComparison.Ordinal)
                 && string.Equals(HelperName, other.HelperName, StringComparison.Ordinal)
                 && string.Equals(FieldTypeFullName, other.FieldTypeFullName, StringComparison.Ordinal)
+                && IsCSharpUnion == other.IsCSharpUnion
                 && Members.Equals(other.Members);
         }
 
@@ -2028,6 +2059,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Signature);
             hash = ValueEquality.Combine(hash, HelperName);
             hash = ValueEquality.Combine(hash, FieldTypeFullName);
+            hash = ValueEquality.Combine(hash, IsCSharpUnion);
             hash = ValueEquality.Combine(hash, Members.GetHashCode());
             return hash;
         }

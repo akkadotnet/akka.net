@@ -549,6 +549,18 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// A field typed as a C# 15 <c>union</c> already has a closed case set; an
+    /// <c>[AkkaUnion(typeof(...))]</c> list on it that names a different set is contradictory.
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionDeclarationConflictsWithCSharpUnion = new(
+        "AKKASG050",
+        "[AkkaUnion] list disagrees with the C# union's cases",
+        "Property '{0}' on type '{1}' is the C# union '{2}', whose cases are its union members, but its [AkkaUnion] list {3}. Remove the [AkkaUnion] attribute, or list exactly the union's cases.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -611,6 +623,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.IgnoredFieldAnnotations => IgnoredFieldAnnotations,
             DiagnosticKey.UnionImplementorNotSerializable => UnionImplementorNotSerializable,
             DiagnosticKey.UnionMemberSetIncomplete => UnionMemberSetIncomplete,
+            DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion => UnionDeclarationConflictsWithCSharpUnion,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

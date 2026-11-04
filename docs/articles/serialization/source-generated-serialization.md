@@ -495,6 +495,11 @@ union with no members can only throw. Every other union rule -- **AKKASG015** th
 a listed one. The wire format does not change:
 a union frame carries each member's own manifest, whether the set was listed or found.
 
+This ships with the same referenced-assembly walk Decision 19 uses for top-level dispatch; see
+[Cross-Assembly Types](#cross-assembly-types) for the walk itself, and
+[The One-Owner Rule](#the-one-owner-rule) for the same two costs and mitigations that apply here
+too.
+
 ### Closed Hierarchies
 
 A record hierarchy whose base has only a private constructor is closed: only the nested types can
@@ -529,10 +534,48 @@ is a closed hierarchy, a case left off the list gets a warning (**AKKASG049**). 
 the wire contract on purpose is legal, so this is not an error. An interface or a base with a
 non-private constructor is open: anyone can add implementors, so a narrower list is never flagged.
 
-This ships with the same referenced-assembly walk Decision 19 uses for top-level dispatch; see
-[Cross-Assembly Types](#cross-assembly-types) for the walk itself, and
-[The One-Owner Rule](#the-one-owner-rule) for the same two costs and mitigations that apply here
-too.
+### C# 15 Union Types
+
+A property typed as a C# 15 `union` is a union field with no `[AkkaUnion]` needed: the union's cases
+are its members. Each case follows the same member rules as an `[AkkaUnion]` member (**AKKASG015**
+through **AKKASG017**, **AKKASG025**, **AKKASG036**).
+
+```csharp
+[AkkaSerializable(Manifest = "paid-invoice")]
+public sealed record PaidInvoice([property: AkkaField(1)] long PublisherId, [property: AkkaField(2)] long InvoiceNumber);
+
+[AkkaSerializable(Manifest = "trial", AllowEmpty = true)]
+public sealed record Trial;
+
+public union Coverage(PaidInvoice, Trial);
+
+[AkkaSerializable(Manifest = "period-covered")]
+public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId, [property: AkkaField(2)] Coverage Coverage) : ISubscriptionEvent;
+```
+
+Write dispatch matches the exact runtime type of the case the union holds. `default(Coverage)`, which
+holds no case, is written as MessagePack nil and reads back as `default`. A `Coverage?` property
+works too. A held case is written exactly as the same type would be written in an `[AkkaUnion]` field,
+so data written with a closed record hierarchy reads back into a union of the same cases, and the
+other way around.
+
+An `[AkkaUnion(typeof(...))]` list on a union-typed property is allowed only when it names exactly the
+union's cases; any other list is an error (**AKKASG050**). Only struct unions are supported.
+
+C# unions need the C# 15 compiler, which ships with the .NET 11 SDK. Akka.NET itself needs no
+`net11.0` target: a project that targets `net10.0` declares `System.Runtime.CompilerServices.UnionAttribute`
+and `System.Runtime.CompilerServices.IUnion` as internal types (Akka.NET does not ship them, since
+they would collide with the `net11.0` BCL):
+
+```csharp
+namespace System.Runtime.CompilerServices
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
+    internal sealed class UnionAttribute : Attribute { }
+
+    internal interface IUnion { object? Value { get; } }
+}
+```
 
 ## Closed Generic Registrations
 
@@ -1198,6 +1241,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 | AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a parameterless `[AkkaUnion]` base but isn't `[AkkaSerializable]`, so the discovered set leaves it out and it fails when first serialized. See [Closed Hierarchies](#closed-hierarchies). |
 | AKKASG049 | Warning | Union member list omits a case of a closed hierarchy | An explicit `[AkkaUnion(...)]` list on a field typed as a closed hierarchy (a C# 15 `closed` class or record, or private constructors only) leaves out a derived type. Writing a value of that type fails at runtime. |
+| AKKASG050 | Error | [AkkaUnion] list disagrees with the C# union's cases | A property typed as a C# 15 `union` carries an `[AkkaUnion(typeof(...))]` list that names a different set than the union's cases. Remove the attribute, or list exactly the cases. See C# 15 Union Types above. |
 
 ## Limitations Today and Planned Changes
 

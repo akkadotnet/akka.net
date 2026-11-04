@@ -921,9 +921,28 @@ public sealed partial class AkkaSerializerGenerator
             // empty, Decision 21's discovered form; see that key's own doc comment). A field-level
             // [AkkaUnion] on a non-named-type field (impossible in practice: the attribute target
             // list does not include arrays/pointers, but this stays defensive) leaves the key default.
-            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
-                : hasUnionAttribute ? new TypeMapping(FieldKind.Union, member.Type is INamedTypeSymbol namedFieldType ? TypeKey.FromSymbol(namedFieldType) : default)
-                : MapType(member.Type, knownTypes);
+            //
+            // A C# 15 union field (TUnion or Nullable<TUnion>) needs no [AkkaUnion]: its cases ARE the
+            // member set. A Union mapping with IsValueType marks it (see FieldInfo.IsCSharpUnion), and
+            // an [AkkaUnion] list that names a different set is reported as AKKASG050.
+            var unionDeclarationConflict = string.Empty;
+            TypeMapping mapping;
+            if (!isEnvelopePayload && TryGetCSharpUnionType(member.Type) is { } csharpUnionType)
+            {
+                var cases = ExtractCSharpUnionCases(csharpUnionType, knownTypes);
+                if (hasUnionAttribute && !unionMembers.IsEmpty)
+                    unionDeclarationConflict = DescribeUnionDeclarationConflict(unionMembers, cases);
+
+                unionMembers = cases;
+                mapping = new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(csharpUnionType), isValueType: true);
+            }
+            else
+            {
+                mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
+                    : hasUnionAttribute ? new TypeMapping(FieldKind.Union, member.Type is INamedTypeSymbol namedFieldType ? TypeKey.FromSymbol(namedFieldType) : default)
+                    : MapType(member.Type, knownTypes);
+            }
+
             fields.Add(new FieldInfo(
                 index,
                 member.Name,
@@ -931,7 +950,8 @@ public sealed partial class AkkaSerializerGenerator
                 mapping,
                 isNullable,
                 unionMembers: isEnvelopePayload ? default : unionMembers,
-                unionDeclaredOnObjectField: isEnvelopePayload && unionDeclaredOnField));
+                unionDeclaredOnObjectField: isEnvelopePayload && unionDeclaredOnField,
+                unionDeclarationConflict: unionDeclarationConflict));
             fieldSymbols.Add(member);
         }
 
@@ -1237,6 +1257,90 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return builder.ToImmutable();
+    }
+
+    private const string IUnionFullName = "System.Runtime.CompilerServices.IUnion";
+
+    /// <summary>
+    /// The C# 15 union struct behind <paramref name="type"/> (unwrapping <c>Nullable&lt;T&gt;</c>), or
+    /// null. A union lowers to a sealed struct implementing <c>System.Runtime.CompilerServices.IUnion</c>
+    /// with one public single-parameter constructor per case. The interface is the signal: Roslyn does
+    /// not return the compiler-made <c>[Union]</c> attribute from a source symbol's
+    /// <c>GetAttributes()</c>, so an attribute check would never match a union declared in source.
+    /// Matched by full metadata name, so the net11.0 BCL type and a net10.0 consumer polyfill both
+    /// count. Union classes are not supported yet.
+    /// </summary>
+    private static INamedTypeSymbol? TryGetCSharpUnionType(ITypeSymbol type)
+    {
+        if (TryGetNullableValueType(type, out var underlying))
+            type = underlying;
+
+        if (type is not INamedTypeSymbol { TypeKind: TypeKind.Struct } named)
+            return null;
+
+        foreach (var implemented in named.AllInterfaces)
+        {
+            if (string.Equals(implemented.ToDisplayString(), IUnionFullName, StringComparison.Ordinal))
+                return named;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A C# union's cases: the parameter types of its public single-parameter instance constructors,
+    /// in declaration order. Each case then goes through the same member rules as an
+    /// <c>[AkkaUnion]</c> member (AKKASG015-017, AKKASG025, AKKASG036).
+    /// </summary>
+    private static ImmutableArray<UnionMemberInfo> ExtractCSharpUnionCases(INamedTypeSymbol unionType, KnownTypes knownTypes)
+    {
+        var builder = ImmutableArray.CreateBuilder<UnionMemberInfo>();
+        var seen = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        foreach (var constructor in unionType.InstanceConstructors)
+        {
+            if (constructor.DeclaredAccessibility != Accessibility.Public || constructor.Parameters.Length != 1)
+                continue;
+
+            var caseType = constructor.Parameters[0].Type;
+            if (!seen.Add(caseType))
+                continue;
+
+            if (caseType is not INamedTypeSymbol namedCase)
+            {
+                var displayName = caseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                builder.Add(new UnionMemberInfo(new TypeKey(displayName, ImmutableArray<TypeKey>.Empty, displayName), caseType.IsValueType, isAssignable: true, isSupported: false, isSealed: true, isAbstract: false));
+                continue;
+            }
+
+            builder.Add(new UnionMemberInfo(
+                TypeKey.FromSymbol(namedCase),
+                namedCase.IsValueType,
+                isAssignable: true,
+                isSupported: true,
+                isSealed: namedCase.IsSealed || namedCase.IsValueType,
+                isAbstract: namedCase.IsAbstract,
+                foreignAssemblyName: GetForeignAssemblyName(namedCase, knownTypes)));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>Empty when <paramref name="declared"/> and <paramref name="cases"/> name the same types; otherwise what differs, for AKKASG050.</summary>
+    private static string DescribeUnionDeclarationConflict(ImmutableArray<UnionMemberInfo> declared, ImmutableArray<UnionMemberInfo> cases)
+    {
+        var caseKeys = new HashSet<TypeKey>(cases.Select(member => member.Key));
+        var declaredKeys = new HashSet<TypeKey>(declared.Select(member => member.Key));
+        var extra = declared.Where(member => !caseKeys.Contains(member.Key)).Select(member => ToDisplayName(member.TypeFullName)).ToList();
+        var missing = cases.Where(member => !declaredKeys.Contains(member.Key)).Select(member => ToDisplayName(member.TypeFullName)).ToList();
+        if (extra.Count == 0 && missing.Count == 0)
+            return string.Empty;
+
+        var parts = new List<string>();
+        if (extra.Count > 0)
+            parts.Add("names " + string.Join(", ", extra.Select(name => "'" + name + "'")) + ", which " + (extra.Count == 1 ? "is not a case" : "are not cases"));
+        if (missing.Count > 0)
+            parts.Add("omits the case" + (missing.Count == 1 ? " " : "s ") + string.Join(", ", missing.Select(name => "'" + name + "'")));
+        return string.Join(" and ", parts);
     }
 
     private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
