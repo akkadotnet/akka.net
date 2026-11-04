@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -158,6 +159,30 @@ namespace Akka.Streams.Tests
             shared.IsShutdown.Should().BeFalse();
             (await Source.Single(2).RunWith(Sink.First<int>(), shared)).Should().Be(2);
             (await Source.Single(3).RunWith(Sink.First<int>(), Sys)).Should().Be(3);
+        }
+
+        [Fact(DisplayName = "Disposing the shared ActorSystem materializer should log a debug message only once")]
+        public async Task Should_log_debug_once_When_shared_materializer_is_disposed_repeatedly()
+        {
+            // AkkaSpec runs at WARNING, so use a dedicated system with DEBUG enabled to observe the log.
+            var system = ActorSystem.Create("shared-materializer-dispose-log",
+                ConfigurationFactory.ParseString("akka.loglevel = DEBUG").WithFallback(Sys.Settings.Config));
+            try
+            {
+                await CreateEventFilter(system)
+                    .Debug(start: "Ignored Dispose() on the ActorSystem's shared default materializer")
+                    .ExpectOneAsync(() =>
+                    {
+                        system.Materializer().Dispose();
+                        system.Materializer().Dispose();
+                        system.Materializer(namePrefix: "prefixed").Dispose();
+                        return Task.CompletedTask;
+                    });
+            }
+            finally
+            {
+                await system.Terminate();
+            }
         }
 
         [Fact(DisplayName = "Disposing a materializer created with custom settings should shut it down")]

@@ -270,11 +270,18 @@ namespace Akka.Streams
         /// shut down when the <see cref="ActorSystem"/> terminates. Calling <see cref="Dispose"/> on it, or on a
         /// name-prefixed view of it, does nothing, so that one caller's <c>using</c> block or DI scope cannot shut
         /// it down for every other caller. Call <see cref="Shutdown"/> explicitly to stop it for all users.
+        /// The first ignored call is logged at debug level, so a caller that expected to own the materializer
+        /// gets a hint without spamming the log.
         /// </remarks>
         public void Dispose()
         {
-            if (!IsSharedSystemMaterializer)
-                Shutdown();
+            if (IsSharedSystemMaterializer)
+            {
+                OnSharedSystemMaterializerDisposeIgnored();
+                return;
+            }
+
+            Shutdown();
         }
 
         /// <summary>
@@ -284,6 +291,17 @@ namespace Akka.Streams
         /// <c>true</c> for the <see cref="ActorSystem"/>'s shared default materializer and its name-prefixed views.
         /// </remarks>
         internal virtual bool IsSharedSystemMaterializer => false;
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// Called instead of <see cref="Shutdown"/> when <see cref="Dispose"/> is invoked on the
+        /// <see cref="ActorSystem"/>'s shared default materializer or a name-prefixed view of it.
+        /// </remarks>
+        internal virtual void OnSharedSystemMaterializerDisposeIgnored()
+        {
+        }
     }
 
     /// <summary>
