@@ -219,10 +219,10 @@ The system SHALL support declaring a closed, explicitly-enumerated set of concre
 
 ### Requirement: Generated serializers support closed generic type registrations
 
-The system SHALL support registering closed generic constructions of a generic `[AkkaSerializable]` type via `[AkkaSerializable<T>]` on the `[AkkaSerializer]` class, since a source generator cannot emit serialization code for an open generic definition.
+The system SHALL support registering closed generic constructions of a generic `[AkkaSerializable]` type via `[AkkaSerializerIncludes<T>]` on the `[AkkaSerializer]` class, since a source generator cannot emit serialization code for an open generic definition.
 
 #### Scenario: Closed construction registered
-- **WHEN** a generic `[AkkaSerializable]` type has an `[AkkaSerializable<T>(Manifest = ...)]` registration on the serializer class
+- **WHEN** a generic `[AkkaSerializable]` type has an `[AkkaSerializerIncludes<T>(Manifest = ...)]` registration on the serializer class
 - **THEN** the generator SHALL emit dispatch for that closed construction as its own top-level message with its own manifest, with generic fields resolved against the concrete type arguments
 
 #### Scenario: Closed construction as nested field

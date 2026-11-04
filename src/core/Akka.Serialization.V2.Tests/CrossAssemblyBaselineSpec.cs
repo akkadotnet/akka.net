@@ -188,7 +188,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record Holder([property: AkkaField(1)] Wrapper<int> Count) : IWrap;
 
             [AkkaSerializer<IWrap>("wrap", 130003)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrap-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrap-int-v1")]
             public sealed partial class WrapSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
@@ -199,7 +199,7 @@ public sealed class CrossAssemblyBaselineSpec
         var registeredAll = registeredGeneratorDiagnostics.AddRange(registeredCompileDiagnostics);
 
         // Why registering the closed construction works.
-        // [AkkaSerializable<Wrapper<int>>] reads the Wrapper<T> definition off the type symbol,
+        // [AkkaSerializerIncludes<Wrapper<int>>] reads the Wrapper<T> definition off the type symbol,
         // not off syntax. The registration step adds Wrapper<int> to messagesByType itself.
         // This avoids the gap that cases 1 and 2 hit. No errors. The generator emits the write
         // and read helpers.
@@ -207,7 +207,7 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().Contain("WriteWrapperInt");
         generatedSource.Should().Contain("ReadWrapperInt");
 
-        // Same setup as above, but with no [AkkaSerializable<Wrapper<int>>] registration.
+        // Same setup as above, but with no [AkkaSerializerIncludes<Wrapper<int>>] registration.
         const string sourceBUnregistered = """
             #nullable enable
             using Akka.Actor;
@@ -275,7 +275,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record AcceptCassette([property: AkkaField(1)] int Layer) : IComms;
 
             [AkkaSerializer<IComms>("comms", 130005)]
-            [AkkaSerializable<Envelope<AcceptCassette>>(Manifest = "env-dmac")]
+            [AkkaSerializerIncludes<Envelope<AcceptCassette>>(Manifest = "env-dmac")]
             public sealed partial class CommsSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
@@ -323,7 +323,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record Holder([property: AkkaField(1)] Envelope<object> Inner) : IComms;
 
             [AkkaSerializer<IComms>("comms", 130006)]
-            [AkkaSerializable<Envelope<object>>(Manifest = "env-any")]
+            [AkkaSerializerIncludes<Envelope<object>>(Manifest = "env-any")]
             public sealed partial class CommsSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;

@@ -95,7 +95,7 @@ namespace Akka.Hosting.Tests
     public sealed class HostingAdditionalMessage;
 
     [AkkaSerializer<IHostingGeneratedMessage>("hosting-generated", 120001)]
-    [AkkaSerializable<HostingAdditionalMessage>(Manifest = "additional")]
+    [AkkaSerializerIncludes<HostingAdditionalMessage>]
     public sealed partial class HostingGeneratedSerializer : AkkaSerializer
     {
         public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

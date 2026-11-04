@@ -1104,40 +1104,71 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             diagnostic.GetMessage(null).Contains("declared more than once", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "Generator should not report AKKASG020 for a non-generic [AkkaSerializable<T>] adoption, and its Manifest override should win (Decision 18)")]
-    public void Generator_should_adopt_a_non_generic_registration_and_apply_its_manifest_override()
+    private const string NonGenericIncludeSource = """
+        #nullable enable
+        using Akka.Actor;
+        using Akka.Serialization.V2;
+
+        namespace DiagnosticSample;
+
+        public interface IProtocol
+        {
+        }
+
+        [AkkaSerializable(Manifest = "plain-v1")]
+        public sealed record Plain([property: AkkaField(1)] string Value);
+
+        [AkkaSerializer<IProtocol>("sample", 120705)]
+        INCLUDE
+        public sealed partial class SampleSerializer : AkkaSerializer
+        {
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+        }
+        """;
+
+    [Fact(DisplayName = "Generator should include a non-generic, non-protocol type under its own Manifest, with no AKKASG020 (Decision 18)")]
+    public void Generator_should_include_a_non_generic_type_under_its_own_manifest()
     {
-        // Decision 18: a registration on the serializer class ADOPTS the registered type, generic or
-        // not; AKKASG020 no longer rejects a non-generic type argument. `Plain` already implements
-        // `IProtocol` under its own manifest ("plain-v1"), but the registration's own Manifest
-        // ("plain-again-v1") overrides it -- the same explicit-wins rule Decision 18 gives an
-        // expanded ManifestPrefix construction.
-        const string source = """
-            #nullable enable
-            using Akka.Actor;
-            using Akka.Serialization.V2;
+        // Decision 18: [AkkaSerializerIncludes<T>] ADOPTS the type, generic or not; AKKASG020 does
+        // not reject a non-generic type argument. `Plain` implements no protocol, and its manifest
+        // comes from its own [AkkaSerializable], the only place a non-generic type declares one.
+        var source = NonGenericIncludeSource.Replace("INCLUDE", "[AkkaSerializerIncludes<Plain>]");
 
-            namespace DiagnosticSample;
+        var result = GeneratorTestHarness.Run(source);
 
-            public interface IProtocol
-            {
-            }
+        result.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        result.CompileDiagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        result.GeneratedSources.Values.Should().Contain(text => text.Contains("\"plain-v1\""));
+    }
 
-            [AkkaSerializable(Manifest = "plain-v1")]
-            public sealed record Plain([property: AkkaField(1)] string Value) : IProtocol;
-
-            [AkkaSerializer<IProtocol>("sample", 120705)]
-            [AkkaSerializable<Plain>(Manifest = "plain-again-v1")]
-            public sealed partial class SampleSerializer : AkkaSerializer
-            {
-                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
-            }
-            """;
+    [Fact(DisplayName = "Generator should report AKKASG053 when an include of a non-generic type sets its own Manifest")]
+    public void Generator_should_report_AKKASG053_when_non_generic_include_sets_manifest()
+    {
+        var source = NonGenericIncludeSource.Replace("INCLUDE", "[AkkaSerializerIncludes<Plain>(Manifest = \"plain-again-v1\")]");
 
         var diagnostics = RunGenerator(source);
 
-        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG020");
-        diagnostics.Should().NotContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var error = diagnostics.Should().ContainSingle(diagnostic => diagnostic.Id == "AKKASG053").Which;
+        error.Severity.Should().Be(DiagnosticSeverity.Error);
+        error.Location.Should().NotBe(Location.None);
+        error.GetMessage().Should().Contain("Manifest = \"plain-again-v1\"")
+            .And.Contain("which currently declares \"plain-v1\"")
+            .And.Contain("Remove Manifest from [AkkaSerializerIncludes<DiagnosticSample.Plain>]");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG053 when a non-generic include carries the only Manifest")]
+    public void Generator_should_report_AKKASG053_when_manifest_is_only_on_the_include()
+    {
+        // The manifest written on the include instead of the type. The error says the type declares
+        // none yet, and points at the fix: declare it there.
+        var source = NonGenericIncludeSource
+            .Replace("[AkkaSerializable(Manifest = \"plain-v1\")]", "[AkkaSerializable]")
+            .Replace("INCLUDE", "[AkkaSerializerIncludes<Plain>(Manifest = \"other-msg\")]");
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().ContainSingle(diagnostic => diagnostic.Id == "AKKASG053")
+            .Which.GetMessage().Should().Contain("which declares none yet").And.Contain("declare it on 'DiagnosticSample.Plain'");
     }
 
     [Fact(DisplayName = "Generator should report AKKASG022 when a generic protocol message has no closed generic registrations")]
@@ -1605,7 +1636,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
             [AkkaSerializer<IProtocol>("sample", 130003)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -1975,7 +2006,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload);
 
             [AkkaSerializer<IProtocol>("sample", 130017)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -2021,7 +2052,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record Payload([property: AkkaField(1)] string Value);
 
             [AkkaSerializer<IProtocol>("sample", 130018)]
-            [AkkaSerializable<Wrapper<Payload>>(Manifest = "wrapper-payload-v1")]
+            [AkkaSerializerIncludes<Wrapper<Payload>>(Manifest = "wrapper-payload-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -2057,7 +2088,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
             [AkkaSerializer<IProtocol>("sample", 130019)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -2195,7 +2226,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
             [AkkaSerializer<IProtocol>("sample", 140301)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -2234,7 +2265,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
             [AkkaSerializer<IProtocol>("sample", 140302)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

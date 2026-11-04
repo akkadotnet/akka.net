@@ -165,37 +165,45 @@ public sealed class AkkaUnionAttribute : Attribute
 }
 
 /// <summary>
-/// Registers a CLOSED generic construction of a generic <see cref="AkkaSerializableAttribute"/>
-/// type (for example <c>[AkkaSerializable&lt;Wrapper&lt;OrderPlaced&gt;&gt;]</c>) with a generated
-/// serializer. Everything on the wire is marked <c>[AkkaSerializable]</c>: ordinary types carry
-/// the non-generic form on their own declaration; a closed generic construction has no
-/// declaration site of its own, so its marking lives here, on the <c>[AkkaSerializer]</c> class.
+/// Includes a type in a generated serializer: <typeparamref name="TMessage"/> becomes one of the
+/// serializer's top-level messages, with its own dispatch arm and its own binding in the generated
+/// <c>CreateSerializerDetails(system)</c>, even though it does not implement the serializer's
+/// protocol interface. Apply it to the <c>[AkkaSerializer]</c> class, for example
+/// <c>[AkkaSerializerIncludes&lt;ChatResponse&gt;]</c> or
+/// <c>[AkkaSerializerIncludes&lt;Wrapper&lt;OrderPlaced&gt;&gt;(Manifest = "wrapper-order-placed")]</c>.
 /// </summary>
 /// <remarks>
-/// A Roslyn source generator cannot reify open generics: it can only emit concrete serialization
-/// code for closed constructions it can see at compile time (the same rule System.Text.Json's
-/// source generator enforces by rejecting unbound generics in <c>[JsonSerializable]</c>). Each
-/// registered construction behaves exactly like its own top-level message: it needs a distinct
-/// <see cref="Manifest"/>, participates in ordinary manifest dispatch, and its generic fields are
-/// resolved against the concrete type arguments. The generic type definition itself must still be
-/// annotated <c>[AkkaSerializable]</c> (that is where the <c>[AkkaField]</c> indices live), but
-/// the open definition is never serialized — only its registered closed constructions are.
+/// <para>
+/// The included type still describes itself with <see cref="AkkaSerializableAttribute"/>: its
+/// <see cref="AkkaFieldAttribute"/> indices, and, for an ordinary type, its manifest. This attribute
+/// only says which serializer owns it. An ordinary type's manifest therefore lives on the type
+/// alone; setting <see cref="Manifest"/> here for a non-generic type is a build error.
+/// </para>
+/// <para>
+/// A closed generic construction is the exception. A Roslyn source generator cannot reify open
+/// generics: it can only emit concrete serialization code for closed constructions it can see at
+/// compile time (the same rule System.Text.Json's source generator enforces by rejecting unbound
+/// generics in <c>[JsonSerializable]</c>). A construction such as <c>Wrapper&lt;OrderPlaced&gt;</c>
+/// has no declaration of its own to carry a manifest, so it takes its <see cref="Manifest"/> (or a
+/// <see cref="ManifestPrefix"/> expansion) from this attribute. The generic definition itself must
+/// still be annotated <c>[AkkaSerializable]</c> (that is where the <c>[AkkaField]</c> indices
+/// live), but the open definition is never serialized, only its included closed constructions are.
+/// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-public sealed class AkkaSerializableAttribute<TMessage> : Attribute
+public sealed class AkkaSerializerIncludesAttribute<TMessage> : Attribute
 {
     /// <summary>
-    /// Stable serializer-owned manifest for this closed construction. Required when the
-    /// construction implements the serializer's protocol interface (top-level dispatch); also the
-    /// union discriminator when the construction is an <see cref="AkkaUnionAttribute"/> member.
+    /// Stable serializer-owned manifest for a closed generic construction. Used for top-level
+    /// dispatch, and as the union discriminator when the construction is a union member. Only a
+    /// closed generic construction takes a manifest here: a non-generic type declares its own
+    /// manifest with <see cref="AkkaSerializableAttribute.Manifest"/>.
     /// </summary>
     /// <remarks>
-    /// A registration on the serializer class means <em>adopt this type into this serializer</em>:
-    /// <typeparamref name="TMessage"/> need not implement the serializer's protocol interface, and
-    /// need not be a closed generic construction at all. When <typeparamref name="TMessage"/> also
-    /// has a <see cref="ManifestPrefix"/> set, <see cref="Manifest"/> registers the literal
-    /// construction alongside the expansion <see cref="ManifestPrefix"/> produces, overriding the
-    /// manifest the formula would otherwise derive for that one construction.
+    /// When <typeparamref name="TMessage"/> also has a <see cref="ManifestPrefix"/> set,
+    /// <see cref="Manifest"/> includes the literal construction alongside the expansion
+    /// <see cref="ManifestPrefix"/> produces, overriding the manifest the formula would otherwise
+    /// derive for that one construction.
     /// </remarks>
     public string? Manifest { get; init; }
 
@@ -209,7 +217,7 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
     /// A type argument has a closed set when it is the serializer's own protocol interface (see
     /// <see cref="AkkaSerializerAttribute{TProtocol}"/>), or an interface or abstract class carrying
     /// a type-level <see cref="AkkaUnionAttribute"/>. For example,
-    /// <c>[AkkaSerializable&lt;Envelope&lt;ICommsMessage&gt;&gt;(ManifestPrefix = "env")]</c> on a
+    /// <c>[AkkaSerializerIncludes&lt;Envelope&lt;ICommsMessage&gt;&gt;(ManifestPrefix = "env")]</c> on a
     /// serializer whose protocol is <c>ICommsMessage</c> registers one closed construction of
     /// <c>Envelope&lt;T&gt;</c> per member of the protocol set -- <c>Envelope&lt;AcceptCassette&gt;</c>,
     /// <c>Envelope&lt;OrderCancelled&gt;</c>, and so on -- each with its own generated dispatch arm,

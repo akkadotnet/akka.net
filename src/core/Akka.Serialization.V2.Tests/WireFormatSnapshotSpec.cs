@@ -81,7 +81,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         "union-member-order-cancelled-nested-only",
         "union-member-order-note-struct",
 
-        // Closed-generic [AkkaSerializable<T>] registrations.
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations.
         "closed-generic-wrapper-order-request",
         "closed-generic-wrapper-order-receipt",
 
@@ -250,7 +250,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             "env-3", new OrderNote("order-3", "expedite"))),
 
         // --------------------------------------------------------------------------------------
-        // Closed-generic [AkkaSerializable<T>] registrations -- fixtures from
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations -- fixtures from
         // GeneratedClosedGenericSpec.
         // --------------------------------------------------------------------------------------
         "closed-generic-wrapper-order-request" => Case(_closedGenericSerializer, new Wrapper<OrderRequest>(

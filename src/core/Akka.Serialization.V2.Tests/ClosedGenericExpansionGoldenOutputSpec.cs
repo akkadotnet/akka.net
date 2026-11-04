@@ -66,9 +66,9 @@ public sealed class ClosedGenericExpansionGoldenOutputSpec
             [property: AkkaField(2)] TSecond Second);
 
         [AkkaSerializer<IComms>("expansion-golden", 190101)]
-        [AkkaSerializable<Envelope<IComms>>(ManifestPrefix = "env", Manifest = "env-any")]
-        [AkkaSerializable<Envelope<Cassette>>(Manifest = "env-cassette-v1")]
-        [AkkaSerializable<Pair<IComms, Envelope<Cassette>>>(ManifestPrefix = "pair")]
+        [AkkaSerializerIncludes<Envelope<IComms>>(ManifestPrefix = "env", Manifest = "env-any")]
+        [AkkaSerializerIncludes<Envelope<Cassette>>(Manifest = "env-cassette-v1")]
+        [AkkaSerializerIncludes<Pair<IComms, Envelope<Cassette>>>(ManifestPrefix = "pair")]
         public sealed partial class ExpansionGoldenSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -111,7 +111,7 @@ public sealed class ClosedGenericExpansionGoldenOutputSpec
         public sealed record Ping([property: AkkaField(1)] int Value) : IComms;
 
         [AkkaSerializer<IComms>("expansion-golden-cross-assembly", 190102)]
-        [AkkaSerializable<AuditStamp>(Manifest = "audit-override-v1")]
+        [AkkaSerializerIncludes<AuditStamp>]
         public sealed partial class ExpansionGoldenCrossAssemblySerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

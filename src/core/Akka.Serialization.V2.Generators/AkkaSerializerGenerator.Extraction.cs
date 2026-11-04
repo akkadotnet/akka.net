@@ -29,7 +29,7 @@ public sealed partial class AkkaSerializerGenerator
 
     private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
 
-    private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute`1";
+    private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializerIncludesAttribute`1";
 
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute`2";
 
@@ -187,7 +187,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class, as light
+    /// Extracts <c>[AkkaSerializerIncludes&lt;T&gt;]</c> registrations from the serializer class, as light
     /// specs (see <see cref="ClosedGenericRegistrationInfo"/>) plus the full schema for every VALID
     /// literal target (see <see cref="SerializerInfo.ClosedGenericSchemas"/>). Decision 18: a
     /// registration ADOPTS <typeparamref name="TMessage"/> into this serializer -- a closed generic
@@ -245,7 +245,9 @@ public sealed partial class AkkaSerializerGenerator
             if (string.IsNullOrEmpty(manifest))
                 continue;
 
-            if (attribute.AttributeClass!.TypeArguments[0] is INamedTypeSymbol explicitTarget)
+            // Only a closed generic construction takes its manifest from the registration; a
+            // non-generic target's manifest is its own (and a Manifest set here is AKKASG053).
+            if (attribute.AttributeClass!.TypeArguments[0] is INamedTypeSymbol { IsGenericType: true } explicitTarget)
             {
                 var explicitTargetKey = TypeKey.FromSymbol(explicitTarget);
                 explicitManifestByTarget[explicitTargetKey] = manifest!;
@@ -260,9 +262,18 @@ public sealed partial class AkkaSerializerGenerator
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var manifest = ReadStringNamedArgument(attribute, "Manifest") ?? string.Empty;
+            var registrationManifest = ReadStringNamedArgument(attribute, "Manifest") ?? string.Empty;
             var manifestPrefix = ReadStringNamedArgument(attribute, "ManifestPrefix") ?? string.Empty;
             var target = attribute.AttributeClass!.TypeArguments[0] as INamedTypeSymbol;
+
+            // A non-generic type describes itself: its manifest comes from its own
+            // [AkkaSerializable(Manifest = ...)], never from the registration, so there is exactly
+            // one place to declare it. A Manifest set here anyway is kept aside for AKKASG053. Only a
+            // closed generic construction, which has no declaration of its own, takes its manifest
+            // from the registration.
+            var isNonGenericTarget = target is { IsGenericType: false };
+            var misplacedManifest = isNonGenericTarget ? registrationManifest : string.Empty;
+            var manifest = isNonGenericTarget ? GetOwnManifest(target!, knownTypes) ?? string.Empty : registrationManifest;
             var serializableAttribute = target?.OriginalDefinition.GetAttributes()
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
 
@@ -276,17 +287,17 @@ public sealed partial class AkkaSerializerGenerator
             // "Manifest alone" or "neither property" registers (or attempts to register) the literal
             // target, exactly as before Decision 18. "ManifestPrefix alone" does NOT register the
             // literal construction -- only its expansion, below.
-            if (manifest.Length > 0 || manifestPrefix.Length == 0)
+            if (registrationManifest.Length > 0 || manifestPrefix.Length == 0)
             {
                 if (!isValidTarget)
                 {
                     var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
-                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix));
+                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix, misplacedManifest: misplacedManifest));
                 }
                 else
                 {
-                    // AllowEmpty travels with the definition's [AkkaSerializable]; the manifest is
-                    // per-registration and comes from the registration attribute.
+                    // AllowEmpty travels with the definition's [AkkaSerializable]. The manifest is the
+                    // type's own for a non-generic target, the registration's for a construction.
                     var allowEmpty = serializableAttribute!.NamedArguments
                         .Any(argument => argument.Key == "AllowEmpty" && argument.Value.Value is true);
                     var targetTypeKey = TypeKey.FromSymbol(target!);
@@ -299,7 +310,7 @@ public sealed partial class AkkaSerializerGenerator
                         compilation,
                         definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition),
                         locationEntries);
-                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty, manifestPrefix: manifestPrefix));
+                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty, manifestPrefix: manifestPrefix, misplacedManifest: misplacedManifest));
                     schemasBuilder.Add(message);
                 }
             }
@@ -315,7 +326,7 @@ public sealed partial class AkkaSerializerGenerator
             // attach to.
             if (!isValidTarget || target is not { IsGenericType: true })
             {
-                if (manifest.Length == 0)
+                if (registrationManifest.Length == 0)
                 {
                     var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
                     registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix,
@@ -570,7 +581,7 @@ public sealed partial class AkkaSerializerGenerator
         // AkkaSerializerFormatterAttribute<TTarget, TFormatter> where TFormatter :
         // IAkkaMessagePackFormatter<TTarget> -- a constructed generic attribute, so matching
         // requires comparing against OriginalDefinition (the same pattern used for
-        // AkkaSerializableAttribute<TMessage> in ExtractClosedGenericRegistrations).
+        // AkkaSerializerIncludesAttribute<TMessage> in ExtractClosedGenericRegistrations).
         var formatterAttributes = symbol.GetAttributes()
             .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, formatterAttributeType))
             .ToImmutableArray();
@@ -688,7 +699,7 @@ public sealed partial class AkkaSerializerGenerator
 
         // A generic [AkkaSerializable] DEFINITION is never a message itself -- a source generator
         // cannot reify an open generic. Only its registered closed constructions serialize
-        // ([AkkaSerializable<T>], AKKASG020/022). Extract it as a flagged placeholder
+        // ([AkkaSerializerIncludes<T>], AKKASG020/022). Extract it as a flagged placeholder
         // carrying its protocols (for the AKKASG022 check) but no fields: a T-typed field would map
         // as Unsupported and produce a misleading AKKASG003 against the definition.
         if (symbol.IsGenericType)
@@ -1466,7 +1477,7 @@ public sealed partial class AkkaSerializerGenerator
         // closed generic construction (Wrapper<Foo>) the [AkkaSerializable] attribute lives on the
         // definition. The mapping key is TypeKey.FromSymbol, whose metadata name plus type arguments
         // are arity-aware and construction-aware, so a closed construction resolves to its registered
-        // [AkkaSerializable<T>] message -- or, if unregistered, fails AKKASG023 instead of silently
+        // [AkkaSerializerIncludes<T>] message -- or, if unregistered, fails AKKASG023 instead of silently
         // dropping its type arguments.
         if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
             return new TypeMapping(
@@ -1860,7 +1871,7 @@ public sealed partial class AkkaSerializerGenerator
         /// <summary>The open <c>AkkaSerializerFormatterAttribute&lt;TTarget, TFormatter&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractFormatters"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
         public INamedTypeSymbol? FormatterAttribute { get; }
 
-        /// <summary>The open <c>AkkaSerializableAttribute&lt;TMessage&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractClosedGenericRegistrations"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
+        /// <summary>The open <c>AkkaSerializerIncludesAttribute&lt;TMessage&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractClosedGenericRegistrations"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
         public INamedTypeSymbol? GenericSerializableAttribute { get; }
 
         public INamedTypeSymbol? Guid { get; }

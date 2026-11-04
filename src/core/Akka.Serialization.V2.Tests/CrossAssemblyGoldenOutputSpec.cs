@@ -90,7 +90,7 @@ public sealed class CrossAssemblyGoldenOutputSpec
         public sealed record Holder([property: AkkaField(1)] Wrapper<int> Count) : IComms;
 
         [AkkaSerializer<IComms>("cross-assembly-golden", 190001)]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class CrossAssemblyGoldenSerializer : AkkaSerializer
         {{
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

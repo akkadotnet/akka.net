@@ -238,7 +238,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor InvalidClosedGenericRegistration = new(
         "AKKASG020",
         "Closed generic registration is invalid",
-        "[AkkaSerializable<T>] registration '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
+        "[AkkaSerializerIncludes<T>] registration '{0}' on serializer '{1}' must name an [AkkaSerializable] type, or a closed generic construction of one",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -254,7 +254,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor GenericSerializableRequiresRegistration = new(
         "AKKASG022",
         "Generic serializable type requires closed generic registrations",
-        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializable<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializable<T>(Manifest = ...)] on the serializer class",
+        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializerIncludes<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializerIncludes<T>(Manifest = ...)] on the serializer class",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -262,7 +262,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor UnregisteredClosedGenericField = new(
         "AKKASG023",
         "Closed generic field type is not registered",
-        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializable<T>]",
+        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializerIncludes<T>]",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -357,7 +357,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor ManifestIgnoredOnGenericDefinition = new(
         "AKKASG037",
         "Manifest on a generic [AkkaSerializable] definition is ignored",
-        "Generic [AkkaSerializable] type '{0}' specifies Manifest '{1}', which is ignored: a generic definition is never serialized directly, and each closed construction registered with [AkkaSerializable<T>] supplies its own Manifest",
+        "Generic [AkkaSerializable] type '{0}' specifies Manifest '{1}', which is ignored: a generic definition is never serialized directly, and each closed construction registered with [AkkaSerializerIncludes<T>] supplies its own Manifest",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
@@ -418,7 +418,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor ClosedSetExpansionRequiresClosedSet = new(
         "AKKASG040",
         "ManifestPrefix has no closed set to expand",
-        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' has no closed member set to expand: {3}",
+        "[AkkaSerializerIncludes<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' has no closed member set to expand: {3}",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -426,7 +426,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Decision 18's one-owner rule: a message type belongs to only one serializer's closed set in
     /// one compilation, whether it gets there by implementing a protocol or by an explicit
-    /// <c>[AkkaSerializable&lt;T&gt;]</c> adoption (a literal registration or a <c>ManifestPrefix</c>
+    /// <c>[AkkaSerializerIncludes&lt;T&gt;]</c> adoption (a literal registration or a <c>ManifestPrefix</c>
     /// expansion member). Two serializers claiming the same type is a build error reported at BOTH
     /// serializers. Across compilations that cannot see each other this becomes a startup check
     /// instead (Decision 19, not part of this change).
@@ -447,7 +447,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor ClosedSetExpansionCount = new(
         "AKKASG042",
         "Closed-set expansion produced constructions",
-        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' expanded to {3} closed generic construction(s)",
+        "[AkkaSerializerIncludes<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' expanded to {3} closed generic construction(s)",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
@@ -530,7 +530,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor UnionImplementorNotSerializable = new(
         "AKKASG048",
         "Union implementor is not [AkkaSerializable]",
-        "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'; for a generic type, mark the definition and register each closed construction with [AkkaSerializable<T>(Manifest = \"...\")] on the serializer.",
+        "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'; for a generic type, mark the definition and register each closed construction with [AkkaSerializerIncludes<T>(Manifest = \"...\")] on the serializer.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -564,6 +564,20 @@ public sealed partial class AkkaSerializerGenerator
     /// <c>[AkkaSerializable]</c> on a C# 15 union declaration: a union has no fields of its own to
     /// serialize, and without this the attribute was silently ignored until the first send failed.
     /// </summary>
+    /// <summary>
+    /// <c>[AkkaSerializerIncludes&lt;T&gt;(Manifest = ...)]</c> where <c>T</c> is not generic. A
+    /// non-generic type declares its own manifest on its <c>[AkkaSerializable]</c>, so the manifest
+    /// has exactly one home; only a closed generic construction, which has no declaration of its
+    /// own, takes one from the registration. Reported at the registration attribute.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ManifestOnNonGenericInclude = new(
+        "AKKASG053",
+        "Manifest belongs on the included type",
+        "[AkkaSerializerIncludes<{0}>] on serializer '{1}' sets Manifest = \"{2}\", but '{0}' is not generic, so its manifest comes from its own [AkkaSerializable(Manifest = ...)]{3}. Remove Manifest from [AkkaSerializerIncludes<{0}>] and declare it on '{0}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor SerializableOnCSharpUnion = new(
         "AKKASG051",
         "[AkkaSerializable] is not supported on a C# union",
@@ -637,6 +651,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.UnionMemberSetIncomplete => UnionMemberSetIncomplete,
             DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion => UnionDeclarationConflictsWithCSharpUnion,
             DiagnosticKey.SerializableOnCSharpUnion => SerializableOnCSharpUnion,
+            DiagnosticKey.ManifestOnNonGenericInclude => ManifestOnNonGenericInclude,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

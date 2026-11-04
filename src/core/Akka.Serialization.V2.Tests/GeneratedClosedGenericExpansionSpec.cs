@@ -102,14 +102,15 @@ public sealed class GeneratedClosedGenericExpansionSpec : IAsyncLifetime
         RoundTrip(pairWithCancelled).Should().Be(pairWithCancelled);
     }
 
-    [Fact(DisplayName = "A registration should adopt a non-generic, non-protocol type, and its own Manifest should override the type's own attribute")]
+    [Fact(DisplayName = "An include should adopt a non-generic, non-protocol type under the type's own Manifest")]
     public void Registration_should_adopt_a_non_generic_non_protocol_type()
     {
         var auditStamp = new ExpansionAuditStamp("/user/some-actor");
 
-        // ExpansionAuditStamp implements no protocol at all; its own [AkkaSerializable] attribute
-        // declares Manifest = "audit-v1", but the registration's own Manifest overrides it.
-        _serializer.Manifest(auditStamp).Should().Be("audit-override-v1");
+        // ExpansionAuditStamp implements no protocol at all. [AkkaSerializerIncludes<ExpansionAuditStamp>]
+        // adds it to the serializer, and its manifest comes from its own [AkkaSerializable], the
+        // only place a non-generic type declares one.
+        _serializer.Manifest(auditStamp).Should().Be("audit-v1");
 
         var bytes = _serializer.ToBinary(auditStamp);
         var result = _serializer.FromBinary(bytes, _serializer.Manifest(auditStamp));
@@ -193,10 +194,10 @@ public sealed record ExpansionAuditStamp([property: AkkaField(1)] string ActorPa
 public sealed record ExpansionCurveball([property: AkkaField(1)] string Note);
 
 [AkkaSerializer<IExpansionProtocol>("closed-generic-expansion-test", 140301)]
-[AkkaSerializable<ExpansionEnvelope<IExpansionProtocol>>(ManifestPrefix = "env", Manifest = "env-any")]
-[AkkaSerializable<ExpansionEnvelope<ExpansionAcceptCassette>>(Manifest = "env-cassette-v1")]
-[AkkaSerializable<ExpansionPair<IExpansionProtocol, ExpansionEnvelope<ExpansionAcceptCassette>>>(ManifestPrefix = "pair")]
-[AkkaSerializable<ExpansionAuditStamp>(Manifest = "audit-override-v1")]
+[AkkaSerializerIncludes<ExpansionEnvelope<IExpansionProtocol>>(ManifestPrefix = "env", Manifest = "env-any")]
+[AkkaSerializerIncludes<ExpansionEnvelope<ExpansionAcceptCassette>>(Manifest = "env-cassette-v1")]
+[AkkaSerializerIncludes<ExpansionPair<IExpansionProtocol, ExpansionEnvelope<ExpansionAcceptCassette>>>(ManifestPrefix = "pair")]
+[AkkaSerializerIncludes<ExpansionAuditStamp>]
 public sealed partial class ExpansionSerializer : AkkaSerializer
 {
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

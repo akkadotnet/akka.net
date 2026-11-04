@@ -288,14 +288,14 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializer<IProtocol>("golden-sample", 150101)]
         [AkkaSerializerFormatter<Foreign, ForeignFormatter>]
         [AkkaSerializerFormatter<Temperature, TemperatureFormatter>]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
-        [AkkaSerializable<Wrapper<GeoPoint>>(Manifest = "wrapper-geo-v1")]
-        [AkkaSerializable<Wrapper<Pair<int, string>>>(Manifest = "wrapper-pair-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<GeoPoint>>(Manifest = "wrapper-geo-v1")]
+        [AkkaSerializerIncludes<Wrapper<Pair<int, string>>>(Manifest = "wrapper-pair-v1")]
         // Decision 18: a registration is now unconditionally a top-level message too (the adoption
         // rule), not merely "reachable if some field needs it" -- so, unlike before Decision 18,
         // this needs its own Manifest even though Pair<int, string> is also reachable as a nested
         // field of Wrapper<Pair<int, string>> above.
-        [AkkaSerializable<Pair<int, string>>(Manifest = "pair-int-string-v1")]
+        [AkkaSerializerIncludes<Pair<int, string>>(Manifest = "pair-int-string-v1")]
         public sealed partial class GoldenSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

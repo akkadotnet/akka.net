@@ -79,7 +79,7 @@ public sealed class GeneratorIncrementalCachingSpec
 
         [AkkaSerializer<IProtocol>("caching-sample", 150001)]
         [AkkaSerializerFormatter<Foreign, ForeignFormatter>]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
