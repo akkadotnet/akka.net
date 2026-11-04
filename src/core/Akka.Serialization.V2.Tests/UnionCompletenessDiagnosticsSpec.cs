@@ -212,6 +212,95 @@ public sealed class UnionCompletenessDiagnosticsSpec
             .Which.GetMessage(null).Should().Contain("Square");
     }
 
+    // Real C# 15 syntax (LanguageVersion.Preview through the harness's newer Roslyn). The compiler
+    // adds IsClosedTypeAttribute only at emit time and Roslyn does not return it from a source symbol,
+    // so these prove the generator recognizes the `closed` modifier itself -- including on a base
+    // with no private constructor, where nothing else marks the hierarchy as closed.
+    private const string ClosedRecordSource = """
+        #nullable enable
+        using Akka.Serialization.V2;
+
+        namespace System.Runtime.CompilerServices
+        {
+            [System.AttributeUsage(System.AttributeTargets.Class)]
+            internal sealed class IsClosedTypeAttribute : System.Attribute { }
+        }
+
+        namespace Completeness.CSharp15
+        {
+            {{UNION}}
+            public closed record Shape
+            {
+                [AkkaSerializable(Manifest = "circle")]
+                public sealed record Circle([property: AkkaField(1)] double Radius) : Shape;
+
+                [AkkaSerializable(Manifest = "square")]
+                public sealed record Square([property: AkkaField(1)] double Side) : Shape;
+
+                {{TRIANGLE}}
+                public sealed record Triangle([property: AkkaField(1)] double Base) : Shape;
+            }
+
+            {{FIELD}}
+        }
+        """ + SerializerSource;
+
+    private static Harness.GeneratorRunResult RunClosedRecord(string union, string triangle, string field)
+    {
+        var source = ClosedRecordSource.Replace("{{UNION}}", union).Replace("{{TRIANGLE}}", triangle).Replace("{{FIELD}}", field);
+        return GeneratorTestHarness.Run(new[] { new SourceFile("Source.cs", source) }, GeneratorTestHarness.PreviewParseOptions);
+    }
+
+    [Fact(DisplayName = "Should_RoundTripEveryCase_When_FieldIsCSharp15ClosedRecordUnion")]
+    public void Should_RoundTripEveryCase_When_FieldIsCSharp15ClosedRecordUnion()
+    {
+        var result = RunClosedRecord("[AkkaUnion]", """[AkkaSerializable(Manifest = "triangle")]""", """
+            [AkkaSerializable(Manifest = "drawn")]
+            public sealed record Drawn([property: AkkaField(1)] Shape Shape) : ISubscriptionEvent;
+
+            public static class Samples
+            {
+                public static object[] All() => [new Drawn(new Shape.Circle(1)), new Drawn(new Shape.Square(2)), new Drawn(new Shape.Triangle(3))];
+            }
+            """);
+
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        using var system = Akka.Actor.ActorSystem.Create("closed-record-union");
+        var serializer = (Akka.Serialization.SerializerWithStringManifest)Activator.CreateInstance(
+            assembly.GetType("SubscriptionSerializer", throwOnError: true)!, (Akka.Actor.ExtendedActorSystem)system)!;
+        var samples = (object[])assembly.GetType("Completeness.CSharp15.Samples", throwOnError: true)!.GetMethod("All")!.Invoke(null, null)!;
+
+        foreach (var original in samples)
+            serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
+    }
+
+    [Fact(DisplayName = "Should_ReportAKKASG048_When_CSharp15ClosedRecordCaseLacksAkkaSerializable")]
+    public void Should_ReportAKKASG048_When_CSharp15ClosedRecordCaseLacksAkkaSerializable()
+    {
+        var result = RunClosedRecord("[AkkaUnion]", string.Empty, """
+            [AkkaSerializable(Manifest = "drawn")]
+            public sealed record Drawn([property: AkkaField(1)] Shape Shape) : ISubscriptionEvent;
+            """);
+
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG048")
+            .Which.GetMessage(null).Should().Contain("Completeness.CSharp15.Shape.Triangle");
+    }
+
+    [Fact(DisplayName = "Should_WarnAKKASG049_When_ExplicitListOmitsCaseOfCSharp15ClosedRecord")]
+    public void Should_WarnAKKASG049_When_ExplicitListOmitsCaseOfCSharp15ClosedRecord()
+    {
+        var result = RunClosedRecord(string.Empty, """[AkkaSerializable(Manifest = "triangle")]""", """
+            [AkkaSerializable(Manifest = "drawn")]
+            public sealed record Drawn([property: AkkaField(1), AkkaUnion(typeof(Shape.Circle), typeof(Shape.Square))] Shape Shape) : ISubscriptionEvent;
+            """);
+
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG049")
+            .Which.GetMessage(null).Should().Contain("Shape.Triangle");
+    }
+
     [Fact(DisplayName = "Should_NotWarnAKKASG049_When_ExplicitUnionListNarrowsAnOpenBase")]
     public void Should_NotWarnAKKASG049_When_ExplicitUnionListNarrowsAnOpenBase()
     {
