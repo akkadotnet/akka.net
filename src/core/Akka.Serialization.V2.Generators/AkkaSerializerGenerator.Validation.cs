@@ -948,7 +948,13 @@ public sealed partial class AkkaSerializerGenerator
         // member's own declaration, which may not even be in this compilation.
         var at = new LocationKey(message.Key, field.Name);
         var unionKey = field.Mapping.Key;
-        var unionDisplayName = ToDisplayName(unionKey.DisplayName ?? field.TypeFullName);
+        var unionDisplayName = ToDisplayName(unionKey.DisplayName ?? field.UnionTypeFullName);
+
+        if (field.UnionDeclarationConflict.Length > 0)
+        {
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.UnionTypeFullName), field.UnionDeclarationConflict));
+            isValid = false;
+        }
 
         // AKKASG048: a discovered set only sees [AkkaSerializable] types, so a derived type that
         // forgot the attribute silently drops out of dispatch and fails on its first write.
@@ -962,7 +968,8 @@ public sealed partial class AkkaSerializerGenerator
                 hasUnmarkedImplementor = true;
             }
 
-            isValid = !hasUnmarkedImplementor;
+            if (hasUnmarkedImplementor)
+                isValid = false;
         }
 
         // AKKASG019, empty set: an explicit list always has at least one member (`first` is a
