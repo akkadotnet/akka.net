@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingProducerControllerImpl.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -275,18 +275,10 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var outKey = $"{ProducerId}-{entityId}";
         if (CurrentState.OutStates.TryGetValue(outKey, out var outState))
         {
-            if (outState.Stopping)
-            {
-                // The per-entity ProducerController is terminating. Its name is still reserved in
-                // this actor's children container, so a replacement cannot be created yet - doing
-                // so throws InvalidActorNameException and takes the whole controller down. Buffer
-                // instead; the Terminated handler replays once the name is free.
-                BufferWhileStopping(outKey, outState, msg, replyTo, totalSeqNr, newReplyAfterStore);
-                return;
-            }
-
-            // there is demand, send immediately
-            if (outState.NextTo.HasValue)
+            // there is demand, send immediately. A Stopping entry may still hold demand from its
+            // terminating child, so it always buffers; the Terminated handler replays the buffer
+            // into a fresh ProducerController once the child's name is free.
+            if (outState.NextTo.HasValue && !outState.Stopping)
             {
                 Send(msg, outKey, outState.SeqNr, outState.NextTo.Value);
                 var newUnconfirmed = outState.Unconfirmed.Add(new Unconfirmed<T>(totalSeqNr, outState.SeqNr, replyTo));
@@ -359,28 +351,6 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         producer.Tell(new ProducerController.Start<T>(RequestNextAdapter));
         Context.Watch(producer);
         return producer;
-    }
-
-    /// <summary>
-    /// Buffers a message for an entity whose child is stopping. Unlike the normal buffering path we
-    /// do not send a RequestNext, because there is no live ProducerController to consume it.
-    /// </summary>
-    private void BufferWhileStopping(string outKey, OutState<T> outState, T msg, Option<IActorRef> replyTo,
-        TotalSeqNr totalSeqNr, ImmutableDictionary<TotalSeqNr, IActorRef> newReplyAfterStore)
-    {
-        if (CurrentState.BufferSize >= Settings.BufferSize)
-            throw new IllegalStateException(
-                $"Buffer overflow, current size [{CurrentState.BufferSize}] >= max [{Settings.BufferSize}]");
-
-        _log.Debug("Buffering message to stopping entityId [{0}], buffer size for entityId [{1}]",
-            outState.EntityId, outState.Buffered.Count + 1);
-
-        var newBuffered = outState.Buffered.Add(new Buffered<T>(totalSeqNr, msg, replyTo));
-        CurrentState = CurrentState with
-        {
-            OutStates = CurrentState.OutStates.SetItem(outKey, outState with { Buffered = newBuffered }),
-            ReplyAfterStore = newReplyAfterStore
-        };
     }
 
     private ImmutableList<Unconfirmed<T>> OnAck(OutState<T> outState, long confirmedSeqNr)
@@ -476,6 +446,13 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var outKey = next.ProducerId;
         if (CurrentState.OutStates.TryGetValue(outKey, out var outState))
         {
+            if (outState.Stopping)
+            {
+                // stale demand from the terminating child; its replacement will send its own RequestNext
+                _log.Debug("Ignoring RequestNext from stopping ProducerController [{0}]", outKey);
+                return;
+            }
+
             if (outState.NextTo.HasValue)
                 throw new IllegalStateException($"Received RequestNext but already has demand for [{outKey}]");
 
@@ -594,34 +571,35 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
     private void ReceiveTerminated(Terminated terminated)
     {
         var deadRef = terminated.ActorRef;
-
-        var deadKeys = CurrentState.OutStates
-            .Where(c => c.Value.ProducerController.Equals(deadRef))
-            .Select(c => c.Key)
-            .ToImmutableList();
-
-        if (deadKeys.IsEmpty)
+        var (outKey, outState) = CurrentState.OutStates.FirstOrDefault(c => c.Value.ProducerController.Equals(deadRef));
+        if (outKey is null)
             return;
 
-        foreach (var outKey in deadKeys)
+        if (!outState.Stopping)
         {
-            var outState = CurrentState.OutStates[outKey];
-
-            if (outState.Buffered.IsEmpty)
-            {
-                _log.Debug("ProducerController for [{0}] terminated, no buffered messages", outKey);
-                CurrentState = CurrentState with { OutStates = CurrentState.OutStates.Remove(outKey) };
-                continue;
-            }
-
-            _log.Debug("ProducerController for [{0}] terminated, recreating for [{1}] buffered messages",
-                outKey, outState.Buffered.Count);
-
-            var producer = CreateProducerController(outState.EntityId, outKey);
-            var newOutState = new OutState<T>(outState.EntityId, producer, Option<IActorRef>.None,
-                outState.Buffered, 1L, ImmutableList<Unconfirmed<T>>.Empty, _timeProvider.Now.Ticks);
-            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.SetItem(outKey, newOutState) };
+            // Not stopped by CleanupUnused. Children are restarted by supervision rather than stopped,
+            // so this should not happen; keep the entry (and its Unconfirmed) as-is rather than
+            // silently resetting delivery state we did not prove to be empty.
+            _log.Warning("ProducerController for [{0}] terminated unexpectedly", outKey);
+            return;
         }
+
+        if (outState.Buffered.IsEmpty)
+        {
+            _log.Debug("ProducerController for [{0}] terminated, no buffered messages", outKey);
+            CurrentState = CurrentState with { OutStates = CurrentState.OutStates.Remove(outKey) };
+            return;
+        }
+
+        // Safe to restart at SeqNr 1 with empty Unconfirmed: cleanup only stops a child whose
+        // Unconfirmed and Buffered are empty, and nothing is sent to a Stopping entry.
+        _log.Debug("ProducerController for [{0}] terminated, recreating for [{1}] buffered messages",
+            outKey, outState.Buffered.Count);
+
+        var producer = CreateProducerController(outState.EntityId, outKey);
+        var newOutState = new OutState<T>(outState.EntityId, producer, Option<IActorRef>.None,
+            outState.Buffered, 1L, ImmutableList<Unconfirmed<T>>.Empty, _timeProvider.Now.Ticks);
+        CurrentState = CurrentState with { OutStates = CurrentState.OutStates.SetItem(outKey, newOutState) };
     }
 
     private void StoreMessageSent(DurableProducerQueue.MessageSent<T> messageSent, int attempt)
