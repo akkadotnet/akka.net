@@ -8,6 +8,8 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -18,9 +20,10 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Specs for <c>[AkkaUnion]</c> fields: closed, explicitly-enumerated member sets encoded
-/// structurally inline and discriminated by each member's serializer-owned manifest -- the typed
-/// alternative to an <c>object</c>-typed envelope field for payload sets known at compile time.
+/// Specs for union fields typed as an interface: the member set is every <c>[AkkaSerializable]</c>
+/// implementor the build can see, encoded structurally inline and discriminated by each member's
+/// serializer-owned manifest -- the typed alternative to an <c>object</c>-typed envelope field for
+/// payload sets known at compile time.
 /// </summary>
 public sealed class GeneratedUnionSpec : IAsyncLifetime
 {
@@ -120,23 +123,10 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
         RoundTrip(withNull).Should().Be(withNull);
     }
 
-    [Fact(DisplayName = "Field-level union override should narrow the type-level member set")]
-    public void Field_level_union_override_should_narrow_type_level_set()
-    {
-        // OrderNote is a member of the TYPE-LEVEL union on IOrderEvent, but OptionalUnionMessage
-        // overrides the field with a narrower set that excludes it: the override must win.
-        var message = new OptionalUnionMessage("id-3", new OrderNote("order-12", "excluded"));
-
-        var write = () => _serializer.ToBinary(message);
-
-        write.Should().Throw<SerializationException>()
-            .WithMessage("*not a declared union member*");
-    }
-
     [Fact(DisplayName = "Union write should fail serialization for an undeclared runtime type")]
     public void Union_write_should_fail_for_undeclared_runtime_type()
     {
-        var message = new UnionEnvelope("env-7", new UndeclaredEvent());
+        var message = new UnionEnvelope("env-7", UndeclaredUnionTypes.CreateUndeclaredEvent());
 
         var write = () => _serializer.ToBinary(message);
 
@@ -149,7 +139,7 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
     {
         // Exact-runtime-type dispatch: a subtype of a declared member must NOT silently serialize
         // as its base (it would drop the subtype's state on the wire).
-        var message = new UnionEnvelope("env-8", new DerivedOrderCancelled("order-8", "reason", "extra"));
+        var message = new UnionEnvelope("env-8", UndeclaredUnionTypes.CreateDerivedOrderCancelled("order-8", "reason"));
 
         var write = () => _serializer.ToBinary(message);
 
@@ -160,7 +150,7 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
     [Fact(DisplayName = "Union SizeHint should report UnknownSize for an undeclared runtime type")]
     public void Union_size_hint_should_report_unknown_for_undeclared_type()
     {
-        var message = new UnionEnvelope("env-9", new UndeclaredEvent());
+        var message = new UnionEnvelope("env-9", UndeclaredUnionTypes.CreateUndeclaredEvent());
 
         _serializer.SizeHint(message).Should().Be(SerializerV2.UnknownSize);
     }
@@ -286,11 +276,9 @@ public interface IUnionTestProtocol
 }
 
 /// <summary>
-/// The union's static field type, carrying the TYPE-LEVEL member declaration: stated once here,
-/// inherited by every field of this type (mirroring [JsonDerivedType] and the case list of the
-/// proposed C# language unions). Individual fields may override with their own [AkkaUnion].
+/// The union's static field type. Every field typed this way is a union over its
+/// <c>[AkkaSerializable]</c> implementors, with no attribute on the interface or the field.
 /// </summary>
-[AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled), typeof(OrderNote))]
 public interface IOrderEvent
 {
 }
@@ -301,21 +289,17 @@ public sealed partial class UnionTestSerializer : AkkaSerializer
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
-/// <summary>Inherits the full member set from the type-level union on <see cref="IOrderEvent"/>.</summary>
+/// <summary>A union over every <see cref="IOrderEvent"/> implementor.</summary>
 [AkkaSerializable(Manifest = "union-envelope-v1")]
 public sealed record UnionEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
     [property: AkkaField(2)] IOrderEvent Event) : IUnionTestProtocol;
 
-/// <summary>
-/// Field-level OVERRIDE: narrows the type-level member set to exclude <see cref="OrderNote"/> for
-/// this one field only.
-/// </summary>
+/// <summary>A nullable union field.</summary>
 [AkkaSerializable(Manifest = "optional-union-v1")]
 public sealed record OptionalUnionMessage(
     [property: AkkaField(1)] string Id,
-    [property: AkkaField(2), AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled))]
-    IOrderEvent? MaybeEvent) : IUnionTestProtocol;
+    [property: AkkaField(2)] IOrderEvent? MaybeEvent) : IUnionTestProtocol;
 
 /// <summary>A union member that is ALSO a top-level protocol message: one manifest, two roles.</summary>
 [AkkaSerializable(Manifest = ManifestName)]
@@ -338,9 +322,44 @@ public readonly record struct OrderNote(
     [property: AkkaField(1)] string OrderId,
     [property: AkkaField(2)] string Note) : IOrderEvent;
 
-/// <summary>Implements the field's static type but is NOT a declared union member.</summary>
-public sealed record UndeclaredEvent : IOrderEvent;
+/// <summary>
+/// Types the build never saw: an implementor of the union's static type, and a subtype of a
+/// declared member. Declared in source, either one would fail the build (AKKASG048); emitted at
+/// run time, they stand in for a type loaded later (a plugin, or a newer build of another
+/// assembly), which the generated dispatch must reject instead of truncating to a known type.
+/// </summary>
+internal static class UndeclaredUnionTypes
+{
+    private static readonly ModuleBuilder Module = AssemblyBuilder
+        .DefineDynamicAssembly(new AssemblyName("UndeclaredUnionTypes"), AssemblyBuilderAccess.Run)
+        .DefineDynamicModule("UndeclaredUnionTypes");
 
-/// <summary>An undeclared SUBTYPE of a declared member: must fail, not truncate to its base.</summary>
-public sealed record DerivedOrderCancelled(string OrderId, string Reason, string Extra)
-    : OrderCancelled(OrderId, Reason);
+    private static readonly Type UndeclaredEvent = DefineUndeclaredEvent();
+    private static readonly Type DerivedOrderCancelled = DefineDerivedOrderCancelled();
+
+    public static IOrderEvent CreateUndeclaredEvent() => (IOrderEvent)Activator.CreateInstance(UndeclaredEvent)!;
+
+    public static IOrderEvent CreateDerivedOrderCancelled(string orderId, string reason)
+        => (IOrderEvent)Activator.CreateInstance(DerivedOrderCancelled, orderId, reason)!;
+
+    private static Type DefineUndeclaredEvent()
+    {
+        var type = Module.DefineType("UndeclaredEvent", TypeAttributes.Public | TypeAttributes.Sealed, typeof(object), new[] { typeof(IOrderEvent) });
+        type.DefineDefaultConstructor(MethodAttributes.Public);
+        return type.CreateType();
+    }
+
+    private static Type DefineDerivedOrderCancelled()
+    {
+        var parameterTypes = new[] { typeof(string), typeof(string) };
+        var type = Module.DefineType("DerivedOrderCancelled", TypeAttributes.Public | TypeAttributes.Sealed, typeof(OrderCancelled));
+        var constructor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, parameterTypes);
+        var il = constructor.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Call, typeof(OrderCancelled).GetConstructor(parameterTypes)!);
+        il.Emit(OpCodes.Ret);
+        return type.CreateType();
+    }
+}

@@ -92,79 +92,6 @@ public sealed class AkkaFieldAttribute : Attribute
 }
 
 /// <summary>
-/// Declares a closed, explicitly-enumerated union of concrete
-/// <see cref="AkkaSerializableAttribute"/> member types for an interface or abstract base -- or,
-/// applied to an <see cref="AkkaFieldAttribute"/> property, overrides the member set for that one
-/// field.
-/// </summary>
-/// <remarks>
-/// <para>
-/// The natural declaration site is the union's base TYPE (the interface or abstract class), where
-/// the member set is stated once -- mirroring <c>System.Text.Json</c>'s <c>[JsonDerivedType]</c>
-/// and the case list of the proposed C# language unions. Every field whose static type carries a
-/// type-level union inherits its member set. A field-level application overrides the type-level
-/// set for that field only (for example, to narrow the members a particular schema accepts).
-/// </para>
-/// <para>
-/// Unlike a field typed <c>object</c> (a runtime serializer boundary for payloads whose concrete
-/// type may live in an assembly unknown at compile time), a union field is encoded structurally
-/// inline: the generator emits compile-time dispatch over the declared member set, discriminated
-/// by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member must be
-/// <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable to the
-/// field's static type. A runtime value whose exact type is not a declared member fails
-/// serialization. This attribute has no effect on a field whose static type is <c>object</c>: the
-/// static type alone already selects the envelope boundary (consistent with its precedence over
-/// formatter registrations).
-/// </para>
-/// </remarks>
-[AttributeUsage(AttributeTargets.Property | AttributeTargets.Interface | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class AkkaUnionAttribute : Attribute
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with an explicit,
-    /// listed member set.
-    /// </summary>
-    /// <param name="first">
-    /// The first concrete member type this field may hold. A union is never empty: at least one
-    /// member is always required, so <c>[AkkaUnion()]</c> with a comma-separated list does not
-    /// compile.
-    /// </param>
-    /// <param name="rest">Any additional concrete member types this field may hold.</param>
-    public AkkaUnionAttribute(Type first, params Type[] rest)
-    {
-        var memberTypes = new Type[rest.Length + 1];
-        memberTypes[0] = first;
-        rest.CopyTo(memberTypes, 1);
-        MemberTypes = memberTypes;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with no listed
-    /// member set: the closed set is every <see cref="AkkaSerializableAttribute"/> implementor the
-    /// generator can see, in this compilation and in a referenced assembly that itself references
-    /// <c>Akka.Serialization.V2</c>.
-    /// </summary>
-    /// <remarks>
-    /// Use this parameterless form when the union's base type sits upstream of its members in a
-    /// layered codebase: an assembly cannot name a type from an assembly that references it, so a
-    /// listed member set is not merely tedious there, it is uncompilable. The marker alone declares
-    /// the interface or abstract class a wire contract; the generator finds its members at build
-    /// time. <see cref="MemberTypes"/> is empty for this form -- an empty array here means
-    /// "discover the set", not "the set is empty".
-    /// </remarks>
-    public AkkaUnionAttribute()
-    {
-        MemberTypes = Array.Empty<Type>();
-    }
-
-    /// <summary>
-    /// The closed set of concrete member types this field may hold, or empty when this attribute
-    /// was declared with the parameterless constructor (the set is discovered at build time).
-    /// </summary>
-    public Type[] MemberTypes { get; }
-}
-
-/// <summary>
 /// Includes a type in a generated serializer: <typeparamref name="TMessage"/> becomes one of the
 /// serializer's top-level messages, with its own dispatch arm and its own binding in the generated
 /// <c>CreateSerializerDetails(system)</c>, even though it does not implement the serializer's
@@ -215,8 +142,10 @@ public sealed class AkkaSerializerIncludesAttribute<TMessage> : Attribute
     /// <remarks>
     /// <para>
     /// A type argument has a closed set when it is the serializer's own protocol interface (see
-    /// <see cref="AkkaSerializerAttribute{TProtocol}"/>), or an interface or abstract class carrying
-    /// a type-level <see cref="AkkaUnionAttribute"/>. For example,
+    /// <see cref="AkkaSerializerAttribute{TProtocol}"/>), any other interface or abstract class, or a
+    /// closed hierarchy (a C# 15 <c>closed</c> class or record, or a class whose constructors are all
+    /// private with nested derived types). Its members are the <see cref="AkkaSerializableAttribute"/>
+    /// types that derive from or implement it. For example,
     /// <c>[AkkaSerializerIncludes&lt;Envelope&lt;ICommsMessage&gt;&gt;(ManifestPrefix = "env")]</c> on a
     /// serializer whose protocol is <c>ICommsMessage</c> registers one closed construction of
     /// <c>Envelope&lt;T&gt;</c> per member of the protocol set -- <c>Envelope&lt;AcceptCassette&gt;</c>,
@@ -229,9 +158,7 @@ public sealed class AkkaSerializerIncludesAttribute<TMessage> : Attribute
     /// <see cref="ManifestPrefix"/> alone does not register the literal construction (the one whose
     /// type argument is the closed-set type itself, for example <c>Envelope&lt;ICommsMessage&gt;</c>);
     /// set <see cref="Manifest"/> as well to also register it. A field whose static type is the
-    /// closed-set type -- the protocol interface, or a type-level <see cref="AkkaUnionAttribute"/>
-    /// base -- is treated as a union over that same closed set, with no
-    /// <see cref="AkkaUnionAttribute"/> needed on the field. Setting <see cref="ManifestPrefix"/> on
+    /// closed-set type is treated as a union over that same closed set. Setting <see cref="ManifestPrefix"/> on
     /// a registration whose type argument has no closed set (a concrete class, for example) is a
     /// compile-time error: a concrete class has nothing to expand over.
     /// </para>

@@ -467,6 +467,32 @@ This ships with the referenced-assembly walk from Decision 19. It is the same wa
 
 *Both gaps above are closed (union completeness follow-up).* The reporting site the gap note asked for is the union FIELD, the same site every other union diagnostic uses: each field that reaches a broken set is itself broken. A new `UnionHierarchyFacts` (on `CompilationFacts`) shares AKKASG029's single walk over this compilation's source types, for every discovered union field's static type and every listed one that is a closed class declared here (open listed types are dropped up front, so they cost nothing per edit), and AKKASG048 (Error) names each concrete implementor of a discovered set that lacks `[AkkaSerializable]`. A discovered set that resolves to nothing now reports AKKASG019 instead of emitting a dispatch helper with no arms (whose dead code raised CS0162, which fails warnings-as-errors builds). The same facts record which union static types are closed hierarchies (a C# 15 `closed` class or record, found by its modifier since the compiler adds `IsClosedTypeAttribute` only at emit time; a type carrying that attribute; or a class whose constructors are all private, ignoring a record's copy constructor); an explicit member list on such a field that omits a derived case gets AKKASG049 (Warning). AKKASG025 moved from Info to Warning so it shows in ordinary build output. Referenced-assembly unmarked implementors of a marked union base remain undiagnosed.
 
+### 22. Unions Are Inferred From The Property Type; `[AkkaUnion]` Is Removed
+
+`[AkkaUnion]` is removed, in both its listed and parameterless forms. The property's static type alone decides whether a field is a union, the same way Decision 20 lets `object` alone mark the envelope boundary.
+
+The rule runs on the static type, after generic substitution:
+
+- an interface or abstract class is a union over every `[AkkaSerializable]` type that implements or derives from it, scoped as in Decision 19
+- a closed hierarchy is a union over its cases: an abstract class with only private constructors (already covered by "abstract class"), or a C# 15 `closed` class or record. A concrete class is never a union, even with only private constructors: it can hand out instances of itself (a `static readonly` default, a factory), which no union of its subclasses could write
+- a C# 15 `union` is a union over its cases
+- the serializer's own protocol interface is still Decision 18's protocol set
+- framework types (the `System` namespace, and Akka.NET's own core assembly) and collection-like types (anything implementing `IEnumerable`) are never inferred, and keep their existing errors
+- a sealed or concrete open class stays a nested value. Inferring a union there would change the field's wire format the moment someone added a subclass. Instead, a concrete non-sealed nested value class that some class in this compilation derives from is a build error, `AKKASG052`, whether the field holds it directly or as a collection element, key, or value: a subclass value written there would lose its own fields
+
+Decision 21 kept the marker to keep intent explicit. That reason does not hold up. Intent is already explicit twice over: the field sits on an `[AkkaSerializable]` message, and each member carries its own `[AkkaSerializable(Manifest = ...)]`. The parameterless marker found every implementor anyway, so it never narrowed anything; it only repeated what the members already declared. The listed form did narrow, but its uses are niche: a deliberate omission (better expressed as a narrower interface), and pinning the set (each member's manifest already shows up in review). The one real loss is an open type from a library the author cannot annotate; a C# 15 `union` declared locally, or an `object` field, covers it.
+
+`System.Text.Json` keeps explicit `[JsonDerivedType]` lists for open types because its list lives on the base type, which usually cannot see derived types in other assemblies, and because changing existing JSON output would break users. Neither holds here: this generator runs in the serializer's compilation, which sees every referenced assembly, and the API has not shipped.
+
+This change touches these things:
+
+- `AkkaUnionAttribute` is deleted
+- `AKKASG018`, `AKKASG038`, `AKKASG049`, and `AKKASG050` are retired; their ids stay permanent gaps. Each one checked a hand-written list
+- `AKKASG019` keeps only its empty-set half; `AKKASG048` now applies to every inferred union except the protocol interface, which `AKKASG029` already covers
+- a formatter registered for an interface or abstract class takes precedence over inference
+- `ManifestPrefix` expands over any type argument that would be a union as a property type
+- the wire format does not change: a union frame carries each member's own manifest, whatever produced the set
+
 ### 23. Including A Type Is Its Own Attribute; A Non-Generic Type Owns Its Manifest
 
 `[AkkaSerializable<T>]` on the serializer class is renamed `[AkkaSerializerIncludes<T>]`. The old name made one attribute look like two declarations of the same type, so authors wrote the manifest twice:

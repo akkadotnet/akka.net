@@ -371,49 +371,6 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyA.Money(Cents: cents);
     }
 
-    private int SizeOfPlaced_319e66f54b337f1f(global::CrossAssemblyGolden.AssemblyA.Placed message)
-    {
-        checked
-        {
-            var size = SizeOfMapHeader(1);
-            size += SizeOfInt32(1);
-            size += SizeOfString(message.OrderId);
-            return size;
-        }
-    }
-
-    private void WritePlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Placed message)
-    {
-        writer.WriteMapHeader(1);
-        writer.Write(1);
-        writer.Write(message.OrderId);
-    }
-
-    private global::CrossAssemblyGolden.AssemblyA.Placed ReadPlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackReader reader)
-    {
-        var __fieldCount = reader.ReadMapHeader();
-        string? orderId = null;
-        var __hasOrderId = false;
-        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
-        {
-            var __fieldId = reader.ReadInt32();
-            switch (__fieldId)
-            {
-                case 1:
-                    orderId = reader.ReadString();
-                    __hasOrderId = true;
-                    break;
-                default:
-                    reader.Skip();
-                    break;
-            }
-        }
-
-        if (!__hasOrderId || orderId is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [OrderId] with index [1] while deserializing [global::CrossAssemblyGolden.AssemblyA.Placed].");
-        return new global::CrossAssemblyGolden.AssemblyA.Placed(OrderId: orderId!);
-    }
-
     private int SizeOfCancelled_d37c74148d117549(global::CrossAssemblyGolden.AssemblyA.Cancelled message)
     {
         checked
@@ -457,19 +414,52 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyA.Cancelled(OrderId: orderId!);
     }
 
+    private int SizeOfPlaced_319e66f54b337f1f(global::CrossAssemblyGolden.AssemblyA.Placed message)
+    {
+        checked
+        {
+            var size = SizeOfMapHeader(1);
+            size += SizeOfInt32(1);
+            size += SizeOfString(message.OrderId);
+            return size;
+        }
+    }
+
+    private void WritePlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Placed message)
+    {
+        writer.WriteMapHeader(1);
+        writer.Write(1);
+        writer.Write(message.OrderId);
+    }
+
+    private global::CrossAssemblyGolden.AssemblyA.Placed ReadPlaced_319e66f54b337f1f(ref global::MessagePack.MessagePackReader reader)
+    {
+        var __fieldCount = reader.ReadMapHeader();
+        string? orderId = null;
+        var __hasOrderId = false;
+        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
+        {
+            var __fieldId = reader.ReadInt32();
+            switch (__fieldId)
+            {
+                case 1:
+                    orderId = reader.ReadString();
+                    __hasOrderId = true;
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (!__hasOrderId || orderId is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [OrderId] with index [1] while deserializing [global::CrossAssemblyGolden.AssemblyA.Placed].");
+        return new global::CrossAssemblyGolden.AssemblyA.Placed(OrderId: orderId!);
+    }
+
     private void WriteUnion_IOrderEvent(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.IOrderEvent value)
     {
         var runtimeType = value.GetType();
-        if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Placed))
-        {
-            writer.WriteMapHeader(2);
-            writer.Write(1);
-            writer.Write("placed-v1");
-            writer.Write(2);
-            WritePlaced_319e66f54b337f1f(ref writer, (global::CrossAssemblyGolden.AssemblyA.Placed)value);
-            return;
-        }
-
         if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Cancelled))
         {
             writer.WriteMapHeader(2);
@@ -477,6 +467,16 @@ public sealed partial class CrossAssemblyGoldenSerializer
             writer.Write("cancelled-v1");
             writer.Write(2);
             WriteCancelled_d37c74148d117549(ref writer, (global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
+            return;
+        }
+
+        if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Placed))
+        {
+            writer.WriteMapHeader(2);
+            writer.Write(1);
+            writer.Write("placed-v1");
+            writer.Write(2);
+            WritePlaced_319e66f54b337f1f(ref writer, (global::CrossAssemblyGolden.AssemblyA.Placed)value);
             return;
         }
 
@@ -500,11 +500,11 @@ public sealed partial class CrossAssemblyGoldenSerializer
                 case 2:
                     switch (manifest)
                     {
-                        case "placed-v1":
-                            result = ReadPlaced_319e66f54b337f1f(ref reader);
-                            break;
                         case "cancelled-v1":
                             result = ReadCancelled_d37c74148d117549(ref reader);
+                            break;
+                        case "placed-v1":
+                            result = ReadPlaced_319e66f54b337f1f(ref reader);
                             break;
                         case null:
                             throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::CrossAssemblyGolden.AssemblyA.IOrderEvent].");
@@ -528,20 +528,20 @@ public sealed partial class CrossAssemblyGoldenSerializer
     private int SizeOfUnion_IOrderEvent(global::CrossAssemblyGolden.AssemblyA.IOrderEvent value)
     {
         var runtimeType = value.GetType();
-        if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Placed))
-        {
-            var payloadSize = SizeOfPlaced_319e66f54b337f1f((global::CrossAssemblyGolden.AssemblyA.Placed)value);
-            if (payloadSize < 0)
-                return global::Akka.Serialization.SerializerV2.UnknownSize;
-            return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("placed-v1") + SizeOfInt32(2) + payloadSize);
-        }
-
         if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Cancelled))
         {
             var payloadSize = SizeOfCancelled_d37c74148d117549((global::CrossAssemblyGolden.AssemblyA.Cancelled)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("cancelled-v1") + SizeOfInt32(2) + payloadSize);
+        }
+
+        if (runtimeType == typeof(global::CrossAssemblyGolden.AssemblyA.Placed))
+        {
+            var payloadSize = SizeOfPlaced_319e66f54b337f1f((global::CrossAssemblyGolden.AssemblyA.Placed)value);
+            if (payloadSize < 0)
+                return global::Akka.Serialization.SerializerV2.UnknownSize;
+            return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("placed-v1") + SizeOfInt32(2) + payloadSize);
         }
 
         return global::Akka.Serialization.SerializerV2.UnknownSize;

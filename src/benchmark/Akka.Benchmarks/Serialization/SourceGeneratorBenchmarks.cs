@@ -173,7 +173,7 @@ public class SourceGeneratorBenchmarks
 /// Builds a synthetic <c>[AkkaSerializable]</c>/<c>[AkkaSerializer]</c> corpus of a given size, for
 /// benchmarking the generator pipeline rather than testing its correctness. Each serializer gets:
 /// a scalar-field message mix, one nested value object (a <c>readonly record struct</c>), one
-/// <c>[AkkaUnion]</c> with three members, and one closed-generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
+/// union interface with three implementors, and one closed-generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
 /// registration.
 /// </summary>
 internal static class SourceGeneratorBenchmarkCorpus
@@ -218,8 +218,7 @@ internal static class SourceGeneratorBenchmarkCorpus
         sb.AppendLine("}");
         sb.AppendLine();
 
-        // One [AkkaUnion] with three members.
-        sb.AppendLine($"[AkkaUnion(typeof(UnionMember{s}A), typeof(UnionMember{s}B), typeof(UnionMember{s}C))]");
+        // One union interface with three implementors.
         sb.AppendLine($"public interface IUnion{s}");
         sb.AppendLine("{");
         sb.AppendLine("}");

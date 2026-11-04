@@ -61,7 +61,6 @@ public sealed class GeneratorIncrementalCachingSpec
             public int SizeOf(Foreign value) => Akka.Serialization.SerializerV2.UnknownSize;
         }
 
-        [AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled))]
         public interface IOrderEvent
         {
         }

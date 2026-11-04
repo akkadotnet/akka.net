@@ -57,7 +57,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         ("formatter (AKKASG008)", FormatterSource, "AKKASG008"),
         ("closed generic registration (AKKASG020)", ClosedGenericSource, "AKKASG020"),
         ("closed generic missing fields (AKKASG004)", ClosedGenericMissingFieldsSource, "AKKASG004"),
-        ("union member (AKKASG015)", UnionMemberSource, "AKKASG015"),
+        ("unmarked union implementor (AKKASG048)", UnionMemberSource, "AKKASG048"),
         ("duplicate field index (AKKASG005)", DuplicateFieldIndexSource, "AKKASG005"),
     };
 
@@ -388,7 +388,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
 
         [AkkaSerializable(Manifest = "outer-v1")]
         public sealed record Outer(
-            [property: AkkaField(1), AkkaUnion(typeof(NotSerializable))] IEvent Event) : IProtocol;
+            [property: AkkaField(1)] IEvent Event) : IProtocol;
         """;
 
     private const string DuplicateFieldIndexSource = """

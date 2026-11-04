@@ -383,16 +383,19 @@ cannot hold, such as `70000` read into a `short` or `-1` read into a `ulong`, th
 
 ## Unions
 
-`[AkkaUnion(typeof(A), typeof(B), ...)]` declares a **closed, explicitly enumerated** set of
-concrete member types. It applies to an interface, an abstract class, or one specific field.
-Unlike [envelope payloads](#envelope-payloads), a union is encoded structurally inline, at compile
-time. No runtime serializer lookup is involved.
+A property typed as an interface, an abstract class, a closed hierarchy, or a C# 15 `union` is a
+**union field**. The generator works out its members from the type, with no attribute. Unlike
+[envelope payloads](#envelope-payloads), a union is encoded structurally inline, at compile time:
+each value is written as its own manifest plus its fields. No runtime serializer lookup is involved.
 
-The natural declaration site is the union's base type. There, the member set is stated once. Every
-field of that static type inherits it:
+| Property type | Members |
+| --- | --- |
+| An interface or abstract class | Every `[AkkaSerializable]` type that implements or derives from it, in this compilation or in a referenced assembly that references `Akka.Serialization.V2` |
+| A [closed hierarchy](#closed-hierarchies) | Its `[AkkaSerializable]` cases |
+| A [C# 15 union](#c-15-union-types) | The union's cases |
+| The serializer's own protocol interface | The protocol's messages (see [A Protocol-Interface Field Is an Implicit Union](#a-protocol-interface-field-is-an-implicit-union)) |
 
 ```csharp
-[AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled), typeof(OrderNote))]
 public interface IOrderEvent
 {
 }
@@ -408,7 +411,7 @@ public sealed record OrderPlaced(
     [property: AkkaField(2)] int Quantity) : IOrderEvent, IUnionTestProtocol;
 
 [AkkaSerializable(Manifest = "order-cancelled-v1")]
-public record OrderCancelled(
+public sealed record OrderCancelled(
     [property: AkkaField(1)] string OrderId,
     [property: AkkaField(2)] string Reason) : IOrderEvent;
 
@@ -419,50 +422,61 @@ public readonly record struct OrderNote(
 ```
 
 `OrderPlaced` shows a union member that is also a top-level protocol message. It has one manifest
-and two roles. `OrderNote` shows a value-type member, dispatched through boxing. A single field can
-override the inherited member set with its own, narrower `[AkkaUnion]`:
+and two roles. `OrderCancelled` is a member only: it never travels on its own, and its manifest
+exists to tell the union's members apart. `OrderNote` shows a value-type member, dispatched
+through boxing.
 
-```csharp
-[AkkaSerializable(Manifest = "optional-union-v1")]
-public sealed record OptionalUnionMessage(
-    [property: AkkaField(1)] string Id,
-    [property: AkkaField(2), AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled))]
-    IOrderEvent? MaybeEvent) : IUnionTestProtocol;
-```
+Some types are never unions:
+
+* A sealed or concrete class is a [nested value](#nested-akkaserializable-value-objects), written
+  as that class's own fields. Treating it as a union would change the field's wire format the
+  moment someone added a subclass. A subclass value written there would lose its own fields, so
+  when a class in this compilation derives from a concrete nested value class, the build fails
+  (**AKKASG052**). Seal the class, or make the base abstract and remove its `[AkkaSerializable]`
+  so the property becomes a union of its subclasses. The same check covers a concrete class used as
+  a collection element, dictionary key, or dictionary value; there, sealing is the only fix.
+* `object` is always an [envelope payload](#envelope-payloads).
+* Framework types (the `System` namespace, such as `Stream` or `IComparable`, and Akka.NET's own
+  core types, such as `ActorPath`) and collection
+  interfaces report **AKKASG003**. So does an interface or abstract class used as a collection
+  element, dictionary key, or dictionary value: only a property's own type can be a union.
+
+To leave a type out of a union, don't implement the union's interface on it. A narrower interface,
+implemented only by the members you want, gives a narrower union.
 
 ### Member Requirements
 
-Every member type must meet four requirements. It must be **serializable**: an `[AkkaSerializable]`
-class or struct handled by the same serializer (**AKKASG015**). It must be **manifested**, since
-its manifest is the union's discriminator (**AKKASG016**). That manifest must be unique within the
-union (**AKKASG017**). It must be **assignable** to the field's static type (**AKKASG018**). It
-must be **concrete**. An abstract member is dead code, since dispatch matches the exact runtime
-type, and an abstract type is never a runtime type (**AKKASG036**, warning). A merely unsealed
-member gets a warning (**AKKASG025**). It works, but an undeclared subtype fails at serialize time.
+Every member type must meet three requirements. It must be **serializable**: an
+`[AkkaSerializable]` class or struct handled by the same serializer (**AKKASG015**). It must be
+**manifested**, since its manifest is the union's discriminator (**AKKASG016**). That manifest
+must be unique within the union (**AKKASG017**). An abstract member is dead code, since dispatch
+matches the exact runtime type and an abstract type is never a runtime type (**AKKASG036**,
+warning). A member that is not sealed gets a warning (**AKKASG025**): it works, but a subtype the
+generator didn't see fails at serialize time.
 
-**AKKASG019** guards the member set itself: a duplicate member type, or a set with no members at
-all. A field-level
-`[AkkaUnion]` on a property typed `object` fails compilation with **AKKASG038**. `object` is
-always an envelope payload boundary, so the union declaration is contradictory.
+A concrete type in this compilation that implements or derives from a union's type but has no
+`[AkkaSerializable]` would be left out of the dispatch and fail the first time it is written, so
+it fails the build instead (**AKKASG048**), the union counterpart of **AKKASG029**. The check
+covers union properties declared in this compilation; a union property on a message from a
+referenced assembly is not checked yet. A union with no members at all fails with **AKKASG019**:
+a union with no members can only throw.
 
 ### Exact-Runtime-Type Dispatch
 
 Write dispatch matches the *exact* runtime type. It ignores the declared static type and any base
-type. A value whose exact type is not a declared member fails with a `SerializationException`.
-This includes an undeclared subtype of a declared member. The generator never silently widens the
-value to the base type and loses state. On read, an unrecognized manifest inside the union frame
-throws a `SerializationException` naming it. The caller decides what to do with either failure.
-The generator never guesses.
+type. A value whose exact type is not a member fails with a `SerializationException`. This
+includes a subtype of a member that the generator never saw, such as a type loaded at run time. The
+generator never silently widens the value to the base type and loses state. On read, an
+unrecognized manifest inside the union frame throws a `SerializationException` naming it. The
+caller decides what to do with either failure. The generator never guesses.
 
-### Marked Union Bases
+### Hierarchies Across Assemblies
 
-`[AkkaUnion]` with no arguments declares an interface or abstract class a wire contract, with no
-listed member set. The closed set becomes every `[AkkaSerializable]` implementor the generator can
-see: in this compilation, and in a referenced assembly that itself references
-`Akka.Serialization.V2`.
+The members of an interface or abstract class can live on both sides of an assembly boundary. In a
+layered codebase, the interface sits upstream of its implementations:
 
 ```csharp
-[AkkaUnion]
+// Core.dll
 public interface IDestination
 {
 }
@@ -476,25 +490,14 @@ public sealed record CommsDestination([property: AkkaField(1)] string Host) : ID
 public sealed record TechDestination([property: AkkaField(1)] string Cluster) : IDestination;
 ```
 
-Use this form in a layered codebase, where the interface sits upstream of its implementations. An
-assembly cannot name a type from an assembly that references it, so a listed member set is not
-merely tedious there. It is uncompilable. The marker alone states the intent: this interface is a
-wire contract, so the generator may look for its implementors instead of requiring a list.
-
-The explicit list still works everywhere it always did. As a field-level override
-(`[property: AkkaField(2), AkkaUnion(typeof(A))]`), it works anywhere in the serializer's
-compilation. As a type-level form, it works only where every listed member is visible from the
-type's own assembly -- the same direction limit the marker form exists to lift.
-
-The walk only finds `[AkkaSerializable]` types. A concrete type in this compilation that derives
-from or implements a marked base but has no `[AkkaSerializable]` would be left out of the dispatch
-and fail the first time it is written, so it fails the build instead (**AKKASG048**), the union
-counterpart of **AKKASG029**. The check covers union properties declared in this compilation; a
-union property on a message from a referenced assembly is not checked yet. A marked base with no members at all fails with **AKKASG019**: a
-union with no members can only throw. Every other union rule -- **AKKASG015** through
-**AKKASG018**, **AKKASG025**, **AKKASG036** -- applies to a discovered member exactly as it does to
-a listed one. The wire format does not change:
-a union frame carries each member's own manifest, whether the set was listed or found.
+The serializer's compilation sees every assembly it references, so a field typed `IDestination`
+there is a union over both records. The message that declares the field can live in any of those
+assemblies too: an `Envelope` with an `IDestination` property, declared in `Core.dll` next to the
+interface, still gets both records when its serializer lives in an assembly that references
+`Comms.dll` and `Tech.dll`. The serializer's assembly must reference every assembly that declares a
+member; members in an assembly it cannot see are not part of the union. The wire format is the same either way: a union frame carries
+each member's own manifest. Only a referenced assembly's public types are visible: an `internal`
+implementor there is left out of the union and fails when it is first written, with no build error.
 
 This ships with the same referenced-assembly walk Decision 19 uses for top-level dispatch; see
 [Cross-Assembly Types](#cross-assembly-types) for the walk itself, and
@@ -503,12 +506,10 @@ too.
 
 ### Closed Hierarchies
 
-A record hierarchy whose base has only a private constructor is closed: only the nested types can
-derive from it. A parameterless `[AkkaUnion]` on the base turns it into a typed union, with no
-member list to keep in sync:
+A closed hierarchy fixes its derived types in its own declaration. The most portable form is an
+abstract base whose constructors are all private, so only its nested types can derive from it:
 
 ```csharp
-[AkkaUnion]
 public abstract record Coverage
 {
     private Coverage() { }
@@ -524,21 +525,22 @@ public abstract record Coverage
 public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId, [property: AkkaField(2)] Coverage Coverage) : ISubscriptionEvent;
 ```
 
-A C# 15 `closed record` (or `closed class`) works the same way, on `net10.0` as well as `net11.0`:
-the generator recognizes the `closed` modifier, and also a type carrying
+This needs no particular compiler: `Coverage` is a union because it is abstract, and the private
+constructor keeps anyone outside it from adding cases. The base must be abstract. A concrete class
+is never a union, even when its constructors are all private: it can still hand out instances of
+itself (a `static readonly` default, a factory method), and no union of its subclasses could write
+one. Such a property keeps its **AKKASG007** error until you make the base abstract.
+
+A C# 15 `closed record` (or `closed class`) works the same way, on `net10.0` as well as `net11.0`.
+The generator recognizes the `closed` modifier, and also a type carrying
 `System.Runtime.CompilerServices.IsClosedTypeAttribute`. On `net10.0` the compiler needs that
 attribute (plus `UnionAttribute` and `IUnion` for unions) declared as an internal polyfill in your
 project; Akka.NET does not ship them, since they would collide with the `net11.0` BCL.
 
-When the field lists its members instead (`[AkkaUnion(typeof(A), typeof(B))]`) and the field's type
-is a closed hierarchy, a case left off the list gets a warning (**AKKASG049**). Leaving a case out of
-the wire contract on purpose is legal, so this is not an error. An interface or a base with a
-non-private constructor is open: anyone can add implementors, so a narrower list is never flagged.
-
 ### C# 15 Union Types
 
-A property typed as a C# 15 `union` is a union field with no `[AkkaUnion]` needed: the union's cases
-are its members. Each case follows the same member rules as an `[AkkaUnion]` member (**AKKASG015**
+A property typed as a C# 15 `union` is a union field whose members are the union's cases. Each case
+follows the same [member rules](#member-requirements) as any other union member (**AKKASG015**
 through **AKKASG017**, **AKKASG025**, **AKKASG036**).
 
 ```csharp
@@ -557,16 +559,14 @@ public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId,
 Write dispatch matches the exact runtime type of the case the union holds. `default(Coverage)`, which
 holds no case, is written as MessagePack nil and reads back as `default`. A `Coverage?` property works
 too, but `null` and a `default(Coverage)` value both write nil, so both read back as `null`. A held
-case is written exactly as the same type would be written in an `[AkkaUnion]` field, so a held case
+case is written exactly as the same type would be written in a class-hierarchy union field, so a held case
 written with a closed record hierarchy reads back into a union of the same cases, and the other way
 around. `default(Coverage)` has no hierarchy equivalent: its nil only reads back into a nullable field.
 
-An `[AkkaUnion(typeof(...))]` list on a union-typed property is allowed only when it names exactly the
-union's cases; any other list is an error (**AKKASG050**). `[AkkaSerializable]` on the union
-declaration itself is an error (**AKKASG051**): mark the cases instead. A formatter registered for the
+`[AkkaSerializable]` on the union declaration itself is an error (**AKKASG051**): mark the cases instead. A formatter registered for the
 union type with `[AkkaSerializerFormatter<TUnion, TFormatter>]` takes precedence, as for any other
 type. Not supported yet: union classes, and unions as collection elements or dictionary values
-(`List<Coverage>` reports **AKKASG003**, as a collection of an `[AkkaUnion]` base does).
+(`List<Coverage>` reports **AKKASG003**, as a collection of an interface does).
 
 C# unions need the C# 15 compiler, which ships with the .NET 11 SDK. Akka.NET itself needs no
 `net11.0` target: a project that targets `net10.0` declares `System.Runtime.CompilerServices.UnionAttribute`
@@ -649,8 +649,8 @@ the concrete type arguments. This mirrors `System.Text.Json`'s source generator,
 
 A combined shape also works: a generic wrapper whose payload field is itself a closed union.
 `EventWrapper<T>` declares no union of its own. At construction time, when `T` is `IOrderEvent`,
-the substituted type's own type-level `[AkkaUnion]` applies. The generator picks it up and
-validates it against that type:
+the substituted field type is an interface, so it is a union over `IOrderEvent`'s implementors. The
+generator resolves and validates it against that type:
 
 ```csharp
 [AkkaSerializable]
@@ -676,8 +676,9 @@ unsupported type. Reflection is not a path the generator accommodates.
 
 ### `ManifestPrefix`: Expanding a Registration over a Closed Set
 
-A registration's type argument can itself have a **closed set**: either the serializer's own
-protocol interface, or a type carrying a type-level `[AkkaUnion]`. Setting `ManifestPrefix` on such
+A registration's type argument can itself have a **closed set**: the serializer's own protocol
+interface, or any other type a property could use as a [union](#unions) (an interface, an abstract
+class, or a closed hierarchy). Setting `ManifestPrefix` on such
 a registration expands it to one closed construction per member of that set, instead of the single
 construction named in the attribute:
 
@@ -777,15 +778,15 @@ reported.
 ### A Protocol-Interface Field Is an Implicit Union
 
 A field whose static type is *exactly* the serializer's own protocol interface is a union over the
-protocol set, with no `[AkkaUnion]` attribute required. This is what makes the literal construction
+protocol set, like any other [interface field](#unions). This is what makes the literal construction
 above encodable at all: `Envelope<ICommsMessage>`'s `Message` field is typed `ICommsMessage`, and
 without this rule it would be **AKKASG003**. The closed set is the same one `ManifestPrefix`
 expands over, and the wire frame is the same union frame any other union uses -- a discriminator
 manifest, then the member's own fields.
 
-This rule is narrow on purpose. It fires only when the field's *own* static type is the protocol
-interface, not a collection of it (`List<ICommsMessage>` is unaffected) and not some other
-interface a field happens to mention. Declare `[AkkaUnion]` for any other closed set.
+As for any union, only the field's *own* static type counts: a collection of the protocol interface
+(`List<ICommsMessage>`) still reports **AKKASG003**. Unmarked implementors of the protocol report
+**AKKASG029** at the serializer, not **AKKASG048** at each field.
 
 ### The One-Owner Rule
 
@@ -803,8 +804,8 @@ compilation can see, local or referenced.
 
 ## Cross-Assembly Types
 
-A top-level protocol implementor, a nested field, a union member, a marked union base's members, or
-a closed generic's own open definition can all live in a **referenced assembly** instead of the
+A top-level protocol implementor, a nested field, a union member, or a closed generic's own open
+definition can all live in a **referenced assembly** instead of the
 serializer's own compilation.
 
 **Top-level protocol implementors.** The generator walks every referenced assembly that itself
@@ -830,17 +831,15 @@ public sealed partial class OrderSerializer : AkkaSerializer
 // own Write/Read/SizeOf helpers, even though neither is declared in Wire.dll.
 ```
 
-The same walk backs **A Protocol-Interface Field Is an Implicit Union** and **marked union bases**
-(see [Marked Union Bases](#marked-union-bases)): both closed sets span this compilation plus every
-referenced assembly that references V2.
+The same walk backs [union fields](#unions) typed as an interface or abstract class, including
+**A Protocol-Interface Field Is an Implicit Union**: each closed set spans this compilation plus
+every referenced assembly that references V2 (see
+[Hierarchies Across Assemblies](#hierarchies-across-assemblies)).
 
-**Three shapes that predate this walk keep working the same way:**
+**Two shapes that predate this walk keep working the same way:**
 
 * **A nested field type.** `Pay` in assembly B can have an `[AkkaField]` property typed `Money`,
   where `Money` is declared and `[AkkaSerializable]` in assembly A.
-* **A union member type.** `[AkkaUnion(typeof(Placed), typeof(Cancelled))]` can list member types
-  declared in a referenced assembly, as long as the `[AkkaUnion]` attribute itself is applied to a
-  type that assembly A also declares (for example the union's own base interface).
 * **A generic definition behind a closed generic registration.** `Wrapper<T>` can live in assembly
   A. `[AkkaSerializerIncludes<Wrapper<int>>]` on the serializer in assembly B still registers it. This
   shape needed no new work: a closed generic registration already reads its target off the type
@@ -867,7 +866,7 @@ join the closed set; there is no local reference site to report an accessibility
 so it stays silently absent, the same way an unrelated type would.
 
 Every diagnostic in this section reports at the **local reference site**: the property that names
-the type, the `[AkkaUnion]`/`[AkkaSerializerIncludes<T>]` attribute application, or (for a placement
+the type, the `[AkkaSerializerIncludes<T>]` attribute application, or (for a placement
 mistake) the local type declaration -- see [Serializer Placement](#serializer-placement). The
 referenced assembly never gets a diagnostic, because no generator work runs there. Each message
 offers two fixes: register a hand-written `[AkkaSerializerFormatter<TTarget, TFormatter>]`, or
@@ -1203,14 +1202,17 @@ used to fire when a registered closed generic construction implemented no protoc
 unreachable from any field. An include now always makes its type a top-level message (see
 [Including Messages Outside the Protocol](#including-messages-outside-the-protocol)), so that condition can no longer
 occur, and the id stays a permanent gap. **AKKASG035** does not exist either. It used to fire when a
-field carried both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. That attribute was retired, so the
-diagnostic was retired with it, and the id stays a permanent gap.
+field carried both `[AkkaEnvelopePayload]` and a union attribute. That attribute was retired, so the
+diagnostic was retired with it, and the id stays a permanent gap. **AKKASG018**, **AKKASG038**,
+**AKKASG049**, and **AKKASG050** do not exist either. They checked hand-written `[AkkaUnion]` member
+lists. Before the first 1.6 beta, the generator started working out a union's members from the
+property's type, the attribute was removed, and those ids stay permanent gaps.
 
 | Id | Severity | Title | Meaning |
 |---|---|---|---|
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
-| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode, or it is a collection with an element, key, or value that neither the generator nor a registered formatter can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, type it as the serializer's own protocol interface, or type the property as `object`. |
+| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode, or it is a collection with an element, key, or value that neither the generator nor a registered formatter can encode. On a framework interface or abstract class, a collection element, or a type parameter, the message adds a hint: only a property's own interface or abstract class type is a [union](#unions); type the property as `object` for an envelope payload. |
 | AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. Reports at the type declaration even without a serializer. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
@@ -1225,8 +1227,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG015 | Error | Union member type is not serializable | A declared union member isn't an `[AkkaSerializable]` type handled by this serializer. |
 | AKKASG016 | Error | Union member manifest is required | A union member has no `Manifest`, so it can't act as the union's discriminator. |
 | AKKASG017 | Error | Union member manifests must be unique | Two members of the same union share a manifest. |
-| AKKASG018 | Error | Union member is not assignable to the field type | A declared member isn't implicitly convertible to the field's static type. |
-| AKKASG019 | Error | Union member set is invalid | The union's member set itself is malformed: a duplicate member type, or a set with no members (a parameterless `[AkkaUnion]` that found no `[AkkaSerializable]` implementor). |
+| AKKASG019 | Error | Union member set is invalid | The union has no members: no `[AkkaSerializable]` type implements or derives from the property's interface or abstract class. Mark its implementations, or type the property as `object`. |
 | AKKASG020 | Error | Closed generic registration is invalid | An `[AkkaSerializerIncludes<T>]` registration's target isn't a closed type (generic or not) whose definition is `[AkkaSerializable]`. |
 | AKKASG021 | Error | Duplicate closed generic registration | The same closed construction is registered more than once on one serializer. |
 | AKKASG022 | Error | Generic serializable type requires closed generic registrations | A generic `[AkkaSerializable]` type implements the protocol but has no closed registrations. |
@@ -1242,7 +1243,6 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG033 | Error | Protocol type must be an interface | The `TProtocol` type argument to `[AkkaSerializer<TProtocol>]` isn't an interface. |
 | AKKASG036 | Warning | Union member type is abstract | An abstract union member can never be the exact runtime type, so its dispatch branch is dead code. |
 | AKKASG037 | Info | Manifest on a generic [AkkaSerializable] definition is ignored | A `Manifest` set on the *open* generic definition is ignored; only closed constructions carry one. |
-| AKKASG038 | Error | Union declaration on an object-typed property | A property typed `object` also carries a field-level `[AkkaUnion]`. `object` is always an envelope payload boundary, so the union declaration is contradictory. |
 | AKKASG039 | Error | Referenced type or member is not accessible | A referenced-assembly nested field or union member type is `[AkkaSerializable]`, but this compilation cannot see it, or one of its own `[AkkaField]` properties, or a type it itself nests. See [Cross-assembly types](#cross-assembly-types). |
 | AKKASG040 | Error | ManifestPrefix has no closed set to expand | A registration sets `ManifestPrefix`, but its type argument isn't generic, is a concrete class, or otherwise has no closed member set (or a fixed nested argument was never itself registered). See [ManifestPrefix](#manifestprefix-expanding-a-registration-over-a-closed-set). |
 | AKKASG041 | Error | Message type is owned by more than one serializer | A type belongs to more than one serializer's closed set in this compilation, by protocol membership or adoption. See [The One-Owner Rule](#the-one-owner-rule). |
@@ -1252,10 +1252,9 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG045 | Error | Message type is not accessible to generated code | An `[AkkaSerializable]` type, or a type that contains it, is `private`, `protected`, or `private protected`. The generated serializer cannot name it. Make it `internal` or `public`. |
 | AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
-| AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a parameterless `[AkkaUnion]` base but isn't `[AkkaSerializable]`, so the discovered set leaves it out and it fails when first serialized. See [Closed Hierarchies](#closed-hierarchies). |
-| AKKASG049 | Warning | Union member list omits a case of a closed hierarchy | An explicit `[AkkaUnion(...)]` list on a field typed as a closed hierarchy (a C# 15 `closed` class or record, or private constructors only) leaves out a derived type. Writing a value of that type fails at runtime. |
-| AKKASG050 | Error | [AkkaUnion] list disagrees with the C# union's cases | A property typed as a C# 15 `union` carries an `[AkkaUnion(typeof(...))]` list that names a different set than the union's cases. Remove the attribute, or list exactly the cases. See C# 15 Union Types above. |
+| AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a union property's type but isn't `[AkkaSerializable]`, so the union leaves it out and it fails when first serialized. See [Member Requirements](#member-requirements). |
 | AKKASG051 | Error | [AkkaSerializable] is not supported on a C# union | `[AkkaSerializable]` sits on a C# 15 `union` declaration. A union holds one of its cases and has no fields of its own: mark each case type and use the union as a property type. |
+| AKKASG052 | Error | Nested value type has subclasses | A property writes a concrete `[AkkaSerializable]` class that is not sealed as a nested value (as its own type, or as a collection element, key, or value), and a class in this compilation derives from it. A nested value is written as the base class's own fields, so a subclass value would lose its own. Seal the class; for the property's own type you can instead make it abstract and remove its `[AkkaSerializable]` so the property becomes a [union](#unions). |
 | AKKASG053 | Error | Manifest belongs on the included type | `[AkkaSerializerIncludes<T>]` sets `Manifest`, but `T` is not generic. A non-generic type declares its manifest on its own `[AkkaSerializable]`; remove `Manifest` from the include and declare it there. See [Including Messages Outside the Protocol](#including-messages-outside-the-protocol). |
 
 ## Limitations Today and Planned Changes
@@ -1268,8 +1267,8 @@ instantiation assembled dynamically at runtime is one example. Second, a diction
 `object` fails compilation with **AKKASG003**. A round-tripped envelope payload has no stable
 identity to use as a lookup key.
 
-A top-level protocol implementor, a nested field type, a union member type, a marked union base's
-members, and a closed generic's own open definition can all live in a referenced assembly today;
+A top-level protocol implementor, a nested field type, a union member type, and a closed generic's
+own open definition can all live in a referenced assembly today;
 see [Cross-Assembly Types](#cross-assembly-types) and [Serializer Placement](#serializer-placement).
 
 The following work is planned. None of it ships on `dev` today. It is tracked against

@@ -50,13 +50,13 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    // Same id/title/severity as UnsupportedFieldType. Used only for an interface, abstract class,
-    // or type parameter field, which is usually a forgotten [AkkaUnion], or a field that should
-    // simply be typed object.
+    // Same id/title/severity as UnsupportedFieldType. Used for an interface, abstract class, or type
+    // parameter that is not a union: a framework type, a collection element, key, or value, or an
+    // unsubstituted type parameter. A property typed that way should usually be typed object.
     private static readonly DiagnosticDescriptor UnsupportedFieldTypePolymorphic = new(
         "AKKASG003",
         "Unsupported field type",
-        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Declare a closed member set with [AkkaUnion], type it as the serializer's own protocol interface, or type the property as object.",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. A property typed as an interface or abstract class is a union of its [AkkaSerializable] implementations, which does not apply to framework types, collection elements, or type parameters; type the property as object for an envelope payload.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -219,14 +219,6 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor UnionMemberNotAssignable = new(
-        "AKKASG018",
-        "Union member is not assignable to the field type",
-        "Union member '{0}' on property '{1}' of type '{2}' is not implicitly convertible to the field type '{3}'",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor InvalidUnionMemberSet = new(
         "AKKASG019",
         "Union member set is invalid",
@@ -363,21 +355,6 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
-    /// An object-typed property is ALWAYS the envelope-payload boundary (Decision 20): the static
-    /// type alone carries that meaning, with no attribute involved. A field-level <c>[AkkaUnion]</c>
-    /// on such a property is therefore contradictory author intent -- not a harmless no-op -- so
-    /// this is an ERROR, unlike the retired AKKASG035 advisory it replaces (deliberately a
-    /// different id; AKKASG035 stays a permanent gap).
-    /// </summary>
-    private static readonly DiagnosticDescriptor UnionDeclaredOnObjectField = new(
-        "AKKASG038",
-        "Union declaration on an object-typed property",
-        "Property '{0}' on type '{1}' is typed object, which is always an envelope payload boundary, but carries a field-level [AkkaUnion]. Type the property as the union's base type, or remove the attribute.",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    /// <summary>
     /// Decision 16 (openspec/changes/messagepack-sourcegen-validation/design.md): a referenced-
     /// assembly type carries <c>[AkkaSerializable]</c>, but this compilation cannot see it, or one of
     /// its own <c>[AkkaField]</c> properties, or a type it itself nests. Distinct from
@@ -411,7 +388,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Decision 18: <c>ManifestPrefix</c> expands a registration over a type argument's closed
     /// member set. A type argument has a closed set only when it is the serializer's own protocol
-    /// interface, or a type carrying a type-level <c>[AkkaUnion]</c> with an explicit member list.
+    /// interface, or any other interface, abstract class, or closed hierarchy.
     /// Fires at the registration itself when <c>ManifestPrefix</c> is set but no type argument has
     /// one -- including a non-generic target, which has no type argument to expand over at all.
     /// </summary>
@@ -522,8 +499,8 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
-    /// A parameterless <c>[AkkaUnion]</c> discovers its members by looking for
-    /// <c>[AkkaSerializable]</c> types, so a derived type that forgot the attribute is silently left
+    /// A union field typed as an interface, abstract class, or closed hierarchy discovers its members
+    /// by looking for <c>[AkkaSerializable]</c> types, so a derived type that forgot the attribute is silently left
     /// out of the generated dispatch and only fails the first time a value of it is written. The
     /// union counterpart of AKKASG029. Reported at the union field.
     /// </summary>
@@ -531,31 +508,6 @@ public sealed partial class AkkaSerializerGenerator
         "AKKASG048",
         "Union implementor is not [AkkaSerializable]",
         "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'; for a generic type, mark the definition and register each closed construction with [AkkaSerializerIncludes<T>(Manifest = \"...\")] on the serializer.",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    /// <summary>
-    /// An explicit <c>[AkkaUnion(typeof(A), ...)]</c> list on a field whose static type is a closed
-    /// hierarchy leaves out a type that derives from it. Writing a value of the omitted type fails at
-    /// runtime. A warning, not an error: leaving a case out of the wire contract on purpose is legal.
-    /// </summary>
-    private static readonly DiagnosticDescriptor UnionMemberSetIncomplete = new(
-        "AKKASG049",
-        "Union member list omits a case of a closed hierarchy",
-        "Union on property '{0}' of type '{1}' lists its members explicitly but omits {2}, which derive from the closed type '{3}'; writing a value of an omitted type fails at runtime. List every case, or use a parameterless [AkkaUnion] on '{3}'.",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
-    /// <summary>
-    /// A field typed as a C# 15 <c>union</c> already has a closed case set; an
-    /// <c>[AkkaUnion(typeof(...))]</c> list on it that names a different set is contradictory.
-    /// </summary>
-    private static readonly DiagnosticDescriptor UnionDeclarationConflictsWithCSharpUnion = new(
-        "AKKASG050",
-        "[AkkaUnion] list disagrees with the C# union's cases",
-        "Property '{0}' on type '{1}' is the C# union '{2}', whose cases are its union members, but its [AkkaUnion] list {3}. Remove the [AkkaUnion] attribute, or list exactly the union's cases.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -582,6 +534,20 @@ public sealed partial class AkkaSerializerGenerator
         "AKKASG051",
         "[AkkaSerializable] is not supported on a C# union",
         "C# union '{0}' cannot be [AkkaSerializable]: a union holds one of its cases and has no fields of its own. Mark each case type [AkkaSerializable(Manifest = \"...\")] and use '{0}' as an [AkkaField] property type instead.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// A property typed as a concrete, non-sealed <c>[AkkaSerializable]</c> class is a nested value:
+    /// it is written as that class's own fields, never as a union (inferring one would change the
+    /// wire format the moment a subclass appeared). When a class in this compilation derives from it,
+    /// a value of that subclass would silently lose its own fields on the wire. Reported at the field.
+    /// </summary>
+    private static readonly DiagnosticDescriptor NestedValueHasSubclasses = new(
+        "AKKASG052",
+        "Nested value type has subclasses",
+        "Property '{0}' on type '{1}' writes '{2}' as a nested value, but '{2}' is not sealed and {3} derive from it. A nested value is written as '{2}''s own fields, so a subclass value would lose its own fields. {4}.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -618,7 +584,6 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.UnionMemberNotSerializableCrossAssembly => UnionMemberNotSerializableCrossAssembly,
             DiagnosticKey.UnionMemberMissingManifest => UnionMemberMissingManifest,
             DiagnosticKey.UnionMemberManifestCollision => UnionMemberManifestCollision,
-            DiagnosticKey.UnionMemberNotAssignable => UnionMemberNotAssignable,
             DiagnosticKey.InvalidUnionMemberSet => InvalidUnionMemberSet,
             DiagnosticKey.InvalidClosedGenericRegistration => InvalidClosedGenericRegistration,
             DiagnosticKey.DuplicateClosedGenericRegistration => DuplicateClosedGenericRegistration,
@@ -635,7 +600,6 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.ProtocolTypeMustBeInterface => ProtocolTypeMustBeInterface,
             DiagnosticKey.UnionMemberAbstract => UnionMemberAbstract,
             DiagnosticKey.ManifestIgnoredOnGenericDefinition => ManifestIgnoredOnGenericDefinition,
-            DiagnosticKey.UnionDeclaredOnObjectField => UnionDeclaredOnObjectField,
             DiagnosticKey.NestedFieldNotAccessibleCrossAssembly => NestedFieldNotAccessibleCrossAssembly,
             DiagnosticKey.UnionMemberNotAccessibleCrossAssembly => UnionMemberNotAccessibleCrossAssembly,
             DiagnosticKey.ClosedSetExpansionRequiresClosedSet => ClosedSetExpansionRequiresClosedSet,
@@ -648,10 +612,9 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.PropertyNotSerialized => PropertyNotSerialized,
             DiagnosticKey.IgnoredFieldAnnotations => IgnoredFieldAnnotations,
             DiagnosticKey.UnionImplementorNotSerializable => UnionImplementorNotSerializable,
-            DiagnosticKey.UnionMemberSetIncomplete => UnionMemberSetIncomplete,
-            DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion => UnionDeclarationConflictsWithCSharpUnion,
             DiagnosticKey.SerializableOnCSharpUnion => SerializableOnCSharpUnion,
             DiagnosticKey.ManifestOnNonGenericInclude => ManifestOnNonGenericInclude,
+            DiagnosticKey.NestedValueHasSubclasses => NestedValueHasSubclasses,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

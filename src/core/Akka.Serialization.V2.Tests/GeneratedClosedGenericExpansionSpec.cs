@@ -18,11 +18,11 @@ namespace Akka.Serialization.V2.Tests;
 /// <summary>
 /// Specs for Decision 18 (openspec/changes/messagepack-sourcegen-validation/design.md, "Closed-Set
 /// Expansion And Adoption On The Serializer"): a registration whose type argument has a closed set
-/// (the serializer's own protocol interface, or a type-level <c>[AkkaUnion]</c>) expands to one
+/// (the serializer's own protocol interface, or any other interface or abstract base) expands to one
 /// closed construction per member, with a manifest derived by a fixed formula; a registration on
 /// the serializer adopts any <c>[AkkaSerializable]</c> type, generic or not, whether or not it
 /// implements the protocol; and a field typed as the protocol interface is a union over the
-/// protocol set with no <c>[AkkaUnion]</c> needed. <see cref="ExpansionSerializer"/> mirrors the
+/// protocol set. <see cref="ExpansionSerializer"/> mirrors the
 /// customer shape from the design record: <see cref="ExpansionEnvelope{T}"/> plays the role of the
 /// customer's own generic envelope, registered once over the protocol interface.
 /// </summary>
@@ -66,7 +66,7 @@ public sealed class GeneratedClosedGenericExpansionSpec : IAsyncLifetime
         RoundTrip(cassetteEnvelope).Should().Be(cassetteEnvelope);
     }
 
-    [Fact(DisplayName = "The literal construction's protocol-interface field should be encoded as a union over the protocol set, with no [AkkaUnion] attribute")]
+    [Fact(DisplayName = "The literal construction's protocol-interface field should be encoded as a union over the protocol set")]
     public void Literal_construction_field_should_be_an_implicit_protocol_union()
     {
         object cassetteBody = new ExpansionAcceptCassette(9);

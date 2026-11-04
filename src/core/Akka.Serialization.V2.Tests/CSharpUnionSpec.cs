@@ -136,10 +136,10 @@ public sealed class CSharpUnionSpec : AkkaSpec
         }
     }
 
-    [Fact(DisplayName = "Should_WriteSameBytesAsAkkaUnionHierarchy_When_CaseIsHeldInCSharpUnion")]
-    public void Should_WriteSameBytesAsAkkaUnionHierarchy_When_CaseIsHeldInCSharpUnion()
+    [Fact(DisplayName = "Should_WriteSameBytesAsClosedHierarchyUnion_When_CaseIsHeldInCSharpUnion")]
+    public void Should_WriteSameBytesAsClosedHierarchyUnion_When_CaseIsHeldInCSharpUnion()
     {
-        // The same cases, once as a closed record hierarchy behind [AkkaUnion] and once as a C# union:
+        // The same cases, once as a closed record hierarchy and once as a C# union:
         // the field's bytes must match, so data written by one shape reads back with the other.
         const string source = """
             #nullable enable
@@ -147,7 +147,6 @@ public sealed class CSharpUnionSpec : AkkaSpec
 
             namespace Unions.Wire;
 
-            [AkkaUnion]
             public abstract record Shape
             {
                 private Shape() { }
@@ -237,38 +236,6 @@ public sealed class CSharpUnionSpec : AkkaSpec
 
         result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG015" && d.GetMessage(null).Contains("System.String"));
         result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("SubscriptionSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
-    }
-
-    [Fact(DisplayName = "Should_ReportAKKASG050_When_AkkaUnionListDisagreesWithCSharpUnionCases")]
-    public void Should_ReportAKKASG050_When_AkkaUnionListDisagreesWithCSharpUnionCases()
-    {
-        var source = CoverageCases + """
-
-            [AkkaSerializable(Manifest = "holder")]
-            public sealed record Holder([property: AkkaField(1), AkkaUnion(typeof(PaidInvoice), typeof(Trial))] Coverage Coverage) : ISubscriptionEvent;
-            """;
-
-        var result = RunPreview(source);
-
-        var error = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG050").Which;
-        error.Severity.Should().Be(DiagnosticSeverity.Error);
-        error.GetMessage(null).Should().Contain("Unions.PaidUpstream").And.Contain("Unions.Migrated");
-    }
-
-    [Fact(DisplayName = "Should_AcceptMatchingAkkaUnionList_When_FieldIsCSharpUnion")]
-    public void Should_AcceptMatchingAkkaUnionList_When_FieldIsCSharpUnion()
-    {
-        var source = CoverageCases + """
-
-            [AkkaSerializable(Manifest = "holder")]
-            public sealed record Holder(
-                [property: AkkaField(1), AkkaUnion(typeof(Migrated), typeof(Trial), typeof(PaidInvoice), typeof(Complimentary), typeof(PaidUpstream))] Coverage Coverage) : ISubscriptionEvent;
-            """;
-
-        var result = RunPreview(source);
-
-        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
-        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
     [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable")]
