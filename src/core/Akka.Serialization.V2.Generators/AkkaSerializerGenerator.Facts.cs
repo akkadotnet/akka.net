@@ -52,8 +52,9 @@ public sealed partial class AkkaSerializerGenerator
         var closedSetKeys = ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers);
         var referencedAssembliesUsingV2 = ComputeReferencedAssembliesUsingV2(compilation, cancellationToken);
 
+        var (unionWalkKeys, closedUnionKeys) = ComputeUnionKeys(compilation, messages, serializers, cancellationToken);
         var (localUnmarkedImplementorsByProtocol, unionHierarchies) = ComputeLocalImplementorFacts(
-            compilation, protocolKeys, ComputeDistinctUnionKeys(messages, serializers), knownTypes, cancellationToken);
+            compilation, protocolKeys, unionWalkKeys, closedUnionKeys, knownTypes, cancellationToken);
         var localMarkedImplementorsByClosedSetKey = ComputeLocalMarkedImplementorsFromMessages(messages, closedSetKeys);
         var (referencedMarked, referencedUnmarked) = ComputeReferencedAssemblyImplementors(
             compilation, referencedAssembliesUsingV2, closedSetKeys, protocolKeys, knownTypes, cancellationToken);
@@ -70,25 +71,30 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Every distinct static-type key of a <see cref="FieldKind.Union"/> field, listed or discovered,
-    /// across ordinary declarations and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>.
-    /// The keys <see cref="ComputeLocalImplementorFacts"/> answers union questions for.
+    /// The union keys the source-type walk must bucket implementors for, and which of them are closed.
+    /// A discovered key (parameterless <c>[AkkaUnion]</c>; <see cref="FieldInfo.UnionMembers"/> still
+    /// empty) always needs its unmarked implementors (AKKASG048). A listed key needs them only when it
+    /// is a closed class declared here (AKKASG049): an interface, or any other open base, can gain
+    /// implementors anywhere, so it is dropped before the walk and costs nothing per edit. Scans
+    /// ordinary declarations and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>.
     /// </summary>
-    private static ImmutableArray<TypeKey> ComputeDistinctUnionKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers)
+    private static (ImmutableArray<TypeKey> WalkKeys, ImmutableArray<TypeKey> ClosedKeys) ComputeUnionKeys(
+        Compilation compilation,
+        ImmutableArray<MessageInfo?> messages,
+        ImmutableArray<SerializerInfo?> serializers,
+        CancellationToken cancellationToken)
     {
-        var seen = new HashSet<TypeKey>();
-        var builder = ImmutableArray.CreateBuilder<TypeKey>();
+        var discovered = new HashSet<TypeKey>();
+        var listed = new HashSet<TypeKey>();
 
         void CollectFrom(MessageInfo message)
         {
             foreach (var field in message.Fields)
             {
-                if (field.Mapping.Kind != FieldKind.Union)
+                if (field.Mapping.Kind != FieldKind.Union || field.Mapping.Key.MetadataName.Length == 0)
                     continue;
 
-                var key = field.Mapping.Key;
-                if (key.MetadataName.Length > 0 && seen.Add(key))
-                    builder.Add(key);
+                (field.UnionMembers.IsEmpty ? discovered : listed).Add(field.Mapping.Key);
             }
         }
 
@@ -107,7 +113,25 @@ public sealed partial class AkkaSerializerGenerator
                 CollectFrom(schema);
         }
 
-        return builder.ToImmutable();
+        if (discovered.Count == 0 && listed.Count == 0)
+            return (ImmutableArray<TypeKey>.Empty, ImmutableArray<TypeKey>.Empty);
+
+        var closed = new List<TypeKey>();
+        foreach (var key in listed)
+        {
+            if (ResolveTypeSymbol(compilation, key) is { } symbol
+                && SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly)
+                && IsClosedHierarchy(symbol, cancellationToken))
+            {
+                closed.Add(key);
+            }
+        }
+
+        var walk = new List<TypeKey>(discovered);
+        walk.AddRange(closed.Where(key => !discovered.Contains(key)));
+        walk.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+        closed.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+        return (walk.ToImmutableArray(), closed.ToImmutableArray());
     }
 
     /// <summary>
@@ -296,6 +320,7 @@ public sealed partial class AkkaSerializerGenerator
         Compilation compilation,
         ImmutableArray<TypeKey> protocolKeys,
         ImmutableArray<TypeKey> unionKeys,
+        ImmutableArray<TypeKey> closedUnionKeys,
         KnownTypes knownTypes,
         CancellationToken cancellationToken)
     {
@@ -308,7 +333,6 @@ public sealed partial class AkkaSerializerGenerator
 
         var unionUnmarked = new Dictionary<TypeKey, List<TypeKey>>();
         var unionMarked = new Dictionary<TypeKey, List<TypeKey>>();
-        var closedUnionKeys = new List<TypeKey>();
         foreach (var unionKey in unionKeys)
         {
             unionUnmarked[unionKey] = new List<TypeKey>();
@@ -316,27 +340,13 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         // ONE pass over the source-declared types serves AKKASG029 (unmarked protocol implementors)
-        // and AKKASG048/049 (union implementors, closed bases). A union key that is itself declared
-        // here is checked for closedness as the walk reaches it, so no per-key symbol lookup is needed.
+        // and AKKASG048/049 (implementors of the union keys ComputeUnionKeys kept).
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
             // This whole-compilation walk re-runs on every edit (its output combines the
             // CompilationProvider by necessity); honor IDE cancellation between candidates, exactly
             // as the pre-S5 per-serializer walk did.
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (!unionKeys.IsEmpty && candidate.TypeKind == TypeKind.Class && !candidate.IsSealed)
-            {
-                foreach (var unionKey in unionKeys)
-                {
-                    if (CouldMatchByMetadataName(unionKey.MetadataName, candidate.MetadataName)
-                        && TypeKey.FromSymbol(candidate, includeDisplayName: false).Equals(unionKey)
-                        && IsClosedHierarchy(candidate, cancellationToken))
-                    {
-                        closedUnionKeys.Add(unionKey);
-                    }
-                }
-            }
 
             if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract)
                 continue;
@@ -369,12 +379,9 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        var unionHierarchies = UnionHierarchyFacts.Empty;
-        if (!unionKeys.IsEmpty)
-        {
-            closedUnionKeys.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
-            unionHierarchies = new UnionHierarchyFacts(SortAndBuild(unionUnmarked), SortAndBuild(unionMarked), closedUnionKeys.ToImmutableArray());
-        }
+        var unionHierarchies = unionKeys.IsEmpty
+            ? UnionHierarchyFacts.Empty
+            : new UnionHierarchyFacts(SortAndBuild(unionUnmarked), SortAndBuild(unionMarked), closedUnionKeys);
 
         return (BuildWithEveryEntry(buckets), unionHierarchies);
     }
