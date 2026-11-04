@@ -18,7 +18,7 @@ namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
 /// A closed record hierarchy (private base constructor, sealed nested cases) used as a field type
-/// through a parameterless <c>[AkkaUnion]</c>: every case, fieldless ones included, round-trips
+/// with no attribute on the base: every case, fieldless ones included, round-trips
 /// through the serializer's id and manifest as its exact concrete type.
 /// </summary>
 public sealed class ClosedHierarchyUnionRoundTripSpec : AkkaSpec
@@ -55,7 +55,6 @@ public sealed class ClosedHierarchyUnionRoundTripSpec : AkkaSpec
 
 public interface ICoverageTestProtocol;
 
-[AkkaUnion]
 public abstract record Coverage
 {
     private Coverage() { }

@@ -39,7 +39,6 @@ public sealed class GeneratedMemberNamingRuntimeSpec : AkkaSpec
     }
 }
 
-[AkkaUnion(typeof(NamingCommands.LeaveChat), typeof(NamingEvents.LeaveChat))]
 public interface INamingProtocol;
 
 public static class NamingCommands

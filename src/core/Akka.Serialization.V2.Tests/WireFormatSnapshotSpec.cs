@@ -76,7 +76,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         "readonly-collection-populated",
         "readonly-dictionary-populated",
 
-        // [AkkaUnion]: one snapshot per declared member of IOrderEvent.
+        // Interface union: one snapshot per member of IOrderEvent.
         "union-member-order-placed-class",
         "union-member-order-cancelled-nested-only",
         "union-member-order-note-struct",
@@ -237,7 +237,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             new Dictionary<string, int> { ["a"] = 1, ["b"] = 2 })),
 
         // --------------------------------------------------------------------------------------
-        // [AkkaUnion] -- one snapshot per declared member of IOrderEvent -- fixtures from
+        // Interface union -- one snapshot per member of IOrderEvent -- fixtures from
         // GeneratedUnionSpec.
         // --------------------------------------------------------------------------------------
         "union-member-order-placed-class" => Case(_unionSerializer, new UnionEnvelope(

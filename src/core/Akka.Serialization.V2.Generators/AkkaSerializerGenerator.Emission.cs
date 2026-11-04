@@ -431,9 +431,9 @@ public sealed partial class AkkaSerializerGenerator
             .ToImmutableArray();
 
         // Decision 19/21: every [AkkaSerializable] implementor of ANY closed-set key (a serializer's
-        // protocol interface, or a marked union base) declared in a referenced assembly is added to
+        // protocol interface, or any other union base) declared in a referenced assembly is added to
         // the SAME candidate pool as a local declaration. This is what widens top-level dispatch
-        // (Decision 19) and the implicit protocol/marked-union-field rule (Decision 18/21) across
+        // (Decision 19) and the implicit protocol/union-base field rule (Decision 18/21) across
         // assemblies, with no other change needed anywhere the pool is scanned. Not scoped to this
         // serializer's own protocol key: the pool is compilation-wide, exactly as declaredMessages
         // already is, and the filters below (topLevelMessages, GetClosedSetMembers) do the scoping.
@@ -534,18 +534,17 @@ public sealed partial class AkkaSerializerGenerator
     /// Resolves formatter overrides (unchanged); reclassifies a field whose static type is EXACTLY
     /// <paramref name="protocolTypeFullName"/> from <see cref="FieldKind.Unsupported"/> to a union
     /// over the protocol set (Decision 18: "a field whose static type is the serializer's own
-    /// protocol interface is a union over the protocol set, with no [AkkaUnion] attribute
-    /// required"); and, as of Decision 21, resolves a DISCOVERED-mode union field (one whose
-    /// <see cref="FieldInfo.UnionMembers"/> is still empty after extraction -- a parameterless
-    /// <c>[AkkaUnion]</c>) to a union over every visible implementor of ITS OWN static type
+    /// protocol interface is a union over the protocol set"); and, as of Decision 21, resolves a
+    /// DISCOVERED-mode union field (one whose <see cref="FieldInfo.UnionMembers"/> is still empty
+    /// after extraction -- an interface, abstract class, or closed hierarchy, see
+    /// <c>IsInferredUnionBase</c>) to a union over every visible implementor of ITS OWN static type
     /// (<see cref="TypeMapping.Key"/> on a <see cref="FieldKind.Union"/> mapping). Both rules pull
     /// their candidate set from <paramref name="allMessagesForProtocolScan"/>, which -- Decision 19
     /// -- already includes every referenced-assembly implementor <see cref="ComputeCompilationFacts"/>
     /// found for any closed-set key (see <see cref="ResolveSerializerMessages"/>'s own injection), so
-    /// no further cross-assembly plumbing is needed here. Formatter resolution takes precedence when
-    /// more than one rule could apply to the same field kind (matching the existing documented
-    /// precedence of an explicit formatter registration), but neither closed-set field is ever
-    /// independently registered with a formatter in practice.
+    /// no further cross-assembly plumbing is needed here. A formatter registered for the field's
+    /// type takes precedence over union discovery (matching the documented precedence of an
+    /// explicit formatter registration).
     /// </summary>
     private static ImmutableDictionary<TypeKey, MessageInfo> ResolveMessages(
         ImmutableDictionary<TypeKey, MessageInfo> allMessagesByType,
@@ -575,7 +574,7 @@ public sealed partial class AkkaSerializerGenerator
                     continue;
 
                 membersBuilder.Add(new UnionMemberInfo(
-                    member.Key, member.IsValueType, isAssignable: true, isSupported: true, member.IsSealed, member.IsAbstract, member.ForeignAssemblyName));
+                    member.Key, member.IsValueType, isSupported: true, member.IsSealed, member.IsAbstract, member.ForeignAssemblyName));
             }
 
             var result = membersBuilder.ToImmutable();
@@ -633,21 +632,26 @@ public sealed partial class AkkaSerializerGenerator
                 {
                     resolvedFields.Add(field.WithUnion(GetClosedSetMembers(protocolTypeFullName)));
                 }
-                else if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
-                {
-                    // Decision 21: the field's own static-type key IS the closed-set key -- captured
-                    // at extraction time regardless of assembly, on TypeMapping.Key (see that
-                    // property's own doc comment). A default key (no named static type; see
-                    // ExtractMessageCore) leaves the field as-is: there is nothing to resolve it
-                    // against, and it stays an empty union rather than crashing on an empty lookup.
-                    var closedSetKey = field.Mapping.Key.DisplayName ?? string.Empty;
-                    resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey), isDiscovered: true));
-                }
                 else if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
                     field.Mapping.TypeFullName.Length > 0 &&
                     formattersByTarget.TryGetValue(field.Mapping.Key, out var formatter))
                 {
+                    // Ahead of union discovery: a formatter registered for an interface or abstract
+                    // base claims every field of that type, exactly as it does for any other type.
                     resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.Key), formatter));
+                }
+                else if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
+                {
+                    // An inferred union (an interface, abstract class, or closed hierarchy): the
+                    // field's own static-type key IS the closed-set key -- captured at extraction time
+                    // regardless of assembly, on TypeMapping.Key. A default key (no named static type)
+                    // leaves the field as-is: there is nothing to resolve it against, and it stays an
+                    // empty union rather than crashing on an empty lookup. The serializer's own
+                    // protocol interface resolves to the same protocol set Decision 18 always used, and
+                    // is not marked discovered: AKKASG029 already covers its unmarked implementors.
+                    var closedSetKey = field.Mapping.Key.DisplayName ?? string.Empty;
+                    var isProtocol = protocolTypeFullName.Length > 0 && string.Equals(closedSetKey, protocolTypeFullName, StringComparison.Ordinal);
+                    resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey), isDiscovered: !isProtocol));
                 }
                 else if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
                 {
@@ -1433,7 +1437,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Union emission ([AkkaUnion] fields).
+    // Union emission (interface, abstract, closed-hierarchy, and C# union fields).
     //
     // A union value encodes as a 2-entry int-keyed map: { 1: <member manifest string>, 2: <the
     // member's ordinary inline field map> }. The manifest is the discriminator -- the same
@@ -1453,7 +1457,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// The dedup identity of a union dispatch helper: the field's static type plus the ordered
     /// member set. Two fields (in the same or different messages) with the same static type and
-    /// member set -- the common case under type-level [AkkaUnion] declarations -- share one
+    /// member set -- the common case, since the set follows from the static type -- share one
     /// generated Write/Read/SizeOf helper trio instead of emitting duplicates per field.
     /// </summary>
     private static string BuildUnionSignature(FieldInfo field)
@@ -1540,7 +1544,7 @@ public sealed partial class AkkaSerializerGenerator
     // case held in its public Value property (never on the struct's own type, and never by casting
     // the struct), build the union back with its case constructor on read, and map
     // default(TUnion), whose Value is null, to MessagePack nil. The wire shape of a held case is
-    // identical to an [AkkaUnion] member's.
+    // identical to the same type's in a class-hierarchy union.
     private static void GenerateUnionWrite(CodeWriter w, UnionHelperPlan helper)
     {
         w.Raw("private void Write").Identifier(helper.HelperName)
@@ -1823,7 +1827,7 @@ public sealed partial class AkkaSerializerGenerator
                 }
                 break;
             case FieldKind.Union:
-                // An [AkkaUnion] field is reference-like (its static type is an interface or abstract
+                // A class-hierarchy union field is reference-like (its static type is an interface or abstract
                 // base), so only the nullable-reference guard is needed here. A C# union is a struct:
                 // its helper writes nil for default(TUnion) itself, and GenerateWriteField already
                 // unwrapped a Nullable<TUnion>.
@@ -2811,7 +2815,7 @@ public sealed partial class AkkaSerializerGenerator
         if (field.Mapping.Kind == FieldKind.Object)
             return !field.Mapping.IsValueType;
 
-        // An [AkkaUnion] field is reference-like (its static type is an interface or abstract base);
+        // A class-hierarchy union field is reference-like (its static type is an interface or class);
         // a C# 15 union is a struct, so it behaves like any other non-nullable struct kind.
         if (field.Mapping.Kind == FieldKind.Union)
             return !field.IsCSharpUnion;

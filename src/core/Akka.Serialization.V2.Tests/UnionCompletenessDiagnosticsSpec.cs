@@ -18,9 +18,9 @@ namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
 /// A union's member set must cover every type that can reach the field, or the first write of a
-/// missing type fails at runtime. AKKASG048 catches a derived type that a parameterless
-/// <c>[AkkaUnion]</c> cannot discover because it lacks <c>[AkkaSerializable]</c>; AKKASG049 catches
-/// an explicit member list that leaves out a case of a closed hierarchy.
+/// missing type fails at runtime. A field typed as an interface, abstract class, or closed
+/// hierarchy discovers its members from <c>[AkkaSerializable]</c> types; AKKASG048 catches a
+/// derived type that discovery cannot see because it lacks <c>[AkkaSerializable]</c>.
 /// </summary>
 public sealed class UnionCompletenessDiagnosticsSpec
 {
@@ -34,14 +34,13 @@ public sealed class UnionCompletenessDiagnosticsSpec
         """;
 
     // A closed hierarchy: the private constructor means only the nested cases can derive from Coverage.
-    private static string ClosedCoverage(string trialAttribute, string coverageAttribute = "[AkkaUnion]") => $$"""
+    private static string ClosedCoverage(string trialAttribute) => $$"""
         #nullable enable
         using System;
         using Akka.Serialization.V2;
 
         namespace Completeness;
 
-        {{coverageAttribute}}
         public abstract record Coverage
         {
             private Coverage() { }
@@ -110,7 +109,6 @@ public sealed class UnionCompletenessDiagnosticsSpec
 
             namespace Completeness.Open;
 
-            [AkkaUnion]
             public interface IOrderEvent { }
 
             [AkkaSerializable(Manifest = "placed")]
@@ -140,7 +138,6 @@ public sealed class UnionCompletenessDiagnosticsSpec
 
             namespace Completeness.AllUnmarked;
 
-            [AkkaUnion]
             public interface IOrderEvent { }
 
             public sealed record OrderForgotten(string OrderId) : IOrderEvent;
@@ -155,31 +152,11 @@ public sealed class UnionCompletenessDiagnosticsSpec
         result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG019", "AKKASG048 already names the fix");
     }
 
-    [Fact(DisplayName = "Should_WarnAKKASG049_When_ExplicitUnionListOmitsCaseOfClosedHierarchy")]
-    public void Should_WarnAKKASG049_When_ExplicitUnionListOmitsCaseOfClosedHierarchy()
+    [Fact(DisplayName = "Should_InferUnion_When_ConcreteBaseCarriesIsClosedTypeAttribute")]
+    public void Should_InferUnion_When_ConcreteBaseCarriesIsClosedTypeAttribute()
     {
-        var source = ClosedCoverage(trialAttribute: """[AkkaSerializable(Manifest = "trial", AllowEmpty = true)]""", coverageAttribute: string.Empty) + """
-
-            [AkkaSerializable(Manifest = "period-covered")]
-            public sealed record PeriodCovered(
-                [property: AkkaField(1)] long SubscriptionId,
-                [property: AkkaField(2), AkkaUnion(typeof(Coverage.PaidInvoice), typeof(Coverage.PaidUpstream), typeof(Coverage.Trial))] Coverage Coverage) : ISubscriptionEvent;
-            """ + SerializerSource;
-
-        var result = GeneratorTestHarness.Run(source);
-
-        var warning = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG049").Which;
-        warning.Severity.Should().Be(DiagnosticSeverity.Warning);
-        warning.GetMessage(null).Should().Contain("Coverage.Complimentary").And.Contain("Coverage.Migrated").And.NotContain("Coverage.Trial'");
-
-        // A warning: the listed cases still generate.
-        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
-    }
-
-    [Fact(DisplayName = "Should_TreatIsClosedTypeBaseAsClosed_When_ExplicitUnionListOmitsCase")]
-    public void Should_TreatIsClosedTypeBaseAsClosed_When_ExplicitUnionListOmitsCase()
-    {
-        // The shape a C# 15 'closed record' lowers to: an abstract class carrying IsClosedTypeAttribute,
+        // A concrete base with a public constructor and top-level (not nested) cases is closed only
+        // because it carries IsClosedTypeAttribute -- the shape a C# 15 'closed record' lowers to,
         // here declared through the same consumer-side polyfill a net10.0 project needs.
         const string source = """
             #nullable enable
@@ -194,7 +171,7 @@ public sealed class UnionCompletenessDiagnosticsSpec
             namespace Completeness.ClosedKeyword
             {
                 [System.Runtime.CompilerServices.IsClosedType]
-                public abstract record Shape;
+                public record Shape;
 
                 [AkkaSerializable(Manifest = "circle")]
                 public sealed record Circle([property: AkkaField(1)] double Radius) : Shape;
@@ -203,14 +180,18 @@ public sealed class UnionCompletenessDiagnosticsSpec
                 public sealed record Square([property: AkkaField(1)] double Side) : Shape;
 
                 [AkkaSerializable(Manifest = "drawn")]
-                public sealed record Drawn([property: AkkaField(1), AkkaUnion(typeof(Circle))] Shape Shape) : ISubscriptionEvent;
+                public sealed record Drawn([property: AkkaField(1)] Shape Shape) : ISubscriptionEvent;
             }
             """ + SerializerSource;
 
         var result = GeneratorTestHarness.Run(source);
 
-        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG049")
-            .Which.GetMessage(null).Should().Contain("Square");
+        // Only the generator's view is asserted: the compiler itself rejects a source-level
+        // [IsClosedType] (CS8335, reserved for compiler use), but a closed type read from a
+        // referenced assembly's metadata carries exactly this attribute.
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        var generated = string.Join(Environment.NewLine, result.RunResult.GeneratedTrees.Select(tree => tree.ToString()));
+        generated.Should().Contain("Union_Shape").And.Contain("\"circle\"").And.Contain("\"square\"");
     }
 
     // Real C# 15 syntax (LanguageVersion.Preview through the harness's newer Roslyn). The compiler
@@ -229,7 +210,6 @@ public sealed class UnionCompletenessDiagnosticsSpec
 
         namespace Completeness.CSharp15
         {
-            {{UNION}}
             public closed record Shape
             {
                 [AkkaSerializable(Manifest = "circle")]
@@ -246,16 +226,16 @@ public sealed class UnionCompletenessDiagnosticsSpec
         }
         """ + SerializerSource;
 
-    private static Harness.GeneratorRunResult RunClosedRecord(string union, string triangle, string field)
+    private static Harness.GeneratorRunResult RunClosedRecord(string triangle, string field)
     {
-        var source = ClosedRecordSource.Replace("{{UNION}}", union).Replace("{{TRIANGLE}}", triangle).Replace("{{FIELD}}", field);
+        var source = ClosedRecordSource.Replace("{{TRIANGLE}}", triangle).Replace("{{FIELD}}", field);
         return GeneratorTestHarness.Run(new[] { new SourceFile("Source.cs", source) }, GeneratorTestHarness.PreviewParseOptions);
     }
 
     [Fact(DisplayName = "Should_RoundTripEveryCase_When_FieldIsCSharp15ClosedRecordUnion")]
     public void Should_RoundTripEveryCase_When_FieldIsCSharp15ClosedRecordUnion()
     {
-        var result = RunClosedRecord("[AkkaUnion]", """[AkkaSerializable(Manifest = "triangle")]""", """
+        var result = RunClosedRecord("""[AkkaSerializable(Manifest = "triangle")]""", """
             [AkkaSerializable(Manifest = "drawn")]
             public sealed record Drawn([property: AkkaField(1)] Shape Shape) : ISubscriptionEvent;
 
@@ -281,7 +261,7 @@ public sealed class UnionCompletenessDiagnosticsSpec
     [Fact(DisplayName = "Should_ReportAKKASG048_When_CSharp15ClosedRecordCaseLacksAkkaSerializable")]
     public void Should_ReportAKKASG048_When_CSharp15ClosedRecordCaseLacksAkkaSerializable()
     {
-        var result = RunClosedRecord("[AkkaUnion]", string.Empty, """
+        var result = RunClosedRecord(string.Empty, """
             [AkkaSerializable(Manifest = "drawn")]
             public sealed record Drawn([property: AkkaField(1)] Shape Shape) : ISubscriptionEvent;
             """);
@@ -290,23 +270,12 @@ public sealed class UnionCompletenessDiagnosticsSpec
             .Which.GetMessage(null).Should().Contain("Completeness.CSharp15.Shape.Triangle");
     }
 
-    [Fact(DisplayName = "Should_WarnAKKASG049_When_ExplicitListOmitsCaseOfCSharp15ClosedRecord")]
-    public void Should_WarnAKKASG049_When_ExplicitListOmitsCaseOfCSharp15ClosedRecord()
+    [Fact(DisplayName = "Should_ReportAKKASG003_NotCrash_When_FieldIsArrayOfInterface")]
+    public void Should_ReportAKKASG003_NotCrash_When_FieldIsArrayOfInterface()
     {
-        var result = RunClosedRecord(string.Empty, """[AkkaSerializable(Manifest = "triangle")]""", """
-            [AkkaSerializable(Manifest = "drawn")]
-            public sealed record Drawn([property: AkkaField(1), AkkaUnion(typeof(Shape.Circle), typeof(Shape.Square))] Shape Shape) : ISubscriptionEvent;
-            """);
-
-        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG049")
-            .Which.GetMessage(null).Should().Contain("Shape.Triangle");
-    }
-
-    [Fact(DisplayName = "Should_ReportAKKASG018_NotCrash_When_ExplicitUnionIsOnArrayField")]
-    public void Should_ReportAKKASG018_NotCrash_When_ExplicitUnionIsOnArrayField()
-    {
-        // A union field whose type is not a named type has a key with no metadata name; collecting
-        // union keys must skip it rather than throw and take the whole generator down (CS8785).
+        // An interface is a union only as a property's own type: an array of it is not a named
+        // type, so it is never a union key, and collecting union keys must not throw over it
+        // (CS8785) -- it stays an ordinary unsupported field.
         const string source = """
             #nullable enable
             using Akka.Serialization.V2;
@@ -319,36 +288,14 @@ public sealed class UnionCompletenessDiagnosticsSpec
             public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
 
             [AkkaSerializable(Manifest = "holder")]
-            public sealed record Holder([property: AkkaField(1), AkkaUnion(typeof(Circle))] IShape[] Shapes) : ISubscriptionEvent;
+            public sealed record Holder([property: AkkaField(1)] IShape[] Shapes) : ISubscriptionEvent;
             """ + SerializerSource;
 
         var result = GeneratorTestHarness.Run(source);
 
         result.AllDiagnostics.Should().NotContain(d => d.Id == "CS8785");
-        result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG018");
-    }
-
-    [Fact(DisplayName = "Should_NotCrash_When_ParameterlessUnionIsOnArrayField")]
-    public void Should_NotCrash_When_ParameterlessUnionIsOnArrayField()
-    {
-        const string source = """
-            #nullable enable
-            using Akka.Serialization.V2;
-
-            namespace Completeness.DiscoveredArrayField;
-
-            public interface IShape { }
-
-            [AkkaSerializable(Manifest = "circle")]
-            public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
-
-            [AkkaSerializable(Manifest = "holder")]
-            public sealed record Holder([property: AkkaField(1), AkkaUnion] IShape[] Shapes) : ISubscriptionEvent;
-            """ + SerializerSource;
-
-        var result = GeneratorTestHarness.Run(source);
-
-        result.AllDiagnostics.Should().NotContain(d => d.Id == "CS8785");
+        result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG003");
+        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG019" || d.Id == "AKKASG048");
     }
 
     [Fact(DisplayName = "Should_NotReportAKKASG048_When_ImplementorIsRefStruct")]
@@ -362,7 +309,6 @@ public sealed class UnionCompletenessDiagnosticsSpec
 
             namespace Completeness.RefStruct;
 
-            [AkkaUnion]
             public interface IShape { }
 
             [AkkaSerializable(Manifest = "circle")]
@@ -380,11 +326,12 @@ public sealed class UnionCompletenessDiagnosticsSpec
         result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
-    [Fact(DisplayName = "Should_KeepSerializersCached_When_UnrelatedTypeStartsImplementingOpenListedUnion")]
-    public void Should_KeepSerializersCached_When_UnrelatedTypeStartsImplementingOpenListedUnion()
+    [Fact(DisplayName = "Should_ReportAKKASG048_When_EditMakesUnmarkedTypeImplementUnionBase")]
+    public void Should_ReportAKKASG048_When_EditMakesUnmarkedTypeImplementUnionBase()
     {
-        // A listed union over an interface is never reported on, so a new implementor of that
-        // interface elsewhere must not invalidate the compilation facts or re-resolve serializers.
+        // An interface field's set is every [AkkaSerializable] implementor, so a type in ANOTHER file
+        // that starts implementing it without the attribute must invalidate the cached compilation
+        // facts and surface AKKASG048 on the next incremental run.
         const string holder = """
             #nullable enable
             using Akka.Serialization.V2;
@@ -397,54 +344,16 @@ public sealed class UnionCompletenessDiagnosticsSpec
             public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
 
             [AkkaSerializable(Manifest = "holder")]
-            public sealed record Holder([property: AkkaField(1), AkkaUnion(typeof(Circle))] IShape Shape) : ISubscriptionEvent;
+            public sealed record Holder([property: AkkaField(1)] IShape Shape) : ISubscriptionEvent;
             """ + SerializerSource;
 
         var result = GeneratorTestHarness.RunIncremental(
             new[] { new SourceFile("Holder.cs", holder), new SourceFile("Other.cs", "namespace Completeness.Caching; public sealed class Unrelated { }") },
             new[] { new SourceFile("Holder.cs", holder), new SourceFile("Other.cs", "namespace Completeness.Caching; public sealed class Unrelated : IShape { }") });
 
-        var reasons = result.After.RunResult.Results.Single().TrackedSteps[AkkaSerializerGenerator.TrackingNames.CompilationFacts]
-            .SelectMany(step => step.Outputs).Select(output => output.Reason).ToList();
-        reasons.Should().OnlyContain(reason => reason == Microsoft.CodeAnalysis.IncrementalStepRunReason.Unchanged || reason == Microsoft.CodeAnalysis.IncrementalStepRunReason.Cached);
+        result.Before.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG048");
+        result.After.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG048")
+            .Which.GetMessage(null).Should().Contain("Completeness.Caching.Unrelated");
     }
 
-    [Fact(DisplayName = "Should_NotWarnAKKASG049_When_ExplicitUnionListNarrowsAnOpenBase")]
-    public void Should_NotWarnAKKASG049_When_ExplicitUnionListNarrowsAnOpenBase()
-    {
-        // An interface (or a class with a non-private constructor) can gain implementors anywhere, so
-        // a narrower list is a choice, not an omission.
-        const string source = """
-            #nullable enable
-            using Akka.Serialization.V2;
-
-            namespace Completeness.OpenList;
-
-            public interface IOrderEvent { }
-
-            [AkkaSerializable(Manifest = "placed")]
-            public sealed record OrderPlaced([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
-            [AkkaSerializable(Manifest = "cancelled")]
-            public sealed record OrderCancelled([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
-            public abstract record Shape;
-
-            [AkkaSerializable(Manifest = "circle")]
-            public sealed record Circle([property: AkkaField(1)] double Radius) : Shape;
-
-            [AkkaSerializable(Manifest = "square")]
-            public sealed record Square([property: AkkaField(1)] double Side) : Shape;
-
-            [AkkaSerializable(Manifest = "notice")]
-            public sealed record OrderNotice(
-                [property: AkkaField(1), AkkaUnion(typeof(OrderPlaced))] IOrderEvent Event,
-                [property: AkkaField(2), AkkaUnion(typeof(Circle))] Shape Shape) : ISubscriptionEvent;
-            """ + SerializerSource;
-
-        var result = GeneratorTestHarness.Run(source);
-
-        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG049" || d.Id == "AKKASG048");
-        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
-    }
 }
