@@ -26,8 +26,8 @@ namespace Akka.Serialization.V2.Tests;
 /// <summary>
 /// Golden-output gate for the generator's EMISSION layer: drives the generator over a corpus that
 /// exercises every emission path (scalars, all ten collection shapes, immutable collections,
-/// nullable variants, nested messages, closed generic registrations, type-level and field-level
-/// unions, envelope payloads, formatters with both constructor kinds, hybrid
+/// nullable variants, nested messages, closed generic registrations, interface unions, envelope
+/// payloads, formatters with both constructor kinds, hybrid
 /// constructor+initializer reconstruction, keyword-named/adversarial properties, fieldless
 /// messages, struct messages, manifest escaping, internal accessibility, and a global-namespace
 /// serializer) and asserts the FULL generated text of every hint name is byte-identical to a
@@ -95,9 +95,9 @@ public sealed class GeneratorGoldenOutputSpec
             public int SizeOf(Temperature value) => 9;
         }
 
-        // ---- type-level union with class and struct members ----
+        // ---- interface union with class and struct members (no attribute: every
+        // [AkkaSerializable] implementor is a member) ----
 
-        [AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled), typeof(OrderExpired))]
         public interface IOrderEvent
         {
         }
@@ -200,14 +200,12 @@ public sealed class GeneratorGoldenOutputSpec
             [property: AkkaField(20)] int[][] Jagged,
             [property: AkkaField(21)] List<Color> Palette) : IProtocol;
 
-        // ---- type-level union field (required and nullable) plus a field-level override that
-        // forces a second helper for the same folded static type (numeric-suffix path) ----
+        // ---- union field (required and nullable) ----
 
         [AkkaSerializable(Manifest = "union-v1")]
         public sealed record UnionMessage(
             [property: AkkaField(1)] IOrderEvent Event,
-            [property: AkkaField(2)] IOrderEvent? MaybeEvent,
-            [property: AkkaField(3), AkkaUnion(typeof(OrderPlaced))] IOrderEvent Narrowed) : IProtocol;
+            [property: AkkaField(2)] IOrderEvent? MaybeEvent) : IProtocol;
 
         // ---- envelope payload (required and nullable) ----
 
@@ -288,14 +286,14 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializer<IProtocol>("golden-sample", 150101)]
         [AkkaSerializerFormatter<Foreign, ForeignFormatter>]
         [AkkaSerializerFormatter<Temperature, TemperatureFormatter>]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
-        [AkkaSerializable<Wrapper<GeoPoint>>(Manifest = "wrapper-geo-v1")]
-        [AkkaSerializable<Wrapper<Pair<int, string>>>(Manifest = "wrapper-pair-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<GeoPoint>>(Manifest = "wrapper-geo-v1")]
+        [AkkaSerializerIncludes<Wrapper<Pair<int, string>>>(Manifest = "wrapper-pair-v1")]
         // Decision 18: a registration is now unconditionally a top-level message too (the adoption
         // rule), not merely "reachable if some field needs it" -- so, unlike before Decision 18,
         // this needs its own Manifest even though Pair<int, string> is also reachable as a nested
         // field of Wrapper<Pair<int, string>> above.
-        [AkkaSerializable<Pair<int, string>>(Manifest = "pair-int-string-v1")]
+        [AkkaSerializerIncludes<Pair<int, string>>(Manifest = "pair-int-string-v1")]
         public sealed partial class GoldenSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

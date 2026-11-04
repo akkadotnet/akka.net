@@ -57,7 +57,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         ("formatter (AKKASG008)", FormatterSource, "AKKASG008"),
         ("closed generic registration (AKKASG020)", ClosedGenericSource, "AKKASG020"),
         ("closed generic missing fields (AKKASG004)", ClosedGenericMissingFieldsSource, "AKKASG004"),
-        ("union member (AKKASG015)", UnionMemberSource, "AKKASG015"),
+        ("unmarked union implementor (AKKASG048)", UnionMemberSource, "AKKASG048"),
         ("duplicate field index (AKKASG005)", DuplicateFieldIndexSource, "AKKASG005"),
     };
 
@@ -287,7 +287,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         }
 
         [AkkaSerializer<IProtocol>("closed-generic-missing-fields", 500009)]
-        [AkkaSerializable<EmptyWrapper<int>>(Manifest = "empty-wrapper-v1")]
+        [AkkaSerializerIncludes<EmptyWrapper<int>>(Manifest = "empty-wrapper-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -356,7 +356,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
 
         [AkkaSerializer<IProtocol>("closed-generic", 500006)]
-        [AkkaSerializable<int>(Manifest = "int-v1")]
+        [AkkaSerializerIncludes<int>(Manifest = "int-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -388,7 +388,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
 
         [AkkaSerializable(Manifest = "outer-v1")]
         public sealed record Outer(
-            [property: AkkaField(1), AkkaUnion(typeof(NotSerializable))] IEvent Event) : IProtocol;
+            [property: AkkaField(1)] IEvent Event) : IProtocol;
         """;
 
     private const string DuplicateFieldIndexSource = """

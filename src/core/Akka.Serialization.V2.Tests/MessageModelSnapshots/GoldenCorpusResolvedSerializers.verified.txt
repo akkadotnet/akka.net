@@ -65,9 +65,7 @@ UsedFormatters:
   global::GoldenSample.Foreign -> global::GoldenSample.ForeignFormatter (ctorKind=Parameterless)
   global::GoldenSample.Temperature -> global::GoldenSample.TemperatureFormatter (ctorKind=System)
 UnionPlan:
-  Union_IOrderEvent (fieldType=global::GoldenSample.IOrderEvent, signature=global::GoldenSample.IOrderEvent|global::GoldenSample.OrderPlaced):
-    global::GoldenSample.OrderPlaced (manifest=order-placed-v1, method=OrderPlaced_52bdf597a009434f)
-  Union_IOrderEvent_2 (fieldType=global::GoldenSample.IOrderEvent, signature=global::GoldenSample.IOrderEvent|global::GoldenSample.OrderPlaced|global::GoldenSample.OrderCancelled|global::GoldenSample.OrderExpired):
+  Union_IOrderEvent (fieldType=global::GoldenSample.IOrderEvent, signature=global::GoldenSample.IOrderEvent|global::GoldenSample.OrderPlaced|global::GoldenSample.OrderCancelled|global::GoldenSample.OrderExpired):
     global::GoldenSample.OrderPlaced (manifest=order-placed-v1, method=OrderPlaced_52bdf597a009434f)
     global::GoldenSample.OrderCancelled (manifest=order-cancelled-v1, method=OrderCancelled_76715fe24db6852f)
     global::GoldenSample.OrderExpired (manifest=order-expired-v1, method=OrderExpired_229d90eb12e6b0fb)

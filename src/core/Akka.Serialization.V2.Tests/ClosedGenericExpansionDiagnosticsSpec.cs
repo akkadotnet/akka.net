@@ -48,7 +48,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             public sealed record Envelope<T>([property: AkkaField(1)] T Message);
 
             [AkkaSerializer<IProtocol>("sample", 140401)]
-            [AkkaSerializable<Envelope<Member>>(ManifestPrefix = "env")]
+            [AkkaSerializerIncludes<Envelope<Member>>(ManifestPrefix = "env")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -81,7 +81,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             public sealed record Plain([property: AkkaField(1)] string Value) : IProtocol;
 
             [AkkaSerializer<IProtocol>("sample", 140402)]
-            [AkkaSerializable<Plain>(ManifestPrefix = "no-op")]
+            [AkkaSerializerIncludes<Plain>(ManifestPrefix = "no-op")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -120,7 +120,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             public sealed record Envelope<T>([property: AkkaField(1)] T Message);
 
             [AkkaSerializer<IProtocol>("sample", 140403)]
-            [AkkaSerializable<Envelope<IProtocol>>(ManifestPrefix = "env")]
+            [AkkaSerializerIncludes<Envelope<IProtocol>>(ManifestPrefix = "env")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -157,14 +157,14 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             public sealed record Shared([property: AkkaField(1)] string Value);
 
             [AkkaSerializer<IProtocolA>("sample-a", 140404)]
-            [AkkaSerializable<Shared>(Manifest = "shared-a-v1")]
+            [AkkaSerializerIncludes<Shared>(Manifest = "shared-a-v1")]
             public sealed partial class SerializerA : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializer<IProtocolB>("sample-b", 140405)]
-            [AkkaSerializable<Shared>(Manifest = "shared-b-v1")]
+            [AkkaSerializerIncludes<Shared>(Manifest = "shared-b-v1")]
             public sealed partial class SerializerB : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -210,7 +210,7 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
             // SerializerB adopts Member directly, even though it already belongs to SerializerA
             // through the protocol it implements.
             [AkkaSerializer<IProtocolB>("sample-b", 140407)]
-            [AkkaSerializable<Member>(Manifest = "member-b-v1")]
+            [AkkaSerializerIncludes<Member>(Manifest = "member-b-v1")]
             public sealed partial class SerializerB : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -247,10 +247,10 @@ public sealed class ClosedGenericExpansionDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>("sample", 140408)]
             // Derives Envelope<First> = "env" + "/" + "b" = "env/b".
-            [AkkaSerializable<Envelope<IProtocol>>(ManifestPrefix = "env")]
+            [AkkaSerializerIncludes<Envelope<IProtocol>>(ManifestPrefix = "env")]
             // Collides with the derived manifest above -- deliberately, to prove a derived manifest
             // participates in the SAME AKKASG012 check as every hand-written one.
-            [AkkaSerializable<Box<int>>(Manifest = "env/b")]
+            [AkkaSerializerIncludes<Box<int>>(Manifest = "env/b")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

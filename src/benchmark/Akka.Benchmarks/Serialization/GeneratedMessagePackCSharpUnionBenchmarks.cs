@@ -21,7 +21,7 @@ using BenchmarkDotNet.Configs;
 namespace Akka.Benchmarks.Serialization;
 
 /// <summary>
-/// A C# 15 <c>union</c> field against the equivalent <c>[AkkaUnion]</c> closed record hierarchy
+/// A C# 15 <c>union</c> field against the equivalent closed record hierarchy
 /// field. Both hold the SAME case objects and write the SAME bytes (checked in
 /// <see cref="Setup"/>), so each category isolates the cost of the dispatch shape: the hierarchy
 /// dispatches on the field value's runtime type, the union on the runtime type of its
@@ -96,7 +96,7 @@ public class GeneratedMessagePackCSharpUnionBenchmarks
 
         // The comparison is only fair if both shapes do the same encoding work.
         if (!_hierarchyFirstBytes.SequenceEqual(_unionFirstBytes) || !_hierarchyLastBytes.SequenceEqual(_unionLastBytes))
-            throw new InvalidOperationException("C# union and [AkkaUnion] hierarchy fields must write identical bytes for the same case.");
+            throw new InvalidOperationException("C# union and closed hierarchy fields must write identical bytes for the same case.");
 
         Console.WriteLine($"First-case payload: {_unionFirstBytes.Length} bytes; last-case payload: {_unionLastBytes.Length} bytes; default union payload: {_unionDefaultBytes.Length} bytes");
     }
@@ -158,7 +158,6 @@ public sealed partial class CSharpUnionBenchmarkSerializer : AkkaSerializer
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
-[AkkaUnion]
 public abstract record CoverageBenchmark
 {
     private CoverageBenchmark()

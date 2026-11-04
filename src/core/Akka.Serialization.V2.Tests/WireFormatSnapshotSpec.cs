@@ -76,12 +76,12 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         "readonly-collection-populated",
         "readonly-dictionary-populated",
 
-        // [AkkaUnion]: one snapshot per declared member of IOrderEvent.
+        // Interface union: one snapshot per member of IOrderEvent.
         "union-member-order-placed-class",
         "union-member-order-cancelled-nested-only",
         "union-member-order-note-struct",
 
-        // Closed-generic [AkkaSerializable<T>] registrations.
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations.
         "closed-generic-wrapper-order-request",
         "closed-generic-wrapper-order-receipt",
 
@@ -237,7 +237,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             new Dictionary<string, int> { ["a"] = 1, ["b"] = 2 })),
 
         // --------------------------------------------------------------------------------------
-        // [AkkaUnion] -- one snapshot per declared member of IOrderEvent -- fixtures from
+        // Interface union -- one snapshot per member of IOrderEvent -- fixtures from
         // GeneratedUnionSpec.
         // --------------------------------------------------------------------------------------
         "union-member-order-placed-class" => Case(_unionSerializer, new UnionEnvelope(
@@ -250,7 +250,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             "env-3", new OrderNote("order-3", "expedite"))),
 
         // --------------------------------------------------------------------------------------
-        // Closed-generic [AkkaSerializable<T>] registrations -- fixtures from
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations -- fixtures from
         // GeneratedClosedGenericSpec.
         // --------------------------------------------------------------------------------------
         "closed-generic-wrapper-order-request" => Case(_closedGenericSerializer, new Wrapper<OrderRequest>(

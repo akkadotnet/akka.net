@@ -45,7 +45,7 @@ public class SourceGeneratorBenchmarks
     public int MessagesPerSerializer { get; set; }
 
     /// <summary>
-    /// S7: when true, serializer 0 ALSO carries an <c>[AkkaSerializable&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
+    /// S7: when true, serializer 0 ALSO carries an <c>[AkkaSerializerIncludes&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
     /// registration -- <see cref="SourceGeneratorBenchmarkCorpus.BuildSource"/>'s
     /// <c>includeManifestPrefixVariant</c> parameter -- expanding over all
     /// <see cref="MessagesPerSerializer"/> of serializer 0's own protocol messages. Runs every
@@ -173,7 +173,7 @@ public class SourceGeneratorBenchmarks
 /// Builds a synthetic <c>[AkkaSerializable]</c>/<c>[AkkaSerializer]</c> corpus of a given size, for
 /// benchmarking the generator pipeline rather than testing its correctness. Each serializer gets:
 /// a scalar-field message mix, one nested value object (a <c>readonly record struct</c>), one
-/// <c>[AkkaUnion]</c> with three members, and one closed-generic <c>[AkkaSerializable&lt;T&gt;]</c>
+/// union interface with three implementors, and one closed-generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
 /// registration.
 /// </summary>
 internal static class SourceGeneratorBenchmarkCorpus
@@ -185,7 +185,7 @@ internal static class SourceGeneratorBenchmarkCorpus
     /// <c>IncrementalEditOneMessage</c> without any fragile string-replace over the generated text.
     /// When <paramref name="includeManifestPrefixVariant"/> is true (S7's own benchmark variant, see
     /// <see cref="SourceGeneratorBenchmarks.PrefixVariant"/>), serializer 0 ALSO gets an
-    /// <c>Envelope0&lt;T&gt;</c> generic wrapper and an <c>[AkkaSerializable&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
+    /// <c>Envelope0&lt;T&gt;</c> generic wrapper and an <c>[AkkaSerializerIncludes&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
     /// registration, expanding over all of serializer 0's own <paramref name="messagesPerSerializer"/>
     /// protocol messages -- the shape the S7 hoist exists to make cheap on every keystroke.
     /// </summary>
@@ -218,8 +218,7 @@ internal static class SourceGeneratorBenchmarkCorpus
         sb.AppendLine("}");
         sb.AppendLine();
 
-        // One [AkkaUnion] with three members.
-        sb.AppendLine($"[AkkaUnion(typeof(UnionMember{s}A), typeof(UnionMember{s}B), typeof(UnionMember{s}C))]");
+        // One union interface with three implementors.
         sb.AppendLine($"public interface IUnion{s}");
         sb.AppendLine("{");
         sb.AppendLine("}");
@@ -308,10 +307,10 @@ internal static class SourceGeneratorBenchmarkCorpus
         }
 
         sb.AppendLine($"[AkkaSerializer<IProtocol{s}>(\"bench-serializer-{s}\", {190000 + s})]");
-        sb.AppendLine($"[AkkaSerializable<Wrapper{s}<int>>(Manifest = \"wrapper{s}-int-v1\")]");
+        sb.AppendLine($"[AkkaSerializerIncludes<Wrapper{s}<int>>(Manifest = \"wrapper{s}-int-v1\")]");
 
         if (includeManifestPrefixVariant)
-            sb.AppendLine($"[AkkaSerializable<Envelope{s}<IProtocol{s}>>(ManifestPrefix = \"env\")]");
+            sb.AppendLine($"[AkkaSerializerIncludes<Envelope{s}<IProtocol{s}>>(ManifestPrefix = \"env\")]");
 
         sb.AppendLine($"public sealed partial class BenchSerializer{s} : AkkaSerializer");
         sb.AppendLine("{");

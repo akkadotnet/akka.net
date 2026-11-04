@@ -168,9 +168,9 @@ A Roslyn source generator cannot reify an open generic type, so a generic `[Akka
 definition is never itself serialized -- only explicitly registered closed constructions are, the
 same model System.Text.Json's source generator uses for `[JsonSerializable]`.
 
-- [x] 11.1 Add `[AkkaSerializable<TMessage>(Manifest = ...)]`, applied to the `[AkkaSerializer]`
+- [x] 11.1 Add `[AkkaSerializerIncludes<TMessage>(Manifest = ...)]`, applied to the `[AkkaSerializer]`
       class, to register one closed generic construction of a generic `[AkkaSerializable]` type
-      (`src/core/Akka.Serialization.V2/Attributes.cs` `AkkaSerializableAttribute<TMessage>`)
+      (`src/core/Akka.Serialization.V2/Attributes.cs` `AkkaSerializerIncludesAttribute<TMessage>`)
 - [x] 11.2 Each registered closed construction dispatches as its own top-level message with its own
       manifest and its own generated `Manifest`/`Serialize`/`Deserialize` arm, with generic fields
       resolved against the concrete type arguments, and is usable as a nested field of an ordinary
@@ -281,7 +281,7 @@ implement Decisions 19 or 21 (the referenced-assembly implementor walk and the u
 member-list form; later PRs) -- the closed set `ManifestPrefix` expands over, and the walk a
 one-owner conflict compares against, are both scoped to the current compilation only.
 
-- [x] 14.1 Add `ManifestPrefix` to `AkkaSerializableAttribute<TMessage>` (extend-only; `Attributes.cs`),
+- [x] 14.1 Add `ManifestPrefix` to `AkkaSerializerIncludesAttribute<TMessage>` (extend-only; `Attributes.cs`),
       alongside the existing `Manifest`. `ClosedGenericRegistrationInfo` gains `ManifestPrefix`,
       `ExpansionGroup` (empty for a directly-written registration; the base target's display name for
       a synthesized expansion member), and `ExpansionError` (non-empty when a `ManifestPrefix`

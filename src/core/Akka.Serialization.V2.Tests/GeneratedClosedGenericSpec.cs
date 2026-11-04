@@ -16,7 +16,7 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Specs for the generic <c>[AkkaSerializable&lt;T&gt;]</c> form: registering CLOSED generic constructions of a
+/// Specs for the generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c> form: registering CLOSED generic constructions of a
 /// generic <c>[AkkaSerializable]</c> type on the serializer module, the same closed-construction
 /// registration model System.Text.Json's source generator uses for <c>[JsonSerializable]</c>.
 /// Each registered construction behaves as its own top-level message with its own manifest, with
@@ -66,7 +66,7 @@ public sealed class GeneratedClosedGenericSpec : IAsyncLifetime
     [Fact(DisplayName = "Closed construction wire format should inline the substituted payload with no discriminator")]
     public void Closed_construction_wire_format_should_inline_payload()
     {
-        // Contrast with both an object-typed envelope field ({id, manifest, bytes}) and [AkkaUnion]
+        // Contrast with both an object-typed envelope field ({id, manifest, bytes}) and a union field
         // ({manifest, fields}): a T-typed field in a registered construction is statically known,
         // so it encodes as a plain nested field map with NO discriminator of any kind.
         var message = new Wrapper<OrderRequest>("wrap-4", new OrderRequest("order-4", 9), null);
@@ -137,9 +137,9 @@ public interface IClosedGenericTestProtocol
 }
 
 [AkkaSerializer<IClosedGenericTestProtocol>("closed-generic-test", 120404)]
-[AkkaSerializable<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
-[AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
-[AkkaSerializable<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
+[AkkaSerializerIncludes<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
+[AkkaSerializerIncludes<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
+[AkkaSerializerIncludes<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
 public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -158,8 +158,8 @@ public sealed record Wrapper<T>(
 /// <summary>
 /// The combined scenario: a generic wrapper whose payload property is a closed union. The
 /// definition declares NO union of its own -- at instantiation time (T := IOrderEvent) the
-/// substituted static type's TYPE-LEVEL [AkkaUnion] declaration on IOrderEvent is picked up, and
-/// its members are validated against the substituted type.
+/// substituted static type IOrderEvent is an interface, so the field becomes a union over its
+/// [AkkaSerializable] implementors, validated against the substituted type.
 /// </summary>
 [AkkaSerializable]
 public sealed record EventWrapper<T>(

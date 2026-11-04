@@ -21,8 +21,8 @@ namespace Akka.Benchmarks.Serialization;
 /// <summary>
 /// Companion to <see cref="GeneratedMessagePackSerializerBenchmarks"/>: covers two source-generated
 /// features that predate that file and had zero benchmark coverage until now --
-/// <c>[AkkaUnion]</c> manifest-discriminated union fields (see
-/// Akka.Serialization.V2.Tests.GeneratedUnionSpec) and closed-generic <c>[AkkaSerializable&lt;T&gt;]</c>
+/// manifest-discriminated union fields typed as an interface (see
+/// Akka.Serialization.V2.Tests.GeneratedUnionSpec) and closed-generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
 /// registrations (see Akka.Serialization.V2.Tests.GeneratedClosedGenericSpec), including the combined
 /// "generic wrapper over a union interface" shape that motivated both features.
 /// </summary>
@@ -66,17 +66,16 @@ public class GeneratedMessagePackUnionAndGenericBenchmarks
         }));
         _system = (ExtendedActorSystem)ActorSystem.Create("generated-messagepack-union-generic-bench", setup);
 
-        // Representative member: OrderPlacedEvent is the FIRST type named in
-        // [AkkaUnion(typeof(OrderPlacedEvent), typeof(OrderShippedEvent), typeof(OrderCancelledEvent), typeof(OrderRefundedEvent))]
-        // on IOrderEventBenchmark below, so its write dispatch matches on the first `if (runtimeType == typeof(...))`
+        // Representative member: OrderPlacedEvent is the FIRST IOrderEventBenchmark implementor
+        // declared below, so its write dispatch matches on the first `if (runtimeType == typeof(...))`
         // check the generator emits for GenerateUnionWrite.
         _unionRepresentative = new UnionBenchmarkEnvelope(
             "union-env-1",
             new OrderPlacedEvent("order-90001", Guid.Parse("11111111-2222-3333-4444-555555555555"), 4, 199.95m));
 
-        // Worst case: OrderRefundedEvent is the LAST type named in the same [AkkaUnion] list. Union
-        // write dispatch is a sequential `if (runtimeType == typeof(member)) { ...; return; }` chain in
-        // declaration order (AkkaSerializerGenerator.GenerateUnionWrite) -- unlike union READ, which
+        // Worst case: OrderRefundedEvent is the LAST implementor declared. Union write dispatch is a
+        // sequential `if (runtimeType == typeof(member)) { ...; return; }` chain in member order
+        // (AkkaSerializerGenerator.GenerateUnionWrite) -- unlike union READ, which
         // dispatches on the manifest string through a `switch` (a jump table, not sequential), so there
         // is no equivalent read-side "worst case". Serializing OrderRefundedEvent must fall through three
         // failed type-equality checks before it matches.
@@ -107,8 +106,8 @@ public class GeneratedMessagePackUnionAndGenericBenchmarks
         // The flagship combined scenario: a registered closed-generic construction
         // (GenericBenchmarkWrapper<IOrderEventBenchmark>) whose type argument is itself a
         // manifest-discriminated union interface. No object boundary anywhere on the wire: the wrapper's
-        // Payload field is statically typed as IOrderEventBenchmark, picks up that interface's
-        // type-level [AkkaUnion] declaration automatically, and is dispatched/encoded inline.
+        // Payload field is statically typed as IOrderEventBenchmark, so it is a union over that
+        // interface's implementors, dispatched and encoded inline.
         _combinedWrapper = new GenericBenchmarkWrapper<IOrderEventBenchmark>(
             "wrapper-2",
             new OrderPlacedEvent("order-90004", Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"), 6, 349.5m),
@@ -197,20 +196,19 @@ public interface IGenericBenchmarkProtocol
 }
 
 [AkkaSerializer<IGenericBenchmarkProtocol>("closed-generic-benchmark", 120005)]
-[AkkaSerializable<GenericBenchmarkWrapper<OrderDetailPayload>>(Manifest = "generic-wrapper-order-detail-v1")]
-[AkkaSerializable<GenericBenchmarkWrapper<IOrderEventBenchmark>>(Manifest = "generic-wrapper-order-event-v1")]
+[AkkaSerializerIncludes<GenericBenchmarkWrapper<OrderDetailPayload>>(Manifest = "generic-wrapper-order-detail-v1")]
+[AkkaSerializerIncludes<GenericBenchmarkWrapper<IOrderEventBenchmark>>(Manifest = "generic-wrapper-order-event-v1")]
 public sealed partial class GenericBenchmarkSerializer : AkkaSerializer
 {
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 /// <summary>
-/// The union's static field type, carrying the type-level member declaration -- inherited by every
-/// field typed as <see cref="IOrderEventBenchmark"/>, including the substituted <c>T</c> of
-/// <see cref="GenericBenchmarkWrapper{T}"/> in the combined scenario. Declaration order here IS write
-/// dispatch order (see <see cref="GeneratedMessagePackUnionAndGenericBenchmarks.Union_worst_case_last_declared_member_serialize"/>).
+/// The union's static field type: every field typed as <see cref="IOrderEventBenchmark"/>, including
+/// the substituted <c>T</c> of <see cref="GenericBenchmarkWrapper{T}"/> in the combined scenario, is a
+/// union over its implementors below. Their declaration order IS write dispatch order (see
+/// <see cref="GeneratedMessagePackUnionAndGenericBenchmarks.Union_worst_case_last_declared_member_serialize"/>).
 /// </summary>
-[AkkaUnion(typeof(OrderPlacedEvent), typeof(OrderShippedEvent), typeof(OrderCancelledEvent), typeof(OrderRefundedEvent))]
 public interface IOrderEventBenchmark
 {
 }

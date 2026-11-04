@@ -153,13 +153,13 @@ internal static class GeneratorTestHarness
     /// generator" shape used by the cross-assembly baseline spec. The generator never runs over
     /// this compilation.
     /// </summary>
-    public static MetadataReference CompileToReference(string source, string assemblyName)
+    public static MetadataReference CompileToReference(string source, string assemblyName, params MetadataReference[] references)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, ParseOptions, path: assemblyName + ".cs");
         var compilation = CSharpCompilation.Create(
             assemblyName,
             new[] { syntaxTree },
-            BaseReferences,
+            BaseReferences.Concat(references),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
 
         var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();

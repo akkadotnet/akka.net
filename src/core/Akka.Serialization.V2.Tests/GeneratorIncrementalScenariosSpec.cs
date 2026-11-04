@@ -698,7 +698,7 @@ public sealed class GeneratorIncrementalScenariosSpec
             [property: AkkaField(2)] string TraceId);
 
         [AkkaSerializer<IGammaProtocol>("scenario-gamma", 170101)]
-        [AkkaSerializable<Envelope<IGammaProtocol>>(ManifestPrefix = "gamma")]
+        [AkkaSerializerIncludes<Envelope<IGammaProtocol>>(ManifestPrefix = "gamma")]
         public sealed partial class GammaSerializer : AkkaSerializer
         {
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

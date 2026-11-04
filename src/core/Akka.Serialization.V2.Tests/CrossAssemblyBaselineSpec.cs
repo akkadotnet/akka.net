@@ -98,7 +98,7 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().Contain("WriteMoney").And.Contain("ReadMoney");
     }
 
-    [Fact(DisplayName = "Cross-assembly baseline: union members declared and [AkkaSerializable] in a referenced assembly fail AKKASG015 (not found), even though the type-level [AkkaUnion] declaration on the interface IS discovered")]
+    [Fact(DisplayName = "Cross-assembly baseline: an interface field whose [AkkaSerializable] implementors live in a referenced assembly discovers and serializes them")]
     public void Union_members_from_referenced_assembly()
     {
         const string sourceA = """
@@ -107,7 +107,6 @@ public sealed class CrossAssemblyBaselineSpec
 
             namespace CrossAssemblyBaseline.Case2.AssemblyA;
 
-            [AkkaUnion(typeof(Placed), typeof(Cancelled))]
             public interface IOrderEvent { }
 
             [AkkaSerializable(Manifest = "placed-v1")]
@@ -140,9 +139,8 @@ public sealed class CrossAssemblyBaselineSpec
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
         // Why this case now compiles clean (Decision 16).
-        // The generator reads [AkkaUnion] off the IOrderEvent symbol. This already worked across
-        // assemblies before this decision: the field maps to FieldKind.Union, not Unsupported, so
-        // AKKASG003 never fires. What used to fail is the SAME lookup case 1 hit: each member
+        // The field is typed as the interface IOrderEvent, so it maps to FieldKind.Union, not
+        // Unsupported, and AKKASG003 never fires. What used to fail is the SAME lookup case 1 hit: each member
         // (Placed, Cancelled) is checked against messagesByType, which held only types declared
         // here. Both live in A, so both used to fail as AKKASG015, even though both already carry
         // [AkkaSerializable] and a manifest there.
@@ -188,7 +186,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record Holder([property: AkkaField(1)] Wrapper<int> Count) : IWrap;
 
             [AkkaSerializer<IWrap>("wrap", 130003)]
-            [AkkaSerializable<Wrapper<int>>(Manifest = "wrap-int-v1")]
+            [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrap-int-v1")]
             public sealed partial class WrapSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
@@ -199,7 +197,7 @@ public sealed class CrossAssemblyBaselineSpec
         var registeredAll = registeredGeneratorDiagnostics.AddRange(registeredCompileDiagnostics);
 
         // Why registering the closed construction works.
-        // [AkkaSerializable<Wrapper<int>>] reads the Wrapper<T> definition off the type symbol,
+        // [AkkaSerializerIncludes<Wrapper<int>>] reads the Wrapper<T> definition off the type symbol,
         // not off syntax. The registration step adds Wrapper<int> to messagesByType itself.
         // This avoids the gap that cases 1 and 2 hit. No errors. The generator emits the write
         // and read helpers.
@@ -207,7 +205,7 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().Contain("WriteWrapperInt");
         generatedSource.Should().Contain("ReadWrapperInt");
 
-        // Same setup as above, but with no [AkkaSerializable<Wrapper<int>>] registration.
+        // Same setup as above, but with no [AkkaSerializerIncludes<Wrapper<int>>] registration.
         const string sourceBUnregistered = """
             #nullable enable
             using Akka.Actor;
@@ -275,7 +273,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record AcceptCassette([property: AkkaField(1)] int Layer) : IComms;
 
             [AkkaSerializer<IComms>("comms", 130005)]
-            [AkkaSerializable<Envelope<AcceptCassette>>(Manifest = "env-dmac")]
+            [AkkaSerializerIncludes<Envelope<AcceptCassette>>(Manifest = "env-dmac")]
             public sealed partial class CommsSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
@@ -323,7 +321,7 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record Holder([property: AkkaField(1)] Envelope<object> Inner) : IComms;
 
             [AkkaSerializer<IComms>("comms", 130006)]
-            [AkkaSerializable<Envelope<object>>(Manifest = "env-any")]
+            [AkkaSerializerIncludes<Envelope<object>>(Manifest = "env-any")]
             public sealed partial class CommsSerializer : AkkaSerializer
             { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
@@ -464,22 +462,21 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().BeEmpty("AKKASG039 is an error, so the pipeline skips AddSource for ShopSerializer");
     }
 
-    [Fact(DisplayName = "AKKASG039: a union member that is itself internal to the referenced assembly (declared via an [AkkaUnion] usage written IN that assembly) fails AKKASG039")]
-    public void Union_member_type_not_accessible()
+    [Fact(DisplayName = "Cross-assembly baseline: an internal implementor in a referenced assembly is not discovered, and the public one still is")]
+    public void Internal_implementor_in_referenced_assembly_is_not_discovered()
     {
-        // [AkkaUnion(typeof(Placed), typeof(Cancelled))] is written IN assembly A, on IOrderEvent,
-        // so the C# compiler only ever needs Cancelled to be accessible FROM A -- an internal type
-        // is always accessible from its own assembly. B never names Cancelled directly; it only
-        // names the public interface IOrderEvent. That is exactly the shape that lets a directly
-        // inaccessible TYPE (not one level down, unlike the nested-field case above) reach this
-        // generator at all: B's own source never had a chance to reject it at compile time.
+        // The referenced-assembly walk reads A's PUBLIC type table only: an internal type can never
+        // be named by B's generated code, so it can never be a union member there. Discovery picks
+        // up the public Placed and silently leaves the internal Cancelled out -- a Cancelled value
+        // reaching this field fails at write time, the same as any type the build cannot see.
+        // AKKASG048 cannot catch it either: that check covers implementors declared in THIS
+        // compilation only.
         const string sourceA = """
             #nullable enable
             using Akka.Serialization.V2;
 
             namespace CrossAssemblyBaseline.Case8.AssemblyA;
 
-            [AkkaUnion(typeof(Placed), typeof(Cancelled))]
             public interface IOrderEvent { }
 
             [AkkaSerializable(Manifest = "placed-v1")]
@@ -511,44 +508,24 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case8.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // Placed resolves fine (public, accessible) -- only Cancelled fails.
-        all.Should().NotContain(d => d.Id == "AKKASG015" && d.GetMessage(null).Contains("Placed", StringComparison.Ordinal));
-        all.Should().Contain(d =>
-            d.Id == "AKKASG039" &&
-            d.Severity == DiagnosticSeverity.Error &&
-            d.GetMessage(null).Contains("Cancelled", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("Event", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("CrossAssemblyBaseline.Case8.A", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("internal", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("OrdersSerializer", StringComparison.Ordinal));
-        generatedSource.Should().BeEmpty("AKKASG039 is an error, so the pipeline skips AddSource for OrdersSerializer");
+        all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        generatedSource.Should().Contain("WritePlaced").And.NotContain("Cancelled");
     }
 
-    [Fact(DisplayName = "AKKASG039: an accessibility problem one level down (a nested field's OWN union member is internal) is attributed to the actual broken type, and still reports at the LOCAL top-level reference site")]
-    public void Nested_field_failure_one_level_down()
+    [Fact(DisplayName = "Cross-assembly baseline: a nested referenced-assembly type whose interface field has only an internal implementor fails AKKASG019")]
+    public void Nested_union_with_only_internal_implementor_reports_AKKASG019()
     {
-        // Money is fully public and would resolve fine on its own. Its own field, Location, is typed
-        // as the PUBLIC interface IAddressKind -- Money never directly appears inaccessible. But
-        // IAddressKind's only declared union member, SecretAddress, is internal to A. Building
-        // Money's schema succeeds (Location itself is fully readable), but completing the union it
-        // carries requires resolving SecretAddress's own schema, and THAT fails. Decision 16: the
-        // failure "can sit one level down ... it does not stop at the property in B that referenced
-        // it" -- the message must name SecretAddress, not just Money, while the diagnostic still
-        // reports at Pay's own Amount property in B (the only local site there is).
-        //
-        // This is also the only way a directly-inaccessible NESTED type can reach this generator at
-        // all in practice: a nested OBJECT field's own type must be exactly as accessible as the
-        // field itself (C# CS0051/CS0053), so an object-typed field can never point at a strictly
-        // less accessible nested type. A union field has no such constraint -- [AkkaUnion] is
-        // written IN A, on IAddressKind, so SecretAddress only ever needs to be accessible from A's
-        // own code, which internal always is.
+        // Money is public and nested in Pay. Its own field, Location, is typed as the public
+        // interface IAddressKind, whose only implementor, SecretAddress, is internal to A. The
+        // referenced-assembly walk sees only A's public types, so Money's union has no members at
+        // all and fails AKKASG019, which stops emission for ShopSerializer. The diagnostic belongs
+        // to Money's field in A's metadata, so it carries no source location in B.
         const string sourceA = """
             #nullable enable
             using Akka.Serialization.V2;
 
             namespace CrossAssemblyBaseline.Case9.AssemblyA;
 
-            [AkkaUnion(typeof(SecretAddress))]
             public interface IAddressKind { }
 
             [AkkaSerializable(Manifest = "secret-address-v1")]
@@ -581,17 +558,11 @@ public sealed class CrossAssemblyBaselineSpec
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
         all.Should().Contain(d =>
-            d.Id == "AKKASG039" &&
+            d.Id == "AKKASG019" &&
             d.Severity == DiagnosticSeverity.Error &&
-            // Reports at Pay.Amount -- the LOCAL site that named Money -- even though Money itself
-            // is accessible; there is no local site on SecretAddress to point at instead.
-            d.GetMessage(null).Contains("Amount", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("Money", StringComparison.Ordinal) &&
-            // The failing type named in the message is SecretAddress, one level below Money.
-            d.GetMessage(null).Contains("SecretAddress", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("internal", StringComparison.Ordinal) &&
-            d.GetMessage(null).Contains("ShopSerializer", StringComparison.Ordinal));
-        generatedSource.Should().BeEmpty("AKKASG039 is an error, so the pipeline skips AddSource for ShopSerializer");
+            d.GetMessage(null).Contains("Location", StringComparison.Ordinal) &&
+            d.GetMessage(null).Contains("IAddressKind", StringComparison.Ordinal));
+        generatedSource.Should().BeEmpty("AKKASG019 is an error, so the pipeline skips AddSource for ShopSerializer");
     }
 
     // Delegates to the shared harness (Harness/GeneratorTestHarness.cs), which builds the base

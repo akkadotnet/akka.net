@@ -276,7 +276,7 @@ public sealed partial class AkkaSerializerGenerator
     /// and [AkkaSerializable]-marked open generic definitions (governed entirely by AKKASG022's
     /// registration machinery). An unmarked OPEN GENERIC definition that implements the protocol is
     /// still an error here: with no [AkkaSerializable] on the definition, none of its closed
-    /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
+    /// constructions could ever be registered with [AkkaSerializerIncludes&lt;T&gt;] in the first place.
     /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
     /// today and only fails at runtime, the first time it is sent.
     /// As of S5, the whole-compilation scan that used to run HERE, per serializer, now runs exactly
@@ -489,6 +489,18 @@ public sealed partial class AkkaSerializerGenerator
 
         var isValid = true;
 
+        // AKKASG053: a Manifest on a registration of a non-generic type, which declares its own.
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.MisplacedManifest.Length > 0))
+        {
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            var ownManifest = registration.Manifest.Length > 0
+                ? $" (which currently declares \"{registration.Manifest}\")"
+                : " (which declares none yet)";
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ManifestOnNonGenericInclude, at,
+                ToDisplayName(registration.TargetDisplayName), serializer.ClassName, registration.MisplacedManifest, ownManifest));
+            isValid = false;
+        }
+
         // AKKASG040: a ManifestPrefix registration that could not expand at all.
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length > 0))
         {
@@ -521,7 +533,7 @@ public sealed partial class AkkaSerializerGenerator
 
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length == 0 && !IsValidRegistration(r)))
         {
-            // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
+            // Reports at THIS registration's own [AkkaSerializerIncludes<T>] attribute application --
             // Decision 16: "the registration attribute for a closed generic".
             var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidClosedGenericRegistration, at, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
@@ -565,7 +577,7 @@ public sealed partial class AkkaSerializerGenerator
                 continue;
 
             // Reports at the SERIALIZER's own attribute: the fix ("register each closed construction
-            // with [AkkaSerializable<T>] ... on the serializer class") is an edit to the serializer,
+            // with [AkkaSerializerIncludes<T>] ... on the serializer class") is an edit to the serializer,
             // not to the generic definition itself.
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.GenericSerializableRequiresRegistration, new LocationKey(serializer.Key, string.Empty),
                 ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
@@ -785,15 +797,6 @@ public sealed partial class AkkaSerializerGenerator
                 diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ConstructorParameterNotCovered, messageAt, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
-            // Error (AKKASG038): an object-typed property is always the envelope-payload boundary
-            // (the static type alone carries that meaning); a field-level [AkkaUnion] on it can
-            // never take effect, so this is contradictory author intent, not a harmless no-op.
-            foreach (var field in message.Fields.Where(field => field.UnionDeclaredOnObjectField))
-            {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionDeclaredOnObjectField, new LocationKey(message.Key, field.Name), field.Name, ToDisplayName(message.FullyQualifiedName)));
-                isValid = false;
-            }
-
             foreach (var field in message.Fields.Where(field => GetDiagnosticKind(field, out _) == FieldKind.Unsupported))
             {
                 var at = new LocationKey(message.Key, field.Name);
@@ -822,6 +825,27 @@ public sealed partial class AkkaSerializerGenerator
             {
                 if (!ValidateUnionField(message, field, messagesByType, accessibilityFailuresByType, unionHierarchies, serializer.ClassName, diagnostics))
                     isValid = false;
+            }
+
+            // AKKASG052: a nested value -- the field itself, or a collection element, key, or value
+            // inside it -- typed as a non-sealed class that something derives from. It is written as
+            // the base's own fields, so a subclass value would lose its own fields on the wire.
+            foreach (var field in message.Fields)
+            {
+                foreach (var nested in EnumerateNestedValueMappings(field.Mapping))
+                {
+                    if (!unionHierarchies.SubclassesByNestedValueKey.TryGetValue(nested.Key, out var subclasses))
+                        continue;
+
+                    var typeName = ToDisplayName(nested.TypeFullName);
+                    var subclassNames = string.Join(", ", subclasses.Select(subclass => "'" + ToDisplayName(subclass.DisplayName ?? string.Empty) + "'"));
+                    var fix = field.Mapping.Kind == FieldKind.Object
+                        ? $"Seal '{typeName}', or make it abstract and remove its [AkkaSerializable] so the property becomes a union of its [AkkaSerializable] subclasses"
+                        : $"Seal '{typeName}'; a union is not supported as a collection element, key, or value";
+                    diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NestedValueHasSubclasses, new LocationKey(message.Key, field.Name),
+                        field.Name, ToDisplayName(message.FullyQualifiedName), typeName, subclassNames, fix));
+                    isValid = false;
+                }
             }
 
             // An Object mapping that resolves to no known message would generate a call to a
@@ -867,7 +891,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     // Decision table for a nested type this generator cannot serialize today: a closed generic
-    // construction reports AKKASG023 (register it with [AkkaSerializable<T>]); a type declared in a
+    // construction reports AKKASG023 (register it with [AkkaSerializerIncludes<T>]); a type declared in a
     // referenced assembly that this compilation cannot see (or cannot read a member of) reports the
     // new AKKASG039; a type declared in a referenced assembly with no schema this generator can read
     // at all reports the AKKASG007 cross-assembly wording; anything else reports the plain AKKASG007
@@ -950,12 +974,6 @@ public sealed partial class AkkaSerializerGenerator
         var unionKey = field.Mapping.Key;
         var unionDisplayName = ToDisplayName(unionKey.DisplayName ?? field.UnionTypeFullName);
 
-        if (field.UnionDeclarationConflict.Length > 0)
-        {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.UnionTypeFullName), field.UnionDeclarationConflict));
-            isValid = false;
-        }
-
         // AKKASG048: a discovered set only sees [AkkaSerializable] types, so a derived type that
         // forgot the attribute silently drops out of dispatch and fails on its first write.
         var hasUnmarkedImplementor = false;
@@ -972,37 +990,19 @@ public sealed partial class AkkaSerializerGenerator
                 isValid = false;
         }
 
-        // AKKASG019, empty set: an explicit list always has at least one member (`first` is a
-        // mandatory constructor argument), but a discovered set can resolve to nothing. Generating a
-        // dispatch helper with no arms only produces dead code that throws on every call. When the
-        // set is empty BECAUSE its implementors are unmarked, AKKASG048 above already names the fix.
+        // AKKASG019, empty set: a discovered set can resolve to nothing -- an interface or abstract
+        // class nothing [AkkaSerializable] implements. Generating a dispatch helper with no arms only
+        // produces dead code that throws on every call. When the set is empty BECAUSE its
+        // implementors are unmarked, AKKASG048 above already names the fix.
         if (field.UnionMembers.IsEmpty)
         {
             if (!hasUnmarkedImplementor)
             {
                 diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, at, field.Name, ToDisplayName(message.FullyQualifiedName),
-                    $"no [AkkaSerializable] type derives from or implements '{unionDisplayName}', so the union has no members"));
+                    $"no [AkkaSerializable] type derives from or implements '{unionDisplayName}', so the union has no members; mark its implementations [AkkaSerializable] with a Manifest, or type the property as object for an envelope payload"));
             }
 
             return false;
-        }
-
-        // AKKASG049: an explicit list on a closed hierarchy that leaves out one of its cases.
-        if (!field.IsDiscoveredUnion && unionHierarchies.ClosedKeys.Contains(unionKey))
-        {
-            var listed = new HashSet<TypeKey>(field.UnionMembers.Select(member => member.Key));
-            var omitted = new List<TypeKey>();
-            if (unionHierarchies.MarkedImplementorsByKey.TryGetValue(unionKey, out var markedCases))
-                omitted.AddRange(markedCases.Where(candidate => !listed.Contains(candidate)));
-            if (unionHierarchies.UnmarkedImplementorsByKey.TryGetValue(unionKey, out var unmarkedCases))
-                omitted.AddRange(unmarkedCases.Where(candidate => !listed.Contains(candidate)));
-
-            if (omitted.Count > 0)
-            {
-                omitted.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
-                var omittedNames = string.Join(", ", omitted.Select(candidate => "'" + ToDisplayName(candidate.DisplayName ?? string.Empty) + "'"));
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberSetIncomplete, at, field.Name, ToDisplayName(message.FullyQualifiedName), omittedNames, unionDisplayName));
-            }
         }
 
         // Grouped by TypeKey (not display text) so two distinct types that happen to render the
@@ -1023,12 +1023,6 @@ public sealed partial class AkkaSerializerGenerator
                 ReportUnionMemberNotSerializable(message, field.Name, member, serializerClassName, accessibilityFailuresByType, diagnostics);
                 isValid = false;
                 continue;
-            }
-
-            if (!member.IsAssignable)
-            {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotAssignable, at, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
-                isValid = false;
             }
 
             // Advisory tier for member types whose exact-runtime-type dispatch is compromised:
