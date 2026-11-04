@@ -287,6 +287,67 @@ public sealed class CSharpUnionSpec : AkkaSpec
         error.GetMessage(null).Should().Contain("Unions.CoverageMessage");
     }
 
+    [Fact(DisplayName = "Should_ReportOnlyAKKASG051_When_AkkaSerializableUnionIsUsedAsField")]
+    public void Should_ReportOnlyAKKASG051_When_AkkaSerializableUnionIsUsedAsField()
+    {
+        var source = CoverageCases + """
+
+            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            public union CoverageMessage(PaidInvoice, Trial);
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1)] CoverageMessage Coverage) : ISubscriptionEvent;
+            """;
+
+        var result = RunPreview(source);
+
+        result.GeneratorDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Id).Should().Equal("AKKASG051");
+    }
+
+    [Fact(DisplayName = "Should_RoundTripNullableValueTypeCase_When_UnionDeclaresIt")]
+    public void Should_RoundTripNullableValueTypeCase_When_UnionDeclaresIt()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Unions.NullableCase;
+
+            [AkkaSerializable(Manifest = "point")]
+            public readonly record struct Point([property: AkkaField(1)] int X, [property: AkkaField(2)] int Y);
+
+            [AkkaSerializable(Manifest = "label")]
+            public sealed record Label([property: AkkaField(1)] string Text);
+
+            public union Marker(Point?, Label);
+
+            public interface IMarked;
+
+            [AkkaSerializable(Manifest = "marked")]
+            public sealed record Marked([property: AkkaField(1)] Marker Marker) : IMarked;
+
+            [AkkaSerializer<IMarked>("marked", 152004)]
+            public sealed partial class MarkedSerializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+
+            public static class Samples
+            {
+                public static object[] All() => [new Marked(new Marker((Point?)new Point(3, 4))), new Marked(new Marker(new Label("x"))), new Marked(default)];
+            }
+            """;
+
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "Unions.NullableCase.MarkedSerializer");
+        foreach (var original in (object[])Invoke(assembly, "Unions.NullableCase.Samples", "All")!)
+            serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
+    }
+
     [Fact(DisplayName = "Should_UseOwnSchema_When_AkkaSerializableStructAlsoImplementsIUnion")]
     public void Should_UseOwnSchema_When_AkkaSerializableStructAlsoImplementsIUnion()
     {

@@ -1317,8 +1317,11 @@ public sealed partial class AkkaSerializerGenerator
         if (!implementsIUnion)
             return false;
 
+        // An [AkkaSerializable] struct keeps its own schema, except a real union declaration: that
+        // already gets AKKASG051, and a field of its type should still map as the union it is.
         if (knownTypes.SerializableAttribute != null
-            && type.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
+            && type.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute))
+            && !IsDeclaredAsUnion(type))
             return false;
 
         var hasPublicValue = type.GetMembers("Value").OfType<IPropertySymbol>().Any(property =>
@@ -1344,7 +1347,12 @@ public sealed partial class AkkaSerializerGenerator
             if (constructor.DeclaredAccessibility != Accessibility.Public || constructor.Parameters.Length != 1)
                 continue;
 
+            // A nullable value-type case (union U(VS?, ...)) holds a boxed VS when set, so it is the
+            // VS case on the wire; the VS value converts back to VS? when the union is rebuilt.
             var caseType = constructor.Parameters[0].Type;
+            if (TryGetNullableValueType(caseType, out var underlyingCase))
+                caseType = underlyingCase;
+
             if (!seen.Add(caseType))
                 continue;
 
@@ -1366,6 +1374,22 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Whether <paramref name="type"/> is declared in source with a type declaration other than a
+    /// class, struct, record or interface: a C# 15 <c>union</c>, which this generator's Roslyn has no
+    /// syntax type for. A metadata type has no declaring syntax and returns false.
+    /// </summary>
+    private static bool IsDeclaredAsUnion(INamedTypeSymbol type)
+    {
+        foreach (var reference in type.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax() is TypeDeclarationSyntax and not (ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax or InterfaceDeclarationSyntax))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>Empty when <paramref name="declared"/> and <paramref name="cases"/> name the same types; otherwise what differs, for AKKASG050.</summary>
