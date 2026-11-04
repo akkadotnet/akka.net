@@ -530,7 +530,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor UnionImplementorNotSerializable = new(
         "AKKASG048",
         "Union implementor is not [AkkaSerializable]",
-        "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'.",
+        "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'; for a generic type, mark the definition and register each closed construction with [AkkaSerializable<T>(Manifest = \"...\")] on the serializer.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

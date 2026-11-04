@@ -91,7 +91,9 @@ public sealed partial class AkkaSerializerGenerator
         {
             foreach (var field in message.Fields)
             {
-                if (field.Mapping.Kind != FieldKind.Union || field.Mapping.Key.MetadataName.Length == 0)
+                // A union field whose static type is not a named type (an array, say) has a default
+                // key with a null MetadataName; it is already reported by AKKASG018.
+                if (field.Mapping.Kind != FieldKind.Union || string.IsNullOrEmpty(field.Mapping.Key.MetadataName))
                     continue;
 
                 (field.UnionMembers.IsEmpty ? discovered : listed).Add(field.Mapping.Key);
@@ -367,7 +369,9 @@ public sealed partial class AkkaSerializerGenerator
                 }
             }
 
-            foreach (var unionKey in unionKeys)
+            // A ref struct can never be converted to an interface or base type, so it can never
+            // reach a union field.
+            foreach (var unionKey in candidate.IsRefLikeType ? ImmutableArray<TypeKey>.Empty : unionKeys)
             {
                 // A marked generic definition is served through closed-generic registrations, not
                 // through the discovered set, so only a non-generic marked type is a "case".

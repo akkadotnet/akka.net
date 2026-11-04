@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Linq;
+using Akka.Serialization.V2.Generators;
 using Akka.Serialization.V2.Tests.Harness;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
@@ -299,6 +300,90 @@ public sealed class UnionCompletenessDiagnosticsSpec
 
         result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG049")
             .Which.GetMessage(null).Should().Contain("Shape.Triangle");
+    }
+
+    [Fact(DisplayName = "Should_ReportAKKASG018_NotCrash_When_ExplicitUnionIsOnArrayField")]
+    public void Should_ReportAKKASG018_NotCrash_When_ExplicitUnionIsOnArrayField()
+    {
+        // A union field whose type is not a named type has a key with no metadata name; collecting
+        // union keys must skip it rather than throw and take the whole generator down (CS8785).
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Completeness.ArrayField;
+
+            public interface IShape { }
+
+            [AkkaSerializable(Manifest = "circle")]
+            public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1), AkkaUnion(typeof(Circle))] IShape[] Shapes) : ISubscriptionEvent;
+            """ + SerializerSource;
+
+        var result = GeneratorTestHarness.Run(source);
+
+        result.AllDiagnostics.Should().NotContain(d => d.Id == "CS8785");
+        result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG018");
+    }
+
+    [Fact(DisplayName = "Should_NotReportAKKASG048_When_ImplementorIsRefStruct")]
+    public void Should_NotReportAKKASG048_When_ImplementorIsRefStruct()
+    {
+        // A ref struct may implement an interface (C# 13) but can never be converted to it, so it
+        // can never reach a union field.
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Completeness.RefStruct;
+
+            [AkkaUnion]
+            public interface IShape { }
+
+            [AkkaSerializable(Manifest = "circle")]
+            public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
+
+            public ref struct StackShape : IShape { }
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1)] IShape Shape) : ISubscriptionEvent;
+            """ + SerializerSource;
+
+        var result = GeneratorTestHarness.Run(new[] { new SourceFile("Source.cs", source) }, GeneratorTestHarness.PreviewParseOptions);
+
+        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG048");
+        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Should_KeepSerializersCached_When_UnrelatedTypeStartsImplementingOpenListedUnion")]
+    public void Should_KeepSerializersCached_When_UnrelatedTypeStartsImplementingOpenListedUnion()
+    {
+        // A listed union over an interface is never reported on, so a new implementor of that
+        // interface elsewhere must not invalidate the compilation facts or re-resolve serializers.
+        const string holder = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Completeness.Caching;
+
+            public interface IShape { }
+
+            [AkkaSerializable(Manifest = "circle")]
+            public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1), AkkaUnion(typeof(Circle))] IShape Shape) : ISubscriptionEvent;
+            """ + SerializerSource;
+
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Holder.cs", holder), new SourceFile("Other.cs", "namespace Completeness.Caching; public sealed class Unrelated { }") },
+            new[] { new SourceFile("Holder.cs", holder), new SourceFile("Other.cs", "namespace Completeness.Caching; public sealed class Unrelated : IShape { }") });
+
+        var reasons = result.After.RunResult.Results.Single().TrackedSteps[AkkaSerializerGenerator.TrackingNames.CompilationFacts]
+            .SelectMany(step => step.Outputs).Select(output => output.Reason).ToList();
+        reasons.Should().OnlyContain(reason => reason == Microsoft.CodeAnalysis.IncrementalStepRunReason.Unchanged || reason == Microsoft.CodeAnalysis.IncrementalStepRunReason.Cached);
     }
 
     [Fact(DisplayName = "Should_NotWarnAKKASG049_When_ExplicitUnionListNarrowsAnOpenBase")]

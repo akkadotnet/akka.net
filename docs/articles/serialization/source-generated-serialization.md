@@ -488,7 +488,8 @@ type's own assembly -- the same direction limit the marker form exists to lift.
 The walk only finds `[AkkaSerializable]` types. A concrete type in this compilation that derives
 from or implements a marked base but has no `[AkkaSerializable]` would be left out of the dispatch
 and fail the first time it is written, so it fails the build instead (**AKKASG048**), the union
-counterpart of **AKKASG029**. A marked base with no members at all fails with **AKKASG019**: a
+counterpart of **AKKASG029**. The check covers union properties declared in this compilation; a
+union property on a message from a referenced assembly is not checked yet. A marked base with no members at all fails with **AKKASG019**: a
 union with no members can only throw. Every other union rule -- **AKKASG015** through
 **AKKASG018**, **AKKASG025**, **AKKASG036** -- applies to a discovered member exactly as it does to
 a listed one. The wire format does not change:
