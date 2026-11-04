@@ -129,7 +129,7 @@ public sealed partial class AkkaSerializerGenerator
         // Advisory only (AKKASG037): a Manifest on a generic [AkkaSerializable] DEFINITION is
         // silently ignored -- the definition is never serialized directly (see ExtractMessage),
         // and every registered closed construction carries its own per-construction Manifest from
-        // [AkkaSerializable<T>]. Reported once per definition, independent of any serializer, at the
+        // [AkkaSerializerIncludes<T>]. Reported once per definition, independent of any serializer, at the
         // definition's own message-level location.
         foreach (var definition in declaredMessages.Where(message => message.IsGenericDefinition && !string.IsNullOrWhiteSpace(message.Manifest)))
         {
@@ -140,7 +140,7 @@ public sealed partial class AkkaSerializerGenerator
 
         // Decision 18's one-owner rule (AKKASG041): a message type belongs to only one serializer's
         // closed set in this compilation, whether it gets there by implementing a protocol or by an
-        // explicit [AkkaSerializable<T>] adoption (a literal registration or a ManifestPrefix
+        // explicit [AkkaSerializerIncludes<T>] adoption (a literal registration or a ManifestPrefix
         // expansion member). Reported at EVERY owning serializer's own attribute -- "a build error
         // at both registration sites" -- since no single one of them is the "correct" owner.
         var multiOwnedMessages = ComputeMultiOwnedMessages(serializers, declaredMessages);
@@ -171,7 +171,7 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// Decision 18's one-owner rule: for every message type, every serializer that owns it -- by
-    /// implementing that serializer's protocol, or by an explicit <c>[AkkaSerializable&lt;T&gt;]</c>
+    /// implementing that serializer's protocol, or by an explicit <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
     /// adoption (<see cref="SerializerInfo.ClosedGenericSchemas"/>, which already holds only VALID,
     /// registered targets: a literal registration, or a <c>ManifestPrefix</c> expansion member) --
     /// returns only the types with MORE than one owner, each mapped to its owners' class names
@@ -406,7 +406,7 @@ public sealed partial class AkkaSerializerGenerator
     private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages, MetadataSchemaTable metadataSchemas, CompilationFacts facts)
     {
         // Decision 18 lets a registration adopt a NON-generic, ordinarily-declared type (for
-        // example [AkkaSerializable<AuditStamp>(Manifest = "audit-v1")]), which already has its own
+        // example [AkkaSerializerIncludes<AuditStamp>(Manifest = "audit-v1")]), which already has its own
         // entry in declaredMessages from the normal ExtractMessage path -- unlike a closed generic
         // construction, which never does (only its open definition is source-declared). Excluding
         // that key from the declaredMessages half of the concat below is what keeps `allMessages`

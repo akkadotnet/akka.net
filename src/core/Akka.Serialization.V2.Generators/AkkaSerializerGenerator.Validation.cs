@@ -276,7 +276,7 @@ public sealed partial class AkkaSerializerGenerator
     /// and [AkkaSerializable]-marked open generic definitions (governed entirely by AKKASG022's
     /// registration machinery). An unmarked OPEN GENERIC definition that implements the protocol is
     /// still an error here: with no [AkkaSerializable] on the definition, none of its closed
-    /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
+    /// constructions could ever be registered with [AkkaSerializerIncludes&lt;T&gt;] in the first place.
     /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
     /// today and only fails at runtime, the first time it is sent.
     /// As of S5, the whole-compilation scan that used to run HERE, per serializer, now runs exactly
@@ -489,6 +489,18 @@ public sealed partial class AkkaSerializerGenerator
 
         var isValid = true;
 
+        // AKKASG053: a Manifest on a registration of a non-generic type, which declares its own.
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.MisplacedManifest.Length > 0))
+        {
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            var ownManifest = registration.Manifest.Length > 0
+                ? $" (which currently declares \"{registration.Manifest}\")"
+                : " (which declares none yet)";
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ManifestOnNonGenericInclude, at,
+                ToDisplayName(registration.TargetDisplayName), serializer.ClassName, registration.MisplacedManifest, ownManifest));
+            isValid = false;
+        }
+
         // AKKASG040: a ManifestPrefix registration that could not expand at all.
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length > 0))
         {
@@ -521,7 +533,7 @@ public sealed partial class AkkaSerializerGenerator
 
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length == 0 && !IsValidRegistration(r)))
         {
-            // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
+            // Reports at THIS registration's own [AkkaSerializerIncludes<T>] attribute application --
             // Decision 16: "the registration attribute for a closed generic".
             var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidClosedGenericRegistration, at, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
@@ -565,7 +577,7 @@ public sealed partial class AkkaSerializerGenerator
                 continue;
 
             // Reports at the SERIALIZER's own attribute: the fix ("register each closed construction
-            // with [AkkaSerializable<T>] ... on the serializer class") is an edit to the serializer,
+            // with [AkkaSerializerIncludes<T>] ... on the serializer class") is an edit to the serializer,
             // not to the generic definition itself.
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.GenericSerializableRequiresRegistration, new LocationKey(serializer.Key, string.Empty),
                 ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
@@ -867,7 +879,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     // Decision table for a nested type this generator cannot serialize today: a closed generic
-    // construction reports AKKASG023 (register it with [AkkaSerializable<T>]); a type declared in a
+    // construction reports AKKASG023 (register it with [AkkaSerializerIncludes<T>]); a type declared in a
     // referenced assembly that this compilation cannot see (or cannot read a member of) reports the
     // new AKKASG039; a type declared in a referenced assembly with no schema this generator can read
     // at all reports the AKKASG007 cross-assembly wording; anything else reports the plain AKKASG007

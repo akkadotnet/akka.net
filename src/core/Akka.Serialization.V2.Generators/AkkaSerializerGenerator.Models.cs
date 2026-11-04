@@ -383,7 +383,7 @@ public sealed partial class AkkaSerializerGenerator
         public ImmutableArray<FormatterInfo> Formatters { get; }
 
         /// <summary>
-        /// This serializer's <c>[AkkaSerializable&lt;T&gt;]</c> registrations, as light specs: what to
+        /// This serializer's <c>[AkkaSerializerIncludes&lt;T&gt;]</c> registrations, as light specs: what to
         /// target, its manifest, and whether an empty schema is allowed. The full extracted schema for
         /// each VALID registration lives beside this array, in <see cref="ClosedGenericSchemas"/>, keyed
         /// the same way as every other message -- not embedded inside the registration itself.
@@ -434,7 +434,7 @@ public sealed partial class AkkaSerializerGenerator
         public ImmutableArray<PrefixExpansionSpec> PrefixExpansions { get; }
 
         /// <summary>
-        /// Every <c>[AkkaSerializable&lt;T&gt;(Manifest = ...)]</c> registration this serializer
+        /// Every <c>[AkkaSerializerIncludes&lt;T&gt;(Manifest = ...)]</c> registration this serializer
         /// declares, keyed by its own (possibly invalid) target -- read straight off each attribute
         /// application, regardless of whether that registration turned out to be valid. Decision 18's
         /// override rule ("an explicit registration for this exact construction wins") needs this
@@ -862,7 +862,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// A single <c>[AkkaSerializable&lt;T&gt;]</c> registration, as a light spec: what to target, its
+    /// A single <c>[AkkaSerializerIncludes&lt;T&gt;]</c> registration, as a light spec: what to target, its
     /// manifest, and whether an empty schema is allowed -- nothing else. The full schema for a VALID
     /// target lives beside this registration, in <see cref="SerializerInfo.ClosedGenericSchemas"/>,
     /// keyed by <see cref="Target"/> the same way as every other message; a target with no matching
@@ -877,7 +877,8 @@ public sealed partial class AkkaSerializerGenerator
             bool allowEmpty,
             string expansionGroup = "",
             string manifestPrefix = "",
-            string expansionError = "")
+            string expansionError = "",
+            string misplacedManifest = "")
         {
             Target = target;
             Manifest = manifest;
@@ -885,6 +886,7 @@ public sealed partial class AkkaSerializerGenerator
             ExpansionGroup = expansionGroup;
             ManifestPrefix = manifestPrefix;
             ExpansionError = expansionError;
+            MisplacedManifest = misplacedManifest;
         }
 
         public TypeKey Target { get; }
@@ -896,7 +898,7 @@ public sealed partial class AkkaSerializerGenerator
         public bool AllowEmpty { get; }
 
         /// <summary>
-        /// Empty for a directly-written <c>[AkkaSerializable&lt;T&gt;]</c> registration. For a
+        /// Empty for a directly-written <c>[AkkaSerializerIncludes&lt;T&gt;]</c> registration. For a
         /// construction synthesized by Decision 18's <c>ManifestPrefix</c> expansion, the display
         /// name of the base registration's own type argument (for example
         /// <c>"Envelope&lt;ICommsMessage&gt;"</c>) -- the group every construction expanded from the
@@ -920,6 +922,13 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public string ExpansionError { get; }
 
+        /// <summary>
+        /// The <c>Manifest</c> named argument when it was set on a registration of a NON-generic type,
+        /// which takes its manifest from its own <c>[AkkaSerializable]</c> instead; empty otherwise.
+        /// Drives AKKASG053.
+        /// </summary>
+        public string MisplacedManifest { get; }
+
         public bool Equals(ClosedGenericRegistrationInfo? other)
         {
             if (ReferenceEquals(this, other))
@@ -933,7 +942,8 @@ public sealed partial class AkkaSerializerGenerator
                 && AllowEmpty == other.AllowEmpty
                 && string.Equals(ExpansionGroup, other.ExpansionGroup, StringComparison.Ordinal)
                 && string.Equals(ManifestPrefix, other.ManifestPrefix, StringComparison.Ordinal)
-                && string.Equals(ExpansionError, other.ExpansionError, StringComparison.Ordinal);
+                && string.Equals(ExpansionError, other.ExpansionError, StringComparison.Ordinal)
+                && string.Equals(MisplacedManifest, other.MisplacedManifest, StringComparison.Ordinal);
         }
 
         public override bool Equals(object? obj) => Equals(obj as ClosedGenericRegistrationInfo);
@@ -947,11 +957,12 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, ExpansionGroup);
             hash = ValueEquality.Combine(hash, ManifestPrefix);
             hash = ValueEquality.Combine(hash, ExpansionError);
+            hash = ValueEquality.Combine(hash, MisplacedManifest);
             return hash;
         }
     }
 
-    /// <summary>One <c>[AkkaSerializable&lt;T&gt;(Manifest = ...)]</c> registration's own target and manifest, read straight off its attribute regardless of validity. See <see cref="SerializerInfo.ExplicitManifestsByTarget"/>.</summary>
+    /// <summary>One <c>[AkkaSerializerIncludes&lt;T&gt;(Manifest = ...)]</c> registration's own target and manifest, read straight off its attribute regardless of validity. See <see cref="SerializerInfo.ExplicitManifestsByTarget"/>.</summary>
     internal readonly record struct ExplicitTargetManifest(TypeKey Target, string Manifest);
 
     /// <summary>
@@ -1845,7 +1856,8 @@ public sealed partial class AkkaSerializerGenerator
         UnionImplementorNotSerializable,
         UnionMemberSetIncomplete,
         UnionDeclarationConflictsWithCSharpUnion,
-        SerializableOnCSharpUnion
+        SerializableOnCSharpUnion,
+        ManifestOnNonGenericInclude
     }
 
     /// <summary>

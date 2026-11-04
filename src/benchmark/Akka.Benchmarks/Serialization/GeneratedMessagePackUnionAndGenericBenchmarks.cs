@@ -22,7 +22,7 @@ namespace Akka.Benchmarks.Serialization;
 /// Companion to <see cref="GeneratedMessagePackSerializerBenchmarks"/>: covers two source-generated
 /// features that predate that file and had zero benchmark coverage until now --
 /// <c>[AkkaUnion]</c> manifest-discriminated union fields (see
-/// Akka.Serialization.V2.Tests.GeneratedUnionSpec) and closed-generic <c>[AkkaSerializable&lt;T&gt;]</c>
+/// Akka.Serialization.V2.Tests.GeneratedUnionSpec) and closed-generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
 /// registrations (see Akka.Serialization.V2.Tests.GeneratedClosedGenericSpec), including the combined
 /// "generic wrapper over a union interface" shape that motivated both features.
 /// </summary>
@@ -197,8 +197,8 @@ public interface IGenericBenchmarkProtocol
 }
 
 [AkkaSerializer<IGenericBenchmarkProtocol>("closed-generic-benchmark", 120005)]
-[AkkaSerializable<GenericBenchmarkWrapper<OrderDetailPayload>>(Manifest = "generic-wrapper-order-detail-v1")]
-[AkkaSerializable<GenericBenchmarkWrapper<IOrderEventBenchmark>>(Manifest = "generic-wrapper-order-event-v1")]
+[AkkaSerializerIncludes<GenericBenchmarkWrapper<OrderDetailPayload>>(Manifest = "generic-wrapper-order-detail-v1")]
+[AkkaSerializerIncludes<GenericBenchmarkWrapper<IOrderEventBenchmark>>(Manifest = "generic-wrapper-order-event-v1")]
 public sealed partial class GenericBenchmarkSerializer : AkkaSerializer
 {
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

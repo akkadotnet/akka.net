@@ -16,7 +16,7 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Specs for the generic <c>[AkkaSerializable&lt;T&gt;]</c> form: registering CLOSED generic constructions of a
+/// Specs for the generic <c>[AkkaSerializerIncludes&lt;T&gt;]</c> form: registering CLOSED generic constructions of a
 /// generic <c>[AkkaSerializable]</c> type on the serializer module, the same closed-construction
 /// registration model System.Text.Json's source generator uses for <c>[JsonSerializable]</c>.
 /// Each registered construction behaves as its own top-level message with its own manifest, with
@@ -137,9 +137,9 @@ public interface IClosedGenericTestProtocol
 }
 
 [AkkaSerializer<IClosedGenericTestProtocol>("closed-generic-test", 120404)]
-[AkkaSerializable<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
-[AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
-[AkkaSerializable<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
+[AkkaSerializerIncludes<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
+[AkkaSerializerIncludes<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
+[AkkaSerializerIncludes<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
 public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
     public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

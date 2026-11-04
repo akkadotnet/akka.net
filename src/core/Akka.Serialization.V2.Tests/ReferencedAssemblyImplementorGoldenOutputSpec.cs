@@ -158,7 +158,7 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
                 [property: AkkaField(2)] string TraceId);
 
             [AkkaSerializer<ICommsMessage>("prefix-expansion-golden", 190103)]
-            [AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
+            [AkkaSerializerIncludes<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
             public sealed partial class CommsSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
