@@ -37,7 +37,7 @@ public sealed partial class AkkaSerializerGenerator
     /// implementor fact -- no symbol walk is needed for that half, since every marked local message
     /// already passed through extraction and left a cached <see cref="MessageInfo"/> behind with
     /// everything this stage needs (<see cref="MessageInfo.Protocols"/>, <see cref="MessageInfo.BaseTypeNames"/>).
-    /// The only symbol walk left in this stage is <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>
+    /// The only symbol walk left in this stage is <see cref="ComputeLocalImplementorFacts"/>
     /// (AKKASG029's own local-only input, unchanged since S5) and the referenced-assembly walk below,
     /// which is itself cached per assembly REFERENCE (see <see cref="ReferencedAssemblyFactsCache"/>).
     /// </summary>
@@ -52,12 +52,12 @@ public sealed partial class AkkaSerializerGenerator
         var closedSetKeys = ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers);
         var referencedAssembliesUsingV2 = ComputeReferencedAssembliesUsingV2(compilation, cancellationToken);
 
-        var localUnmarkedImplementorsByProtocol = ComputeLocalUnmarkedImplementorsByProtocol(compilation, protocolKeys, knownTypes, cancellationToken);
+        var (localUnmarkedImplementorsByProtocol, unionHierarchies) = ComputeLocalImplementorFacts(
+            compilation, protocolKeys, ComputeDistinctUnionKeys(messages, serializers), knownTypes, cancellationToken);
         var localMarkedImplementorsByClosedSetKey = ComputeLocalMarkedImplementorsFromMessages(messages, closedSetKeys);
         var (referencedMarked, referencedUnmarked) = ComputeReferencedAssemblyImplementors(
             compilation, referencedAssembliesUsingV2, closedSetKeys, protocolKeys, knownTypes, cancellationToken);
         var upstreamSerializerBindings = ComputeUpstreamSerializerBindings(compilation, referencedAssembliesUsingV2, knownTypes, cancellationToken);
-        var unionHierarchies = ComputeUnionHierarchyFacts(compilation, ComputeDistinctUnionKeys(messages, serializers), knownTypes, cancellationToken);
 
         return new CompilationFacts(
             localUnmarkedImplementorsByProtocol,
@@ -72,7 +72,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Every distinct static-type key of a <see cref="FieldKind.Union"/> field, listed or discovered,
     /// across ordinary declarations and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>.
-    /// The keys <see cref="ComputeUnionHierarchyFacts"/> answers for.
+    /// The keys <see cref="ComputeLocalImplementorFacts"/> answers union questions for.
     /// </summary>
     private static ImmutableArray<TypeKey> ComputeDistinctUnionKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers)
     {
@@ -108,74 +108,6 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return builder.ToImmutable();
-    }
-
-    /// <summary>
-    /// The AKKASG048/AKKASG049 input. For each union key, walks this compilation's own source types
-    /// once and buckets every concrete class/struct that derives from or implements it by whether it
-    /// carries <c>[AkkaSerializable]</c>, and records which keys are closed hierarchies (see
-    /// <see cref="UnionHierarchyFacts.ClosedKeys"/>). Costs nothing when no message has a union field.
-    /// Only local types are walked: a closed hierarchy's cases live with its base, and a
-    /// referenced-assembly implementor of an open union base is a follow-up, as it already is for
-    /// AKKASG029's referenced-assembly half of marked union bases.
-    /// </summary>
-    private static UnionHierarchyFacts ComputeUnionHierarchyFacts(
-        Compilation compilation,
-        ImmutableArray<TypeKey> unionKeys,
-        KnownTypes knownTypes,
-        CancellationToken cancellationToken)
-    {
-        if (unionKeys.IsEmpty || knownTypes.SerializableAttribute == null)
-            return UnionHierarchyFacts.Empty;
-
-        var closedKeys = new List<TypeKey>();
-        foreach (var key in unionKeys)
-        {
-            if (ResolveTypeSymbol(compilation, key) is { } symbol
-                && SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly)
-                && IsClosedHierarchy(symbol, cancellationToken))
-            {
-                closedKeys.Add(key);
-            }
-        }
-
-        var unmarked = new Dictionary<TypeKey, List<TypeKey>>();
-        var marked = new Dictionary<TypeKey, List<TypeKey>>();
-        foreach (var key in unionKeys)
-        {
-            unmarked[key] = new List<TypeKey>();
-            marked[key] = new List<TypeKey>();
-        }
-
-        foreach (var candidate in GetSourceDeclaredTypes(compilation))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract)
-                continue;
-
-            TypeKey? candidateKey = null;
-            bool? isMarked = null;
-            foreach (var key in unionKeys)
-            {
-                if (!DerivesFromOrImplements(candidate, key))
-                    continue;
-
-                isMarked ??= candidate.GetAttributes()
-                    .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
-
-                // A marked generic definition is served through closed-generic registrations, not
-                // through the discovered set, so only a non-generic marked type is a "case".
-                if (isMarked.Value && candidate.IsGenericType)
-                    continue;
-
-                candidateKey ??= TypeKey.FromSymbol(candidate);
-                (isMarked.Value ? marked : unmarked)[key].Add(candidateKey.Value);
-            }
-        }
-
-        closedKeys.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
-        return new UnionHierarchyFacts(SortAndBuild(unmarked), SortAndBuild(marked), closedKeys.ToImmutableArray());
     }
 
     /// <summary>
@@ -344,7 +276,8 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// The AKKASG029 input (see <see cref="ValidateProtocolCoverage"/>): walks every source-declared
+    /// The AKKASG029 input (see <see cref="ValidateProtocolCoverage"/>), and in the same pass the
+    /// AKKASG048/AKKASG049 input (<see cref="UnionHierarchyFacts"/>): walks every source-declared
     /// type in <paramref name="compilation"/> EXACTLY ONCE -- not once per protocol, and not once
     /// per serializer, as the pre-S5 shape inside <c>ValidateProtocolCoverage</c> did -- testing
     /// each non-abstract class/struct candidate against every requested protocol key at once and
@@ -359,19 +292,32 @@ public sealed partial class AkkaSerializerGenerator
     /// bucket's implementor list is sorted by <see cref="TypeKey.MetadataName"/> (ordinal) for a
     /// deterministic diagnostic order across runs.
     /// </summary>
-    private static ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> ComputeLocalUnmarkedImplementorsByProtocol(
+    private static (ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> UnmarkedByProtocol, UnionHierarchyFacts UnionHierarchies) ComputeLocalImplementorFacts(
         Compilation compilation,
         ImmutableArray<TypeKey> protocolKeys,
+        ImmutableArray<TypeKey> unionKeys,
         KnownTypes knownTypes,
         CancellationToken cancellationToken)
     {
-        if (protocolKeys.IsEmpty || knownTypes.SerializableAttribute == null)
-            return ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty;
+        if ((protocolKeys.IsEmpty && unionKeys.IsEmpty) || knownTypes.SerializableAttribute == null)
+            return (ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty, UnionHierarchyFacts.Empty);
 
         var buckets = new Dictionary<TypeKey, List<TypeKey>>();
         foreach (var protocolKey in protocolKeys)
             buckets[protocolKey] = new List<TypeKey>();
 
+        var unionUnmarked = new Dictionary<TypeKey, List<TypeKey>>();
+        var unionMarked = new Dictionary<TypeKey, List<TypeKey>>();
+        var closedUnionKeys = new List<TypeKey>();
+        foreach (var unionKey in unionKeys)
+        {
+            unionUnmarked[unionKey] = new List<TypeKey>();
+            unionMarked[unionKey] = new List<TypeKey>();
+        }
+
+        // ONE pass over the source-declared types serves AKKASG029 (unmarked protocol implementors)
+        // and AKKASG048/049 (union implementors, closed bases). A union key that is itself declared
+        // here is checked for closedness as the walk reaches it, so no per-key symbol lookup is needed.
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
             // This whole-compilation walk re-runs on every edit (its output combines the
@@ -379,22 +325,58 @@ public sealed partial class AkkaSerializerGenerator
             // as the pre-S5 per-serializer walk did.
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!unionKeys.IsEmpty && candidate.TypeKind == TypeKind.Class && !candidate.IsSealed)
+            {
+                foreach (var unionKey in unionKeys)
+                {
+                    if (CouldMatchByMetadataName(unionKey.MetadataName, candidate.MetadataName)
+                        && TypeKey.FromSymbol(candidate, includeDisplayName: false).Equals(unionKey)
+                        && IsClosedHierarchy(candidate, cancellationToken))
+                    {
+                        closedUnionKeys.Add(unionKey);
+                    }
+                }
+            }
+
             if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract)
                 continue;
 
             var isMarked = candidate.GetAttributes()
                 .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
-            if (isMarked)
-                continue;
 
-            foreach (var protocolKey in protocolKeys)
+            TypeKey? candidateKey = null;
+            if (!isMarked)
             {
-                if (ImplementsProtocol(candidate, protocolKey))
-                    buckets[protocolKey].Add(TypeKey.FromSymbol(candidate));
+                foreach (var protocolKey in protocolKeys)
+                {
+                    if (ImplementsProtocol(candidate, protocolKey))
+                    {
+                        candidateKey ??= TypeKey.FromSymbol(candidate);
+                        buckets[protocolKey].Add(candidateKey.Value);
+                    }
+                }
+            }
+
+            foreach (var unionKey in unionKeys)
+            {
+                // A marked generic definition is served through closed-generic registrations, not
+                // through the discovered set, so only a non-generic marked type is a "case".
+                if ((isMarked && candidate.IsGenericType) || !DerivesFromOrImplements(candidate, unionKey))
+                    continue;
+
+                candidateKey ??= TypeKey.FromSymbol(candidate);
+                (isMarked ? unionMarked : unionUnmarked)[unionKey].Add(candidateKey.Value);
             }
         }
 
-        return BuildWithEveryEntry(buckets);
+        var unionHierarchies = UnionHierarchyFacts.Empty;
+        if (!unionKeys.IsEmpty)
+        {
+            closedUnionKeys.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+            unionHierarchies = new UnionHierarchyFacts(SortAndBuild(unionUnmarked), SortAndBuild(unionMarked), closedUnionKeys.ToImmutableArray());
+        }
+
+        return (BuildWithEveryEntry(buckets), unionHierarchies);
     }
 
     /// <summary>
@@ -768,7 +750,7 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// Sorts and builds a closed-set-implementor dictionary, OMITTING any key whose bucket ended up
-    /// empty -- unlike <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>'s own "one entry per
+    /// empty -- unlike <see cref="ComputeLocalImplementorFacts"/>'s own "one entry per
     /// requested key, even an empty one" convention (that convention exists there so a lookup MISS
     /// unambiguously means "no serializer asked", distinguishing it from a HIT with zero unmarked
     /// implementors; nothing downstream of the walks this method serves needs that distinction, and

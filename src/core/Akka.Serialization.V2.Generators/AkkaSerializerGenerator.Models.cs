@@ -2327,7 +2327,7 @@ public sealed partial class AkkaSerializerGenerator
         /// Sorted by <see cref="TypeKey.MetadataName"/> (ordinal) for a deterministic diagnostic
         /// order. One entry per protocol key that at least one collected
         /// <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declares, even when that entry's array is empty
-        /// (a protocol with clean coverage) -- see <see cref="AkkaSerializerGenerator.ComputeLocalUnmarkedImplementorsByProtocol"/>.
+        /// (a protocol with clean coverage) -- see <see cref="AkkaSerializerGenerator.ComputeLocalImplementorFacts"/>.
         /// </summary>
         public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> LocalUnmarkedImplementorsByProtocol { get; }
 

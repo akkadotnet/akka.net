@@ -281,7 +281,7 @@ public sealed partial class AkkaSerializerGenerator
     /// today and only fails at runtime, the first time it is sent.
     /// As of S5, the whole-compilation scan that used to run HERE, per serializer, now runs exactly
     /// once per compilation change for every serializer's protocol at once, inside
-    /// <see cref="ComputeCompilationFacts"/> (see <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>).
+    /// <see cref="ComputeCompilationFacts"/> (see <see cref="ComputeLocalImplementorFacts"/>).
     /// This method is now a pure, symbol-free, Compilation-free function of the resolved serializer
     /// plus that precomputed <see cref="CompilationFacts"/> -- it only formats the diagnostic for
     /// each already-identified implementor. Diagnostic id, text, and trigger conditions are
@@ -338,7 +338,7 @@ public sealed partial class AkkaSerializerGenerator
     /// serializer's protocol -- with a single, allocation-free string compare, before paying for a
     /// full <see cref="TypeKey.FromSymbol"/> (which recurses into type arguments for a generic
     /// interface). As of S5 this runs once per candidate type per PROTOCOL KEY, inside
-    /// <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/> -- once for the whole compilation,
+    /// <see cref="ComputeLocalImplementorFacts"/> -- once for the whole compilation,
     /// not once per serializer as before -- and its result is never itself cached across candidates
     /// (only the caller's aggregated <see cref="CompilationFacts"/> output is), so skipping the
     /// expensive path for the overwhelming majority of interfaces that were never going to match is
@@ -384,7 +384,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Every named type declared in <paramref name="compilation"/>'s OWN source (never a referenced
     /// assembly: <see cref="Compilation.Assembly"/> is the assembly being compiled), recursively
-    /// including nested types. Used by <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>,
+    /// including nested types. Used by <see cref="ComputeLocalImplementorFacts"/>,
     /// transiently, inside the S5 compilation-facts stage -- never stored in a cached provider
     /// itself (its CALLER's output is what gets cached; see <see cref="CompilationFacts"/>).
     /// </summary>
