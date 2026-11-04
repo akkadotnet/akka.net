@@ -263,7 +263,7 @@ public sealed partial class AkkaSerializerGenerator
 
         var resolved = ResolveSerializerMessages(serializer, declaredMessages, metadataSchemas, facts);
         var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, metadataSchemas, validationDiagnostics);
+        ValidateResolved(serializer, resolved, metadataSchemas, facts, validationDiagnostics);
 
         var topLevelMessages = BuildClosedSet(resolved.TopLevelMessages);
         var usedFormatters = CollectUsedFormatters(resolved.ReachableMessages);
@@ -354,8 +354,8 @@ public sealed partial class AkkaSerializerGenerator
         if (!resolved.IsEmittable)
             return;
 
-        // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g. AKKASG027)
-        // or Info (e.g. AKKASG025) still lets the serializer generate normally, exactly as the old
+        // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g. AKKASG025,
+        // AKKASG027) still lets the serializer generate normally, exactly as the old
         // isValid-returning Validate* chain already behaved (see ValidateResolved).
         if (resolved.ValidationDiagnostics.Any(diagnostic => DiagnosticRegistry.Resolve(diagnostic.Key).DefaultSeverity == DiagnosticSeverity.Error))
             return;
@@ -641,7 +641,7 @@ public sealed partial class AkkaSerializerGenerator
                     // ExtractMessageCore) leaves the field as-is: there is nothing to resolve it
                     // against, and it stays an empty union rather than crashing on an empty lookup.
                     var closedSetKey = field.Mapping.Key.DisplayName ?? string.Empty;
-                    resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey)));
+                    resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey), isDiscovered: true));
                 }
                 else if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
                     field.Mapping.TypeFullName.Length > 0 &&

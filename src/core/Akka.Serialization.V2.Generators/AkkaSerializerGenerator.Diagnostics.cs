@@ -280,7 +280,7 @@ public sealed partial class AkkaSerializerGenerator
         "Union member type is not sealed",
         "Union member '{0}' on property '{1}' of type '{2}' is not sealed; union write dispatch matches the exact runtime type, so an undeclared subtype of '{0}' fails serialization -- consider sealing it",
         "Akka.Serialization.V2",
-        DiagnosticSeverity.Info,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor NoMatchingConstructor = new(
@@ -522,6 +522,33 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// A parameterless <c>[AkkaUnion]</c> discovers its members by looking for
+    /// <c>[AkkaSerializable]</c> types, so a derived type that forgot the attribute is silently left
+    /// out of the generated dispatch and only fails the first time a value of it is written. The
+    /// union counterpart of AKKASG029. Reported at the union field.
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionImplementorNotSerializable = new(
+        "AKKASG048",
+        "Union implementor is not [AkkaSerializable]",
+        "Type '{0}' derives from or implements union '{1}' (property '{2}' of type '{3}') but is not [AkkaSerializable]; it is invisible to the generated union dispatch and fails at runtime when first serialized. Add [AkkaSerializable(Manifest = \"...\")] to '{0}'; for a generic type, mark the definition and register each closed construction with [AkkaSerializable<T>(Manifest = \"...\")] on the serializer.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// An explicit <c>[AkkaUnion(typeof(A), ...)]</c> list on a field whose static type is a closed
+    /// hierarchy leaves out a type that derives from it. Writing a value of the omitted type fails at
+    /// runtime. A warning, not an error: leaving a case out of the wire contract on purpose is legal.
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionMemberSetIncomplete = new(
+        "AKKASG049",
+        "Union member list omits a case of a closed hierarchy",
+        "Union on property '{0}' of type '{1}' lists its members explicitly but omits {2}, which derive from the closed type '{3}'; writing a value of an omitted type fails at runtime. List every case, or use a parameterless [AkkaUnion] on '{3}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -582,6 +609,8 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.MessageTypeNotAccessible => MessageTypeNotAccessible,
             DiagnosticKey.PropertyNotSerialized => PropertyNotSerialized,
             DiagnosticKey.IgnoredFieldAnnotations => IgnoredFieldAnnotations,
+            DiagnosticKey.UnionImplementorNotSerializable => UnionImplementorNotSerializable,
+            DiagnosticKey.UnionMemberSetIncomplete => UnionMemberSetIncomplete,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 
