@@ -15,6 +15,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Akka.Serialization.V2.Generators;
 
@@ -132,7 +133,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             if (ResolveTypeSymbol(compilation, key) is { } symbol
                 && SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, compilation.Assembly)
-                && IsClosedHierarchy(symbol))
+                && IsClosedHierarchy(symbol, cancellationToken))
             {
                 closedKeys.Add(key);
             }
@@ -198,16 +199,26 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// A class whose derived types are fixed by its own declaration: a C# 15 <c>closed</c> class or
-    /// record (lowered to an abstract class carrying <c>IsClosedTypeAttribute</c>; matched by full
-    /// metadata name, so a consumer-side polyfill counts), or a class whose every constructor is
-    /// private, so only its nested types can derive from it. A non-sealed record's compiler-made copy
+    /// record, or a class whose every constructor is private, so only its nested types can derive
+    /// from it. A source-declared <c>closed</c> type is found by its modifier: the compiler only adds
+    /// <c>IsClosedTypeAttribute</c> at emit time, and Roslyn does not return compiler-made attributes
+    /// from a source symbol's <c>GetAttributes()</c>. The modifier is matched by text because this
+    /// generator builds against a Roslyn that predates the keyword. The attribute itself (matched by
+    /// full metadata name, so a consumer polyfill counts) still covers an explicit application. A non-sealed record's compiler-made copy
     /// constructor is protected; it is ignored here, since deriving through it alone is not a
     /// realistic way to extend a closed hierarchy.
     /// </summary>
-    private static bool IsClosedHierarchy(INamedTypeSymbol symbol)
+    private static bool IsClosedHierarchy(INamedTypeSymbol symbol, CancellationToken cancellationToken)
     {
         if (symbol.TypeKind != TypeKind.Class || symbol.IsSealed)
             return false;
+
+        foreach (var reference in symbol.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax(cancellationToken) is TypeDeclarationSyntax declaration
+                && declaration.Modifiers.Any(modifier => string.Equals(modifier.ValueText, "closed", StringComparison.Ordinal)))
+                return true;
+        }
 
         foreach (var attribute in symbol.GetAttributes())
         {

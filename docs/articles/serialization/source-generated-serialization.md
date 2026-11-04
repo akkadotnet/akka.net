@@ -517,9 +517,11 @@ public abstract record Coverage
 public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId, [property: AkkaField(2)] Coverage Coverage) : ISubscriptionEvent;
 ```
 
-A C# 15 `closed record` works the same way: the compiler lowers it to an abstract class carrying
-`System.Runtime.CompilerServices.IsClosedTypeAttribute`, and the generator treats that attribute as
-closed too. A consumer-side polyfill of the attribute counts.
+A C# 15 `closed record` (or `closed class`) works the same way, on `net10.0` as well as `net11.0`:
+the generator recognizes the `closed` modifier, and also a type carrying
+`System.Runtime.CompilerServices.IsClosedTypeAttribute`. On `net10.0` the compiler needs that
+attribute (plus `UnionAttribute` and `IUnion` for unions) declared as an internal polyfill in your
+project; Akka.NET does not ship them, since they would collide with the `net11.0` BCL.
 
 When the field lists its members instead (`[AkkaUnion(typeof(A), typeof(B))]`) and the field's type
 is a closed hierarchy, a case left off the list gets a warning (**AKKASG049**). Leaving a case out of
