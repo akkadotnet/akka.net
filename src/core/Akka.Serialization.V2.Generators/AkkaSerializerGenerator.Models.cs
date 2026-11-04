@@ -2423,9 +2423,9 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Per union static type (the type of any <see cref="FieldKind.Union"/> field, whether its member
-    /// set is listed or discovered), the concrete types DECLARED IN THIS COMPILATION that derive from
-    /// or implement it, split by whether they carry <c>[AkkaSerializable]</c>, plus which of those
+    /// Per union static type that AKKASG048/049 can report on (a discovered set's type, or a listed
+    /// set's type that is a closed class declared here), the concrete types DECLARED IN THIS
+    /// COMPILATION that derive from or implement it, split by whether they carry <c>[AkkaSerializable]</c>, plus which of those
     /// static types are closed hierarchies. Symbol-free and value-equatable, so it can ride inside
     /// <see cref="CompilationFacts"/> without breaking incremental caching. Every implementor list is
     /// sorted by <see cref="TypeKey.MetadataName"/> (ordinal); a key with no implementors of a kind
@@ -2455,10 +2455,10 @@ public sealed partial class AkkaSerializerGenerator
         public ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> MarkedImplementorsByKey { get; }
 
         /// <summary>
-        /// Union static types whose set of derived types is fixed by their declaration: a class
-        /// carrying <c>System.Runtime.CompilerServices.IsClosedTypeAttribute</c> (a C# 15 <c>closed</c>
-        /// type), or a class whose every constructor is private, so only its own nested types can
-        /// derive from it. Sorted by <see cref="TypeKey.MetadataName"/> (ordinal).
+        /// Listed union static types whose set of derived types is fixed by their declaration: a C# 15
+        /// <c>closed</c> class or record (found by its modifier; a type carrying
+        /// <c>IsClosedTypeAttribute</c> also counts), or a class whose every constructor is private,
+        /// so only its own nested types can derive from it directly. Sorted by <see cref="TypeKey.MetadataName"/> (ordinal).
         /// </summary>
         public ImmutableArray<TypeKey> ClosedKeys { get; }
 

@@ -259,7 +259,7 @@ public sealed partial class AkkaSerializerGenerator
                     continue;
 
                 var key = field.Mapping.Key;
-                if (key.MetadataName.Length == 0 || !seen.Add(key))
+                if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
                     continue;
 
                 builder.Add(key);
@@ -268,7 +268,7 @@ public sealed partial class AkkaSerializerGenerator
 
         void CollectKey(TypeKey key)
         {
-            if (key.MetadataName.Length == 0 || !seen.Add(key))
+            if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
                 return;
 
             builder.Add(key);

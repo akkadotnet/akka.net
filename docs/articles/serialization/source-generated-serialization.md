@@ -1197,7 +1197,7 @@ diagnostic was retired with it, and the id stays a permanent gap.
 | AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 | AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a parameterless `[AkkaUnion]` base but isn't `[AkkaSerializable]`, so the discovered set leaves it out and it fails when first serialized. See [Closed Hierarchies](#closed-hierarchies). |
-| AKKASG049 | Warning | Union member list omits a case of a closed hierarchy | An explicit `[AkkaUnion(...)]` list on a field typed as a closed hierarchy (private constructors only, or `IsClosedTypeAttribute`) leaves out a derived type. Writing a value of that type fails at runtime. |
+| AKKASG049 | Warning | Union member list omits a case of a closed hierarchy | An explicit `[AkkaUnion(...)]` list on a field typed as a closed hierarchy (a C# 15 `closed` class or record, or private constructors only) leaves out a derived type. Writing a value of that type fails at runtime. |
 
 ## Limitations Today and Planned Changes
 

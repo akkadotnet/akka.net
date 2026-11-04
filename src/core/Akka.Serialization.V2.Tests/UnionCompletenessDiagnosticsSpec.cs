@@ -328,6 +328,29 @@ public sealed class UnionCompletenessDiagnosticsSpec
         result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG018");
     }
 
+    [Fact(DisplayName = "Should_NotCrash_When_ParameterlessUnionIsOnArrayField")]
+    public void Should_NotCrash_When_ParameterlessUnionIsOnArrayField()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Completeness.DiscoveredArrayField;
+
+            public interface IShape { }
+
+            [AkkaSerializable(Manifest = "circle")]
+            public sealed record Circle([property: AkkaField(1)] double Radius) : IShape;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1), AkkaUnion] IShape[] Shapes) : ISubscriptionEvent;
+            """ + SerializerSource;
+
+        var result = GeneratorTestHarness.Run(source);
+
+        result.AllDiagnostics.Should().NotContain(d => d.Id == "CS8785");
+    }
+
     [Fact(DisplayName = "Should_NotReportAKKASG048_When_ImplementorIsRefStruct")]
     public void Should_NotReportAKKASG048_When_ImplementorIsRefStruct()
     {

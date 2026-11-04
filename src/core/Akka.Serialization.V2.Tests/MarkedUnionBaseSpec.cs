@@ -91,7 +91,7 @@ public sealed class MarkedUnionBaseSpec
         var result = GeneratorTestHarness.Run(source);
 
         // A union with no members can only throw: report it instead of emitting a dispatch helper
-        // with no arms (which also fails the consumer's build with CS0162 in generated code).
+        // with no arms (its dead code raised CS0162, which fails a warnings-as-errors build).
         result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG019" && d.Severity == DiagnosticSeverity.Error)
             .Which.GetMessage(null).Should().Contain("IOrderEvent");
         result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("OrdersSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
