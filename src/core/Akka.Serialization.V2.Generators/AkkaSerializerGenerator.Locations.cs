@@ -68,7 +68,7 @@ namespace Akka.Serialization.V2.Generators;
 //                                           application for that target.
 //   - a specific closed-generic
 //     registration                      -> LocationKey(serializer.Key, ClosedGenericLocationMember(...)):
-//                                           the [AkkaSerializable<T>] application for that target
+//                                           the [AkkaSerializerIncludes<T>] application for that target
 //                                           (Decision 16: "the registration attribute for a closed
 //                                           generic"). A closed-generic SCHEMA's own fields are keyed
 //                                           by the CONSTRUCTION's TypeKey (e.g. Wrapper<int>), not the
@@ -149,7 +149,7 @@ public sealed partial class AkkaSerializerGenerator
     private static string FormatterLocationMember(string targetTypeFullName) => "formatter:" + targetTypeFullName;
 
     /// <summary>
-    /// The <see cref="LocationKey.Member"/> for a specific <c>[AkkaSerializable&lt;T&gt;]</c>
+    /// The <see cref="LocationKey.Member"/> for a specific <c>[AkkaSerializerIncludes&lt;T&gt;]</c>
     /// registration application, keyed by its target type's display name (the same string
     /// <see cref="ClosedGenericRegistrationInfo.TargetDisplayName"/> already carries).
     /// </summary>
@@ -303,7 +303,7 @@ public sealed partial class AkkaSerializerGenerator
     /// Appends the location entries for one <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declaration into
     /// <paramref name="entries"/>: the serializer's own attribute (<see cref="LocationKey.Member"/>
     /// empty), plus one entry per <c>[AkkaSerializerFormatter&lt;TTarget,TFormatter&gt;]</c> and
-    /// <c>[AkkaSerializable&lt;T&gt;]</c> attribute application found directly on the class. Re-scans
+    /// <c>[AkkaSerializerIncludes&lt;T&gt;]</c> attribute application found directly on the class. Re-scans
     /// <paramref name="symbol"/>'s attributes independently of <see cref="ExtractFormatters"/>/
     /// <see cref="ExtractClosedGenericRegistrations"/> -- there are at most a handful of attributes on
     /// any one serializer class (unlike a message's potentially many <c>[AkkaField]</c> properties, a
@@ -359,7 +359,7 @@ public sealed partial class AkkaSerializerGenerator
     /// entries (its key matches a <see cref="ClosedGenericRegistrationInfo.Target"/>), the message's
     /// own key has no location bag entry to resolve: a CLOSED CONSTRUCTION (e.g. <c>Wrapper&lt;int&gt;</c>)
     /// has no separate syntax of its own -- only the GENERIC DEFINITION does. In that case the closed
-    /// construction's own <c>[AkkaSerializable&lt;T&gt;]</c> registration attribute IS the local
+    /// construction's own <c>[AkkaSerializerIncludes&lt;T&gt;]</c> registration attribute IS the local
     /// reference site (Decision 16), so this returns that instead. For a literal (non-expanded)
     /// registration that is the SAME key <see cref="BuildSerializerLocationBag"/> already populated
     /// (<see cref="ClosedGenericRegistrationInfo.TargetDisplayName"/>, the target as written on the

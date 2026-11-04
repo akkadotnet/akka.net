@@ -31,8 +31,8 @@ public sealed class GeneratedMemberNamingSpec
                 public interface IProtocol { }
                 [AkkaSerializer<IProtocol>("naming", 120901)]
             """ + (scenario == "generic-arguments" ? """
-                [AkkaSerializable<Wrapper<First.Payload>>(Manifest = "first-wrapper")]
-                [AkkaSerializable<Wrapper<Second.Payload>>(Manifest = "second-wrapper")]
+                [AkkaSerializerIncludes<Wrapper<First.Payload>>(Manifest = "first-wrapper")]
+                [AkkaSerializerIncludes<Wrapper<Second.Payload>>(Manifest = "second-wrapper")]
             """ : string.Empty) + """
                 public sealed partial class SampleSerializer : AkkaSerializer
                 {

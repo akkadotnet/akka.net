@@ -66,8 +66,8 @@ public sealed class DeclarationDiagnosticsSpec
             [AkkaSerializable]
             public sealed record Message<T>([property: AkkaField(0)] T A, [property: AkkaField(0)] T B) : IProtocol;
             [AkkaSerializer<IProtocol>("sample", 120902)]
-            [AkkaSerializable<Message<int>>(Manifest = "int")]
-            [AkkaSerializable<Message<string>>(Manifest = "string")]
+            [AkkaSerializerIncludes<Message<int>>(Manifest = "int")]
+            [AkkaSerializerIncludes<Message<string>>(Manifest = "string")]
             public sealed partial class SampleSerializer : AkkaSerializer { }
             """);
         result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG005");

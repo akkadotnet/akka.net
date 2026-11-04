@@ -1783,38 +1783,31 @@ public sealed partial class GoldenSerializer
     {
         checked
         {
-            var size = SizeOfMapHeader(3);
+            var size = SizeOfMapHeader(2);
             size += SizeOfInt32(1);
-            var @eventSize = SizeOfUnion_IOrderEvent_2(message.Event);
+            var @eventSize = SizeOfUnion_IOrderEvent(message.Event);
             if (@eventSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += @eventSize;
             size += SizeOfInt32(2);
-            var maybeEventSize = message.MaybeEvent is null ? SizeOfNil() : SizeOfUnion_IOrderEvent_2(message.MaybeEvent);
+            var maybeEventSize = message.MaybeEvent is null ? SizeOfNil() : SizeOfUnion_IOrderEvent(message.MaybeEvent);
             if (maybeEventSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             size += maybeEventSize;
-            size += SizeOfInt32(3);
-            var narrowedSize = SizeOfUnion_IOrderEvent(message.Narrowed);
-            if (narrowedSize < 0)
-                return global::Akka.Serialization.SerializerV2.UnknownSize;
-            size += narrowedSize;
             return size;
         }
     }
 
     private void WriteUnionMessage_f4c965afe72b140e(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.UnionMessage message)
     {
-        writer.WriteMapHeader(3);
+        writer.WriteMapHeader(2);
         writer.Write(1);
-        WriteUnion_IOrderEvent_2(ref writer, message.Event);
+        WriteUnion_IOrderEvent(ref writer, message.Event);
         writer.Write(2);
         if (message.MaybeEvent is null)
             writer.WriteNil();
         else
-            WriteUnion_IOrderEvent_2(ref writer, message.MaybeEvent);
-        writer.Write(3);
-        WriteUnion_IOrderEvent(ref writer, message.Narrowed);
+            WriteUnion_IOrderEvent(ref writer, message.MaybeEvent);
     }
 
     private global::GoldenSample.UnionMessage ReadUnionMessage_f4c965afe72b140e(ref global::MessagePack.MessagePackReader reader)
@@ -1823,26 +1816,20 @@ public sealed partial class GoldenSerializer
         global::GoldenSample.IOrderEvent? @event = null;
         var __hasEvent = false;
         global::GoldenSample.IOrderEvent? maybeEvent = null;
-        global::GoldenSample.IOrderEvent? narrowed = null;
-        var __hasNarrowed = false;
         for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
         {
             var __fieldId = reader.ReadInt32();
             switch (__fieldId)
             {
                 case 1:
-                    @event = ReadUnion_IOrderEvent_2(ref reader);
+                    @event = ReadUnion_IOrderEvent(ref reader);
                     __hasEvent = true;
                     break;
                 case 2:
                     if (reader.TryReadNil())
                         maybeEvent = null;
                     else
-                        maybeEvent = ReadUnion_IOrderEvent_2(ref reader);
-                    break;
-                case 3:
-                    narrowed = ReadUnion_IOrderEvent(ref reader);
-                    __hasNarrowed = true;
+                        maybeEvent = ReadUnion_IOrderEvent(ref reader);
                     break;
                 default:
                     reader.Skip();
@@ -1852,9 +1839,7 @@ public sealed partial class GoldenSerializer
 
         if (!__hasEvent || @event is null)
             throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Event] with index [1] while deserializing [global::GoldenSample.UnionMessage].");
-        if (!__hasNarrowed || narrowed is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Narrowed] with index [3] while deserializing [global::GoldenSample.UnionMessage].");
-        return new global::GoldenSample.UnionMessage(Event: @event!, MaybeEvent: maybeEvent, Narrowed: narrowed!);
+        return new global::GoldenSample.UnionMessage(Event: @event!, MaybeEvent: maybeEvent);
     }
 
     private int SizeOfEnvelopeMessage_c3a85f5c62ed7533(global::GoldenSample.EnvelopeMessage message)
@@ -2893,75 +2878,6 @@ public sealed partial class GoldenSerializer
             return;
         }
 
-        throw new global::System.Runtime.Serialization.SerializationException($"Type [{runtimeType}] is not a declared union member for union [global::GoldenSample.IOrderEvent].");
-    }
-
-    private global::GoldenSample.IOrderEvent ReadUnion_IOrderEvent(ref global::MessagePack.MessagePackReader reader)
-    {
-        var fieldCount = reader.ReadMapHeader();
-        string? manifest = null;
-        global::GoldenSample.IOrderEvent? result = default;
-        var hasPayload = false;
-        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)
-        {
-            var fieldId = reader.ReadInt32();
-            switch (fieldId)
-            {
-                case 1:
-                    manifest = reader.ReadString();
-                    break;
-                case 2:
-                    switch (manifest)
-                    {
-                        case "order-placed-v1":
-                            result = ReadOrderPlaced_52bdf597a009434f(ref reader);
-                            break;
-                        case null:
-                            throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::GoldenSample.IOrderEvent].");
-                        default:
-                            throw new global::System.Runtime.Serialization.SerializationException($"Unknown union manifest [{manifest}] for union [global::GoldenSample.IOrderEvent].");
-                    }
-
-                    hasPayload = true;
-                    break;
-                default:
-                    reader.Skip();
-                    break;
-            }
-        }
-
-        if (!hasPayload || result is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing union payload for union [global::GoldenSample.IOrderEvent].");
-        return result;
-    }
-
-    private int SizeOfUnion_IOrderEvent(global::GoldenSample.IOrderEvent value)
-    {
-        var runtimeType = value.GetType();
-        if (runtimeType == typeof(global::GoldenSample.OrderPlaced))
-        {
-            var payloadSize = SizeOfOrderPlaced_52bdf597a009434f((global::GoldenSample.OrderPlaced)value);
-            if (payloadSize < 0)
-                return global::Akka.Serialization.SerializerV2.UnknownSize;
-            return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("order-placed-v1") + SizeOfInt32(2) + payloadSize);
-        }
-
-        return global::Akka.Serialization.SerializerV2.UnknownSize;
-    }
-
-    private void WriteUnion_IOrderEvent_2(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.IOrderEvent value)
-    {
-        var runtimeType = value.GetType();
-        if (runtimeType == typeof(global::GoldenSample.OrderPlaced))
-        {
-            writer.WriteMapHeader(2);
-            writer.Write(1);
-            writer.Write("order-placed-v1");
-            writer.Write(2);
-            WriteOrderPlaced_52bdf597a009434f(ref writer, (global::GoldenSample.OrderPlaced)value);
-            return;
-        }
-
         if (runtimeType == typeof(global::GoldenSample.OrderCancelled))
         {
             writer.WriteMapHeader(2);
@@ -2985,7 +2901,7 @@ public sealed partial class GoldenSerializer
         throw new global::System.Runtime.Serialization.SerializationException($"Type [{runtimeType}] is not a declared union member for union [global::GoldenSample.IOrderEvent].");
     }
 
-    private global::GoldenSample.IOrderEvent ReadUnion_IOrderEvent_2(ref global::MessagePack.MessagePackReader reader)
+    private global::GoldenSample.IOrderEvent ReadUnion_IOrderEvent(ref global::MessagePack.MessagePackReader reader)
     {
         var fieldCount = reader.ReadMapHeader();
         string? manifest = null;
@@ -3030,7 +2946,7 @@ public sealed partial class GoldenSerializer
         return result;
     }
 
-    private int SizeOfUnion_IOrderEvent_2(global::GoldenSample.IOrderEvent value)
+    private int SizeOfUnion_IOrderEvent(global::GoldenSample.IOrderEvent value)
     {
         var runtimeType = value.GetType();
         if (runtimeType == typeof(global::GoldenSample.OrderPlaced))

@@ -33,9 +33,9 @@ public sealed class CrossAssemblyGoldenOutputSpec
     private const string RegenEnvVar = "AKKA_GOLDEN_REGEN";
     private const string HintName = "CrossAssemblyGoldenSerializer.AkkaSerialization.g.cs";
 
-    // Assembly A: a nested field type (Money), a type-level union with two members (Placed,
-    // Cancelled), and a generic definition (Wrapper<T>) -- Decision 16's three referenced-assembly
-    // uses. The generator never runs over this compilation; A only supplies types (see
+    // Assembly A: a nested field type (Money), an interface whose two [AkkaSerializable]
+    // implementors (Cancelled, Placed) make up a union, and a generic definition (Wrapper<T>) --
+    // Decision 16's three referenced-assembly uses. The generator never runs over this compilation; A only supplies types (see
     // GeneratorTestHarness.CompileToReference).
     private const string AssemblySourceTemplate = """
         #nullable enable
@@ -46,16 +46,18 @@ public sealed class CrossAssemblyGoldenOutputSpec
         [AkkaSerializable]
         public sealed record Money([property: AkkaField(1)] long Cents);
 
-        [AkkaUnion(typeof(Placed), typeof(Cancelled))]
         public interface IOrderEvent
         {{
         }}
 
-        [AkkaSerializable(Manifest = "placed-v1")]
-        public sealed record Placed([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
+        // Declared in metadata-name order on purpose: a discovered union lists local members in
+        // declaration order and referenced-assembly members sorted by metadata name, so this keeps
+        // the local and cross-assembly runs comparable byte for byte.
         [AkkaSerializable(Manifest = "cancelled-v1")]
         public sealed record Cancelled([property: AkkaField(1)] string OrderId) : IOrderEvent;
+
+        [AkkaSerializable(Manifest = "placed-v1")]
+        public sealed record Placed([property: AkkaField(1)] string OrderId) : IOrderEvent;
 
         [AkkaSerializable]
         public sealed record Wrapper<T>([property: AkkaField(1)] string Id, [property: AkkaField(2)] T Payload);
@@ -90,7 +92,7 @@ public sealed class CrossAssemblyGoldenOutputSpec
         public sealed record Holder([property: AkkaField(1)] Wrapper<int> Count) : IComms;
 
         [AkkaSerializer<IComms>("cross-assembly-golden", 190001)]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class CrossAssemblyGoldenSerializer : AkkaSerializer
         {{
             public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);

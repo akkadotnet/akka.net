@@ -371,8 +371,10 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
             /*
              * It is possible the ProducerController re-sends msg-3 again before it has processed its acknowledgement.
              * If the ConsumerController restarts between sending the acknowledgement and receiving that re-sent msg-3,
-             * it will deliver msg-3 a second time. We then expect msg-4 next:
+             * it will deliver msg-3 a second time. The ConsumerController holds msg-4 until that duplicate
+             * is confirmed, so confirm it, then expect msg-4 next:
              */
+            delivery3cor4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
             var delivery4 = await consumerProbes[1].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
             delivery4.Message.Should().BeEquivalentTo(new Job("msg-4"));
         }
@@ -388,8 +390,25 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
         // redeliver also when no more messages are sent to the entity
         Sys.Stop(consumerProbes[1]); // don't wait for termination
 
-        var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
-        delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
+        var delivery3cor4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+
+        if (delivery3cor4b.Message.Equals(new Job("msg-3")))
+        {
+            /*
+             * Each SequencedMessage that reaches a new ConsumerController without the First flag makes it send
+             * Resend(0), so a resend of [3-4] can still be in flight when consumerProbes[1] stops, ahead of
+             * the producer seeing msg-3's confirmation. That batch starts the next entity incarnation, which
+             * takes msg-3 as its first message and delivers it again (at-least-once). Confirm it, then
+             * expect msg-4:
+             */
+            delivery3cor4b.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
+            var delivery4b = await consumerProbes[2].ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+            delivery4b.Message.Should().BeEquivalentTo(new Job("msg-4"));
+        }
+        else if (!delivery3cor4b.Message.Equals(new Job("msg-4")))
+        {
+            throw new Exception($"Unexpected message {delivery3cor4b.Message}");
+        }
     }
 
     [Fact]
@@ -457,6 +476,52 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
         var delivery5 = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         delivery5.Message.Should().BeEquivalentTo(new Job("msg-5"));
         delivery5.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
+    }
+
+    // https://github.com/akkadotnet/akka.net/issues/8850
+    [Fact]
+    public async Task
+        ReliableDelivery_with_Sharding_must_deliver_messages_racing_ProducerController_cleanup()
+    {
+        await JoinCluster();
+        NextId();
+
+        var consumerEndProbe = CreateTestProbe();
+        var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
+                ShardingConsumerController.Create<Job>(c =>
+                        Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
+                    ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
+            HashCodeMessageExtractor.Create(10,
+                o => string.Empty, o => o));
+
+        var cleanupAfter = TimeSpan.FromMilliseconds(100);
+        var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
+        {
+            CleanupUnusedAfter = cleanupAfter
+        };
+        var shardingProducerController =
+            Sys.ActorOf(
+                ShardingProducerController.Create<Job>(ProducerId, region, Option<Props>.None,
+                    shardingProducerSettings), $"shardingController-{_idCount}");
+        var producerProbe = CreateTestProbe();
+        shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
+
+        var next = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        for (var i = 1; i <= 20; i++)
+        {
+            // let entity-1 go idle, then stop its ProducerController and immediately send to it again,
+            // so the message arrives while the child's name is still reserved by the terminating actor
+            await Task.Delay(cleanupAfter * 1.5);
+            shardingProducerController.Tell(ShardingProducerController.CleanupUnused.Instance);
+            next.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job($"msg-{i}")));
+
+            var delivery = await consumerEndProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+            delivery.Message.Should().BeEquivalentTo(new Job($"msg-{i}"));
+            delivery.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
+
+            // the producer must keep receiving demand; a restart of the controller would lose it
+            next = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
+        }
     }
 
     [Fact]

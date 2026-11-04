@@ -322,20 +322,11 @@ IsGenericDefinition: False
 Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.UnionMessage>
 Fields:
   [1] Event: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: False)
-      union member: global::GoldenSample.OrderCancelled (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
-      union member: global::GoldenSample.OrderExpired (valueType=True, assignable=True, supported=True, sealed=True, abstract=False)
-      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
   [2] MaybeEvent: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: True)
-      union member: global::GoldenSample.OrderCancelled (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
-      union member: global::GoldenSample.OrderExpired (valueType=True, assignable=True, supported=True, sealed=True, abstract=False)
-      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
-  [3] Narrowed: kind=Union, type=global::GoldenSample.IOrderEvent (nullable: False)
-      union member: global::GoldenSample.OrderPlaced (valueType=False, assignable=True, supported=True, sealed=True, abstract=False)
 ConstructionPlan: valid=True
   Arguments:
     Event <- Event
     MaybeEvent <- MaybeEvent
-    Narrowed <- Narrowed
 
 ================================================================================
 Type: global::GoldenSample.Wrapper

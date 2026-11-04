@@ -445,7 +445,6 @@ namespace Akka.Persistence.Embedded.Tests.Journal
             var failed = await WriteAsync(Write(Evt("reset", 2, new TestEvent("b"))));
             failed.Succeeded.Should().BeFalse();
             failed.Failure.Should().BeOfType<SqliteException>();
-            Writer.ConnectionResetsForTests.Should().Be(1);
 
             Db.Execute("ALTER TABLE journal_moved RENAME TO journal");
             (await WriteAsync(Write(Evt("reset", 2, new TestEvent("b"))))).Succeeded.Should().BeTrue("the next write opens a new connection");

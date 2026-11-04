@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MarkedUnionBaseSpec.cs" company="Akka.NET Project">
+// <copyright file="UnionBaseDiscoverySpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -16,17 +16,16 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Design.md Decision 21 ("Unions Without A Member List"): <c>[AkkaUnion]</c> with no arguments on
-/// an interface or abstract class declares the closed set "every visible [AkkaSerializable]
-/// implementor", discovered at build time instead of listed. Ships with the same referenced-
-/// assembly walk as Decision 19 (<see cref="CrossAssemblyBaselineSpec"/>, <see cref="PlacementDiagnosticsSpec"/>),
-/// so this file focuses on the marker form itself: local discovery, cross-assembly discovery, and
-/// that the explicit list keeps working unaffected.
+/// Design.md Decision 21 ("Unions Without A Member List"): a field typed as an interface or
+/// abstract class is a union over "every visible [AkkaSerializable] implementor", discovered at
+/// build time with no attribute anywhere. Ships with the same referenced-assembly walk as Decision
+/// 19 (<see cref="CrossAssemblyBaselineSpec"/>, <see cref="PlacementDiagnosticsSpec"/>), so this
+/// file focuses on discovery itself: local, empty, and across the assembly boundary.
 /// </summary>
-public sealed class MarkedUnionBaseSpec
+public sealed class UnionBaseDiscoverySpec
 {
-    [Fact(DisplayName = "A parameterless [AkkaUnion] on a local interface discovers every local [AkkaSerializable] implementor, with no listed members")]
-    public void Local_marked_union_base_discovers_local_implementors()
+    [Fact(DisplayName = "An interface field discovers every local [AkkaSerializable] implementor, with no attribute")]
+    public void Local_interface_field_discovers_local_implementors()
     {
         const string source = """
             #nullable enable
@@ -35,7 +34,6 @@ public sealed class MarkedUnionBaseSpec
 
             namespace MarkedUnion.Case1;
 
-            [AkkaUnion]
             public interface IOrderEvent { }
 
             [AkkaSerializable(Manifest = "placed-v1")]
@@ -65,8 +63,8 @@ public sealed class MarkedUnionBaseSpec
         generated.Should().Contain("placed-v1").And.Contain("cancelled-v1");
     }
 
-    [Fact(DisplayName = "A parameterless [AkkaUnion] with zero visible implementors compiles clean and emits an (empty) union, rather than failing AKKASG019's empty-set rule")]
-    public void Local_marked_union_base_with_no_implementors_is_not_an_error()
+    [Fact(DisplayName = "An interface field with zero visible implementors reports AKKASG019 and emits no serializer")]
+    public void Local_interface_field_with_no_implementors_reports_AKKASG019()
     {
         const string source = """
             #nullable enable
@@ -75,7 +73,6 @@ public sealed class MarkedUnionBaseSpec
 
             namespace MarkedUnion.Case1b;
 
-            [AkkaUnion]
             public interface IOrderEvent { }
 
             [AkkaSerializable(Manifest = "notice-v1")]
@@ -90,12 +87,15 @@ public sealed class MarkedUnionBaseSpec
 
         var result = GeneratorTestHarness.Run(source);
 
-        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
-        result.AllDiagnostics.Should().NotContain(d => d.Id == "AKKASG019");
+        // A union with no members can only throw: report it instead of emitting a dispatch helper
+        // with no arms (its dead code raised CS0162, which fails a warnings-as-errors build).
+        result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG019" && d.Severity == DiagnosticSeverity.Error)
+            .Which.GetMessage(null).Should().Contain("IOrderEvent");
+        result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("OrdersSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "A parameterless [AkkaUnion] declared upstream discovers implementors on BOTH sides of the assembly boundary")]
-    public void Marked_union_base_spans_the_assembly_boundary()
+    [Fact(DisplayName = "An interface declared upstream discovers implementors on BOTH sides of the assembly boundary")]
+    public void Interface_union_spans_the_assembly_boundary()
     {
         const string sourceA = """
             #nullable enable
@@ -103,7 +103,6 @@ public sealed class MarkedUnionBaseSpec
 
             namespace MarkedUnion.Case2.AssemblyA;
 
-            [AkkaUnion]
             public interface IDestination { }
 
             [AkkaSerializable(Manifest = "dest-comms-v1")]
@@ -146,45 +145,59 @@ public sealed class MarkedUnionBaseSpec
         generated.Should().Contain("dest-comms-v1").And.Contain("dest-tech-v1");
     }
 
-    [Fact(DisplayName = "An explicit type-level [AkkaUnion(typeof(...))] list is unaffected by Decision 21 and still works")]
-    public void Explicit_union_list_still_works()
+    private const string DestinationImplementations = """
+        [AkkaSerializable(Manifest = "dest-comms-v1")]
+        public sealed record CommsDestination([property: AkkaField(1)] string Host) : IDestination;
+
+        [AkkaSerializable(Manifest = "dest-tech-v1")]
+        public sealed record TechDestination([property: AkkaField(1)] string Cluster) : IDestination;
+        """;
+
+    private const string EnvelopeMessage = """
+        public interface IEnvelopeProtocol { }
+
+        [AkkaSerializable(Manifest = "envelope-v1")]
+        public sealed record Envelope([property: AkkaField(1)] IDestination Destination) : IEnvelopeProtocol;
+        """;
+
+    private const string EnvelopeSerializer = """
+
+        [AkkaSerializer<IEnvelopeProtocol>("envelope", 140104)]
+        public sealed partial class EnvelopeSerializer : AkkaSerializer
+        { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
+        """;
+
+    private const string Header = "#nullable enable\nusing Akka.Serialization.V2;\n";
+
+    private static void AssertBothDestinationsDiscovered(Harness.GeneratorRunResult result)
     {
-        const string source = """
-            #nullable enable
-            using Akka.Actor;
-            using Akka.Serialization.V2;
-
-            namespace MarkedUnion.Case3;
-
-            [AkkaUnion(typeof(Placed), typeof(Cancelled))]
-            public interface IOrderEvent { }
-
-            [AkkaSerializable(Manifest = "placed-v1")]
-            public sealed record Placed([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
-            [AkkaSerializable(Manifest = "cancelled-v1")]
-            public sealed record Cancelled([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
-            // A third implementor exists but is deliberately NOT in the explicit list -- proving the
-            // list, not discovery, still governs this form.
-            [AkkaSerializable(Manifest = "amended-v1")]
-            public sealed record Amended([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
-            [AkkaSerializable(Manifest = "notice-v1")]
-            public sealed record OrderNotice([property: AkkaField(1)] IOrderEvent Event) : IOrderProtocol;
-
-            public interface IOrderProtocol { }
-
-            [AkkaSerializer<IOrderProtocol>("orders", 140104)]
-            public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
-            """;
-
-        var result = GeneratorTestHarness.Run(source);
-        var generated = string.Join(Environment.NewLine, result.RunResult.GeneratedTrees.Select(tree => tree.ToString()));
-
         result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
-        generated.Should().Contain("WritePlaced").And.Contain("WriteCancelled");
-        generated.Should().NotContain("WriteAmended");
+        var generated = string.Join(Environment.NewLine, result.RunResult.GeneratedTrees.Select(tree => tree.ToString()));
+        generated.Should().Contain("dest-comms-v1").And.Contain("dest-tech-v1");
+    }
+
+    [Fact(DisplayName = "Should_DiscoverImplementors_When_InterfaceIsInAImplementorsInBAndMessageWithSerializerInC")]
+    public void Should_DiscoverImplementors_When_InterfaceIsInAImplementorsInBAndMessageWithSerializerInC()
+    {
+        var assemblyA = GeneratorTestHarness.CompileToReference(Header + "namespace ThreeWay.Case1.A;\npublic interface IDestination { }\n", "ThreeWay.Case1.A");
+        var assemblyB = GeneratorTestHarness.CompileToReference(Header + "using ThreeWay.Case1.A;\nnamespace ThreeWay.Case1.B;\n" + DestinationImplementations, "ThreeWay.Case1.B", assemblyA);
+
+        var result = GeneratorTestHarness.Run(Header + "using ThreeWay.Case1.A;\nnamespace ThreeWay.Case1.C;\n" + EnvelopeMessage + EnvelopeSerializer, assemblyA, assemblyB);
+
+        AssertBothDestinationsDiscovered(result);
+    }
+
+    [Fact(DisplayName = "Should_DiscoverImplementors_When_MessageWithInterfaceFieldIsInAImplementorsInBAndSerializerInC")]
+    public void Should_DiscoverImplementors_When_MessageWithInterfaceFieldIsInAImplementorsInBAndSerializerInC()
+    {
+        // The message itself comes from A's metadata. Its IDestination field's key must still be
+        // requested from the referenced-assembly walk, or B's implementors are never collected and
+        // the union resolves empty (AKKASG019).
+        var assemblyA = GeneratorTestHarness.CompileToReference(Header + "namespace ThreeWay.Case2.A;\npublic interface IDestination { }\n" + EnvelopeMessage, "ThreeWay.Case2.A");
+        var assemblyB = GeneratorTestHarness.CompileToReference(Header + "using ThreeWay.Case2.A;\nnamespace ThreeWay.Case2.B;\n" + DestinationImplementations, "ThreeWay.Case2.B", assemblyA);
+
+        var result = GeneratorTestHarness.Run(Header + "using ThreeWay.Case2.A;\nnamespace ThreeWay.Case2.C;\n" + EnvelopeSerializer, assemblyA, assemblyB);
+
+        AssertBothDestinationsDiscovered(result);
     }
 }

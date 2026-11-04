@@ -46,6 +46,12 @@ namespace Akka.Remote.Tests.Artery
         private static Address AddressFor(ActorSystem system) => RARP.For(system).Provider.DefaultAddress;
         private static string EchoPath(ActorSystem system) => $"{AddressFor(system)}/user/echo";
 
+        private static async Task TerminateAsync(ActorSystem? system)
+        {
+            if (system is not null)
+                await system.Terminate().AwaitWithTimeout(10.Seconds());
+        }
+
         private static readonly MethodInfo EnqueueControlMethod = typeof(ArteryRemoting)
             .GetMethod("EnqueueControl", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("ArteryRemoting.EnqueueControl was not found.");
@@ -104,11 +110,13 @@ namespace Akka.Remote.Tests.Artery
             var cancellation = TestContext.Current.CancellationToken;
             using var pool = new FailOncePool();
             var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(ConfigFor()), new ArteryTransportSetup(pool));
-            var sender = ActorSystem.Create("QuarantineRecoverySender", setup);
-            ActorSystem? peer = ActorSystem.Create("QuarantineRecoveryPeer", ConfigFor());
+            ActorSystem? sender = null;
+            ActorSystem? peer = null;
             ActorSystem? replacement = null;
             try
             {
+                sender = ActorSystem.Create("QuarantineRecoverySender", setup);
+                peer = ActorSystem.Create("QuarantineRecoveryPeer", ConfigFor());
                 sender.ActorOf(Props.Create(() => new Echo()), "echo");
                 peer.ActorOf(Props.Create(() => new Echo()), "echo");
                 var probe = CreateTestProbe(sender);
@@ -189,9 +197,8 @@ namespace Akka.Remote.Tests.Artery
             finally
             {
                 pool.FailBlockedEncode();
-                await sender.Terminate().AwaitWithTimeout(10.Seconds());
-                if (peer is not null) await peer.Terminate().AwaitWithTimeout(10.Seconds());
-                if (replacement is not null) await replacement.Terminate().AwaitWithTimeout(10.Seconds());
+                // Start every shutdown before awaiting any, so one failure cannot skip the rest.
+                await Task.WhenAll(TerminateAsync(sender), TerminateAsync(peer), TerminateAsync(replacement));
             }
         }
     }

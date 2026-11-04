@@ -18,7 +18,7 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Golden-output gate for Decisions 19 and 21 (referenced-assembly protocol implementors, marked
+/// Golden-output gate for Decisions 19 and 21 (referenced-assembly protocol implementors, interface
 /// union bases, and <c>ManifestPrefix</c> expansion over a closed set that spans an assembly
 /// boundary; openspec/changes/messagepack-sourcegen-validation/design.md). Each case is pinned
 /// against a checked-in baseline the same way <see cref="CrossAssemblyGoldenOutputSpec"/> and
@@ -72,8 +72,8 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
         AssertMatchesGoldenBaseline("OrdersSerializer.AkkaSerialization.g.cs", result);
     }
 
-    [Fact(DisplayName = "Marked-union-base golden: a parameterless [AkkaUnion] discovers implementors on both sides of the assembly boundary, byte-identical to a checked-in baseline")]
-    public void Should_EmitByteIdenticalOutput_ForMarkedUnionBaseAcrossTheBoundary()
+    [Fact(DisplayName = "Interface-union golden: an interface field discovers implementors on both sides of the assembly boundary, byte-identical to a checked-in baseline")]
+    public void Should_EmitByteIdenticalOutput_ForInterfaceUnionAcrossTheBoundary()
     {
         const string sourceA = """
             #nullable enable
@@ -81,7 +81,6 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
 
             namespace MarkedUnionGolden.AssemblyA;
 
-            [AkkaUnion]
             public interface IDestination
             {
             }
@@ -158,7 +157,7 @@ public sealed class ReferencedAssemblyImplementorGoldenOutputSpec
                 [property: AkkaField(2)] string TraceId);
 
             [AkkaSerializer<ICommsMessage>("prefix-expansion-golden", 190103)]
-            [AkkaSerializable<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
+            [AkkaSerializerIncludes<Envelope<ICommsMessage>>(ManifestPrefix = "env")]
             public sealed partial class CommsSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
