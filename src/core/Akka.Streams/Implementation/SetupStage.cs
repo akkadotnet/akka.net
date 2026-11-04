@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#nullable enable
-
 using System;
 using System.Threading.Tasks;
 using Akka.Annotations;
