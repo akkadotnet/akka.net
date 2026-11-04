@@ -80,11 +80,13 @@ public sealed class InferredUnionSpec : AkkaSpec
             serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
     }
 
-    [Fact(DisplayName = "Should_RoundTripEveryCase_When_ConcreteBaseHasOnlyPrivateConstructorsAndNestedCases")]
-    public void Should_RoundTripEveryCase_When_ConcreteBaseHasOnlyPrivateConstructorsAndNestedCases()
+    [Fact(DisplayName = "Should_NotInferUnion_When_ConcreteBaseHasOnlyPrivateConstructorsAndNestedCases")]
+    public void Should_NotInferUnion_When_ConcreteBaseHasOnlyPrivateConstructorsAndNestedCases()
     {
-        // Not abstract: closed only because the private constructor leaves the nested types as
-        // the only possible subclasses.
+        // A concrete base can always hand out instances of itself -- here Coverage.None -- and no
+        // union of its subclasses could write one. So it is not inferred; the field keeps its
+        // AKKASG007 build error instead of building clean and failing on the first write of
+        // Coverage.None. Making the base abstract (or C# 15 closed) is the way to get a union.
         const string source = """
             #nullable enable
             using Akka.Serialization.V2;
@@ -95,6 +97,8 @@ public sealed class InferredUnionSpec : AkkaSpec
             {
                 private Coverage() { }
 
+                public static readonly Coverage None = new();
+
                 [AkkaSerializable(Manifest = "paid")]
                 public sealed record Paid([property: AkkaField(1)] long InvoiceNumber) : Coverage;
 
@@ -104,31 +108,20 @@ public sealed class InferredUnionSpec : AkkaSpec
 
             [AkkaSerializable(Manifest = "covered")]
             public sealed record Covered([property: AkkaField(1)] Coverage Coverage) : IDrawing;
-
-            public static class Samples
-            {
-                public static object[] All() => [new Covered(new Coverage.Paid(7)), new Covered(new Coverage.Trial())];
-            }
             """ + SerializerSource;
 
         var result = GeneratorTestHarness.Run(source);
-        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
 
-        var assembly = GeneratorTestHarness.EmitAndLoad(result);
-        var serializer = CreateSerializer(assembly, "Inferred.PrivateCtor.DrawingSerializer");
-        foreach (var original in (object[])Invoke(assembly, "Inferred.PrivateCtor.Samples", "All")!)
-        {
-            var restored = serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original));
-            restored.Should().Be(original);
-        }
+        result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG007");
+        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG019" || d.Id == "AKKASG048");
     }
 
     [Fact(DisplayName = "Should_NotInferUnion_When_ConcreteClassHasPrivateConstructorButNoNestedSubclass")]
     public void Should_NotInferUnion_When_ConcreteClassHasPrivateConstructorButNoNestedSubclass()
     {
         // The value-object/factory pattern: a private constructor guards creation, not
-        // subclassing. Nothing derives from Email, so it is not a hierarchy; it keeps the ordinary
-        // "nested type is not [AkkaSerializable]" error instead of becoming an empty union.
+        // subclassing. A concrete class is never inferred, so it keeps the ordinary "nested type
+        // is not [AkkaSerializable]" error instead of becoming an empty union.
         const string source = """
             #nullable enable
             using Akka.Serialization.V2;
@@ -160,10 +153,12 @@ public sealed class InferredUnionSpec : AkkaSpec
     [InlineData("ICircleBag")]
     [InlineData("IComparable")]
     [InlineData("IDisposable")]
+    [InlineData("Akka.Actor.ICanTell")]
     public void Should_ReportAKKASG003_NotInferUnion_When_FieldIsCollectionOrFrameworkInterface(string fieldType)
     {
         // A collection-like interface (anything implementing IEnumerable, including a user-declared
-        // one) or a System-namespace type is never a closed set of the user's own messages.
+        // one), a System-namespace type, or a type from Akka.NET's own core assembly is never a
+        // closed set of the user's own messages.
         var source = $$"""
             #nullable enable
             using System;
@@ -184,6 +179,27 @@ public sealed class InferredUnionSpec : AkkaSpec
         var result = GeneratorTestHarness.Run(source);
 
         result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG003");
+        result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG019" || d.Id == "AKKASG048");
+    }
+
+    [Fact(DisplayName = "Should_NotInferUnion_When_FieldIsAkkaCoreAbstractClass")]
+    public void Should_NotInferUnion_When_FieldIsAkkaCoreAbstractClass()
+    {
+        // Akka.Actor.ActorPath is abstract, but it is Akka.NET's own type, not a closed set of the
+        // user's messages: it keeps its "needs a formatter or [AkkaSerializable]" error.
+        var source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Inferred.AkkaCore;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1)] Akka.Actor.ActorPath Path) : IDrawing;
+            """ + SerializerSource;
+
+        var result = GeneratorTestHarness.Run(source);
+
+        result.GeneratorDiagnostics.Should().Contain(d => d.Id == "AKKASG007");
         result.GeneratorDiagnostics.Should().NotContain(d => d.Id == "AKKASG019" || d.Id == "AKKASG048");
     }
 

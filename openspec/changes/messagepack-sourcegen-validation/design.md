@@ -474,11 +474,11 @@ This ships with the referenced-assembly walk from Decision 19. It is the same wa
 The rule runs on the static type, after generic substitution:
 
 - an interface or abstract class is a union over every `[AkkaSerializable]` type that implements or derives from it, scoped as in Decision 19
-- a closed hierarchy is a union over its cases: a C# 15 `closed` class or record, or a concrete class declared in this compilation whose constructors are all private and which has a nested derived type
+- a closed hierarchy is a union over its cases: an abstract class with only private constructors (already covered by "abstract class"), or a C# 15 `closed` class or record. A concrete class is never a union, even with only private constructors: it can hand out instances of itself (a `static readonly` default, a factory), which no union of its subclasses could write
 - a C# 15 `union` is a union over its cases
 - the serializer's own protocol interface is still Decision 18's protocol set
-- framework types (the `System` namespace) and collection-like types (anything implementing `IEnumerable`) are never inferred, and keep `AKKASG003`
-- a sealed or concrete open class stays a nested value. Inferring a union there would change the field's wire format the moment someone added a subclass. Instead, a concrete non-sealed nested value class that some class in this compilation derives from is a build error, `AKKASG052`: a subclass value written to the field would lose its own fields
+- framework types (the `System` namespace, and Akka.NET's own core assembly) and collection-like types (anything implementing `IEnumerable`) are never inferred, and keep their existing errors
+- a sealed or concrete open class stays a nested value. Inferring a union there would change the field's wire format the moment someone added a subclass. Instead, a concrete non-sealed nested value class that some class in this compilation derives from is a build error, `AKKASG052`, whether the field holds it directly or as a collection element, key, or value: a subclass value written there would lose its own fields
 
 Decision 21 kept the marker to keep intent explicit. That reason does not hold up. Intent is already explicit twice over: the field sits on an `[AkkaSerializable]` message, and each member carries its own `[AkkaSerializable(Manifest = ...)]`. The parameterless marker found every implementor anyway, so it never narrowed anything; it only repeated what the members already declared. The listed form did narrow, but its uses are niche: a deliberate omission (better expressed as a narrower interface), and pinning the set (each member's manifest already shows up in review). The one real loss is an open type from a library the author cannot annotate; a C# 15 `union` declared locally, or an `object` field, covers it.
 

@@ -547,7 +547,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor NestedValueHasSubclasses = new(
         "AKKASG052",
         "Nested value type has subclasses",
-        "Property '{0}' on type '{1}' is typed '{2}', a class that is not sealed, and {3} derive from it. The property is written as '{2}''s own fields, so a subclass value would lose its own fields. Seal '{2}', or make it abstract so the property becomes a union of its [AkkaSerializable] subclasses.",
+        "Property '{0}' on type '{1}' writes '{2}' as a nested value, but '{2}' is not sealed and {3} derive from it. A nested value is written as '{2}''s own fields, so a subclass value would lose its own fields. {4}.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

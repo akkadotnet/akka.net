@@ -466,7 +466,7 @@ public sealed partial class AkkaSerializerGenerator
             // An open or closed hierarchy base expands the SAME way the protocol interface does
             // above -- every visible [AkkaSerializable] type that derives from or implements it,
             // local and referenced-assembly, discovered later.
-            if (IsInferredUnionBase(namedArgument, MapType(namedArgument, knownTypes)))
+            if (IsInferredUnionBase(namedArgument, MapType(namedArgument, knownTypes), knownTypes))
             {
                 position = new PrefixArgumentPosition(PrefixArgumentKind.DiscoveredClosedSet, TypeKey.FromSymbol(namedArgument), ImmutableArray<PrefixArgumentCandidate>.Empty);
                 return true;
@@ -924,7 +924,7 @@ public sealed partial class AkkaSerializerGenerator
             else
             {
                 mapping = MapType(member.Type, knownTypes);
-                if (member.Type is INamedTypeSymbol namedFieldType && IsInferredUnionBase(namedFieldType, mapping))
+                if (member.Type is INamedTypeSymbol namedFieldType && IsInferredUnionBase(namedFieldType, mapping, knownTypes))
                     mapping = new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(namedFieldType));
             }
 
@@ -1149,26 +1149,26 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Whether a field (or <c>ManifestPrefix</c> type argument) typed <paramref name="type"/> is a
     /// union over every <c>[AkkaSerializable]</c> type that derives from or implements it, with no
-    /// attribute: an interface, an abstract class, or a closed hierarchy (a C# 15 <c>closed</c>
-    /// class or record, or a class whose constructors are all private and which has a nested type
-    /// deriving from it). <paramref name="mapping"/> is the type's ordinary mapping: only a type the
-    /// generator could not otherwise encode qualifies, so a known shape (a supported collection
-    /// interface, <c>IActorRef</c>) or an <c>[AkkaSerializable]</c> type keeps its own encoding. A
-    /// sealed or concrete open class never qualifies: written as a nested value today, inferring a
-    /// union for it would change its wire format the moment someone adds a derived type.
-    /// The concrete closed form is checked only for types declared in this compilation: Roslyn
-    /// hides a referenced assembly's private members, so "every constructor is private" cannot be
-    /// trusted there. Collection-like types (anything implementing <c>IEnumerable</c>) and framework
-    /// types (the <c>System</c> namespace: <c>Stream</c>, <c>IComparable</c>, ...) never qualify: no
-    /// one means them as a closed set of their own messages, and an unsupported collection shape
-    /// must keep its AKKASG003 error rather than turn into an empty union.
+    /// attribute: an interface, an abstract class, or a C# 15 <c>closed</c> class or record (found by
+    /// its modifier, or by <c>IsClosedTypeAttribute</c> on a referenced type). <paramref name="mapping"/>
+    /// is the type's ordinary mapping: only a type the generator could not otherwise encode qualifies,
+    /// so a known shape (a supported collection interface, <c>IActorRef</c>) or an
+    /// <c>[AkkaSerializable]</c> type keeps its own encoding. A concrete class never qualifies, even one
+    /// whose constructors are all private: it can always hand out instances of itself (a
+    /// <c>static readonly</c> default, a factory), which no union of its subclasses could write.
+    /// Written as a nested value instead, inferring a union for it would also change its wire format
+    /// the moment someone added a subclass. Collection-like types (anything implementing
+    /// <c>IEnumerable</c>) and framework types (the <c>System</c> namespace, and Akka.NET's own core
+    /// assembly: <c>ActorPath</c>, <c>ICanTell</c>, ...) never qualify: no one means them as a closed
+    /// set of their own messages, and they must keep their AKKASG003 error rather than turn into an
+    /// empty union.
     /// </summary>
-    private static bool IsInferredUnionBase(INamedTypeSymbol type, TypeMapping mapping)
+    private static bool IsInferredUnionBase(INamedTypeSymbol type, TypeMapping mapping, KnownTypes knownTypes)
     {
         if (mapping.Kind is not (FieldKind.Unsupported or FieldKind.MissingSerializableDefinition))
             return false;
 
-        if (IsInSystemNamespace(type) || IsEnumerable(type))
+        if (IsInSystemNamespace(type) || IsEnumerable(type) || IsAkkaCoreType(type, knownTypes))
             return false;
 
         if (type.TypeKind == TypeKind.Interface)
@@ -1177,26 +1177,11 @@ public sealed partial class AkkaSerializerGenerator
         if (type.TypeKind != TypeKind.Class || type.IsSealed || type.IsStatic)
             return false;
 
-        if (type.IsAbstract)
-            return true;
-
-        if (type.DeclaringSyntaxReferences.IsEmpty || !IsClosedHierarchy(type, CancellationToken.None))
-            return false;
-
-        if (HasClosedModifier(type, CancellationToken.None))
-            return true;
-
-        foreach (var nested in type.GetTypeMembers())
-        {
-            for (var baseType = nested.BaseType; baseType != null; baseType = baseType.BaseType)
-            {
-                if (SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, type.OriginalDefinition))
-                    return true;
-            }
-        }
-
-        return false;
+        return type.IsAbstract || HasClosedModifier(type, CancellationToken.None);
     }
+
+    private static bool IsAkkaCoreType(INamedTypeSymbol type, KnownTypes knownTypes)
+        => knownTypes.ActorRef != null && SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, knownTypes.ActorRef.ContainingAssembly);
 
     private static bool IsInSystemNamespace(INamedTypeSymbol type)
     {

@@ -64,7 +64,7 @@ public sealed class NestedValueSubclassSpec
         error.Location.Kind.Should().NotBe(LocationKind.None, "AKKASG052 reports at the field");
         var message = error.GetMessage();
         message.Should().Contain("'Destination'").And.Contain("'NestedValues.Address'").And.Contain("'NestedValues.PoBoxAddress'");
-        message.Should().Contain("Seal 'NestedValues.Address'").And.Contain("make it abstract");
+        message.Should().Contain("Seal 'NestedValues.Address'").And.Contain("make it abstract and remove its [AkkaSerializable]");
     }
 
     [Fact(DisplayName = "Should_ReportAKKASG052_When_NestedValueClassHasUnmarkedSubclass")]
@@ -108,6 +108,26 @@ public sealed class NestedValueSubclassSpec
         var result = GeneratorTestHarness.Run(source);
 
         result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG052");
+    }
+
+    [Theory(DisplayName = "Should_ReportAKKASG052_When_CollectionElementIsSubclassedNestedValue")]
+    [InlineData("System.Collections.Generic.IReadOnlyList<Address>")]
+    [InlineData("System.Collections.Generic.IReadOnlyDictionary<string, Address>")]
+    public void Should_ReportAKKASG052_When_CollectionElementIsSubclassedNestedValue(string fieldType)
+    {
+        // Each element (or dictionary value) is written as Address's own fields too, so a subclass
+        // element loses its fields exactly as a subclass property value would. A union is not
+        // supported as an element, so the only fix offered is sealing.
+        var source = Source(UnsealedAddress, """
+            [AkkaSerializable]
+            public sealed record PoBoxAddress([property: AkkaField(1)] string Street, [property: AkkaField(2)] int Box) : Address(Street);
+            """, fieldType: fieldType);
+
+        var result = GeneratorTestHarness.Run(source);
+
+        var message = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG052").Which.GetMessage();
+        message.Should().Contain("'NestedValues.PoBoxAddress'").And.Contain("a union is not supported as a collection element");
+        message.Should().NotContain("make it abstract");
     }
 
     [Fact(DisplayName = "Should_NotReportAKKASG052_When_NestedValueClassHasNoSubclass")]

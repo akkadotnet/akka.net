@@ -432,9 +432,12 @@ Some types are never unions:
   as that class's own fields. Treating it as a union would change the field's wire format the
   moment someone added a subclass. A subclass value written there would lose its own fields, so
   when a class in this compilation derives from a concrete nested value class, the build fails
-  (**AKKASG052**). Seal the class, or make the base abstract or closed to carry subclasses.
+  (**AKKASG052**). Seal the class, or make the base abstract and remove its `[AkkaSerializable]`
+  so the property becomes a union of its subclasses. The same check covers a concrete class used as
+  a collection element, dictionary key, or dictionary value; there, sealing is the only fix.
 * `object` is always an [envelope payload](#envelope-payloads).
-* Framework types (the `System` namespace, such as `Stream` or `IComparable`) and collection
+* Framework types (the `System` namespace, such as `Stream` or `IComparable`, and Akka.NET's own
+  core types, such as `ActorPath`) and collection
   interfaces report **AKKASG003**. So does an interface or abstract class used as a collection
   element, dictionary key, or dictionary value: only a property's own type can be a union.
 
@@ -503,9 +506,8 @@ too.
 
 ### Closed Hierarchies
 
-A closed hierarchy fixes its derived types in its own declaration. The generator recognizes two
-forms. The first is a base whose constructors are all private, so only its nested types can
-derive from it:
+A closed hierarchy fixes its derived types in its own declaration. The most portable form is an
+abstract base whose constructors are all private, so only its nested types can derive from it:
 
 ```csharp
 public abstract record Coverage
@@ -523,14 +525,14 @@ public abstract record Coverage
 public sealed record PeriodCovered([property: AkkaField(1)] long SubscriptionId, [property: AkkaField(2)] Coverage Coverage) : ISubscriptionEvent;
 ```
 
-This form needs no particular compiler. An abstract base like `Coverage` is already a union because
-it is abstract. A concrete base with only private constructors is a union too, as long as at least
-one nested type derives from it and the base is declared in the serializer's own compilation. A
-class with private constructors and no nested subclasses, such as a value object built through a
-factory method, is not.
+This needs no particular compiler: `Coverage` is a union because it is abstract, and the private
+constructor keeps anyone outside it from adding cases. The base must be abstract. A concrete class
+is never a union, even when its constructors are all private: it can still hand out instances of
+itself (a `static readonly` default, a factory method), and no union of its subclasses could write
+one. Such a property keeps its **AKKASG007** error until you make the base abstract.
 
-The second form is a C# 15 `closed record` (or `closed class`), which works on `net10.0` as well
-as `net11.0`. The generator recognizes the `closed` modifier, and also a type carrying
+A C# 15 `closed record` (or `closed class`) works the same way, on `net10.0` as well as `net11.0`.
+The generator recognizes the `closed` modifier, and also a type carrying
 `System.Runtime.CompilerServices.IsClosedTypeAttribute`. On `net10.0` the compiler needs that
 attribute (plus `UnionAttribute` and `IUnion` for unions) declared as an internal polyfill in your
 project; Akka.NET does not ship them, since they would collide with the `net11.0` BCL.
@@ -1252,7 +1254,7 @@ property's type, the attribute was removed, and those ids stay permanent gaps.
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 | AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a union property's type but isn't `[AkkaSerializable]`, so the union leaves it out and it fails when first serialized. See [Member Requirements](#member-requirements). |
 | AKKASG051 | Error | [AkkaSerializable] is not supported on a C# union | `[AkkaSerializable]` sits on a C# 15 `union` declaration. A union holds one of its cases and has no fields of its own: mark each case type and use the union as a property type. |
-| AKKASG052 | Error | Nested value type has subclasses | A property is typed as a concrete `[AkkaSerializable]` class that is not sealed, and a class in this compilation derives from it. The property is written as the base class's own fields, so a subclass value would lose its own. Seal the class, or make it abstract so the property becomes a [union](#unions). |
+| AKKASG052 | Error | Nested value type has subclasses | A property writes a concrete `[AkkaSerializable]` class that is not sealed as a nested value (as its own type, or as a collection element, key, or value), and a class in this compilation derives from it. A nested value is written as the base class's own fields, so a subclass value would lose its own. Seal the class; for the property's own type you can instead make it abstract and remove its `[AkkaSerializable]` so the property becomes a [union](#unions). |
 | AKKASG053 | Error | Manifest belongs on the included type | `[AkkaSerializerIncludes<T>]` sets `Manifest`, but `T` is not generic. A non-generic type declares its manifest on its own `[AkkaSerializable]`; remove `Manifest` from the include and declare it there. See [Including Messages Outside the Protocol](#including-messages-outside-the-protocol). |
 
 ## Limitations Today and Planned Changes

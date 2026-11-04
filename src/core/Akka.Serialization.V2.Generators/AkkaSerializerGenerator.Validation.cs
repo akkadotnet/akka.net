@@ -827,18 +827,25 @@ public sealed partial class AkkaSerializerGenerator
                     isValid = false;
             }
 
-            // AKKASG052: a nested value field typed as a non-sealed class that something derives
-            // from. The field is written as the base's own fields, so a subclass value would lose
-            // its own fields on the wire.
-            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Object))
+            // AKKASG052: a nested value -- the field itself, or a collection element, key, or value
+            // inside it -- typed as a non-sealed class that something derives from. It is written as
+            // the base's own fields, so a subclass value would lose its own fields on the wire.
+            foreach (var field in message.Fields)
             {
-                if (!unionHierarchies.SubclassesByNestedValueKey.TryGetValue(field.Mapping.Key, out var subclasses))
-                    continue;
+                foreach (var nested in EnumerateNestedValueMappings(field.Mapping))
+                {
+                    if (!unionHierarchies.SubclassesByNestedValueKey.TryGetValue(nested.Key, out var subclasses))
+                        continue;
 
-                var subclassNames = string.Join(", ", subclasses.Select(subclass => "'" + ToDisplayName(subclass.DisplayName ?? string.Empty) + "'"));
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NestedValueHasSubclasses, new LocationKey(message.Key, field.Name),
-                    field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), subclassNames));
-                isValid = false;
+                    var typeName = ToDisplayName(nested.TypeFullName);
+                    var subclassNames = string.Join(", ", subclasses.Select(subclass => "'" + ToDisplayName(subclass.DisplayName ?? string.Empty) + "'"));
+                    var fix = field.Mapping.Kind == FieldKind.Object
+                        ? $"Seal '{typeName}', or make it abstract and remove its [AkkaSerializable] so the property becomes a union of its [AkkaSerializable] subclasses"
+                        : $"Seal '{typeName}'; a union is not supported as a collection element, key, or value";
+                    diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NestedValueHasSubclasses, new LocationKey(message.Key, field.Name),
+                        field.Name, ToDisplayName(message.FullyQualifiedName), typeName, subclassNames, fix));
+                    isValid = false;
+                }
             }
 
             // An Object mapping that resolves to no known message would generate a call to a

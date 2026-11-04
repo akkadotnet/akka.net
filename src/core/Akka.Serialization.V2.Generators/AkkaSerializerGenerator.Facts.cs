@@ -154,8 +154,11 @@ public sealed partial class AkkaSerializerGenerator
         {
             foreach (var field in message.Fields)
             {
-                if (field.Mapping.Kind == FieldKind.Object && !field.Mapping.IsValueType && unsealed.Contains(field.Mapping.Key))
-                    used.Add(field.Mapping.Key);
+                foreach (var nested in EnumerateNestedValueMappings(field.Mapping))
+                {
+                    if (unsealed.Contains(nested.Key))
+                        used.Add(nested.Key);
+                }
             }
         }
 
@@ -183,6 +186,24 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
+    /// Every reference-type nested value (<see cref="FieldKind.Object"/>) a field writes: the field's
+    /// own mapping, and any collection element, dictionary key, or dictionary value inside it, at any
+    /// depth. Each one is written as that class's own fields, so a subclass value in any of these
+    /// positions would lose its own fields (AKKASG052).
+    /// </summary>
+    internal static IEnumerable<TypeMapping> EnumerateNestedValueMappings(TypeMapping mapping)
+    {
+        if (mapping.Kind == FieldKind.Object && !mapping.IsValueType)
+            yield return mapping;
+
+        foreach (var argument in mapping.TypeArguments)
+        {
+            foreach (var nested in EnumerateNestedValueMappings(argument))
+                yield return nested;
+        }
+    }
+
+    /// <summary>
     /// Whether <paramref name="candidate"/> has <paramref name="key"/> anywhere in its base-class chain
     /// or among its interfaces. Compares by metadata identity, with the same cheap name pre-filter
     /// <see cref="ImplementsProtocol"/> uses.
@@ -202,45 +223,12 @@ public sealed partial class AkkaSerializerGenerator
     private const string IsClosedTypeAttributeFullName = "System.Runtime.CompilerServices.IsClosedTypeAttribute";
 
     /// <summary>
-    /// A class whose derived types are fixed by its own declaration: a C# 15 <c>closed</c> class or
-    /// record, or a class whose every constructor is private, so only its nested types can derive
-    /// from it. A source-declared <c>closed</c> type is found by its modifier: the compiler only adds
-    /// <c>IsClosedTypeAttribute</c> at emit time, and Roslyn does not return compiler-made attributes
-    /// from a source symbol's <c>GetAttributes()</c>. The modifier is matched by text because this
-    /// generator builds against a Roslyn that predates the keyword. The attribute itself (matched by
-    /// full metadata name, so a consumer polyfill counts) still covers an explicit application. A non-sealed record's compiler-made copy
-    /// constructor is protected; it is ignored here, since deriving through it alone is not a
-    /// realistic way to extend a closed hierarchy.
-    /// </summary>
-    private static bool IsClosedHierarchy(INamedTypeSymbol symbol, CancellationToken cancellationToken)
-    {
-        if (symbol.TypeKind != TypeKind.Class || symbol.IsSealed)
-            return false;
-
-        if (HasClosedModifier(symbol, cancellationToken))
-            return true;
-
-        var sawConstructor = false;
-        foreach (var constructor in symbol.InstanceConstructors)
-        {
-            var isRecordCopyConstructor = symbol.IsRecord
-                && constructor.Parameters.Length == 1
-                && SymbolEqualityComparer.Default.Equals(constructor.Parameters[0].Type, symbol);
-            if (isRecordCopyConstructor)
-                continue;
-
-            sawConstructor = true;
-            if (constructor.DeclaredAccessibility != Accessibility.Private)
-                return false;
-        }
-
-        return sawConstructor;
-    }
-
-    /// <summary>
     /// A C# 15 <c>closed</c> class or record: the <c>closed</c> modifier on a source declaration, or
     /// <c>IsClosedTypeAttribute</c> (matched by full metadata name, so a consumer polyfill counts) on
-    /// any declaration. See <see cref="IsClosedHierarchy"/> for why the modifier is matched by text.
+    /// any declaration. A source-declared <c>closed</c> type is found by its modifier: the compiler only
+    /// adds <c>IsClosedTypeAttribute</c> at emit time, and Roslyn does not return compiler-made
+    /// attributes from a source symbol's <c>GetAttributes()</c>. The modifier is matched by text because
+    /// this generator builds against a Roslyn that predates the keyword.
     /// </summary>
     private static bool HasClosedModifier(INamedTypeSymbol symbol, CancellationToken cancellationToken)
     {
@@ -614,9 +602,14 @@ public sealed partial class AkkaSerializerGenerator
     /// compilations are created and dropped constantly. The workspace and the generator driver both
     /// keep the SAME <see cref="MetadataReference"/> instance across an edit for as long as the
     /// reference set itself is unchanged (that instance is exactly what "the reference set is
-    /// unchanged" means), and the walk's result depends only on the PE file's own metadata, not on
-    /// which symbol instance happens to represent it right now -- so keying on the reference is both
-    /// safe and the thing that is actually stable. <see cref="Compilation.GetMetadataReference(IAssemblySymbol)"/>
+    /// unchanged" means), and the walk's result depends almost only on the PE file's own metadata,
+    /// not on which symbol instance happens to represent it right now -- so keying on the reference
+    /// is both safe and the thing that is actually stable. One exception, accepted knowingly:
+    /// <see cref="ReferencedTypeFacts.UnionFieldKeys"/> also depends on what a field's type IS (an
+    /// interface or not, collection-like or not), and that type can live in a different reference.
+    /// If that other assembly changes shape while this reference stays the same instance, the cached
+    /// keys go stale until this reference changes too. The worst outcome is a missing union key, which
+    /// surfaces as an AKKASG019 that a full rebuild clears, never as wrong generated code. <see cref="Compilation.GetMetadataReference(IAssemblySymbol)"/>
     /// recovers it from an assembly symbol at lookup time; it returns null for an assembly with no
     /// corresponding reference in this compilation (a source assembly reached via
     /// <c>CompilationReference</c>, or the compilation's own assembly), so the assembly symbol itself
@@ -736,7 +729,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             if (property.Type is not INamedTypeSymbol fieldType
                 || !property.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute))
-                || !IsInferredUnionBase(fieldType, MapType(fieldType, knownTypes)))
+                || !IsInferredUnionBase(fieldType, MapType(fieldType, knownTypes), knownTypes))
                 continue;
 
             keys ??= ImmutableArray.CreateBuilder<TypeKey>();
