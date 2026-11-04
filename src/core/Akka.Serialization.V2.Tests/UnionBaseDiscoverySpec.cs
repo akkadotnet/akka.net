@@ -144,4 +144,60 @@ public sealed class UnionBaseDiscoverySpec
         generated.Should().Contain("WriteCommsDestination").And.Contain("WriteTechDestination");
         generated.Should().Contain("dest-comms-v1").And.Contain("dest-tech-v1");
     }
+
+    private const string DestinationImplementations = """
+        [AkkaSerializable(Manifest = "dest-comms-v1")]
+        public sealed record CommsDestination([property: AkkaField(1)] string Host) : IDestination;
+
+        [AkkaSerializable(Manifest = "dest-tech-v1")]
+        public sealed record TechDestination([property: AkkaField(1)] string Cluster) : IDestination;
+        """;
+
+    private const string EnvelopeMessage = """
+        public interface IEnvelopeProtocol { }
+
+        [AkkaSerializable(Manifest = "envelope-v1")]
+        public sealed record Envelope([property: AkkaField(1)] IDestination Destination) : IEnvelopeProtocol;
+        """;
+
+    private const string EnvelopeSerializer = """
+
+        [AkkaSerializer<IEnvelopeProtocol>("envelope", 140104)]
+        public sealed partial class EnvelopeSerializer : AkkaSerializer
+        { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
+        """;
+
+    private const string Header = "#nullable enable\nusing Akka.Serialization.V2;\n";
+
+    private static void AssertBothDestinationsDiscovered(Harness.GeneratorRunResult result)
+    {
+        result.AllDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var generated = string.Join(Environment.NewLine, result.RunResult.GeneratedTrees.Select(tree => tree.ToString()));
+        generated.Should().Contain("dest-comms-v1").And.Contain("dest-tech-v1");
+    }
+
+    [Fact(DisplayName = "Should_DiscoverImplementors_When_InterfaceIsInAImplementorsInBAndMessageWithSerializerInC")]
+    public void Should_DiscoverImplementors_When_InterfaceIsInAImplementorsInBAndMessageWithSerializerInC()
+    {
+        var assemblyA = GeneratorTestHarness.CompileToReference(Header + "namespace ThreeWay.Case1.A;\npublic interface IDestination { }\n", "ThreeWay.Case1.A");
+        var assemblyB = GeneratorTestHarness.CompileToReference(Header + "using ThreeWay.Case1.A;\nnamespace ThreeWay.Case1.B;\n" + DestinationImplementations, "ThreeWay.Case1.B", assemblyA);
+
+        var result = GeneratorTestHarness.Run(Header + "using ThreeWay.Case1.A;\nnamespace ThreeWay.Case1.C;\n" + EnvelopeMessage + EnvelopeSerializer, assemblyA, assemblyB);
+
+        AssertBothDestinationsDiscovered(result);
+    }
+
+    [Fact(DisplayName = "Should_DiscoverImplementors_When_MessageWithInterfaceFieldIsInAImplementorsInBAndSerializerInC")]
+    public void Should_DiscoverImplementors_When_MessageWithInterfaceFieldIsInAImplementorsInBAndSerializerInC()
+    {
+        // The message itself comes from A's metadata. Its IDestination field's key must still be
+        // requested from the referenced-assembly walk, or B's implementors are never collected and
+        // the union resolves empty (AKKASG019).
+        var assemblyA = GeneratorTestHarness.CompileToReference(Header + "namespace ThreeWay.Case2.A;\npublic interface IDestination { }\n" + EnvelopeMessage, "ThreeWay.Case2.A");
+        var assemblyB = GeneratorTestHarness.CompileToReference(Header + "using ThreeWay.Case2.A;\nnamespace ThreeWay.Case2.B;\n" + DestinationImplementations, "ThreeWay.Case2.B", assemblyA);
+
+        var result = GeneratorTestHarness.Run(Header + "using ThreeWay.Case2.A;\nnamespace ThreeWay.Case2.C;\n" + EnvelopeSerializer, assemblyA, assemblyB);
+
+        AssertBothDestinationsDiscovered(result);
+    }
 }

@@ -488,7 +488,11 @@ public sealed record TechDestination([property: AkkaField(1)] string Cluster) : 
 ```
 
 The serializer's compilation sees every assembly it references, so a field typed `IDestination`
-there is a union over both records. The wire format is the same either way: a union frame carries
+there is a union over both records. The message that declares the field can live in any of those
+assemblies too: an `Envelope` with an `IDestination` property, declared in `Core.dll` next to the
+interface, still gets both records when its serializer lives in an assembly that references
+`Comms.dll` and `Tech.dll`. The serializer's assembly must reference every assembly that declares a
+member; members in an assembly it cannot see are not part of the union. The wire format is the same either way: a union frame carries
 each member's own manifest. Only a referenced assembly's public types are visible: an `internal`
 implementor there is left out of the union and fails when it is first written, with no build error.
 

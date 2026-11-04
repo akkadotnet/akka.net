@@ -49,8 +49,9 @@ public sealed partial class AkkaSerializerGenerator
     {
         var knownTypes = GetKnownTypes(compilation);
         var protocolKeys = ComputeDistinctProtocolKeys(serializers);
-        var closedSetKeys = ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers);
         var referencedAssembliesUsingV2 = ComputeReferencedAssembliesUsingV2(compilation, cancellationToken);
+        var closedSetKeys = AddReferencedUnionFieldKeys(compilation, referencedAssembliesUsingV2,
+            ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers), knownTypes, cancellationToken);
 
         var unionWalkKeys = ComputeUnionKeys(protocolKeys, messages, serializers);
         var nestedValueKeys = ComputeNestedValueKeys(messages, serializers);
@@ -540,18 +541,28 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private readonly struct ReferencedTypeFacts
     {
-        public ReferencedTypeFacts(TypeKey key, bool isMarked, ImmutableArray<string> protocols, ImmutableArray<string> baseTypeNames)
+        public ReferencedTypeFacts(TypeKey key, bool isMarked, ImmutableArray<string> protocols, ImmutableArray<string> baseTypeNames, ImmutableArray<TypeKey> unionFieldKeys)
         {
             Key = key;
             IsMarked = isMarked;
             Protocols = protocols;
             BaseTypeNames = baseTypeNames;
+            UnionFieldKeys = unionFieldKeys;
         }
 
         public TypeKey Key { get; }
         public bool IsMarked { get; }
         public ImmutableArray<string> Protocols { get; }
         public ImmutableArray<string> BaseTypeNames { get; }
+
+        /// <summary>
+        /// For a marked type: the static type of every <c>[AkkaField]</c> property that is an inferred
+        /// union base (see <c>IsInferredUnionBase</c>). A message from a referenced assembly can reach
+        /// the serializer (as a protocol implementor or a nested value) and bring such a field with it;
+        /// its key must be a requested closed-set key, or the union's members in OTHER referenced
+        /// assemblies are never collected. Empty for an unmarked type.
+        /// </summary>
+        public ImmutableArray<TypeKey> UnionFieldKeys { get; }
     }
 
     /// <summary>One <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declaration found in a referenced assembly, cached alongside <see cref="ReferencedTypeFacts"/> in the same per-assembly walk.</summary>
@@ -704,10 +715,81 @@ public sealed partial class AkkaSerializerGenerator
                 continue;
 
             var baseTypeNames = isMarked ? GetBaseTypeNames(candidate) : ImmutableArray<string>.Empty;
-            types.Add(new ReferencedTypeFacts(TypeKey.FromSymbol(candidate), isMarked, protocols, baseTypeNames));
+            var unionFieldKeys = isMarked ? GetUnionFieldKeys(candidate, knownTypes) : ImmutableArray<TypeKey>.Empty;
+            types.Add(new ReferencedTypeFacts(TypeKey.FromSymbol(candidate), isMarked, protocols, baseTypeNames, unionFieldKeys));
         }
 
         return new ReferencedAssemblyFacts(types.ToImmutable(), serializers.ToImmutable());
+    }
+
+    /// <summary>
+    /// The static types of <paramref name="type"/>'s own <c>[AkkaField]</c> properties that are inferred
+    /// union bases. See <see cref="ReferencedTypeFacts.UnionFieldKeys"/>.
+    /// </summary>
+    private static ImmutableArray<TypeKey> GetUnionFieldKeys(INamedTypeSymbol type, KnownTypes knownTypes)
+    {
+        if (knownTypes.FieldAttribute == null)
+            return ImmutableArray<TypeKey>.Empty;
+
+        ImmutableArray<TypeKey>.Builder? keys = null;
+        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        {
+            if (property.Type is not INamedTypeSymbol fieldType
+                || !property.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute))
+                || !IsInferredUnionBase(fieldType, MapType(fieldType, knownTypes)))
+                continue;
+
+            keys ??= ImmutableArray.CreateBuilder<TypeKey>();
+            keys.Add(TypeKey.FromSymbol(fieldType));
+        }
+
+        return keys?.ToImmutable() ?? ImmutableArray<TypeKey>.Empty;
+    }
+
+    /// <summary>
+    /// Adds to <paramref name="closedSetKeys"/> every union field key a marked type in a referenced
+    /// V2 assembly declares (see <see cref="ReferencedTypeFacts.UnionFieldKeys"/>). Without this, a
+    /// message from assembly A with an <c>IDestination</c> field, serialized in C, would resolve to an
+    /// empty union whenever <c>IDestination</c>'s implementors live in a third assembly B: the key
+    /// would never be requested, so B's implementors would never be collected. Reads only the cached
+    /// per-assembly facts. Order is stable: this compilation's own keys first, then referenced ones in
+    /// reference order.
+    /// </summary>
+    private static ImmutableArray<TypeKey> AddReferencedUnionFieldKeys(
+        Compilation compilation,
+        ImmutableArray<string> referencedAssembliesUsingV2,
+        ImmutableArray<TypeKey> closedSetKeys,
+        KnownTypes knownTypes,
+        CancellationToken cancellationToken)
+    {
+        if (referencedAssembliesUsingV2.IsEmpty)
+            return closedSetKeys;
+
+        var qualifyingAssemblies = new HashSet<string>(referencedAssembliesUsingV2, StringComparer.Ordinal);
+        var seen = new HashSet<TypeKey>(closedSetKeys);
+        ImmutableArray<TypeKey>.Builder? builder = null;
+
+        foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!qualifyingAssemblies.Contains(assembly.Name))
+                continue;
+
+            foreach (var type in GetReferencedAssemblyFacts(compilation, assembly, knownTypes, cancellationToken).Types)
+            {
+                foreach (var key in type.UnionFieldKeys)
+                {
+                    if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
+                        continue;
+
+                    builder ??= closedSetKeys.ToBuilder();
+                    builder.Add(key);
+                }
+            }
+        }
+
+        return builder?.ToImmutable() ?? closedSetKeys;
     }
 
     /// <summary>
