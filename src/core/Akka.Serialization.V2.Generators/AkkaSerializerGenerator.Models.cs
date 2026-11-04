@@ -1844,7 +1844,8 @@ public sealed partial class AkkaSerializerGenerator
         IgnoredFieldAnnotations,
         UnionImplementorNotSerializable,
         UnionMemberSetIncomplete,
-        UnionDeclarationConflictsWithCSharpUnion
+        UnionDeclarationConflictsWithCSharpUnion,
+        SerializableOnCSharpUnion
     }
 
     /// <summary>

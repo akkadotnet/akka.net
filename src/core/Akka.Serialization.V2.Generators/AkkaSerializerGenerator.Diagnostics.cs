@@ -561,6 +561,18 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// <c>[AkkaSerializable]</c> on a C# 15 union declaration: a union has no fields of its own to
+    /// serialize, and without this the attribute was silently ignored until the first send failed.
+    /// </summary>
+    private static readonly DiagnosticDescriptor SerializableOnCSharpUnion = new(
+        "AKKASG051",
+        "[AkkaSerializable] is not supported on a C# union",
+        "C# union '{0}' cannot be [AkkaSerializable]: a union holds one of its cases and has no fields of its own. Mark each case type [AkkaSerializable(Manifest = \"...\")] and use '{0}' as an [AkkaField] property type instead.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -624,6 +636,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.UnionImplementorNotSerializable => UnionImplementorNotSerializable,
             DiagnosticKey.UnionMemberSetIncomplete => UnionMemberSetIncomplete,
             DiagnosticKey.UnionDeclarationConflictsWithCSharpUnion => UnionDeclarationConflictsWithCSharpUnion,
+            DiagnosticKey.SerializableOnCSharpUnion => SerializableOnCSharpUnion,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

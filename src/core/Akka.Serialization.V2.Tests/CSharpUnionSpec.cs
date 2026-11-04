@@ -271,6 +271,72 @@ public sealed class CSharpUnionSpec : AkkaSpec
         result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable")]
+    public void Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable()
+    {
+        var source = CoverageCases + """
+
+            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
+            """;
+
+        var result = RunPreview(source);
+
+        var error = result.GeneratorDiagnostics.Should().ContainSingle(d => d.Id == "AKKASG051").Which;
+        error.Severity.Should().Be(DiagnosticSeverity.Error);
+        error.GetMessage(null).Should().Contain("Unions.CoverageMessage");
+    }
+
+    [Fact(DisplayName = "Should_UseOwnSchema_When_AkkaSerializableStructAlsoImplementsIUnion")]
+    public void Should_UseOwnSchema_When_AkkaSerializableStructAlsoImplementsIUnion()
+    {
+        // A hand-written [AkkaSerializable] struct that happens to implement IUnion keeps its own
+        // field schema: treating it as a union would drop Currency and rebuild it through Money(Amount).
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+
+            namespace Unions.OwnSchema;
+
+            [AkkaSerializable(Manifest = "amount")]
+            public sealed record Amount([property: AkkaField(1)] decimal Value);
+
+            [AkkaSerializable(Manifest = "money")]
+            public readonly record struct Money([property: AkkaField(1)] Amount Amount, [property: AkkaField(2)] string Currency) : System.Runtime.CompilerServices.IUnion
+            {
+                public Money(Amount amount) : this(amount, "USD") { }
+
+                public object? Value => Amount;
+            }
+
+            public interface IPriced;
+
+            [AkkaSerializable(Manifest = "priced")]
+            public sealed record Priced([property: AkkaField(1)] Money Price) : IPriced;
+
+            [AkkaSerializer<IPriced>("priced", 152003)]
+            public sealed partial class PricedSerializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+
+            public static class Samples
+            {
+                public static object Euro() => new Priced(new Money(new Amount(12.5m), "EUR"));
+            }
+            """;
+
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "Unions.OwnSchema.PricedSerializer");
+        var original = Invoke(assembly, "Unions.OwnSchema.Samples", "Euro")!;
+
+        serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
+    }
+
     private Akka.Serialization.SerializerWithStringManifest CreateSerializer(Assembly assembly, string typeName)
     {
         var type = assembly.GetType(typeName, throwOnError: true)!;

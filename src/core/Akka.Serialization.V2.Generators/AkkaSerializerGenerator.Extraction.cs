@@ -672,6 +672,20 @@ public sealed partial class AkkaSerializerGenerator
                 allowEmpty = allowEmptyValue;
         }
 
+        // A C# 15 union declaration (the only type declaration the message predicate admits beyond
+        // class/struct/record) wraps one of its cases and has no fields of its own: the cases are the
+        // [AkkaSerializable] types, and the union is used as a field type. Keyed on the syntax, so a
+        // hand-written [AkkaSerializable] struct that implements IUnion keeps its own schema.
+        if (context.TargetNode is not (ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax))
+        {
+            var unionKey = TypeKey.FromSymbol(symbol);
+            var unionLocations = ImmutableArray.CreateBuilder<LocationEntry>();
+            AddLocationEntry(unionLocations, new LocationKey(unionKey, string.Empty), FirstLocationOrNull(symbol.Locations));
+            var unionDiagnostic = new DiagnosticSpec(DiagnosticKey.SerializableOnCSharpUnion, new LocationKey(unionKey, string.Empty),
+                ToDisplayName(GetFullyQualifiedTypeName(symbol)));
+            return new ExtractedMessage(null, new LocationBag(unionLocations.ToImmutable()), ImmutableArray.Create(unionDiagnostic));
+        }
+
         // A generic [AkkaSerializable] DEFINITION is never a message itself -- a source generator
         // cannot reify an open generic. Only its registered closed constructions serialize
         // ([AkkaSerializable<T>], AKKASG020/022). Extract it as a flagged placeholder
@@ -927,7 +941,7 @@ public sealed partial class AkkaSerializerGenerator
             // an [AkkaUnion] list that names a different set is reported as AKKASG050.
             var unionDeclarationConflict = string.Empty;
             TypeMapping mapping;
-            if (!isEnvelopePayload && TryGetCSharpUnionType(member.Type) is { } csharpUnionType)
+            if (!isEnvelopePayload && TryGetCSharpUnionType(member.Type, knownTypes) is { } csharpUnionType)
             {
                 var cases = ExtractCSharpUnionCases(csharpUnionType, knownTypes);
                 if (hasUnionAttribute && !unionMembers.IsEmpty)
@@ -1263,28 +1277,57 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// The C# 15 union struct behind <paramref name="type"/> (unwrapping <c>Nullable&lt;T&gt;</c>), or
-    /// null. A union lowers to a sealed struct implementing <c>System.Runtime.CompilerServices.IUnion</c>
-    /// with one public single-parameter constructor per case. The interface is the signal: Roslyn does
-    /// not return the compiler-made <c>[Union]</c> attribute from a source symbol's
-    /// <c>GetAttributes()</c>, so an attribute check would never match a union declared in source.
-    /// Matched by full metadata name, so the net11.0 BCL type and a net10.0 consumer polyfill both
-    /// count. Union classes are not supported yet.
+    /// null. See <see cref="IsCSharpUnionStruct"/> for what counts.
     /// </summary>
-    private static INamedTypeSymbol? TryGetCSharpUnionType(ITypeSymbol type)
+    private static INamedTypeSymbol? TryGetCSharpUnionType(ITypeSymbol type, KnownTypes knownTypes)
     {
         if (TryGetNullableValueType(type, out var underlying))
             type = underlying;
 
-        if (type is not INamedTypeSymbol { TypeKind: TypeKind.Struct } named)
-            return null;
+        return type is INamedTypeSymbol named && IsCSharpUnionStruct(named, knownTypes) ? named : null;
+    }
 
-        foreach (var implemented in named.AllInterfaces)
+    /// <summary>
+    /// Whether <paramref name="type"/> has the shape a C# 15 union lowers to: a struct implementing
+    /// <c>System.Runtime.CompilerServices.IUnion</c>, with a public instance <c>object? Value</c>
+    /// property (generated code reads it directly) and at least one public single-parameter
+    /// constructor (the cases). The interface is the signal: Roslyn does not return the
+    /// compiler-made <c>[Union]</c> attribute from a source symbol's <c>GetAttributes()</c>, so an
+    /// attribute check would never match a union declared in source. Matched by full metadata name,
+    /// so the net11.0 BCL type and a net10.0 consumer polyfill both count. A struct carrying
+    /// <c>[AkkaSerializable]</c> has its own field schema and is never treated as a union. Union
+    /// classes are not supported yet.
+    /// </summary>
+    private static bool IsCSharpUnionStruct(INamedTypeSymbol type, KnownTypes knownTypes)
+    {
+        if (type.TypeKind != TypeKind.Struct)
+            return false;
+
+        var implementsIUnion = false;
+        foreach (var implemented in type.AllInterfaces)
         {
-            if (string.Equals(implemented.ToDisplayString(), IUnionFullName, StringComparison.Ordinal))
-                return named;
+            if (string.Equals(implemented.MetadataName, "IUnion", StringComparison.Ordinal)
+                && string.Equals(implemented.ToDisplayString(), IUnionFullName, StringComparison.Ordinal))
+            {
+                implementsIUnion = true;
+                break;
+            }
         }
 
-        return null;
+        if (!implementsIUnion)
+            return false;
+
+        if (knownTypes.SerializableAttribute != null
+            && type.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
+            return false;
+
+        var hasPublicValue = type.GetMembers("Value").OfType<IPropertySymbol>().Any(property =>
+            property.DeclaredAccessibility == Accessibility.Public && !property.IsStatic && property.GetMethod != null
+            && property.Type.SpecialType == SpecialType.System_Object);
+        if (!hasPublicValue)
+            return false;
+
+        return type.InstanceConstructors.Any(constructor => constructor.DeclaredAccessibility == Accessibility.Public && constructor.Parameters.Length == 1);
     }
 
     /// <summary>
