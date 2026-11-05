@@ -216,6 +216,8 @@ namespace Akka.Routing
     /// </summary>
     public static class ConsistentHash
     {
+        static readonly byte[] NullHashKey = new byte[] { 0 };
+
         /// <summary>
         /// Factory method to create a <see cref="ConsistentHash{T}"/> instance.
         /// </summary>
@@ -339,7 +341,7 @@ namespace Akka.Routing
             switch (obj)
             {
                 case null:
-                    return new byte[] { 0 };
+                    return NullHashKey;
                 case byte[] bytes:
                     return bytes;
                 case int @int:
