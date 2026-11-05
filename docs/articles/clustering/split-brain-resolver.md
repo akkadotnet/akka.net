@@ -36,7 +36,10 @@ akka.cluster {
 }
 ```
 
-Keep in mind that split brain resolver will NOT work when `akka.cluster.auto-down-unreachable-after` is used.
+The legacy `akka.cluster.auto-down-unreachable-after` mechanism was removed in Akka.NET v1.6.
+Remove that setting and configure the Split Brain Resolver instead. Do not copy the former
+auto-down delay into `stable-after`: auto-down and SBR use different decision models, so choose
+`stable-after` based on your failure detector, expected transient outages, and operational needs.
 
 ## Split Brain Resolution Strategies
 

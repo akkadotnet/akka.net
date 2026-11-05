@@ -34,7 +34,6 @@ namespace Akka.Cluster.Tests.MultiNode
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = off
                 akka.cluster.retry-unsuccessful-join-after = 3s
             ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
