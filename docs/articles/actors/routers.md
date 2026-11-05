@@ -98,6 +98,27 @@ Routers are implemented as actors, so a router is supervised by its parent, and 
 
 By default, pool routers use `Pool.DefaultSupervisorStrategy`, which is `SupervisorStrategy.DefaultStrategy`. This strategy restarts a routee for ordinary exceptions and stops it for `ActorInitializationException`, `ActorKilledException`, and `DeathPactException`.
 
+## Sending messages to actors behind router
+
+As routers are actors, we send over messages to actors they manage the same way we communicate to other actors via `ActorRef`:
+
+```cs
+var router = system.ActorOf(Props.Create<Worker>().WithRouter(new RoundRobinPool(3)), "some-pool");
+foreach (var element in Enumerable.Range(0, 6))
+{
+  router.Tell(new Message(element));
+}
+```
+
+Router will send over messages according to its strategy.
+In this particular case, we have `RoundRobinPool` configuration that will:
+* create 3 instances (because it's Pool strategy - see above) of `Worker` actor 
+* enqueue<sup>1</sup> total of 6 messages of type `Message` to actors **mailboxes** it manages according to its RoundRobin routing strategy
+
+Final outcome should be 2 messages per each actor's mailbox (see how RoundRobin strategy works below).
+
+<sup>1</sup> *assuming that `Worker` actor is configured to `Receive<Message>`*
+
 ## Routing Strategies
 
 These are the routing strategies provided by Akka.NET out of the box.
