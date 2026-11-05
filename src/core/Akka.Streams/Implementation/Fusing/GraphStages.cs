@@ -834,15 +834,19 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
+#nullable enable
             private readonly TaskFlattenSource<T, M> _stage;
             private readonly TaskCompletionSource<M> _materialized;
             private readonly SubSinkInlet<T> _sinkIn;
+            private readonly Attributes _inheritedAttributes;
 
-            public Logic(TaskFlattenSource<T, M> stage, TaskCompletionSource<M> materialized)
+            public Logic(TaskFlattenSource<T, M> stage, TaskCompletionSource<M> materialized,
+                Attributes inheritedAttributes)
                 : base(stage.Shape)
             {
                 _stage = stage;
                 _materialized = materialized;
+                _inheritedAttributes = inheritedAttributes;
                 _sinkIn = new SubSinkInlet<T>(this, "TaskFlattenSource.in");
 
                 // initial handler (until task completes)
@@ -860,6 +864,7 @@ namespace Akka.Streams.Implementation.Fusing
                         InternalOnDownstreamFinish(cause);
                     }));
             }
+#nullable restore
 
             public override void PreStart()
             {
@@ -890,7 +895,7 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     var runnable = Source.FromGraph(t.Result).ToMaterialized(_sinkIn.Sink, Keep.Left);
-                    var materializedValue = Interpreter.SubFusingMaterializer.Materialize(runnable, _stage.InitialAttributes);
+                    var materializedValue = Interpreter.SubFusingMaterializer.Materialize(runnable, _inheritedAttributes);
                     _materialized.TrySetResult(materializedValue);
 
                     SetHandler(_stage.Outlet, this);
@@ -931,7 +936,7 @@ namespace Akka.Streams.Implementation.Fusing
         public override ILogicAndMaterializedValue<Task<M>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var materialized = TaskEx.NonBlockingTaskCompletionSource<M>();
-            return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized), materialized.Task);
+            return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized, inheritedAttributes), materialized.Task);
         }
 
         public override string ToString() => "TaskFlattenSource";
