@@ -1,3 +1,54 @@
+#### 1.5.74 November 5th, 2026 ####
+
+Akka.NET v1.5.74 backports a batch of Akka.Streams, Cluster.Sharding, Cluster.Tools, Persistence and Hosting bug fixes from `dev`, plus a large set of de-flaked tests. It also moves NuGet publishing to GitHub Actions.
+
+**Akka.Streams**
+* [Ignore `Dispose()` on the ActorSystem's shared default materializer](https://github.com/akkadotnet/akka.net/pull/8886) - `system.Materializer()` and `ActorMaterializer.Create(system)` with no custom settings return one materializer that the `ActorSystem` owns. Disposing it, for example in a `using` block, through a scoped DI registration, or in an actor's `PostStop`, shut it down for every caller until the system restarted. `Dispose()` on that shared instance is now ignored. The `ActorSystem` still shuts it down on termination, and an explicit `Shutdown()` still stops it. Materializers created with custom settings or on an `IActorContext` behave as before.
+* [Fix `Flow.Setup` input forwarding](https://github.com/akkadotnet/akka.net/pull/8839) - `Flow.Setup` grabbed upstream elements but never pushed them into the flow it built, so they were lost.
+* [Fix inherited attributes in deferred stream operators](https://github.com/akkadotnet/akka.net/pull/8842) - `LazyFlow`, `LazySink` and `Source.FromTaskSource` now materialize their inner graph with the attributes of the enclosing graph, so dispatcher, supervision and other attributes apply to it.
+* [Honor `StreamRefAttributes` on `SourceRef`](https://github.com/akkadotnet/akka.net/pull/8879) - The `FinalTerminationSignalDeadline`, `BufferCapacity` and `DemandRedeliveryInterval` attributes now take effect on a `SourceRef`. Before, only `SubscriptionTimeout` did. Fixes [#8878](https://github.com/akkadotnet/akka.net/issues/8878).
+* [Read `final-termination-signal-deadline` from HOCON](https://github.com/akkadotnet/akka.net/pull/7834) - `StreamRefSettings.FinalTerminationSignalDeadline` was never loaded from configuration and was always zero.
+* [Stage correctness fixes](https://github.com/akkadotnet/akka.net/pull/8876):
+  * `UnfoldFlow` no longer hangs on its initial seed ([#7867](https://github.com/akkadotnet/akka.net/pull/7867), [#7906](https://github.com/akkadotnet/akka.net/pull/7906)).
+  * `KeepAlive` (`IdleInject`) no longer injects over an element that upstream already has ready, and its idle deadline starts at the first pull instead of at materialization ([#7863](https://github.com/akkadotnet/akka.net/pull/7863), [#7881](https://github.com/akkadotnet/akka.net/pull/7881)).
+  * `MergePrioritized` keeps the configured priority ratios ([#7872](https://github.com/akkadotnet/akka.net/pull/7872)).
+  * `RestartWithBackoff` sets its reset deadline before starting the inner graph, so a synchronous completion doesn't see a stale deadline ([#7861](https://github.com/akkadotnet/akka.net/pull/7861)).
+  * `Source.Lazily` fails its materialized task with the factory's exception instead of a misleading "stopped without completing" error ([#8843](https://github.com/akkadotnet/akka.net/pull/8843)).
+  * `PartitionHub` consumers report the real failure when a hub callback task is cancelled, instead of failing with a null exception ([#8064](https://github.com/akkadotnet/akka.net/pull/8064)).
+  * The outgoing TCP stage completes cleanly when upstream finishes before the connection is established, instead of logging a `NullReferenceException` ([#8628](https://github.com/akkadotnet/akka.net/pull/8628)).
+
+**Akka.Cluster.Sharding**
+* [Defer `ShardingProducerController` cleanup until the delivery child terminates](https://github.com/akkadotnet/akka.net/pull/8869) - A message that arrived while an idle entity's `ProducerController` was stopping tried to create a new child with the same name, threw `InvalidActorNameException` and restarted the controller. Messages for that entity are now buffered until the old child has terminated. Fixes [#8850](https://github.com/akkadotnet/akka.net/issues/8850).
+* [Preserve owner termination during shard handoff](https://github.com/akkadotnet/akka.net/pull/8865) - When the region that owned a shard terminated mid-rebalance, the handoff kept sending `HandOff` to the dead region and stalled until `handoff-timeout`. It now remembers the termination and finishes the handoff.
+
+**Akka.Cluster.Tools**
+* [Handle a failed lease release when `ClusterSingletonManager` leaves Oldest](https://github.com/akkadotnet/akka.net/pull/8065) - A faulted `Lease.Release()` became an unhandled `Status.Failure`, so nobody saw that the release failed. It is now handled and logged.
+
+**Akka.Persistence**
+* [Fix race condition in `ReceivePersistentActor` async handlers](https://github.com/akkadotnet/akka.net/pull/7873) - The `RunTask` continuation could run on the thread pool and touch actor state off the actor thread. It now runs synchronously, as intended.
+
+**Akka**
+* [Fix `ByteString.CopyTo(Span/Memory)` throwing "Destination is too short"](https://github.com/akkadotnet/akka.net/pull/8845) - The `Span<byte>` and `Memory<byte>` overloads threw whenever a copy stopped partway through a segment, including when the destination was sized exactly to `count`. Fixes [#8469](https://github.com/akkadotnet/akka.net/issues/8469).
+* [Add `Match` extension methods for `Option<T>`](https://github.com/akkadotnet/akka.net/pull/8774) - New `Match` overloads in `Akka.Util.Extensions` take a function or action for the `Some` and `None` cases.
+
+**Akka.Hosting**
+* [MAUI detection no longer throws under InvariantGlobalization](https://github.com/akkadotnet/akka.net/pull/8783) - `AddAkka` threw `CultureNotFoundException` at startup when `InvariantGlobalization` was on and a satellite assembly, such as one from Microsoft.Data.SqlClient, was loaded.
+
+**Build and tests**
+* [Publish to NuGet via GitHub Actions trusted publishing](https://github.com/akkadotnet/akka.net/pull/8893) - Release packages are now pushed from GitHub Actions using NuGet trusted publishing (OIDC) instead of from Azure DevOps with a long-lived API key. Package contents are unchanged.
+* De-flaked Remote, Hosting, core, Streams, Persistence, DI, Cluster.Sharding, Cluster.Tools, DistributedData and multi-node specs ([#8881](https://github.com/akkadotnet/akka.net/pull/8881), [#8882](https://github.com/akkadotnet/akka.net/pull/8882), [#8883](https://github.com/akkadotnet/akka.net/pull/8883), [#8884](https://github.com/akkadotnet/akka.net/pull/8884)). These change tests only.
+
+4 contributors since release 1.5.73
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 65 | 3030 | 1265 | Aaron Stannard |
+| 4 | 229 | 87 | Gregorius Soedharmo |
+| 3 | 317 | 12 | Ariel Fischer |
+| 2 | 48 | 9 | Matt Kotsenas |
+
+To see the full set of changes in Akka.NET v1.5.74, [click here](https://github.com/akkadotnet/akka.net/milestone/157?closed=1).
+
 #### 1.5.73 October 5th, 2026 ####
 
 Akka.NET v1.5.73 restores the Microsoft.Extensions dependency ranges to their pre-1.5.72 width. 1.5.72 raised the minimum to 10.0 across core and Hosting during the Akka.Hosting import; this release rolls that back to keep applications on older Microsoft.Extensions versions working.
