@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ReliableDeliveryShardingSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -492,7 +492,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
         {
             // let entity-1 go idle, then stop its ProducerController and immediately send to it again,
             // so the message arrives while the child's name is still reserved by the terminating actor
-            await Task.Delay(cleanupAfter * 1.5);
+            await Task.Delay(TimeSpan.FromMilliseconds(cleanupAfter.TotalMilliseconds * 1.5));
             shardingProducerController.Tell(ShardingProducerController.CleanupUnused.Instance);
             next.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job($"msg-{i}")));
 
