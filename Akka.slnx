@@ -79,6 +79,8 @@
     <Project Path="src/contrib/hosting/Akka.Cluster.Hosting.Tests/Akka.Cluster.Hosting.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Cluster.Hosting/Akka.Cluster.Hosting.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting.InvariantGlobalization.Tests/Akka.Hosting.InvariantGlobalization.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.Maui.Tests/Akka.Hosting.Maui.Tests.csproj" />
+    <Project Path="src/contrib/hosting/Akka.Hosting.Maui/Akka.Hosting.Maui.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Tests/Akka.Hosting.TestKit.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Xunit2.Tests/Akka.Hosting.TestKit.Xunit2.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Hosting.TestKit.Xunit2/Akka.Hosting.TestKit.Xunit2.csproj" />
