@@ -23,6 +23,12 @@ structurally while keeping nested values' comparison rules; unordered protocol m
 without depending on hash-bucket enumeration order. The test kit's bounded generic dispatch supports the pinned
 FluentAssertions 5 API and runs only in JIT tests; it is not part of serializer or Native AOT product code.
 
+Manifest parity is strict by default. A legacy serializer with `IncludeManifest = false` has an empty manifest;
+its new native V2 id must declare a nonempty token. Such a case explicitly sets the optional init property
+`V2Manifest`, for example `new V2PortCase(message, "", "selection") { V2Manifest = "a" }`.
+Every reader, mixed-binding exchange and golden dump uses the corresponding writer's token. This does not
+relax native manifest validation, change the positional case constructor, or alter the legacy id's format.
+
 ## Golden snapshots
 
 The two golden tests write a hex dump of each case (`HexDumpFormatter`) and check it with [Verify](https://github.com/VerifyTests/Verify),
