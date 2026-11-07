@@ -1,0 +1,8 @@
+﻿case: mix
+message-type: MixMetricsSelector
+manifest: c
+serializer-id: 50
+byte-count: 21
+
+0000  81 01 92 83 01 0a 02 a1  65 03 c4 00 83 01 0a 02  |........e.......|
+0010  a1 64 03 c4 00                                    |.d...|

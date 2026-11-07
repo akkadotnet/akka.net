@@ -1,0 +1,10 @@
+﻿case: pool-mix
+message-type: AdaptiveLoadBalancingPool
+manifest: b
+serializer-id: 50
+byte-count: 60
+
+0000  84 01 83 01 0a 02 a1 63  03 c4 0e 0a 05 08 0a 12  |.......c........|
+0010  01 65 0a 05 08 0a 12 01  64 02 04 03 bd 61 6b 6b  |.e......d....akk|
+0020  61 2e 61 63 74 6f 72 2e  64 65 66 61 75 6c 74 2d  |a.actor.default-|
+0030  64 69 73 70 61 74 63 68  65 72 04 c2              |dispatcher..|
