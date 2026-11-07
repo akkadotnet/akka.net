@@ -253,6 +253,9 @@ Full details: [Source-Generated MessagePack Serialization](docs/articles/seriali
 
 ## Enabling Artery
 
+Moving an existing deployment? Follow [Migrating From DotNetty to Artery](docs/articles/remoting/dotnetty-to-artery.md)
+for configuration, cluster transition, addresses, Hosting, and TLS migration.
+
 Artery is experimental. Don't use it in production - Akka.NET logs that warning itself the
 moment it starts. It's off by default, and needs the `Akka.Remote` package either way, same as
 classic remoting:
