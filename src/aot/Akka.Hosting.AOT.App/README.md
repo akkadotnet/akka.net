@@ -36,4 +36,4 @@ materializer's island-boundary code; see #8731). `src/core/Akka/` is out of scop
 plain-core canary's own baseline already covers it. Checked by the Hosting steps of the `AotCanary` job in
 `build-system/pr-validation.yaml`, which also documents how to reproduce the check locally.
 
-`Resources/Canary.cs.resx` exists only to put a "cs" satellite assembly in the image: under `InvariantGlobalization`, `Assembly.GetName()` (and `FullName` on Native AOT) throws `CultureNotFoundException` for satellites, which crashed `AddAkka`'s MAUI detection (#8782). `Program.cs` checks the satellite is present before `AddAkka`.
+`Resources/Canary.cs.resx` exists only to put a "cs" satellite assembly in the image: under `InvariantGlobalization`, `Assembly.GetName()` (and `FullName` on Native AOT) throws `CultureNotFoundException` for satellites, which crashed `AddAkka`'s MAUI detection (#8782). `Program.cs` checks the satellite is present before `AddAkka`. On the JIT it explicitly loads the satellite first; `PublishAot` defines `NATIVE_AOT` to exclude that loading code from the native build, which already enumerates compiled-in satellites.
