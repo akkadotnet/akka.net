@@ -45,6 +45,8 @@ In production, you want all four. Skipping any of them leaves a gap the other th
 
 ## TLS (Transport Layer Security) Overview
 
+This article's configuration examples describe TLS for Akka.Remote's DotNetty transport. Akka.IO TCP has a separate, per-command TLS API and trust-policy model; see [TLS for Akka.IO, Akka.Streams, and Artery](tls-for-io-streams-artery.md). The APIs are independent, so DotNetty settings and HOCON keys shown below do not configure Akka.IO.
+
 TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It provides:
 
 **What TLS Protects Against:**
