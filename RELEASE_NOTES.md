@@ -1,3 +1,28 @@
+#### 1.6.0-beta6 November 7th, 2026 ####
+
+Akka.NET 1.6.0-beta6 adds top-level C# 15 union serialization and makes distributed data the default store for cluster sharding coordinator state. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+
+**Serialization V2**
+
+* C# 15 unions can now be sent or persisted as top-level messages with `[AkkaSerializable(Manifest = "...")]`. Deserialization reconstructs the boxed union, so `Receive<TUnion>` and `Recover<TUnion>` handlers continue to match. Closed generic unions register each construction with `[AkkaSerializerIncludes<T>]`. Standalone cases retain their own manifests, and explicitly included types discovered in referenced assemblies no longer cause duplicate registrations. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908), fixes [#8906](https://github.com/akkadotnet/akka.net/issues/8906))
+* Top-level unions use their own manifest with the existing union-field payload frame. Writing `default(TUnion)` at the top level throws `SerializationException`; field nil semantics are unchanged. AKKASG051 now requires an explicit manifest on a marked union. Reordering cases preserves the wire format; adding cases requires readers to upgrade before writers use them, and removing cases prevents reading stored values of those cases. Switching between a union and a closed hierarchy still requires a migration for top-level messages. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908))
+
+**Akka.Cluster.Sharding - behavior change**
+
+* `akka.cluster.sharding.state-store-mode` now defaults to `ddata` instead of `persistence`. Coordinator state is replicated through Akka.DistributedData. The previous default silently used the in-memory journal when no durable journal was configured, losing coordinator state when the coordinator moved. ([#8905](https://github.com/akkadotnet/akka.net/pull/8905), addresses [#8903](https://github.com/akkadotnet/akka.net/issues/8903))
+* **Migration:** set `akka.cluster.sharding.state-store-mode = persistence` explicitly to preserve the previous behavior. With `remember-entities = on`, the new default follows `remember-entities-store`, which defaults to `ddata`, rather than forcing the event-sourced store. Set `akka.cluster.sharding.remember-entities-store = eventsourced` to keep reading remembered entities from the journal. See the [v1.6 breaking-change ledger](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md). ([#8905](https://github.com/akkadotnet/akka.net/pull/8905))
+
+**Examples**
+
+* The cluster sharding node example updates its Akka.Persistence.Sql dependency from 1.5.70 to 1.5.73. ([#8889](https://github.com/akkadotnet/akka.net/pull/8889))
+
+2 contributors since release 1.6.0-beta5
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 2       | 328  | 30   | Aaron Stannard  |
+| 1       | 1    | 1    | dependabot[bot] |
+
 #### 1.6.0-beta5 November 4th, 2026 ####
 
 Akka.NET 1.6.0-beta5 removes `[AkkaUnion]` in favor of inferring unions from the property type, teaches the source generator to serialize C# 15 union types, and fixes a sharding producer-controller crash plus four Akka.Streams bugs. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
