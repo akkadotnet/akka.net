@@ -54,6 +54,7 @@
         "materializer",
         "Microservices",
         "MNTR",
+        "PKCS",
         "mutex",
         "netstandard",
         "Newtonsoft",

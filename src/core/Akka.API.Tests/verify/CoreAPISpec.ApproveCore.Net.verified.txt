@@ -4160,6 +4160,12 @@ namespace Akka.IO
         public void Start() { }
         public void Write(System.Buffers.ReadOnlySequence<byte> data) { }
     }
+    public static class TlsCertificateLoader
+    {
+        public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadFromStore(string thumbprint, string storeName = "My", System.Security.Cryptography.X509Certificates.StoreLocation storeLocation = 1, bool validOnly = true) { }
+        public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12(byte[] data, string? password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
+        public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12FromFile(string path, string? password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
+    }
     public static class TlsCertificateValidation
     {
         public static Akka.IO.TlsCertificateValidationCallback ChainPlusThen(System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2?, System.Security.Cryptography.X509Certificates.X509Chain?, string, bool> customCheck, Akka.Event.ILoggingAdapter? log = null) { }
