@@ -993,6 +993,8 @@ namespace Akka.IO
 
                         if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
                         {
+                            // Must be the last statement: once the actor sees this it may call Start() immediately,
+                            // reusing this instance and overwriting _pending on another thread.
                             _self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
                             return;
                         }
