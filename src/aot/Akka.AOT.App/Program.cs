@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.AOT.App.Actors;
@@ -30,6 +31,9 @@ internal static class Program
 
         try
         {
+            if (!AppContext.TryGetSwitch("Akka.DynamicTypeLoading", out var dynamicLoading) || dynamicLoading)
+                throw new InvalidOperationException("[canary] Akka.DynamicTypeLoading must be explicitly disabled.");
+
             // Run 1: the bare default - no HOCON, no BootstrapSetup.
             await RunAsync("aot", static setup => ActorSystem.Create("aot", ActorSystemSetup.Create(setup)));
 
