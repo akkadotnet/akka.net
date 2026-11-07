@@ -11,9 +11,23 @@ Test helpers for a serializer port (#8675, #8714): a legacy serializer gets a V2
 2. Put the spec in `[Collection(DynamicTypeLoadingCollection.Name)]`. One check flips a process-wide switch.
 3. For interop, `MixedBindingPair.Create(name, v2Config, legacyConfig)` starts one V2 node and one legacy node, and
    `AssertRoundTripsBothWays(cases, v2Id, legacyId)` checks both directions. `MixedBindingPair.BindTo` builds bindings.
+   For protocols such as DistributedData that omit the actor-system name on the wire, use
+   `CreateWithSameSystemName(name, v2Config, legacyConfig)` and build the corpus for that logical name.
+   The existing `Create` factory retains its `name-v2` / `name-legacy` naming. Use port-zero configs
+   for network providers; these helpers exchange bytes in process and do not prove network transport.
 
 The base class checks the id (legacy + 40, inside 40-79), manifest parity, V2 and legacy round trips, both ids decoding,
-the binding staying legacy, the V2 id resolving with dynamic type loading off, and the golden snapshots below.
+the binding staying legacy, a full V2 corpus round trip with dynamic type loading off, and the golden snapshots below.
+Round trips require the same root runtime type. When domain equality fails, the fallback compares every root member
+structurally while keeping nested values' comparison rules; unordered protocol maps therefore retain all keys and values
+without depending on hash-bucket enumeration order. The test kit's bounded generic dispatch supports the pinned
+FluentAssertions 5 API and runs only in JIT tests; it is not part of serializer or Native AOT product code.
+
+Manifest parity is strict by default. A legacy serializer with `IncludeManifest = false` has an empty manifest;
+its new native V2 id must declare a nonempty token. Such a case explicitly sets the optional init property
+`V2Manifest`, for example `new V2PortCase(message, "", "selection") { V2Manifest = "a" }`.
+Every reader, mixed-binding exchange and golden dump uses the corresponding writer's token. This does not
+relax native manifest validation, change the positional case constructor, or alter the legacy id's format.
 
 ## Golden snapshots
 
@@ -41,3 +55,9 @@ for f in <spec folder>/Snapshots/*.received.txt; do mv "$f" "${f%.received.txt}.
 Rules: never edit a `.verified.txt` by hand to make a test pass. If a legacy snapshot changes in `git diff`, stop: the
 legacy format must never change. A shipped V2 format only grows (add fields, never change or reuse them). CI only compares;
 a missing or stale snapshot fails the test.
+
+For a message whose nested `Equals` compares only identity (or collection instances), set
+`V2PortCase.AssertEquivalent` to a complete domain assertion. It receives expected and actual
+after the shared exact runtime-type guard, and runs even when the root's `Equals` returns true.
+Compare every serialized field, including nested versions and records; an identity-only check
+would hide lost wire state. Leave it null for the shared default comparison.

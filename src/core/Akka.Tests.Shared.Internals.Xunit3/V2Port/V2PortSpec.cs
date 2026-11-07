@@ -9,7 +9,9 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -25,19 +27,36 @@ namespace Akka.TestKit;
 
 /// <summary>One message of a port's corpus and the manifest the legacy serializer gives it.</summary>
 /// <param name="Message">A deterministic message (no clock, no random values), or the golden bytes drift.</param>
-/// <param name="Manifest">The legacy manifest token. The V2 serializer must reuse it.</param>
+/// <param name="Manifest">The legacy manifest token. V2 reuses it unless <see cref="V2Manifest"/> explicitly differs.</param>
 /// <param name="Name">Unique in the corpus. Names the snapshot files.</param>
-public sealed record V2PortCase(object Message, string Manifest, string Name);
+public sealed record V2PortCase(object Message, string Manifest, string Name)
+{
+    /// <summary>
+    /// Explicit V2 token for a new id whose legacy serializer had no manifest. Null preserves
+    /// strict legacy-token parity; native V2 serializers still require a nonempty token.
+    /// </summary>
+    public string? V2Manifest { get; init; }
+
+    /// <summary>
+    /// Optional complete domain assertion for messages whose nested equality omits wire fields or
+    /// compares collection identities. Receives expected then actual, after the exact runtime-type
+    /// check. Null retains the shared equality/structural checks.
+    /// </summary>
+    public Action<object, object>? AssertEquivalent { get; init; }
+}
 
 /// <summary>
 /// The spec a V2 serializer port derives from: a legacy serializer gets a V2 twin at id + 40 (inside 40-79) with
-/// the same manifests. Supply the two serializers and a corpus; the tests come with the base class. The golden checks
+/// the same manifests unless an empty legacy token requires an explicit new native token. Supply the two serializers
+/// and a corpus; the tests come with the base class. The golden checks
 /// are Verify snapshots in a <c>Snapshots</c> folder next to the derived spec's source file (see the README).
 /// Both serializers must be registered the way a deployed node has them (a module's table, or a setup), with no bindings on the V2 row.
 /// </summary>
 public abstract class V2PortSpec : AkkaSpec
 {
     private const string DynamicTypeLoadingSwitch = "Akka.DynamicTypeLoading";
+    private static readonly MethodInfo StructuralAssert = typeof(V2PortSpec).GetMethod(nameof(AssertStructurally),
+        BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Structural assertion method is missing.");
 
     private readonly string _sourceFile;
 
@@ -91,7 +110,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             legacy.Manifest(c.Message).Should().Be(c.Manifest, "legacy manifest of {0}", c.Name);
-            v2.Manifest(c.Message).Should().Be(c.Manifest, "V2 reuses the legacy manifest of {0}", c.Name);
+            v2.Manifest(c.Message).Should().Be(c.V2Manifest ?? c.Manifest, "declared V2 manifest of {0}", c.Name);
         }
     }
 
@@ -122,7 +141,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             AssertSame(c, Sys.Serialization.Deserialize(legacy.ToBinary(c.Message), legacy.Identifier, c.Manifest), "legacy id");
-            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "V2 id");
+            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "V2 id");
         }
     }
 
@@ -151,7 +170,7 @@ public abstract class V2PortSpec : AkkaSpec
 
             foreach (var c in Cases)
             {
-                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "dynamic type loading off");
+                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "dynamic type loading off");
                 AssertV2RoundTrip(v2, c);
             }
         }
@@ -166,7 +185,7 @@ public abstract class V2PortSpec : AkkaSpec
     {
         var v2 = CreateV2(Node);
 
-        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message));
+        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message), c => c.V2Manifest ?? c.Manifest);
     }
 
     [Fact(DisplayName = "Should_MatchGoldenLegacyBytes_When_LegacySerializes")]
@@ -174,20 +193,21 @@ public abstract class V2PortSpec : AkkaSpec
     {
         var legacy = CreateLegacy(Node);
 
-        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message));
+        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message), c => c.Manifest);
     }
 
     /// <summary>
     /// Verifies one hex dump per case as <c>{prefix}.{case}.{kind}</c>. Every case runs before the test fails, so a first
     /// run writes all the <c>.received.txt</c> files at once.
     /// </summary>
-    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize)
+    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize,
+        Func<V2PortCase, string> manifest)
     {
         var failures = new List<string>();
 
         foreach (var c in Cases)
         {
-            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), c.Manifest, serializerId, serialize(c));
+            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), manifest(c), serializerId, serialize(c));
 
             try
             {
@@ -208,8 +228,9 @@ public abstract class V2PortSpec : AkkaSpec
     private static void AssertV2RoundTrip(SerializerV2 v2, V2PortCase c)
     {
         var bytes = v2.ToBinary(c.Message);
-        AssertSame(c, v2.FromBinary(bytes, c.Manifest), "V2 FromBinary");
-        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), c.Manifest), "V2 Deserialize");
+        var manifest = c.V2Manifest ?? c.Manifest;
+        AssertSame(c, v2.FromBinary(bytes, manifest), "V2 FromBinary");
+        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), manifest), "V2 Deserialize");
 
         var writer = new ArrayBufferWriter<byte>();
         v2.Serialize(c.Message, writer).Should().Be(writer.WrittenCount, "{0}: Serialize reports what it wrote", c.Name);
@@ -223,7 +244,32 @@ public abstract class V2PortSpec : AkkaSpec
     /// <summary>Asserts <paramref name="actual"/> equals the corpus message, by <c>Equals</c> or else structurally.</summary>
     internal static void AssertSame(V2PortCase c, object? actual, string stage)
     {
+        if (actual is null || actual.GetType() != c.Message.GetType())
+        {
+            actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+            return;
+        }
+        if (c.AssertEquivalent is { } assertEquivalent)
+        {
+            assertEquivalent(c.Message, actual!);
+            return;
+        }
         if (!Equals(c.Message, actual))
-            actual.Should().BeEquivalentTo(c.Message, o => o.RespectingRuntimeTypes(), "{0}: {1}", stage, c.Name);
+        {
+            // FA 5 only exposes ComparingByMembers<T>. This JIT-only test dispatch changes the
+            // root message strategy while preserving nested actor refs, CRDTs and byte equality.
+            try
+            {
+                StructuralAssert.MakeGenericMethod(c.Message.GetType()).Invoke(null, [c, actual, stage]);
+            }
+            catch (TargetInvocationException error) when (error.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Capture(error.InnerException).Throw();
+            }
+        }
     }
+
+    private static void AssertStructurally<T>(V2PortCase c, object? actual, string stage)
+        => actual.Should().BeEquivalentTo(c.Message,
+            o => o.RespectingRuntimeTypes().ComparingByMembers<T>(), "{0}: {1}", stage, c.Name);
 }
