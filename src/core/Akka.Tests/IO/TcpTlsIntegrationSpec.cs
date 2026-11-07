@@ -729,14 +729,14 @@ namespace Akka.Tests.IO
             request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(usages, true));
             using var generatedCertificate = request.CreateSelfSigned(
                 DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
-            // Windows Schannel needs an imported key container for generated test certificates.
+            // Windows Schannel needs an imported key container; loader tests also re-export these keys.
             var exportedCertificate = generatedCertificate.Export(X509ContentType.Pkcs12);
             try
             {
                 return X509CertificateLoader.LoadPkcs12(
                     exportedCertificate,
                     password: null,
-                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet | X509KeyStorageFlags.Exportable);
             }
             finally
             {
