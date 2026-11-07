@@ -27,13 +27,21 @@ namespace Akka.TestKit;
 
 /// <summary>One message of a port's corpus and the manifest the legacy serializer gives it.</summary>
 /// <param name="Message">A deterministic message (no clock, no random values), or the golden bytes drift.</param>
-/// <param name="Manifest">The legacy manifest token. The V2 serializer must reuse it.</param>
+/// <param name="Manifest">The legacy manifest token. V2 reuses it unless <see cref="V2Manifest"/> explicitly differs.</param>
 /// <param name="Name">Unique in the corpus. Names the snapshot files.</param>
-public sealed record V2PortCase(object Message, string Manifest, string Name);
+public sealed record V2PortCase(object Message, string Manifest, string Name)
+{
+    /// <summary>
+    /// Explicit V2 token for a new id whose legacy serializer had no manifest. Null preserves
+    /// strict legacy-token parity; native V2 serializers still require a nonempty token.
+    /// </summary>
+    public string? V2Manifest { get; init; }
+}
 
 /// <summary>
 /// The spec a V2 serializer port derives from: a legacy serializer gets a V2 twin at id + 40 (inside 40-79) with
-/// the same manifests. Supply the two serializers and a corpus; the tests come with the base class. The golden checks
+/// the same manifests unless an empty legacy token requires an explicit new native token. Supply the two serializers
+/// and a corpus; the tests come with the base class. The golden checks
 /// are Verify snapshots in a <c>Snapshots</c> folder next to the derived spec's source file (see the README).
 /// Both serializers must be registered the way a deployed node has them (a module's table, or a setup), with no bindings on the V2 row.
 /// </summary>
@@ -95,7 +103,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             legacy.Manifest(c.Message).Should().Be(c.Manifest, "legacy manifest of {0}", c.Name);
-            v2.Manifest(c.Message).Should().Be(c.Manifest, "V2 reuses the legacy manifest of {0}", c.Name);
+            v2.Manifest(c.Message).Should().Be(c.V2Manifest ?? c.Manifest, "declared V2 manifest of {0}", c.Name);
         }
     }
 
@@ -126,7 +134,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             AssertSame(c, Sys.Serialization.Deserialize(legacy.ToBinary(c.Message), legacy.Identifier, c.Manifest), "legacy id");
-            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "V2 id");
+            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "V2 id");
         }
     }
 
@@ -155,7 +163,7 @@ public abstract class V2PortSpec : AkkaSpec
 
             foreach (var c in Cases)
             {
-                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "dynamic type loading off");
+                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "dynamic type loading off");
                 AssertV2RoundTrip(v2, c);
             }
         }
@@ -170,7 +178,7 @@ public abstract class V2PortSpec : AkkaSpec
     {
         var v2 = CreateV2(Node);
 
-        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message));
+        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message), c => c.V2Manifest ?? c.Manifest);
     }
 
     [Fact(DisplayName = "Should_MatchGoldenLegacyBytes_When_LegacySerializes")]
@@ -178,20 +186,21 @@ public abstract class V2PortSpec : AkkaSpec
     {
         var legacy = CreateLegacy(Node);
 
-        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message));
+        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message), c => c.Manifest);
     }
 
     /// <summary>
     /// Verifies one hex dump per case as <c>{prefix}.{case}.{kind}</c>. Every case runs before the test fails, so a first
     /// run writes all the <c>.received.txt</c> files at once.
     /// </summary>
-    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize)
+    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize,
+        Func<V2PortCase, string> manifest)
     {
         var failures = new List<string>();
 
         foreach (var c in Cases)
         {
-            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), c.Manifest, serializerId, serialize(c));
+            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), manifest(c), serializerId, serialize(c));
 
             try
             {
@@ -212,8 +221,9 @@ public abstract class V2PortSpec : AkkaSpec
     private static void AssertV2RoundTrip(SerializerV2 v2, V2PortCase c)
     {
         var bytes = v2.ToBinary(c.Message);
-        AssertSame(c, v2.FromBinary(bytes, c.Manifest), "V2 FromBinary");
-        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), c.Manifest), "V2 Deserialize");
+        var manifest = c.V2Manifest ?? c.Manifest;
+        AssertSame(c, v2.FromBinary(bytes, manifest), "V2 FromBinary");
+        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), manifest), "V2 Deserialize");
 
         var writer = new ArrayBufferWriter<byte>();
         v2.Serialize(c.Message, writer).Should().Be(writer.WrittenCount, "{0}: Serialize reports what it wrote", c.Name);

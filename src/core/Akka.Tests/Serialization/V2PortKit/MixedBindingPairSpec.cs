@@ -37,17 +37,25 @@ namespace Akka.Tests.Serialization.V2PortKit
         /// <summary>Id 39, manifest <c>P</c>, UTF-8 text.</summary>
         public sealed class PairLegacySerializer : SerializerWithStringManifest
         {
+            private readonly string _manifest;
+
             public PairLegacySerializer(ExtendedActorSystem system) : base(system)
             {
+                _manifest = system.Settings.Config.GetString("test.pair-legacy-manifest", "P");
             }
 
             public override int Identifier => 39;
 
-            public override string Manifest(object o) => "P";
+            public override string Manifest(object o) => _manifest;
 
             public override byte[] ToBinary(object obj) => Encoding.UTF8.GetBytes(((PairMessage)obj).Value);
 
-            public override object FromBinary(byte[] bytes, string manifest) => new PairMessage(Encoding.UTF8.GetString(bytes));
+            public override object FromBinary(byte[] bytes, string manifest)
+            {
+                if (manifest != _manifest)
+                    throw new ArgumentException($"Unexpected legacy manifest [{manifest}].", nameof(manifest));
+                return new PairMessage(Encoding.UTF8.GetString(bytes));
+            }
         }
 
         /// <summary>Id 79, manifest <c>P</c>, UTF-8 text behind a 0x01 byte.</summary>
@@ -72,16 +80,41 @@ namespace Akka.Tests.Serialization.V2PortKit
                 return bytes.Length;
             }
 
-            public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) =>
-                new PairMessage(Encoding.UTF8.GetString(bytes.Slice(1).ToArray()));
+            public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+            {
+                if (manifest != "P")
+                    throw new ArgumentException($"Unexpected V2 manifest [{manifest}].", nameof(manifest));
+                return new PairMessage(Encoding.UTF8.GetString(bytes.Slice(1).ToArray()));
+            }
         }
 
         [Fact(DisplayName = "Should_RoundTripBothWays_When_OneNodeBindsV2AndTheOtherPinsLegacy")]
         public async Task Should_RoundTripBothWays_When_OneNodeBindsV2AndTheOtherPinsLegacy()
         {
+            Assert.Null(Cases[0].V2Manifest);
             await using var pair = MixedBindingPair.Create("mixed-ok", Bound("pair-v2"), Bound("pair"));
 
             pair.AssertRoundTripsBothWays(Cases, 79, 39);
+        }
+
+        [Theory(DisplayName = "Should_RequireAnExplicitV2Manifest_When_LegacyHadNoToken")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_RequireAnExplicitV2Manifest_When_LegacyHadNoToken(bool explicitV2Manifest)
+        {
+            var empty = ConfigurationFactory.ParseString("test.pair-legacy-manifest = \"\"");
+            await using var pair = MixedBindingPair.Create("mixed-manifests", Bound("pair-v2").WithFallback(empty),
+                Bound("pair").WithFallback(empty));
+            var sample = new V2PortCase(new PairMessage("one"), "", "legacy-empty")
+            {
+                V2Manifest = explicitV2Manifest ? "P" : null
+            };
+            Action exchange = () => pair.AssertRoundTripsBothWays([sample], 79, 39);
+
+            if (explicitV2Manifest)
+                exchange.Should().NotThrow();
+            else
+                exchange.Should().Throw<Exception>().WithMessage("*manifest*");
         }
 
         [Fact(DisplayName = "Should_FailTheCheck_When_TheV2NodeIsStillPinnedToLegacy")]
