@@ -140,16 +140,20 @@ namespace Akka.Tests.Serialization
         {
             private readonly Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>? _rows;
             private readonly ImmutableDictionary<string, string> _supersedes;
+            private readonly ImmutableDictionary<string, ImmutableHashSet<Type>> _supersedesBindings;
 
             public FakeModule(
                 Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>? rows = null,
-                ImmutableDictionary<string, string>? supersedes = null)
+                ImmutableDictionary<string, string>? supersedes = null,
+                ImmutableDictionary<string, ImmutableHashSet<Type>>? supersedesBindings = null)
             {
                 _rows = rows;
                 _supersedes = supersedes ?? ImmutableDictionary<string, string>.Empty.Add(V2Alias, LegacyAlias);
+                _supersedesBindings = supersedesBindings ?? ImmutableDictionary<string, ImmutableHashSet<Type>>.Empty;
             }
 
             public override ImmutableDictionary<string, string> Supersedes => _supersedes;
+            public override ImmutableDictionary<string, ImmutableHashSet<Type>> SupersedesBindings => _supersedesBindings;
 
             public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => _rows?.Invoke(system) ?? Rows(system);
 
@@ -289,6 +293,105 @@ namespace Akka.Tests.Serialization
                 var bytes = serialization.Serialize(new ProtocolMessage("x"));
                 Encoding.UTF8.GetString(bytes).Should().Be("v2:x");
                 serialization.Deserialize(bytes, V2Serializer.Id, "P").Should().BeOfType<ProtocolMessage>().Which.Value.Should().Be("x");
+            });
+        }
+
+        [Theory(DisplayName = "Should_MoveOnlyTheDeclaredProtocol_When_TheLegacyRowAlsoOwnsOtherBindings")]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Should_MoveOnlyTheDeclaredProtocol_When_TheLegacyRowAlsoOwnsOtherBindings(bool enabled, bool dynamicLoading)
+        {
+            await WithSystem($"akka.actor.serialization-v2 = {(enabled ? "on" : "off")}", async system =>
+            {
+                var module = new FakeModule(supersedesBindings: ImmutableDictionary<string, ImmutableHashSet<Type>>.Empty
+                    .Add(V2Alias, ImmutableHashSet.Create(typeof(ProtocolMessage))));
+                var serialization = await Build(system, dynamicLoading, module);
+                serialization.FindSerializerForType(typeof(ProtocolMessage)).Identifier
+                    .Should().Be(enabled ? V2Serializer.Id : LegacySerializer.Id);
+                serialization.FindSerializerForType(typeof(OtherProtocolMessage)).Should().BeOfType<LegacySerializer>();
+                AssertBothFormatsRead(serialization);
+                if (enabled)
+                {
+                    var text = string.Join("\n", LoggerOf(system).Messages.OfType<Info>().Select(info => info.Message));
+                    text.Should().Contain("1 of 1 bindings");
+                    text.Should().NotContain("kept by user configuration");
+                }
+            });
+        }
+
+        [Theory(DisplayName = "Should_PreservePinsAndAliasOwnership_When_OnlyAProtocolBindingMoves")]
+        [InlineData("pin")]
+        [InlineData("legacy-alias")]
+        [InlineData("v2-alias")]
+        public async Task Should_PreservePinsAndAliasOwnership_When_OnlyAProtocolBindingMoves(string scenario)
+        {
+            var custom = scenario switch
+            {
+                "pin" => Pin(typeof(ProtocolMessage), LegacyAlias),
+                "legacy-alias" => "akka.actor.serializers.fake-legacy = \"Akka.Serialization.ByteArraySerializer, Akka\"",
+                _ => "akka.actor.serializers.fake-legacy-v2 = \"Akka.Serialization.ByteArraySerializer, Akka\""
+            };
+            await WithSystem("akka.actor.serialization-v2 = on\n" + custom, async system =>
+            {
+                var module = new FakeModule(supersedesBindings: ImmutableDictionary<string, ImmutableHashSet<Type>>.Empty
+                    .Add(V2Alias, ImmutableHashSet.Create(typeof(ProtocolMessage))));
+                var serialization = await Build(system, false, module);
+                var protocol = serialization.FindSerializerForType(typeof(ProtocolMessage));
+                var other = serialization.FindSerializerForType(typeof(OtherProtocolMessage));
+                if (scenario == "pin")
+                {
+                    protocol.Should().BeOfType<LegacySerializer>();
+                    other.Should().BeOfType<LegacySerializer>();
+                }
+                else if (scenario == "legacy-alias")
+                {
+                    protocol.Should().BeOfType<V2Serializer>();
+                    other.Should().BeOfType<ByteArraySerializer>();
+                }
+                else
+                {
+                    protocol.Should().BeOfType<ByteArraySerializer>();
+                    other.Should().BeOfType<LegacySerializer>();
+                }
+            });
+        }
+
+        [Theory(DisplayName = "Should_RejectInvalidProtocolTakeovers_When_TheModuleDeclaresInvalidBindings")]
+        [InlineData("undeclared")]
+        [InlineData("empty")]
+        [InlineData("not-legacy")]
+        public async Task Should_RejectInvalidProtocolTakeovers_When_TheModuleDeclaresInvalidBindings(string scenario)
+        {
+            await WithSystem(null, system =>
+            {
+                var alias = scenario == "undeclared" ? "not-declared" : V2Alias;
+                var bindings = scenario == "empty" ? ImmutableHashSet<Type>.Empty
+                    : ImmutableHashSet.Create(scenario == "not-legacy" ? typeof(NativeMessage) : typeof(ProtocolMessage));
+                var module = new FakeModule(supersedesBindings: ImmutableDictionary<string, ImmutableHashSet<Type>>.Empty.Add(alias, bindings));
+                Action build = () => LoadedModule.TryCreate(module, (ExtendedActorSystem)system, out _);
+                build.Should().Throw<InvalidOperationException>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "Should_PreserveAnEmptyDefaultRow_When_NoExplicitSubsetIsDeclared")]
+        public async Task Should_PreserveAnEmptyDefaultRow_When_NoExplicitSubsetIsDeclared()
+        {
+            await WithSystem(null, system =>
+            {
+                var module = new FakeModule(rows: current => FakeModule.Rows(current)
+                    .Select(row => row.Alias == LegacyAlias
+                        ? SerializerDetails.Create(row.Alias, row.Serializer, ImmutableHashSet<Type>.Empty) : row)
+                    .ToImmutableHashSet());
+                var loaded = LoadedModule.TryCreate(module, (ExtendedActorSystem)system, out var skew)!;
+                skew.Should().BeNull();
+                loaded.Takeovers.Should().ContainSingle();
+                loaded.Takeovers[0].Bindings.Should().BeEmpty();
+                foreach (var row in loaded.Details.Where(row => row.Alias is LegacyAlias or V2Alias))
+                    loaded.DefaultBindings(row, true).Should().BeEmpty();
+                return Task.CompletedTask;
             });
         }
 

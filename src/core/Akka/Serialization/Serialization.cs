@@ -972,10 +972,10 @@ namespace Akka.Serialization
                 .OrderBy(t => t.Legacy.Alias, StringComparer.Ordinal)
                 .Select(t =>
                 {
-                    var moved = t.Legacy.UseFor.Count(type =>
+                    var moved = t.Bindings.Count(type =>
                         _serializerMap.TryGetValue(type, out var now) && ReferenceEquals(now, t.V2.SerializerV2));
-                    var kept = t.Legacy.UseFor.Count - moved;
-                    return $"[{t.Legacy.Alias}] -> [{t.V2.Alias}] ({moved} of {t.Legacy.UseFor.Count} bindings" +
+                    var kept = t.Bindings.Count - moved;
+                    return $"[{t.Legacy.Alias}] -> [{t.V2.Alias}] ({moved} of {t.Bindings.Count} bindings" +
                            (kept > 0 ? $", {kept} kept by user configuration)" : ")");
                 })
                 .ToList();
