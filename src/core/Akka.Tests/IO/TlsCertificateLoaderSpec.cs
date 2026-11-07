@@ -139,13 +139,14 @@ namespace Akka.Tests.IO
                 X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, true));
             using var generatedCertificate = request.CreateSelfSigned(
                 DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
+            // These fixtures are exported again to exercise the file and byte loaders.
             var exportedCertificate = generatedCertificate.Export(X509ContentType.Pkcs12);
             try
             {
                 return X509CertificateLoader.LoadPkcs12(
                     exportedCertificate,
                     password: null,
-                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet);
+                    keyStorageFlags: X509KeyStorageFlags.DefaultKeySet | X509KeyStorageFlags.Exportable);
             }
             finally
             {
