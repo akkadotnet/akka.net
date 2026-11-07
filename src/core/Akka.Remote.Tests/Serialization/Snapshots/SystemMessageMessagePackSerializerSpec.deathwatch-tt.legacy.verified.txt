@@ -1,0 +1,10 @@
+﻿case: deathwatch-tt
+message-type: DeathWatchNotification
+manifest: Akka.Dispatch.SysMsg.DeathWatchNotification, Akka
+serializer-id: 22
+byte-count: 56
+
+0000  0a 32 0a 30 61 6b 6b 61  2e 74 63 70 3a 2f 2f 66  |.2.0akka.tcp://f|
+0010  69 78 74 75 72 65 40 31  32 37 2e 30 2e 30 2e 31  |ixture@127.0.0.1|
+0020  3a 32 35 35 32 2f 75 73  65 72 2f 63 68 69 6c 64  |:2552/user/child|
+0030  23 31 32 33 10 01 18 01                           |#123....|

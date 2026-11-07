@@ -1,0 +1,7 @@
+﻿case: recreate-null
+message-type: Recreate
+manifest: Akka.Dispatch.SysMsg.Recreate, Akka
+serializer-id: 22
+byte-count: 2
+
+0000  0a 00                                             |..|

@@ -1,0 +1,15 @@
+﻿case: failed-negative-uid
+message-type: Failed
+manifest: Akka.Dispatch.SysMsg.Failed, Akka
+serializer-id: 22
+byte-count: 143
+
+0000  0a 32 0a 30 61 6b 6b 61  2e 74 63 70 3a 2f 2f 66  |.2.0akka.tcp://f|
+0010  69 78 74 75 72 65 40 31  32 37 2e 30 2e 30 2e 31  |ixture@127.0.0.1|
+0020  3a 32 35 35 32 2f 75 73  65 72 2f 63 68 69 6c 64  |:2552/user/child|
+0030  23 31 32 33 12 4e 0a 38  53 79 73 74 65 6d 2e 49  |#123.N.8System.I|
+0040  6e 76 61 6c 69 64 4f 70  65 72 61 74 69 6f 6e 45  |nvalidOperationE|
+0050  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0060  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0070  12 06 66 61 69 6c 65 64  2a 00 3a 08 6d 73 63 6f  |..failed*.:.msco|
+0080  72 6c 69 62 18 80 80 80  80 80 80 80 80 80 01     |rlib...........|

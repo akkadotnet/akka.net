@@ -1,0 +1,11 @@
+﻿case: resume
+message-type: Resume
+manifest: Akka.Dispatch.SysMsg.Resume, Akka
+serializer-id: 62
+byte-count: 76
+
+0000  81 01 8f 01 03 02 a6 72  65 73 75 6d 65 03 c0 04  |.......resume...|
+0010  c0 05 c0 06 90 07 c0 08  d9 20 53 79 73 74 65 6d  |......... System|
+0020  2e 49 6e 76 61 6c 69 64  4f 70 65 72 61 74 69 6f  |.InvalidOperatio|
+0030  6e 45 78 63 65 70 74 69  6f 6e 09 d2 80 13 15 09  |nException......|
+0040  0a c0 0b c0 0c 00 0d c0  0e 90 0f c0              |............|

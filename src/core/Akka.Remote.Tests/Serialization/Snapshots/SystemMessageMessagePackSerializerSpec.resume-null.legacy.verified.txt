@@ -1,0 +1,7 @@
+﻿case: resume-null
+message-type: Resume
+manifest: Akka.Dispatch.SysMsg.Resume, Akka
+serializer-id: 22
+byte-count: 2
+
+0000  0a 00                                             |..|

@@ -1,0 +1,13 @@
+﻿case: watch
+message-type: Watch
+manifest: Akka.Dispatch.SysMsg.Watch, Akka
+serializer-id: 22
+byte-count: 106
+
+0000  0a 32 0a 30 61 6b 6b 61  2e 74 63 70 3a 2f 2f 66  |.2.0akka.tcp://f|
+0010  69 78 74 75 72 65 40 31  32 37 2e 30 2e 30 2e 31  |ixture@127.0.0.1|
+0020  3a 32 35 35 32 2f 75 73  65 72 2f 63 68 69 6c 64  |:2552/user/child|
+0030  23 31 32 33 12 34 0a 32  61 6b 6b 61 2e 74 63 70  |#123.4.2akka.tcp|
+0040  3a 2f 2f 66 69 78 74 75  72 65 40 31 32 37 2e 30  |://fixture@127.0|
+0050  2e 30 2e 31 3a 32 35 35  32 2f 75 73 65 72 2f 77  |.0.1:2552/user/w|
+0060  61 74 63 68 65 72 23 34  35 36                    |atcher#456|

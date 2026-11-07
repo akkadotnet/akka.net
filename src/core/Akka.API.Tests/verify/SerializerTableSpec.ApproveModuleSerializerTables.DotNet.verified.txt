@@ -60,6 +60,7 @@ module Akka.Remote
     Akka.Routing.TailChoppingPool, Akka
   akka-system-msg: Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote (id 22)
     Akka.Dispatch.SysMsg.SystemMessage, Akka
+  akka-system-msg-v2: Akka.Remote.Serialization.SystemMessageMessagePackSerializer, Akka.Remote (id 62) supersedes akka-system-msg
   artery-control: Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote (id 23)
     Akka.Remote.Artery.IArteryControlMessage, Akka.Remote
   daemon-create: Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote (id 3)

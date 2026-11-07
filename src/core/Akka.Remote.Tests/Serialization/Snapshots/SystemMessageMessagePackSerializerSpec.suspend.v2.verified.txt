@@ -1,0 +1,7 @@
+﻿case: suspend
+message-type: Suspend
+manifest: Akka.Dispatch.SysMsg.Suspend, Akka
+serializer-id: 62
+byte-count: 1
+
+0000  80                                                |.|

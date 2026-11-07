@@ -1,0 +1,13 @@
+﻿case: unwatch
+message-type: Unwatch
+manifest: Akka.Dispatch.SysMsg.Unwatch, Akka
+serializer-id: 62
+byte-count: 105
+
+0000  82 01 d9 30 61 6b 6b 61  2e 74 63 70 3a 2f 2f 66  |...0akka.tcp://f|
+0010  69 78 74 75 72 65 40 31  32 37 2e 30 2e 30 2e 31  |ixture@127.0.0.1|
+0020  3a 32 35 35 32 2f 75 73  65 72 2f 63 68 69 6c 64  |:2552/user/child|
+0030  23 31 32 33 02 d9 32 61  6b 6b 61 2e 74 63 70 3a  |#123..2akka.tcp:|
+0040  2f 2f 66 69 78 74 75 72  65 40 31 32 37 2e 30 2e  |//fixture@127.0.|
+0050  30 2e 31 3a 32 35 35 32  2f 75 73 65 72 2f 77 61  |0.1:2552/user/wa|
+0060  74 63 68 65 72 23 34 35  36                       |tcher#456|

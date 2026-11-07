@@ -1,0 +1,15 @@
+﻿case: recreate
+message-type: Recreate
+manifest: Akka.Dispatch.SysMsg.Recreate, Akka
+serializer-id: 62
+byte-count: 139
+
+0000  81 01 8f 01 03 02 a7 72  65 73 74 61 72 74 03 c0  |.......restart..|
+0010  04 c0 05 8f 01 07 02 a5  69 6e 6e 65 72 03 c0 04  |........inner...|
+0020  c0 05 c0 06 90 07 c0 08  b7 53 79 73 74 65 6d 2e  |.........System.|
+0030  54 69 6d 65 6f 75 74 45  78 63 65 70 74 69 6f 6e  |TimeoutException|
+0040  09 d2 80 13 15 05 0a c0  0b c0 0c 00 0d c0 0e 90  |................|
+0050  0f c0 06 90 07 c0 08 d9  20 53 79 73 74 65 6d 2e  |........ System.|
+0060  49 6e 76 61 6c 69 64 4f  70 65 72 61 74 69 6f 6e  |InvalidOperation|
+0070  45 78 63 65 70 74 69 6f  6e 09 d2 80 13 15 09 0a  |Exception.......|
+0080  c0 0b c0 0c 00 0d c0 0e  90 0f c0                 |...........|

@@ -1,0 +1,7 @@
+﻿case: create-null
+message-type: Create
+manifest: Akka.Dispatch.SysMsg.Create, Akka
+serializer-id: 62
+byte-count: 3
+
+0000  81 01 c0                                          |...|

@@ -1,0 +1,16 @@
+﻿case: recreate
+message-type: Recreate
+manifest: Akka.Dispatch.SysMsg.Recreate, Akka
+serializer-id: 22
+byte-count: 150
+
+0000  0a 93 01 0a 38 53 79 73  74 65 6d 2e 49 6e 76 61  |....8System.Inva|
+0010  6c 69 64 4f 70 65 72 61  74 69 6f 6e 45 78 63 65  |lidOperationExce|
+0020  70 74 69 6f 6e 2c 20 53  79 73 74 65 6d 2e 50 72  |ption, System.Pr|
+0030  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 12 07 72  |ivate.CoreLib..r|
+0040  65 73 74 61 72 74 2a 44  0a 2f 53 79 73 74 65 6d  |estart*D./System|
+0050  2e 54 69 6d 65 6f 75 74  45 78 63 65 70 74 69 6f  |.TimeoutExceptio|
+0060  6e 2c 20 53 79 73 74 65  6d 2e 50 72 69 76 61 74  |n, System.Privat|
+0070  65 2e 43 6f 72 65 4c 69  62 12 05 69 6e 6e 65 72  |e.CoreLib..inner|
+0080  2a 00 3a 08 6d 73 63 6f  72 6c 69 62 3a 08 6d 73  |*.:.mscorlib:.ms|
+0090  63 6f 72 6c 69 62                                 |corlib|

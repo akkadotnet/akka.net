@@ -1,0 +1,15 @@
+﻿case: create-failed
+message-type: Create
+manifest: Akka.Dispatch.SysMsg.Create, Akka
+serializer-id: 22
+byte-count: 137
+
+0000  0a 86 01 0a 2d 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....-Akka.Actor.|
+0010  41 63 74 6f 72 49 6e 69  74 69 61 6c 69 7a 61 74  |ActorInitializat|
+0020  69 6f 6e 45 78 63 65 70  74 69 6f 6e 2c 20 41 6b  |ionException, Ak|
+0030  6b 61 12 0e 69 6e 69 74  69 61 6c 69 7a 61 74 69  |ka..initializati|
+0040  6f 6e 2a 00 32 43 0a 05  41 63 74 6f 72 12 3a 0a  |on*.2C..Actor.:.|
+0050  32 0a 30 61 6b 6b 61 2e  74 63 70 3a 2f 2f 66 69  |2.0akka.tcp://fi|
+0060  78 74 75 72 65 40 31 32  37 2e 30 2e 30 2e 31 3a  |xture@127.0.0.1:|
+0070  32 35 35 32 2f 75 73 65  72 2f 63 68 69 6c 64 23  |2552/user/child#|
+0080  31 32 33 10 10 1a 02 41  52                       |123....AR|
