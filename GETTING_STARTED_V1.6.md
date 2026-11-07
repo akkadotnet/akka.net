@@ -251,6 +251,35 @@ conflict at compile time (for example, two serializers binding the same protocol
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 
+### Built-in remote deployment serializer
+
+The generated remote-deployment serializer is available in **Unreleased (this PR)**. Leave
+`akka.actor.serialization-v2 = off` (the default) while deploying the new readers to every
+peer. Both protobuf id `3` and generated id `43` remain readable, independently of the
+writer setting. Once every peer has these readers, setting `akka.actor.serialization-v2 = on`
+selects `daemon-create-v2` for remote deployment. Applications that already enabled the global
+setting select id `43` immediately when they upgrade this module.
+
+To keep remote-deployment writers on the legacy protocol during a rolling upgrade, pin the
+whole message binding:
+
+```hocon
+akka.actor.serialization-bindings {
+    "Akka.Remote.DaemonMsgCreate, Akka.Remote" = daemon-create
+}
+```
+
+An older release does not gain the new reader when you disable the writer setting. Id `3`
+keeps its empty manifest and original protobuf bytes; new id `43` uses MessagePack with
+the explicit nonempty manifest `a`, as required for a new `SerializerV2` identifier.
+
+This generated envelope does **not** enable Native AOT remote deployment. The actor type
+and constructor arguments still come from the remote `Props`. With
+`Akka.DynamicTypeLoading = false`, the generated serializer rejects manifest lookup,
+serialization, size hints, and deserialization before invoking nested serializers or
+writing output. Keep remote deployment on a JIT host; no native actor factory is registered.
+Custom argument, configuration, router, and scope serializers remain independently registered.
+
 ## Enabling Artery
 
 Artery is experimental. Don't use it in production - Akka.NET logs that warning itself the

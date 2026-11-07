@@ -1,0 +1,31 @@
+case: two-deploys
+message-type: DaemonMsgCreate
+manifest:
+serializer-id: 3
+byte-count: 390
+
+0000  0a f1 01 12 97 01 0a 0a  70 72 6f 70 73 2d 70 61  |........props-pa|
+0010  74 68 12 13 20 20 70 72  6f 70 73 2d 76 61 6c 75  |th..  props-valu|
+0020  65 20 3a 20 31 0d 0a 1a  21 08 03 12 1d 61 6b 6b  |e : 1...!....akk|
+0030  61 2e 61 63 74 6f 72 2e  64 65 66 61 75 6c 74 2d  |a.actor.default-|
+0040  64 69 73 70 61 74 63 68  65 72 22 28 0a 26 0a 0c  |dispatcher"(.&..|
+0050  70 72 6f 70 73 2d 74 61  72 67 65 74 12 09 31 32  |props-target..12|
+0060  37 2e 30 2e 30 2e 31 18  f8 13 22 08 61 6b 6b 61  |7.0.0.1...".akka|
+0070  2e 74 63 70 2a 10 70 72  6f 70 73 2d 64 69 73 70  |.tcp*.props-disp|
+0080  61 74 63 68 65 72 30 10  3a 02 52 53 40 10 4a 02  |atcher0.:.RS@.J.|
+0090  43 46 50 10 5a 05 52 4f  52 52 50 60 0b 1a 55 41  |CFP.Z.RORRP`..UA|
+00a0  6b 6b 61 2e 52 65 6d 6f  74 65 2e 54 65 73 74 73  |kka.Remote.Tests|
+00b0  2e 53 65 72 69 61 6c 69  7a 61 74 69 6f 6e 2e 44  |.Serialization.D|
+00c0  61 65 6d 6f 6e 4d 73 67  43 72 65 61 74 65 56 32  |aemonMsgCreateV2|
+00d0  53 70 65 63 2b 46 69 78  74 75 72 65 41 63 74 6f  |Spec+FixtureActo|
+00e0  72 2c 20 41 6b 6b 61 2e  52 65 6d 6f 74 65 2e 54  |r, Akka.Remote.T|
+00f0  65 73 74 73 12 79 0a 0c  6d 65 73 73 61 67 65 2d  |ests.y..message-|
+0100  70 61 74 68 12 15 20 20  6d 65 73 73 61 67 65 2d  |path..  message-|
+0110  76 61 6c 75 65 20 3a 20  32 0d 0a 22 2a 0a 28 0a  |value : 2.."*.(.|
+0120  0e 6d 65 73 73 61 67 65  2d 74 61 72 67 65 74 12  |.message-target.|
+0130  09 31 32 37 2e 30 2e 30  2e 31 18 f9 13 22 08 61  |.127.0.0.1...".a|
+0140  6b 6b 61 2e 74 63 70 2a  12 6d 65 73 73 61 67 65  |kka.tcp*.message|
+0150  2d 64 69 73 70 61 74 63  68 65 72 30 10 3a 02 52  |-dispatcher0.:.R|
+0160  53 40 10 4a 02 43 46 50  10 5a 02 46 43 60 07 1a  |S@.J.CFP.Z.FC`..|
+0170  13 2f 72 65 6d 6f 74 65  2f 74 77 6f 2d 64 65 70  |./remote/two-dep|
+0180  6c 6f 79 73 22 00                                 |loys".|

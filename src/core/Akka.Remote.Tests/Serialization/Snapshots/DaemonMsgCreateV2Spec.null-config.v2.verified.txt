@@ -1,0 +1,17 @@
+﻿case: null-config
+message-type: DaemonMsgCreate
+manifest: a
+serializer-id: 43
+byte-count: 166
+
+0000  84 01 83 01 d9 55 41 6b  6b 61 2e 52 65 6d 6f 74  |.....UAkka.Remot|
+0010  65 2e 54 65 73 74 73 2e  53 65 72 69 61 6c 69 7a  |e.Tests.Serializ|
+0020  61 74 69 6f 6e 2e 44 61  65 6d 6f 6e 4d 73 67 43  |ation.DaemonMsgC|
+0030  72 65 61 74 65 56 32 53  70 65 63 2b 46 69 78 74  |reateV2Spec+Fixt|
+0040  75 72 65 41 63 74 6f 72  2c 20 41 6b 6b 61 2e 52  |ureActor, Akka.R|
+0050  65 6d 6f 74 65 2e 54 65  73 74 73 02 86 01 aa 70  |emote.Tests....p|
+0060  72 6f 70 73 2d 6e 75 6c  6c 02 c0 03 c0 04 c0 05  |rops-null.......|
+0070  a0 06 ff 03 90 02 86 01  ac 6d 65 73 73 61 67 65  |.........message|
+0080  2d 6e 75 6c 6c 02 c0 03  c0 04 c0 05 a0 06 ff 03  |-null...........|
+0090  b3 2f 72 65 6d 6f 74 65  2f 6e 75 6c 6c 2d 63 6f  |./remote/null-co|
+00a0  6e 66 69 67 04 a0                                 |nfig..|

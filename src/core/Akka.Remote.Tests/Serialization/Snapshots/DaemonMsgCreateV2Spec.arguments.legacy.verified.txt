@@ -1,0 +1,23 @@
+case: arguments
+message-type: DaemonMsgCreate
+manifest:
+serializer-id: 3
+byte-count: 257
+
+0000  0a d6 01 12 11 40 10 4a  02 43 46 60 ff ff ff ff  |.....@.J.CF`....|
+0010  ff ff ff ff ff 01 1a 56  41 6b 6b 61 2e 52 65 6d  |.......VAkka.Rem|
+0020  6f 74 65 2e 54 65 73 74  73 2e 53 65 72 69 61 6c  |ote.Tests.Serial|
+0030  69 7a 61 74 69 6f 6e 2e  44 61 65 6d 6f 6e 4d 73  |ization.DaemonMs|
+0040  67 43 72 65 61 74 65 56  32 53 70 65 63 2b 41 72  |gCreateV2Spec+Ar|
+0050  67 75 6d 65 6e 74 41 63  74 6f 72 2c 20 41 6b 6b  |gumentActor, Akk|
+0060  61 2e 52 65 6d 6f 74 65  2e 54 65 73 74 73 22 08  |a.Remote.Tests".|
+0070  61 72 67 75 6d 65 6e 74  22 04 11 00 00 00 22 00  |argument".....".|
+0080  2a 25 53 79 73 74 65 6d  2e 53 74 72 69 6e 67 2c  |*%System.String,|
+0090  20 53 79 73 74 65 6d 2e  50 72 69 76 61 74 65 2e  | System.Private.|
+00a0  43 6f 72 65 4c 69 62 2a  24 53 79 73 74 65 6d 2e  |CoreLib*$System.|
+00b0  49 6e 74 33 32 2c 20 53  79 73 74 65 6d 2e 50 72  |Int32, System.Pr|
+00c0  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 2a 00 32  |ivate.CoreLib*.2|
+00d0  03 11 11 00 3a 03 01 01  00 12 11 40 10 4a 02 43  |....:......@.J.C|
+00e0  46 60 ff ff ff ff ff ff  ff ff ff 01 1a 11 2f 72  |F`............/r|
+00f0  65 6d 6f 74 65 2f 61 72  67 75 6d 65 6e 74 73 22  |emote/arguments"|
+0100  00                                                |.|

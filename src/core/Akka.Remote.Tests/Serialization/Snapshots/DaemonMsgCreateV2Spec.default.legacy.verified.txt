@@ -1,0 +1,16 @@
+case: default
+message-type: DaemonMsgCreate
+manifest:
+serializer-id: 3
+byte-count: 145
+
+0000  0a 6a 12 11 40 10 4a 02  43 46 60 ff ff ff ff ff  |.j..@.J.CF`.....|
+0010  ff ff ff ff 01 1a 55 41  6b 6b 61 2e 52 65 6d 6f  |......UAkka.Remo|
+0020  74 65 2e 54 65 73 74 73  2e 53 65 72 69 61 6c 69  |te.Tests.Seriali|
+0030  7a 61 74 69 6f 6e 2e 44  61 65 6d 6f 6e 4d 73 67  |zation.DaemonMsg|
+0040  43 72 65 61 74 65 56 32  53 70 65 63 2b 46 69 78  |CreateV2Spec+Fix|
+0050  74 75 72 65 41 63 74 6f  72 2c 20 41 6b 6b 61 2e  |tureActor, Akka.|
+0060  52 65 6d 6f 74 65 2e 54  65 73 74 73 12 11 40 10  |Remote.Tests..@.|
+0070  4a 02 43 46 60 ff ff ff  ff ff ff ff ff ff 01 1a  |J.CF`...........|
+0080  0e 2f 72 65 6d 6f 74 65  2f 66 72 6f 7a 65 6e 22  |./remote/frozen"|
+0090  00                                                |.|

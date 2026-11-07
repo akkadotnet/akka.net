@@ -1,0 +1,17 @@
+﻿case: null-config
+message-type: DaemonMsgCreate
+manifest:
+serializer-id: 3
+byte-count: 164
+
+0000  0a 70 12 17 0a 0a 70 72  6f 70 73 2d 6e 75 6c 6c  |.p....props-null|
+0010  60 ff ff ff ff ff ff ff  ff ff 01 1a 55 41 6b 6b  |`...........UAkk|
+0020  61 2e 52 65 6d 6f 74 65  2e 54 65 73 74 73 2e 53  |a.Remote.Tests.S|
+0030  65 72 69 61 6c 69 7a 61  74 69 6f 6e 2e 44 61 65  |erialization.Dae|
+0040  6d 6f 6e 4d 73 67 43 72  65 61 74 65 56 32 53 70  |monMsgCreateV2Sp|
+0050  65 63 2b 46 69 78 74 75  72 65 41 63 74 6f 72 2c  |ec+FixtureActor,|
+0060  20 41 6b 6b 61 2e 52 65  6d 6f 74 65 2e 54 65 73  | Akka.Remote.Tes|
+0070  74 73 12 19 0a 0c 6d 65  73 73 61 67 65 2d 6e 75  |ts....message-nu|
+0080  6c 6c 60 ff ff ff ff ff  ff ff ff ff 01 1a 13 2f  |ll`............/|
+0090  72 65 6d 6f 74 65 2f 6e  75 6c 6c 2d 63 6f 6e 66  |remote/null-conf|
+00a0  69 67 22 00                                       |ig".|

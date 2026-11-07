@@ -64,6 +64,7 @@ module Akka.Remote
     Akka.Remote.Artery.IArteryControlMessage, Akka.Remote
   daemon-create: Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote (id 3)
     Akka.Remote.DaemonMsgCreate, Akka.Remote
+  daemon-create-v2: Akka.Remote.Serialization.DaemonMsgCreateMessagePackSerializer, Akka.Remote (id 43) supersedes daemon-create
   primitive: Akka.Remote.Serialization.PrimitiveSerializers, Akka.Remote (id 17)
     System.Int32, System.Private.CoreLib
     System.Int64, System.Private.CoreLib

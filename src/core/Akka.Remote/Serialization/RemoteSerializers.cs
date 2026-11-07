@@ -22,6 +22,9 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("daemon-create-v2", "daemon-create");
+
         private static readonly Config PrimitiveDefaults = ConfigurationFactory.ParseString("use-legacy-behavior = on");
 
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
@@ -59,6 +62,8 @@ namespace Akka.Remote.Serialization
                 ImmutableHashSet.Create(typeof(Google.Protobuf.IMessage))),
             SerializerDetails.Create("daemon-create", new DaemonMsgCreateSerializer(system),
                 ImmutableHashSet.Create(typeof(DaemonMsgCreate))),
+            SerializerDetails.Create("daemon-create-v2", new DaemonMsgCreateMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty),
             SerializerDetails.Create("akka-system-msg", new SystemMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(SystemMessage))),
             SerializerDetails.Create("artery-control", new ArteryControlMessageSerializer(system),
