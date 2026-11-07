@@ -1,0 +1,7 @@
+﻿case: mix
+message-type: MixMetricsSelector
+manifest: c
+serializer-id: 10
+byte-count: 14
+
+0000  0a 05 08 0a 12 01 65 0a  05 08 0a 12 01 64        |......e......d|

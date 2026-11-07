@@ -1,0 +1,12 @@
+﻿case: gossip-zero
+message-type: MetricsGossipEnvelope
+manifest: a
+serializer-id: 10
+byte-count: 87
+
+0000  0a 15 0a 07 6d 65 74 72  69 63 73 12 01 61 18 f8  |....metrics..a..|
+0010  13 22 04 61 6b 6b 61 12  3c 0a 15 0a 07 6d 65 74  |.".akka.<....met|
+0020  72 69 63 73 12 01 61 18  f8 13 22 04 61 6b 6b 61  |rics..a...".akka|
+0030  12 04 7a 65 72 6f 1a 1d  10 e7 24 1a 18 12 02 08  |..zero....$.....|
+0040  03 1a 12 09 00 00 00 00  00 00 59 40 11 0a d7 a3  |..........Y@....|
+0050  70 3d 0a c7 3f 18 01                              |p=..?..|

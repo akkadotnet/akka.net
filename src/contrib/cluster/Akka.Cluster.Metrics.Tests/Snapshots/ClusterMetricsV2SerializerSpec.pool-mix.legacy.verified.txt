@@ -1,0 +1,8 @@
+﻿case: pool-mix
+message-type: AdaptiveLoadBalancingPool
+manifest: b
+serializer-id: 10
+byte-count: 25
+
+0000  0a 15 08 0a 12 01 63 1a  0e 0a 05 08 0a 12 01 65  |......c........e|
+0010  0a 05 08 0a 12 01 64 10  04                       |......d..|

@@ -1,0 +1,8 @@
+﻿case: pool-memory
+message-type: AdaptiveLoadBalancingPool
+manifest: b
+serializer-id: 10
+byte-count: 19
+
+0000  0a 05 08 0a 12 01 65 10  07 1a 06 63 75 73 74 6f  |......e....custo|
+0010  6d 20 01                                          |m .|
