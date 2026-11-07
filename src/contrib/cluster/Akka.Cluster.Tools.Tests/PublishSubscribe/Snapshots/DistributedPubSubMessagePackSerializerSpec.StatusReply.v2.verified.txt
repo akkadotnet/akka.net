@@ -1,0 +1,9 @@
+﻿case: StatusReply
+message-type: Status
+manifest: A
+serializer-id: 49
+byte-count: 36
+
+0000  82 01 81 94 a8 61 6b 6b  61 2e 74 63 70 a6 70 75  |.....akka.tcp.pu|
+0010  62 73 75 62 a9 31 32 37  2e 30 2e 30 2e 31 cd 09  |bsub.127.0.0.1..|
+0020  f8 11 02 c3                                       |....|

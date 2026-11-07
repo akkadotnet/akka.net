@@ -1,0 +1,10 @@
+﻿case: Publish
+message-type: Publish
+manifest: E
+serializer-id: 49
+byte-count: 62
+
+0000  83 01 a5 74 6f 70 69 63  02 83 01 11 02 d9 25 53  |...topic......%S|
+0010  79 73 74 65 6d 2e 53 74  72 69 6e 67 2c 20 53 79  |ystem.String, Sy|
+0020  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0030  65 4c 69 62 03 c4 05 68  65 6c 6c 6f 03 c2        |eLib...hello..|

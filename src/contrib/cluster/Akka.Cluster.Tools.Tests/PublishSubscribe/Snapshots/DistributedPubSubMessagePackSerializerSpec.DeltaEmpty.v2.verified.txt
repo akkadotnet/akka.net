@@ -1,0 +1,7 @@
+﻿case: DeltaEmpty
+message-type: Delta
+manifest: B
+serializer-id: 49
+byte-count: 3
+
+0000  81 01 90                                          |...|

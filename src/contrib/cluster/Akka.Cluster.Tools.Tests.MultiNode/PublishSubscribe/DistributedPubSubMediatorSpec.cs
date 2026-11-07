@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -47,6 +48,17 @@ public class DistributedPubSubMediatorSpecConfig : MultiNodeConfig
                 akka.cluster.pub-sub.max-delta-elements = 500
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
             ").WithFallback(DistributedPubSub.DefaultConfig());
+
+        // All peers have both readers; writers model off, on, and on with both PubSub pins.
+        NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = off") });
+        NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = on") });
+        NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString("""
+            akka.actor.serialization-v2 = on
+            akka.actor.serialization-bindings {
+              "Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools" = akka-pubsub
+              "Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools" = akka-pubsub
+            }
+            """) });
     }
 }
 
@@ -235,6 +247,19 @@ public class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
     [MultiNodeFact]
     public async Task DistributedPubSubMediatorSpecs()
     {
+        var writerId = Myself.Equals(_second) ? 49 : 9;
+        foreach (var message in new object[]
+                 {
+                     new Tools.PublishSubscribe.Internal.Status(ImmutableDictionary<Address, long>.Empty, false),
+                     new Delta(ImmutableList<Bucket>.Empty), new Send("/user/target", "payload", false),
+                     new SendToAll("/user/target", "payload"), new Publish("topic", "payload"),
+                     new SendToOneSubscriber("payload")
+                 })
+        {
+            Sys.Serialization.FindSerializerFor(message).Identifier.Should().Be(writerId);
+        }
+        Log.Info("PubSub interop: process [{0}], role [{1}], writer [{2}]", Environment.ProcessId, Myself.Name, writerId);
+
         await DistributedPubSubMediator_must_startup_2_nodes_cluster();
         await DistributedPubSubMediator_must_keep_track_of_added_users();
         await DistributedPubSubMediator_must_replicate_users_to_new_node();

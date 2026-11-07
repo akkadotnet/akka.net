@@ -1,0 +1,11 @@
+﻿case: SendLocal
+message-type: Send
+manifest: C
+serializer-id: 49
+byte-count: 69
+
+0000  83 01 ac 2f 75 73 65 72  2f 74 61 72 67 65 74 02  |.../user/target.|
+0010  83 01 11 02 d9 25 53 79  73 74 65 6d 2e 53 74 72  |.....%System.Str|
+0020  69 6e 67 2c 20 53 79 73  74 65 6d 2e 50 72 69 76  |ing, System.Priv|
+0030  61 74 65 2e 43 6f 72 65  4c 69 62 03 c4 05 68 65  |ate.CoreLib...he|
+0040  6c 6c 6f 03 c3                                    |llo..|

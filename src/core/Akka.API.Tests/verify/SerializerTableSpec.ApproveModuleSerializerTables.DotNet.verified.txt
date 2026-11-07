@@ -21,6 +21,7 @@ module Akka.Cluster.Tools
   akka-pubsub: Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools (id 9)
     Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools
     Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools
+  akka-pubsub-v2: Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessagePackSerializer, Akka.Cluster.Tools (id 49) supersedes akka-pubsub
   akka-singleton: Akka.Cluster.Tools.Singleton.Serialization.ClusterSingletonMessageSerializer, Akka.Cluster.Tools (id 14)
     Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools
 module Akka.DistributedData

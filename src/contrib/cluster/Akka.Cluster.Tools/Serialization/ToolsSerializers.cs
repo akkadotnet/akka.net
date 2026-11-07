@@ -26,11 +26,16 @@ namespace Akka.Cluster.Tools
     /// </summary>
     internal sealed class ToolsSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-pubsub-v2", "akka-pubsub");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-cluster-client", new ClusterClientMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(IClusterClientMessage), typeof(IClusterClientProtocolMessage))),
             SerializerDetails.Create("akka-pubsub", new DistributedPubSubMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(IDistributedPubSubMessage), typeof(SendToOneSubscriber))),
+            SerializerDetails.Create("akka-pubsub-v2", new DistributedPubSubMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty),
             SerializerDetails.Create("akka-singleton", new ClusterSingletonMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(IClusterSingletonMessage)))
         );
