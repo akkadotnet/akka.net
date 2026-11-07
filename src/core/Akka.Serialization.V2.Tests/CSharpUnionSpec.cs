@@ -7,11 +7,19 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
+using Akka.Serialization;
 using Akka.Serialization.V2.Tests.Harness;
 using Akka.TestKit;
 using FluentAssertions;
@@ -493,6 +501,105 @@ public sealed class CSharpUnionSpec : AkkaSpec
         var original = Invoke(assembly, "Unions.OwnSchema.Samples", "Euro")!;
 
         serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
+    }
+
+    [Fact(DisplayName = "Should_RecoverUnionEvents_When_PersistentActorIsRecreated")]
+    public async Task Should_RecoverUnionEvents_When_PersistentActorIsRecreated()
+    {
+        var source = CoverageCases + """
+
+            [AkkaSerializable(Manifest = "coverage-event")]
+            public union CoverageEvent(PaidInvoice, Trial) : ISubscriptionEvent;
+
+            public sealed class UnionActor : Akka.Persistence.ReceivePersistentActor
+            {
+                public override string PersistenceId => "union-recovery";
+
+                public UnionActor(Akka.Actor.IActorRef probe)
+                {
+                    var recovered = new System.Collections.Generic.List<CoverageEvent>();
+                    Recover<CoverageEvent>(e => recovered.Add(e));
+                    Recover<Akka.Persistence.RecoveryCompleted>(_ => probe.Tell(recovered.ToArray(), Self));
+                    Command<CoverageEvent>(e => Persist(e, persisted => probe.Tell(persisted, Self)));
+                }
+            }
+
+            public static class RecoverySamples
+            {
+                public static object[] Events() => [(CoverageEvent)new PaidInvoice(42, 1001), (CoverageEvent)new Trial()];
+                public static Akka.Actor.Props Props(Akka.Actor.IActorRef probe)
+                    => Akka.Actor.Props.Create(() => new UnionActor(probe));
+            }
+            """;
+        var result = GeneratorTestHarness.Run(
+            new[] { new SourceFile("Recovery.cs", source), new SourceFile("Polyfills.cs", Polyfills) },
+            GeneratorTestHarness.PreviewParseOptions,
+            MetadataReference.CreateFromFile(typeof(ReceivePersistentActor).Assembly.Location));
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializerType = assembly.GetType("Unions.SubscriptionSerializer", throwOnError: true)!;
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(
+            (SerializerDetails)serializerType.GetMethod("CreateSerializerDetails")!.Invoke(null, new object[] { system })!)));
+        var config = ConfigurationFactory.ParseString($"""
+            akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+            akka.persistence.journal.inmem.class = "{typeof(SerializedPayloadJournal).AssemblyQualifiedName}"
+            """);
+        var system = ActorSystem.Create("union-recovery", setup.WithSetup(BootstrapSetup.Create().WithConfig(config)));
+        try
+        {
+            var events = (object[])Invoke(assembly, "Unions.RecoverySamples", "Events")!;
+            system.Serialization.FindSerializerFor(events[0]).GetType().Should().Be(serializerType);
+            var props = (Props)Invoke(assembly, "Unions.RecoverySamples", "Props", TestActor)!;
+            var actor = system.ActorOf(props);
+            (await ExpectMsgAsync<Array>(TimeSpan.FromSeconds(10))).Length.Should().Be(0);
+            foreach (var e in events)
+            {
+                actor.Tell(e);
+                (await ExpectMsgAsync<object>(TimeSpan.FromSeconds(10))).Should().Be(e);
+            }
+
+            await WatchAsync(actor);
+            system.Stop(actor);
+            await ExpectTerminatedAsync(actor, TimeSpan.FromSeconds(10));
+            var recovering = system.ActorOf(props);
+            var recovered = await ExpectMsgAsync<Array>(TimeSpan.FromSeconds(10));
+            recovered.Cast<object>().Should().Equal(events);
+            system.Stop(recovering);
+        }
+        finally
+        {
+            await system.Terminate();
+        }
+    }
+
+    // Store bytes rather than live payloads: the ordinary memory journal bypasses serialization.
+    public sealed class SerializedPayloadJournal : MemoryJournal
+    {
+        private sealed record StoredPayload(int SerializerId, string Manifest, byte[] Bytes);
+
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
+        {
+            var serialization = Context.System.Serialization;
+            return base.WriteMessagesAsync(messages.Select(write => new AtomicWrite(
+                ((IImmutableList<IPersistentRepresentation>)write.Payload).Select(persistent =>
+                {
+                    var serializer = serialization.FindSerializerFor(persistent.Payload);
+                    return persistent.WithPayload(new StoredPayload(serializer.Identifier,
+                        Akka.Serialization.Serialization.ManifestFor(serializer, persistent.Payload), serializer.ToBinary(persistent.Payload)));
+                }).ToImmutableList())), cancellationToken);
+        }
+
+        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
+            Action<IPersistentRepresentation> recoveryCallback)
+        {
+            var serialization = context.System.Serialization;
+            return base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max, persistent =>
+            {
+                var stored = (StoredPayload)persistent.Payload;
+                recoveryCallback(persistent.WithPayload(serialization.Deserialize(stored.Bytes, stored.SerializerId, stored.Manifest)));
+            });
+        }
     }
 
     private Akka.Serialization.SerializerWithStringManifest CreateSerializer(Assembly assembly, string typeName)

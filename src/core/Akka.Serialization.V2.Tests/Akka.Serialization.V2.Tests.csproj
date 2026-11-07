@@ -21,6 +21,7 @@
     <!-- Supplies the shared xunit3-compatible AkkaSpec base (transitively brings in Akka.TestKit.Xunit) so
          serialization specs can run under the standard TestKit instead of raw ActorSystem.Create. -->
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
