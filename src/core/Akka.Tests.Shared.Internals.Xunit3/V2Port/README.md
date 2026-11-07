@@ -55,3 +55,9 @@ for f in <spec folder>/Snapshots/*.received.txt; do mv "$f" "${f%.received.txt}.
 Rules: never edit a `.verified.txt` by hand to make a test pass. If a legacy snapshot changes in `git diff`, stop: the
 legacy format must never change. A shipped V2 format only grows (add fields, never change or reuse them). CI only compares;
 a missing or stale snapshot fails the test.
+
+For a message whose nested `Equals` compares only identity (or collection instances), set
+`V2PortCase.AssertEquivalent` to a complete domain assertion. It receives expected and actual
+after the shared exact runtime-type guard, and runs even when the root's `Equals` returns true.
+Compare every serialized field, including nested versions and records; an identity-only check
+would hide lost wire state. Leave it null for the shared default comparison.
