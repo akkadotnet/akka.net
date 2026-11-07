@@ -10,6 +10,8 @@ using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
@@ -142,6 +144,11 @@ internal sealed class ReliableDeliveryMessagePackSerializer : SerializerV2
 
     private object ToWire(object obj)
     {
+        if (obj is ConsumerController.ISequencedMessage or ProducerController.IRegisterConsumer
+            or DurableProducerQueue.IMessageSent or DurableProducerQueue.IState
+            && !AkkaFeatures.IsDynamicTypeLoadingSupported)
+            throw GenericMessageNotSupported();
+
         switch (obj)
         {
             case ConsumerController.ISequencedMessage sequencedMessage:
@@ -230,7 +237,7 @@ internal sealed class ReliableDeliveryMessagePackSerializer : SerializerV2
         switch (wire)
         {
             case SequencedMessageWire sequencedMessage:
-                return GetFactory(ResolveType(sequencedMessage.TypeName))
+                return GetFactory(sequencedMessage.TypeName)
                     .CreateSequencedMessage(sequencedMessage, sequencedMessage.ProducerControllerRef ?? ActorRefs.Nobody);
             case AckWire ack:
                 return new ProducerController.Ack(ack.ConfirmedSeqNr);
@@ -240,14 +247,14 @@ internal sealed class ReliableDeliveryMessagePackSerializer : SerializerV2
             case ResendWire resend:
                 return new ProducerController.Resend(resend.FromSeqNr);
             case RegisterConsumerWire registerConsumer:
-                return GetFactory(ResolveType(registerConsumer.TypeName))
+                return GetFactory(registerConsumer.TypeName)
                     .CreateRegisterConsumer(registerConsumer.ConsumerControllerRef ?? ActorRefs.Nobody);
             case MessageSentWire messageSent:
-                return GetFactory(ResolveType(messageSent.TypeName)).CreateMessageSent(messageSent);
+                return GetFactory(messageSent.TypeName).CreateMessageSent(messageSent);
             case ConfirmedWire confirmed:
                 return new DurableProducerQueue.Confirmed(confirmed.SeqNr, confirmed.Qualifier, confirmed.Timestamp);
             case StateWire state:
-                return GetFactory(ResolveType(state.TypeName)).CreateState(state);
+                return GetFactory(state.TypeName).CreateState(state);
             case CleanupWire cleanup:
                 return new DurableProducerQueue.Cleanup(cleanup.Qualifiers.ToImmutableHashSet());
             default:
@@ -261,13 +268,24 @@ internal sealed class ReliableDeliveryMessagePackSerializer : SerializerV2
             wire.Manifest);
     }
 
-    private static Type ResolveType(string typeName)
+    private static IDomainFactory GetFactory(string typeName)
     {
-        return TypeCache.GetOrAdd(typeName, static name => Type.GetType(name, true)!);
+        if (AkkaFeatures.IsDynamicTypeLoadingSupported)
+            return CreateFactoryByReflection(typeName);
+
+        throw GenericMessageNotSupported();
     }
 
-    private static IDomainFactory GetFactory(Type payloadType)
+    private static SerializationException GenericMessageNotSupported() =>
+        new("Generic Reliable Delivery messages require runtime type reconstruction, which is disabled " +
+            "because the [Akka.DynamicTypeLoading] feature switch is off. Native AOT support for these " +
+            "messages is not yet available; enabling [akka.actor.serialization-v2] does not remove that requirement.");
+
+    [RequiresUnreferencedCode("Resolves a Delivery payload type from its wire name and constructs its domain factory reflectively.")]
+    [RequiresDynamicCode("Constructs a generic Delivery domain factory for a payload type discovered at runtime.")]
+    private static IDomainFactory CreateFactoryByReflection(string typeName)
     {
+        var payloadType = TypeCache.GetOrAdd(typeName, static name => Type.GetType(name, true)!);
         return DomainFactories.GetOrAdd(payloadType,
             static t => (IDomainFactory)Activator.CreateInstance(typeof(DomainFactory<>).MakeGenericType(t))!);
     }

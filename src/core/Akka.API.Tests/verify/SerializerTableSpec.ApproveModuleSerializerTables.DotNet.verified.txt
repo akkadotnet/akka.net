@@ -4,6 +4,7 @@
     Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster
   reliable-delivery: Akka.Cluster.Serialization.ReliableDeliverySerializer, Akka.Cluster (id 36)
     Akka.Delivery.Internal.IDeliverySerializable, Akka
+  reliable-delivery-v2: Akka.Cluster.Serialization.ReliableDeliveryMessagePackSerializer, Akka.Cluster (id 76) supersedes reliable-delivery
 module Akka.Cluster.Metrics
   akka-cluster-metrics: Akka.Cluster.Metrics.Serialization.ClusterMetricsMessageSerializer, Akka.Cluster.Metrics (id 10)
     Akka.Cluster.Metrics.AdaptiveLoadBalancingPool, Akka.Cluster.Metrics

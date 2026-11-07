@@ -30,6 +30,11 @@ you need a reproducible build.
   for MessagePack-backed serializers: a compile-time schema, no reflection, AOT-safe
   registration. See
   [Source-generated serializer](#source-generated-serializer-akkaserializationv2) below.
+* **Built-in V2 serializers are opt-in.** `akka.actor.serialization-v2 = on` selects available
+  built-in V2 writers while retaining legacy readers. Upgrade every participating reader first;
+  a previous v1.6 beta might lack a port. See
+  [Enabling Built-in Serialization V2](docs/articles/serialization/built-in-v2.md) for the
+  reader-release table, Akka.Hosting configuration, legacy binding pins, and durable rollback limits.
 * **Native AOT support, in progress.** A local `ActorSystem` and a basic Akka.Hosting app
   publish and run clean under Native AOT in CI. Classic remoting does not work under AOT at
   all; Artery is the target transport for Remote under AOT, but only a manual probe has tried

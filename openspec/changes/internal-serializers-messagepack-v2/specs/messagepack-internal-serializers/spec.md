@@ -64,15 +64,16 @@ The system SHALL implement a serializer whose bytes are already minimal, or whos
 - **THEN** the bytes SHALL equal the legacy serializer's bytes for that message
 - **AND** the serializer SHALL read all bytes the legacy serializer wrote, including multi-segment sequences
 
-### Requirement: Durable records are self-describing and recover by stored format
+### Requirement: Durable records recover independently of the current write binding
 
-Every durable record the migration touches SHALL carry a signal of the serializer that wrote it, and recovery SHALL dispatch on that signal rather than on the current write-side binding, so that records written before and after the switch is turned on both recover correctly. Persistence outer records that existing plugins store without a serializer id SHALL keep their legacy bytes and id.
+Stamped payloads SHALL recover by their stored serializer id and manifest. Stores without a format signal SHALL keep their existing legacy storage format independently of the global network-writer switch. Persistence outer records SHALL keep their legacy bytes and id.
 
-#### Scenario: Legacy headerless LMDB records recover after the DData switch-over
+#### Scenario: LMDB retains its legacy storage format when DData network writers change
 
-- **WHEN** DistributedData's bindings have moved to the V2 serializer and the durable (LMDB) store contains records written before this change (no format header)
-- **THEN** the store SHALL recover each headerless record as the legacy protobuf `DurableDataEnvelope`
-- **AND** records written after the change SHALL carry a `(serializerId, manifest)` header and recover by that stored id
+- **WHEN** DistributedData's network bindings move to V2 and an existing LMDB database is recovered
+- **THEN** the store SHALL resolve the legacy serializer independently of the current type binding
+- **AND** both existing records and subsequent writes SHALL retain the legacy headerless format
+- **AND** disabling V2 and restarting SHALL recover every key
 
 #### Scenario: Stamped persistence payloads recover old and new entries by stored id
 

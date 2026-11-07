@@ -2,5 +2,7 @@
   href: serialization.md
 - name: Source-Generated MessagePack Serialization
   href: source-generated-serialization.md
+- name: Enabling Built-in Serialization V2
+  href: built-in-v2.md
 - name: Built-in Serializer Ids
   href: codes.md
