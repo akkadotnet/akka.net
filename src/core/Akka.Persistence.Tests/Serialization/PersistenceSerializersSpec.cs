@@ -94,10 +94,10 @@ namespace Akka.Persistence.Tests.Serialization
             var serialization = await ModuleSerializerSpecs.AssertBuildsWithoutWarning(Sys, EventFilter);
 
             serialization.GetSerializerById(7).Should().BeOfType<PersistenceMessageSerializer>();
-            serialization.GetSerializerById(8).Should().BeOfType<PersistenceSnapshotSerializer>();
+            serialization.GetSerializerById(8).Should().BeOfType<NativePersistenceSnapshotSerializer>();
 
             serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<PersistenceMessageSerializer>();
-            serialization.FindSerializerForType(typeof(Akka.Persistence.Serialization.Snapshot)).Should().BeOfType<PersistenceSnapshotSerializer>();
+            serialization.FindSerializerForType(typeof(Akka.Persistence.Serialization.Snapshot)).Should().BeOfType<NativePersistenceSnapshotSerializer>();
         }
 
         /// <remarks>
@@ -113,7 +113,7 @@ namespace Akka.Persistence.Tests.Serialization
             {
                 var serialization = ((ExtendedActorSystem)system).Serialization;
                 serialization.GetSerializerById(7).Should().BeOfType<PersistenceMessageSerializer>();
-                serialization.GetSerializerById(8).Should().BeOfType<PersistenceSnapshotSerializer>();
+                serialization.GetSerializerById(8).Should().BeOfType<NativePersistenceSnapshotSerializer>();
             }
             finally
             {

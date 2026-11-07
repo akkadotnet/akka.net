@@ -1,0 +1,7 @@
+case: bytes
+message-type: Snapshot
+manifest: Akka.Persistence.Serialization.Snapshot, Akka.Persistence
+serializer-id: 8
+byte-count: 8
+
+0000  08 04 12 04 00 01 80 ff                           |........|
