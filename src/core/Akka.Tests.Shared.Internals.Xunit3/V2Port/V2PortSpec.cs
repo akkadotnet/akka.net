@@ -36,6 +36,13 @@ public sealed record V2PortCase(object Message, string Manifest, string Name)
     /// strict legacy-token parity; native V2 serializers still require a nonempty token.
     /// </summary>
     public string? V2Manifest { get; init; }
+
+    /// <summary>
+    /// Optional complete domain assertion for messages whose nested equality omits wire fields or
+    /// compares collection identities. Receives expected then actual, after the exact runtime-type
+    /// check. Null retains the shared equality/structural checks.
+    /// </summary>
+    public Action<object, object>? AssertEquivalent { get; init; }
 }
 
 /// <summary>
@@ -238,6 +245,11 @@ public abstract class V2PortSpec : AkkaSpec
     internal static void AssertSame(V2PortCase c, object? actual, string stage)
     {
         actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+        if (c.AssertEquivalent is { } assertEquivalent)
+        {
+            assertEquivalent(c.Message, actual!);
+            return;
+        }
         if (!Equals(c.Message, actual))
         {
             // FA 5 only exposes ComparingByMembers<T>. This JIT-only test dispatch changes the
