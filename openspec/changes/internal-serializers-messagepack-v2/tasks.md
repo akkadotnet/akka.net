@@ -7,7 +7,7 @@ Implementation handoff: [accepted delivery plan](../../../.systematize/plans/bui
 - [ ] 1.3 First additive registration proves the pattern: ReliableDelivery PR #8409 (not merged yet)
 - [ ] 1.4 Rework PR #8409 to the C# table model: read-only row `reliable-delivery-v2` (id 76, empty `UseFor`) in `ClusterSerializers`, delete its `Cluster.conf` rows, and remove the stale text about the withdrawn #8403 `write-bindings` flag
 - [x] 1.5 Global opt-in switch implemented by #8724/#8729: HOCON-only `akka.actor.serialization-v2`, default off, with Hosting `WithSerializationV2`; user bindings retain precedence. Issue #8713 remains open for wider integration evidence.
-- [ ] 1.6 V2 port test kit and table approval (#8714): shared spec base, golden-bytes helpers, mixed-binding helper
+- [x] 1.6 V2 port test kit and table approval infrastructure is merged in #8725: V2PortSpec, Verify golden snapshots, MixedBindingPair and the existing live table approval. Reuse it for subsequent ports; adoption and broader integration evidence remain tracked by #8714.
 - [x] 1.7 Shared generator support (#8715) is merged: formatters in collection positions (G-1), native `TimeSpan` and small scalars (G-3).
 
 ## 2. Subsystem 1: ReliableDelivery (id 36 -> 76) [lowest risk, first]

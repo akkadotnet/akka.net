@@ -36,7 +36,7 @@ Shared wire fragments reused across these protos: `UniqueAddress` (64-bit uid, `
 **Goals:**
 
 - Migrate the internal cluster/replication/delivery/sharding/remote message serializers from protobuf to source-generated MessagePack V2, writing MessagePack when the user turns on the global opt-in switch (off by default), with legacy serializers registered forever for reads.
-- Preserve read compatibility unconditionally: every v1.6 node can read protobuf and MessagePack-v2 for any migrated subsystem regardless of what it writes.
+- Preserve read compatibility unconditionally: every node containing a port can read both its protobuf and MessagePack-v2 formats regardless of what it writes; earlier v1.6 betas may lack that reader.
 - Gate the switch-on recommendation for each subsystem on a measured CPU/allocation/payload-size benchmark result, not a target date.
 - Reuse the `messagepack-sourcegen-validation` generator, attributes, and envelope-payload model unmodified.
 - Give operators one switch for the whole migration, plus the existing `serialization-bindings` override mechanism to pin a subsystem to legacy. The switch is the only new knob.
@@ -54,14 +54,14 @@ Shared wire fragments reused across these protos: `UniqueAddress` (64-bit uid, `
 
 ### 1. The binding controls the WRITE side only; both serializers always registered
 
-Verified against `Serialization.cs`: reads are id-dispatched (`_serializersById`), writes are binding-driven. Register both the legacy serializer id and the new V2 id in every subsystem's C# module table (`<Module>Serializers`) unconditionally: the legacy row keeps its bindings, the V2 row is read-only (alias `<legacy-alias>-v2`, empty `UseFor`) until the global switch (Decision 2) is on. Reads need only the id, so an empty `UseFor` still makes the id readable. Migration is nothing more than which row a subsystem's marker-interface binding (e.g. `IReplicatorMessage`, `IDeliverySerializable`, `IClusterShardingSerializable`) belongs to. Read-side-always-registered is sufficient for a homogeneous v1.6 cluster: every node holds both serializers, so any node decodes either format no matter which it writes. (Stores that resolve by the current binding need a fixed legacy storage serializer; see Decision 11.) No `.conf` rows: HOCON rows for built-in serializers are deleted (#8676, PR #8711).
+Verified against `Serialization.cs`: reads are id-dispatched (`_serializersById`), writes are binding-driven. Register both the legacy serializer id and the new V2 id in every subsystem's C# module table (`<Module>Serializers`) unconditionally: the legacy row keeps its bindings, the V2 row is read-only (alias `<legacy-alias>-v2`, empty `UseFor`) until the global switch (Decision 2) is on. Reads need only the id, so an empty `UseFor` still makes the id readable. Migration is nothing more than which row a subsystem's marker-interface binding (e.g. `IReplicatorMessage`, `IDeliverySerializable`, `IClusterShardingSerializable`) belongs to. Read-side-always-registered is sufficient once every participating node contains the port: each holds both serializers and decodes either format regardless of its writer setting. (Stores that resolve by the current binding need a fixed legacy storage serializer; see Decision 11.) No `.conf` rows: HOCON rows for built-in serializers are deleted (#8676, PR #8711).
 ### 2. One global opt-in switch, off by default (amended 2026-10-02, supersedes the 2026-07-18 no-flag ruling)
 
 **Decision: there is one global V2 switch, off by default.** The 2026-07-18 ruling removed all flag machinery after PR #8403 (closed unmerged): that PR's central HOCON-driven hook reinvented ordinary `serialization-bindings` overriding behind a stringly-typed registry, with imperative mutation of the binding table at startup. The maintainer reversed the "no switch at all" part on 2026-10-02, because moving bindings per subsystem in code makes the whole 1.6 wire change land by accident of release timing. What stays withdrawn: per-subsystem flag keys and a stringly-typed registry.
 
 - **V2 serializers ship as read-only rows** in each module's C# table: alias `<legacy-alias>-v2`, id `legacy + 40`, empty `UseFor`. Every node can read V2 as soon as it runs a release containing them.
 - **When the user turns the switch on, each module's V2 row takes over its legacy row's bindings.** Legacy rows stay registered forever for reads.
-- **The legacy serializer and its id stay registered unconditionally, forever.** Reads dispatch by id, so every v1.6 node decodes both formats regardless of what any node writes.
+- **The legacy serializer and its id stay registered unconditionally, forever.** Reads dispatch by id, so every node containing the port decodes both formats regardless of its writer setting.
 - **No ceremonial release gate.** Operators turn the switch on once every node runs a version that can read V2. That is docs guidance (Decision 6), not a hard rule in code.
 - **User bindings still win.** A user `serialization-bindings` entry (by alias) or `SerializationSetup` binding overrides the table defaults and the switch (Decision 3).
 - **Implemented by #8724/#8729:** `akka.actor.serialization-v2` is HOCON-only and defaults off; Hosting exposes `WithSerializationV2`. User bindings still win. There is no separate Setup equivalent.
@@ -93,7 +93,7 @@ The V2 serializer is `AkkaSerializer : SerializerV2` (source-generated), reusing
 
 **Decision: the switch is off by default, V2 rows ship read-only, and operators turn the switch on once every node can read V2. There is no framework-owned capability gate and no remoting-handshake change.** The hazard is unchanged: a node with no V2 serializer registered (any node on a release without the row) receiving a V2 id → `Cannot find serializer with id [N]`. Consequences:
 
-- **v1.6↔v1.6 is always safe**: every v1.6 node registers both serializers, so mixed legacy/V2 writers coexist freely (including nodes where an operator pinned the legacy binding or left the switch off).
+- **Nodes containing the same port interoperate in either mode**: both serializers register on those nodes, so mixed legacy/V2 writers coexist (including nodes where an operator pinned the legacy binding or left the switch off).
 - **v1.5→v1.6 rolling upgrades need no pin**: the switch is off by default, so v1.6 nodes keep writing legacy bytes that v1.5 nodes read. The operator turns the switch on after the last node reaches a V2-capable version. Docs say so; code doesn't enforce it.
 - **Correctness-critical subsystems can sit out**: the switch design (#8713) may offer a per-module opt-out, and Cluster core in particular may stay on legacy longer (Decision 7).
 
@@ -177,7 +177,7 @@ Any v2 schema carrying the system uid must emit it as **64-bit `long`** (`widen-
 
 1. Land each subsystem's forked serializer **additively** as a read-only row in its module's C# table (new id registered, empty `UseFor`, no `.conf` rows, legacy bindings untouched) with parity specs, golden V2 and legacy bytes, and its benchmark A/B. PR bodies carry `## Breaking changes`, `## Generator gaps found` and `## Generator changes made`. ReliableDelivery (PR #8409) is the first; it needs rework to the table model.
 2. Primitive (17) is already native. Rewrite PersistenceMessage (7) and PersistenceSnapshot (8) with identical bytes and ids.
-3. Reuse the merged generator work (#8715) and global switch (#8724/#8729). Extract the test kit (#8714) from the reference port; integrate the LMDB legacy pin (#8716) with DData.
+3. Reuse the merged generator work (#8715) and global switch (#8724/#8729). Reuse the merged #8725 port test kit (#8714); integrate the LMDB legacy pin (#8716) with DData.
 4. When a subsystem clears the benchmark gate and any prerequisite (for DData, the LMDB legacy pin and recovery tests), the maintainer signs off and the docs recommend the switch for it. The switch moves every deployed Supersedes mapping, including ports introduced by a package upgrade. Correctness and durability gate the mapping's merge; benchmark sign-off gates the recommendation to enable it.
 5. Operator writer rollback is turning the switch off and restarting the affected actor systems or the Decision 3 `application.conf` binding pin. No data migration is needed: durable formats never carry V2 bytes without id-dispatched reads (Decision 11), and both serializers remain registered indefinitely.
 6. Long-term (future major version, once durable-store migration tooling exists): delete protobuf write paths and ultimately the `Google.Protobuf` dependency; legacy reads remain supported throughout v1.6.
