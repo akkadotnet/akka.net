@@ -253,7 +253,8 @@ Full details: [Source-Generated MessagePack Serialization](docs/articles/seriali
 
 ### Built-in remote deployment serializer
 
-The generated remote-deployment serializer is available in **Unreleased (this PR)**. Leave
+The generated remote-deployment serializer is available in **Unreleased
+([#8931](https://github.com/akkadotnet/akka.net/pull/8931))**. Leave
 `akka.actor.serialization-v2 = off` (the default) while deploying the new readers to every
 peer. Both protobuf id `3` and generated id `43` remain readable, independently of the
 writer setting. Once every peer has these readers, setting `akka.actor.serialization-v2 = on`
