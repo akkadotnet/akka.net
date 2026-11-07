@@ -19,11 +19,16 @@ namespace Akka.Cluster.Serialization
     /// </summary>
     internal sealed class ClusterSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("reliable-delivery-v2", "reliable-delivery");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-cluster", new ClusterMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(IClusterMessage), typeof(ClusterRouterPool))),
             SerializerDetails.Create("reliable-delivery", new ReliableDeliverySerializer(system),
-                ImmutableHashSet.Create(typeof(IDeliverySerializable)))
+                ImmutableHashSet.Create(typeof(IDeliverySerializable))),
+            SerializerDetails.Create("reliable-delivery-v2", new ReliableDeliveryMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty)
         );
     }
 }

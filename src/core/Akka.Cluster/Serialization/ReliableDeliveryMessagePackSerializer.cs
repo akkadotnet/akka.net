@@ -29,8 +29,8 @@ namespace Akka.Cluster.Serialization;
 /// <para>
 /// Wire-compat model: dual registration. The legacy protobuf serializer stays fully registered and
 /// is readable forever; this serializer is additive. Reads dispatch purely by serializer id, so any
-/// v1.6 node can decode BOTH formats. Writes stay on protobuf until the separately-built
-/// <c>akka.actor.serialization.v2</c> write-side flag re-points the
+/// node containing both registrations can decode BOTH formats. Writes stay on protobuf until
+/// <c>akka.actor.serialization-v2</c> re-points the
 /// <c>Akka.Delivery.Internal.IDeliverySerializable</c> binding at this serializer.
 /// </para>
 /// <para>
@@ -359,7 +359,7 @@ internal sealed partial class ReliableDeliveryMessagePackCodec : AkkaSerializer
     /// codec is instantiated directly by <see cref="ReliableDeliveryMessagePackSerializer"/>, never
     /// registered on its own.
     /// </summary>
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial SerializerDetails CreateSerializerDetails(ExtendedActorSystem system);
 }
 
 // ---------------------------------------------------------------------------------------------

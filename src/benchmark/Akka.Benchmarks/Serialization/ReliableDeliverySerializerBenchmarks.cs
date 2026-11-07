@@ -67,7 +67,7 @@ public class ReliableDeliverySerializerBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        // Cluster.conf registers BOTH serializers (id 36 protobuf-bound, id 76 additive);
+        // ClusterSerializers registers BOTH serializers (id 36 protobuf-bound, id 76 additive);
         // the arms below drive the serializer instances directly for a clean A/B.
         _system = (ExtendedActorSystem)ActorSystem.Create("rd-serializer-bench", ClusterConfigFactory.Default());
         _protobuf = new ReliableDeliverySerializer(_system);
