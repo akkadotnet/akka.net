@@ -972,7 +972,12 @@ namespace Akka.IO
                         }
                         resumed = false;
 
-                        var result = _pending.GetAwaiter().GetResult();
+                        // Clear the field before consuming the read. Touching a stale _pending again would not throw: Pipe reuses
+                        // token 0 for every waiting read, and a read that completed synchronously still holds a buffer that
+                        // AdvanceTo has released to the pool. A cleared ValueTask yields an empty result instead.
+                        var pending = _pending;
+                        _pending = default;
+                        var result = pending.GetAwaiter().GetResult();
                         var buffer = result.Buffer;
 
                         // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
