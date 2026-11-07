@@ -1,0 +1,9 @@
+﻿case: status
+message-type: Status
+manifest: M
+serializer-id: 52
+byte-count: 36
+
+0000  85 01 03 02 0a 03 92 82  01 a1 61 02 c4 05 66 69  |..........a...fi|
+0010  72 73 74 82 01 a1 62 02  c4 06 73 65 63 6f 6e 64  |rst...b...second|
+0020  04 11 05 13                                       |....|

@@ -51,6 +51,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Cluster.TestKit.Xunit2")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
+[assembly: InternalsVisibleTo("Akka.DistributedData.LightningDB")]
 [assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
 [assembly: InternalsVisibleTo("Akka.Persistence.Query")]

@@ -7,6 +7,7 @@
 
 using Akka.Actor;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
 using Akka.Serialization;
 using Akka.Util;
 using System;
@@ -282,7 +283,7 @@ namespace Akka.DistributedData
         private readonly ICancelable _pruningTask;
         private readonly ICancelable _clockTask;
 
-        private readonly Serializer _serializer;
+        private readonly Serializer _digestSerializer;
         private readonly long _maxPruningDisseminationNanos;
 
         /// <summary>
@@ -393,7 +394,7 @@ namespace Akka.DistributedData
                 : null;
             _clockTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.GossipInterval, _settings.GossipInterval, Self, ClockTick.Instance, Self);
 
-            _serializer = Context.System.Serialization.FindSerializerForType(typeof(DataEnvelope));
+            _digestSerializer = FindDigestSerializer(Context.System);
             _maxPruningDisseminationNanos = _settings.MaxPruningDissemination.Ticks * 100;
 
             _previousClockTime = DateTime.UtcNow.Ticks * 100;
@@ -950,10 +951,23 @@ namespace Akka.DistributedData
         {
             if (Equals(envelope.Data, DeletedData.Instance)) return DeletedDigest;
 
-            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions());
+            var bytes = _digestSerializer.ToBinary(envelope.WithoutDeltaVersions());
             var serialized = SHA1.Create().ComputeHash(bytes);
             return ByteString.CopyFrom(serialized);
         }
+
+#nullable enable
+        internal static Serializer FindDigestSerializer(ActorSystem actorSystem)
+        {
+            var selected = actorSystem.Serialization.FindSerializerForType(typeof(DataEnvelope));
+            // Equal state must hash identically across V2/legacy network bindings. Otherwise
+            // every old key appears changed and bounded gossip can starve genuinely missing keys.
+            // Keep custom bindings and custom implementations of the legacy alias intact.
+            return selected.Identifier == ReplicatorMessagePackSerializer.SerializerIdentifier
+                ? actorSystem.Serialization.GetSerializerForAlias("akka-data-replication")
+                : selected;
+        }
+#nullable restore
 
         private DataEnvelope GetData(string key)
         {

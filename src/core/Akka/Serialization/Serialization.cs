@@ -1280,5 +1280,19 @@ namespace Akka.Serialization
         {
             return AsPublicSerializer(_serializersById[serializerId]);
         }
+
+#nullable enable
+        /// <summary>
+        /// Resolves a registered alias independently of its current write bindings. Durable stores
+        /// use this to retain an existing format when a new module row takes over network bindings.
+        /// </summary>
+        internal Serializer GetSerializerForAlias(string alias)
+        {
+            var serializer = GetSerializerByName(alias);
+            if (serializer is null)
+                throw new SerializationException($"Serializer alias [{alias}] is not registered.");
+            return AsPublicSerializer(serializer);
+        }
+#nullable restore
     }
 }

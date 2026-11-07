@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
+        <EmbeddedResource Include="reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -22,6 +22,11 @@
   <ItemGroup>
     <Protobuf Access="internal" Include="../../../protobuf/ReplicatedDataMessages.proto" />
     <Protobuf Access="internal" Include="../../../protobuf/ReplicatorMessages.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,8 @@
+﻿case: gossip-empty
+message-type: Gossip
+manifest: N
+serializer-id: 52
+byte-count: 29
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 61 3c c4 34 81  |..........ka<.4.|
+0010  f9 00 8b 30 00 be f0 9e  b5 09 00 00 00           |...0.........|

@@ -1,0 +1,11 @@
+﻿case: get-majority-plus
+message-type: Get
+manifest: A
+serializer-id: 12
+byte-count: 79
+
+0000  0a 12 0a 0b 0a 07 63 6f  75 6e 74 65 72 10 02 10  |......counter...|
+0010  0b 22 01 66 18 d0 0f 22  2e 0a 03 63 74 78 10 11  |.".f..."...ctx..|
+0020  22 25 53 79 73 74 65 6d  2e 53 74 72 69 6e 67 2c  |"%System.String,|
+0030  20 53 79 73 74 65 6d 2e  50 72 69 76 61 74 65 2e  | System.Private.|
+0040  43 6f 72 65 4c 69 62 28  03 30 01 38 02 40 01     |CoreLib(.0.8.@.|

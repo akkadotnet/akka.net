@@ -1,0 +1,7 @@
+﻿case: delta-nack
+message-type: DeltaNack
+manifest: R
+serializer-id: 52
+byte-count: 1
+
+0000  80                                                |.|

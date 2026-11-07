@@ -1,0 +1,9 @@
+﻿case: get-majority
+message-type: Get
+manifest: A
+serializer-id: 52
+byte-count: 36
+
+0000  87 01 83 01 0b 02 a1 66  03 c4 0b 0a 07 63 6f 75  |.......f.....cou|
+0010  6e 74 65 72 10 02 02 02  03 cd 07 d0 04 00 05 03  |nter............|
+0020  06 00 07 c0                                       |....|

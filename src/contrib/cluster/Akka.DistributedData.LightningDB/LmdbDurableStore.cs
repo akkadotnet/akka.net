@@ -5,10 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
@@ -16,8 +19,6 @@ using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
 using LightningDB;
-using System.Diagnostics;
-using System.Linq;
 
 namespace Akka.DistributedData.LightningDB
 {
@@ -56,7 +57,7 @@ namespace Akka.DistributedData.LightningDB
 
         private readonly TimeSpan _writeBehindInterval;
         private readonly string _path;
-        private string _dir;
+        private string? _dir;
 
         private readonly Dictionary<string, DurableDataEnvelope> _pending = new();
         private readonly ILoggingAdapter _log;
@@ -70,7 +71,13 @@ namespace Akka.DistributedData.LightningDB
             _log = Context.GetLogger();
 
             _serialization = Context.System.Serialization;
-            _serializer = _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            // LMDB values have no serializer id/manifest header. Redirect only the built-in V2
+            // network replacement (reserved id 52) to the legacy alias (#8716). An existing custom
+            // durable binding must keep its own format, including when the global switch is off.
+            var selected = _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            _serializer = selected.Identifier == 52
+                ? _serialization.GetSerializerForAlias("akka-data-replication")
+                : selected;
             _manifest = Akka.Serialization.Serialization.ManifestFor(_serializer, new DurableDataEnvelope(GCounter.Empty));
 
             var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();
@@ -109,8 +116,10 @@ namespace Akka.DistributedData.LightningDB
         {
             base.PreStart();
 
+            var parentName = Self.Path.Parent?.Name
+                ?? throw new InvalidOperationException("The LMDB durable-store actor must have a parent.");
             _dir = _path.EndsWith(DatabaseName)
-                ? Path.GetFullPath($"{_path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
+                ? Path.GetFullPath($"{_path}-{Context.System.Name}-{parentName}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
                 : Path.GetFullPath(_path);
             if (!Directory.Exists(_dir))
                 Directory.CreateDirectory(_dir);
@@ -122,7 +131,7 @@ namespace Akka.DistributedData.LightningDB
         {
             var t0 = Stopwatch.StartNew();      
          
-            var env = new LightningEnvironment(_dir)
+            var env = new LightningEnvironment(_dir ?? throw new InvalidOperationException("LMDB directory is not initialized."))
             {
                 MapSize = _mapSize,
                 MaxDatabases = 1
@@ -275,6 +284,7 @@ namespace Akka.DistributedData.LightningDB
             }
         }
 
-        public ITimerScheduler Timers { get; set; }
+        // The actor system injects the timer scheduler before PreStart.
+        public ITimerScheduler Timers { get; set; } = null!;
     }
 }

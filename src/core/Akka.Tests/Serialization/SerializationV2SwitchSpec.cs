@@ -209,6 +209,23 @@ namespace Akka.Tests.Serialization
 
         private static RecordingLogger LoggerOf(ActorSystem system) => (RecordingLogger)((ExtendedActorSystem)system).Settings.StdoutLogger;
 
+        [Theory(DisplayName = "Should_ResolveBothAliasesAndRejectMissingAliases_When_TheirBindingsHaveMoved")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_ResolveBothAliasesAndRejectMissingAliases_When_TheirBindingsHaveMoved(bool dynamicTypeLoading)
+        {
+            await WithSystem("akka.actor.serialization-v2 = on", async system =>
+            {
+                var serialization = await Build(system, dynamicTypeLoading);
+                Assert.Equal(LegacySerializer.Id, serialization.GetSerializerForAlias(LegacyAlias).Identifier);
+                Assert.Equal(V2Serializer.Id, serialization.GetSerializerForAlias(V2Alias).Identifier);
+                Assert.Equal(V2Serializer.Id, serialization.FindSerializerForType(typeof(ProtocolMessage)).Identifier);
+                var error = Assert.Throws<SerializationException>(() => serialization.GetSerializerForAlias("missing-alias"));
+                Assert.Contains("missing-alias", error.Message);
+                Assert.Contains("not registered", error.Message);
+            });
+        }
+
         private static void AssertLegacyBindings(AkkaSerialization serialization)
         {
             foreach (var type in LegacyTypes)
