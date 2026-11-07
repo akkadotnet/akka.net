@@ -9,7 +9,9 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -38,6 +40,8 @@ public sealed record V2PortCase(object Message, string Manifest, string Name);
 public abstract class V2PortSpec : AkkaSpec
 {
     private const string DynamicTypeLoadingSwitch = "Akka.DynamicTypeLoading";
+    private static readonly MethodInfo StructuralAssert = typeof(V2PortSpec).GetMethod(nameof(AssertStructurally),
+        BindingFlags.NonPublic | BindingFlags.Static) ?? throw new InvalidOperationException("Structural assertion method is missing.");
 
     private readonly string _sourceFile;
 
@@ -223,7 +227,23 @@ public abstract class V2PortSpec : AkkaSpec
     /// <summary>Asserts <paramref name="actual"/> equals the corpus message, by <c>Equals</c> or else structurally.</summary>
     internal static void AssertSame(V2PortCase c, object? actual, string stage)
     {
+        actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
         if (!Equals(c.Message, actual))
-            actual.Should().BeEquivalentTo(c.Message, o => o.RespectingRuntimeTypes(), "{0}: {1}", stage, c.Name);
+        {
+            // FA 5 only exposes ComparingByMembers<T>. This JIT-only test dispatch changes the
+            // root message strategy while preserving nested actor refs, CRDTs and byte equality.
+            try
+            {
+                StructuralAssert.MakeGenericMethod(c.Message.GetType()).Invoke(null, [c, actual, stage]);
+            }
+            catch (TargetInvocationException error) when (error.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Capture(error.InnerException).Throw();
+            }
+        }
     }
+
+    private static void AssertStructurally<T>(V2PortCase c, object? actual, string stage)
+        => actual.Should().BeEquivalentTo(c.Message,
+            o => o.RespectingRuntimeTypes().ComparingByMembers<T>(), "{0}: {1}", stage, c.Name);
 }
