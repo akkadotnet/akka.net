@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,10 +36,11 @@ namespace Akka.DistributedData.Serialization
         }
 
         private const int BufferSize = 1024 * 4;
+        private const int ReplicatedDataV2SerializerId = 51;
 
         public ExtendedActorSystem System { get; }
 
-        private volatile Akka.Serialization.Serialization _ser;
+        private volatile Akka.Serialization.Serialization? _ser;
 
         public Akka.Serialization.Serialization Serialization
         {
@@ -53,7 +55,7 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private volatile string _protocol;
+        private volatile string? _protocol;
 
         public string AddressProtocol
         {
@@ -65,7 +67,7 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private volatile Information _transportInfo;
+        private volatile Information? _transportInfo;
 
         public Information TransportInfo
         {
@@ -193,6 +195,12 @@ namespace Akka.DistributedData.Serialization
             {
                 var m = new OtherMessage();
                 var msgSerializer = Serialization.FindSerializerFor(msg);
+                // Protobuf envelopes also feed canonical digests and headerless durable storage.
+                // A network CRDT takeover must not change their nested format. Resolve the
+                // registered legacy alias so application replacements of that alias still win;
+                // other explicitly selected serializers retain their existing format.
+                if (msgSerializer.Identifier == ReplicatedDataV2SerializerId)
+                    msgSerializer = Serialization.GetSerializerForAlias("akka-replicated-data");
                 m.SerializerId = msgSerializer.Identifier;
                 m.EnclosedMessage = ByteString.CopyFrom(msgSerializer.ToBinary(msg));
 

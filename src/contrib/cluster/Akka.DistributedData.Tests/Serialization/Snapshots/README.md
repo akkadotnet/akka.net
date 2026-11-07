@@ -60,7 +60,9 @@ stores without silently replacing nested id-11 bytes before that new writer is e
 `ReplicatedDataCanonicalSerializationSpec` additionally freezes nested GCounter values in
 GSet, ORSet, LWWRegister and ORDictionary before the canonical-helper change, on the unchanged
 id-11 source and helper at `447fa543d`. Values use UID 42, a fixed full address, counter 7 and
-timestamp 1234567. Independent protobuf field decoding confirms nested id 11 / manifest F;
+timestamp 1234567. The captured ORSet and dictionary key dots are fixed explicitly at versions
+1 and 2, respectively; public Add/SetItem would use a process-global counter. Independent
+protobuf field decoding confirms nested id 11 / manifest F;
 ORSet and ORDictionary fixtures include their original gzip containers. These four fixtures
 are historical protobuf controls, not id-51 fixtures. The deliberately different reserved-id-51
 Setup stand-in activates a marker binding only in its on phase; it is not a production CRDT

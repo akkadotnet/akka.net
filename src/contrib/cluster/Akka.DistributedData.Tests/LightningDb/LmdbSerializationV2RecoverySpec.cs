@@ -46,14 +46,21 @@ public sealed class LmdbSerializationV2RecoverySpec : AkkaSpec
     [InlineData("10ms", "type-pin")]
     [InlineData("off", "legacy-alias")]
     [InlineData("10ms", "legacy-alias")]
+    [InlineData("off", "crdt-module")]
+    [InlineData("10ms", "crdt-module")]
+    [InlineData("off", "crdt-typed")]
+    [InlineData("10ms", "crdt-typed")]
+    [InlineData("off", "crdt-legacy-alias")]
+    [InlineData("10ms", "crdt-legacy-alias")]
     public async Task Should_RetainExistingStorageAndRecoverAllKeys_When_V2NetworkBindingsChangeAcrossSystems(string writeBehind, string binding)
     {
-        var customBinding = binding != "module";
-        const string name = "lmdb-v2-recovery";
+        var futureCrdt = binding.StartsWith("crdt-", StringComparison.Ordinal);
+        var customBinding = !futureCrdt && binding != "module";
+        var name = futureCrdt ? CanonicalCrdtSetup.SystemName : "lmdb-v2-recovery";
         var directory = Path.Combine(Path.GetTempPath(), "akka-lmdb-v2-" + Guid.NewGuid().ToString("N"));
         var node = ReplicatorMessagePackSerializerSpec.Node(name, "counter.example", 1L << 40);
-        var before = new DurableDataEnvelope(GCounter.Empty.Increment(node, 1));
-        var after = new DurableDataEnvelope(GCounter.Empty.Increment(node, 2));
+        var before = new DurableDataEnvelope(futureCrdt ? CanonicalCrdtSetup.Register(7) : GCounter.Empty.Increment(node, 1));
+        var after = new DurableDataEnvelope(futureCrdt ? CanonicalCrdtSetup.Register(8) : GCounter.Empty.Increment(node, 2));
         Directory.CreateDirectory(directory);
         try
         {
@@ -68,12 +75,19 @@ public sealed class LmdbSerializationV2RecoverySpec : AkkaSpec
             {
                 Assert.Equal(binding == "type-pin" ? 777 : 52,
                     kit.Sys.Serialization.FindSerializerForType(typeof(DurableDataEnvelope)).Identifier);
+                if (futureCrdt)
+                    Assert.Equal(51, kit.Sys.Serialization.FindSerializerFor(before.Data).Identifier);
                 Assert.Equal(before, Assert.Single(loaded).Value);
                 await Store(kit, store, "after", after);
             });
             var records = ReadRecords(directory);
             Assert.Equal(historical, records["before"]);
             Assert.Equal(2, records.Count);
+            if (futureCrdt)
+            {
+                foreach (var record in records.Values)
+                    CanonicalCrdtSetup.AssertStoredCrdtIds(record, binding[5..]);
+            }
 
             await WithStore(false, (kit, _, loaded) =>
             {
@@ -113,7 +127,9 @@ public sealed class LmdbSerializationV2RecoverySpec : AkkaSpec
                         write-behind-interval = {{writeBehind}}
                     }
                     """).WithFallback(custom).WithFallback(DistributedData.DefaultConfig());
-                var kit = new ActorTestKit(config, name, _output);
+                var kit = futureCrdt
+                    ? new ActorTestKit(CanonicalCrdtSetup.Create(enabled, binding[5..], config), name, _output)
+                    : new ActorTestKit(config, name, _output);
                 try
                 {
                     var store = kit.Sys.ActorOf(LmdbDurableStore.Props(

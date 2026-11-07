@@ -172,11 +172,20 @@ internal static class CanonicalCrdtSetup
     internal static object Case(string name) => name switch
     {
         "gset" => GSet<GCounter>.Empty.Add(Counter(7)),
-        "orset" => ORSet<GCounter>.Empty.Add(Node, Counter(7)),
+        "orset" => FixedSet(Counter(7), 1),
         "register" => Register(7),
-        "dictionary" => ORDictionary<string, GCounter>.Empty.SetItem(Node, "count", Counter(7)),
+        "dictionary" => new ORDictionary<string, GCounter>(FixedSet("count", 2),
+            ImmutableDictionary<string, GCounter>.Empty.Add("count", Counter(7))),
         _ => throw new ArgumentException("Unknown canonical CRDT case", nameof(name))
     };
+
+    private static ORSet<T> FixedSet<T>(T value, long version) where T : notnull
+    {
+        // Public Add increments a process-global counter; fixed dots reproduce the original
+        // legacy fixtures independently of test order without rewriting their stored bytes.
+        var vector = VersionVector.Create(Node, version);
+        return new ORSet<T>(ImmutableDictionary<T, VersionVector>.Empty.Add(value, vector), vector);
+    }
 
     internal static void AssertEquivalent(object expected, object actual)
     {
