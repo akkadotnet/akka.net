@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.6.0-beta5</VersionPrefix>
+    <VersionPrefix>1.6.0-beta6</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -66,39 +66,24 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET 1.6.0-beta5 removes `[AkkaUnion]` in favor of inferring unions from the property type, teaches the source generator to serialize C# 15 union types, and fixes a sharding producer-controller crash plus four Akka.Streams bugs. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+    <PackageReleaseNotes>Akka.NET 1.6.0-beta6 adds top-level C# 15 union serialization and makes distributed data the default store for cluster sharding coordinator state. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
 
 **Serialization V2**
 
-* A property typed as an interface, an abstract class, or a closed hierarchy is now a union over every `[AkkaSerializable]` type that implements or derives from it - no attribute needed. `AkkaUnionAttribute` is deleted, and AKKASG018, AKKASG038, AKKASG049 and AKKASG050 retire with it. Framework types and collection-like types are never inferred. The wire format is unchanged. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
-* C# 15 union types work as field types. The generator detects a union as a struct implementing `IUnion`, uses its public single-parameter constructors as the member set, and dispatches on `Value`. `TUnion?` and `default(TUnion)` both read back as null. ([#8888](https://github.com/akkadotnet/akka.net/pull/8888))
-* `[AkkaSerializable&lt;T&gt;]` is renamed to `[AkkaSerializerIncludes&lt;T&gt;]`. A non-generic included type now takes its manifest from its own `[AkkaSerializable(Manifest = ...)]`; setting `Manifest` on the include of a non-generic type is the new AKKASG053 error. Closed generic constructions keep `Manifest`/`ManifestPrefix` on the include. ([#8891](https://github.com/akkadotnet/akka.net/pull/8891))
-* AKKASG048 fails the build when a concrete implementor in the compilation lacks `[AkkaSerializable]`, and AKKASG019 now fires on an empty discovered union instead of emitting a dispatch helper with no arms. AKKASG025 (unsealed union member) is now a Warning instead of Info. ([#8887](https://github.com/akkadotnet/akka.net/pull/8887))
-* New AKKASG052 catches a property typed as a concrete, non-sealed nested value class that some class in the compilation derives from - the property would be written as the base's own fields and lose the subclass state. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
+* C# 15 unions can now be sent or persisted as top-level messages with `[AkkaSerializable(Manifest = "...")]`. Deserialization reconstructs the boxed union, so `Receive&lt;TUnion&gt;` and `Recover&lt;TUnion&gt;` handlers continue to match. Closed generic unions register each construction with `[AkkaSerializerIncludes&lt;T&gt;]`. Standalone cases retain their own manifests, and explicitly included types discovered in referenced assemblies no longer cause duplicate registrations. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908), fixes [#8906](https://github.com/akkadotnet/akka.net/issues/8906))
+* Top-level unions use their own manifest with the existing union-field payload frame. Writing `default(TUnion)` at the top level throws `SerializationException`; field nil semantics are unchanged. AKKASG051 now requires an explicit manifest on a marked union. Reordering cases preserves the wire format; adding cases requires readers to upgrade before writers use them, and removing cases prevents reading stored values of those cases. Switching between a union and a closed hierarchy still requires a migration for top-level messages. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908))
 
-**Akka.Streams**
+**Akka.Cluster.Sharding - behavior change**
 
-* `Dispose()` on the `ActorSystem`'s shared default materializer no longer shuts it down for every user of the system. A `using` block, a scoped DI registration, or an actor disposing it in `PostStop` used to break `system.Materializer()` and every later materialization. The `ActorSystem` still stops it on termination, and `Shutdown()` still stops it explicitly. ([#8895](https://github.com/akkadotnet/akka.net/pull/8895), fixes [#8885](https://github.com/akkadotnet/akka.net/issues/8885))
-* `SourceRef` now honors `StreamRefAttributes` for buffer capacity, demand redelivery interval and final termination signal deadline, falling back to `StreamRefSettings` when no attribute is set. ([#8880](https://github.com/akkadotnet/akka.net/pull/8880), fixes [#8878](https://github.com/akkadotnet/akka.net/issues/8878))
-* `StreamRefSettings` now initializes `FinalTerminationSignalDeadline` from its constructor, and gains a `WithFinalTerminationSignalDeadline` method. ([#8877](https://github.com/akkadotnet/akka.net/pull/8877))
-* Deferred stream operators now pass inherited attributes through when they materialize their inner graph, so attributes set above a `LazySource`, `LazySink` or `Setup` stage reach the stages inside it. ([#8842](https://github.com/akkadotnet/akka.net/pull/8842))
-* `Flow.Setup` forwards its input correctly instead of dropping elements. ([#8839](https://github.com/akkadotnet/akka.net/pull/8839))
+* `akka.cluster.sharding.state-store-mode` now defaults to `ddata` instead of `persistence`. Coordinator state is replicated through Akka.DistributedData. The previous default silently used the in-memory journal when no durable journal was configured, losing coordinator state when the coordinator moved. ([#8905](https://github.com/akkadotnet/akka.net/pull/8905), addresses [#8903](https://github.com/akkadotnet/akka.net/issues/8903))
+* **Migration:** set `akka.cluster.sharding.state-store-mode = persistence` explicitly to preserve the previous behavior. With `remember-entities = on`, the new default follows `remember-entities-store`, which defaults to `ddata`, rather than forcing the event-sourced store. Set `akka.cluster.sharding.remember-entities-store = eventsourced` to keep reading remembered entities from the journal. See the [v1.6 breaking-change ledger](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md). ([#8905](https://github.com/akkadotnet/akka.net/pull/8905))
 
-**Akka.Cluster.Sharding**
-
-* `ShardingProducerController` no longer throws `InvalidActorNameException` and restarts when a message arrives for an entity whose delivery child is still terminating. Cleanup now marks the entity as stopping and buffers for it, and the entry is removed only once the child's name is free. Producer demand keeps flowing while the child stops. ([#8869](https://github.com/akkadotnet/akka.net/pull/8869), fixes [#8850](https://github.com/akkadotnet/akka.net/issues/8850))
-
-**Internal**
-
-* NuGet publishing moves to GitHub Actions trusted publishing, replacing the Windows release pipeline. ([#8892](https://github.com/akkadotnet/akka.net/pull/8892))
-* `ReliableDeliveryShardingSpec` no longer races on a legal at-least-once duplicate of msg-3. ([#8894](https://github.com/akkadotnet/akka.net/pull/8894))
-
-2 contributors since release 1.6.0-beta4
+2 contributors since release 1.6.0-beta5
 
 | COMMITS | LOC+ | LOC- | AUTHOR          |
 |---------|------|------|-----------------|
-| 10      | 4482 | 1834 | Aaron Stannard  |
-| 2       | 256  | 10   | Ariel Fischer   |</PackageReleaseNotes>
+| 2       | 328  | 30   | Aaron Stannard  |
+| 1       | 1    | 1    | dependabot[bot] |</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
