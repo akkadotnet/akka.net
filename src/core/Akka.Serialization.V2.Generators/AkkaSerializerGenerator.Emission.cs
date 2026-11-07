@@ -443,7 +443,10 @@ public sealed partial class AkkaSerializerGenerator
         // here rather than crashing the concat below.
         var referencedAssemblyImplementors = CollectReferencedAssemblyImplementorSchemas(facts, metadataSchemas);
         if (!referencedAssemblyImplementors.IsEmpty)
-            allMessages = allMessages.AddRange(referencedAssemblyImplementors);
+        {
+            var existingKeys = new HashSet<TypeKey>(allMessages.Select(message => message.Key));
+            allMessages = allMessages.AddRange(referencedAssemblyImplementors.Where(message => existingKeys.Add(message.Key)));
+        }
 
         var allMessagesByType = metadataSchemas.SchemasByType.IsEmpty
             ? allMessages.ToImmutableDictionary(message => message.Key)
@@ -591,6 +594,8 @@ public sealed partial class AkkaSerializerGenerator
         {
             foreach (var field in message.Fields)
             {
+                if (message.IsTopLevelUnion)
+                    continue;
                 if (field.Mapping.Kind == FieldKind.Unsupported &&
                     protocolTypeFullName.Length > 0 &&
                     string.Equals(field.TypeFullName, protocolTypeFullName, StringComparison.Ordinal))
@@ -1107,6 +1112,11 @@ public sealed partial class AkkaSerializerGenerator
             .Raw("(").Type(TypeName.Global(message.FullyQualifiedName)).Line(" message)");
         using (w.Block())
         {
+            if (message.IsTopLevelUnion)
+            {
+                w.Raw("return SizeOf").Identifier(unionHelpers[BuildUnionSignature(message.Fields[0])]).Line("(message);");
+                return;
+            }
             w.Line("checked");
             using (w.Block())
             {
@@ -1311,6 +1321,14 @@ public sealed partial class AkkaSerializerGenerator
             .Raw("(ref global::MessagePack.MessagePackWriter writer, ").Type(TypeName.Global(message.FullyQualifiedName)).Line(" message)");
         using (w.Block())
         {
+            if (message.IsTopLevelUnion)
+            {
+                w.Line("if (message.Value is null)");
+                using (w.Indented())
+                    w.Line("throw new global::System.Runtime.Serialization.SerializationException(\"Cannot serialize a default union as a top-level message.\");");
+                w.Raw("Write").Identifier(unionHelpers[BuildUnionSignature(message.Fields[0])]).Line("(ref writer, message);");
+                return;
+            }
             w.Raw("writer.WriteMapHeader(").Number(message.Fields.Length).Line(");");
             var alloc = new NameAlloc();
             foreach (var field in message.Fields)
@@ -1326,6 +1344,11 @@ public sealed partial class AkkaSerializerGenerator
             .Line("(ref global::MessagePack.MessagePackReader reader)");
         using (w.Block())
         {
+            if (message.IsTopLevelUnion)
+            {
+                w.Raw("return Read").Identifier(unionHelpers[BuildUnionSignature(message.Fields[0])]).Line("(ref reader);");
+                return;
+            }
             // Generator-owned locals are prefixed "__" so they cannot collide with a per-field local
             // (Local.ForField(field.Name)/GetHasLocal below), no matter what the [AkkaField] property
             // is named -- including adversarial names like "FieldCount" or "EntryIndex" that would

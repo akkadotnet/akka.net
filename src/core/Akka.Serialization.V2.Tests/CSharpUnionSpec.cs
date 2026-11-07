@@ -7,10 +7,19 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
+using Akka.Serialization;
 using Akka.Serialization.V2.Tests.Harness;
 using Akka.TestKit;
 using FluentAssertions;
@@ -238,12 +247,12 @@ public sealed class CSharpUnionSpec : AkkaSpec
         result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("SubscriptionSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable")]
-    public void Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable()
+    [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionHasNoManifest")]
+    public void Should_ReportAKKASG051_When_UnionHasNoManifest()
     {
         var source = CoverageCases + """
 
-            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            [AkkaSerializable(AllowEmpty = true)]
             public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
             """;
 
@@ -259,7 +268,7 @@ public sealed class CSharpUnionSpec : AkkaSpec
     {
         var source = CoverageCases + """
 
-            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            [AkkaSerializable(AllowEmpty = true)]
             public union CoverageMessage(PaidInvoice, Trial);
 
             [AkkaSerializable(Manifest = "holder")]
@@ -269,6 +278,135 @@ public sealed class CSharpUnionSpec : AkkaSpec
         var result = RunPreview(source);
 
         result.GeneratorDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Id).Should().Equal("AKKASG051");
+    }
+
+    [Fact(DisplayName = "Should_RoundTripTopLevelUnionCasesAndRejectDefault")]
+    public void Should_RoundTripTopLevelUnionCasesAndRejectDefault()
+    {
+        var source = CoverageCases.Replace("long InvoiceNumber);", "long InvoiceNumber) : ISubscriptionEvent;") + """
+
+            [AkkaSerializable(Manifest = "coverage-message")]
+            public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1)] CoverageMessage Coverage) : ISubscriptionEvent;
+
+            public static class TopLevelSamples
+            {
+                public static object[] All() => [(CoverageMessage)new PaidInvoice(1, 2), (CoverageMessage)new Trial()];
+                public static object Empty() => default(CoverageMessage);
+                public static object Standalone() => new PaidInvoice(1, 2);
+                public static object Wrap(object value) => new Holder((CoverageMessage)value);
+                public static bool IsUnion(object value) => value is CoverageMessage;
+            }
+            """;
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "Unions.SubscriptionSerializer");
+        foreach (var original in (object[])Invoke(assembly, "Unions.TopLevelSamples", "All")!)
+        {
+            serializer.Manifest(original).Should().Be("coverage-message");
+            var bytes = serializer.ToBinary(original);
+            var restored = serializer.FromBinary(bytes, "coverage-message");
+            restored.Should().Be(original);
+            Invoke(assembly, "Unions.TopLevelSamples", "IsUnion", restored).Should().Be(true);
+            ((SerializerV2)serializer).SizeHint(original).Should().Be(bytes.Length);
+            var holder = Invoke(assembly, "Unions.TopLevelSamples", "Wrap", original)!;
+            var holderBytes = serializer.ToBinary(holder);
+            holderBytes.Skip(2).Should().Equal(bytes);
+        }
+        var standalone = Invoke(assembly, "Unions.TopLevelSamples", "Standalone")!;
+        serializer.Manifest(standalone).Should().Be("paid-invoice");
+        serializer.FromBinary(serializer.ToBinary(standalone), "paid-invoice").Should().Be(standalone);
+        var empty = Invoke(assembly, "Unions.TopLevelSamples", "Empty")!;
+        Action write = () => serializer.ToBinary(empty);
+        write.Should().Throw<System.Runtime.Serialization.SerializationException>();
+    }
+
+    [Fact(DisplayName = "Should_RoundTripRegisteredClosedGenericUnion")]
+    public void Should_RoundTripRegisteredClosedGenericUnion()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+            namespace GenericUnion;
+            public interface IProtocol;
+            [AkkaSerializable(Manifest = "number")]
+            public sealed record Number([property: AkkaField(1)] int Value);
+            [AkkaSerializable(Manifest = "text")]
+            public sealed record Text([property: AkkaField(1)] string Value);
+            [AkkaSerializable(Manifest = "generic-union")]
+            public union Choice<T>(Number, T) : IProtocol;
+            [AkkaSerializer<IProtocol>("generic-union", 152005)]
+            [AkkaSerializerIncludes<Choice<Text>>(Manifest = "choice-text")]
+            public sealed partial class Serializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+            public static class Samples
+            {
+                public static object[] All() => [(Choice<Text>)new Number(42), (Choice<Text>)new Text("hello")];
+            }
+            """;
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "GenericUnion.Serializer");
+        foreach (var original in (object[])Invoke(assembly, "GenericUnion.Samples", "All")!)
+        {
+            serializer.Manifest(original).Should().Be("choice-text");
+            serializer.FromBinary(serializer.ToBinary(original), "choice-text").Should().Be(original);
+        }
+    }
+
+    [Fact(DisplayName = "Should_GenerateForUnionDeclaredInReferencedAssembly")]
+    public void Should_GenerateForUnionDeclaredInReferencedAssembly()
+    {
+        const string types = """
+            using Akka.Serialization.V2;
+            namespace ExternalUnion;
+            public interface IProtocol;
+            [AkkaSerializable(Manifest = "case")]
+            public sealed record Case([property: AkkaField(1)] int Value);
+            [AkkaSerializable(Manifest = "choice")]
+            public union Choice(Case) : IProtocol;
+            """;
+        var sourceAssembly = RunPreview(types);
+        using var stream = new MemoryStream();
+        var emit = sourceAssembly.OutputCompilation.WithAssemblyName("ExternalUnionTypes").Emit(stream);
+        emit.Success.Should().BeTrue(string.Join(", ", emit.Diagnostics));
+        var reference = MetadataReference.CreateFromImage(stream.ToArray());
+        const string consumer = """
+            using Akka.Serialization.V2;
+            using ExternalUnion;
+            [AkkaSerializer<IProtocol>("external", 152006)]
+            [AkkaSerializerIncludes<Choice>]
+            public sealed partial class Serializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+            """;
+        var result = GeneratorTestHarness.Run(new[] { new SourceFile("Consumer.cs", consumer) }, GeneratorTestHarness.PreviewParseOptions, reference);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        result.RunResult.GeneratedTrees.Single().ToString().Should().Contain("message.Value is null");
+    }
+
+    [Theory(DisplayName = "Should_ValidateTopLevelUnionCases")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "[AkkaSerializable(AllowEmpty = true)]", "AKKASG016")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "[AkkaSerializable(Manifest = \"paid-invoice\", AllowEmpty = true)]", "AKKASG017")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "", "AKKASG015")]
+    public void Should_ValidateTopLevelUnionCases(string before, string after, string diagnostic)
+    {
+        var source = CoverageCases.Replace(before, after) + """
+
+            [AkkaSerializable(Manifest = "coverage-message")]
+            public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
+            """;
+        RunPreview(source).GeneratorDiagnostics.Should().Contain(d => d.Id == diagnostic);
     }
 
     [Fact(DisplayName = "Should_RoundTripNullableValueTypeCase_When_UnionDeclaresIt")]
@@ -363,6 +501,105 @@ public sealed class CSharpUnionSpec : AkkaSpec
         var original = Invoke(assembly, "Unions.OwnSchema.Samples", "Euro")!;
 
         serializer.FromBinary(serializer.ToBinary(original), serializer.Manifest(original)).Should().Be(original);
+    }
+
+    [Fact(DisplayName = "Should_RecoverUnionEvents_When_PersistentActorIsRecreated")]
+    public async Task Should_RecoverUnionEvents_When_PersistentActorIsRecreated()
+    {
+        var source = CoverageCases + """
+
+            [AkkaSerializable(Manifest = "coverage-event")]
+            public union CoverageEvent(PaidInvoice, Trial) : ISubscriptionEvent;
+
+            public sealed class UnionActor : Akka.Persistence.ReceivePersistentActor
+            {
+                public override string PersistenceId => "union-recovery";
+
+                public UnionActor(Akka.Actor.IActorRef probe)
+                {
+                    var recovered = new System.Collections.Generic.List<CoverageEvent>();
+                    Recover<CoverageEvent>(e => recovered.Add(e));
+                    Recover<Akka.Persistence.RecoveryCompleted>(_ => probe.Tell(recovered.ToArray(), Self));
+                    Command<CoverageEvent>(e => Persist(e, persisted => probe.Tell(persisted, Self)));
+                }
+            }
+
+            public static class RecoverySamples
+            {
+                public static object[] Events() => [(CoverageEvent)new PaidInvoice(42, 1001), (CoverageEvent)new Trial()];
+                public static Akka.Actor.Props Props(Akka.Actor.IActorRef probe)
+                    => Akka.Actor.Props.Create(() => new UnionActor(probe));
+            }
+            """;
+        var result = GeneratorTestHarness.Run(
+            new[] { new SourceFile("Recovery.cs", source), new SourceFile("Polyfills.cs", Polyfills) },
+            GeneratorTestHarness.PreviewParseOptions,
+            MetadataReference.CreateFromFile(typeof(ReceivePersistentActor).Assembly.Location));
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializerType = assembly.GetType("Unions.SubscriptionSerializer", throwOnError: true)!;
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(
+            (SerializerDetails)serializerType.GetMethod("CreateSerializerDetails")!.Invoke(null, new object[] { system })!)));
+        var config = ConfigurationFactory.ParseString($"""
+            akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+            akka.persistence.journal.inmem.class = "{typeof(SerializedPayloadJournal).AssemblyQualifiedName}"
+            """);
+        var system = ActorSystem.Create("union-recovery", setup.WithSetup(BootstrapSetup.Create().WithConfig(config)));
+        try
+        {
+            var events = (object[])Invoke(assembly, "Unions.RecoverySamples", "Events")!;
+            system.Serialization.FindSerializerFor(events[0]).GetType().Should().Be(serializerType);
+            var props = (Props)Invoke(assembly, "Unions.RecoverySamples", "Props", TestActor)!;
+            var actor = system.ActorOf(props);
+            (await ExpectMsgAsync<Array>(TimeSpan.FromSeconds(10))).Length.Should().Be(0);
+            foreach (var e in events)
+            {
+                actor.Tell(e);
+                (await ExpectMsgAsync<object>(TimeSpan.FromSeconds(10))).Should().Be(e);
+            }
+
+            await WatchAsync(actor);
+            system.Stop(actor);
+            await ExpectTerminatedAsync(actor, TimeSpan.FromSeconds(10));
+            var recovering = system.ActorOf(props);
+            var recovered = await ExpectMsgAsync<Array>(TimeSpan.FromSeconds(10));
+            recovered.Cast<object>().Should().Equal(events);
+            system.Stop(recovering);
+        }
+        finally
+        {
+            await system.Terminate();
+        }
+    }
+
+    // Store bytes rather than live payloads: the ordinary memory journal bypasses serialization.
+    public sealed class SerializedPayloadJournal : MemoryJournal
+    {
+        private sealed record StoredPayload(int SerializerId, string Manifest, byte[] Bytes);
+
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
+        {
+            var serialization = Context.System.Serialization;
+            return base.WriteMessagesAsync(messages.Select(write => new AtomicWrite(
+                ((IImmutableList<IPersistentRepresentation>)write.Payload).Select(persistent =>
+                {
+                    var serializer = serialization.FindSerializerFor(persistent.Payload);
+                    return persistent.WithPayload(new StoredPayload(serializer.Identifier,
+                        Akka.Serialization.Serialization.ManifestFor(serializer, persistent.Payload), serializer.ToBinary(persistent.Payload)));
+                }).ToImmutableList())), cancellationToken);
+        }
+
+        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
+            Action<IPersistentRepresentation> recoveryCallback)
+        {
+            var serialization = context.System.Serialization;
+            return base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max, persistent =>
+            {
+                var stored = (StoredPayload)persistent.Payload;
+                recoveryCallback(persistent.WithPayload(serialization.Deserialize(stored.Bytes, stored.SerializerId, stored.Manifest)));
+            });
+        }
     }
 
     private Akka.Serialization.SerializerWithStringManifest CreateSerializer(Assembly assembly, string typeName)

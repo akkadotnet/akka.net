@@ -563,10 +563,29 @@ case is written exactly as the same type would be written in a class-hierarchy u
 written with a closed record hierarchy reads back into a union of the same cases, and the other way
 around. `default(Coverage)` has no hierarchy equivalent: its nil only reads back into a nullable field.
 
-`[AkkaSerializable]` on the union declaration itself is an error (**AKKASG051**): mark the cases instead. A formatter registered for the
-union type with `[AkkaSerializerFormatter<TUnion, TFormatter>]` takes precedence, as for any other
-type. Not supported yet: union classes, and unions as collection elements or dictionary values
-(`List<Coverage>` reports **AKKASG003**, as a collection of an interface does).
+To send or persist the union itself, give the union an explicit manifest and make it part of the
+serializer's protocol (or register it with `[AkkaSerializerIncludes<T>]`):
+
+```csharp
+[AkkaSerializable(Manifest = "coverage-v1")]
+public union Coverage(PaidInvoice, Trial) : ISubscriptionEvent;
+```
+
+The top-level manifest identifies `Coverage`; its payload is the same case-manifest and case-body
+frame used for a union field. Deserialization returns a boxed `Coverage`, so handlers for the union
+type still match. Writing `default(Coverage)` as a top-level message throws a
+`SerializationException`; the nil behavior for fields is unchanged. An attribute without a manifest
+on the union reports **AKKASG051**. A standalone case retains its own distinct top-level manifest.
+
+Case order does not affect the wire format. Adding a case requires readers to be upgraded before
+writers use it; removing a case prevents reading stored values of that case. Switching between a
+union and a closed hierarchy preserves the field frame, but changes the top-level manifest and
+therefore needs a migration for top-level messages. Generic unions require a registration and
+manifest for each closed construction using `[AkkaSerializerIncludes<T>]`.
+
+A formatter registered for the union type with `[AkkaSerializerFormatter<TUnion, TFormatter>]` takes
+precedence for fields. Not supported yet: union classes, and unions as collection elements or
+dictionary values (`List<Coverage>` reports **AKKASG003**, as a collection of an interface does).
 
 C# unions need the C# 15 compiler, which ships with the .NET 11 SDK. Akka.NET itself needs no
 `net11.0` target: a project that targets `net10.0` declares `System.Runtime.CompilerServices.UnionAttribute`
@@ -1253,7 +1272,7 @@ property's type, the attribute was removed, and those ids stay permanent gaps.
 | AKKASG046 | Warning | Stored property is not serialized | A public declared auto-property or positional record property has no `[AkkaField]`. Add a field index, or suppress this diagnostic if omission is intentional. Computed properties, static members, inherited members, and fields are outside this check. |
 | AKKASG047 | Warning | Field annotations on an unmarked type are ignored | A type declares `[AkkaField]` properties without `[AkkaSerializable]`. Add the type marker, including for nested payloads. If a custom formatter handles the type, remove the unused annotations or suppress the warning. |
 | AKKASG048 | Error | Union implementor is not [AkkaSerializable] | A concrete type in this compilation derives from or implements a union property's type but isn't `[AkkaSerializable]`, so the union leaves it out and it fails when first serialized. See [Member Requirements](#member-requirements). |
-| AKKASG051 | Error | [AkkaSerializable] is not supported on a C# union | `[AkkaSerializable]` sits on a C# 15 `union` declaration. A union holds one of its cases and has no fields of its own: mark each case type and use the union as a property type. |
+| AKKASG051 | Error | A C# union requires a manifest | Set an explicit `Manifest` on `[AkkaSerializable]` when marking a C# 15 union declaration. |
 | AKKASG052 | Error | Nested value type has subclasses | A property writes a concrete `[AkkaSerializable]` class that is not sealed as a nested value (as its own type, or as a collection element, key, or value), and a class in this compilation derives from it. A nested value is written as the base class's own fields, so a subclass value would lose its own. Seal the class; for the property's own type you can instead make it abstract and remove its `[AkkaSerializable]` so the property becomes a [union](#unions). |
 | AKKASG053 | Error | Manifest belongs on the included type | `[AkkaSerializerIncludes<T>]` sets `Manifest`, but `T` is not generic. A non-generic type declares its manifest on its own `[AkkaSerializable]`; remove `Manifest` from the include and declare it there. See [Including Messages Outside the Protocol](#including-messages-outside-the-protocol). |
 

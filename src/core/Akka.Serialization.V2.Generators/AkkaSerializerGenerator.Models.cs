@@ -589,6 +589,10 @@ public sealed partial class AkkaSerializerGenerator
         public string Manifest { get; }
         public ImmutableArray<FieldInfo> Fields { get; }
 
+        // A synthetic unnamed field lets the existing reachability and union validation pipeline
+        // process the union's cases. It is emitted directly, without a message-field map.
+        public bool IsTopLevelUnion => Fields.Length == 1 && Fields[0].Name.Length == 0 && Fields[0].IsCSharpUnion;
+
         /// <summary>
         /// Fully-qualified display names of every implemented interface (see
         /// <see cref="GetProtocolNames"/>) -- the symbol-free protocol list matched ordinally
