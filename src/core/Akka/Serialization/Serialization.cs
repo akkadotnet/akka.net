@@ -372,8 +372,8 @@ namespace Akka.Serialization
 
                 // Record all declarations, including when the global switch is off: an explicit
                 // user binding can still select the module's builtin V2 writer in that mode.
-                foreach (var (v2, legacy) in built.Takeovers)
-                    _canonicalLegacyAliases.Add(v2.SerializerV2, legacy.Alias);
+                foreach (var takeover in built.Takeovers)
+                    _canonicalLegacyAliases.Add(takeover.V2.SerializerV2, takeover.Legacy.Alias);
 
                 foreach (var details in built.Details)
                 {
