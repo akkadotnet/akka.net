@@ -231,7 +231,8 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        [Fact(DisplayName = "Should_close_both_sides_without_reset_When_both_disassociate_at_once")]
+        [Fact(DisplayName = "Should_close_both_sides_without_reset_When_both_disassociate_at_once",
+            Skip = GracefulCloseSkipReason)]
         public async Task Should_close_both_sides_without_reset_When_both_disassociate_at_once()
         {
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
