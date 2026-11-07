@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
@@ -238,12 +239,12 @@ public sealed class CSharpUnionSpec : AkkaSpec
         result.RunResult.GeneratedTrees.Should().NotContain(tree => tree.FilePath.EndsWith("SubscriptionSerializer.AkkaSerialization.g.cs", StringComparison.Ordinal));
     }
 
-    [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable")]
-    public void Should_ReportAKKASG051_When_UnionDeclarationIsAkkaSerializable()
+    [Fact(DisplayName = "Should_ReportAKKASG051_When_UnionHasNoManifest")]
+    public void Should_ReportAKKASG051_When_UnionHasNoManifest()
     {
         var source = CoverageCases + """
 
-            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            [AkkaSerializable(AllowEmpty = true)]
             public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
             """;
 
@@ -259,7 +260,7 @@ public sealed class CSharpUnionSpec : AkkaSpec
     {
         var source = CoverageCases + """
 
-            [AkkaSerializable(Manifest = "coverage-message", AllowEmpty = true)]
+            [AkkaSerializable(AllowEmpty = true)]
             public union CoverageMessage(PaidInvoice, Trial);
 
             [AkkaSerializable(Manifest = "holder")]
@@ -269,6 +270,135 @@ public sealed class CSharpUnionSpec : AkkaSpec
         var result = RunPreview(source);
 
         result.GeneratorDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Id).Should().Equal("AKKASG051");
+    }
+
+    [Fact(DisplayName = "Should_RoundTripTopLevelUnionCasesAndRejectDefault")]
+    public void Should_RoundTripTopLevelUnionCasesAndRejectDefault()
+    {
+        var source = CoverageCases.Replace("long InvoiceNumber);", "long InvoiceNumber) : ISubscriptionEvent;") + """
+
+            [AkkaSerializable(Manifest = "coverage-message")]
+            public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
+
+            [AkkaSerializable(Manifest = "holder")]
+            public sealed record Holder([property: AkkaField(1)] CoverageMessage Coverage) : ISubscriptionEvent;
+
+            public static class TopLevelSamples
+            {
+                public static object[] All() => [(CoverageMessage)new PaidInvoice(1, 2), (CoverageMessage)new Trial()];
+                public static object Empty() => default(CoverageMessage);
+                public static object Standalone() => new PaidInvoice(1, 2);
+                public static object Wrap(object value) => new Holder((CoverageMessage)value);
+                public static bool IsUnion(object value) => value is CoverageMessage;
+            }
+            """;
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "Unions.SubscriptionSerializer");
+        foreach (var original in (object[])Invoke(assembly, "Unions.TopLevelSamples", "All")!)
+        {
+            serializer.Manifest(original).Should().Be("coverage-message");
+            var bytes = serializer.ToBinary(original);
+            var restored = serializer.FromBinary(bytes, "coverage-message");
+            restored.Should().Be(original);
+            Invoke(assembly, "Unions.TopLevelSamples", "IsUnion", restored).Should().Be(true);
+            ((SerializerV2)serializer).SizeHint(original).Should().Be(bytes.Length);
+            var holder = Invoke(assembly, "Unions.TopLevelSamples", "Wrap", original)!;
+            var holderBytes = serializer.ToBinary(holder);
+            holderBytes.Skip(2).Should().Equal(bytes);
+        }
+        var standalone = Invoke(assembly, "Unions.TopLevelSamples", "Standalone")!;
+        serializer.Manifest(standalone).Should().Be("paid-invoice");
+        serializer.FromBinary(serializer.ToBinary(standalone), "paid-invoice").Should().Be(standalone);
+        var empty = Invoke(assembly, "Unions.TopLevelSamples", "Empty")!;
+        Action write = () => serializer.ToBinary(empty);
+        write.Should().Throw<System.Runtime.Serialization.SerializationException>();
+    }
+
+    [Fact(DisplayName = "Should_RoundTripRegisteredClosedGenericUnion")]
+    public void Should_RoundTripRegisteredClosedGenericUnion()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Serialization.V2;
+            namespace GenericUnion;
+            public interface IProtocol;
+            [AkkaSerializable(Manifest = "number")]
+            public sealed record Number([property: AkkaField(1)] int Value);
+            [AkkaSerializable(Manifest = "text")]
+            public sealed record Text([property: AkkaField(1)] string Value);
+            [AkkaSerializable(Manifest = "generic-union")]
+            public union Choice<T>(Number, T) : IProtocol;
+            [AkkaSerializer<IProtocol>("generic-union", 152005)]
+            [AkkaSerializerIncludes<Choice<Text>>(Manifest = "choice-text")]
+            public sealed partial class Serializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+            public static class Samples
+            {
+                public static object[] All() => [(Choice<Text>)new Number(42), (Choice<Text>)new Text("hello")];
+            }
+            """;
+        var result = RunPreview(source);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        var assembly = GeneratorTestHarness.EmitAndLoad(result);
+        var serializer = CreateSerializer(assembly, "GenericUnion.Serializer");
+        foreach (var original in (object[])Invoke(assembly, "GenericUnion.Samples", "All")!)
+        {
+            serializer.Manifest(original).Should().Be("choice-text");
+            serializer.FromBinary(serializer.ToBinary(original), "choice-text").Should().Be(original);
+        }
+    }
+
+    [Fact(DisplayName = "Should_GenerateForUnionDeclaredInReferencedAssembly")]
+    public void Should_GenerateForUnionDeclaredInReferencedAssembly()
+    {
+        const string types = """
+            using Akka.Serialization.V2;
+            namespace ExternalUnion;
+            public interface IProtocol;
+            [AkkaSerializable(Manifest = "case")]
+            public sealed record Case([property: AkkaField(1)] int Value);
+            [AkkaSerializable(Manifest = "choice")]
+            public union Choice(Case) : IProtocol;
+            """;
+        var sourceAssembly = RunPreview(types);
+        using var stream = new MemoryStream();
+        var emit = sourceAssembly.OutputCompilation.WithAssemblyName("ExternalUnionTypes").Emit(stream);
+        emit.Success.Should().BeTrue(string.Join(", ", emit.Diagnostics));
+        var reference = MetadataReference.CreateFromImage(stream.ToArray());
+        const string consumer = """
+            using Akka.Serialization.V2;
+            using ExternalUnion;
+            [AkkaSerializer<IProtocol>("external", 152006)]
+            [AkkaSerializerIncludes<Choice>]
+            public sealed partial class Serializer : AkkaSerializer
+            {
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+            }
+            """;
+        var result = GeneratorTestHarness.Run(new[] { new SourceFile("Consumer.cs", consumer) }, GeneratorTestHarness.PreviewParseOptions, reference);
+        result.GeneratorDiagnostics.Where(d => d.Severity >= DiagnosticSeverity.Warning).Should().BeEmpty();
+        result.CompileDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        result.RunResult.GeneratedTrees.Single().ToString().Should().Contain("message.Value is null");
+    }
+
+    [Theory(DisplayName = "Should_ValidateTopLevelUnionCases")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "[AkkaSerializable(AllowEmpty = true)]", "AKKASG016")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "[AkkaSerializable(Manifest = \"paid-invoice\", AllowEmpty = true)]", "AKKASG017")]
+    [InlineData("[AkkaSerializable(Manifest = \"trial\", AllowEmpty = true)]", "", "AKKASG015")]
+    public void Should_ValidateTopLevelUnionCases(string before, string after, string diagnostic)
+    {
+        var source = CoverageCases.Replace(before, after) + """
+
+            [AkkaSerializable(Manifest = "coverage-message")]
+            public union CoverageMessage(PaidInvoice, Trial) : ISubscriptionEvent;
+            """;
+        RunPreview(source).GeneratorDiagnostics.Should().Contain(d => d.Id == diagnostic);
     }
 
     [Fact(DisplayName = "Should_RoundTripNullableValueTypeCase_When_UnionDeclaresIt")]

@@ -532,8 +532,8 @@ public sealed partial class AkkaSerializerGenerator
 
     private static readonly DiagnosticDescriptor SerializableOnCSharpUnion = new(
         "AKKASG051",
-        "[AkkaSerializable] is not supported on a C# union",
-        "C# union '{0}' cannot be [AkkaSerializable]: a union holds one of its cases and has no fields of its own. Mark each case type [AkkaSerializable(Manifest = \"...\")] and use '{0}' as an [AkkaField] property type instead.",
+        "A C# union requires a manifest",
+        "C# union '{0}' requires an explicit Manifest when marked [AkkaSerializable]",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

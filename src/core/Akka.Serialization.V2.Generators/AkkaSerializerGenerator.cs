@@ -225,9 +225,8 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         var extractedMessages = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializableAttributeFullName,
-                // Any type declaration except an interface: a C# 15 union declaration must reach
-                // ExtractMessage too, so [AkkaSerializable] on it is reported (AKKASG051) instead of
-                // silently ignored.
+                // C# 15 union declarations also reach extraction for top-level serialization and
+                // the missing-manifest diagnostic (AKKASG051).
                 static (node, _) => node is TypeDeclarationSyntax and not InterfaceDeclarationSyntax,
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
             .WithTrackingName(TrackingNames.ExtractedMessages);

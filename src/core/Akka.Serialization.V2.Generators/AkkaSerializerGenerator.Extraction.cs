@@ -653,11 +653,9 @@ public sealed partial class AkkaSerializerGenerator
                 allowEmpty = allowEmptyValue;
         }
 
-        // A C# 15 union declaration (the only type declaration the message predicate admits beyond
-        // class/struct/record) wraps one of its cases and has no fields of its own: the cases are the
-        // [AkkaSerializable] types, and the union is used as a field type. Keyed on the syntax, so a
-        // hand-written [AkkaSerializable] struct that implements IUnion keeps its own schema.
-        if (context.TargetNode is not (ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax))
+        // A top-level C# union needs its own manifest, separate from its cases. Keyed on syntax
+        // so a hand-written [AkkaSerializable] struct implementing IUnion keeps its own schema.
+        if (context.TargetNode is not (ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax) && string.IsNullOrWhiteSpace(manifest))
         {
             var unionKey = TypeKey.FromSymbol(symbol);
             var unionLocations = ImmutableArray.CreateBuilder<LocationEntry>();
@@ -689,7 +687,9 @@ public sealed partial class AkkaSerializerGenerator
 
             var declarationLocations = ImmutableArray.CreateBuilder<LocationEntry>();
             AddLocationEntry(declarationLocations, new LocationKey(definitionKey, string.Empty), FirstLocationOrNull(symbol.Locations));
-            var declarationDiagnostics = ExtractDeclarationDiagnostics(symbol, definitionKey, allowEmpty, knownTypes, declarationLocations);
+            var declarationDiagnostics = IsDeclaredAsUnion(symbol)
+                ? ImmutableArray<DiagnosticSpec>.Empty
+                : ExtractDeclarationDiagnostics(symbol, definitionKey, allowEmpty, knownTypes, declarationLocations);
             return new ExtractedMessage(definitionInfo, new LocationBag(declarationLocations.ToImmutable()), declarationDiagnostics);
         }
 
@@ -860,6 +860,18 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableArray<LocationEntry>.Builder? locationEntries = null,
         ImmutableArray<DiagnosticSpec>.Builder? declarationDiagnostics = null)
     {
+        if (IsDeclaredAsUnion(symbol))
+        {
+            var unionField = new FieldInfo(0, string.Empty, key.DisplayName ?? string.Empty,
+                new TypeMapping(FieldKind.Union, key, isValueType: true), false,
+                unionMembers: ExtractCSharpUnionCases(symbol, knownTypes));
+            return new MessageInfo(symbol.Name, key, manifest, ImmutableArray.Create(unionField),
+                GetProtocolNames(symbol), allowEmpty: true, invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
+                constructionPlan: ConstructionPlan.Empty, definitionFullName: definitionFullName,
+                isSealed: true, isValueType: true, foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes),
+                inaccessibleReason: DescribeInaccessibleDeclaration(symbol));
+        }
+
         var fields = new List<FieldInfo>();
         var fieldSymbols = new List<IPropertySymbol>();
         var invalidFields = ImmutableArray.CreateBuilder<InvalidFieldInfo>();
@@ -1250,8 +1262,7 @@ public sealed partial class AkkaSerializerGenerator
         if (!implementsIUnion)
             return false;
 
-        // An [AkkaSerializable] struct keeps its own schema, except a real union declaration: that
-        // already gets AKKASG051, and a field of its type should still map as the union it is.
+        // An [AkkaSerializable] struct keeps its own schema, except a real union declaration.
         if (knownTypes.SerializableAttribute != null
             && type.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute))
             && !IsDeclaredAsUnion(type))
@@ -1310,8 +1321,7 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// Whether <paramref name="type"/> is declared in source with a type declaration other than a
-    /// class, struct, record or interface: a C# 15 <c>union</c>, which this generator's Roslyn has no
-    /// syntax type for. A metadata type has no declaring syntax and returns false.
+    /// class, struct, record or interface, or carries the compiler-emitted UnionAttribute in metadata.
     /// </summary>
     private static bool IsDeclaredAsUnion(INamedTypeSymbol type)
     {
@@ -1321,7 +1331,8 @@ public sealed partial class AkkaSerializerGenerator
                 return true;
         }
 
-        return false;
+        return type.GetAttributes().Any(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == "System.Runtime.CompilerServices.UnionAttribute");
     }
 
     private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
