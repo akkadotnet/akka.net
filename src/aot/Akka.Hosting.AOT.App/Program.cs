@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using Akka.Actor;
 using Akka.DependencyInjection;
 using Akka.Event;
@@ -49,6 +51,24 @@ appBuilder.Services.AddSingleton<IGreetingService, GreetingService>();
 // Health checks: a typical Hosting app wires Microsoft.Extensions.Diagnostics.HealthChecks in and
 // adds Akka's built-in liveness check to it with WithActorSystemLivenessCheck() below.
 appBuilder.Services.AddHealthChecks();
+
+#if !NATIVE_AOT
+// The JIT loads satellites on demand. Load this fixture before scanning; Native AOT already
+// enumerates compiled-in satellites and must not include this dynamic assembly-loading path.
+System.Reflection.Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "cs", "Akka.Hosting.AOT.App.resources.dll"));
+#endif
+
+// Self-check (#8782): the "cs" satellite resource must be in the image, or this canary no longer
+// covers MAUI detection under InvariantGlobalization. On Native AOT a satellite's FullName throws
+// CultureNotFoundException; on the JIT it contains "Culture=cs".
+var hasSatellite = AppDomain.CurrentDomain.GetAssemblies().Any(a =>
+{
+    try { return a.FullName?.Contains("Culture=cs", StringComparison.Ordinal) ?? false; }
+    catch (System.Globalization.CultureNotFoundException) { return true; }
+});
+Console.WriteLine($"[canary-hosting] satellite assembly present: {hasSatellite}");
+if (!hasSatellite)
+    throw new InvalidOperationException("The 'cs' satellite assembly is missing from the canary; see #8782.");
 
 appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
 {

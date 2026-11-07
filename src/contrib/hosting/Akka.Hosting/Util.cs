@@ -34,7 +34,7 @@ namespace Akka.Hosting
             {
                 return assemblies.Any(IsMauiAssembly);
             }
-            catch
+            catch (Exception)
             {
                 // detection is best effort - failing to detect means "not MAUI"
                 return false;
@@ -47,11 +47,13 @@ namespace Akka.Hosting
             {
                 // Don't use Assembly.GetName() here: it builds a CultureInfo for satellite assemblies
                 // (e.g. "cs" from Microsoft.Data.SqlClient) and throws CultureNotFoundException
-                // when InvariantGlobalization is enabled. FullName is a plain string that starts
-                // with the simple assembly name.
+                // when InvariantGlobalization is enabled. On CoreCLR/Mono, FullName avoids that
+                // CultureInfo. On Native AOT, FullName goes through GetName() and still throws for
+                // satellite assemblies (AppDomain.GetAssemblies() lists them without loading them),
+                // so the catch below is required. Do not remove it.
                 return IsMauiAssemblyName(assembly?.FullName);
             }
-            catch
+            catch (Exception)
             {
                 return false;
             }
