@@ -1,0 +1,7 @@
+﻿case: EntityState
+message-type: State
+manifest: CA
+serializer-id: 53
+byte-count: 6
+
+0000  81 01 91 a2 65 31                                 |....e1|

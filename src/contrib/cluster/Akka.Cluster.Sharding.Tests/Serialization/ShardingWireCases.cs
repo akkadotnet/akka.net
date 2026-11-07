@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 
-namespace Akka.Cluster.Sharding.Tests.Serialization;
+namespace Akka.Cluster.Sharding.Tests;
 
 internal static class ShardingWireCases
 {

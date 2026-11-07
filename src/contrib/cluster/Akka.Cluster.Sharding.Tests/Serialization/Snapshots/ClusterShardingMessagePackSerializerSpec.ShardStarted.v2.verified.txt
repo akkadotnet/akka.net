@@ -1,0 +1,7 @@
+﻿case: ShardStarted
+message-type: ShardStarted
+manifest: BG
+serializer-id: 53
+byte-count: 5
+
+0000  81 01 a2 73 31                                    |...s1|

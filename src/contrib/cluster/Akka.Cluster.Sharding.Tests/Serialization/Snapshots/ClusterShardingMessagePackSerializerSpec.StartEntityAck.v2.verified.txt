@@ -1,0 +1,7 @@
+﻿case: StartEntityAck
+message-type: StartEntityAck
+manifest: EB
+serializer-id: 53
+byte-count: 9
+
+0000  82 01 a2 65 31 02 a2 73  31                       |...e1..s1|

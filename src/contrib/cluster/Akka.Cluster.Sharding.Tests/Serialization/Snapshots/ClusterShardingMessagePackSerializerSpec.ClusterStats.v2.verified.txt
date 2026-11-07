@@ -1,0 +1,10 @@
+﻿case: ClusterStats
+message-type: ClusterShardingStats
+manifest: CS
+serializer-id: 53
+byte-count: 53
+
+0000  81 01 91 82 01 94 a8 61  6b 6b 61 2e 74 63 70 a4  |.......akka.tcp.|
+0010  77 69 72 65 a9 31 32 37  2e 30 2e 30 2e 31 cd 09  |wire.127.0.0.1..|
+0020  f8 02 82 01 91 82 01 a2  73 31 02 11 02 91 a6 66  |........s1.....f|
+0030  61 69 6c 65 64                                    |ailed|

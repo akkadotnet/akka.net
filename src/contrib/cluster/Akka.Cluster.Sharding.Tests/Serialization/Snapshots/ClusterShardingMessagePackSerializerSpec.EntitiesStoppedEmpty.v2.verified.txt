@@ -1,0 +1,7 @@
+﻿case: EntitiesStoppedEmpty
+message-type: EntitiesStopped
+manifest: CF
+serializer-id: 53
+byte-count: 3
+
+0000  81 01 90                                          |...|

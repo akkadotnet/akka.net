@@ -1,0 +1,8 @@
+﻿case: RegionStats
+message-type: ShardRegionStats
+manifest: DD
+serializer-id: 53
+byte-count: 19
+
+0000  82 01 91 82 01 a2 73 31  02 11 02 91 a6 66 61 69  |......s1.....fai|
+0010  6c 65 64                                          |led|

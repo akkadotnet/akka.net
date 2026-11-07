@@ -17,9 +17,14 @@ namespace Akka.Cluster.Sharding.Serialization
     /// </summary>
     internal sealed class ShardingSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-sharding-v2", "akka-sharding");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-sharding", new ClusterShardingMessageSerializer(system),
-                ImmutableHashSet.Create(typeof(IClusterShardingSerializable)))
+                ImmutableHashSet.Create(typeof(IClusterShardingSerializable))),
+            SerializerDetails.Create("akka-sharding-v2", new ClusterShardingMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty)
         );
     }
 }

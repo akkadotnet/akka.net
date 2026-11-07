@@ -1,0 +1,7 @@
+﻿case: StartEntity
+message-type: StartEntity
+manifest: EA
+serializer-id: 53
+byte-count: 5
+
+0000  81 01 a2 65 31                                    |...e1|

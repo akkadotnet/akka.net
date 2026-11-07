@@ -1,0 +1,7 @@
+﻿case: GetClusterStats
+message-type: GetClusterShardingStats
+manifest: GS
+serializer-id: 53
+byte-count: 7
+
+0000  81 01 ce 00 12 d6 87                              |.......|

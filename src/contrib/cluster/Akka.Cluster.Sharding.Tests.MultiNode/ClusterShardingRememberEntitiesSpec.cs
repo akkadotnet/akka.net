@@ -5,11 +5,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.Configuration;
+using Akka.Event;
+using Akka.Remote;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -39,11 +44,19 @@ public class ClusterShardingRememberEntitiesSpecConfig : MultiNodeClusterShardin
         Third = Role("third");
 
         NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString(@"
+                akka.actor.serialization-v2 = on
                 akka.cluster.sharding.distributed-data.durable.lmdb {
                     # use same directory when starting new node on third (not used at same time)
                     dir = ""target/ShardingRememberEntitiesSpec/sharding-third""
                 }
             ") });
+        NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = off") });
+        NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString("""
+            akka.actor.serialization-v2 = on
+            akka.actor.serialization-bindings {
+              "Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding" = akka-sharding
+            }
+            """) });
     }
 }
 
@@ -113,6 +126,14 @@ public class DDataClusterShardingEventSourcedRememberEntitiesEnabledSpec : Clust
 
 public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterShardingSpec<ClusterShardingRememberEntitiesSpecConfig>
 {
+    private sealed class ProcessIdentity : ReceiveActor
+    {
+        public ProcessIdentity()
+        {
+            Receive<int>(_ => Sender.Tell(Environment.ProcessId, Self));
+        }
+    }
+
     #region setup
 
     private sealed class MyMessageExtractor : IMessageExtractor
@@ -185,6 +206,24 @@ public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterShar
     [MultiNodeFact]
     public async Task Cluster_sharding_with_remember_entities_specs()
     {
+        var writerId = Myself.Equals(Config.Third) ? 53 : 13;
+        foreach (var message in new object[]
+                 {
+                     new ShardingEnvelope("e1", "payload"), ShardCoordinator.CoordinatorState.Empty,
+                     new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create("e1")),
+                     new EventSourcedRememberEntitiesShardStore.State(ImmutableHashSet.Create("e1"))
+                 })
+            Sys.Serialization.FindSerializerFor(message).Identifier.Should().Be(writerId);
+        Log.Info("Sharding interop: process [{0}], role [{1}], writer [{2}]", Environment.ProcessId, Myself.Name, writerId);
+        Sys.ActorOf(Props.Create(() => new ProcessIdentity()), "process-identity");
+        await EnterBarrierAsync("writers-ready");
+        var other = Myself.Equals(Config.Second) ? Config.Third : Config.Second;
+        var remote = await Sys.ActorSelection(await NodeAsync(other) / "user" / "process-identity").ResolveOne(TimeSpan.FromSeconds(10));
+        remote.Should().BeOfType<RemoteActorRef>();
+        remote.Tell(Environment.ProcessId, TestActor);
+        (await ExpectMsgAsync<int>(TimeSpan.FromSeconds(10))).Should().NotBe(Environment.ProcessId);
+        await EnterBarrierAsync("processes-distinct");
+
         await Cluster_sharding_with_remember_entities_must_start_remembered_entities_when_coordinator_fail_over();
 
         // https://github.com/akkadotnet/akka.net/issues/4262 - need to resolve this and then we can remove if statement

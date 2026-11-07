@@ -1,0 +1,7 @@
+﻿case: ShardStats
+message-type: ShardStats
+manifest: DB
+serializer-id: 53
+byte-count: 7
+
+0000  82 01 a2 73 31 02 11                              |...s1..|

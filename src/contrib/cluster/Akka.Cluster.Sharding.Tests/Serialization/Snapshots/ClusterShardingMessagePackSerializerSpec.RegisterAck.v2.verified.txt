@@ -1,0 +1,10 @@
+﻿case: RegisterAck
+message-type: RegisterAck
+manifest: BC
+serializer-id: 53
+byte-count: 49
+
+0000  81 01 d9 2d 61 6b 6b 61  2e 74 63 70 3a 2f 2f 77  |...-akka.tcp://w|
+0010  69 72 65 40 31 32 37 2e  30 2e 30 2e 31 3a 32 35  |ire@127.0.0.1:25|
+0020  35 32 2f 75 73 65 72 2f  72 65 67 69 6f 6e 23 34  |52/user/region#4|
+0030  32                                                |2|

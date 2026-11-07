@@ -1,0 +1,7 @@
+﻿case: GetRegions
+message-type: GetCurrentRegions
+manifest: DG
+serializer-id: 53
+byte-count: 1
+
+0000  80                                                |.|

@@ -1,0 +1,8 @@
+﻿case: CurrentRegions
+message-type: CurrentRegions
+manifest: DH
+serializer-id: 53
+byte-count: 31
+
+0000  81 01 91 94 a8 61 6b 6b  61 2e 74 63 70 a4 77 69  |.....akka.tcp.wi|
+0010  72 65 a9 31 32 37 2e 30  2e 30 2e 31 cd 09 f8     |re.127.0.0.1...|

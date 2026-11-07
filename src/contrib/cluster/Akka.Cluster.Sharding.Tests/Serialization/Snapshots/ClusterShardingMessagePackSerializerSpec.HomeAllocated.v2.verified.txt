@@ -1,0 +1,10 @@
+﻿case: HomeAllocated
+message-type: ShardHomeAllocated
+manifest: AF
+serializer-id: 53
+byte-count: 53
+
+0000  82 01 a2 73 31 02 d9 2d  61 6b 6b 61 2e 74 63 70  |...s1..-akka.tcp|
+0010  3a 2f 2f 77 69 72 65 40  31 32 37 2e 30 2e 30 2e  |://wire@127.0.0.|
+0020  31 3a 32 35 35 32 2f 75  73 65 72 2f 72 65 67 69  |1:2552/user/regi|
+0030  6f 6e 23 34 32                                    |on#42|

@@ -1,0 +1,10 @@
+﻿case: Envelope
+message-type: ShardingEnvelope
+manifest: a
+serializer-id: 53
+byte-count: 59
+
+0000  82 01 a2 65 31 02 83 01  11 02 d9 25 53 79 73 74  |...e1......%Syst|
+0010  65 6d 2e 53 74 72 69 6e  67 2c 20 53 79 73 74 65  |em.String, Syste|
+0020  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0030  62 03 c4 07 70 61 79 6c  6f 61 64                 |b...payload|

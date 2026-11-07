@@ -1,0 +1,7 @@
+﻿case: CoordinatorStateEmpty
+message-type: CoordinatorState
+manifest: AA
+serializer-id: 53
+byte-count: 9
+
+0000  84 01 90 02 90 03 90 04  90                       |.........|

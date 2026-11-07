@@ -1,0 +1,7 @@
+﻿case: CurrentRegionsEmpty
+message-type: CurrentRegions
+manifest: DH
+serializer-id: 53
+byte-count: 3
+
+0000  81 01 90                                          |...|

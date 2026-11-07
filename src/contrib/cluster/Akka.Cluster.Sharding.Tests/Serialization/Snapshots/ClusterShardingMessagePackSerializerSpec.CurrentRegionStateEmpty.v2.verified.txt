@@ -1,0 +1,7 @@
+﻿case: CurrentRegionStateEmpty
+message-type: CurrentShardRegionState
+manifest: FE
+serializer-id: 53
+byte-count: 5
+
+0000  82 01 90 02 90                                    |.....|

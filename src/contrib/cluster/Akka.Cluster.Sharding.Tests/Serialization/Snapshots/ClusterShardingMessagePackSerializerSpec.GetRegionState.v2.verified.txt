@@ -1,0 +1,7 @@
+﻿case: GetRegionState
+message-type: GetShardRegionState
+manifest: FC
+serializer-id: 53
+byte-count: 1
+
+0000  80                                                |.|
