@@ -1,0 +1,7 @@
+﻿case: hand-over-in-progress
+message-type: HandOverInProgress
+manifest: B
+serializer-id: 14
+byte-count: 0
+
+(zero-byte payload)

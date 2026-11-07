@@ -358,7 +358,43 @@ jobs:
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare SQLite AOT warnings against the baseline'
 
-      # Both publish logs and the run log, so a failure can be diagnosed from the artifact without
+      # Incremental first-party V2 serializer proof (#8718). This keeps the plain-core canary's
+      # dependency surface unchanged; the first corpus is Singleton, not Remote/Cluster startup.
+      - bash: |
+          rm -rf src/aot/Akka.Serialization.V2.AOT.App/bin src/aot/Akka.Serialization.V2.AOT.App/obj
+          set -o pipefail
+          dotnet publish src/aot/Akka.Serialization.V2.AOT.App -r linux-x64 -c Release \
+            -o "$(Agent.TempDirectory)/v2-aot-publish" 2>&1 | tee "$(Agent.TempDirectory)/v2-aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The built-in V2 serializer canary publish failed with exit code $rc."
+            exit 1
+          fi
+        displayName: 'Publish the built-in V2 serializer AOT canary'
+
+      - bash: |
+          set -o pipefail
+          timeout 300 "$(Agent.TempDirectory)/v2-aot-publish/Akka.Serialization.V2.AOT.App" 2>&1 | tee "$(Agent.TempDirectory)/v2-aot-run.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The built-in V2 serializer AOT canary failed with exit code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary-v2] OK cases=12 native-writes=4 rejected=9' "$(Agent.TempDirectory)/v2-aot-run.log"; then
+            echo "##vso[task.logissue type=error]The built-in V2 serializer AOT canary did not complete its corpus."
+            exit 1
+          fi
+        displayName: 'Run the built-in V2 serializer AOT canary'
+
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/v2-aot-publish.log" \
+            --baseline src/aot/Akka.Serialization.V2.AOT.App/aot-warnings.baseline.txt \
+            --scope "src/core/Akka.Remote/,src/core/Akka.Cluster/,src/contrib/cluster/Akka.Cluster.Tools/,src/aot/Akka.Serialization.V2.AOT.App/" \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare built-in V2 serializer AOT warnings against the baseline'
+
+      # All publish and run logs, so a failure can be diagnosed from the artifact without
       # re-running the job. always() because the interesting case is the one where a step above
       # failed.
       - task: PublishBuildArtifacts@1

@@ -1,0 +1,7 @@
+﻿case: hand-over-to-me
+message-type: HandOverToMe
+manifest: A
+serializer-id: 14
+byte-count: 0
+
+(zero-byte payload)

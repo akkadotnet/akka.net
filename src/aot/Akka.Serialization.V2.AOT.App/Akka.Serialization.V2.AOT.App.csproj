@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Print ILC warnings for the checked baseline; keep C# warnings as errors. -->
+    <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <!-- Keep native publishing local to this app, with ordinary solution builds managed. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\LogWatchdogFilter.cs" Link="LogWatchdogFilter.cs" />
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+  </ItemGroup>
+</Project>

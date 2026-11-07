@@ -1,0 +1,7 @@
+﻿case: take-over-from-me
+message-type: TakeOverFromMe
+manifest: D
+serializer-id: 54
+byte-count: 1
+
+0000  80                                                |.|

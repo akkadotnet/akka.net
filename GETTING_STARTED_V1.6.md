@@ -251,6 +251,38 @@ conflict at compile time (for example, two serializers binding the same protocol
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 
+### Built-in serializers: global V2 opt-in
+
+The source generator for your messages and the built-in serializer migration are separate.
+Built-in V2 serializers live beside their legacy readers. `akka.actor.serialization-v2` is
+off by default; enabling it moves the default write bindings of each deployed V2 port.
+
+| Protocol | Legacy reader | V2 reader | First release containing the V2 reader |
+|---|---|---|---|
+| Cluster Singleton hand-over | `akka-singleton`, id 14 | `akka-singleton-v2`, id 54 | Unreleased; this change is tracked by [#8682](https://github.com/akkadotnet/akka.net/issues/8682). Earlier v1.6 betas do not imply reader support. |
+
+Upgrade every participating reader before enabling the switch. An application that already
+has it on can start writing a newly added V2 port when its module is upgraded.
+
+```hocon
+akka.actor.serialization-v2 = on
+```
+
+With Akka.Hosting, `akkaBuilder.WithSerializationV2()` writes that same setting. To keep the
+whole Singleton hand-over protocol on legacy while other deployed ports use V2:
+
+```hocon
+akka.actor.serialization-bindings {
+  "Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools" = akka-singleton
+}
+```
+
+Both ids remain registered regardless of the switch or pin. Turning the switch off changes
+future writes; it does not add a V2 reader to older binaries. This setting does not replace
+user-message serializer registration or imply that the entire Cluster subsystem supports
+Native AOT. The native serializer canary verifies the four Singleton hand-over messages
+with a local provider; cross-process cluster hand-over is tested separately on the JIT.
+
 ## Enabling Artery
 
 Artery is experimental. Don't use it in production - Akka.NET logs that warning itself the

@@ -23,6 +23,7 @@ module Akka.Cluster.Tools
     Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools
   akka-singleton: Akka.Cluster.Tools.Singleton.Serialization.ClusterSingletonMessageSerializer, Akka.Cluster.Tools (id 14)
     Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools
+  akka-singleton-v2: Akka.Cluster.Tools.Singleton.Serialization.ClusterSingletonMessagePackSerializer, Akka.Cluster.Tools (id 54) supersedes akka-singleton
 module Akka.DistributedData
   akka-data-replication: Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData (id 12)
     Akka.DistributedData.IReplicatorMessage, Akka.DistributedData
