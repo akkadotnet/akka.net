@@ -1,0 +1,7 @@
+﻿case: publish-null
+message-type: Publish
+manifest: AC
+serializer-id: 15
+byte-count: 9
+
+0000  0a 05 74 6f 70 69 63 1a  00                       |..topic..|

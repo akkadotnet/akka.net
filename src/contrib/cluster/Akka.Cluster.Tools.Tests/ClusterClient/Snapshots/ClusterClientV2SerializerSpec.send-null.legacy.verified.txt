@@ -1,0 +1,8 @@
+﻿case: send-null
+message-type: Send
+manifest: AA
+serializer-id: 15
+byte-count: 18
+
+0000  0a 0c 2f 75 73 65 72 2f  77 6f 72 6b 65 72 10 01  |../user/worker..|
+0010  1a 00                                             |..|

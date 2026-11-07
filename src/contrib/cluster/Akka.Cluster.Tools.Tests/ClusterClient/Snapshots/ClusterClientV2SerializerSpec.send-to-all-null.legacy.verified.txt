@@ -1,0 +1,7 @@
+﻿case: send-to-all-null
+message-type: SendToAll
+manifest: AB
+serializer-id: 15
+byte-count: 16
+
+0000  0a 0c 2f 75 73 65 72 2f  77 6f 72 6b 65 72 1a 00  |../user/worker..|

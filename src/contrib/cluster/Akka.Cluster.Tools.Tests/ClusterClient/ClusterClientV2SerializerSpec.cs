@@ -49,7 +49,10 @@ public sealed class ClusterClientV2SerializerSpec : V2PortSpec
         new V2PortCase(new ClientProtocol.Publish("topic", "payload"), "AC", "publish"),
         new V2PortCase(ClientProtocol.RefreshContactsTick.Instance, "AD", "refresh-contacts"),
         new V2PortCase(ClientProtocol.HeartbeatTick.Instance, "AE", "heartbeat-tick"),
-        new V2PortCase(ClientProtocol.ReconnectTimeout.Instance, "AF", "reconnect-timeout")
+        new V2PortCase(ClientProtocol.ReconnectTimeout.Instance, "AF", "reconnect-timeout"),
+        new V2PortCase(new ClientProtocol.Send("/user/worker", null!, true), "AA", "send-null"),
+        new V2PortCase(new ClientProtocol.SendToAll("/user/worker", null!), "AB", "send-to-all-null"),
+        new V2PortCase(new ClientProtocol.Publish("topic", null!), "AC", "publish-null")
     };
 
     private static Config ClientConfig => ConfigurationFactory.ParseString("akka.cluster.client.use-legacy-serialization = off")

@@ -131,18 +131,18 @@ internal sealed record ClientReceptionistShutdownWire : IClusterClientWireMessag
 [AkkaSerializable(Manifest = "AA")]
 internal sealed record ClientSendWire(
     [property: AkkaField(1)] string Path,
-    [property: AkkaField(2)] object Payload,
+    [property: AkkaField(2)] object? Payload,
     [property: AkkaField(3)] bool LocalAffinity) : IClusterClientWireMessage;
 
 [AkkaSerializable(Manifest = "AB")]
 internal sealed record ClientSendToAllWire(
     [property: AkkaField(1)] string Path,
-    [property: AkkaField(2)] object Payload) : IClusterClientWireMessage;
+    [property: AkkaField(2)] object? Payload) : IClusterClientWireMessage;
 
 [AkkaSerializable(Manifest = "AC")]
 internal sealed record ClientPublishWire(
     [property: AkkaField(1)] string Topic,
-    [property: AkkaField(2)] object Payload) : IClusterClientWireMessage;
+    [property: AkkaField(2)] object? Payload) : IClusterClientWireMessage;
 
 [AkkaSerializable(Manifest = "AD", AllowEmpty = true)]
 internal sealed record ClientRefreshContactsWire : IClusterClientWireMessage
