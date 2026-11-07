@@ -1,0 +1,7 @@
+case: state-no-timeout
+message-type: StateChangeEvent
+manifest: Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence
+serializer-id: 7
+byte-count: 7
+
+0000  0a 05 73 74 61 74 65                              |..state|

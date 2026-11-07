@@ -1,0 +1,15 @@
+case: atomic-pair
+message-type: AtomicWrite
+manifest: Akka.Persistence.AtomicWrite, Akka.Persistence
+serializer-id: 7
+byte-count: 136
+
+0000  0a 42 0a 2e 08 11 12 03  6f 6e 65 1a 25 53 79 73  |.B......one.%Sys|
+0010  74 65 6d 2e 53 74 72 69  6e 67 2c 20 53 79 73 74  |tem.String, Syst|
+0020  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0030  69 62 10 01 1a 03 70 69  64 6a 06 77 72 69 74 65  |ib....pidj.write|
+0040  72 70 d0 0f 0a 42 0a 2e  08 11 12 03 74 77 6f 1a  |rp...B......two.|
+0050  25 53 79 73 74 65 6d 2e  53 74 72 69 6e 67 2c 20  |%System.String, |
+0060  53 79 73 74 65 6d 2e 50  72 69 76 61 74 65 2e 43  |System.Private.C|
+0070  6f 72 65 4c 69 62 10 02  1a 03 70 69 64 6a 06 77  |oreLib....pidj.w|
+0080  72 69 74 65 72 70 a0 1f                           |riterp..|

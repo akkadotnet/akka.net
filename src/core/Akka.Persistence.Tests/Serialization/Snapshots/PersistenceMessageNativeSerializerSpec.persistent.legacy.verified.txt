@@ -1,0 +1,12 @@
+case: persistent
+message-type: Persistent
+manifest: Akka.Persistence.Persistent, Akka.Persistence
+serializer-id: 7
+byte-count: 87
+
+0000  0a 32 08 11 12 07 70 61  79 6c 6f 61 64 1a 25 53  |.2....payload.%S|
+0010  79 73 74 65 6d 2e 53 74  72 69 6e 67 2c 20 53 79  |ystem.String, Sy|
+0020  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0030  65 4c 69 62 10 11 1a 03  70 69 64 20 01 62 07 61  |eLib....pid .b.a|
+0040  64 61 70 74 65 72 6a 06  77 72 69 74 65 72 70 80  |dapterj.writerp.|
+0050  eb d5 c8 a7 b5 b1 04                              |.......|
