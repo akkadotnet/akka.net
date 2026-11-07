@@ -302,6 +302,15 @@ namespace Akka.Remote.Tests.Artery
                 var newUid = AddressUidExtension.Uid(restartedSystemB);
                 newUid.Should().NotBe(oldUid);
 
+                // Idle associations reconnect on demand; resolution drives the new TLS handshake.
+                var selectionAfterRestart = systemA.ActorSelection(SelectionPath(restartedSystemB, "echo"));
+                IActorRef? echoAfterRestart = null;
+                await AwaitAssertAsync(async () =>
+                {
+                    echoAfterRestart = await selectionAfterRestart.ResolveOne(
+                        TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+                }, TimeSpan.FromSeconds(30), cancellationToken: TestContext.Current.CancellationToken);
+
                 var transport = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
                 var association = transport.Registry.AssociationFor(address);
                 await AwaitConditionAsync(
@@ -312,10 +321,7 @@ namespace Akka.Remote.Tests.Artery
                 association.IsQuarantined(oldUid).Should().BeFalse("a stale UID cannot quarantine a new peer incarnation");
                 association.IsQuarantined(newUid).Should().BeFalse("a stale UID quarantine leaves the current incarnation usable");
 
-                var echoAfterRestart = await systemA.ActorSelection(
-                        SelectionPath(restartedSystemB, "echo"))
-                    .ResolveOne(TimeSpan.FromSeconds(10));
-                echoAfterRestart.Tell("after-restart", probe.Ref);
+                echoAfterRestart!.Tell("after-restart", probe.Ref);
                 await probe.ExpectMsgAsync("after-restart", TimeSpan.FromSeconds(10));
             }
             finally
