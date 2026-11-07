@@ -1,0 +1,7 @@
+case: GetShardHome
+message-type: GetShardHome
+manifest: BD
+serializer-id: 13
+byte-count: 4
+
+0000  0a 02 73 31                                       |..s1|

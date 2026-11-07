@@ -1,0 +1,7 @@
+case: CurrentRegionStateEmpty
+message-type: CurrentShardRegionState
+manifest: FE
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

@@ -1,0 +1,7 @@
+case: CurrentShardState
+message-type: CurrentShardState
+manifest: FB
+serializer-id: 13
+byte-count: 8
+
+0000  0a 02 73 31 12 02 65 31                           |..s1..e1|

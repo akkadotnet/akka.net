@@ -1,0 +1,7 @@
+case: GetRegionStats
+message-type: GetShardRegionStats
+manifest: DC
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

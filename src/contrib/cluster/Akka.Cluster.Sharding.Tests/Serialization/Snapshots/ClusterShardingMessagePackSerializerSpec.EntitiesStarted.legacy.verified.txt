@@ -1,0 +1,7 @@
+case: EntitiesStarted
+message-type: EntitiesStarted
+manifest: CE
+serializer-id: 13
+byte-count: 4
+
+0000  0a 02 65 31                                       |..e1|

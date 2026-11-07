@@ -1,0 +1,7 @@
+case: ClusterStatsEmpty
+message-type: ClusterShardingStats
+manifest: CS
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

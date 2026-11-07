@@ -1,0 +1,9 @@
+case: ProxyRegistered
+message-type: ShardRegionProxyRegistered
+manifest: AC
+serializer-id: 13
+byte-count: 46
+
+0000  0a 2c 61 6b 6b 61 2e 74  63 70 3a 2f 2f 77 69 72  |.,akka.tcp://wir|
+0010  65 40 31 32 37 2e 30 2e  30 2e 31 3a 32 35 35 32  |e@127.0.0.1:2552|
+0020  2f 75 73 65 72 2f 70 72  6f 78 79 23 34 32        |/user/proxy#42|

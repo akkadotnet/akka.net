@@ -1,0 +1,7 @@
+case: RememberShardsEmpty
+message-type: State
+manifest: SS
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

@@ -1,0 +1,7 @@
+case: EntityStateEmpty
+message-type: State
+manifest: CA
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

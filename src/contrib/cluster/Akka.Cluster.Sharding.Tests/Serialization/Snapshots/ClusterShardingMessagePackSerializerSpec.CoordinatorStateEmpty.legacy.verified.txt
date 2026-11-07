@@ -1,0 +1,7 @@
+case: CoordinatorStateEmpty
+message-type: CoordinatorState
+manifest: AA
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

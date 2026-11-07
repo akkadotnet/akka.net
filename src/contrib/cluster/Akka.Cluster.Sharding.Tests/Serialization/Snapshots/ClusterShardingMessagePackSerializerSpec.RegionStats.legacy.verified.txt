@@ -1,0 +1,7 @@
+case: RegionStats
+message-type: ShardRegionStats
+manifest: DD
+serializer-id: 13
+byte-count: 16
+
+0000  0a 06 0a 02 73 31 10 11  12 06 66 61 69 6c 65 64  |....s1....failed|

@@ -1,0 +1,7 @@
+case: GetShardStats
+message-type: GetShardStats
+manifest: DA
+serializer-id: 13
+byte-count: 0
+
+(zero-byte payload)

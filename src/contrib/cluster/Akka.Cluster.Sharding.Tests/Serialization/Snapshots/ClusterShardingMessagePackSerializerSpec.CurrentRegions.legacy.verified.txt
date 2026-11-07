@@ -1,0 +1,8 @@
+case: CurrentRegions
+message-type: CurrentRegions
+manifest: DH
+serializer-id: 13
+byte-count: 32
+
+0000  0a 1e 0a 04 77 69 72 65  12 09 31 32 37 2e 30 2e  |....wire..127.0.|
+0010  30 2e 31 18 f8 13 22 08  61 6b 6b 61 2e 74 63 70  |0.1...".akka.tcp|
