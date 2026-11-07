@@ -24,6 +24,7 @@ checking only the major/minor version is insufficient.
 | Subsystem | Legacy alias / id | V2 alias / id | First release containing the V2 reader | Native AOT boundary |
 |---|---|---|---|---|
 | Reliable Delivery, including durable producer queues | `reliable-delivery` / 36 | `reliable-delivery-v2` / 76 | Unreleased; [#8409](https://github.com/akkadotnet/akka.net/pull/8409) | Generic Delivery messages throw `SerializationException` when `Akka.DynamicTypeLoading` is off, on the JIT as well as Native AOT. |
+| Cluster protocol and cluster router pools | `akka-cluster` / 5 | `akka-cluster-v2` / 45 | Unreleased; [#8924](https://github.com/akkadotnet/akka.net/pull/8924) | Local codec probes cover current and historical heartbeat forms. Native cluster bootstrap and transport remain separate capabilities. |
 | Cluster Singleton hand-over | `akka-singleton` / 14 | `akka-singleton-v2` / 54 | Unreleased; [#8915](https://github.com/akkadotnet/akka.net/pull/8915) | Local native codec canary passes all four manifests. Cluster startup and ownership hand-over remain separate capabilities. |
 | Cluster Metrics | `akka-cluster-metrics` / 10 | `akka-cluster-metrics-v2` / 50 | Unreleased; [#8917](https://github.com/akkadotnet/akka.net/pull/8917) | A standalone native codec probe passes all five implemented manifests. Tracked CI coverage and complete Metrics subsystem AOT support remain pending. |
 | Replicator protocol | `akka-data-replication` / 12 | `akka-data-replication-v2` / 52 | Unreleased; [#8918](https://github.com/akkadotnet/akka.net/pull/8918) | Nested CRDT serialization still uses id 11. Generic CRDT native reconstruction remains separate work. |
@@ -102,6 +103,10 @@ akka.actor.serialization-bindings {
     "Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools" = akka-pubsub
     "Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools" = akka-pubsub
 
+    # Cluster protocol and router pools: both bindings are needed.
+    "Akka.Cluster.IClusterMessage, Akka.Cluster" = akka-cluster
+    "Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster" = akka-cluster
+
     # Replicator protocol
     "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
 
@@ -173,7 +178,7 @@ Set `akka.actor.serialization-v2 = off`, or call `WithSerializationV2(false)`, a
 the affected actor systems. Future default writes return to the legacy serializers. Explicit
 user bindings still take precedence, including an explicit binding to a V2 alias.
 
-Previously stored V2 events and snapshots keep their id 76 payloads. Keep binaries containing
+Previously stored V2 records keep their stored serializer ids, including Delivery id 76. Keep binaries containing
 that reader for all future recoveries. Turning the setting off does not rewrite those records
 or make them readable by a binary without the V2 serializer. A backup taken before enablement
 does not include subsequent writes; restoring it requires a separate application data-recovery
@@ -184,6 +189,21 @@ legacy built-in storage format while changing network bindings, and preserves ex
 durable serializer bindings and legacy-alias overrides. Test the same custom serializer setup
 during recovery; switching the global setting does not convert LMDB values. This protection
 is tracked in [#8716](https://github.com/akkadotnet/akka.net/issues/8716).
+
+## Same-Format Native Persistence Envelopes
+
+The native Persistence implementations retain protobuf bytes and ids: message envelopes use
+id 7 ([#8927](https://github.com/akkadotnet/akka.net/pull/8927)) and snapshot envelopes use id 8
+([#8925](https://github.com/akkadotnet/akka.net/pull/8925)). These are unreleased implementation
+updates independent of the global MessagePack switch. They do not require stored records to be
+rewritten. Both continue to dispatch application payloads through their registered serializers.
+
+Code retrieving a built-in serializer should use `Serializer` or `SerializerV2` contracts;
+the module returns new internal concrete types. The public legacy classes remain available,
+and copied configuration naming those classes resolves through exact static aliases.
+Generic `PersistentFSMSnapshot<T>` retains its JIT implementation and explicitly throws when
+dynamic type loading is disabled, even after a JIT cache was warmed. This does not establish
+native support for arbitrary persistence plugins or payloads.
 
 ## Native AOT Is a Separate Capability
 
