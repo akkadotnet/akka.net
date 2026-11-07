@@ -1122,6 +1122,7 @@ namespace Akka.DistributedData.Serialization
     public sealed class ReplicatedDataSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ReplicatedDataSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
@@ -1129,6 +1130,7 @@ namespace Akka.DistributedData.Serialization
     public sealed class ReplicatorMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }

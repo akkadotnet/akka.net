@@ -131,7 +131,6 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
-        /// <exception cref="System.NotImplementedException">TBD</exception>
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             switch (name.FirstOrDefault())
@@ -227,7 +226,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        /// <exception cref="InvalidMessageException">TBD</exception>
+        /// <exception cref="InvalidMessageException">The message is <c>null</c>.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null) throw new InvalidMessageException("Message is null.");
@@ -240,7 +239,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="watchee">The actor being watched.</param>
         /// <param name="watcher">The actor watching.</param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if the watch is intercepted for this remote actor; otherwise, <c>false</c>.</returns>
         public bool IsWatchIntercepted(IActorRef watchee, IActorRef watcher)
         {
             return !watcher.Equals(RemoteProvider.RemoteWatcher) && watchee.Equals(this);

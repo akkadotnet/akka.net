@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
-using Akka.IO.Buffers;
 using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -29,19 +28,8 @@ namespace Akka.Tests.IO
                                        akka.actor.serialize-creators = on
                                        akka.actor.serialize-messages = on
 
-                                       akka.io.udp-connected.buffer-pool = "akka.io.udp-connected.direct-buffer-pool"
                                        akka.io.udp-connected.nr-of-selectors = 1
-                                       # This comes out to be about 1.6 Mib maximum total buffer size
-                                       akka.io.udp-connected.direct-buffer-pool.buffer-size = 512
-                                       akka.io.udp-connected.direct-buffer-pool.buffers-per-segment = 32
-                                       akka.io.udp-connected.direct-buffer-pool.buffer-pool-limit = 100
-
-                                       akka.io.udp.buffer-pool = "akka.io.udp.direct-buffer-pool"
                                        akka.io.udp.nr-of-selectors = 1
-                                       # This comes out to be about 1.6 Mib maximum total buffer size
-                                       akka.io.udp.direct-buffer-pool.buffer-size = 512
-                                       akka.io.udp.direct-buffer-pool.buffers-per-segment = 32
-                                       akka.io.udp.direct-buffer-pool.buffer-pool-limit = 100
                                        akka.io.udp.trace-logging = true
                                        akka.loglevel = DEBUG
                    """, output)
@@ -161,50 +149,5 @@ namespace Akka.Tests.IO
             clientMsgs.Sum(x => x.Data.Length).Should().Be(data.Length * 3);
         }
 
-        [Fact]
-        public async Task The_UDP_connection_oriented_implementation_must_not_leak_memory()
-        {
-            const int batchCount = 2000;
-            const int batchSize = 100;
-
-            var udpConnection = UdpConnected.Instance.Apply(Sys);
-            var poolInfo = udpConnection.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
-
-            var serverProbe = CreateTestProbe();
-            var (server, serverEndPoint) = await BindUdpAsync(serverProbe);
-
-            var clientProbe = CreateTestProbe();
-            var (client, clientEndPoint) = await ConnectUdpAsync(serverEndPoint, clientProbe);
-
-            var data = Encoding.ASCII.GetBytes("Fly little packet!").AsMemory();
-
-            // send a lot of packets through, the byte buffer pool should not leak anything
-            for (var n = 0; n < batchCount; ++n)
-            {
-                for (var j = 0; j < batchSize; ++j)
-                    client.Tell(UdpConnected.Send.Create(data));
-
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, TimeSpan.FromSeconds(10))
-                    .Cast<Udp.Received>().ToListAsync();
-                msgs.Sum(m => m.Data.Length).Should().Be(data.Length * batchSize);
-            }
-
-            // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
-            server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
-            client.Tell(UdpConnected.Disconnect.Instance, clientProbe);
-            await clientProbe.ExpectMsgAsync<UdpConnected.Disconnected>();
-
-            // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
-
-            poolInfo = udpConnection.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
-        }
     }
 }

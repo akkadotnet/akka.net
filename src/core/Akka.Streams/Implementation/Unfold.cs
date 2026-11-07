@@ -17,8 +17,8 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TElement">TBD</typeparam>
+    /// <typeparam name="TState">The state passed from one unfolding step to the next.</typeparam>
+    /// <typeparam name="TElement">The type of elements emitted by the source.</typeparam>
     [InternalApi]
     public class Unfold<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
@@ -51,23 +51,23 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the initial state for this source.
         /// </summary>
         public readonly TState State;
         /// <summary>
-        /// TBD
+        /// Computes the next state and element, or returns no value to complete the source.
         /// </summary>
         public readonly Func<TState, Option<(TState, TElement)>> UnfoldFunc;
         /// <summary>
-        /// TBD
+        /// Gets the source outlet.
         /// </summary>
         public readonly Outlet<TElement> Out = new("Unfold.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a source that computes one state transition for each downstream pull.
         /// </summary>
-        /// <param name="state">TBD</param>
-        /// <param name="unfoldFunc">TBD</param>
+        /// <param name="state">The initial state supplied to <paramref name="unfoldFunc"/>.</param>
+        /// <param name="unfoldFunc">Returns the next state and element, or no value to finish.</param>
         public Unfold(TState state, Func<TState, Option<(TState, TElement)>> unfoldFunc)
         {
             State = state;
@@ -76,23 +76,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the outlet-only source shape.
         /// </summary>
         public override SourceShape<TElement> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that evaluates the unfolding function on demand.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to the stage.</param>
+        /// <returns>Logic that evaluates one step whenever downstream pulls.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TElement">TBD</typeparam>
+    /// <typeparam name="TState">The state passed from one unfolding step to the next.</typeparam>
+    /// <typeparam name="TElement">The type of elements emitted by the source.</typeparam>
     [InternalApi]
     public class UnfoldAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
@@ -142,23 +142,23 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the initial state for this source.
         /// </summary>
         public readonly TState State;
         /// <summary>
-        /// TBD
+        /// Asynchronously computes the next state and element, or returns no value to complete the source.
         /// </summary>
         public readonly Func<TState, Task<Option<(TState, TElement)>>> UnfoldFunc;
         /// <summary>
-        /// TBD
+        /// Gets the source outlet.
         /// </summary>
         public readonly Outlet<TElement> Out = new("UnfoldAsync.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a source that asynchronously computes one state transition for each downstream pull.
         /// </summary>
-        /// <param name="state">TBD</param>
-        /// <param name="unfoldFunc">TBD</param>
+        /// <param name="state">The initial state supplied to <paramref name="unfoldFunc"/>.</param>
+        /// <param name="unfoldFunc">Returns a task with the next state and element, or no value to finish.</param>
         public UnfoldAsync(TState state, Func<TState, Task<Option<(TState, TElement)>>> unfoldFunc)
         {
             State = state;
@@ -167,23 +167,23 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the outlet-only source shape.
         /// </summary>
         public override SourceShape<TElement> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that evaluates the asynchronous unfolding function on demand.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to the stage.</param>
+        /// <returns>Logic that evaluates and awaits one step whenever downstream pulls.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
     
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TElement">TBD</typeparam>
+    /// <typeparam name="TState">The state passed from one unfolding step to the next.</typeparam>
+    /// <typeparam name="TElement">The type of elements emitted by the source.</typeparam>
     [InternalApi]
     public class UnfoldInfinite<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
@@ -212,23 +212,23 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the initial state for this source.
         /// </summary>
         public readonly TState State;
         /// <summary>
-        /// TBD
+        /// Computes the next state and element for each downstream pull.
         /// </summary>
         public readonly Func<TState, (TState, TElement)> UnfoldFunc;
         /// <summary>
-        /// TBD
+        /// Gets the source outlet.
         /// </summary>
         public readonly Outlet<TElement> Out = new("UnfoldInfinite.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a source that computes a state transition for every downstream pull and has no completion result.
         /// </summary>
-        /// <param name="state">TBD</param>
-        /// <param name="unfoldFunc">TBD</param>
+        /// <param name="state">The initial state supplied to <paramref name="unfoldFunc"/>.</param>
+        /// <param name="unfoldFunc">Returns the next state and element.</param>
         public UnfoldInfinite(TState state, Func<TState, (TState, TElement)> unfoldFunc)
         {
             State = state;
@@ -237,15 +237,15 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the outlet-only source shape.
         /// </summary>
         public override SourceShape<TElement> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates the logic that evaluates the unfolding function on demand.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes applied to the stage.</param>
+        /// <returns>Logic that evaluates one step whenever downstream pulls.</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 }

@@ -1,0 +1,8 @@
+﻿case: scalars-nullable-all-null
+message-type: NullableScalarsMessage
+manifest: nullable-scalars-v1
+serializer-id: 122003
+byte-count: 19
+
+0000  89 01 c0 02 c0 03 c0 04  c0 05 c0 06 c0 07 c0 08  |................|
+0010  c0 09 c0                                          |...|

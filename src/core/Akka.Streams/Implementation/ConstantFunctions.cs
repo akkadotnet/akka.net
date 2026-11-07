@@ -10,15 +10,15 @@ using System;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Provides small constant-valued functions used by stream stages.
     /// </summary>
     internal static class ConstantFunctions
     {
         /// <summary>
-        /// TBD
+        /// Creates a function that returns one for every input.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The input type accepted by the function.</typeparam>
+        /// <returns>A function that returns <c>1</c> regardless of its input.</returns>
         public static Func<T, long> OneLong<T>() => _ => 1L;
     }
 }

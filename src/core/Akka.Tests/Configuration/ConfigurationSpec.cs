@@ -51,7 +51,8 @@ namespace Akka.Tests.Configuration
             settings.LogDeadLettersSuspendDuration.ShouldBe(TimeSpan.FromMinutes(5));
             settings.LogFormatter.Should().BeOfType<SemanticLogMessageFormatter>();
 
-            settings.ProviderClass.ShouldBe(typeof (LocalActorRefProvider).FullName);
+            // the default provider resolves to ProviderSelection.Local, so ProviderClass reports the assembly-qualified name
+            settings.ProviderClass.ShouldBe(ProviderSelection.Local.Instance.Fqn);
             settings.SupervisorStrategyClass.ShouldBe(typeof (DefaultSupervisorStrategy).FullName);
             settings.CreationTimeout.Seconds.ShouldBe(20);
             settings.AskTimeout.ShouldBe(Timeout.InfiniteTimeSpan);

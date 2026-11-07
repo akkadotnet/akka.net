@@ -169,11 +169,6 @@ namespace Akka.Tests.Performance.IO
             var config = ConfigurationFactory.ParseString(@"
                 akka {
                     loglevel=INFO
-                    io.tcp.direct-buffer-pool {
-                        buffer-size = 64
-                        buffers-per-segment = 1000
-                        buffer-pool-limit = 10000
-                    }
                 }");
 
             _system = ActorSystem.Create("TcpHorizontalScaleSpec", config);

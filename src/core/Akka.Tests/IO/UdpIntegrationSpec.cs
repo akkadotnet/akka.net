@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using Akka.Actor;
 using Akka.IO;
-using Akka.IO.Buffers;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
@@ -30,13 +29,6 @@ namespace Akka.Tests.IO
                     akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
-
-                    akka.io.udp.buffer-pool = ""akka.io.udp.direct-buffer-pool""
-                    akka.io.udp.nr-of-selectors = 1
-                    # This comes out to be about 1.6 Mib maximum total buffer size
-                    akka.io.udp.direct-buffer-pool.buffer-size = 512
-                    akka.io.udp.direct-buffer-pool.buffers-per-segment = 32
-                    akka.io.udp.direct-buffer-pool.buffer-pool-limit = 100
                     # akka.io.udp.trace-logging = true
                     akka.loglevel = DEBUG", output)
         {
@@ -190,93 +182,6 @@ namespace Akka.Tests.IO
 
             for (int i = 0; i < iterations; i++) server.Tell(Udp.Send.Create(data[i], clientLocalEndpoint));
             for (int i = 0; i < iterations; i++) await CheckSendingToClient(data[i]);
-        }
-
-        [Fact]
-        public async Task The_UDP_Fire_and_Forget_implementation_must_not_leak_memory()
-        {
-            const int batchCount = 2000;
-            const int batchSize = 100;
-
-            var udp = Udp.Instance.Apply(Sys);
-            var poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
-
-            var serverProbe = CreateTestProbe();
-            var (server, _) = await BindUdpAsync(serverProbe);
-            var clientProbe = CreateTestProbe();
-            var (client, clientLocalEndpoint) = await BindUdpAsync(clientProbe);
-
-            var data = Encoding.ASCII.GetBytes("Fly little packet!").AsMemory();
-
-            // send a lot of packets through, the byte buffer pool should not leak anything
-            for (var n = 0; n < batchCount; ++n)
-            {
-                for (var i = 0; i < batchSize; i++)
-                    server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
-
-                var msgs = await clientProbe.ReceiveNAsync(batchSize, default).ToListAsync();
-                var receives = msgs.Cast<Udp.Received>();
-                receives.Sum(r => r.Data.Length).Should().Be(data.Length * batchSize);
-            }
-
-            // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
-            server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
-            client.Tell(Udp.Unbind.Instance, clientProbe);
-            await clientProbe.ExpectMsgAsync<Udp.Unbound>();
-
-            // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
-
-            poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
-        }
-
-        [Fact]
-        public async Task The_UDP_Fire_and_Forget_SimpleSender_implementation_must_not_leak_memory()
-        {
-            const int batchCount = 2000;
-            const int batchSize = 100;
-
-            var udp = Udp.Instance.Apply(Sys);
-            var poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
-
-            var serverProbe = CreateTestProbe();
-            var (server, serverLocalEndpoint) = await BindUdpAsync(serverProbe);
-            var sender = await SimpleSender();
-
-            var data = Encoding.ASCII.GetBytes("Fly little packet!").AsMemory();
-
-            // send a lot of packets through, the byte buffer pool should not leak anything
-            for (var n = 0; n < batchCount; ++n)
-            {
-                for (int i = 0; i < batchSize; i++)
-                    sender.Tell(Udp.Send.Create(data, serverLocalEndpoint));
-
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, 10.Seconds())
-                    .Cast<Udp.Received>().ToListAsync();
-                msgs.Sum(r => r.Data.Length).Should().Be(data.Length * batchSize);
-            }
-
-            // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
-            server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
-
-            // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
-
-            poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
-            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
-            poolInfo.Free.Should().Be(poolInfo.TotalSize);
-            poolInfo.Used.Should().Be(0);
         }
 
         [Fact]

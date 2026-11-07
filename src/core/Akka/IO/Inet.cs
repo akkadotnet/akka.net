@@ -211,6 +211,9 @@ namespace Akka.IO
             /// <c>TcpSettings.ReceiveBufferSize</c> (the pre-existing default), with the pause-writer
             /// threshold set to twice that value -- this option only lets a caller (e.g. Artery) raise
             /// both watermarks past the default without changing it for every other Akka.IO TCP user.
+            /// When present, the same watermarks also apply to the output pipe, which bounds how many
+            /// written bytes a connection accepts (and acks) ahead of the socket; otherwise the output
+            /// pipe pauses at 64 KB.
             /// </remarks>
             public class PipeBufferSize : SocketOption
             {

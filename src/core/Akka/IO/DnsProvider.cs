@@ -10,20 +10,20 @@ using System;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Supplies the cache, resolver actor type, and manager actor type used by an Akka.IO DNS extension.
     /// </summary>
     public interface IDnsProvider
     {
         /// <summary>
-        /// TBD
+        /// Gets the DNS cache shared by the resolver and manager actors.
         /// </summary>
         DnsBase Cache { get; }
         /// <summary>
-        /// TBD
+        /// Gets the actor type used to resolve DNS queries.
         /// </summary>
         Type ActorClass { get; }
         /// <summary>
-        /// TBD
+        /// Gets the actor type used to manage DNS resolution and cache maintenance.
         /// </summary>
         Type ManagerClass { get; }
     }

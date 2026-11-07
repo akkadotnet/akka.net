@@ -52,7 +52,7 @@ public interface IActorDsl
     /// <summary>
     /// Changes the actor's behavior and replaces the current handler with the specified handler.
     /// </summary>
-    /// <param name="handler">TBD</param>
+    /// <param name="handler">The replacement handler, which receives each message and the actor context.</param>
     void Become(Action<object, IActorContext> handler);
 
     /// <summary>
@@ -61,7 +61,7 @@ public interface IActorDsl
     /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
     /// is matched with a call to <see cref="UnbecomeStacked"/>.</remarks>
     /// </summary>
-    /// <param name="handler">TBD</param>
+    /// <param name="handler">The handler to push onto the behavior stack, which receives each message and the actor context.</param>
     void BecomeStacked(Action<object, IActorContext> handler);
 
     /// <summary>

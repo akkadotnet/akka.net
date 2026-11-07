@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -24,7 +25,7 @@ namespace Akka.Actor
     public abstract class SupervisorStrategy : ISurrogated
     {
         /// <summary>
-        /// TBD
+        /// Maps exceptions to the supervision directives selected by this strategy.
         /// </summary>
         public abstract IDecider Decider { get; }
 
@@ -52,7 +53,7 @@ namespace Akka.Actor
         /// <param name="child">The child actor.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="stats">The stats for the failed child.</param>
-        /// <param name="children">TBD</param>
+        /// <param name="children">The supervisor's child restart statistics, used by strategies that coordinate child failures.</param>
         /// <returns><c>true</c> if the child actor was handled, otherwise <c>false</c>.</returns>
         public bool HandleFailure(ActorCell actorCell, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
@@ -200,9 +201,9 @@ namespace Akka.Actor
         /// It does not need to do anything special. Exceptions thrown from this method
         /// do NOT make the actor fail if this happens during termination.
         /// </summary>
-        /// <param name="actorContext">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <param name="children">TBD</param>
+        /// <param name="actorContext">The context of the supervising actor.</param>
+        /// <param name="child">The child actor that has terminated.</param>
+        /// <param name="children">The remaining child references after the terminated child has been removed.</param>
         public abstract void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children);
 
         /// <summary>
@@ -331,7 +332,7 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="OneForOneStrategy"/> class.
         /// </summary>
-        /// <param name="decider">TBD</param>
+        /// <param name="decider">The exception-to-directive mapping used by this strategy.</param>
         public OneForOneStrategy(IDecider decider)
             : this(-1, -1, decider, true)
         {
@@ -362,14 +363,14 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// TBD
+        /// Applies the strategy's restart limit and either restarts or stops the failed child.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="restart">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <param name="children">TBD</param>
+        /// <param name="context">The context of the supervising actor.</param>
+        /// <param name="restart">Whether the selected directive requests a restart.</param>
+        /// <param name="child">The child actor that failed.</param>
+        /// <param name="cause">The exception that caused the failure.</param>
+        /// <param name="stats">The restart history for the failed child.</param>
+        /// <param name="children">The restart statistics for all children; this one-for-one strategy does not use this collection.</param>
         public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (restart && stats.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds))
@@ -379,11 +380,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Leaves the remaining children unchanged when one child terminates.
         /// </summary>
-        /// <param name="actorContext">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <param name="children">TBD</param>
+        /// <param name="actorContext">The context of the supervising actor.</param>
+        /// <param name="child">The child that terminated.</param>
+        /// <param name="children">The supervisor's remaining children.</param>
         public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
@@ -833,22 +834,22 @@ namespace Akka.Actor
     public static class Decider
     {
         /// <summary>
-        /// TBD
+        /// Creates a deployable decider with a default directive and exception type mappings.
         /// </summary>
-        /// <param name="defaultDirective">TBD</param>
-        /// <param name="pairs">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="defaultDirective">The directive used when no exception type mapping matches.</param>
+        /// <param name="pairs">Exception type and directive pairs checked in the order supplied.</param>
+        /// <returns>A decider that can be serialized as supervisor configuration.</returns>
         public static DeployableDecider From(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
         {
             return new DeployableDecider(defaultDirective, pairs);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a deployable decider with a default directive and exception type mappings.
         /// </summary>
-        /// <param name="defaultDirective">TBD</param>
-        /// <param name="pairs">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="defaultDirective">The directive used when no exception type mapping matches.</param>
+        /// <param name="pairs">Exception type and directive pairs checked in the order supplied.</param>
+        /// <returns>A decider that can be serialized as supervisor configuration.</returns>
         public static DeployableDecider From(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs)
         {
             return new DeployableDecider(defaultDirective, pairs);
@@ -866,7 +867,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Adapts a local exception-to-directive function to the <see cref="IDecider"/> interface.
     /// </summary>
     public class LocalOnlyDecider : IDecider
     {
@@ -875,7 +876,7 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalOnlyDecider"/> class.
         /// </summary>
-        /// <param name="decider">TBD</param>
+        /// <param name="decider">The function that maps an exception to a supervision directive.</param>
         public LocalOnlyDecider(Func<Exception, Directive> decider)
         {
             _decider = decider;
@@ -893,7 +894,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// A decider that stores exception type mappings and a default directive for configuration and serialization.
     /// </summary>
     public class DeployableDecider : IDecider, IEquatable<DeployableDecider>
     {
@@ -909,8 +910,8 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="DeployableDecider"/> class.
         /// </summary>
-        /// <param name="defaultDirective">TBD</param>
-        /// <param name="pairs">TBD</param>
+        /// <param name="defaultDirective">The directive used when no exception type mapping matches.</param>
+        /// <param name="pairs">Exception type and directive pairs checked in the order supplied.</param>
         public DeployableDecider(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs)
             : this(defaultDirective, pairs.ToArray())
         {
@@ -919,8 +920,8 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="DeployableDecider"/> class.
         /// </summary>
-        /// <param name="defaultDirective">TBD</param>
-        /// <param name="pairs">TBD</param>
+        /// <param name="defaultDirective">The directive used when no exception type mapping matches.</param>
+        /// <param name="pairs">Exception type and directive pairs checked in the order supplied.</param>
         public DeployableDecider(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
         {
             DefaultDirective = defaultDirective;
@@ -928,12 +929,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The directive returned when no configured exception type mapping matches.
         /// </summary>
         public Directive DefaultDirective { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The exception type and directive mappings checked by this decider.
         /// </summary>
         public KeyValuePair<Type, Directive>[] Pairs { get; private set; }
 
@@ -989,34 +990,90 @@ namespace Akka.Actor
     /// </summary>
     public abstract class SupervisorStrategyConfigurator
     {
+        /// <summary>
+        /// The configurators that ship inside Akka.dll - the two that <c>akka.conf</c> and Akka.Persistence's
+        /// <c>persistence.conf</c> name - constructed directly so that neither the trimmer nor the Native AOT
+        /// compiler has to see through a <see cref="Type.GetType(string)"/> call.
+        /// </summary>
+        private static readonly Dictionary<string, Func<SupervisorStrategyConfigurator>> BuiltInConfigurators =
+            BuildBuiltInConfigurators();
+
         public abstract SupervisorStrategy Create();
 
         /// <summary>
-        /// TBD
+        /// Creates a configurator for the named supervisor strategy type.
         /// </summary>
-        /// <param name="typeName">TBD</param>
+        /// <param name="typeName">The configured type name or alias to resolve.</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if the given <paramref name="typeName"/> is undefined or references an unknown type.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A configurator that creates the requested supervisor strategy.</returns>
+        /// <remarks>
+        /// Callers inside Akka.NET name their own setting through the overload below. This one cannot tell
+        /// which of the two settings the name came from, so a failure reports both.
+        /// </remarks>
         public static SupervisorStrategyConfigurator CreateConfigurator(string typeName)
+            => CreateConfigurator(typeName, "akka.actor.guardian-supervisor-strategy / supervisor-strategy");
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Same as <see cref="CreateConfigurator(string)"/>, but the caller names the HOCON setting that
+        /// carried <paramref name="typeName"/> so that a failure points at the setting the user has to fix.
+        /// </summary>
+        /// <param name="typeName">The configurator type name read out of HOCON.</param>
+        /// <param name="settingPath">The HOCON path <paramref name="typeName"/> came from.</param>
+        internal static SupervisorStrategyConfigurator CreateConfigurator(string typeName, string settingPath)
         {
-            switch (typeName)
+            if (typeName == null)
+                throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
+
+            if (Akka.Util.TypeExtensions.ToBuiltInAkkaTypeName(typeName) is { } builtInConfiguratorName &&
+                BuiltInConfigurators.TryGetValue(builtInConfiguratorName, out var factory))
+                return factory();
+
+            if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                    settingPath,
+                    typeName,
+                    "one of the built-in supervisor strategy configurators"));
+
+            return CreateConfiguratorFromTypeName(typeName);
+        }
+
+        /// <summary>
+        /// Builds <see cref="BuiltInConfigurators"/>.
+        ///
+        /// Keyed by bare type name; TypeExtensions.ToBuiltInAkkaTypeName normalizes what HOCON carries.
+        /// </summary>
+        private static Dictionary<string, Func<SupervisorStrategyConfigurator>> BuildBuiltInConfigurators()
+        {
+            var builtIn = new Dictionary<string, Func<SupervisorStrategyConfigurator>>(StringComparer.Ordinal);
+
+            Add<DefaultSupervisorStrategy>(static () => new DefaultSupervisorStrategy());
+            Add<StoppingSupervisorStrategy>(static () => new StoppingSupervisorStrategy());
+
+            return builtIn;
+
+            // typeof(TConfigurator) is what keeps this trimmer-safe: the trimmer sees the type, keeps it, and
+            // hands us its own name, so the key can't drift out of step with the type it maps to.
+            void Add<TConfigurator>(Func<SupervisorStrategyConfigurator> factory)
+                where TConfigurator : SupervisorStrategyConfigurator
             {
-                case "Akka.Actor.DefaultSupervisorStrategy":
-                    return new DefaultSupervisorStrategy();
-                case "Akka.Actor.StoppingSupervisorStrategy":
-                    return new StoppingSupervisorStrategy();
-                case null:
-                    throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
-                default:
-                    Type configuratorType = Type.GetType(typeName);
-
-                    if (configuratorType == null)
-                        throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
-
-                    return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
+                // "Akka.Actor.DefaultSupervisorStrategy"
+                builtIn[typeof(TConfigurator).FullName] = factory;
             }
+        }
+
+        [RequiresUnreferencedCode("Loads a SupervisorStrategyConfigurator named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static SupervisorStrategyConfigurator CreateConfiguratorFromTypeName(string typeName)
+        {
+            var configuratorType = Type.GetType(typeName);
+
+            if (configuratorType == null)
+                throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
+
+            return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
         }
     }
 

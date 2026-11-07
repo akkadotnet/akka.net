@@ -26,97 +26,97 @@ namespace Akka.Actor
     {
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
         /// <summary>
-        /// TBD
+        /// Sends a request and returns the response as a task, using the configured ask timeout when none is supplied.
         /// </summary>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="timeout">The maximum time to wait for a reply, or <c>null</c> to use the system's ask timeout.</param>
+        /// <returns>A task that completes with the reply message.</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             return self.Ask<object>(message, timeout, CancellationToken.None);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request and returns the response as a task that can be canceled by the supplied token.
         /// </summary>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="cancellationToken">The token used to cancel waiting for the reply.</param>
+        /// <returns>A task that completes with the reply message.</returns>
         public static Task<object> Ask(this ICanTell self, object message, CancellationToken cancellationToken)
         {
             return self.Ask<object>(message, null, cancellationToken);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request and returns the response as a task, with a timeout and cancellation token.
         /// </summary>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="timeout">The maximum time to wait for a reply, or <c>null</c> to use the system's ask timeout.</param>
+        /// <param name="cancellationToken">The token used to cancel waiting for the reply.</param>
+        /// <returns>A task that completes with the reply message.</returns>
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             return self.Ask<object>(message, timeout, cancellationToken);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request and returns its reply as a value of type <typeparamref name="T"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The expected reply type.</typeparam>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="timeout">The maximum time to wait for a reply, or <c>null</c> to use the system's ask timeout.</param>
+        /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             return self.Ask<T>(message, timeout, CancellationToken.None);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request and returns its reply as a value of type <typeparamref name="T"/>, with cancellation support.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The expected reply type.</typeparam>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="cancellationToken">The token used to cancel waiting for the reply.</param>
+        /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, CancellationToken cancellationToken)
         {
             return self.Ask<T>(message, null, cancellationToken);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request and returns its reply as a value of type <typeparamref name="T"/>, with a timeout and cancellation token.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
+        /// <typeparam name="T">The expected reply type.</typeparam>
+        /// <param name="self">The message target.</param>
+        /// <param name="message">The request message to send.</param>
+        /// <param name="timeout">The maximum time to wait for a reply, or <c>null</c> to use the system's ask timeout.</param>
+        /// <param name="cancellationToken">The token used to cancel waiting for the reply.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             return Ask<T>(self, _ => message, timeout, cancellationToken);
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a request created with a temporary reply reference and returns the reply as a task.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
+        /// <typeparam name="T">The expected reply type.</typeparam>
+        /// <param name="self">The message target.</param>
         /// <param name="messageFactory">Factory method that creates a message that can encapsulate the 'Sender' IActorRef</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="cancellationToken">TBD</param>
+        /// <param name="timeout">The maximum time to wait for a reply, or <c>null</c> to use the system's ask timeout.</param>
+        /// <param name="cancellationToken">The token used to cancel waiting for the reply.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
             IActorRefProvider provider = ResolveProvider(self);
@@ -243,7 +243,7 @@ namespace Akka.Actor
         private AtomicReference<object> _stateDoNotCallMeDirectly = new(null);
 
         /// <summary>
-        /// TBD
+        /// Holds intermediate state used while registering a task-backed actor reference's temporary path.
         /// </summary>
         internal sealed class Registering
         {
@@ -251,13 +251,13 @@ namespace Akka.Actor
             // ReSharper disable once InconsistentNaming
 
             /// <summary>
-            /// TBD
+            /// State marker indicating that temporary-path registration is in progress.
             /// </summary>
             public static Registering Instance { get; } = new();
         }
 
         /// <summary>
-        /// TBD
+        /// State marker indicating that the task-backed reference has stopped before creating a path.
         /// </summary>
         internal sealed class Stopped
         {
@@ -271,21 +271,21 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// State marker for a stopped task-backed reference whose temporary path was already created.
         /// </summary>
         internal sealed class StoppedWithPath : IEquatable<StoppedWithPath>
         {
             /// <summary>
-            /// TBD
+            /// Creates the stopped state for a registered temporary actor path.
             /// </summary>
-            /// <param name="path">TBD</param>
+            /// <param name="path">The temporary path that was registered before the reference stopped.</param>
             public StoppedWithPath(ActorPath path)
             {
                 Path = path;
             }
 
             /// <summary>
-            /// TBD
+            /// The registered temporary path retained after the reference stops.
             /// </summary>
             public ActorPath Path { get; }
 
@@ -590,7 +590,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Stops this task-backed actor reference and completes its reply task if no reply was received.
         /// </summary>
         public override void Stop()
         {

@@ -19,7 +19,7 @@ namespace Akka.Actor.Internal
         private static readonly ImmutableDictionary<string, IChildStats> _emptyStats = ImmutableDictionary<string, IChildStats>.Empty;
 
         /// <summary>
-        /// TBD
+        /// Initializes the shared empty children container.
         /// </summary>
         protected EmptyChildrenContainer()
         {
@@ -27,16 +27,16 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// The shared container representing an actor with no children.
         /// </summary>
         public static IChildrenContainer Instance { get; } = new EmptyChildrenContainer();
 
         /// <summary>
-        /// TBD
+        /// Adds the first child and returns a populated container.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name to add.</param>
+        /// <param name="stats">The child's restart statistics.</param>
+        /// <returns>A normal container containing the child.</returns>
         public virtual IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             var newMap = _emptyStats.Add(name, stats);
@@ -44,21 +44,21 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Leaves this empty container unchanged because it has no child references.
         /// </summary>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="child">The child reference to remove.</param>
+        /// <returns>This empty container.</returns>
         public IChildrenContainer Remove(IActorRef child)
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Reports that no entry exists for the supplied name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name to find.</param>
+        /// <param name="stats">Set to <c>null</c>.</param>
+        /// <returns>Always <c>false</c>.</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
             stats = null;
@@ -66,11 +66,11 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Reports that no child reference is present.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="childRestartStats">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The child reference to find.</param>
+        /// <param name="childRestartStats">Set to <c>null</c>.</param>
+        /// <returns>Always <c>false</c>.</returns>
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             childRestartStats = null;
@@ -78,72 +78,71 @@ namespace Akka.Actor.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Reports that this container has no children.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The actor reference to check.</param>
+        /// <returns>Always <c>false</c>.</returns>
         public bool Contains(IActorRef actor)
         {
             return false;
         }
 
         /// <summary>
-        /// TBD
+        /// An empty collection of child references.
         /// </summary>
         public IReadOnlyCollection<IInternalActorRef> Children { get { return ImmutableList<IInternalActorRef>.Empty; } }
 
         /// <summary>
-        /// TBD
+        /// An empty collection of child restart statistics.
         /// </summary>
         public IReadOnlyCollection<ChildRestartStats> Stats { get { return ImmutableList<ChildRestartStats>.Empty; } }
 
         /// <summary>
-        /// TBD
+        /// Leaves this empty container unchanged because it has no child to terminate.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The child reference that terminated.</param>
+        /// <returns>This empty container.</returns>
         public IChildrenContainer ShallDie(IActorRef actor)
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Reserves a name and returns a populated container.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name to reserve.</param>
+        /// <returns>A normal container with the name marked as reserved.</returns>
         public virtual IChildrenContainer Reserve(string name)
         {
             return NormalChildrenContainer.Create(_emptyStats.Add(name, ChildNameReserved.Instance));
         }
 
         /// <summary>
-        /// TBD
+        /// Leaves this container unchanged because it has no reservation to remove.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The reserved child name to release.</param>
+        /// <returns>This empty container.</returns>
         public IChildrenContainer Unreserve(string name)
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// A description of this empty container.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>No children</c>.</returns>
         public override string ToString()
         {
             return "No children";
         }
 
         /// <summary>
-        /// TBD
+        /// Always <c>false</c> because this container has no children and is not terminating.
         /// </summary>
         public virtual bool IsTerminating { get { return false; } }
         /// <summary>
-        /// TBD
+        /// Always <c>true</c> because this container is in its normal state.
         /// </summary>
         public virtual bool IsNormal { get { return true; } }
     }
 }
-

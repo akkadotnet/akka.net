@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -134,7 +136,154 @@ namespace Akka.Persistence.Tests
             ExpectMsg((object)"int:4711");
             ExpectMsg((object)"any:hello");
         }
-        
+
+        // The following tests establish, for Command/Recover (which share the ReceiveActorHandlers
+        // "no more handlers" rule with ReceiveActor), the same v1.5.71 parity restored for ReceiveActor:
+        // only an always-handling (Action<T>-based, including CommandAsync/RecoverAsync) object/no-predicate
+        // registration blocks later registrations. A Func<T,bool> one may decline (return false) and does
+        // not. See https://github.com/akkadotnet/akka.net/pull/7557.
+
+        [Fact(DisplayName = "Should_FallThroughToLaterHandler_When_GenericObjectFuncCommandHandlerWithNoPredicate_Declines")]
+        public async Task Should_FallThroughToLaterHandler_When_GenericObjectFuncCommandHandlerWithNoPredicate_Declines()
+        {
+            var pid = "command-generic-func-object-declines";
+            var actor = Sys.ActorOf(Props.Create(() => new GenericObjectFuncCommandDeclinesActor(pid)), "command-generic-func-object-declines");
+
+            actor.Tell("hello", TestActor);
+            actor.Tell(42, TestActor);
+
+            await ExpectMsgAsync("string:hello");
+            await ExpectMsgAsync("int:42");
+        }
+
+        [Fact(DisplayName = "Should_FallThroughToLaterHandler_When_TypedObjectFuncCommandHandlerWithNoPredicate_Declines")]
+        public async Task Should_FallThroughToLaterHandler_When_TypedObjectFuncCommandHandlerWithNoPredicate_Declines()
+        {
+            var pid = "command-typed-func-object-declines";
+            var actor = Sys.ActorOf(Props.Create(() => new TypedObjectFuncCommandDeclinesActor(pid)), "command-typed-func-object-declines");
+
+            actor.Tell("hello", TestActor);
+            actor.Tell(42, TestActor);
+
+            await ExpectMsgAsync("string:hello");
+            await ExpectMsgAsync("int:42");
+        }
+
+        [Fact(DisplayName = "Should_FallThroughToLaterHandler_When_GenericObjectFuncRecoverHandlerWithNoPredicate_Declines")]
+        public async Task Should_FallThroughToLaterHandler_When_GenericObjectFuncRecoverHandlerWithNoPredicate_Declines()
+        {
+            var pid = "recover-generic-func-object-declines";
+            WriteEvents(pid, 1, "two");
+            var actor = Sys.ActorOf(Props.Create(() => new GenericObjectFuncRecoverDeclinesActor(pid)), "recover-generic-func-object-declines");
+
+            actor.Tell("GetState", TestActor);
+
+            await ExpectMsgAsync("int:1");
+            await ExpectMsgAsync("string:two");
+        }
+
+        [Fact(DisplayName = "Should_FallThroughToLaterHandler_When_TypedObjectFuncRecoverHandlerWithNoPredicate_Declines")]
+        public async Task Should_FallThroughToLaterHandler_When_TypedObjectFuncRecoverHandlerWithNoPredicate_Declines()
+        {
+            var pid = "recover-typed-func-object-declines";
+            WriteEvents(pid, 1, "two");
+            var actor = Sys.ActorOf(Props.Create(() => new TypedObjectFuncRecoverDeclinesActor(pid)), "recover-typed-func-object-declines");
+
+            actor.Tell("GetState", TestActor);
+
+            await ExpectMsgAsync("int:1");
+            await ExpectMsgAsync("string:two");
+        }
+
+        [Fact(DisplayName = "Should_ThrowActorInitializationException_WithInvalidOperationExceptionInner_When_RegisteringCommandHandler_After_GenericObjectActionCommandHandlerWithNoPredicate")]
+        public async Task Should_Throw_When_RegisteringCommandHandler_After_GenericObjectActionCommandHandlerWithNoPredicate()
+        {
+            Sys.EventStream.Subscribe(TestActor, typeof(Error));
+
+            var pid = "command-generic-action-object-blocks";
+            var actor = Sys.ActorOf(Props.Create(() => new GenericObjectActionCommandThenAnotherActor(pid)), "command-generic-action-object-blocks");
+
+            await AssertActorInitializationFailureAsync(actor);
+
+            Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
+        }
+
+        [Fact(DisplayName = "Should_ThrowActorInitializationException_WithInvalidOperationExceptionInner_When_RegisteringRecoverHandler_After_GenericObjectActionRecoverHandlerWithNoPredicate")]
+        public async Task Should_Throw_When_RegisteringRecoverHandler_After_GenericObjectActionRecoverHandlerWithNoPredicate()
+        {
+            Sys.EventStream.Subscribe(TestActor, typeof(Error));
+
+            var pid = "recover-generic-action-object-blocks";
+            var actor = Sys.ActorOf(Props.Create(() => new GenericObjectActionRecoverThenAnotherActor(pid)), "recover-generic-action-object-blocks");
+
+            await AssertActorInitializationFailureAsync(actor);
+
+            Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
+        }
+
+        [Fact(DisplayName = "Should_ThrowActorInitializationException_WithInvalidOperationExceptionInner_When_RegisteringHandler_After_GenericObjectCommandAsyncHandlerWithNoPredicate")]
+        public async Task Should_Throw_When_RegisteringHandler_After_GenericObjectCommandAsyncHandlerWithNoPredicate()
+        {
+            Sys.EventStream.Subscribe(TestActor, typeof(Error));
+
+            var pid = "command-async-generic-object-blocks";
+            var actor = Sys.ActorOf(Props.Create(() => new GenericObjectAsyncCommandThenAnotherActor(pid)), "command-async-generic-object-blocks");
+
+            await AssertActorInitializationFailureAsync(actor);
+
+            Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
+        }
+
+        [Fact(DisplayName = "Should_HandleTypedCommand_When_RegisteredInsideBecome")]
+        public async Task Should_HandleTypedCommand_When_RegisteredInsideBecome()
+        {
+            // Regression test for a #7557-era bug: PersistentActor.AddTypedReceiveHandler used to
+            // unconditionally call EnsureMayConfigureRecoverHandlers(), even for Command(Type, ...)
+            // (isRecover: false). Become/BecomeStacked only push a new frame onto _matchCommandBuilders,
+            // so _matchRecoverBuilders is empty while inside Become - meaning Command(typeof(X), ...)
+            // called from inside Become incorrectly threw "You may only call Recover-methods...".
+            var pid = "command-typed-inside-become";
+            var actor = Sys.ActorOf(Props.Create(() => new CommandTypedInsideBecomeActor(pid)), "command-typed-inside-become");
+
+            actor.Tell("BECOME", TestActor);
+            actor.Tell(42, TestActor);
+
+            await ExpectMsgAsync("int2:42");
+        }
+
+        /// <summary>
+        /// Expects a single <see cref="Error"/> log event caused by an <see cref="ActorInitializationException"/>
+        /// whose inner-exception chain contains an <see cref="InvalidOperationException"/> (the actor system
+        /// wraps actor-construction failures in several layers - reflection-based activation adds its own
+        /// wrapping on top of ActorInitializationException), and that <paramref name="actor"/> subsequently
+        /// terminates (the default supervisor strategy's directive for ActorInitializationException is Stop).
+        /// </summary>
+        private async Task AssertActorInitializationFailureAsync(IActorRef actor)
+        {
+            var error = await ExpectMsgAsync<Error>();
+            var initEx = Assert.IsType<ActorInitializationException>(error.Cause);
+            var invalidOpEx = FindInnerException<InvalidOperationException>(initEx);
+            Assert.NotNull(invalidOpEx);
+            Assert.Equal(
+                "A handler that catches all messages has been added. No handler can be added after that.",
+                invalidOpEx.Message);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var terminated = await actor.WatchAsync(cts.Token);
+            Assert.True(terminated);
+        }
+
+        private static TException FindInnerException<TException>(Exception exception) where TException : Exception
+        {
+            for (var current = exception; current != null; current = current.InnerException)
+            {
+                if (current is TException match)
+                    return match;
+            }
+
+            return null;
+        }
+
         private readonly AtomicCounterLong _seqNrCounter = new(1L);
         /// <summary>
         /// Initialize test journal using provided events.
@@ -254,6 +403,129 @@ namespace Akka.Persistence.Tests
             {
                 Command<int>(i => Sender.Tell("int:" + i, Self));
                 CommandAny(o => Sender.Tell("any:" + o, Self));
+            }
+        }
+
+        private class GenericObjectFuncCommandDeclinesActor : TestReceivePersistentActor
+        {
+            public GenericObjectFuncCommandDeclinesActor(string pid) : base(pid)
+            {
+                Command<object>(o =>
+                {
+                    if (o is string s)
+                    {
+                        Sender.Tell("string:" + s, Self);
+                        return true;
+                    }
+
+                    return false; // decline - later handlers should still get a chance to run
+                });
+                Command<int>(i => Sender.Tell("int:" + i, Self));
+            }
+        }
+
+        private class TypedObjectFuncCommandDeclinesActor : TestReceivePersistentActor
+        {
+            public TypedObjectFuncCommandDeclinesActor(string pid) : base(pid)
+            {
+                Command(typeof(object), o =>
+                {
+                    if (o is string s)
+                    {
+                        Sender.Tell("string:" + s, Self);
+                        return true;
+                    }
+
+                    return false; // decline - later handlers should still get a chance to run
+                });
+                Command<int>(i => Sender.Tell("int:" + i, Self));
+            }
+        }
+
+        private class GenericObjectFuncRecoverDeclinesActor : TestReceivePersistentActor
+        {
+            public GenericObjectFuncRecoverDeclinesActor(string pid) : base(pid)
+            {
+                Recover<object>(o =>
+                {
+                    if (o is int i)
+                    {
+                        State.AddLast("int:" + i);
+                        return true;
+                    }
+
+                    return false; // decline - later handlers should still get a chance to run
+                });
+                Recover<string>(s => State.AddLast("string:" + s));
+                Command<string>(s => s == "GetState", _ =>
+                {
+                    foreach (var item in State)
+                        Sender.Tell(item, Self);
+                });
+            }
+        }
+
+        private class TypedObjectFuncRecoverDeclinesActor : TestReceivePersistentActor
+        {
+            public TypedObjectFuncRecoverDeclinesActor(string pid) : base(pid)
+            {
+                Recover(typeof(object), o =>
+                {
+                    if (o is int i)
+                    {
+                        State.AddLast("int:" + i);
+                        return true;
+                    }
+
+                    return false; // decline - later handlers should still get a chance to run
+                });
+                Recover<string>(s => State.AddLast("string:" + s));
+                Command<string>(s => s == "GetState", _ =>
+                {
+                    foreach (var item in State)
+                        Sender.Tell(item, Self);
+                });
+            }
+        }
+
+        private class GenericObjectActionCommandThenAnotherActor : TestReceivePersistentActor
+        {
+            public GenericObjectActionCommandThenAnotherActor(string pid) : base(pid)
+            {
+                Command<object>(_ => { });
+                Command<string>(_ => { }); // should throw - no more handlers can be added
+            }
+        }
+
+        private class GenericObjectActionRecoverThenAnotherActor : TestReceivePersistentActor
+        {
+            public GenericObjectActionRecoverThenAnotherActor(string pid) : base(pid)
+            {
+                Recover<object>(_ => { });
+                Recover<int>(_ => { }); // should throw - no more handlers can be added
+            }
+        }
+
+        private class GenericObjectAsyncCommandThenAnotherActor : TestReceivePersistentActor
+        {
+            public GenericObjectAsyncCommandThenAnotherActor(string pid) : base(pid)
+            {
+                CommandAsync<object>(_ => Task.CompletedTask);
+                Command<string>(_ => { }); // should throw - no more handlers can be added
+            }
+        }
+
+        private class CommandTypedInsideBecomeActor : TestReceivePersistentActor
+        {
+            public CommandTypedInsideBecomeActor(string pid) : base(pid)
+            {
+                Command<string>(s => s == "BECOME", _ => Become(State2));
+                Command<string>(s => Sender.Tell("string1:" + s, Self));
+            }
+
+            private void State2()
+            {
+                Command(typeof(int), o => Sender.Tell("int2:" + o, Self));
             }
         }
 

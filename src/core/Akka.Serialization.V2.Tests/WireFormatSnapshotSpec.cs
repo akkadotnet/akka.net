@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.TestKit;
 using VerifyXunit;
 using Xunit;
 
@@ -75,12 +76,12 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         "readonly-collection-populated",
         "readonly-dictionary-populated",
 
-        // [AkkaUnion]: one snapshot per declared member of IOrderEvent.
+        // Interface union: one snapshot per member of IOrderEvent.
         "union-member-order-placed-class",
         "union-member-order-cancelled-nested-only",
         "union-member-order-note-struct",
 
-        // Closed-generic [AkkaSerializable<T>] registrations.
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations.
         "closed-generic-wrapper-order-request",
         "closed-generic-wrapper-order-receipt",
 
@@ -118,7 +119,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         // system.Serialization.FindSerializerFor to the SAME generated serializer instead of the
         // system's default fallback. Every other case in this corpus is unaffected: none of them route
         // an IGeneratedTestProtocol-typed value through FindSerializerFor.
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(GeneratedTestSerializer.CreateSerializerDetails(system))));
         _system = ActorSystem.Create("wire-format-snapshot-spec", setup);
         var extendedSystem = (ExtendedActorSystem)_system;
         _generatedSerializer = new GeneratedTestSerializer(extendedSystem);
@@ -236,7 +237,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             new Dictionary<string, int> { ["a"] = 1, ["b"] = 2 })),
 
         // --------------------------------------------------------------------------------------
-        // [AkkaUnion] -- one snapshot per declared member of IOrderEvent -- fixtures from
+        // Interface union -- one snapshot per member of IOrderEvent -- fixtures from
         // GeneratedUnionSpec.
         // --------------------------------------------------------------------------------------
         "union-member-order-placed-class" => Case(_unionSerializer, new UnionEnvelope(
@@ -249,7 +250,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
             "env-3", new OrderNote("order-3", "expedite"))),
 
         // --------------------------------------------------------------------------------------
-        // Closed-generic [AkkaSerializable<T>] registrations -- fixtures from
+        // Closed-generic [AkkaSerializerIncludes<T>] registrations -- fixtures from
         // GeneratedClosedGenericSpec.
         // --------------------------------------------------------------------------------------
         "closed-generic-wrapper-order-request" => Case(_closedGenericSerializer, new Wrapper<OrderRequest>(

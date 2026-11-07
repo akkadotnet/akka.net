@@ -13,10 +13,10 @@ using Akka.TestKit.Internal.StringMatcher;
 namespace Akka.TestKit.Internal;
 
 /// <summary>
-/// TBD
+/// Base class for filters that match log events by their content and source.
 /// </summary>
-/// <param name="eventFilter">TBD</param>
-/// <param name="logEvent">TBD</param>
+/// <param name="eventFilter">The filter that matched the event.</param>
+/// <param name="logEvent">The matching log event.</param>
 public delegate void EventMatched(EventFilterBase eventFilter, LogEvent logEvent);
 
 /// <summary>Internal! 
@@ -31,10 +31,10 @@ public abstract class EventFilterBase : IEventFilter
     private readonly IStringMatcher _messageMatcher;
 
     /// <summary>
-    /// TBD
+    /// Initializes the message and source matchers used by the filter.
     /// </summary>
-    /// <param name="messageMatcher">TBD</param>
-    /// <param name="sourceMatcher">TBD</param>
+    /// <param name="messageMatcher">Matches the event message, or null to match any message.</param>
+    /// <param name="sourceMatcher">Matches the event source, or null to match any source.</param>
     protected EventFilterBase(IStringMatcher? messageMatcher, IStringMatcher? sourceMatcher)
     {
         _messageMatcher = messageMatcher ?? MatchesAll.Instance;
@@ -42,22 +42,22 @@ public abstract class EventFilterBase : IEventFilter
     }
 
     /// <summary>
-    /// TBD
+    /// Raised after this filter matches and suppresses a log event.
     /// </summary>
     public event EventMatched? EventMatched;
 
     /// <summary>
     /// Determines whether the specified event should be filtered or not.
     /// </summary>
-    /// <param name="evt">TBD</param>
+    /// <param name="evt">The log event to inspect.</param>
     /// <returns><c>true</c> to filter the event.</returns>
     protected abstract bool IsMatch(LogEvent evt);  //In Akka JVM this is called matches
 
     /// <summary>
-    /// TBD
+    /// Applies this filter and raises <see cref="EventMatched"/> when the event matches.
     /// </summary>
-    /// <param name="logEvent">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="logEvent">The log event to inspect.</param>
+    /// <returns><c>true</c> if the event matches and should be filtered; otherwise, <c>false</c>.</returns>
     public bool Apply(LogEvent logEvent)
     {
         if(IsMatch(logEvent))
@@ -70,9 +70,9 @@ public abstract class EventFilterBase : IEventFilter
     }
 
     /// <summary>
-    /// TBD
+    /// Notifies subscribers that this filter matched a log event.
     /// </summary>
-    /// <param name="logEvent">TBD</param>
+    /// <param name="logEvent">The matching log event.</param>
     protected virtual void OnEventMatched(LogEvent logEvent)
     {
         var delegt = EventMatched;
@@ -82,9 +82,9 @@ public abstract class EventFilterBase : IEventFilter
     /// <summary>Internal helper.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <param name="src">TBD</param>
-    /// <param name="msg">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="src">The source associated with the event.</param>
+    /// <param name="msg">The event message or message object to match.</param>
+    /// <returns><c>true</c> if both configured matchers accept the source and message; otherwise, <c>false</c>.</returns>
     protected bool InternalDoMatch(string src, object? msg)
     {
         // Check source matcher first (fast path)
@@ -110,14 +110,14 @@ public abstract class EventFilterBase : IEventFilter
     }
 
     /// <summary>
-    /// TBD
+    /// Gets the short name used to identify this filter in diagnostics.
     /// </summary>
     protected abstract string FilterDescriptiveName { get; }
 
     /// <summary>
-    /// TBD
+    /// Returns a description of this filter and its configured matchers.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The filter name and any message or source match criteria.</returns>
     public override string ToString()
     {
         var sb = new StringBuilder();

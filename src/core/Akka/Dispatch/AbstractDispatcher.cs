@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,10 +55,10 @@ namespace Akka.Dispatch
         /// <summary>
         /// Default constructor...
         /// </summary>
-        /// <param name="eventStream">TBD</param>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="mailboxes">TBD</param>
+        /// <param name="eventStream">The event stream for the actor system.</param>
+        /// <param name="scheduler">The scheduler for the actor system.</param>
+        /// <param name="settings">The actor system settings.</param>
+        /// <param name="mailboxes">The registered mailbox types for the actor system.</param>
         public DefaultDispatcherPrerequisites(
             EventStream eventStream,
             IScheduler scheduler,
@@ -71,22 +72,22 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// The event stream shared with the actor system.
         /// </summary>
         public EventStream EventStream { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The scheduler shared with the actor system.
         /// </summary>
         public IScheduler Scheduler { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The settings for the actor system.
         /// </summary>
         public Settings Settings { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The registered mailbox types for the actor system.
         /// </summary>
         public Mailboxes Mailboxes { get; private set; }
     }
@@ -154,20 +155,20 @@ channel-executor.priority = normal");
     internal sealed class DefaultTaskSchedulerExecutorConfigurator : ExecutorServiceConfigurator
     {
         /// <summary>
-        /// TBD
+        /// Produces an executor service backed by the default task scheduler.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The identifier assigned to the executor.</param>
+        /// <returns>An executor service that schedules work on <see cref="TaskScheduler.Default"/>.</returns>
         public override ExecutorService Produce(string id)
         {
             return new TaskSchedulerExecutor(id, TaskScheduler.Default);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a configurator for the default task scheduler executor.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The executor configuration.</param>
+        /// <param name="prerequisites">The actor system services required by dispatcher executors.</param>
         public DefaultTaskSchedulerExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
@@ -194,8 +195,8 @@ channel-executor.priority = normal");
         /// <summary>
         /// Initializes a new instance of the <see cref="ForkJoinExecutorServiceFactory"/> class.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The executor configuration, including dedicated thread-pool or fork-join settings.</param>
+        /// <param name="prerequisites">The actor system services required by dispatcher executors.</param>
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if either 'dedicated-thread-pool' OR 'fork-join-executor' is not defined in <paramref name="config"/>.
         /// </exception>
@@ -206,10 +207,10 @@ channel-executor.priority = normal");
         }
 
         /// <summary>
-        /// TBD
+        /// Produces a fork-join executor with the settings loaded from the configuration.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The identifier assigned to the executor.</param>
+        /// <returns>A fork-join executor service.</returns>
         public override ExecutorService Produce(string id)
         {
             return new ForkJoinExecutor(id, _threadPoolConfiguration);
@@ -255,10 +256,10 @@ channel-executor.priority = normal");
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
 
         /// <summary>
-        /// TBD
+        /// Produces a thread-pool executor appropriate for the current trust level.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The identifier assigned to the executor.</param>
+        /// <returns>A full-trust or partial-trust thread-pool executor service.</returns>
         public override ExecutorService Produce(string id)
         {
             if (IsFullTrusted)
@@ -268,10 +269,10 @@ channel-executor.priority = normal");
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a thread-pool executor service factory.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The executor configuration.</param>
+        /// <param name="prerequisites">The actor system services required by dispatcher executors.</param>
         public ThreadPoolExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites) : base(config,
             prerequisites)
         {
@@ -286,8 +287,8 @@ channel-executor.priority = normal");
         /// <summary>
         /// Takes a <see cref="Config"/> object, usually passed in via <see cref="Settings.Config"/>
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The configuration for this dispatcher.</param>
+        /// <param name="prerequisites">The actor system services required by this dispatcher.</param>
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
@@ -311,7 +312,7 @@ channel-executor.priority = normal");
         /// or returns a reference to an existing instance is an implementation detail of the
         /// underlying implementation.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A dispatcher instance configured by this configurator.</returns>
         public abstract MessageDispatcher Dispatcher();
 
         /// <summary>
@@ -324,6 +325,11 @@ channel-executor.priority = normal");
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
             var executor = Config.GetString("executor", null);
+
+            // This switch is also the built-in table for executors: the cases are short aliases rather than
+            // type names, so the trimmer and the Native AOT compiler already see every configurator Akka.NET
+            // ships. Only the default arm - an executor named by type in HOCON - needs reflection, which is
+            // why that is the one branch behind the Akka.DynamicTypeLoading switch.
             switch (executor)
             {
                 case null:
@@ -340,16 +346,27 @@ channel-executor.priority = normal");
                 case "channel-executor":
                     return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
-                    Type executorConfiguratorType = Type.GetType(executor);
-                    if (executorConfiguratorType == null)
-                    {
-                        throw new ConfigurationException(
-                            $"Could not resolve executor service configurator type {executor} for path {Config.GetString("id", "unknown")}");
-                    }
+                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                            $"{Config.GetString("id", "unknown")}.executor", executor, "one of the built-in executors"));
 
-                    var args = new object[] { Config, Prerequisites };
-                    return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
+                    return CreateExecutorServiceConfiguratorFromTypeName(executor, Config, Prerequisites);
             }
+        }
+
+        [RequiresUnreferencedCode("Loads a dispatcher [executor] named in HOCON by name. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
+        private static ExecutorServiceConfigurator CreateExecutorServiceConfiguratorFromTypeName(
+            string executor, Config config, IDispatcherPrerequisites prerequisites)
+        {
+            var executorConfiguratorType = Type.GetType(executor);
+            if (executorConfiguratorType == null)
+            {
+                throw new ConfigurationException(
+                    $"Could not resolve executor service configurator type {executor} for path {config.GetString("id", "unknown")}");
+            }
+
+            var args = new object[] { config, prerequisites };
+            return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
         }
     }
 
@@ -369,7 +386,7 @@ channel-executor.priority = normal");
                 false; // IMPORTANT: make this a compile-time constant so compiler will elide debug code in production
 
         /// <summary>
-        /// TBD
+        /// Tracks actor references by dispatcher for internal dispatcher diagnostics.
         /// </summary>
         internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors =
             new(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
@@ -418,7 +435,7 @@ channel-executor.priority = normal");
         /// <summary>
         ///     Initializes a new instance of the <see cref="MessageDispatcher" /> class.
         /// </summary>
-        /// <param name="configurator">TBD</param>
+        /// <param name="configurator">The configurator that supplies this dispatcher's settings and prerequisites.</param>
         protected MessageDispatcher(MessageDispatcherConfigurator configurator)
         {
             Configurator = configurator;
@@ -680,8 +697,8 @@ channel-executor.priority = normal");
         /// <summary>
         /// Dispatches a user-defined message from a mailbox to an <see cref="ActorCell"/>
         /// </summary>
-        /// <param name="cell">TBD</param>
-        /// <param name="envelope">TBD</param>
+        /// <param name="cell">The actor cell that will process the message.</param>
+        /// <param name="envelope">The user message and sender to enqueue for the actor.</param>
         public virtual void Dispatch(ActorCell cell, Envelope envelope)
         {
             var mbox = cell.Mailbox;
@@ -692,8 +709,8 @@ channel-executor.priority = normal");
         /// <summary>
         /// Dispatches a <see cref="SystemMessage"/> from a mailbox to an <see cref="ActorCell"/>
         /// </summary>
-        /// <param name="cell">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cell">The actor cell that will process the system message.</param>
+        /// <param name="message">The system message to enqueue for the actor.</param>
         public virtual void SystemDispatch(ActorCell cell, SystemMessage message)
         {
             var mbox = cell.Mailbox;

@@ -75,6 +75,8 @@ namespace Akka.DistributedData.Serialization
                 system.Settings.Config.GetBoolean("akka.cluster.sharding.distributed-data.backward-compatible-wire-format");
         }
 
+        /// <inheritdoc />
+        public override int Identifier => 11;
 
         public override byte[] ToBinary(object obj)
         {

@@ -26,6 +26,12 @@ namespace Akka.Serialization
         {
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ByteArraySerializer) ? 4 : base.Identifier;
+
         /// <summary>
         /// Byte arrays preserve their legacy empty manifest for wire compatibility.
         /// </summary>
@@ -89,17 +95,6 @@ namespace Akka.Serialization
             if (obj is byte[] bytes)
                 return bytes;
             throw new NotSupportedException("The object to convert is not a byte array.");
-        }
-
-        /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
-        /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            return bytes;
         }
 
         /// <summary>

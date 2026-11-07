@@ -150,11 +150,10 @@ namespace Akka.Remote.Artery
     ///
     /// <para>
     /// <b>Local-only, documented simplification vs. Pekko (this is the "where you simplify, say so"
-    /// callout).</b> This message is enqueued directly onto an association's own outbound CONTROL
-    /// channel (the SAME mechanism <see cref="ArteryQuarantined"/> uses) purely as a way to get an
-    /// async, in-order instruction into <see cref="SystemMessageDeliveryStage"/>'s single-threaded
-    /// <c>GraphStageLogic</c> from <see cref="ArteryRemoting.Quarantine"/> (a different execution
-    /// context) -- reusing the existing queue plumbing rather than inventing a new callback channel.
+    /// callout).</b> This command can be enqueued onto an association's outbound CONTROL
+    /// channel to request an in-order reset by its single-threaded delivery owner. Local quarantine
+    /// instead resets through observation of atomic association state before replay: it cannot
+    /// depend on a clear reaching the head of a queue containing retained control frames.
     /// <see cref="SystemMessageDeliveryStage"/> intercepts and CONSUMES this message (never forwards
     /// it to <c>Out</c>/the encoder); it never actually reaches the wire in this implementation. Pekko
     /// may send the equivalent across the wire to evict the peer's inbound acker state early; this

@@ -12,15 +12,15 @@ using Akka.Util.Internal;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Creates comparison delegates for FSM state messages in tests.
     /// </summary>
     public static class FSMSpecHelpers
     {
         /// <summary>
-        /// TBD
+        /// Creates a comparer for current-state notifications from FSM actors.
         /// </summary>
-        /// <typeparam name="TS">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TS">The type of the FSM state name.</typeparam>
+        /// <returns>A delegate that compares current-state messages by actor reference and state name.</returns>
         public static Func<object, object, bool> CurrentStateExpector<TS>()
         {
             return (expected, actual) =>
@@ -33,10 +33,10 @@ namespace Akka.TestKit
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a comparer for transition notifications from FSM actors.
         /// </summary>
-        /// <typeparam name="TS">TBD</typeparam>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TS">The type of the FSM state name.</typeparam>
+        /// <returns>A delegate that compares transition messages by actor reference and their source and destination states.</returns>
         public static Func<object, object, bool> TransitionStateExpector<TS>()
         {
             return (expected, actual) =>

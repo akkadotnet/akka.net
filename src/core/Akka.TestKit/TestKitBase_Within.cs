@@ -14,7 +14,7 @@ using Nito.AsyncEx.Synchronous;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Helpers for bounding test execution blocks by minimum and maximum durations.
     /// </summary>
     public abstract partial class TestKitBase
     {
@@ -25,9 +25,9 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        /// <param name="max">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <param name="max">The maximum duration allowed for the action.</param>
+        /// <param name="action">The synchronous action to execute within the time bound.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         public void Within(
             [AutoDilate] TimeSpan max,
@@ -80,11 +80,11 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        /// <param name="min">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="hint">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <param name="min">The minimum duration the action must take.</param>
+        /// <param name="max">The maximum duration allowed for the action.</param>
+        /// <param name="action">The synchronous action to execute within the time bounds.</param>
+        /// <param name="hint">Additional context to include if the duration assertion fails.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
         public void Within(
             TimeSpan min,
@@ -141,12 +141,12 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
-        /// <param name="function">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <typeparam name="T">The value returned by the function.</typeparam>
+        /// <param name="max">The maximum duration allowed for the function.</param>
+        /// <param name="function">The synchronous function to execute within the time bound.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The value returned by <paramref name="function"/>.</returns>
         public T Within<T>(
             [AutoDilate] TimeSpan max,
             Func<T> function,
@@ -170,12 +170,12 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="max">TBD</param>
-        /// <param name="function">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <typeparam name="T">The value returned by the asynchronous function.</typeparam>
+        /// <param name="max">The maximum duration allowed for the function.</param>
+        /// <param name="function">The asynchronous function to execute within the time bound.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the value returned by <paramref name="function"/>.</returns>
         public Task<T> WithinAsync<T>(
             [AutoDilate] TimeSpan max,
             Func<Task<T>> function,
@@ -198,14 +198,14 @@ namespace Akka.TestKit
         /// the innermost enclosing `within` block.</para>
         /// <remarks>Note that the max duration is scaled using <see cref="Dilated(TimeSpan)"/> which uses the config value "akka.test.timefactor"</remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="min">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="function">TBD</param>
-        /// <param name="hint">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <typeparam name="T">The value returned by the function.</typeparam>
+        /// <param name="min">The minimum duration the function must take.</param>
+        /// <param name="max">The maximum duration allowed for the function.</param>
+        /// <param name="function">The synchronous function to execute within the time bounds.</param>
+        /// <param name="hint">Additional context to include if the duration assertion fails.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>The value returned by <paramref name="function"/>.</returns>
         public T Within<T>(
             TimeSpan min,
             [AutoDilate] TimeSpan max,
@@ -240,14 +240,14 @@ namespace Akka.TestKit
         /// </para>
         /// </remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="min">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="function">TBD</param>
-        /// <param name="hint">TBD</param>
-        /// <param name="epsilonValue">TBD</param>
+        /// <typeparam name="T">The value returned by the asynchronous function.</typeparam>
+        /// <param name="min">The minimum duration the function must take.</param>
+        /// <param name="max">The maximum duration allowed for the function.</param>
+        /// <param name="function">The asynchronous function to execute within the time bounds.</param>
+        /// <param name="hint">Additional context to include if the duration assertion fails.</param>
+        /// <param name="epsilonValue">The allowed tolerance beyond the maximum duration; the elapsed-time check is skipped when a preceding <c>ReceiveWhile</c> operation has set TestKit's no-message state. Null selects the default tolerance.</param>
         /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the value returned by <paramref name="function"/>.</returns>
         public async Task<T> WithinAsync<T>(
             TimeSpan min,
             [AutoDilate] TimeSpan max,

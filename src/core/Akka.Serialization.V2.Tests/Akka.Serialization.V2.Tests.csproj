@@ -6,6 +6,10 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
+    <!-- GeneratedUnionSpec's OrderCancelled is unsealed on purpose: a spec proves an undeclared
+         subtype is rejected at write time. Generator diagnostics ignore #pragma, so the expected
+         AKKASG025 warning on the fields that hold it is suppressed here. -->
+    <NoWarn>$(NoWarn);AKKASG025</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,11 +21,16 @@
     <!-- Supplies the shared xunit3-compatible AkkaSpec base (transitively brings in Akka.TestKit.Xunit) so
          serialization specs can run under the standard TestKit instead of raw ActorSystem.Create. -->
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="$(MicrosoftCodeAnalysisCSharpVersion)" PrivateAssets="all" />
+    <!-- Newer than the generator's own build-time Roslyn ($(MicrosoftCodeAnalysisCSharpVersion)) on
+         purpose: the harness compiles real C# 15 syntax (closed records, unions) with
+         LanguageVersion.Preview, and runs the generator inside that compiler the way a consumer
+         on a newer SDK does. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="$(MicrosoftCodeAnalysisCSharpTestHarnessVersion)" PrivateAssets="all" />
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />

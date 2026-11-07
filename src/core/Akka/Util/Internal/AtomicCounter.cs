@@ -44,7 +44,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Increments the counter and returns the next value
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The incremented counter value.</returns>
         public int Next()
         {
             return Interlocked.Increment(ref _value);
@@ -53,7 +53,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Decrements the counter and returns the next value
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The decremented counter value.</returns>
         public int Decrement()
         {
             return Interlocked.Decrement(ref _value);
@@ -132,25 +132,23 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Returns current counter value and sets a new value on it's place in one operation.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">The value to store in the counter.</param>
+        /// <returns>The counter value before it was replaced.</returns>
         public int GetAndSet(int value)
         {
             return Interlocked.Exchange(ref _value, value);
         }
 
         /// <summary>
-        /// Compares current counter value with provided <paramref name="expected"/> value,
-        /// and sets it to <paramref name="newValue"/> if compared values where equal.
-        /// Returns true if replacement has succeed.
+        /// Attempts to replace <paramref name="expected"/> with <paramref name="newValue"/>.
+        /// The returned comparison uses the value read from the counter after the atomic exchange, so it does not reliably indicate whether the expected value matched.
         /// </summary>
-        /// <param name="expected">TBD</param>
-        /// <param name="newValue">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="expected">The value that the atomic exchange compares against.</param>
+        /// <param name="newValue">The value to store if the comparison matches.</param>
+        /// <returns><c>true</c> when the value returned by the atomic exchange differs from the subsequent read of the counter; otherwise, <c>false</c>.</returns>
         public bool CompareAndSet(int expected, int newValue)
         {
             return Interlocked.CompareExchange(ref _value, newValue, expected) != _value;
         }
     }
 }
-

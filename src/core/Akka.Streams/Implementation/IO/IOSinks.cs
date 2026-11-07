@@ -31,15 +31,15 @@ namespace Akka.Streams.Implementation.IO
         private readonly FlushSignaler _flushSignaler;
 
         /// <summary>
-        /// TBD
+        /// Creates a file sink module that writes incoming byte sequences.
         /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="fileMode">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="autoFlush"></param>
-        /// <param name="flushSignaler"></param>
+        /// <param name="f">The file to write.</param>
+        /// <param name="startPosition">The byte position at which writing starts.</param>
+        /// <param name="fileMode">The mode used to open or create the file.</param>
+        /// <param name="attributes">The attributes attached to this sink module.</param>
+        /// <param name="shape">The sink shape that receives byte sequences.</param>
+        /// <param name="autoFlush">Whether to flush after each received element.</param>
+        /// <param name="flushSignaler">Optional signaler that can request a file flush.</param>
         public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ReadOnlySequence<byte>> shape, bool autoFlush, FlushSignaler flushSignaler) : base(shape)
         {
             _f = f;
@@ -53,38 +53,38 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes attached to this sink module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// The diagnostic label for this file sink.
         /// </summary>
         protected override string Label { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy of this module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to attach to the copy.</param>
+        /// <returns>A file sink module with the supplied attributes and an amended shape.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new FileSink(_f, _startPosition, _fileMode, attributes, AmendShape(attributes), _autoFlush, _flushSignaler);
 
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this module with a replacement shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The sink shape for the copy.</param>
+        /// <returns>A file sink module with the supplied shape.</returns>
         protected override SinkModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlySequence<byte>> shape)
             => new FileSink(_f, _startPosition, _fileMode, Attributes, shape, _autoFlush, _flushSignaler);
 
         /// <summary>
-        /// TBD
+        /// Materializes the file subscriber actor and returns its Reactive Streams subscriber.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
+        /// <param name="materializer">Receives the task completed with the file write result.</param>
+        /// <returns>The subscriber that forwards incoming elements to the file actor.</returns>
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);
@@ -115,12 +115,12 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _autoFlush;
 
         /// <summary>
-        /// TBD
+        /// Creates an output-stream sink module.
         /// </summary>
-        /// <param name="createOutput">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="shape">TBD</param>
-        /// <param name="autoFlush">TBD</param>
+        /// <param name="createOutput">Creates the stream that receives the sink's bytes.</param>
+        /// <param name="attributes">The attributes attached to this sink module.</param>
+        /// <param name="shape">The sink shape that receives byte sequences.</param>
+        /// <param name="autoFlush">Whether to flush after each received element.</param>
         public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ReadOnlySequence<byte>> shape, bool autoFlush) : base(shape)
         {
             _createOutput = createOutput;
@@ -129,32 +129,32 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The attributes attached to this sink module.
         /// </summary>
         public override Attributes Attributes { get; }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy of this module with the supplied attributes.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to attach to the copy.</param>
+        /// <returns>An output-stream sink module with the supplied attributes and an amended shape.</returns>
         public override IModule WithAttributes(Attributes attributes)
             => new OutputStreamSink(_createOutput, attributes, AmendShape(attributes), _autoFlush);
 
         /// <summary>
-        /// TBD
+        /// Creates a copy of this module with a replacement shape.
         /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="shape">The sink shape for the copy.</param>
+        /// <returns>An output-stream sink module with the supplied shape.</returns>
         protected override SinkModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlySequence<byte>> shape)
             => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
         /// <summary>
-        /// TBD
+        /// Creates the output stream, materializes its subscriber actor, and returns the subscriber.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="materializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="context">The materialization context containing the materializer and effective attributes.</param>
+        /// <param name="materializer">Receives the task completed with the output-stream write result.</param>
+        /// <returns>The subscriber that forwards incoming elements to the output-stream actor.</returns>
         public override object Create(MaterializationContext context, out Task<IOResult> materializer)
         {
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);

@@ -10,7 +10,7 @@ using System;
 namespace Akka.Streams.Supervision
 {
     /// <summary>
-    /// TBD
+    /// Action a stream stage takes when its decider handles an exception from element processing.
     /// </summary>
     public enum Directive
     {
@@ -33,27 +33,27 @@ namespace Akka.Streams.Supervision
     }
 
     /// <summary>
-    /// TBD
+    /// Maps an element-processing exception to a supervision directive.
     /// </summary>
-    /// <param name="cause">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="cause">Exception thrown while processing a stream element.</param>
+    /// <returns>The directive that determines how the stream stage handles the exception.</returns>
     public delegate Directive Decider(Exception cause);
 
     /// <summary>
-    /// TBD
+    /// Predefined supervision deciders for stopping, resuming, or restarting a stage.
     /// </summary>
     public static class Deciders
     {
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Directive.Stop"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider StoppingDecider = _ => Directive.Stop;
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Directive.Resume"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider ResumingDecider = _ => Directive.Resume;
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Directive.Restart"/> for any exception; a stage that supports supervision applies the directive.
         /// </summary>
         public static readonly Decider RestartingDecider = _ => Directive.Restart;
     }

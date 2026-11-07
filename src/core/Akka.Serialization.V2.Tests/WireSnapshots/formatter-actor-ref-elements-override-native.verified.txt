@@ -1,0 +1,25 @@
+﻿case: formatter-actor-ref-elements-override-native
+message-type: RefPositions
+manifest: ref-positions-v1
+serializer-id: 122001
+byte-count: 295
+
+0000  85 01 91 92 a3 72 65 66  d9 31 61 6b 6b 61 3a 2f  |.....ref.1akka:/|
+0010  2f 77 69 72 65 2d 66 6f  72 6d 61 74 2d 73 6e 61  |/wire-format-sna|
+0020  70 73 68 6f 74 2d 66 6f  72 6d 61 74 74 65 72 2f  |pshot-formatter/|
+0030  64 65 61 64 4c 65 74 74  65 72 73 02 91 92 a3 72  |deadLetters....r|
+0040  65 66 d9 31 61 6b 6b 61  3a 2f 2f 77 69 72 65 2d  |ef.1akka://wire-|
+0050  66 6f 72 6d 61 74 2d 73  6e 61 70 73 68 6f 74 2d  |format-snapshot-|
+0060  66 6f 72 6d 61 74 74 65  72 2f 64 65 61 64 4c 65  |formatter/deadLe|
+0070  74 74 65 72 73 03 81 a2  64 6c 92 a3 72 65 66 d9  |tters...dl..ref.|
+0080  31 61 6b 6b 61 3a 2f 2f  77 69 72 65 2d 66 6f 72  |1akka://wire-for|
+0090  6d 61 74 2d 73 6e 61 70  73 68 6f 74 2d 66 6f 72  |mat-snapshot-for|
+00a0  6d 61 74 74 65 72 2f 64  65 61 64 4c 65 74 74 65  |matter/deadLette|
+00b0  72 73 04 81 92 a3 72 65  66 d9 31 61 6b 6b 61 3a  |rs....ref.1akka:|
+00c0  2f 2f 77 69 72 65 2d 66  6f 72 6d 61 74 2d 73 6e  |//wire-format-sn|
+00d0  61 70 73 68 6f 74 2d 66  6f 72 6d 61 74 74 65 72  |apshot-formatter|
+00e0  2f 64 65 61 64 4c 65 74  74 65 72 73 01 05 91 92  |/deadLetters....|
+00f0  a3 72 65 66 d9 31 61 6b  6b 61 3a 2f 2f 77 69 72  |.ref.1akka://wir|
+0100  65 2d 66 6f 72 6d 61 74  2d 73 6e 61 70 73 68 6f  |e-format-snapsho|
+0110  74 2d 66 6f 72 6d 61 74  74 65 72 2f 64 65 61 64  |t-formatter/dead|
+0120  4c 65 74 74 65 72 73                              |Letters|

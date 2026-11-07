@@ -12,7 +12,9 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Remote.Artery;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 
@@ -438,6 +440,169 @@ namespace Akka.Remote.Tests.Artery
 
             var deserialized = Sys.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, decoded.TryGetManifest(out var m) ? m : string.Empty);
             Assert.Equal(message, deserialized);
+        }
+
+        [Theory(DisplayName = "Should_restore_transport_context_and_release_buffer_When_encoding_succeeds_or_fails")]
+        [InlineData(0, false)]
+        [InlineData(0, true)]
+        [InlineData(1, false)]
+        [InlineData(1, true)]
+        [InlineData(2, false)]
+        [InlineData(2, true)]
+        public void Should_restore_transport_context_and_release_buffer_When_encoding_succeeds_or_fails(int context, bool fail)
+        {
+            var system = (ExtendedActorSystem)Sys;
+            var serializer = new ContextCheckingSerializer(system, fail);
+            Sys.Serialization.AddSerializer("context-checking", serializer);
+            Sys.Serialization.AddSerializationMap(typeof(ContextMessage), serializer);
+            var pool = new TrackingArrayPool();
+            var saved = Akka.Serialization.Serialization.CurrentTransportInformation;
+            var previous = context switch
+            {
+                0 => null,
+                1 => system.Provider.SerializationInformation,
+                _ => new Information(new Address("akka", "outer", "localhost", 1234), Sys)
+            };
+
+            try
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = previous;
+                if (fail)
+                {
+                    var exception = Assert.Throws<InvalidOperationException>(() =>
+                        ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, "sender", "recipient", new ContextMessage(), pool));
+                    Assert.Same(serializer.Failure, exception);
+                }
+                else
+                {
+                    using var writer = ArteryEnvelopeCodec.Encode(
+                        Sys.Serialization, 42L, "sender", "recipient", new ContextMessage(), pool);
+                    var expected = new byte[ArteryEnvelopeCodec.MaxEncodedSize("sender", "recipient", "ctx", 1)];
+                    var length = ArteryEnvelopeCodec.Encode(expected, 42L, serializer.Identifier,
+                        "sender", "recipient", "ctx", new byte[] { 0x42 });
+                    Assert.Equal(expected.AsSpan(0, length).ToArray(), writer.WrittenMemory.ToArray());
+                }
+
+                Assert.Same(previous, Akka.Serialization.Serialization.CurrentTransportInformation);
+                Assert.Equal(1, pool.Rents);
+                Assert.Equal(pool.Rents, pool.Returns);
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = saved;
+            }
+        }
+
+        [Theory(DisplayName = "Should_preserve_UTF8_wire_bytes_When_metadata_contains_unicode_or_unpaired_surrogates")]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void Should_preserve_UTF8_wire_bytes_When_metadata_contains_unicode_or_unpaired_surrogates(int kind)
+        {
+            var literal = kind switch
+            {
+                0 => "Ω送😀",
+                1 => "\ud800",
+                _ => "\udc00"
+            };
+            var expectedBytes = kind == 0
+                ? new byte[] { 0xCE, 0xA9, 0xE9, 0x80, 0x81, 0xF0, 0x9F, 0x98, 0x80 }
+                : new byte[] { 0xEF, 0xBF, 0xBD };
+            var serializer = new ContextCheckingSerializer((ExtendedActorSystem)Sys, false, literal);
+            Sys.Serialization.AddSerializer("unicode-metadata", serializer);
+            Sys.Serialization.AddSerializationMap(typeof(ContextMessage), serializer);
+
+            using var writer = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, literal, literal, new ContextMessage());
+            var explicitFrame = new byte[ArteryEnvelopeCodec.MaxEncodedSize(literal, literal, literal, 1)];
+            var length = ArteryEnvelopeCodec.Encode(explicitFrame, 42L, serializer.Identifier,
+                literal, literal, literal, new byte[] { 0x42 });
+            Assert.Equal(explicitFrame.AsSpan(0, length).ToArray(), writer.WrittenSpan.ToArray());
+
+            // Independent expected UTF-8 bytes pin replacement fallback and supplementary characters.
+            // Every literal is [u16 LE byte count][bytes], immediately following the fixed header.
+            var cursor = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.Equal(expectedBytes.Length, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(cursor, 2)));
+                cursor += 2;
+                Assert.Equal(expectedBytes, writer.WrittenSpan.Slice(cursor, expectedBytes.Length).ToArray());
+                cursor += expectedBytes.Length;
+            }
+            Assert.Equal(cursor + 1, writer.WrittenCount);
+            Assert.Equal(0x42, writer.WrittenSpan[cursor]);
+        }
+
+        [Theory(DisplayName = "Should_enforce_literal_byte_limit_When_metadata_uses_multibyte_UTF8")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_enforce_literal_byte_limit_When_metadata_uses_multibyte_UTF8(bool oversized)
+        {
+            var literal = new string('Ω', 32767) + (oversized ? "Ω" : "a");
+            if (oversized)
+            {
+                Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Encode(
+                    new byte[70000], 42L, 4, literal, null, string.Empty, ReadOnlySpan<byte>.Empty));
+                Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Encode(
+                    Sys.Serialization, 42L, literal, null, Array.Empty<byte>()));
+                return;
+            }
+
+            using var writer = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, literal, null, Array.Empty<byte>());
+            var explicitFrame = new byte[ArteryEnvelopeCodec.MaxEncodedSize(literal, null, string.Empty, 0)];
+            ArteryEnvelopeCodec.Encode(explicitFrame, 42L, 4, literal, null, string.Empty, ReadOnlySpan<byte>.Empty);
+            Assert.Equal(explicitFrame, writer.WrittenSpan.ToArray());
+            Assert.Equal(ushort.MaxValue, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(36, 2)));
+            var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(writer.WrittenMemory.Slice(4)));
+            Assert.True(decoded.TryGetSenderPath(out var sender));
+            Assert.Equal(literal, sender);
+        }
+
+        private sealed class ContextMessage
+        {
+        }
+
+        private sealed class ContextCheckingSerializer(ExtendedActorSystem system, bool fail, string manifest = "ctx") : SerializerV2(system)
+        {
+            public override int Identifier => 987654;
+            public InvalidOperationException Failure { get; } = new("serializer failed after writing");
+
+            public override string Manifest(object obj)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                return manifest;
+            }
+
+            public override int SizeHint(object obj)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                return 1;
+            }
+
+            public override int Serialize(object obj, IBufferWriter<byte> writer)
+            {
+                Assert.Same(system.Provider.SerializationInformation, Akka.Serialization.Serialization.GetCurrentTransportInformation());
+                writer.GetSpan(1)[0] = 0x42;
+                writer.Advance(1);
+                if (fail)
+                    throw Failure;
+                return 1;
+            }
+
+            public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => new ContextMessage();
+        }
+
+        private sealed class TrackingArrayPool : ArrayPool<byte>
+        {
+            public int Rents { get; private set; }
+            public int Returns { get; private set; }
+
+            public override byte[] Rent(int minimumLength)
+            {
+                Rents++;
+                return new byte[minimumLength];
+            }
+
+            public override void Return(byte[] array, bool clearArray = false) => Returns++;
         }
     }
 }

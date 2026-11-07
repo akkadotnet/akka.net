@@ -25,10 +25,10 @@ public class TestEventListener : DefaultLogger
     private readonly List<IEventFilter> _filters = new();
 
     /// <summary>
-    /// TBD
+    /// Handles logger initialization, filter installation/removal, and log events.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">The message delivered to the logger actor.</param>
+    /// <returns><c>true</c>, indicating that the message was handled.</returns>
     protected override bool Receive(object message)
     {
         switch (message)

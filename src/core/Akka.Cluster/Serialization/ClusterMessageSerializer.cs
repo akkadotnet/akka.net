@@ -72,6 +72,12 @@ namespace Akka.Cluster.Serialization
            
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterMessageSerializer) ? 5 : base.Identifier;
+
         public override byte[] ToBinary(object obj)
         {
             switch (obj)

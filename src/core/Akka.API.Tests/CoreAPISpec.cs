@@ -16,6 +16,8 @@ using Akka.Persistence.Query;
 using PublicApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
+using Akka.Persistence.Embedded.Hosting;
+using Akka.Persistence.Embedded.Journal;
 using Akka.Persistence.Query.InMemory;
 using Akka.Streams;
 using Akka.TestKit;
@@ -65,6 +67,18 @@ namespace Akka.API.Tests
         public Task ApprovePersistenceQuery()
         {
             return VerifyAssembly<PersistenceQuery>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceEmbedded()
+        {
+            return VerifyAssembly<SqliteWriteJournal>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceEmbeddedHosting()
+        {
+            return VerifyAssembly<EmbeddedJournalOptions>();
         }
 
         [Fact]
@@ -132,6 +146,36 @@ namespace Akka.API.Tests
         public Task ApproveTestKitXunit2()
         {
             return VerifyAssembly<TestKit.Xunit2.TestKit>();
+        }
+
+        [Fact]
+        public Task ApproveHosting()
+        {
+            return VerifyAssembly<Hosting.ActorRegistry>();
+        }
+
+        [Fact]
+        public Task ApproveRemoteHosting()
+        {
+            return VerifyAssembly<Remote.Hosting.RemoteOptions>();
+        }
+
+        [Fact]
+        public Task ApproveClusterHosting()
+        {
+            return VerifyAssembly<Cluster.Hosting.SBR.SplitBrainResolverOption>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceHosting()
+        {
+            return VerifyAssembly<Persistence.Hosting.JournalOptions>();
+        }
+
+        [Fact]
+        public Task ApproveHostingTestKit()
+        {
+            return VerifyAssembly<global::Akka.Hosting.TestKit.TestKit>();
         }
     }
 }

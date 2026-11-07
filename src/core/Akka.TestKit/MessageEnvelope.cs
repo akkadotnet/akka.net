@@ -10,17 +10,17 @@ using Akka.Actor;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Represents a received message together with the actor that sent it.
     /// </summary>
     public abstract class MessageEnvelope   //this is called Message in Akka JVM
     {
         /// <summary>
-        /// TBD
+        /// Gets the received message.
         /// </summary>
         public abstract object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the sender of the received message.
         /// </summary>
         public abstract IActorRef Sender { get; }
     }

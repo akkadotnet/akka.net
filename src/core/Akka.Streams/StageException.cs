@@ -11,7 +11,7 @@ using System.Runtime.Serialization;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Exception raised when a stream operation requires an element but the stream contains none.
     /// </summary>
     public class NoSuchElementException : Exception
     {

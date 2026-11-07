@@ -21,25 +21,25 @@ namespace Akka.Streams
     var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
 #>
     /// <summary>
-    /// TBD
+    /// A typed fan-out shape with one input and a fixed set of typed outputs.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted by the input port.</typeparam>
 <# for (int t = 0; t < i; t++) {  #>
-    /// <typeparam name="T<#= t #>">TBD</typeparam>
+    /// <typeparam name="T<#= t #>">The element type emitted by output outlet <c>Out<#= t #></c>.</typeparam>
 <# } #>
     public class FanOutShape<TIn, <#= typeParams #>> : FanOutShape<TIn>
     {
 <# for (int t = 0; t < i; t++) {  #>
         /// <summary>
-        /// TBD
+        /// Output outlet <c>Out<#= t #></c> with element type <typeparamref name="T<#= t #>"/>.
         /// </summary>
         public readonly Outlet<T<#= t #>> Out<#= t #>;
 <# } #>
 
         /// <summary>
-        /// TBD
+        /// Creates the shape with ports supplied by <paramref name="init"/>.
         /// </summary>
-        /// <param name="init">TBD</param>
+        /// <param name="init">The input and any pre-registered outlets used to initialize the shape.</param>
         public FanOutShape(IInit init) : base(init)
         {
 <# for (int t = 0; t < i; t++) {  #>
@@ -48,25 +48,25 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the shape with a generated input, typed output outlets, and the specified port-name prefix.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name used as the prefix for ports created by this shape.</param>
         public FanOutShape(string name) : this(new InitName(name)) { }
         /// <summary>
-        /// TBD
+        /// Creates the shape from an input port and its typed output ports.
         /// </summary>
-        /// <param name="inlet">TBD</param>
+        /// <param name="inlet">The input port carrying <typeparamref name="TIn"/> elements.</param>
 <# for (int t = 0; t < i; t++) {  #>
-        /// <param name="out<#= t #>">TBD</param>
+        /// <param name="out<#= t #>">The output port carrying <typeparamref name="T<#= t #>"/> elements.</param>
 <# } #>
         public FanOutShape(Inlet<TIn> inlet, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("Outlet<T{0}> out{0}", x))) #>) 
             : this(new InitPorts(inlet, new Outlet[] { <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "out"+x)) #> })) { }
 
         /// <summary>
-        /// TBD
+        /// Creates another shape of this type using the supplied initialized ports.
         /// </summary>
-        /// <param name="init">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="init">The input and outlets to use for the new shape.</param>
+        /// <returns>A fan-out shape with the same number and types of ports.</returns>
         protected override FanOutShape<TIn> Construct(IInit init)
         {
             return new FanOutShape<TIn, <#= typeParams #>>(init);

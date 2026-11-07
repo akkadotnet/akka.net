@@ -20,19 +20,19 @@ namespace Akka.Cluster.Tools.Client
     public sealed class ClusterClientReceptionist : IExtension
     {
         /// <summary>
-        /// TBD
+        /// Loads the default cluster client receptionist configuration.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>Default HOCON configuration from the Cluster Tools client reference resource.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterClient>("Akka.Cluster.Tools.Client.reference.conf");
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the cluster client receptionist extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system that owns the receptionist extension.</param>
+        /// <returns>The receptionist extension for the actor system.</returns>
         public static ClusterClientReceptionist Get(ActorSystem system)
         {
             return system.WithExtension<ClusterClientReceptionist, ClusterClientReceptionistExtensionProvider>();
@@ -44,9 +44,9 @@ namespace Akka.Cluster.Tools.Client
         private readonly IActorRef _receptionist;
 
         /// <summary>
-        /// TBD
+        /// Initializes the extension and starts its receptionist actor when this member is eligible under the configured role.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">Actor system where the receptionist is configured.</param>
         public ClusterClientReceptionist(ExtendedActorSystem system)
         {
             _system = system;
@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Client
         /// <see cref="Send"/> or <see cref="SendToAll"/> using the path elements 
         /// of the <see cref="IActorRef"/>, e.g. "/user/myservice".
         /// </summary>
-        /// <param name="actorRef">TBD</param>
+        /// <param name="actorRef">Actor to register as a service reachable by cluster clients.</param>
         public void RegisterService(IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Put(actorRef));
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tools.Client
         /// A registered actor will be automatically unregistered when terminated, 
         /// but it can also be explicitly unregistered before termination.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
+        /// <param name="actorRef">Previously registered service actor to remove.</param>
         public void UnregisterService(IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Remove(actorRef.Path.ToStringWithoutAddress()));
@@ -105,8 +105,8 @@ namespace Akka.Cluster.Tools.Client
         /// published messages.
         /// The client can publish messages to this topic with <see cref="Publish"/>.
         /// </summary>
-        /// <param name="topic">TBD</param>
-        /// <param name="actorRef">TBD</param>
+        /// <param name="topic">Topic to which the actor subscribes.</param>
+        /// <param name="actorRef">Actor that will receive messages published to the topic.</param>
         public void RegisterSubscriber(string topic, IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Subscribe(topic, actorRef));
@@ -116,8 +116,8 @@ namespace Akka.Cluster.Tools.Client
         /// A registered subscriber will be automatically unregistered when terminated, 
         /// but it can also be explicitly unregistered before termination.
         /// </summary>
-        /// <param name="topic">TBD</param>
-        /// <param name="actorRef">TBD</param>
+        /// <param name="topic">Topic from which the actor should be unsubscribed.</param>
+        /// <param name="actorRef">Previously registered subscriber actor to remove.</param>
         public void UnregisterSubscriber(string topic, IActorRef actorRef)
         {
             PubSubMediator.Tell(new PublishSubscribe.Unsubscribe(topic, actorRef));
@@ -153,15 +153,15 @@ namespace Akka.Cluster.Tools.Client
     }
 
     /// <summary>
-    /// TBD
+    /// Extension provider that creates a cluster client receptionist for an actor system.
     /// </summary>
     public sealed class ClusterClientReceptionistExtensionProvider : ExtensionIdProvider<ClusterClientReceptionist>
     {
         /// <summary>
-        /// TBD
+        /// Creates the receptionist extension for the supplied actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system that owns the extension.</param>
+        /// <returns>The initialized receptionist extension.</returns>
         public override ClusterClientReceptionist CreateExtension(ExtendedActorSystem system)
         {
             return new ClusterClientReceptionist(system);

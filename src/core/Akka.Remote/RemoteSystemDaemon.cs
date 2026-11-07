@@ -98,8 +98,8 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
-        /// <param name="terminator">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="terminator">The actor that receives <see cref="TerminationHookDone"/> after this daemon has no children.</param>
+        /// <param name="log">The logger used by this daemon.</param>
         public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent,IActorRef terminator, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
@@ -203,9 +203,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Handles death-watch notifications for remote-deployed actors and forwards other system messages to the base container.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to send.</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is DeathWatchNotification deathWatchNotification)
@@ -356,4 +356,3 @@ namespace Akka.Remote
         }
     }
 }
-

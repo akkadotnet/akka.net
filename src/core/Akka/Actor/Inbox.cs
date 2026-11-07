@@ -16,36 +16,36 @@ using Akka.Configuration;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Describes a pending request for one or more messages from an inbox actor.
     /// </summary>
     internal interface IQuery
     {
         /// <summary>
-        /// TBD
+        /// The monotonic-clock deadline after which this query expires.
         /// </summary>
         TimeSpan Deadline { get; }
         /// <summary>
-        /// TBD
+        /// The actor reference that will receive the query result.
         /// </summary>
         IActorRef Client { get; }
         /// <summary>
-        /// TBD
+        /// Returns this query with a client reference for delivering its result.
         /// </summary>
-        /// <param name="client">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="client">The actor that requested the query.</param>
+        /// <returns>A query with the same deadline and selection criteria and the supplied client.</returns>
         IQuery WithClient(IActorRef client);
     }
 
     /// <summary>
-    /// TBD
+    /// A request to receive the next message before a deadline.
     /// </summary>
     internal struct Get : IQuery
     {
         /// <summary>
-        /// TBD
+        /// Creates a request to receive the next inbox message.
         /// </summary>
-        /// <param name="deadline">TBD</param>
-        /// <param name="client">TBD</param>
+        /// <param name="deadline">The monotonic-clock deadline for the request.</param>
+        /// <param name="client">The actor to receive the message, or <c>null</c> until the inbox actor records the sender.</param>
         public Get(TimeSpan deadline, IActorRef client = null)
             : this()
         {
@@ -54,18 +54,18 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The deadline by which a message must be received.
         /// </summary>
         public TimeSpan Deadline { get; private set; }
         /// <summary>
-        /// TBD
+        /// The actor that will receive the selected message.
         /// </summary>
         public IActorRef Client { get; private set; }
         /// <summary>
-        /// TBD
+        /// Copies this request with a different result recipient.
         /// </summary>
-        /// <param name="client">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="client">The actor to receive the selected message.</param>
+        /// <returns>A request with the same deadline and the supplied client.</returns>
         public IQuery WithClient(IActorRef client)
         {
             return new Get(Deadline, client);
@@ -73,16 +73,16 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// A request to receive the next inbox message matching a predicate before a deadline.
     /// </summary>
     internal struct Select : IQuery
     {
         /// <summary>
-        /// TBD
+        /// Creates a request to receive a message matching a predicate.
         /// </summary>
-        /// <param name="deadline">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="client">TBD</param>
+        /// <param name="deadline">The monotonic-clock deadline for the request.</param>
+        /// <param name="predicate">The predicate a message must satisfy to be selected.</param>
+        /// <param name="client">The actor to receive the message, or <c>null</c> until the inbox actor records the sender.</param>
         public Select(TimeSpan deadline, Predicate<object> predicate, IActorRef client = null)
             : this()
         {
@@ -92,22 +92,22 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The deadline by which a matching message must be received.
         /// </summary>
         public TimeSpan Deadline { get; private set; }
         /// <summary>
-        /// TBD
+        /// The predicate used to select a message.
         /// </summary>
         public Predicate<object> Predicate { get; set; }
         /// <summary>
-        /// TBD
+        /// The actor that will receive the selected message.
         /// </summary>
         public IActorRef Client { get; private set; }
         /// <summary>
-        /// TBD
+        /// Copies this request with a different result recipient.
         /// </summary>
-        /// <param name="client">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="client">The actor to receive the selected message.</param>
+        /// <returns>A request with the same deadline and predicate and the supplied client.</returns>
         public IQuery WithClient(IActorRef client)
         {
             return new Select(Deadline, Predicate, client);
@@ -115,15 +115,15 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// A request for the inbox actor to begin watching a target actor.
     /// </summary>
     internal struct StartWatch
     {
         /// <summary>
-        /// TBD
+        /// Creates a watch request, optionally carrying a custom termination message.
         /// </summary>
-        /// <param name="target">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="target">The actor to monitor.</param>
+        /// <param name="message">The message to deliver on termination, or <c>null</c> to receive <see cref="Terminated"/>.</param>
         public StartWatch(IActorRef target, object message)
             : this()
         {
@@ -132,7 +132,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor whose termination the inbox will monitor.
         /// </summary>
         public IActorRef Target { get; private set; }
 
@@ -143,14 +143,14 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// A request for the inbox actor to stop watching a target actor.
     /// </summary>
     internal struct StopWatch
     {
         /// <summary>
-        /// TBD
+        /// Creates a request to stop watching the specified actor.
         /// </summary>
-        /// <param name="target">TBD</param>
+        /// <param name="target">The actor to stop monitoring.</param>
         public StopWatch(IActorRef target) 
             : this()
         {
@@ -158,7 +158,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor the inbox will stop monitoring.
         /// </summary>
         public IActorRef Target { get; private set; }
     }
@@ -166,9 +166,9 @@ namespace Akka.Actor
     internal struct Kick { }
 
     /// <summary>
-    /// TBD
+    /// A linked-list-backed queue used by the inbox actor to remove messages by predicate.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of items stored in the queue.</typeparam>
     [Serializable]
     internal class InboxQueue<T> : ICollection<T>
     {
@@ -191,16 +191,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Appends an item to the end of the queue.
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to append.</param>
         public void Add(T item)
         {
             _inner.AddLast(item);
         }
 
         /// <summary>
-        /// TBD
+        /// Removes all items from the queue.
         /// </summary>
         public void Clear()
         {
@@ -208,40 +208,40 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the queue contains the specified item.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The item to find.</param>
+        /// <returns><c>true</c> if the item is in the queue; otherwise, <c>false</c>.</returns>
         public bool Contains(T item)
         {
             return _inner.Contains(item);
         }
 
         /// <summary>
-        /// TBD
+        /// Copies the queue's items to an array starting at the specified index.
         /// </summary>
-        /// <param name="array">TBD</param>
-        /// <param name="arrayIndex">TBD</param>
+        /// <param name="array">The destination array.</param>
+        /// <param name="arrayIndex">The zero-based index in <paramref name="array"/> at which copying begins.</param>
         public void CopyTo(T[] array, int arrayIndex)
         {
             _inner.CopyTo(array, arrayIndex);
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the first occurrence of the specified item.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The item to remove.</param>
+        /// <returns><c>true</c> if an item was removed; otherwise, <c>false</c>.</returns>
         public bool Remove(T item)
         {
             return _inner.Remove(item);
         }
 
         /// <summary>
-        /// TBD
+        /// Removes items from the head of the queue until an item satisfies the predicate.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="predicate">The predicate that stops removal when it returns <c>true</c>.</param>
+        /// <returns>The number of items removed from the head of the queue.</returns>
         public int RemoveAll(Predicate<T> predicate)
         {
             var i = 0;
@@ -311,7 +311,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Compares pending inbox queries by their monotonic-clock deadline.
     /// </summary>
     internal class DeadlineComparer : IComparer<IQuery>
     {
@@ -347,7 +347,7 @@ namespace Akka.Actor
         /// Receive a next message from current <see cref="IInboxable"/> with default timeout. This call will return immediately,
         /// if the internal actor previously received a message, or will block until it'll receive a message.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The next message received by the inbox.</returns>
         object Receive();
 
         /// <summary>
@@ -355,36 +355,36 @@ namespace Akka.Actor
         /// if the internal actor previously received a message, or will block for time specified by 
         /// <paramref name="timeout"/> until it'll receive a message.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">The maximum time to wait for a message.</param>
+        /// <returns>The next message received by the inbox.</returns>
         object Receive(TimeSpan timeout);
 
         /// <summary>
-        /// TBD
+        /// Waits asynchronously for the next message using the inbox's configured default timeout.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the next message received by the inbox.</returns>
         Task<object> ReceiveAsync();
 
         /// <summary>
-        /// TBD
+        /// Waits asynchronously for the next message until the specified timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">The maximum time to wait for a message.</param>
+        /// <returns>A task that completes with the next message received by the inbox.</returns>
         Task<object> ReceiveAsync(TimeSpan timeout);
 
         /// <summary>
         /// Receive a next message satisfying specified <paramref name="predicate"/> under default timeout.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="predicate">The predicate a message must satisfy.</param>
+        /// <returns>The next message that satisfies <paramref name="predicate"/>.</returns>
         object ReceiveWhere(Predicate<object> predicate);
 
         /// <summary>
         /// Receive a next message satisfying specified <paramref name="predicate"/> under provided <paramref name="timeout"/>.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="predicate">The predicate a message must satisfy.</param>
+        /// <param name="timeout">The maximum time to wait for a matching message.</param>
+        /// <returns>The next message that satisfies <paramref name="predicate"/>.</returns>
         object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout);
 
         /// <summary>
@@ -392,13 +392,13 @@ namespace Akka.Actor
         /// which is sent to a given target actor. It means, that all <paramref name="target"/>'s
         /// replies will be sent to current inbox instead.
         /// </summary>
-        /// <param name="target">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="target">The actor that should receive the message.</param>
+        /// <param name="message">The message to forward with the inbox actor as its sender.</param>
         void Send(IActorRef target, object message);
     }
 
     /// <summary>
-    /// TBD
+    /// Provides synchronous and asynchronous access to messages sent to a private inbox actor.
     /// </summary>
     public class Inbox : IInboxable, IDisposable
     {
@@ -407,10 +407,10 @@ namespace Akka.Actor
         private readonly TimeSpan _defaultTimeout;
 
         /// <summary>
-        /// TBD
+        /// Creates an inbox actor using the inbox settings from the actor system configuration.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that hosts the inbox actor.</param>
+        /// <returns>An inbox configured with the system's inbox size and default timeout.</returns>
         public static Inbox Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.actor.inbox");
@@ -433,7 +433,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor reference used to receive messages and manage watched actors.
         /// </summary>
         public IActorRef Receiver { get; private set; }
         
@@ -441,8 +441,8 @@ namespace Akka.Actor
         /// Make the inbox's actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subject">The actor whose termination should be observed by this inbox.</param>
+        /// <returns>The monitored actor reference.</returns>
         public IActorRef Watch(IActorRef subject)
         {
             Receiver.Tell(new StartWatch(subject, null));
@@ -456,10 +456,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the inbox actor from monitoring the specified actor.
         /// </summary>
-        /// <param name="subject">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="subject">The actor to stop monitoring.</param>
+        /// <returns>The actor reference that is no longer watched.</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
             Receiver.Tell(new StopWatch(subject));
@@ -467,10 +467,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards a message to a target actor with the inbox receiver as sender.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="actorRef">The actor that should receive the message.</param>
+        /// <param name="message">The message to send.</param>
         public void Send(IActorRef actorRef, object message)
         {
             actorRef.Tell(message, Receiver);
@@ -483,7 +483,7 @@ namespace Akka.Actor
         /// <remarks>
         /// Don't use this method within actors, since it block current thread until a message is received.
         /// </remarks>
-        /// <returns>TBD</returns>
+        /// <returns>The next message received by the inbox.</returns>
         public object Receive()
         {
             return Receive(_defaultTimeout);
@@ -497,12 +497,12 @@ namespace Akka.Actor
         /// <remarks>
         /// Don't use this method within actors, since it block current thread until a message is received.
         /// </remarks>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum time to wait for a message.</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown if the inbox received a <see cref="Status.Failure"/> response message or
         /// it didn't receive a response message by the given <paramref name="timeout"/> .
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The next message received by the inbox.</returns>
         public object Receive(TimeSpan timeout)
         {
             var task = ReceiveAsync(timeout);
@@ -510,25 +510,25 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Receives the next message matching the predicate using the inbox's default timeout.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="predicate">The predicate a message must satisfy.</param>
+        /// <returns>The next message that satisfies <paramref name="predicate"/>.</returns>
         public object ReceiveWhere(Predicate<object> predicate)
         {
             return ReceiveWhere(predicate, _defaultTimeout);
         }
 
         /// <summary>
-        /// TBD
+        /// Receives the next message matching the predicate before the specified timeout.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <param name="predicate">The predicate a message must satisfy.</param>
+        /// <param name="timeout">The maximum time to wait for a matching message.</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown if the inbox received a <see cref="Status.Failure"/> response message or
         /// it didn't receive a response message by the given <paramref name="timeout"/> .
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The next message that satisfies <paramref name="predicate"/>.</returns>
         public object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout)
         {
             var task = Receiver.Ask(new Select(_system.Scheduler.MonotonicClock + timeout, predicate), Timeout.InfiniteTimeSpan);
@@ -536,19 +536,19 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Waits asynchronously for the next message using the inbox's configured default timeout.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task that completes with the next message received by the inbox.</returns>
         public Task<object> ReceiveAsync()
         {
             return ReceiveAsync(_defaultTimeout);
         }
 
         /// <summary>
-        /// TBD
+        /// Waits asynchronously for the next message until the specified timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeout">The maximum time to wait for a message.</param>
+        /// <returns>A task that completes with the next message received by the inbox.</returns>
         public Task<object> ReceiveAsync(TimeSpan timeout)
         {
             return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);

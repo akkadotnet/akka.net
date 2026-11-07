@@ -17,9 +17,9 @@ namespace Akka.Routing
     internal class RouterActor : UntypedActor
     {
         /// <summary>
-        /// TBD
+        /// The routed actor cell managed by this router actor.
         /// </summary>
-        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <exception cref="ActorInitializationException">The actor is not running inside a routed actor cell.</exception>
         protected RoutedActorCell Cell { get; }
 
         private IActorRef RoutingLogicController { get; }
@@ -36,9 +36,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Handles routee management requests and forwards other management messages to the configured controller.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The management message to process.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -64,7 +64,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the router actor when its configuration requires it and all routees have been removed.
         /// </summary>
         protected virtual void StopIfAllRouteesRemoved()
         {
@@ -75,14 +75,13 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Leaves child routees intact when the router actor restarts.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">The exception that caused the router actor to restart.</param>
+        /// <param name="message">The message being processed when the failure occurred.</param>
         protected override void PreRestart(Exception cause, object message)
         {
             //do not scrap children
         }
     }
 }
-

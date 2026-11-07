@@ -30,7 +30,7 @@ namespace Akka.Discovery
             /// <summary>
             /// Result of a failed resolve request
             /// </summary>
-            /// <param name="serviceName">TBD</param>
+            /// <param name="serviceName">Name of the service whose lookup failed.</param>
             public Resolved(string serviceName)
             {
                 ServiceName = serviceName;
@@ -40,8 +40,8 @@ namespace Akka.Discovery
             /// <summary>
             /// Result of a successful resolve request
             /// </summary>
-            /// <param name="serviceName">TBD</param>
-            /// <param name="addresses">TBD</param>
+            /// <param name="serviceName">Name of the service that was resolved.</param>
+            /// <param name="addresses">Resolved targets for the service; a <see langword="null"/> value is treated as an empty list.</param>
             public Resolved(string serviceName, IEnumerable<ResolvedTarget> addresses)
             {
                 ServiceName = serviceName;

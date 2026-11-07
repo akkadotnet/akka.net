@@ -22,10 +22,10 @@ namespace Akka.Persistence.Journal
     public struct Tagged
     {
         /// <summary>
-        /// TBD
+        /// Creates a tagged payload from a sequence of tags.
         /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <param name="tags">TBD</param>
+        /// <param name="payload">Event payload to store in the journal.</param>
+        /// <param name="tags">Tags associated with the event.</param>
         public Tagged(object payload, IEnumerable<string> tags)
         {
             Payload = payload;
@@ -33,10 +33,10 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a tagged payload from an immutable set of tags.
         /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <param name="tags">TBD</param>
+        /// <param name="payload">Event payload to store in the journal.</param>
+        /// <param name="tags">Immutable tags associated with the event.</param>
         public Tagged(object payload, IImmutableSet<string> tags)
         {
             Payload = payload;
@@ -44,12 +44,12 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Event payload that the journal stores.
         /// </summary>
         public object Payload { get; }
 
         /// <summary>
-        /// TBD
+        /// Immutable set of tags associated with the event.
         /// </summary>
         public IImmutableSet<string> Tags { get; }
     }

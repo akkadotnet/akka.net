@@ -12,6 +12,10 @@ using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Dsl
 {
+    /// <summary>
+    /// Provides sinks that write stream elements to <see cref="ChannelWriter{T}"/> instances
+    /// or expose a bounded channel through a <see cref="ChannelReader{T}"/>.
+    /// </summary>
     public static class ChannelSink
     {
         /// <summary>
@@ -38,14 +42,18 @@ namespace Akka.Streams.Dsl
 
         /// <summary>
         /// Creates a sink that upon materialization, returns a <see cref="ChannelReader{T}"/> connected with
-        /// this materialized graph. It can then be used to consume events incoming from the graph. It will
-        /// also be completed once upstream completes.
+        /// this materialized graph. The reader can be used to consume events emitted by the graph. The channel
+        /// closes after normal upstream completion, once any pending write has finished. If upstream fails, the
+        /// channel closes with that failure. Buffered elements remain readable; the reader's <see cref="ChannelReader{T}.Completion"/>
+        /// task completes or faults after no more data is available to read.
+        /// When the channel is full, <see cref="BoundedChannelFullMode.Wait"/> waits for space and backpressures
+        /// upstream. The drop modes can discard an incoming or buffered element according to the selected mode.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="bufferSize"></param>
-        /// <param name="singleReader"></param>
-        /// <param name="fullMode"></param>
-        /// <returns></returns>
+        /// <typeparam name="T">The type of elements written to the channel.</typeparam>
+        /// <param name="bufferSize">The maximum number of elements the bounded channel can store.</param>
+        /// <param name="singleReader">Indicates that the caller guarantees at most one read operation at a time.</param>
+        /// <param name="fullMode">The behavior to use when the bounded channel is full.</param>
+        /// <returns>A sink that materializes to a reader for its bounded channel.</returns>
         public static Sink<T, ChannelReader<T>> AsReader<T>(int bufferSize, bool singleReader = false, BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait) =>
             Sink.FromGraph(new ChannelReaderSink<T>(bufferSize, singleReader, fullMode));
         

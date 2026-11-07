@@ -17,36 +17,36 @@ namespace Akka.Remote
     /// Interface for a registry of Akka <see cref="FailureDetector"/>s. New resources are implicitly registered when heartbeat is first
     /// called with the resource given as parameter.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type used to identify a monitored resource.</typeparam>
     public interface IFailureDetectorRegistry<in T>
     {
         /// <summary>
         /// Returns true if the resource is considered to be up and healthy, false otherwise.
         /// For unregistered resources it returns true.
         /// </summary>
-        /// <param name="resource">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resource">The resource whose health is being checked.</param>
+        /// <returns><c>true</c> if the resource is available or is not registered; otherwise, <c>false</c>.</returns>
         bool IsAvailable(T resource);
 
         /// <summary>
         /// Returns true if the failure detector has received any heartbeats and started monitoring
         /// the resource.
         /// </summary>
-        /// <param name="resource">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resource">The resource whose monitoring state is being checked.</param>
+        /// <returns><c>true</c> if at least one heartbeat has started monitoring the resource; otherwise, <c>false</c>.</returns>
         bool IsMonitoring(T resource);
 
         /// <summary>
         /// Records a heartbeat for a resource. If the resource is not yet registered (i.e. this is the first heartbeat) then
         /// is it automatically registered.
         /// </summary>
-        /// <param name="resource">TBD</param>
+        /// <param name="resource">The resource for which to record a heartbeat.</param>
         void Heartbeat(T resource);
 
         /// <summary>
         /// Remove the heartbeat management for a resource
         /// </summary>
-        /// <param name="resource">TBD</param>
+        /// <param name="resource">The resource whose failure detector should be removed.</param>
         void Remove(T resource);
 
         /// <summary>

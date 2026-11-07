@@ -16,39 +16,39 @@ using Akka.Event;
 namespace Akka.Remote.Transport
 {
     /// <summary>
-    /// TBD
+    /// Abstract service provider interface for transports that create logical associations between remote endpoints.
     /// </summary>
     public abstract class Transport
     {
         /// <summary>
-        /// TBD
+        /// Configuration used to initialize this transport, when the implementation exposes it.
         /// </summary>
         public Config Config { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Actor system that owns this transport.
         /// </summary>
         public ActorSystem System { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Scheme identifier used in this transport's addresses.
         /// </summary>
         public virtual string SchemeIdentifier { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Maximum payload size, in bytes, supported by this transport.
         /// </summary>
         public virtual long MaximumPayloadBytes { get; protected set; }
         /// <summary>
-        /// TBD
+        /// Binds the transport and begins accepting inbound association requests.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A task containing the bound address and a completion source for the inbound association listener.</returns>
         public abstract Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen();
 
         /// <summary>
-        /// TBD
+        /// Determines whether this transport can handle associations for the specified address.
         /// </summary>
-        /// <param name="remote">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remote">Address of the remote transport endpoint.</param>
+        /// <returns><see langword="true"/> if this transport is responsible for the address; otherwise <see langword="false"/>.</returns>
         public abstract bool IsResponsibleFor(Address remote);
 
         /// <summary>
@@ -121,16 +121,16 @@ namespace Akka.Remote.Transport
     public sealed class InboundPayload : IHandleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an event carrying a payload received from a remote association.
         /// </summary>
-        /// <param name="payload">TBD</param>
+        /// <param name="payload">Payload bytes received from the remote endpoint.</param>
         public InboundPayload(ByteString payload)
         {
             Payload = payload;
         }
 
         /// <summary>
-        /// TBD
+        /// Payload bytes received from the remote endpoint.
         /// </summary>
         public ByteString Payload { get; private set; }
 
@@ -142,19 +142,19 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// TBD
+    /// Event indicating that an association has closed, with the reason reported by the transport.
     /// </summary>
     public sealed class Disassociated : IHandleEvent, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Disassociation reason reported by the transport.
         /// </summary>
         internal readonly DisassociateInfo Info;
 
         /// <summary>
-        /// TBD
+        /// Creates a disassociation event.
         /// </summary>
-        /// <param name="info">TBD</param>
+        /// <param name="info">Reason the association was disassociated.</param>
         public Disassociated(DisassociateInfo info)
         {
             Info = info;
@@ -167,19 +167,19 @@ namespace Akka.Remote.Transport
     public sealed class UnderlyingTransportError : IHandleEvent
     {
         /// <summary>
-        /// TBD
+        /// Exception reported by the underlying transport.
         /// </summary>
         internal readonly Exception Cause;
         /// <summary>
-        /// TBD
+        /// Descriptive message supplied by the underlying transport.
         /// </summary>
         internal readonly string Message;
 
         /// <summary>
-        /// TBD
+        /// Creates an event describing a non-fatal underlying transport error.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="cause">Exception that caused the transport error.</param>
+        /// <param name="message">Description of the transport error.</param>
         public UnderlyingTransportError(Exception cause, string message)
         {
             Cause = cause;
@@ -193,15 +193,15 @@ namespace Akka.Remote.Transport
     public enum DisassociateInfo
     {
         /// <summary>
-        /// TBD
+        /// Disassociation occurred for an unspecified reason.
         /// </summary>
         Unknown = 0,
         /// <summary>
-        /// TBD
+        /// The association is being closed because an endpoint is shutting down.
         /// </summary>
         Shutdown = 1,
         /// <summary>
-        /// TBD
+        /// The remote endpoint has quarantined this system.
         /// </summary>
         Quarantined = 2
     }
@@ -265,16 +265,16 @@ namespace Akka.Remote.Transport
     public sealed class InboundAssociation : IAssociationEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates an inbound association event.
         /// </summary>
-        /// <param name="association">TBD</param>
+        /// <param name="association">Handle for the newly accepted association.</param>
         public InboundAssociation(AssociationHandle association)
         {
             Association = association;
         }
 
         /// <summary>
-        /// TBD
+        /// Handle for the newly accepted association.
         /// </summary>
         public AssociationHandle Association { get; private set; }
     }

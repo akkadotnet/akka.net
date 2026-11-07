@@ -314,7 +314,19 @@ namespace Akka.Streams
     }
     public static class Construct
     {
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not " +
+            "have compiled it.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which " +
+            "constructor is needed.")]
+        [System.Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT;" +
+            " will be removed in 1.7. Obsolete since v1.6.0")]
         public static object Instantiate(this System.Type genericType, System.Type genericParam, params object[] constructorArgs) { }
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Builds a closed generic type at runtime with MakeGenericType; Native AOT may not " +
+            "have compiled it.")]
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Constructs a closed generic type through Activator; the trimmer cannot see which " +
+            "constructor is needed.")]
+        [System.Obsolete("Builds a closed generic type at runtime, which is not supported under Native AOT;" +
+            " will be removed in 1.7. Obsolete since v1.6.0")]
         public static object Instantiate(this System.Type genericType, System.Type[] genericParams, params object[] constructorArgs) { }
     }
     public enum DelayOverflowStrategy
@@ -2278,6 +2290,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.StreamRefSettings Copy(int? bufferCapacity = default, System.TimeSpan? demandRedeliveryInterval = default, System.TimeSpan? subscriptionTimeout = default, System.TimeSpan? finalTerminationSignalDeadline = default) { }
         public Akka.Streams.Dsl.StreamRefSettings WithBufferCapacity(int value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
+        public Akka.Streams.Dsl.StreamRefSettings WithFinalTerminationSignalDeadline(System.TimeSpan value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }
         public static Akka.Streams.Dsl.StreamRefSettings Create(Akka.Configuration.Config config) { }
     }
@@ -2433,8 +2446,12 @@ namespace Akka.Streams.Dsl
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
         public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
+        public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandleTls(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, Akka.IO.TlsServerSettings tlsSettings, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption>? options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
+        public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> BindTls(string host, int port, Akka.IO.TlsServerSettings tlsSettings, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption>? options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
         public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
         public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnectionTls(string host, int port, Akka.IO.TlsClientSettings tlsSettings) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnectionTls(System.Net.EndPoint remoteAddress, Akka.IO.TlsClientSettings tlsSettings, System.Net.EndPoint? localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption>? options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
     }
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
@@ -4792,6 +4809,7 @@ namespace Akka.Streams.Serialization
     public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object o) { }
@@ -5283,7 +5301,11 @@ namespace Akka.Streams.Util
     }
     public static class TypeExtensions
     {
-        public static System.Type GetPublishedType(this System.Type type) { }
-        public static System.Type GetSubscribedType(this System.Type type) { }
+        [System.Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type\'s int" +
+            "erfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static System.Type GetPublishedType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] this System.Type type) { }
+        [System.Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type\'s int" +
+            "erfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static System.Type GetSubscribedType([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.Interfaces)] this System.Type type) { }
     }
 }

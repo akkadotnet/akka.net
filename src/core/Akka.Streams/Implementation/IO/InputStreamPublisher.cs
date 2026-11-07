@@ -22,15 +22,15 @@ namespace Akka.Streams.Implementation.IO
     internal sealed class InputStreamPublisher : Actors.ActorPublisher<ReadOnlySequence<byte>>
     {
         /// <summary>
-        /// TBD
+        /// Creates actor properties for a publisher that reads an input stream in byte chunks.
         /// </summary>
-        /// <param name="inputstream">TBD</param>
-        /// <param name="completionSource">TBD</param>
-        /// <param name="chunkSize">TBD</param>
+        /// <param name="inputstream">The stream to read.</param>
+        /// <param name="completionSource">The promise completed with a stop-time <see cref="IOResult"/>; a read error is signaled to subscribers and does not guarantee a failed result.</param>
+        /// <param name="chunkSize">The number of bytes requested for each read.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="chunkSize"/> is less than or equal to zero.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>Local actor properties for the input-stream publisher.</returns>
         public static Props Props(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
             if (chunkSize <= 0)
@@ -52,11 +52,11 @@ namespace Akka.Streams.Implementation.IO
         private long _readBytesTotal;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher actor that reads an input stream and emits byte chunks.
         /// </summary>
-        /// <param name="inputstream">TBD</param>
-        /// <param name="completionSource">TBD</param>
-        /// <param name="chunkSize">TBD</param>
+        /// <param name="inputstream">The stream to read.</param>
+        /// <param name="completionSource">The promise completed with a stop-time <see cref="IOResult"/>; a read error is signaled to subscribers and does not guarantee a failed result.</param>
+        /// <param name="chunkSize">The number of bytes requested for each read.</param>
         /// If this gets changed you must change <see cref="InputStreamPublisher.Props"/> as well!
         public InputStreamPublisher(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
@@ -68,10 +68,10 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Handles read requests, continuation messages, and cancellation.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> when the message is handled; otherwise, <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
@@ -89,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Disposes the input stream and completes the read-result promise if it has not already completed.
         /// </summary>
         protected override void PostStop()
         {

@@ -8,16 +8,22 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
     /// <summary>
     /// Adapts legacy <see cref="Serializer"/> implementations to the <see cref="SerializerV2"/> contract.
     /// </summary>
+    /// <remarks>
+    /// <see cref="Manifest(object)"/> returns what the wrapped serializer would have stored, so a wrapped
+    /// serializer with <see cref="Serializer.IncludeManifest"/> set to <c>false</c> still yields an empty manifest.
+    /// <see cref="SerializerWithStringManifest.FromBinary(byte[], Type)"/> maps the type to its type-qualified name
+    /// and forwards to <see cref="FromBinary(byte[], string)"/>; callers that hold a <see cref="Type"/> and want the
+    /// wrapped serializer's own <c>FromBinary(byte[], Type)</c> should call it on <see cref="Inner"/>, as
+    /// <see cref="Serialization.Deserialize(byte[], int, Type)"/> does.
+    /// </remarks>
     public sealed class SerializerV1Adapter : SerializerV2
     {
         /// <summary>
@@ -76,31 +82,10 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
+        /// <remarks>Virtual dispatch on <see cref="Inner"/> resolves this to whatever override it actually has.</remarks>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (Inner is SerializerWithStringManifest stringManifest)
-                return stringManifest.FromBinary(bytes, manifest);
-
-            if (string.IsNullOrEmpty(manifest))
-                return Inner.FromBinary(bytes, (Type)null!);
-
-            Type type;
-            try
-            {
-                type = TypeCache.GetType(manifest);
-            }
-            catch (Exception ex)
-            {
-                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{Identifier}].", ex);
-            }
-
-            return Inner.FromBinary(bytes, type);
-        }
-
-        /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            return Inner.FromBinary(bytes, type);
+            return Inner.FromBinary(bytes, manifest);
         }
     }
 }

@@ -12,7 +12,6 @@ using System.Reflection;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Cluster;
-using Akka.Configuration;
 using Akka.DistributedData;
 using Akka.DistributedData.Serialization;
 using Akka.Serialization;
@@ -50,18 +49,8 @@ public class SerializerLwwDictionaryBenchmarks
                 BindingFlags.Instance | BindingFlags.NonPublic)
             .MakeGenericMethod(new []{KeyType,ValueType})
             .Invoke(this, new object[]{});
-        var conf = ConfigurationFactory.ParseString(@"akka.actor {
-  serializers {
-    akka-replicated-data = ""Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData""
-  }
-  serialization-bindings {
-    ""Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData"" = akka-replicated-data
-  }
-  serialization-identifiers {
-	""Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData"" = 11
-  }
-}");
-        sys = ActorSystem.Create("rddsb", conf);
+        // Akka.DistributedData registers its serializer from code; no HOCON rows are needed
+        sys = ActorSystem.Create("rddsb");
         ser = sys.Serialization.FindSerializerForType(
             typeof(IReplicatedDataSerialization));
         _c1Ser = ser.ToBinary(_c1);

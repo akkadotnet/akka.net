@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Akka" Version="1.5.70" />
+    <PackageReference Include="Akka.Hosting" Version="1.5.70" />
+    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.70" />
+    <PackageReference Include="Akka.Persistence.Sql.Hosting" Version="1.5.70" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>

@@ -141,13 +141,13 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Query requesting the current shard id and the entity ids currently active in that shard.
         /// </summary>
         [Serializable]
         public sealed class GetCurrentShardState : IShardQuery, IClusterShardingSerializable
         {
             /// <summary>
-            /// TBD
+            /// Singleton query requesting the current state of a shard.
             /// </summary>
             public static readonly GetCurrentShardState Instance = new();
 
@@ -157,26 +157,26 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Reply containing a shard id and the entity ids currently active in that shard.
         /// </summary>
         [Serializable]
         public sealed class CurrentShardState : IClusterShardingSerializable, IEquatable<CurrentShardState>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard described by this reply.
             /// </summary>
             public readonly ShardId ShardId;
 
             /// <summary>
-            /// TBD
+            /// Gets the entity ids currently active in this shard.
             /// </summary>
             public readonly IImmutableSet<EntityId> EntityIds;
 
             /// <summary>
-            /// TBD
+            /// Creates a shard-state reply from a shard id and its active entity ids.
             /// </summary>
-            /// <param name="shardId">TBD</param>
-            /// <param name="entityIds">TBD</param>
+            /// <param name="shardId">The id of the shard.</param>
+            /// <param name="entityIds">The entity ids currently active in the shard.</param>
             public CurrentShardState(ShardId shardId, IImmutableSet<EntityId> entityIds)
             {
                 ShardId = shardId;
@@ -220,13 +220,13 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Query requesting the id and entity count for this shard.
         /// </summary>
         [Serializable]
         public sealed class GetShardStats : IShardQuery, IClusterShardingSerializable
         {
             /// <summary>
-            /// TBD
+            /// Singleton query requesting shard statistics.
             /// </summary>
             public static readonly GetShardStats Instance = new();
 
@@ -239,26 +239,26 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Reply containing a shard id and the entity count reported by that shard.
         /// </summary>
         [Serializable]
         public sealed class ShardStats : IClusterShardingSerializable, IEquatable<ShardStats>
         {
             /// <summary>
-            /// TBD
+            /// Gets the id of the shard described by this reply.
             /// </summary>
             public readonly ShardId ShardId;
 
             /// <summary>
-            /// TBD
+            /// Gets the entity count reported by the shard.
             /// </summary>
             public readonly int EntityCount;
 
             /// <summary>
-            /// TBD
+            /// Creates a shard-statistics reply.
             /// </summary>
-            /// <param name="shardId">TBD</param>
-            /// <param name="entityCount">TBD</param>
+            /// <param name="shardId">The id of the shard.</param>
+            /// <param name="entityCount">The entity count reported by the shard.</param>
             public ShardStats(ShardId shardId, int entityCount)
             {
                 ShardId = shardId;

@@ -68,7 +68,7 @@ public sealed class GeneratorResolveSpec
         resolved.TopLevelMessages.Members.Select(m => m.TypeFullName).Should().ContainInOrder(
             third.FullyQualifiedName, first.FullyQualifiedName, second.FullyQualifiedName);
         resolved.TopLevelMessages.Members.Select(m => m.Manifest).Should().ContainInOrder("third-v1", "first-v1", "second-v1");
-        resolved.TopLevelMessages.Members.Select(m => m.MethodName).Should().ContainInOrder("Third", "First", "Second");
+        resolved.TopLevelMessages.Members.Select(m => m.MethodName).Should().ContainInOrder("Third_fc5f5e50474de629", "First_7fce4d8e86fa101e", "Second_1ff7ef9189b6d511");
     }
 
     [Fact(DisplayName = "ResolveSerializer should compute the reachable set, including a nested message that is not itself top-level")]
@@ -105,7 +105,7 @@ public sealed class GeneratorResolveSpec
         resolved.ResolvedMessagesByType.Keys.Select(key => key.DisplayName).Should().BeEquivalentTo(new[] { outer.FullyQualifiedName, nested.FullyQualifiedName });
     }
 
-    [Fact(DisplayName = "ResolveSerializer should plan one union helper with members in declared order")]
+    [Fact(DisplayName = "ResolveSerializer should plan one union helper with the discovered members in message order")]
     public void ResolveSerializer_should_plan_union_helper()
     {
         const string source = """
@@ -118,7 +118,6 @@ public sealed class GeneratorResolveSpec
             {
             }
 
-            [AkkaUnion(typeof(MemberB), typeof(MemberA))]
             public interface IEvent
             {
             }
@@ -146,12 +145,11 @@ public sealed class GeneratorResolveSpec
         helper.HelperName.Should().Be("Union_IEvent");
         helper.FieldTypeFullName.Should().Be(outer.Fields.Single().TypeFullName);
 
-        // [AkkaUnion(typeof(MemberB), typeof(MemberA))] declares MemberB first -- the plan's member
-        // order must match the attribute's declaration order, not source-declaration or alphabetical
-        // order.
-        helper.Members.Members.Select(m => m.TypeFullName).Should().ContainInOrder(memberB.FullyQualifiedName, memberA.FullyQualifiedName);
-        helper.Members.Members.Select(m => m.Manifest).Should().ContainInOrder("member-b-v1", "member-a-v1");
-        helper.Members.Members.Select(m => m.MethodName).Should().ContainInOrder("MemberB", "MemberA");
+        // The discovered set follows the order of the messages handed to the resolver (outer, memberA,
+        // memberB below) -- not alphabetical order -- so emitted dispatch text stays stable.
+        helper.Members.Members.Select(m => m.TypeFullName).Should().Equal(memberA.FullyQualifiedName, memberB.FullyQualifiedName);
+        helper.Members.Members.Select(m => m.Manifest).Should().Equal("member-a-v1", "member-b-v1");
+        helper.Members.Members.Select(m => m.MethodName).Should().Equal("MemberA_2653f0ef73512927", "MemberB_51f02894bb93d7ef");
     }
 
     [Fact(DisplayName = "Two resolves over equal inputs should be equal")]

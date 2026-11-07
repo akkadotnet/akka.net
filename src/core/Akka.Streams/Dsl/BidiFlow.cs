@@ -12,7 +12,7 @@ using Akka.Streams.Implementation;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// TBD
+    /// Factory methods for bidirectional stream graphs.
     /// </summary>
     public static class BidiFlow
     {
@@ -20,13 +20,13 @@ namespace Akka.Streams.Dsl
         /// A graph with the shape of a flow logically is a flow, this method makes
         /// it so also in type.
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="graph">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn1">The element type entering the first inlet.</typeparam>
+        /// <typeparam name="TOut1">The element type emitted from the first outlet.</typeparam>
+        /// <typeparam name="TIn2">The element type entering the second inlet.</typeparam>
+        /// <typeparam name="TOut2">The element type emitted from the second outlet.</typeparam>
+        /// <typeparam name="TMat">The graph's materialized value type.</typeparam>
+        /// <param name="graph">The graph with a bidirectional shape to wrap.</param>
+        /// <returns>The graph as a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/>.</returns>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> FromGraph<TIn1, TOut1, TIn2, TOut2, TMat>(
             IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> graph)
         {
@@ -54,17 +54,17 @@ namespace Akka.Streams.Dsl
         /// }}}
         /// ]]>
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow1">TBD</param>
-        /// <param name="flow2">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn1">The input type of the first flow, connected to the first inlet.</typeparam>
+        /// <typeparam name="TOut1">The output type of the first flow, connected to the first outlet.</typeparam>
+        /// <typeparam name="TIn2">The input type of the second flow, connected to the second inlet.</typeparam>
+        /// <typeparam name="TOut2">The output type of the second flow, connected to the second outlet.</typeparam>
+        /// <typeparam name="TMat1">The materialized value type of the first flow.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type of the second flow.</typeparam>
+        /// <typeparam name="TMat">The result type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="flow1">The flow connected in the first direction.</param>
+        /// <param name="flow2">The flow connected in the reverse direction.</param>
+        /// <param name="combine">Combines the two flows' materialized values.</param>
+        /// <returns>A bidirectional flow containing both flows and their combined materialized value.</returns>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> FromFlowsMat
             <TIn1, TOut1, TIn2, TOut2, TMat1, TMat2, TMat>(IGraph<FlowShape<TIn1, TOut1>, TMat1> flow1,
                 IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2, Func<TMat1, TMat2, TMat> combine)
@@ -91,15 +91,15 @@ namespace Akka.Streams.Dsl
         /// }}}
         /// ]]>
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat1">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow1">TBD</param>
-        /// <param name="flow2">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn1">The input type of the first flow, connected to the first inlet.</typeparam>
+        /// <typeparam name="TOut1">The output type of the first flow, connected to the first outlet.</typeparam>
+        /// <typeparam name="TIn2">The input type of the second flow, connected to the second inlet.</typeparam>
+        /// <typeparam name="TOut2">The output type of the second flow, connected to the second outlet.</typeparam>
+        /// <typeparam name="TMat1">The materialized value type of the first flow.</typeparam>
+        /// <typeparam name="TMat2">The materialized value type of the second flow.</typeparam>
+        /// <param name="flow1">The flow connected in the first direction.</param>
+        /// <param name="flow2">The flow connected in the reverse direction.</param>
+        /// <returns>A bidirectional flow that discards both flows' materialized values.</returns>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, NotUsed> FromFlows<TIn1, TOut1, TIn2, TOut2, TMat1, TMat2>(
             IGraph<FlowShape<TIn1, TOut1>, TMat1> flow1, IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2)
         {
@@ -110,13 +110,13 @@ namespace Akka.Streams.Dsl
         /// Create a <see cref="BidiFlow{TIn1,TOut1,TIn2,TOut2,TMat}"/> where the top and bottom flows are just one simple mapping
         /// stage each, expressed by the two functions.
         /// </summary>
-        /// <typeparam name="TIn1">TBD</typeparam>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TIn2">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <param name="outbound">TBD</param>
-        /// <param name="inbound">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn1">The input type in the outbound direction.</typeparam>
+        /// <typeparam name="TOut1">The output type in the outbound direction.</typeparam>
+        /// <typeparam name="TIn2">The input type in the inbound direction.</typeparam>
+        /// <typeparam name="TOut2">The output type in the inbound direction.</typeparam>
+        /// <param name="outbound">Maps elements from the first inlet to the first outlet.</param>
+        /// <param name="inbound">Maps elements from the second inlet to the second outlet.</param>
+        /// <returns>A bidirectional flow applying the two mappings, with materialized value <see cref="NotUsed"/>.</returns>
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, NotUsed> FromFunction<TIn1, TOut1, TIn2, TOut2>(Func<TIn1, TOut1> outbound, Func<TIn2, TOut2> inbound)
         {
             return FromFlows(Flow.Create<TIn1>().Select(outbound), Flow.Create<TIn2>().Select(inbound));
@@ -131,10 +131,10 @@ namespace Akka.Streams.Dsl
         /// every second in one direction, but no elements are flowing in the other direction. I.e. this stage considers
         /// the ///joint/// frequencies of the elements in both directions.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The element type flowing in the first direction.</typeparam>
+        /// <typeparam name="TOut">The element type flowing in the reverse direction.</typeparam>
+        /// <param name="timeout">The maximum allowed interval with no processed elements in either direction.</param>
+        /// <returns>A bidirectional flow that fails with <see cref="TimeoutException"/> when neither direction processes an element within the timeout.</returns>
         public static BidiFlow<TIn, TIn, TOut, TOut, NotUsed> BidirectionalIdleTimeout<TIn, TOut>(TimeSpan timeout)
         {
             return FromGraph(new IdleTimeoutBidi<TIn, TOut>(timeout));
@@ -142,70 +142,70 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// TBD
+    /// A graph of two connected stream directions with a materialized value.
     /// </summary>
-    /// <typeparam name="TIn1">TBD</typeparam>
-    /// <typeparam name="TOut1">TBD</typeparam>
-    /// <typeparam name="TIn2">TBD</typeparam>
-    /// <typeparam name="TOut2">TBD</typeparam>
-    /// <typeparam name="TMat">TBD</typeparam>
+    /// <typeparam name="TIn1">The element type accepted by the first inlet.</typeparam>
+    /// <typeparam name="TOut1">The element type emitted from the first outlet.</typeparam>
+    /// <typeparam name="TIn2">The element type accepted by the second inlet.</typeparam>
+    /// <typeparam name="TOut2">The element type emitted from the second outlet.</typeparam>
+    /// <typeparam name="TMat">The type of value produced when the graph is materialized.</typeparam>
     public class BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> : IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat>
     {
         private readonly IModule _module;
 
         /// <summary>
-        /// TBD
+        /// Creates a bidirectional flow from its graph module.
         /// </summary>
-        /// <param name="module">TBD</param>
+        /// <param name="module">The module that contains the graph shape and materialized value.</param>
         public BidiFlow(IModule module)
         {
             _module = module;
         }
 
         /// <summary>
-        /// TBD
+        /// The four-port shape that describes this bidirectional flow.
         /// </summary>
         public BidiShape<TIn1, TOut1, TIn2, TOut2> Shape => (BidiShape<TIn1, TOut1, TIn2, TOut2>)_module.Shape;
 
         /// <summary>
-        /// TBD
+        /// The module containing this flow's graph structure and materialized value.
         /// </summary>
         public IModule Module => _module;
 
         /// <summary>
-        /// TBD
+        /// Replaces the attributes on this graph module.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to apply.</param>
+        /// <returns>A bidirectional graph with the supplied attributes.</returns>
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> WithAttributes(Attributes attributes)
         {
             return new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(_module.WithAttributes(attributes));
         }
 
         /// <summary>
-        /// TBD
+        /// Adds attributes to the attributes already attached to this graph.
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">The attributes to add.</param>
+        /// <returns>A bidirectional graph with the added attributes.</returns>
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> AddAttributes(Attributes attributes)
         {
             return WithAttributes(Module.Attributes.And(attributes));
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a name attribute to this graph.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The graph name.</param>
+        /// <returns>A bidirectional graph with the name attribute.</returns>
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Named(string name)
         {
             return AddAttributes(Attributes.CreateName(name));
         }
 
         /// <summary>
-        /// TBD
+        /// Adds an asynchronous boundary to this graph.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A bidirectional graph with an async-boundary attribute.</returns>
         public IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> Async()
         {
             return AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
@@ -214,7 +214,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Turn this BidiFlow around by 180 degrees, logically flipping it upside down in a protocol stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A bidirectional flow with its two directions exchanged.</returns>
         public BidiFlow<TIn2, TOut2, TIn1, TOut1, TMat> Reversed()
         {
             return new BidiFlow<TIn2, TOut2, TIn1, TOut1, TMat>(Module.ReplaceShape(Shape.Reversed()));
@@ -241,11 +241,11 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other BidiFlow’s value), use
         /// <see cref="AtopMat{TOut12,TIn21,TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
-        /// <typeparam name="TOut12">TBD</typeparam>
-        /// <typeparam name="TIn21">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="bidi">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut12">The output type produced by the added flow in the first direction.</typeparam>
+        /// <typeparam name="TIn21">The input type accepted by the added flow in the reverse direction.</typeparam>
+        /// <typeparam name="TMat2">The added flow's materialized value type.</typeparam>
+        /// <param name="bidi">The bidirectional flow composed with this one.</param>
+        /// <returns>The composed flow, keeping this flow's materialized value.</returns>
         public BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat> Atop<TOut12, TIn21, TMat2>(BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi)
         {
             return AtopMat(bidi, Keep.Left);
@@ -271,13 +271,13 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting BidiFlow.
         /// </summary>
-        /// <typeparam name="TOut12">TBD</typeparam>
-        /// <typeparam name="TIn21">TBD</typeparam>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="bidi">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TOut12">The output type produced by the added flow in the first direction.</typeparam>
+        /// <typeparam name="TIn21">The input type accepted by the added flow in the reverse direction.</typeparam>
+        /// <typeparam name="TMat2">The added flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The materialized value type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="bidi">The bidirectional flow composed with this one.</param>
+        /// <param name="combine">Combines this flow's and the added flow's materialized values.</param>
+        /// <returns>The composed bidirectional flow.</returns>
         public BidiFlow<TIn1, TOut12, TIn21, TOut2, TMat3> AtopMat<TOut12, TIn21, TMat2, TMat3>(BidiFlow<TOut1, TOut12, TIn21, TIn2, TMat2> bidi, Func<TMat, TMat2, TMat3> combine)
         {
             var copy = bidi.Module.CarbonCopy();
@@ -312,9 +312,9 @@ namespace Akka.Streams.Dsl
         /// value of the current flow (ignoring the other Flow’s value), use
         /// <see cref="JoinMat{TMat2,TMat3}"/> if a different strategy is needed.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The added flow's materialized value type.</typeparam>
+        /// <param name="flow">The flow connected between this flow's two directions.</param>
+        /// <returns>A flow that keeps this bidirectional flow's materialized value.</returns>
         public Flow<TIn1, TOut2, TMat> Join<TMat2>(Flow<TOut1, TIn2, TMat2> flow)
         {
             return JoinMat(flow, Keep.Left);
@@ -340,11 +340,11 @@ namespace Akka.Streams.Dsl
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting <see cref="Flow{TIn,TOut,TMat}"/>.
         /// </summary>
-        /// <typeparam name="TMat2">TBD</typeparam>
-        /// <typeparam name="TMat3">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="combine">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TMat2">The added flow's materialized value type.</typeparam>
+        /// <typeparam name="TMat3">The materialized value type returned by <paramref name="combine"/>.</typeparam>
+        /// <param name="flow">The flow connected between this flow's two directions.</param>
+        /// <param name="combine">Combines this bidirectional flow's and the added flow's materialized values.</param>
+        /// <returns>A flow with the combined materialized value.</returns>
         public Flow<TIn1, TOut2, TMat3> JoinMat<TMat2, TMat3>(Flow<TOut1, TIn2, TMat2> flow, Func<TMat, TMat2, TMat3> combine)
         {
             var copy = flow.Module.CarbonCopy();

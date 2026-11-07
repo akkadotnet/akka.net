@@ -88,7 +88,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Exception raised when a full stream buffer or queue cannot accept an element.
     /// </summary>
     [Serializable]
     public class BufferOverflowException : Exception

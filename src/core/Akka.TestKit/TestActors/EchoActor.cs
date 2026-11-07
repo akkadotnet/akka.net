@@ -19,10 +19,10 @@ namespace Akka.TestKit.TestActors;
 public class EchoActor : ReceiveActor
 {
     /// <summary>
-    /// TBD
+    /// Creates an actor that sends received messages to the test actor and, optionally, to their original sender.
     /// </summary>
-    /// <param name="testkit">TBD</param>
-    /// <param name="echoBackToSenderAsWell">TBD</param>
+    /// <param name="testkit">The test kit whose test actor receives each message.</param>
+    /// <param name="echoBackToSenderAsWell">Whether to also forward each message to its sender when that sender is not the test actor.</param>
     public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
     {
         ReceiveAny(msg =>
@@ -43,9 +43,9 @@ public class EchoActor : ReceiveActor
     /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless
     /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
     /// </summary>
-    /// <param name="testkit">TBD</param>
-    /// <param name="echoBackToSenderAsWell">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="testkit">The test kit whose test actor receives each message.</param>
+    /// <param name="echoBackToSenderAsWell">Whether to also forward each message to its sender when that sender is not the test actor.</param>
+    /// <returns>Props for creating the echo actor.</returns>
     public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
     {
         return Actor.Props.Create(() => new EchoActor(testkit, echoBackToSenderAsWell));
@@ -58,7 +58,7 @@ public class EchoActor : ReceiveActor
 public class SimpleEchoActor : ReceiveActor
 {
     /// <summary>
-    /// TBD
+    /// Creates a simple actor that replies to each message's sender with the same message.
     /// </summary>
     public SimpleEchoActor()
     {
@@ -72,7 +72,7 @@ public class SimpleEchoActor : ReceiveActor
     /// Returns a <see cref="Props"/> object that can be used to create an <see cref="SimpleEchoActor"/>.
     /// The <see cref="SimpleEchoActor"/> echoes whatever is sent to it, to the `Sender`.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>Props for creating the simple echo actor.</returns>
     public static Props Props()
     {
         return Actor.Props.Create(() => new SimpleEchoActor());

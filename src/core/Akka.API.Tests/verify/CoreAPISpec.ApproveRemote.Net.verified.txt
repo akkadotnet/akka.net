@@ -428,6 +428,7 @@ namespace Akka.Remote.Serialization
     public class DaemonMsgCreateSerializer : Akka.Serialization.Serializer
     {
         public DaemonMsgCreateSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -435,6 +436,7 @@ namespace Akka.Remote.Serialization
     public class MessageContainerSerializer : Akka.Serialization.Serializer
     {
         public MessageContainerSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -442,20 +444,25 @@ namespace Akka.Remote.Serialization
     public sealed class MiscMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public MiscMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
+    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerV2
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
-        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override int Identifier { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     public class ProtobufSerializer : Akka.Serialization.Serializer
     {
         public ProtobufSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
@@ -463,6 +470,7 @@ namespace Akka.Remote.Serialization
     public sealed class SystemMessageSerializer : Akka.Serialization.Serializer
     {
         public SystemMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }

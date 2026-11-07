@@ -12,10 +12,10 @@ using System.Linq;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Defines a stateful transformation from input elements to zero or more output elements, with termination hooks.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements received from upstream.</typeparam>
+    /// <typeparam name="TOut">The type of elements produced for downstream.</typeparam>
     public interface ITransformerLike<in TIn, out TOut>
     {
         /// <summary>
@@ -29,7 +29,7 @@ namespace Akka.Streams
         /// Invoked for each element to produce a (possibly empty) sequence of
         /// output elements.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The input element to transform.</param>
         IEnumerable<TOut> OnNext(TIn element);
         
         /// <summary>
@@ -49,7 +49,7 @@ namespace Akka.Streams
         /// propagated downstream. If this method completes normally then <see cref="OnTermination"/> is invoked as a final
         /// step, passing the original cause.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled by upstream.</param>
         void OnError(Exception cause);
         
         /// <summary>
@@ -59,17 +59,17 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Provides default termination behavior for an <see cref="ITransformerLike{TIn,TOut}"/> implementation.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The type of elements received from upstream.</typeparam>
+    /// <typeparam name="TOut">The type of elements produced for downstream.</typeparam>
     public abstract class TransformerLikeBase<TIn, TOut> : ITransformerLike<TIn, TOut>
     {
         /// <summary>
         /// Invoked for each element to produce a (possibly empty) sequence of
         /// output elements.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The input element to transform.</param>
         public abstract IEnumerable<TOut> OnNext(TIn element);
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Akka.Streams
         /// propagated downstream. If this method completes normally then <see cref="OnTermination"/> is invoked as a final
         /// step, passing the original cause.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure signaled by upstream.</param>
         public virtual void OnError(Exception cause)
         {
             throw cause;

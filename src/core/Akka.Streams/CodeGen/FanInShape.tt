@@ -19,30 +19,30 @@ using System.Collections.Immutable;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// A typed fan-in shape with one fixed input, a variable number of additional inputs, and one output.
     /// </summary>
-    /// <typeparam name="T0">TBD</typeparam>
-    /// <typeparam name="T1">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="T0">The element type accepted by the fixed <see cref="In0"/> inlet.</typeparam>
+    /// <typeparam name="T1">The element type accepted by each inlet in <see cref="In1s"/>.</typeparam>
+    /// <typeparam name="TOut">The element type emitted by the output port.</typeparam>
     public class FanInShapeN<T0, T1, TOut> : FanInShape<TOut>
     {
         /// <summary>
-        /// TBD
+        /// The number of additional <typeparamref name="T1"/> inlet objects in <see cref="In1s"/>.
         /// </summary>
         public readonly int N;
         /// <summary>
-        /// TBD
+        /// The fixed input inlet with element type <typeparamref name="T0"/>.
         /// </summary>
         public readonly Inlet<T0> In0;
         /// <summary>
-        /// TBD
+        /// The additional input inlets with element type <typeparamref name="T1"/>.
         /// </summary>
         public readonly ImmutableArray<Inlet<T1>> In1s;
         /// <summary>
-        /// TBD
+        /// Creates the shape with <paramref name="n"/> additional inlet objects. The outlet and, when supplied, the first inlet from <paramref name="init"/> are used; remaining inlets are ignored and the additional inlet objects are not registered in <see cref="FanInShape{TOut}.Inlets"/>.
         /// </summary>
-        /// <param name="n">TBD</param>
-        /// <param name="init">TBD</param>
+        /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
+        /// <param name="init">The outlet and optional inlet sequence. Its first inlet initializes <see cref="In0"/> when present; further inlets are ignored.</param>
         public FanInShapeN(int n, IInit init) : base(init)
         {
             N = n;
@@ -53,32 +53,32 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the shape with <paramref name="n"/> additional inlets and a generated default name.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
         public FanInShapeN(int n) : this(n, new InitName("FanInShape1N")) { }
         /// <summary>
-        /// TBD
+        /// Creates the shape with <paramref name="n"/> additional inlet objects and the specified name for the outlet and fixed inlet.
         /// </summary>
-        /// <param name="n">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="n">The number of additional <typeparamref name="T1"/> inlets.</param>
+        /// <param name="name">The name used for the outlet and as a prefix for the fixed inlet; the additional inlet objects are named without this prefix.</param>
         public FanInShapeN(int n, string name) : this(n, new InitName(name)) { }
         /// <summary>
-        /// TBD
+        /// Creates the shape using the supplied output and fixed input. The supplied repeated inputs determine how many new additional inlet objects are created; those repeated inlet objects themselves are ignored.
         /// </summary>
-        /// <param name="outlet">TBD</param>
-        /// <param name="in0">TBD</param>
-        /// <param name="inlets">TBD</param>
+        /// <param name="outlet">The output port carrying <typeparamref name="TOut"/> elements.</param>
+        /// <param name="in0">The fixed input port carrying <typeparamref name="T0"/> elements.</param>
+        /// <param name="inlets">The repeated inlet objects whose count determines the number of additional inlets created by the shape. The supplied inlet objects are ignored.</param>
         public FanInShapeN(Outlet<TOut> outlet, Inlet<T0> in0, params Inlet<T1>[] inlets) : this(inlets.Length, new InitPorts(outlet, new Inlet[]{in0}.Concat(inlets))) { }
 
         /// <summary>
-        /// TBD
+        /// Gets an additional inlet by its one-based position in <see cref="In1s"/>.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The one-based position of the requested additional inlet.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="n" /> is less than or equal to zero.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The inlet at position <paramref name="n"/> in <see cref="In1s"/>.</returns>
         public Inlet<T1> In(int n)
         {
             if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
@@ -86,10 +86,10 @@ namespace Akka.Streams
         }
         
         /// <summary>
-        /// TBD
+        /// Creates another shape of this type using the supplied outlet and fixed inlet. Additional inlet objects are recreated, and any remaining supplied inlets are ignored.
         /// </summary>
-        /// <param name="init">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="init">The outlet and inlet sequence whose first inlet initializes the fixed input.</param>
+        /// <returns>A shape with the same outlet and fixed input plus newly created additional inlet objects, which are not registered in the shape's inlet collection.</returns>
         protected override FanInShape<TOut> Construct(IInit init)
         {
             return new FanInShapeN<T0, T1, TOut>(N, init);
@@ -100,25 +100,25 @@ namespace Akka.Streams
     var typeParams = string.Join(", ", Enumerable.Range(0, i).Select(x => "T" + x));
 #>
     /// <summary>
-    /// TBD
+    /// A typed fan-in shape with one output and a fixed set of typed inputs.
     /// </summary>
 <# for (int t = 0; t < i; t++) {  #>
-    /// <typeparam name="T<#= t #>">TBD</typeparam>
+    /// <typeparam name="T<#= t #>">The element type accepted by input inlet <c>In<#= t #></c>.</typeparam>
 <# } #>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TOut">The element type emitted by the output port.</typeparam>
     public class FanInShape<<#= typeParams #>, TOut> : FanInShape<TOut>
     {
 <# for (int t = 0; t < i; t++) {  #>
         /// <summary>
-        /// TBD
+        /// Input inlet <c>In<#= t #></c> with element type <typeparamref name="T<#= t #>"/>.
         /// </summary>
         public readonly Inlet<T<#= t #>> In<#= t #>;
 <# } #>
 
         /// <summary>
-        /// TBD
+        /// Creates the shape with ports supplied by <paramref name="init"/>.
         /// </summary>
-        /// <param name="init">TBD</param>
+        /// <param name="init">The outlet and any pre-registered inlets used to initialize the shape.</param>
         public FanInShape(IInit init) : base(init)
         {
 <# for (int t = 0; t < i; t++) {  #>
@@ -127,26 +127,26 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the shape with a generated set of typed inlets and the specified port-name prefix.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name used as the prefix for ports created by this shape.</param>
         public FanInShape(string name) : this(new InitName(name)) { }
         /// <summary>
-        /// TBD
+        /// Creates the shape from an output port and its typed input ports.
         /// </summary>
-        /// <param name="outlet">TBD</param>
+        /// <param name="outlet">The output port carrying <typeparamref name="TOut"/> elements.</param>
 <# for (int t = 0; t < i; t++) {  #>
-        /// <param name="in<#= t #>">TBD</param>
+        /// <param name="in<#= t #>">The input port carrying <typeparamref name="T<#= t #>"/> elements.</param>
 <# } #>
-        /// <returns>TBD</returns>
+        /// <returns>A shape that exposes the supplied ports.</returns>
         public FanInShape(Outlet<TOut> outlet, <#= string.Join(", ", Enumerable.Range(0, i).Select(x => string.Format("Inlet<T{0}> in{0}", x))) #>) 
             : this(new InitPorts(outlet, new Inlet[] { <#= string.Join(", ", Enumerable.Range(0, i).Select(x => "in"+x)) #> })) { }
 
         /// <summary>
-        /// TBD
+        /// Creates another shape of this type using the supplied initialized ports.
         /// </summary>
-        /// <param name="init">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="init">The outlet and inlets to use for the new shape.</param>
+        /// <returns>A fan-in shape with the same number and types of ports.</returns>
         protected override FanInShape<TOut> Construct(IInit init)
         {
             return new FanInShape<<#= typeParams #>, TOut>(init);

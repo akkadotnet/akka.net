@@ -12,7 +12,7 @@ using Akka.Dispatch;
 namespace Akka.Routing
 {
     /// <summary>
-    /// TBD
+    /// Actor reference that routes messages to a configured set of routees.
     /// </summary>
     internal class RoutedActorRef : RepointableActorRef
     {
@@ -21,13 +21,13 @@ namespace Akka.Routing
         /// <summary>
         /// Initializes a new instance of the <see cref="RoutedActorRef"/> class.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="routerProps">TBD</param>
-        /// <param name="routerDispatcher">TBD</param>
-        /// <param name="routerMailbox">TBD</param>
-        /// <param name="routeeProps">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
+        /// <param name="system">The actor system that owns this router.</param>
+        /// <param name="routerProps">The properties used to configure the router.</param>
+        /// <param name="routerDispatcher">The dispatcher used by the router actor.</param>
+        /// <param name="routerMailbox">The mailbox type used by the router actor.</param>
+        /// <param name="routeeProps">The properties used to create pool routees.</param>
+        /// <param name="supervisor">The actor supervising this router.</param>
+        /// <param name="path">The actor path assigned to the router.</param>
         public RoutedActorRef(
             ActorSystemImpl system,
             Props routerProps,
@@ -43,9 +43,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Creates the cell used to manage the router and its routees.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A routed actor cell, with a resizable pool cell when the pool defines a resizer.</returns>
         protected override ActorCell NewCell()
         {
             ActorCell cell = Props.RouterConfig is Pool pool && pool.Resizer != null

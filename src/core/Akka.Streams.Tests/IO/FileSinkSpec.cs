@@ -416,29 +416,35 @@ namespace Akka.Streams.Tests.IO
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
                             (a, t) => (a, t))
                         .Run(_materializer);
-                    await Task.Delay(100); // wait for stream to catch up
-
                     actor.Tell("a\n");
                     actor.Tell("b\n");
-                    await Task.Delay(200); // wait for stream to catch up
 
-                    flusher.Flush();
-                    await Task.Delay(100); // wait for flush
-                    CheckFileContent(f, "a\nb\n"); // file should be flushed
+                    // FlushSignaler tells the sink actor directly, while elements reach it through the stream, so
+                    // there is no ordering between a flush and the elements sent just before it. Keep flushing
+                    // until the elements have landed.
+                    await AwaitAssertAsync(() =>
+                    {
+                        flusher.Flush();
+                        CheckFileContent(f, "a\nb\n");
+                    }, Dilated(TimeSpan.FromSeconds(5)));
 
+                    // Every flush above was sent before "c" was, so none of them can flush "c" or "d"; with no
+                    // auto-flush those two stay in the FileStream buffer until the next signal.
                     actor.Tell("c\n");
                     actor.Tell("d\n");
-                    await Task.Delay(200); // wait for stream to catch up
-                    CheckFileContent(f, "a\nb\n"); // file content should not change
+                    await Task.Delay(200);
+                    CheckFileContent(f, "a\nb\n");
 
-                    flusher.Flush();
-                    await Task.Delay(100); // wait for flush
-                    CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
+                    await AwaitAssertAsync(() =>
+                    {
+                        flusher.Flush();
+                        CheckFileContent(f, "a\nb\nc\nd\n");
+                    }, Dilated(TimeSpan.FromSeconds(5)));
 
                     actor.Tell(new Status.Success(NotUsed.Instance));
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.WasSuccessful.Should().BeTrue();
-                    task.Result.Count.Should().Be(8);
+                    var result = await task.WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
+                    result.WasSuccessful.Should().BeTrue();
+                    result.Count.Should().Be(8);
                 }, _materializer);
             }, _materializer);
         }

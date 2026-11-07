@@ -82,12 +82,12 @@ namespace Akka.IO
             
             // fail if send/receive buffer sizes are smaller than max frame size
             if (SendBufferSize < MaxFrameSizeBytes)
-                throw new ArgumentException($"SendBufferSize ({SendBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+                throw new ArgumentException($"SendBufferSize ({SendBufferSize}) must be at least the size of the maximum frame size ({MaxFrameSizeBytes})");
             if (ReceiveBufferSize < MaxFrameSizeBytes)
-                throw new ArgumentException($"ReceiveBufferSize ({ReceiveBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+                throw new ArgumentException($"ReceiveBufferSize ({ReceiveBufferSize}) must be at least the size of the maximum frame size ({MaxFrameSizeBytes})");
             
-            // fail if the max frame size is negative
-            if (MaxFrameSizeBytes < 0)
+            // fail if the max frame size is not positive; it sizes the pipe segments
+            if (MaxFrameSizeBytes <= 0)
                 throw new ArgumentException($"MaxFrameSizeBytes ({MaxFrameSizeBytes}) must be a positive number");
             
             FinishConnectRetries = finishConnectRetries;
@@ -172,7 +172,7 @@ namespace Akka.IO
         public TimeSpan? RegisterTimeout { get; init; }
         
         /// <summary>
-        /// The maximum frame size we will accept when reading or writing to a socket.
+        /// Upper bound on the bytes per socket read or send, rounded up to a power of two.
         /// </summary>
         
         public int MaxFrameSizeBytes { get; init; }

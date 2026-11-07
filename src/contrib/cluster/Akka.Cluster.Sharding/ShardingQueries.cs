@@ -70,7 +70,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Creates query-result metadata by separating completed task results from failed or cancelled queries.
         /// </summary>
         /// <param name="ps">the results of actors queried that did not reply by
         ///     the timeout or returned another failure and those that did</param>

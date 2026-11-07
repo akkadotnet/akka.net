@@ -88,10 +88,10 @@ namespace Akka.Tests.Dispatch
         public IStash Stash { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor that stashes messages until <see cref="Start"/>, then forwards each processed message to the TestKit actor.
         /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
+        /// <param name="testkit">The TestKit instance whose <see cref="TestKitBase.TestActor"/> receives processed messages.</param>
+        /// <param name="echoBackToSenderAsWell">Whether to also forward a processed message to its sender, except when the sender is the TestKit actor.</param>
         public StashingActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
         {
             _testkit = testkit;
@@ -125,16 +125,13 @@ namespace Akka.Tests.Dispatch
         }
 
         /// <summary>
-        /// Returns a <see cref="Props"/> object that can be used to create an <see cref="EchoActor"/>.
-        /// The  <see cref="EchoActor"/> echoes whatever is sent to it, to the
-        /// TestKit's <see cref="TestKitBase.TestActor"/>.
-        /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
-        /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless 
-        /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
+        /// Returns props for a <see cref="StashingActor"/> that stashes messages until <see cref="Start"/> and then forwards them to the TestKit's <see cref="TestKitBase.TestActor"/>.
+        /// By default, it also forwards each processed message to its sender unless the sender is the TestKit actor or
+        /// <paramref name="echoBackToSenderAsWell"/> is <c>false</c>.
         /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="testkit">The TestKit instance whose test actor receives processed messages.</param>
+        /// <param name="echoBackToSenderAsWell">Whether to also forward processed messages to their original sender.</param>
+        /// <returns>Props that create a configured <see cref="StashingActor"/>.</returns>
         public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
         {
             return Akka.Actor.Props.Create(() => new StashingActor(testkit, echoBackToSenderAsWell));
@@ -396,4 +393,3 @@ stable-prio-mailbox{
         }
     }
 }
-

@@ -18,18 +18,18 @@ namespace Akka.TestKit
     public class CallingThreadDispatcherConfigurator : MessageDispatcherConfigurator
     {
         /// <summary>
-        /// TBD 
+        /// Creates a configurator for the calling-thread dispatcher.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
+        /// <param name="config">The HOCON configuration for this dispatcher.</param>
+        /// <param name="prerequisites">The dispatcher prerequisites supplied by the actor system.</param>
         public CallingThreadDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a calling-thread dispatcher using this configurator.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The configured calling-thread dispatcher.</returns>
         public override MessageDispatcher Dispatcher()
         {
             return new CallingThreadDispatcher(this);

@@ -20,7 +20,7 @@ namespace Akka.Actor.Internal
 
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the actor cell currently executing on this thread.
         /// 
         /// INTERNAL!
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
@@ -29,4 +29,3 @@ namespace Akka.Actor.Internal
         public static ActorCell? Current { get { return _current; } set { _current = value; } }
     }
 }
-

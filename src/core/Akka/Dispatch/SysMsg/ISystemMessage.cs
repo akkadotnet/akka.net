@@ -22,20 +22,20 @@ namespace Akka.Dispatch.SysMsg
     internal static class SystemMessageList
     {
         /// <summary>
-        /// TBD
+        /// Empty list whose messages are stored with the most recently added item first.
         /// </summary>
         public static readonly LatestFirstSystemMessageList LNil = new(null);
         /// <summary>
-        /// TBD
+        /// Empty list whose messages are stored with the earliest item first.
         /// </summary>
         public static readonly EarliestFirstSystemMessageList ENil = new(null);
 
         /// <summary>
-        /// TBD
+        /// Counts the linked messages starting at the supplied head.
         /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="head">The first message in the linked list.</param>
+        /// <param name="acc">The number already counted before this list segment.</param>
+        /// <returns>The accumulated count of messages.</returns>
         internal static int SizeInner(SystemMessage head, int acc)
         {
             while (true)
@@ -47,11 +47,11 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// Reverses the linked messages onto an existing accumulator.
         /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="head">The first message in the list to reverse.</param>
+        /// <param name="acc">The list head that receives the reversed messages.</param>
+        /// <returns>The new head of the reversed list.</returns>
         internal static SystemMessage ReverseInner(SystemMessage head, SystemMessage acc)
         {
             while (true)
@@ -389,14 +389,14 @@ namespace Akka.Dispatch.SysMsg
         public Exception Cause { get { return _cause; } }
 
         /// <summary>
-        /// TBD
+        /// The unique identifier of the child failure associated with this message.
         /// </summary>
         public long Uid { get { return _uid; } }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of the failed child and its cause.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The child reference, UID, and optional failure cause.</returns>
         public override string ToString()
         {
             return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
@@ -432,9 +432,9 @@ namespace Akka.Dispatch.SysMsg
         public IActorRef Child { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of the child supervision request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The child reference and whether supervision is asynchronous.</returns>
         public override string ToString()
         {
             return "<Supervise>: " + Child + ", Async=" + Async;
@@ -495,9 +495,9 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of this watch request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The watcher and watched actor references.</returns>
         public override string ToString()
         {
             return $"<Watch>: {Watcher} wants to watch {Watchee}";
@@ -553,9 +553,9 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of this unwatch request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The watcher and formerly watched actor references.</returns>
         public override string ToString()
         {
             return $"<Unwatch>: {Watcher} wants to unwatch {Watchee}";
@@ -584,7 +584,7 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    /// TBD
+    /// Carries task completion back to the actor cell that scheduled the task.
     /// </summary>
     internal sealed class ActorTaskSchedulerMessage : SystemMessage
     {
@@ -594,9 +594,9 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="task">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="scheduler">The scheduler that owns the task.</param>
+        /// <param name="task">The task to execute on the actor scheduler.</param>
+        /// <param name="message">The actor message captured when the task was scheduled.</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
@@ -616,16 +616,16 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// The exception reported when the scheduled task failed.
         /// </summary>
         public Exception Exception { get; }
         /// <summary>
-        /// TBD
+        /// The actor message captured for this task.
         /// </summary>
         public object Message { get; }
 
         /// <summary>
-        /// TBD
+        /// Executes the scheduled task through its actor task scheduler.
         /// </summary>
         public void ExecuteTask()
         {
@@ -633,9 +633,9 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a stable label for this internal scheduler message.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>&lt;ActorTaskSchedulerMessage&gt;</c>.</returns>
         public override string ToString()
         {
             return "<ActorTaskSchedulerMessage>";
@@ -663,9 +663,9 @@ namespace Akka.Dispatch.SysMsg
         public Exception Cause { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of the recreation request and its optional cause.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The recreation message label and optional exception.</returns>
         public override string ToString()
         {
             return "<Recreate>" + (Cause == null ? "" : " Cause: " + Cause);
@@ -693,9 +693,9 @@ namespace Akka.Dispatch.SysMsg
         public Exception CausedByFailure { get; set; }
 
         /// <summary>
-        /// TBD
+        /// A readable representation of this resume request and its optional cause.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The resume message label and optional failure cause.</returns>
         public override string ToString()
         {
             return "<Resume>" + (CausedByFailure == null ? "" : " CausedByFailure: " + CausedByFailure);
@@ -708,9 +708,9 @@ namespace Akka.Dispatch.SysMsg
     public sealed class Suspend : SystemMessage, IStashWhenWaitingForChildren
     {
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic label for this suspension request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>&lt;Suspend&gt;</c>.</returns>
         public override string ToString()
         {
             return "<Suspend>";
@@ -723,9 +723,9 @@ namespace Akka.Dispatch.SysMsg
     public sealed class Stop : SystemMessage
     {
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic label for this stop request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>&lt;Stop&gt;</c>.</returns>
         public override string ToString()
         {
             return "<Stop>";
@@ -754,9 +754,9 @@ namespace Akka.Dispatch.SysMsg
 
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic label and child reference for this child-stop request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>&lt;StopChild&gt;</c> followed by the child reference.</returns>
         public override string ToString()
         {
             return "<StopChild> " + Child;
@@ -785,9 +785,9 @@ namespace Akka.Dispatch.SysMsg
 
 
         /// <summary>
-        /// TBD
+        /// Returns a readable representation of this escalation request and its optional reason.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The escalation message label and optional failure reason.</returns>
         public override string ToString()
         {
             return "<Escalate>" + (Reason == null ? "" : " Reason: " + Reason);
@@ -801,9 +801,9 @@ namespace Akka.Dispatch.SysMsg
     public sealed class Terminate : SystemMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic label for this termination message.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The text <c>&lt;Terminate&gt;</c>.</returns>
         public override string ToString()
         {
             return "<Terminate>";
@@ -818,14 +818,14 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// Initializes a new instance of the <see cref="Create" /> class.
         /// </summary>
-        /// <param name="failure">TBD</param>
+        /// <param name="failure">The actor initialization failure to deliver to the actor cell, or <c>null</c> when creation succeeded.</param>
         public Create(ActorInitializationException failure = null)
         {
             Failure = failure;
         }
 
         /// <summary>
-        /// TBD
+        /// The initialization failure delivered with this create message, or <c>null</c> on successful creation.
         /// </summary>
         public ActorInitializationException Failure { get; }
 
@@ -847,9 +847,9 @@ namespace Akka.Dispatch.SysMsg
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a readable representation of this actor creation request.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The create message label and optional initialization failure.</returns>
         public override string ToString()
         {
             return $"<Create>{(Failure == null ? "" : " Failure: " + Failure)}";

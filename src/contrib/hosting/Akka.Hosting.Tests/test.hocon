@@ -1,0 +1,9 @@
+﻿# See petabridge.cmd configuration options here: https://cmd.petabridge.com/articles/install/host-configuration.html
+petabridge.cmd{
+    # default IP address used to listen for incoming petabridge.cmd client connections
+    # should be a safe default as it listens on "all network interfaces".
+    host = "0.0.0.0"
+    
+    # default port number used to listen for incoming petabridge.cmd client connections
+    port = 9110
+}

@@ -47,46 +47,46 @@ namespace Akka.Remote.Transport
      * Interface used to represent Akka PDUs (Protocol Data Unit)
      */
     /// <summary>
-    /// TBD
+    /// Marker interface for the control and data protocol data units encoded by the remoting transport.
     /// </summary>
     internal interface IAkkaPdu { }
 
     /// <summary>
-    /// TBD
+    /// Control PDU that begins an association with a remote endpoint.
     /// </summary>
     internal sealed class Associate : IAkkaPdu
     {
         /// <summary>
-        /// TBD
+        /// Creates an association PDU from the remote handshake information.
         /// </summary>
-        /// <param name="info">TBD</param>
+        /// <param name="info">The origin address and UID advertised by the associating endpoint.</param>
         public Associate(HandshakeInfo info)
         {
             Info = info;
         }
 
         /// <summary>
-        /// TBD
+        /// Handshake information carried by the association PDU.
         /// </summary>
         public HandshakeInfo Info { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Control PDU that indicates why an association is being terminated.
     /// </summary>
     internal sealed class Disassociate : IAkkaPdu
     {
         /// <summary>
-        /// TBD
+        /// Creates a disassociation PDU with the specified reason.
         /// </summary>
-        /// <param name="reason">TBD</param>
+        /// <param name="reason">The disassociation reason to encode.</param>
         public Disassociate(DisassociateInfo reason)
         {
             Reason = reason;
         }
 
         /// <summary>
-        /// TBD
+        /// Reason for terminating the association.
         /// </summary>
         public DisassociateInfo Reason { get; private set; }
     }
@@ -99,38 +99,38 @@ namespace Akka.Remote.Transport
     internal sealed class Heartbeat : IAkkaPdu { }
 
     /// <summary>
-    /// TBD
+    /// Data PDU containing serialized transport payload bytes.
     /// </summary>
     internal sealed class Payload : IAkkaPdu
     {
         /// <summary>
-        /// TBD
+        /// Creates a payload PDU from its serialized bytes.
         /// </summary>
-        /// <param name="bytes">TBD</param>
+        /// <param name="bytes">The serialized payload bytes.</param>
         public Payload(ByteString bytes)
         {
             Bytes = bytes;
         }
 
         /// <summary>
-        /// TBD
+        /// Serialized payload bytes carried by this PDU.
         /// </summary>
         public ByteString Bytes { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// Decoded remote message envelope, including its optional sender and reliable-delivery sequence number.
     /// </summary>
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
         /// <summary>
-        /// TBD
+        /// Creates a decoded message envelope.
         /// </summary>
-        /// <param name="recipient">TBD</param>
-        /// <param name="recipientAddress">TBD</param>
-        /// <param name="serializedMessage">TBD</param>
-        /// <param name="senderOptional">TBD</param>
-        /// <param name="seq">TBD</param>
+        /// <param name="recipient">Actor reference that receives the message.</param>
+        /// <param name="recipientAddress">Address associated with the recipient path.</param>
+        /// <param name="serializedMessage">Serialized message payload and serializer metadata.</param>
+        /// <param name="senderOptional">Optional sender actor reference, or <see langword="null"/> when no sender was encoded.</param>
+        /// <param name="seq">Optional reliable-delivery sequence number; <see langword="null"/> when reliable delivery is disabled.</param>
         public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo? seq = null)
         {
             Seq = seq;
@@ -141,27 +141,27 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Actor reference that receives the message.
         /// </summary>
         public IInternalActorRef Recipient { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Address associated with the recipient path.
         /// </summary>
         public Address RecipientAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Serialized message payload and serializer metadata.
         /// </summary>
         public SerializedMessage SerializedMessage { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Optional sender actor reference, or <see langword="null"/> when no sender was encoded.
         /// </summary>
         public IActorRef SenderOptional { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Returns whether this message carries a reliable-delivery sequence number.
         /// </summary>
         public bool ReliableDeliveryEnabled { get { return Seq != null; } }
 
@@ -180,10 +180,10 @@ namespace Akka.Remote.Transport
     internal sealed class AckAndMessage
     {
         /// <summary>
-        /// TBD
+        /// Container for the acknowledgement and message decoded from one reliable-delivery envelope.
         /// </summary>
-        /// <param name="ackOption">TBD</param>
-        /// <param name="messageOption">TBD</param>
+        /// <param name="ackOption">Acknowledgement information, or <see langword="null"/> when none was encoded.</param>
+        /// <param name="messageOption">Decoded message, or <see langword="null"/> when the envelope contains only an acknowledgement.</param>
         public AckAndMessage(Ack ackOption, Message messageOption)
         {
             MessageOption = messageOption;
@@ -191,12 +191,12 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Acknowledgement decoded from the envelope, if present.
         /// </summary>
         public Ack AckOption { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Message decoded from the envelope, if present.
         /// </summary>
         public Message MessageOption { get; private set; }
     }
@@ -229,8 +229,8 @@ namespace Akka.Remote.Transport
         /// Takes an <see cref="IAkkaPdu"/> representation of an Akka PDU and returns its encoded form
         /// as a <see cref="ByteString"/>.
         /// </summary>
-        /// <param name="pdu">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="pdu">PDU to encode.</param>
+        /// <returns>Encoded PDU bytes, or <see langword="null"/> when the PDU type is unsupported.</returns>
         public virtual ByteString EncodePdu(IAkkaPdu pdu)
         {
             switch (pdu)
@@ -249,39 +249,39 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes a payload PDU.
         /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="payload">Serialized payload bytes.</param>
+        /// <returns>The encoded payload PDU.</returns>
         public abstract ByteString ConstructPayload(ByteString payload);
 
         /// <summary>
-        /// TBD
+        /// Encodes an association control PDU.
         /// </summary>
-        /// <param name="info">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="info">Handshake information to include in the PDU.</param>
+        /// <returns>The encoded association PDU.</returns>
         public abstract ByteString ConstructAssociate(HandshakeInfo info);
 
         /// <summary>
-        /// TBD
+        /// Encodes a disassociation control PDU.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reason">Disassociation reason to encode.</param>
+        /// <returns>The encoded disassociation PDU.</returns>
         public abstract ByteString ConstructDisassociate(DisassociateInfo reason);
 
         /// <summary>
-        /// TBD
+        /// Encodes a heartbeat control PDU.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The encoded heartbeat PDU.</returns>
         public abstract ByteString ConstructHeartbeat();
 
         /// <summary>
-        /// TBD
+        /// Decodes a reliable-delivery message envelope and its optional acknowledgement.
         /// </summary>
-        /// <param name="raw">TBD</param>
-        /// <param name="provider">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="raw">Serialized acknowledgement and/or message envelope.</param>
+        /// <param name="provider">Remote actor reference provider used to resolve encoded actor paths.</param>
+        /// <param name="localAddress">Local transport address used when resolving actor references.</param>
+        /// <returns>The decoded acknowledgement and message, each of which may be absent.</returns>
         public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
 
         /// <summary>
@@ -296,35 +296,35 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes a remote message envelope and, optionally, its reliable-delivery acknowledgement data.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <param name="serializedMessage">TBD</param>
-        /// <param name="senderOption">TBD</param>
-        /// <param name="seqOption">TBD</param>
-        /// <param name="ackOption">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="localAddress">Local address used to serialize actor references without an address.</param>
+        /// <param name="recipient">Actor reference that receives the message.</param>
+        /// <param name="serializedMessage">Serialized message payload and serializer metadata.</param>
+        /// <param name="senderOption">Optional sender actor reference.</param>
+        /// <param name="seqOption">Optional reliable-delivery sequence number.</param>
+        /// <param name="ackOption">Optional acknowledgement to include with the message.</param>
+        /// <returns>The encoded message envelope.</returns>
         public abstract ByteString ConstructMessage(Address localAddress, IActorRef recipient,
             SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null);
 
         /// <summary>
-        /// TBD
+        /// Encodes a standalone reliable-delivery acknowledgement.
         /// </summary>
-        /// <param name="ack">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ack">Acknowledgement information to encode.</param>
+        /// <returns>The encoded acknowledgement.</returns>
         public abstract ByteString ConstructPureAck(Ack ack);
     }
 
     /// <summary>
-    /// TBD
+    /// Protobuf implementation of the remoting PDU codec.
     /// </summary>
     internal sealed class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         /// <summary>
-        /// TBD
+        /// Decodes a protobuf-encoded remoting PDU.
         /// </summary>
-        /// <param name="raw">TBD</param>
+        /// <param name="raw">Raw protobuf bytes representing the PDU.</param>
         /// <exception cref="PduCodecException">
         /// This exception is thrown when the Akka PDU in the specified byte string,
         /// <paramref name="raw" />, meets one of the following conditions:
@@ -333,7 +333,7 @@ namespace Akka.Remote.Transport
         /// <li>The PDU is a control message with an invalid format. </li>
         /// </ul>
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The decoded payload or control PDU.</returns>
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
             try
@@ -350,23 +350,23 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes the specified payload as an Akka protocol message.
         /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="payload">Serialized payload bytes.</param>
+        /// <returns>The encoded protocol message.</returns>
         public override ByteString ConstructPayload(ByteString payload)
         {
             return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes the endpoint's handshake information as an association control PDU.
         /// </summary>
-        /// <param name="info">TBD</param>
+        /// <param name="info">Handshake information containing the origin address and UID.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="info"/> contains an invalid address.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The encoded association control PDU.</returns>
         public override ByteString ConstructAssociate(HandshakeInfo info)
         {
             var handshakeInfo = new AkkaHandshakeInfo()
@@ -379,10 +379,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes the disassociation reason as the corresponding control PDU.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reason">Disassociation reason to encode.</param>
+        /// <returns>The encoded disassociation control PDU.</returns>
         public override ByteString ConstructDisassociate(DisassociateInfo reason)
         {
             switch (reason)
@@ -419,12 +419,12 @@ namespace Akka.Remote.Transport
         private const ulong SeqUndefined = ulong.MaxValue;
 
         /// <summary>
-        /// TBD
+        /// Decodes an acknowledgement and/or remote message from the serialized envelope container.
         /// </summary>
-        /// <param name="raw">TBD</param>
-        /// <param name="provider">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="raw">Serialized protobuf acknowledgement and/or message envelope.</param>
+        /// <param name="provider">Remote actor reference provider used to resolve encoded actor paths.</param>
+        /// <param name="localAddress">Local address supplied when resolving actor references.</param>
+        /// <returns>The decoded acknowledgement and message, each of which may be absent.</returns>
         public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
@@ -840,15 +840,15 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes a message envelope and optional acknowledgement as an envelope container.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <param name="serializedMessage">TBD</param>
-        /// <param name="senderOption">TBD</param>
-        /// <param name="seqOption">TBD</param>
-        /// <param name="ackOption">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="localAddress">Local address used to serialize actor references without an address.</param>
+        /// <param name="recipient">Actor reference that receives the message.</param>
+        /// <param name="serializedMessage">Serialized message payload and serializer metadata.</param>
+        /// <param name="senderOption">Optional sender actor reference.</param>
+        /// <param name="seqOption">Optional reliable-delivery sequence number.</param>
+        /// <param name="ackOption">Optional acknowledgement to include with the message.</param>
+        /// <returns>The encoded acknowledgement and message envelope.</returns>
         public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
             IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
         {
@@ -864,10 +864,10 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes a standalone reliable-delivery acknowledgement.
         /// </summary>
-        /// <param name="ack">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ack">Acknowledgement information to encode.</param>
+        /// <returns>The encoded acknowledgement container.</returns>
         public override ByteString ConstructPureAck(Ack ack)
         {
             return new AckAndEnvelopeContainer() { Ack = AckBuilder(ack) }.ToByteString();

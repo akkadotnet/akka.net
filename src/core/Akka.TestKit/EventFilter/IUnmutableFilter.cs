@@ -12,7 +12,7 @@ namespace Akka.TestKit;
 
 // ReSharper disable once InconsistentNaming
 /// <summary>
-/// TBD
+/// A disposable handle that restores logging for events muted by an event filter.
 /// </summary>
 public interface IUnmutableFilter : IDisposable
 {

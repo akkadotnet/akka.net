@@ -29,10 +29,10 @@ namespace Akka.Cluster
         /// <summary>
         /// Factory method for <see cref="Akka.Remote.RemoteWatcher"/>
         /// </summary>
-        /// <param name="failureDetector">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="unreachableReaperInterval">TBD</param>
-        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
+        /// <param name="failureDetector">The registry used to access address failure detectors.</param>
+        /// <param name="heartbeatInterval">The interval between remote-watcher heartbeats.</param>
+        /// <param name="unreachableReaperInterval">The interval at which unreachable watched addresses are reaped.</param>
+        /// <param name="heartbeatExpectedResponseAfter">The timeout after which a heartbeat response is expected.</param>
         public new static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -54,12 +54,12 @@ namespace Akka.Cluster
         private ImmutableHashSet<Address> _clusterNodes = ImmutableHashSet.Create<Address>();
 
         /// <summary>
-        /// TBD
+        /// Creates a watcher that delegates non-cluster address monitoring to <see cref="RemoteWatcher"/> and tracks cluster membership.
         /// </summary>
-        /// <param name="failureDetector">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="unreachableReaperInterval">TBD</param>
-        /// <param name="heartbeatExpectedResponseAfter">TBD</param>
+        /// <param name="failureDetector">The registry used to access address failure detectors.</param>
+        /// <param name="heartbeatInterval">The interval between remote-watcher heartbeats.</param>
+        /// <param name="unreachableReaperInterval">The interval at which unreachable watched addresses are reaped.</param>
+        /// <param name="heartbeatExpectedResponseAfter">The timeout after which a heartbeat response is expected.</param>
         public ClusterRemoteWatcher(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
@@ -70,7 +70,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Starts the base watcher and subscribes to cluster member events.
         /// </summary>
         protected override void PreStart()
         {
@@ -79,7 +79,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the base watcher and unsubscribes from cluster events.
         /// </summary>
         protected override void PostStop()
         {
@@ -88,9 +88,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Handles initial cluster state and membership events, forwarding other messages to the base watcher.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The message received by this actor.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -141,9 +141,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Delegates watching to the base watcher only while the target address is not a cluster member.
         /// </summary>
-        /// <param name="watchee">TBD</param>
+        /// <param name="watchee">The actor reference whose remote node may need to be watched.</param>
         protected override void WatchNode(IInternalActorRef watchee)
         {
             if (!_clusterNodes.Contains(watchee.Path.Address)) base.WatchNode(watchee);
@@ -164,4 +164,3 @@ namespace Akka.Cluster
         }
     }
 }
-

@@ -1,0 +1,42 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace Akka.Persistence.Embedded.Hosting
+{
+    public sealed class EmbeddedJournalOptions : Akka.Persistence.Hosting.JournalOptions<Akka.Persistence.Embedded.Journal.SqliteWriteJournal, Akka.Persistence.Embedded.Query.SqliteReadJournalProvider>
+    {
+        public EmbeddedJournalOptions() { }
+        public EmbeddedJournalOptions(bool isDefaultPlugin, string identifier = "embedded") { }
+        public int? BatchSize { get; set; }
+        public int? BufferSize { get; set; }
+        public string? ConnectionString { get; set; }
+        public override string Identifier { get; set; }
+        protected override Akka.Configuration.Config InternalDefaultConfig { get; }
+        public string? JournalTableName { get; set; }
+        public int? QueryMaxBufferSize { get; set; }
+        public string QueryPluginId { get; }
+        public System.TimeSpan? QueryRefreshInterval { get; set; }
+        public int? QueryThreads { get; set; }
+        public int? ReadThreads { get; set; }
+        public int? ReplayBatchSize { get; set; }
+        public string? TagTableName { get; set; }
+        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+    }
+    public static class EmbeddedPersistenceHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions>? journalOptionConfigurator = null, System.Action<Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions>? snapshotOptionConfigurator = null, bool isDefaultPlugin = true) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, Akka.Persistence.Embedded.Hosting.EmbeddedJournalOptions? journalOptions = null, Akka.Persistence.Embedded.Hosting.EmbeddedSnapshotOptions? snapshotOptions = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null) { }
+        public static Akka.Hosting.AkkaConfigurationBuilder WithEmbeddedPersistence(this Akka.Hosting.AkkaConfigurationBuilder builder, string connectionString, Akka.Persistence.Hosting.PersistenceMode mode = 0, System.Action<Akka.Persistence.Hosting.AkkaPersistenceJournalBuilder>? journalBuilder = null, System.Action<Akka.Persistence.Hosting.AkkaPersistenceSnapshotBuilder>? snapshotBuilder = null, bool autoInitialize = true, string pluginIdentifier = "embedded", bool isDefaultPlugin = true) { }
+    }
+    public sealed class EmbeddedSnapshotOptions : Akka.Persistence.Hosting.SnapshotOptions<Akka.Persistence.Embedded.Snapshot.SqliteSnapshotStore>
+    {
+        public EmbeddedSnapshotOptions() { }
+        public EmbeddedSnapshotOptions(bool isDefaultPlugin, string identifier = "embedded") { }
+        public string? ConnectionString { get; set; }
+        public override string Identifier { get; set; }
+        protected override Akka.Configuration.Config InternalDefaultConfig { get; }
+        public string? TableName { get; set; }
+        protected override System.Text.StringBuilder Build(System.Text.StringBuilder sb) { }
+    }
+}

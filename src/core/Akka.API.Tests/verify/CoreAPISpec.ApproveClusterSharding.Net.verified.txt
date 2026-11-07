@@ -581,6 +581,7 @@ namespace Akka.Cluster.Sharding.Serialization
     public class ClusterShardingMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterShardingMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }

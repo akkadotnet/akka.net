@@ -57,7 +57,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         ("formatter (AKKASG008)", FormatterSource, "AKKASG008"),
         ("closed generic registration (AKKASG020)", ClosedGenericSource, "AKKASG020"),
         ("closed generic missing fields (AKKASG004)", ClosedGenericMissingFieldsSource, "AKKASG004"),
-        ("union member (AKKASG015)", UnionMemberSource, "AKKASG015"),
+        ("unmarked union implementor (AKKASG048)", UnionMemberSource, "AKKASG048"),
         ("duplicate field index (AKKASG005)", DuplicateFieldIndexSource, "AKKASG005"),
     };
 
@@ -79,7 +79,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("field-level", 500001)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -117,7 +117,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("type-level", 500002)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable]
@@ -151,7 +151,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("serializer-level", 0)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -188,7 +188,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("coverage", 500003)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         public sealed record Unmarked(string Value) : IProtocol;
@@ -241,7 +241,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IShop>("shop", 500004)]
         public sealed partial class ShopSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -270,12 +270,6 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         lineSpan.StartLinePosition.Line.Should().Be(expectedLine);
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Closed-generic construction, TYPE-LEVEL: a construction has no syntax of its own (only its
-    // GENERIC DEFINITION does), so a type-level diagnostic on it (MissingFields here) must redirect
-    // to that construction's own [AkkaSerializable<T>] registration attribute on the serializer --
-    // see MessageTypeLocationKey's doc comment in AkkaSerializerGenerator.Locations.cs.
-    // ------------------------------------------------------------------------------------------
     private const string ClosedGenericMissingFieldsSource = """
         #nullable enable
         using Akka.Actor;
@@ -293,28 +287,23 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         }
 
         [AkkaSerializer<IProtocol>("closed-generic-missing-fields", 500009)]
-        [AkkaSerializable<EmptyWrapper<int>>(Manifest = "empty-wrapper-v1")]
+        [AkkaSerializerIncludes<EmptyWrapper<int>>(Manifest = "empty-wrapper-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
-    [Fact(DisplayName = "AKKASG004 on a closed-generic construction should report at its own registration attribute, not the generic definition or the serializer's main attribute")]
-    public void Closed_generic_type_level_diagnostic_should_report_at_registration_attribute_line()
+    [Fact(DisplayName = "AKKASG004 should report once at a generic definition even when a construction is registered")]
+    public void Closed_generic_shape_diagnostic_should_report_at_definition_line()
     {
         var diagnostics = GeneratorTestHarness.Run(ClosedGenericMissingFieldsSource).GeneratorDiagnostics;
 
         var diagnostic = diagnostics.Should().ContainSingle(d => d.Id == "AKKASG004").Subject;
         diagnostic.Location.Should().NotBe(Location.None);
 
-        var expectedLine = LineIndexOf(ClosedGenericMissingFieldsSource, "[AkkaSerializable<EmptyWrapper<int>>");
-        var definitionLine = LineIndexOf(ClosedGenericMissingFieldsSource, "public sealed class EmptyWrapper<T>");
-        var serializerAttributeLine = LineIndexOf(ClosedGenericMissingFieldsSource, "[AkkaSerializer<IProtocol>");
-
+        var expectedLine = LineIndexOf(ClosedGenericMissingFieldsSource, "public sealed class EmptyWrapper<T>");
         diagnostic.Location.GetLineSpan().StartLinePosition.Line.Should().Be(expectedLine);
-        expectedLine.Should().NotBe(definitionLine, "the construction has no syntax of its own -- the generic definition's own declaration is the wrong site");
-        expectedLine.Should().NotBe(serializerAttributeLine, "this diagnostic is about ONE registration, not the serializer as a whole");
     }
 
     // ------------------------------------------------------------------------------------------
@@ -345,7 +334,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializerFormatter<Foreign, AbstractFormatter>]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
@@ -367,10 +356,10 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
 
         [AkkaSerializer<IProtocol>("closed-generic", 500006)]
-        [AkkaSerializable<int>(Manifest = "int-v1")]
+        [AkkaSerializerIncludes<int>(Manifest = "int-v1")]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
         """;
 
@@ -394,12 +383,12 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("union-member", 500007)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "outer-v1")]
         public sealed record Outer(
-            [property: AkkaField(1), AkkaUnion(typeof(NotSerializable))] IEvent Event) : IProtocol;
+            [property: AkkaField(1)] IEvent Event) : IProtocol;
         """;
 
     private const string DuplicateFieldIndexSource = """
@@ -416,7 +405,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
         [AkkaSerializer<IProtocol>("dup-index", 500008)]
         public sealed partial class SampleSerializer : AkkaSerializer
         {
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }
 
         [AkkaSerializable(Manifest = "dup-v1")]

@@ -54,10 +54,9 @@ internal sealed class InternalTestActor : UntypedActor
     }
 
     /// <summary>
-    /// TBD
+    /// Handles test-actor control messages and queues received application messages for TestKit assertions.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">The message received by the test actor.</param>
     protected override void OnReceive(object message)
     {
         try

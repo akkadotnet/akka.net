@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -580,77 +579,61 @@ namespace Akka.DistributedData.Tests
         }
 
         // Reproduction spec for issue #5663
+        //
+        // SetItems clears and re-adds every element, so each write ships the full 20k-element set.
+        // Under WriteMajority the write aggregator also resends the full state after Timeout/5, and
+        // on a loaded 2-vCPU agent one hop can take longer than that, so the writes piled up and
+        // timed out (#5686, #7899). WriteLocal plus polling the replicas avoids that. The 30s bound
+        // is generous on purpose; it still catches the quadratic SetItems/merge regression from #5663.
         [Fact]
         public async Task ORMultiValueDictionary_WithValueDeltas_LargeDataSet()
         {
             await InitCluster();
 
-            var changedProbe2 = CreateTestProbe(_sys2);
-            _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
-
-            var changedProbe3 = CreateTestProbe(_sys3);
-            _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
-
             var messages = Enumerable.Range(0, 20000).Select(i => i.ToString()).ToList();
-
-            // Use longer timeout for large dataset operations due to serialization overhead
-            // of 20K+ element ORSet merge operations. Standard timeout of 3s can be insufficient
-            // when the system is under load, causing premature UpdateTimeout before WriteAck
-            // messages arrive from remote nodes.
-            var largeDataTimeout = Dilated(TimeSpan.FromSeconds(10.0));
 
             // Scenario 1 - add 1 entry with multiple values to all nodes
             var keyA = "A";
             var entryA = messages.ToImmutableHashSet();
 
-            var stopwatch = Stopwatch.StartNew();
-            try
-            {
-                await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
-                    _keyJ,
-                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                    new WriteMajority(largeDataTimeout),
-                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-            Log.Info($"Update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
+            await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                WriteLocal.Instance,
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
 
-            var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
-
-            var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+            await AwaitReplicatedEntries(_replicator2, keyA, entryA);
+            await AwaitReplicatedEntries(_replicator3, keyA, entryA);
 
             // Scenario 2 - modify set with existing items in it
             var entryA1 = entryA.Add("999999").Add("1000000");
 
-            stopwatch = Stopwatch.StartNew();
-            try
-            {
-                await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
-                    _keyJ,
-                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                    new WriteMajority(largeDataTimeout),
-                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-            Log.Info($"Single update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
+            await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                WriteLocal.Instance,
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
 
-            var node2Changed = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(10));
-            var node2EntriesBCA = node2Changed.Get(_keyJ);
-            node2EntriesBCA.Entries["A"].Should().BeEquivalentTo(entryA1);
-
-            var node3Changed = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(10));
-            var node3EntriesBCA = node3Changed.Get(_keyJ).Entries;
-            node3EntriesBCA["A"].Should().BeEquivalentTo(entryA1);
+            await AwaitReplicatedEntries(_replicator2, keyA, entryA1);
+            await AwaitReplicatedEntries(_replicator3, keyA, entryA1);
         }
-        
+
+        /// <summary>
+        /// Polls the replicator's local copy of <see cref="_keyJ"/> until the entries under
+        /// <paramref name="key"/> equal <paramref name="expected"/>.
+        /// </summary>
+        private async Task AwaitReplicatedEntries(IActorRef replicator, string key, IImmutableSet<string> expected)
+        {
+            await AwaitAssertAsync(async () =>
+            {
+                var get = await replicator.Ask<IGetResponse>(Dsl.Get(_keyJ, ReadLocal.Instance), TimeSpan.FromSeconds(3));
+                get.Should().BeOfType<GetSuccess>();
+                var entries = ((GetSuccess)get).Get(_keyJ).Entries;
+                entries.ContainsKey(key).Should().BeTrue();
+                entries[key].SetEquals(expected).Should().BeTrue();
+            }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromMilliseconds(250));
+        }
+
         protected override void AfterAll()
         {
             base.AfterAll();

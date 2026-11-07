@@ -13,12 +13,12 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Marks failures that represent violations of the Reactive Streams protocol.
     /// </summary>
     public interface ISpecViolation { }
 
     /// <summary>
-    /// TBD
+    /// Indicates that a subscriber or subscription callback threw during a Reactive Streams interaction.
     /// </summary>
     [Serializable]
     public class SignalThrewException : IllegalStateException, ISpecViolation
@@ -39,81 +39,81 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Shared messages describing Reactive Streams protocol requirements and failures.
     /// </summary>
     public static class ReactiveStreamsCompliance
     {
         /// <summary>
-        /// TBD
+        /// Gets the rejection message for subscribing the same subscriber more than once.
         /// </summary>
         public const string CanNotSubscribeTheSameSubscriberMultipleTimes =
             "can not subscribe the same subscriber multiple times (see reactive-streams specification, rules 1.10 and 2.12)";
         /// <summary>
-        /// TBD
+        /// Gets the rejection message used when a publisher permits only one subscriber.
         /// </summary>
         public const string SupportsOnlyASingleSubscriber =
             "only supports one subscriber (which is allowed, see reactive-streams specification, rule 1.12)";
         /// <summary>
-        /// TBD
+        /// Gets the message for a request whose element count is not positive.
         /// </summary>
         public const string NumberOfElementsInRequestMustBePositiveMsg =
             "The number of requested elements must be > 0 (see reactive-streams specification, rule 3.9)";
         /// <summary>
-        /// TBD
+        /// Gets the message used when a subscriber argument is null.
         /// </summary>
         public const string SubscriberMustNotBeNullMsg = "Subscriber must not be null, rule 1.9";
         /// <summary>
-        /// TBD
+        /// Gets the message used when an error signal is null.
         /// </summary>
         public const string ExceptionMustNotBeNullMsg = "Exception must not be null, rule 2.13";
         /// <summary>
-        /// TBD
+        /// Gets the message used when an element is null.
         /// </summary>
         public const string ElementMustNotBeNullMsg = "Element must not be null, rule 2.13";
         /// <summary>
-        /// TBD
+        /// Gets the message used when a subscription is null.
         /// </summary>
         public const string SubscriptionMustNotBeNullMsg = "Subscription must not be null, rule 2.13";
 
         /// <summary>
-        /// TBD
+        /// Gets the exception shared for requests with non-positive demand.
         /// </summary>
         public static readonly Exception NumberOfElementsInRequestMustBePositiveException =
             new ArgumentException(NumberOfElementsInRequestMustBePositiveMsg);
         /// <summary>
-        /// TBD
+        /// Gets the exception shared when the same subscriber is subscribed more than once.
         /// </summary>
         public static readonly Exception CanNotSubscribeTheSameSubscriberMultipleTimesException =
             new IllegalStateException(CanNotSubscribeTheSameSubscriberMultipleTimes);
 
         /// <summary>
-        /// TBD
+        /// Gets the exception shared when an element is null.
         /// </summary>
         public static readonly Exception ElementMustNotBeNullException =
             new ArgumentNullException("element", ElementMustNotBeNullMsg);
         /// <summary>
-        /// TBD
+        /// Gets the exception shared when a subscription is null.
         /// </summary>
         public static readonly Exception SubscriptionMustNotBeNullException =
             new ArgumentNullException("subscription", SubscriptionMustNotBeNullMsg);
 
         /// <summary>
-        /// TBD
+        /// Gets the exception shared when a subscriber is null.
         /// </summary>
         public static Exception SubscriberMustNotBeNullException { get; } = new ArgumentNullException("subscriber", SubscriberMustNotBeNullMsg);
 
         /// <summary>
-        /// TBD
+        /// Gets the exception shared when an error cause is null.
         /// </summary>
         public static Exception ExceptionMustNotBeNullException { get; } = new ArgumentNullException("exception", ExceptionMustNotBeNullMsg);
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="ISubscriber{T}.OnSubscribe"/> and wraps subscriber exceptions as a protocol violation.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="subscription">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber receiving the subscription.</param>
+        /// <param name="subscription">The subscription to deliver.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling <see cref="ISubscriber{T}.OnSubscribe"/>.</exception>
         public static void TryOnSubscribe<T>(ISubscriber<T> subscriber, ISubscription subscription)
         {
             try
@@ -127,11 +127,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls the untyped subscriber's OnSubscribe callback and wraps any thrown exception.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="subscription">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <param name="subscriber">The subscriber receiving the subscription.</param>
+        /// <param name="subscription">The subscription to deliver.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling OnSubscribe.</exception>
         internal static void TryOnSubscribe(IUntypedSubscriber subscriber, ISubscription subscription)
         {
             try
@@ -145,12 +145,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Validates and delivers an element to a subscriber, wrapping exceptions thrown by its callback.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="element">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber receiving the element.</param>
+        /// <param name="element">The element to deliver; it must not be null.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling <see cref="ISubscriber{T}.OnNext"/>.</exception>
         public static void TryOnNext<T>(ISubscriber<T> subscriber, T element)
         {
             RequireNonNullElement(element);
@@ -165,11 +165,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Validates and delivers an untyped element, wrapping exceptions thrown by the callback.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="element">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <param name="subscriber">The subscriber receiving the element.</param>
+        /// <param name="element">The element to deliver; it must not be null.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling OnNext.</exception>
         internal static void TryOnNext(IUntypedSubscriber subscriber, object element)
         {
             RequireNonNullElement(element);
@@ -184,13 +184,13 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Delivers a failure unless it is itself a protocol violation, wrapping exceptions thrown by the callback.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber receiving the failure.</param>
+        /// <param name="cause">The failure to deliver.</param>
+        /// <exception cref="IllegalStateException">The cause is marked as a Reactive Streams specification violation.</exception>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling <see cref="ISubscriber{T}.OnError"/>.</exception>
         public static void TryOnError<T>(ISubscriber<T> subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
@@ -207,12 +207,12 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Delivers a failure to an untyped subscriber unless it is itself a protocol violation.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <param name="subscriber">The subscriber receiving the failure.</param>
+        /// <param name="cause">The failure to deliver.</param>
+        /// <exception cref="IllegalStateException">The cause is marked as a Reactive Streams specification violation.</exception>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling OnError.</exception>
         internal static void TryOnError(IUntypedSubscriber subscriber, Exception cause)
         {
             if (cause is ISpecViolation)
@@ -229,11 +229,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Delivers successful completion, wrapping exceptions thrown by the callback.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber receiving completion.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling <see cref="ISubscriber{T}.OnComplete"/>.</exception>
         public static void TryOnComplete<T>(ISubscriber<T> subscriber)
         {
             try
@@ -247,10 +247,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Delivers successful completion to an untyped subscriber and wraps exceptions thrown by the callback.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <exception cref="SignalThrewException">TBD</exception>
+        /// <param name="subscriber">The subscriber receiving completion.</param>
+        /// <exception cref="SignalThrewException">The subscriber throws while handling OnComplete.</exception>
         internal static void TryOnComplete(IUntypedSubscriber subscriber)
         {
             try
@@ -264,10 +264,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Signals the standard duplicate-subscription failure to a subscriber already subscribed.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber to notify of the duplicate subscription.</param>
         public static void RejectDuplicateSubscriber<T>(ISubscriber<T> subscriber)
         {
             // since it is already subscribed it has received the subscription first
@@ -276,11 +276,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gives an additional subscriber a cancelled subscription and signals that only one subscriber is supported.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="rejector">TBD</param>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The additional subscriber to reject.</param>
+        /// <param name="rejector">The publisher name or context included in the rejection message.</param>
         public static void RejectAdditionalSubscriber<T>(ISubscriber<T> subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
@@ -288,10 +288,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gives an additional untyped subscriber a cancelled subscription and signals that only one subscriber is supported.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
-        /// <param name="rejector">TBD</param>
+        /// <param name="subscriber">The additional subscriber to reject.</param>
+        /// <param name="rejector">The publisher name or context included in the rejection message.</param>
         internal static void RejectAdditionalSubscriber(IUntypedSubscriber subscriber, string rejector)
         {
             TryOnSubscribe(subscriber, CancelledSubscription.Instance);
@@ -299,20 +299,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Signals the Reactive Streams error for a request with non-positive demand.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber receiving the demand error.</param>
         public static void RejectDueToNonPositiveDemand<T>(ISubscriber<T> subscriber)
         {
             TryOnError(subscriber, NumberOfElementsInRequestMustBePositiveException);
         }
 
         /// <summary>
-        /// TBD
+        /// Throws the shared protocol exception when the subscriber is null.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="subscriber">TBD</param>
+        /// <typeparam name="T">The subscriber's element type.</typeparam>
+        /// <param name="subscriber">The subscriber to validate.</param>
         public static void RequireNonNullSubscriber<T>(ISubscriber<T> subscriber)
         {
             if (ReferenceEquals(subscriber, null))
@@ -320,9 +320,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Throws the shared protocol exception when the subscription is null.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription to validate.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
         /// </exception>
@@ -333,9 +333,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Throws the shared protocol exception when the failure is null.
         /// </summary>
-        /// <param name="exception">TBD</param>
+        /// <param name="exception">The failure to validate.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="exception"/> is undefined.
         /// </exception>
@@ -346,9 +346,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Throws the shared protocol exception when the element is null.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to validate.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="element"/> is undefined.
         /// </exception>
@@ -359,10 +359,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels a subscription, passing the cause when it supports cancellation with an exception.
         /// </summary>
-        /// <param name="subscription">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="subscription">The subscription to cancel.</param>
+        /// <param name="cause">The cancellation cause supplied to subscriptions that support it.</param>
         /// <exception cref="SignalThrewException">
         /// This exception is thrown when an exception occurs while canceling the specified <paramref name="subscription"/>.
         /// </exception>
@@ -389,10 +389,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Requests the specified number of elements, wrapping exceptions thrown by the subscription.
         /// </summary>
-        /// <param name="subscription">TBD</param>
-        /// <param name="demand">TBD</param>
+        /// <param name="subscription">The subscription to request from.</param>
+        /// <param name="demand">The number of elements to request.</param>
         /// <exception cref="SignalThrewException">
         /// This exception is thrown when an exception occurs while requesting no events be sent to the specified <paramref name="subscription"/>.
         /// </exception>

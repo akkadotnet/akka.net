@@ -23,13 +23,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the supervisor strategy used by this actor to handle failures of its children.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default actor supervisor strategy.</returns>
         protected virtual SupervisorStrategy SupervisorStrategy()
         {
             return Actor.SupervisorStrategy.DefaultStrategy;
         }
     }
 }
-

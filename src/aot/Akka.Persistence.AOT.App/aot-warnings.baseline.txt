@@ -1,0 +1,23 @@
+# Trim/AOT warning baseline for the Persistence Native AOT canary (src/aot/Akka.Persistence.AOT.App).
+#
+# Same format and checker as the plain-core canary's baseline
+# (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
+# added/gone entries are handled. Scope differs: --scope passes five prefixes, comma-separated -
+#
+#   src/core/Akka.Persistence/                                   - the persistence core
+#   src/core/Akka.Persistence.Query/                             - PersistenceQuery
+#   src/contrib/persistence/Akka.Persistence.Query.InMemory/     - the read journal the canary queries
+#   src/contrib/hosting/Akka.Persistence.Hosting/                - the builders the canary is built with
+#   src/core/Akka.Streams/                                       - the streams every query runs on
+#
+# src/core/Akka/ is deliberately OUT of scope - the plain-core canary's baseline already covers it.
+# src/core/Akka.Streams/ is in scope: every query materializes a stream, and Akka.Streams no longer needs
+# trimmer roots or carries baselined warnings for that.
+#
+# Everything below is reached from this app and is not caused by plugin registration.
+
+# PersistentFSM snapshots are serialized by reading the generic argument's members by name. The
+# open generic is not in the serializer's built-in table (PersistenceManifestSpec), so it stays a
+# reflection site. The canary never serializes one.
+IL2070|src/core/Akka.Persistence/Serialization/PersistenceMessageSerializer.cs|Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Type,Byte[])|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'System.Type.GetConstructor(Type[])'.Theparameter'type'ofmethod'Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Type,Byte[])'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+IL2075|src/core/Akka.Persistence/Serialization/PersistenceMessageSerializer.cs|Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Object)|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicProperties'incallto'System.Type.GetProperty(String)'.Thereturnvalueofmethod'System.Object.GetType()'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.

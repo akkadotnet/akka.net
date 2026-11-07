@@ -89,6 +89,27 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             await EnterBarrierAsync("name");
         }
 
+        // The throttle is a token bucket with 1000 B capacity. A message larger than the capacity is never
+        // admitted, so the filler's wire size (text plus envelope) must stay under 1000 B.
+        private static readonly string Filler = new('f', 600);
+
+        /// <summary>
+        /// Sends two fillers ahead of the timed messages. A fresh bucket admits its first message without
+        /// draining (it is created with a last-send time of 0), and the second filler drains most of the
+        /// remaining tokens. The numbered messages that follow then run into the throttle on every run.
+        /// </summary>
+        private static void SendFillers(IActorRef echo)
+        {
+            echo.Tell(Filler);
+            echo.Tell(Filler);
+        }
+
+        private async Task ExpectFillersAsync()
+        {
+            await ExpectMsgAsync(Filler, TimeSpan.FromSeconds(5));
+            await ExpectMsgAsync(Filler, TimeSpan.FromSeconds(5));
+        }
+
         public async Task Support_Throttling_of_Network_ConnectionsAsync()
         {
             await RunOnAsync(async () =>
@@ -108,17 +129,24 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
             await RunOnAsync(async () =>
             {
-                foreach(var i in Enumerable.Range(0, 10))
+                var echo = await GetEchoActorRef();
+                SendFillers(echo);
+                foreach (var i in Enumerable.Range(0, 10))
                 {
-                    (await GetEchoActorRef()).Tell(i);
+                    echo.Tell(i);
                 }
             }, _config.Slave);
 
-            // fudged the value to 0.5,since messages are a different size in Akka.NET
-            await WithinAsync(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(2), async () =>
+            // Start timing only after the burst is through, so the bounds depend on the throttle rate
+            // and not on barrier skew between the nodes.
+            await ExpectFillersAsync();
+
+            // Only the bytes beyond the bucket's remaining tokens are delayed, so the min is a fudged value:
+            // messages have a different size in Akka.NET than on the JVM.
+            await WithinAsync(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(5), async () =>
             {
-                await ExpectMsgAsync(0, TimeSpan.FromMilliseconds(500));
-                (await ReceiveNAsync(9).ToListAsync()).ShouldOnlyContainInOrder(Enumerable.Range(1,9).Cast<object>().ToArray());
+                await ExpectMsgAsync(0);
+                (await ReceiveNAsync(9).ToListAsync()).ShouldOnlyContainInOrder(Enumerable.Range(1, 9).Cast<object>().ToArray());
             });
 
             await EnterBarrierAsync("throttled_send2");
@@ -132,19 +160,24 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
             await RunOnAsync(async () =>
             {
+                var echo = await GetEchoActorRef();
+                SendFillers(echo);
                 foreach (var i in Enumerable.Range(10, 10))
                 {
-                    (await GetEchoActorRef()).Tell(i);
+                    echo.Tell(i);
                 }
             }, _config.Slave);
 
+            // Both nodes see the fillers; only the slave's inbound side is throttled.
+            await ExpectFillersAsync();
+
             var minMax = IsNode(_config.Master)
                 ? (TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
-                : (TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(3));
+                : (TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(5));
 
             await WithinAsync(minMax.Item1, minMax.Item2, async () =>
             {
-                await ExpectMsgAsync(10, TimeSpan.FromMilliseconds(500));
+                await ExpectMsgAsync(10);
                 (await ReceiveNAsync(9).ToListAsync()).ShouldOnlyContainInOrder(Enumerable.Range(11, 9).Cast<object>().ToArray());
             });
 

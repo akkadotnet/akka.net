@@ -302,7 +302,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     [Fact(DisplayName = "Generated serializer should round-trip through Serialization")]
     public async Task Generated_serializer_should_round_trip_through_Serialization()
     {
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(GeneratedTestSerializer.CreateSerializerDetails(system))));
         var system = ActorSystem.Create("generated-messagepack-serialization-spec", setup);
         try
         {
@@ -327,7 +327,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     {
         var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
         {
-            var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
+            var generated = GeneratedTestSerializer.CreateSerializerDetails(extendedSystem);
             var custom = SerializerDetails.Create(
                 "custom-protobuf",
                 new CustomProtobufPayloadSerializer(extendedSystem),
@@ -378,7 +378,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     {
         var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
         {
-            var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
+            var generated = GeneratedTestSerializer.CreateSerializerDetails(extendedSystem);
             var custom = SerializerDetails.Create(
                 "custom-protobuf",
                 new CustomProtobufPayloadSerializer(extendedSystem),
@@ -422,7 +422,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     [Fact(DisplayName = "Generated serializer should round-trip a live IActorRef through Akka serialization")]
     public async Task Generated_serializer_should_round_trip_a_live_IActorRef_through_Akka_serialization()
     {
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(GeneratedTestSerializer.CreateSerializerDetails(system))));
         var system = ActorSystem.Create("generated-messagepack-live-ref-spec", setup);
         try
         {
@@ -710,7 +710,7 @@ public interface IGeneratedTestProtocol
 [AkkaSerializer<IGeneratedTestProtocol>("generated-test", 120101)]
 public sealed partial class GeneratedTestSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 public enum SampleStatus

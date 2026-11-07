@@ -524,10 +524,10 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
         /// </summary>
-        /// <param name="maxSequenceNr">Upper bound for a selected snapshot's sequence number.</param>
-        /// <param name="maxTimeStamp">Upper bound for a selected snapshot's timestamp.</param>
-        /// <param name="minSequenceNr">Lower bound for a selected snapshot's sequence number</param>
-        /// <param name="minTimestamp">Lower bound for a selected snapshot's timestamp</param>
+        /// <param name="maxSequenceNr">Inclusive upper bound for a selected snapshot's sequence number.</param>
+        /// <param name="maxTimeStamp">Inclusive upper bound for a selected snapshot's timestamp.</param>
+        /// <param name="minSequenceNr">Inclusive lower bound for a selected snapshot's sequence number.</param>
+        /// <param name="minTimestamp">Inclusive lower bound for a selected snapshot's timestamp. A null value is treated as <see cref="DateTime.MinValue"/>.</param>
         [JsonConstructor]
         public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp, long minSequenceNr = 0L, DateTime? minTimestamp = null)
         {
@@ -540,28 +540,28 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
         /// </summary>
-        /// <param name="maxSequenceNr">Upper bound for a selected snapshot's sequence number.</param>
+        /// <param name="maxSequenceNr">Inclusive upper bound for a selected snapshot's sequence number.</param>
         public SnapshotSelectionCriteria(long maxSequenceNr) : this(maxSequenceNr, DateTime.MaxValue)
         {
         }
 
         /// <summary>
-        /// Upper bound for a selected snapshot's sequence number.
+        /// Inclusive upper bound for a selected snapshot's sequence number.
         /// </summary>
         public long MaxSequenceNr { get; }
 
         /// <summary>
-        /// Upper bound for a selected snapshot's timestamp.
+        /// Inclusive upper bound for a selected snapshot's timestamp.
         /// </summary>
         public DateTime MaxTimeStamp { get; }
 
         /// <summary>
-        /// Lower bound for a selected snapshot's sequence number
+        /// Inclusive lower bound for a selected snapshot's sequence number.
         /// </summary>
         public long MinSequenceNr { get; }
 
         /// <summary>
-        /// Lower bound for a selected snapshot's timestamp
+        /// Inclusive lower bound for a selected snapshot's timestamp.
         /// </summary>
         public DateTime? MinTimestamp { get; }
 

@@ -13,33 +13,33 @@ using Akka.TestKit.Internal;
 namespace Akka.TestKit.TestEvent;
 
 /// <summary>
-/// TBD
+/// Event-stream message that removes a collection of filters from the test event listener.
 /// </summary>
 public sealed class Unmute : INoSerializationVerificationNeeded
 {
     private readonly IReadOnlyCollection<EventFilterBase> _filters;
 
     /// <summary>
-    /// TBD
+    /// Creates an unmute message for the specified filters.
     /// </summary>
-    /// <param name="filters">TBD</param>
+    /// <param name="filters">The filters to remove.</param>
     public Unmute(params EventFilterBase[] filters)
     {
         _filters = filters;
     }
 
     /// <summary>
-    /// TBD
+    /// Creates an unmute message for the specified filters.
     /// </summary>
-    /// <param name="filters">TBD</param>
+    /// <param name="filters">The filters to remove.</param>
     public Unmute(IReadOnlyCollection<EventFilterBase> filters)
     {
         _filters = filters;
     }
 
     /// <summary>
-    /// TBD
+    /// Gets the filters to remove.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The collection of filters included in this message.</returns>
     public IReadOnlyCollection<EventFilterBase> Filters { get { return _filters; } }
 }

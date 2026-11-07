@@ -14,7 +14,7 @@ using Akka.Serialization;
 namespace Akka.Cluster.Tools.Singleton.Serialization
 {
     /// <summary>
-    /// TBD
+    /// Serializes the cluster singleton hand-over protocol messages using compact string manifests and empty payloads.
     /// </summary>
     public class ClusterSingletonMessageSerializer : SerializerWithStringManifest
     {
@@ -40,6 +40,12 @@ namespace Akka.Cluster.Tools.Singleton.Serialization
                 {TakeOverFromMeManifest, _ => TakeOverFromMe.Instance}
             };
         }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterSingletonMessageSerializer) ? 14 : base.Identifier;
 
         /// <summary>
         /// Serializes the given object into a byte array

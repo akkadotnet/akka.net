@@ -165,8 +165,8 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Start a specific number of actors that is then kept alive in the cluster.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="numberOfInstances">TBD</param>
+        /// <param name="name">The name identifying this daemon-process set.</param>
+        /// <param name="numberOfInstances">The number of actors to run, each assigned an identifier from zero through this count minus one.</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
         /// <returns>A reference to a router actor that will distribute all messages evenly across the workers
         /// using round-robin message routing. <c>null</c> if the ShardedDaemonProcess is misconfigured.</returns>

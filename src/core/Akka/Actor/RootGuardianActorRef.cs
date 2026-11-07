@@ -26,16 +26,16 @@ namespace Akka.Actor
         private readonly IReadOnlyDictionary<string, IInternalActorRef> _extraNames;
 
         /// <summary>
-        /// TBD
+        /// Creates the root guardian reference and its actor cell.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="mailboxType">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="deadLetters">TBD</param>
-        /// <param name="extraNames">TBD</param>
+        /// <param name="system">The actor system that owns the guardian.</param>
+        /// <param name="props">The guardian actor configuration.</param>
+        /// <param name="dispatcher">The dispatcher used by the guardian.</param>
+        /// <param name="mailboxType">The guardian's mailbox type.</param>
+        /// <param name="supervisor">The guardian's supervisor.</param>
+        /// <param name="path">The root guardian's actor path.</param>
+        /// <param name="deadLetters">The system's dead-letter reference.</param>
+        /// <param name="extraNames">Additional named references resolved directly beneath the guardian.</param>
         public RootGuardianActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, 
             IInternalActorRef supervisor, ActorPath path, IInternalActorRef deadLetters, IReadOnlyDictionary<string, IInternalActorRef> extraNames)
             : base(system,props,dispatcher,mailboxType,supervisor,path)
@@ -46,24 +46,24 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// The root guardian's parent reference resolves to the root guardian itself.
         /// </summary>
         public override IInternalActorRef Parent { get { return this; } }
 
         /// <summary>
-        /// TBD
+        /// Sets the temporary child container used while guardian children are being initialized.
         /// </summary>
-        /// <param name="tempContainer">TBD</param>
+        /// <param name="tempContainer">The temporary container exposed at the <c>temp</c> path.</param>
         public void SetTempContainer(IInternalActorRef tempContainer)
         {
             _tempContainer = tempContainer;
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves a direct child, including the guardian's built-in names.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The direct child name to resolve.</param>
+        /// <returns>The temporary container, dead letters, a registered extra reference, or a regular child reference.</returns>
         public override IInternalActorRef GetSingleChild(string name)
         {
             switch(name)
@@ -80,4 +80,3 @@ namespace Akka.Actor
         }
     }
 }
-

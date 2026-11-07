@@ -45,6 +45,12 @@ namespace Akka.Cluster.Metrics.Serialization
         }
         
         /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(ClusterMetricsMessageSerializer) ? 10 : base.Identifier;
+
+        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
             switch (obj)
@@ -146,12 +152,15 @@ namespace Akka.Cluster.Metrics.Serialization
         private Proto.MetricsSelector MetricsSelectorToProto(IMetricsSelector selector)
         {
             var serializer = _serialization.Value.FindSerializerFor(selector);
-            
+
             return new Proto.MetricsSelector()
             {
                 Data = ByteString.CopyFrom(serializer.ToBinary(selector)),
                 SerializerId = (uint)serializer.Identifier,
-                Manifest = selector.GetType().TypeQualifiedName()
+                // must be whatever manifest THIS serializer's FromBinary expects back - a plain type-qualified
+                // name only round-trips for a serializer that resolves it by reflection (e.g. json's fallback);
+                // a module serializer such as this one needs its own short manifest instead
+                Manifest = serializer.Manifest(selector)
             };
         }
 

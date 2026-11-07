@@ -69,6 +69,26 @@ namespace Akka.Remote.Artery
         /// check whether a new incarnation completed while this stream was down".
         /// </summary>
         public int CurrentIncarnation { get; set; }
+
+        private int _clearedQuarantineIncarnation;
+
+        /// <summary>
+        /// Called only by the delivery-stage owner or stopped-stream restart cleanup. Quarantine
+        /// is published in immutable association state; no producer thread mutates this buffer.
+        /// Observe it before eager replay, independently of retained control-channel ordering.
+        /// </summary>
+        public bool ClearQuarantined(AssociationState association)
+        {
+            if (association.UniqueRemoteAddress is not { } peer || !association.IsQuarantined(peer.Uid) ||
+                association.Incarnation <= _clearedQuarantineIncarnation)
+                return false;
+
+            Buffer.Clear();
+            NextSeq = 1;
+            CurrentIncarnation = association.Incarnation;
+            _clearedQuarantineIncarnation = association.Incarnation;
+            return true;
+        }
     }
 
     /// <summary>
@@ -225,11 +245,9 @@ namespace Akka.Remote.Artery
                     // association's control stream. Not a restart, so there is nothing to "refresh":
                     // adopt the currently-observed incarnation directly.
                     State.CurrentIncarnation = _stage.Context.AssociationState.Incarnation;
-                else
-                    // A restart (this state has been observed before) -- a NEW incarnation may have
-                    // completed its handshake while this stream was down; reset if so (same check
-                    // RefreshIncarnation performs on every subsequent event).
-                    RefreshIncarnation();
+                // Observe incarnation changes and local quarantine before eager replay, including
+                // when this is the first materialization after quarantine.
+                RefreshIncarnation();
 
                 _controlCallback = GetAsyncCallback<(long OriginUid, object Message)>(HandleControlMessage);
                 _stage.Context.SubscribeControl(this);
@@ -259,6 +277,7 @@ namespace Akka.Remote.Artery
 
             private void HandleControlMessage((long OriginUid, object Message) evt)
             {
+                RefreshIncarnation();
                 // INVARIANT 3 / #6414 stale-ack guard -- see the type-level remarks. A mismatch is
                 // silently ignored: it is either irrelevant (a different association's traffic,
                 // broadcast globally) or a stale reply from a superseded incarnation of THIS one.
@@ -311,7 +330,9 @@ namespace Akka.Remote.Artery
                         break;
 
                     case ISystemMessage systemMessage:
-                        EnqueueSystemMessage(systemMessage, elem);
+                        var association = _stage.Context.AssociationState;
+                        if (association.UniqueRemoteAddress is not { } peer || !association.IsQuarantined(peer.Uid))
+                            EnqueueSystemMessage(systemMessage, elem);
                         break;
 
                     default:
@@ -342,6 +363,7 @@ namespace Akka.Remote.Artery
 
             public void OnPull()
             {
+                RefreshIncarnation();
                 if (_outQueue.Count > 0)
                 {
                     Push(_stage.Out, _outQueue.Dequeue());
@@ -401,9 +423,8 @@ namespace Akka.Remote.Artery
             /// Resets seqNo (back to 1) and empties the unacknowledged buffer -- idempotent, called
             /// both automatically (a genuinely new incarnation observed via
             /// <see cref="RefreshIncarnation"/>) and explicitly (<see cref="ClearSystemMessageDelivery"/>
-            /// / give-up). Deliberately does NOT clear <see cref="_outQueue"/> -- any already-queued
-            /// pass-through/resend elements are harmless to let drain (the control stream keeps
-            /// flowing even once quarantined; see design.md's control-pierces-quarantine semantics).
+            /// / give-up). Removes staged reliable replay from <see cref="_outQueue"/> while preserving
+            /// pass-through control frames (including one-time quarantine notifications).
             /// Mutates the SHARED <see cref="State"/> (design.md group 9 invariant 3) -- this is why
             /// buffer/seqNo resets survive (or rather, correctly do NOT survive across an actual
             /// incarnation change) a stream restart the exact same way they did before that state
@@ -414,6 +435,20 @@ namespace Akka.Remote.Artery
                 State.Buffer.Clear();
                 State.NextSeq = 1;
                 State.CurrentIncarnation = incarnation;
+                DiscardQueuedSystemMessages();
+            }
+
+            private void DiscardQueuedSystemMessages()
+            {
+                // Preserve one-time notices and other pass-through frames, but never emit a
+                // staged reliable replay belonging to delivery state that has just been reset.
+                var count = _outQueue.Count;
+                for (var i = 0; i < count; i++)
+                {
+                    var element = _outQueue.Dequeue();
+                    if (element.Message is not SystemMessageEnvelope)
+                        _outQueue.Enqueue(element);
+                }
             }
 
             /// <summary>
@@ -421,14 +456,16 @@ namespace Akka.Remote.Artery
             /// a NEW handshake) purely by observing <see cref="Artery.AssociationState.Incarnation"/>
             /// advance -- design.md invariant 2 ("new incarnation -&gt; expected restarts at 1").
             /// Explicit quarantine of the CURRENT (unchanged) uid does NOT advance <c>Incarnation</c>
-            /// by itself -- that case is handled by <see cref="ClearSystemMessageDelivery"/>/give-up
-            /// instead (see their remarks).
+            /// by itself -- the owner observes the quarantined current UID and resets once for that
+            /// incarnation, before replay or emission. Explicit local clears remain supported.
             /// </summary>
             private void RefreshIncarnation()
             {
-                var observed = _stage.Context.AssociationState.Incarnation;
-                if (observed != State.CurrentIncarnation)
-                    ResetDeliveryState(observed);
+                var association = _stage.Context.AssociationState;
+                if (association.Incarnation != State.CurrentIncarnation)
+                    ResetDeliveryState(association.Incarnation);
+                if (State.ClearQuarantined(association))
+                    DiscardQueuedSystemMessages();
             }
 
             private void DeliverOrPull()

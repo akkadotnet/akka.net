@@ -13,22 +13,22 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Publisher that completes each subscriber without emitting elements.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements the publisher could emit.</typeparam>
     public sealed class EmptyPublisher<T> : IPublisher<T>
     {
         /// <summary>
-        /// TBD
+        /// The shared empty publisher instance.
         /// </summary>
         public static readonly IPublisher<T> Instance = new EmptyPublisher<T>();
 
         private EmptyPublisher() { }
 
         /// <summary>
-        /// TBD
+        /// Subscribes the consumer and immediately signals completion.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to notify.</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -44,32 +44,32 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>already-completed-publisher</c>.</returns>
         public override string ToString() => "already-completed-publisher";
     }
 
     /// <summary>
-    /// TBD
+    /// Publisher that signals a stored failure to each subscriber.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements the publisher would otherwise emit.</typeparam>
     internal sealed class ErrorPublisher<T> : IPublisher<T>
     {
         /// <summary>
-        /// TBD
+        /// The diagnostic name returned by <see cref="ToString"/>.
         /// </summary>
         public readonly string Name;
         /// <summary>
-        /// TBD
+        /// The failure signaled to subscribers.
         /// </summary>
         public readonly Exception Cause;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher that reports the specified failure.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="cause">The failure signaled to subscribers.</param>
+        /// <param name="name">The diagnostic name of the publisher.</param>
         public ErrorPublisher(Exception cause, string name)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(cause);
@@ -78,9 +78,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Rejects the subscriber according to Reactive Streams rules.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to reject.</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -96,16 +96,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The name supplied when this publisher was created.</returns>
         public override string ToString() => Name;
     }
 
     /// <summary>
-    /// TBD
+    /// Publisher that emits the result of a promise when requested, or completes without an element for the default value.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of the optional element produced by the promise.</typeparam>
     internal sealed class MaybePublisher<T> : IPublisher<T>
     {
         private class MaybeSubscription : ISubscription
@@ -148,19 +148,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// The promise whose nondefault successful result can be emitted to subscribers.
         /// </summary>
         public readonly TaskCompletionSource<T> Promise;
         /// <summary>
-        /// TBD
+        /// The diagnostic name returned by <see cref="ToString"/>.
         /// </summary>
         public readonly string Name;
 
         /// <summary>
-        /// TBD
+        /// Creates a publisher backed by a promise.
         /// </summary>
-        /// <param name="promise">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="promise">The promise whose nondefault result or failure is signaled to subscribers; a default result completes without an element.</param>
+        /// <param name="name">The diagnostic name of the publisher.</param>
         public MaybePublisher(TaskCompletionSource<T> promise, string name)
         {
             Promise = promise;
@@ -168,9 +168,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Subscribes the consumer, emitting a nondefault successful result after demand, completing without an element for a default result, or reporting the promise failure.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to notify.</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscriber(subscriber);
@@ -182,85 +182,85 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The name supplied when this publisher was created.</returns>
         public override string ToString() => Name;
     }
 
     /// <summary>
-    /// TBD
+    /// Subscription whose request and cancel operations are no-ops.
     /// </summary>
     internal sealed class CancelledSubscription : ISubscription
     {
         /// <summary>
-        /// TBD
+        /// The shared cancelled subscription instance.
         /// </summary>
         public static readonly CancelledSubscription Instance = new();
 
         private CancelledSubscription() { }
 
         /// <summary>
-        /// TBD
+        /// Ignores a request because this subscription is already cancelled.
         /// </summary>
-        /// <param name="n">TBD</param>
+        /// <param name="n">The requested number of elements.</param>
         public void Request(long n) { }
 
         /// <summary>
-        /// TBD
+        /// Does nothing because this subscription is already cancelled.
         /// </summary>
         public void Cancel() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Subscriber that cancels its subscription and ignores subsequent signals.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements the subscriber ignores.</typeparam>
     internal sealed class CancellingSubscriber<T> : ISubscriber<T>
     {
         /// <summary>
-        /// TBD
+        /// Cancels the supplied subscription.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription to cancel.</param>
         public void OnSubscribe(ISubscription subscription) => subscription.Cancel();
         /// <summary>
-        /// TBD
+        /// Ignores the received element after cancellation.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element received after cancellation.</param>
         public void OnNext(T element) { }
         /// <summary>
-        /// TBD
+        /// Ignores an object-form element received after cancellation.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The object received after cancellation.</param>
         public void OnNext(object element) { }
         /// <summary>
-        /// TBD
+        /// Ignores the received failure after cancellation.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure received after cancellation.</param>
         public void OnError(Exception cause) { }
         /// <summary>
-        /// TBD
+        /// Ignores completion after cancellation.
         /// </summary>
         public void OnComplete() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Publisher that rejects every subscription request as an additional subscriber.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements the publisher would otherwise emit.</typeparam>
     internal sealed class RejectAdditionalSubscribers<T> : IPublisher<T>
     {
         /// <summary>
-        /// TBD
+        /// The shared publisher instance that rejects subscribers.
         /// </summary>
         public static readonly IPublisher<T> Instance = new RejectAdditionalSubscribers<T>();
 
         private RejectAdditionalSubscribers() { }
 
         /// <summary>
-        /// TBD
+        /// Rejects the subscriber according to Reactive Streams rules.
         /// </summary>
-        /// <param name="subscriber">TBD</param>
+        /// <param name="subscriber">The subscriber to reject.</param>
         public void Subscribe(ISubscriber<T> subscriber)
         {
             try
@@ -274,9 +274,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the diagnostic name of this publisher.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The string <c>already-subscribed-publisher</c>.</returns>
         public override string ToString() => "already-subscribed-publisher";
     }
 }

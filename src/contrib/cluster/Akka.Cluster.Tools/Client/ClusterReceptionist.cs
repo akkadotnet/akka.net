@@ -32,7 +32,7 @@ public interface IClusterClientMessage { }
 public interface IClusterClientInteraction
 {
     /// <summary>
-    /// TBD
+    /// Client actor that interacted with the receptionist.
     /// </summary>
     IActorRef ClusterClient { get; }
 }
@@ -44,16 +44,16 @@ public interface IClusterClientInteraction
 public sealed class ClusterClientUp : IClusterClientInteraction
 {
     /// <summary>
-    /// TBD
+    /// Creates a notification that a cluster client has connected to a receptionist.
     /// </summary>
-    /// <param name="clusterClient">TBD</param>
+    /// <param name="clusterClient">Actor reference of the connected cluster client.</param>
     public ClusterClientUp(IActorRef clusterClient)
     {
         ClusterClient = clusterClient;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor reference of the connected cluster client.
     /// </summary>
     public IActorRef ClusterClient { get; }
 }
@@ -65,16 +65,16 @@ public sealed class ClusterClientUp : IClusterClientInteraction
 public sealed class ClusterClientUnreachable : IClusterClientInteraction
 {
     /// <summary>
-    /// TBD
+    /// Creates a notification that a previously connected cluster client is no longer reachable.
     /// </summary>
-    /// <param name="clusterClient">TBD</param>
+    /// <param name="clusterClient">Actor reference of the cluster client whose heartbeat deadline expired.</param>
     public ClusterClientUnreachable(IActorRef clusterClient)
     {
         ClusterClient = clusterClient;
     }
 
     /// <summary>
-    /// TBD
+    /// Actor reference of the unreachable cluster client.
     /// </summary>
     public IActorRef ClusterClient { get; }
 }
@@ -90,7 +90,7 @@ public sealed class ClusterClientUnreachable : IClusterClientInteraction
 public sealed class SubscribeClusterClients
 {
     /// <summary>
-    /// TBD
+    /// Singleton instance of the subscribe request.
     /// </summary>
     public static SubscribeClusterClients Instance { get; } = new();
     private SubscribeClusterClients() { }
@@ -102,7 +102,7 @@ public sealed class SubscribeClusterClients
 public sealed class UnsubscribeClusterClients
 {
     /// <summary>
-    /// TBD
+    /// Singleton instance of the unsubscribe request.
     /// </summary>
     public static UnsubscribeClusterClients Instance { get; } = new();
     private UnsubscribeClusterClients() { }
@@ -115,7 +115,7 @@ public sealed class UnsubscribeClusterClients
 public sealed class GetClusterClients
 {
     /// <summary>
-    /// TBD
+    /// Singleton instance of the client-list request.
     /// </summary>
     public static GetClusterClients Instance { get; } = new();
     private GetClusterClients() { }
@@ -136,7 +136,7 @@ public sealed class ClusterClients
     }
 
     /// <summary>
-    /// TBD
+    /// Set of cluster clients currently known to the receptionist.
     /// </summary>
     public IImmutableSet<IActorRef> ClusterClientsList { get; }
 }
@@ -168,33 +168,33 @@ public sealed class ClusterReceptionist : ActorBase
     #region Messages
 
     /// <summary>
-    /// TBD
+    /// Requests the current contact point list from the receptionist.
     /// </summary>
     [Serializable]
     internal sealed class GetContacts : IClusterClientMessage, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the contact-point request.
         /// </summary>
         public static GetContacts Instance { get; } = new();
         private GetContacts() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Reply containing receptionist contact points as actor paths.
     /// </summary>
     [Serializable]
     internal sealed class Contacts : IClusterClientMessage
     {
         /// <summary>
-        /// TBD
+        /// Contact point actor paths advertised by the receptionist.
         /// </summary>
         public ImmutableList<string> ContactPoints { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a reply containing contact point actor paths.
         /// </summary>
-        /// <param name="contactPoints">TBD</param>
+        /// <param name="contactPoints">Contact point actor paths to return to the client.</param>
         public Contacts(ImmutableList<string> contactPoints)
         {
             ContactPoints = contactPoints;
@@ -228,51 +228,51 @@ public sealed class ClusterReceptionist : ActorBase
     }
 
     /// <summary>
-    /// TBD
+    /// Requests a heartbeat response to keep a client interaction active.
     /// </summary>
     [Serializable]
     internal sealed class Heartbeat : IClusterClientMessage, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the heartbeat request.
         /// </summary>
         public static Heartbeat Instance { get; } = new();
         private Heartbeat() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Response sent by the receptionist to acknowledge a client heartbeat.
     /// </summary>
     [Serializable]
     internal sealed class HeartbeatRsp : IClusterClientMessage, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the heartbeat response.
         /// </summary>
         public static HeartbeatRsp Instance { get; } = new();
         private HeartbeatRsp() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Keep-alive message that prevents an idle client response tunnel from timing out.
     /// </summary>
     [Serializable]
     internal sealed class Ping : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the tunnel keep-alive message.
         /// </summary>
         public static Ping Instance { get; } = new();
         private Ping() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Periodic message that causes the receptionist to expire clients whose heartbeat deadlines passed.
     /// </summary>
     internal sealed class CheckDeadlines
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance of the deadline-check message.
         /// </summary>
         public static CheckDeadlines Instance { get; } = new();
         private CheckDeadlines() { }
@@ -294,9 +294,9 @@ public sealed class ClusterReceptionist : ActorBase
     /// <summary>
     /// Factory method for <see cref="ClusterReceptionist"/> <see cref="Actor.Props"/>.
     /// </summary>
-    /// <param name="pubSubMediator">TBD</param>
-    /// <param name="settings">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="pubSubMediator">Distributed publish-subscribe mediator used to route client messages.</param>
+    /// <param name="settings">Settings that configure receptionist roles, contacts, and failure detection.</param>
+    /// <returns>Props that create a receptionist actor on the local node.</returns>
     public static Props Props(IActorRef pubSubMediator, ClusterReceptionistSettings settings)
     {
         return Actor.Props.Create(() => new ClusterReceptionist(
@@ -360,11 +360,11 @@ public sealed class ClusterReceptionist : ActorBase
     private readonly ICancelable _checkDeadlinesTask;
 
     /// <summary>
-    /// TBD
+    /// Creates a receptionist that serves cluster clients and tracks client heartbeats.
     /// </summary>
-    /// <param name="pubSubMediator">TBD</param>
-    /// <param name="settings">TBD</param>
-    /// <exception cref="ArgumentException">TBD</exception>
+    /// <param name="pubSubMediator">Distributed publish-subscribe mediator used to route client messages.</param>
+    /// <param name="settings">Settings that configure receptionist roles, contacts, and failure detection.</param>
+    /// <exception cref="ArgumentException">Thrown when this cluster member does not have the configured receptionist role.</exception>
     public ClusterReceptionist(IActorRef pubSubMediator, ClusterReceptionistSettings settings)
     {
         _log = Context.GetLogger();
@@ -429,10 +429,10 @@ public sealed class ClusterReceptionist : ActorBase
     }
 
     /// <summary>
-    /// TBD
+    /// Handles client messages, contact requests, cluster membership updates, and client subscriptions.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">Message delivered to the receptionist actor.</param>
+    /// <returns><see langword="true"/> when the message is handled; otherwise <see langword="false"/>.</returns>
     protected override bool Receive(object message)
     {
         switch (message)
@@ -602,10 +602,10 @@ internal class ClientResponseTunnel : ActorBase
     private readonly ILoggingAdapter _log;
 
     /// <summary>
-    /// TBD
+    /// Creates a response tunnel that forwards receptionist replies to the client.
     /// </summary>
-    /// <param name="client">TBD</param>
-    /// <param name="timeout">TBD</param>
+    /// <param name="client">Cluster client that should receive tunneled replies.</param>
+    /// <param name="timeout">Idle receive timeout after which the tunnel stops.</param>
     public ClientResponseTunnel(IActorRef client, TimeSpan timeout)
     {
         _client = client;
@@ -614,10 +614,10 @@ internal class ClientResponseTunnel : ActorBase
     }
 
     /// <summary>
-    /// TBD
+    /// Forwards replies to the client, handles keep-alive and idle-timeout messages, and stops after ask replies.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">Keep-alive, receive-timeout, or response message.</param>
+    /// <returns><see langword="true"/> when the message is handled; otherwise <see langword="false"/>.</returns>
     protected override bool Receive(object message)
     {
         switch (message)

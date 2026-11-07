@@ -58,9 +58,9 @@ namespace Akka.Streams.Implementation
         private byte _lastInput = 0;
 
         /// <summary>
-        /// TBD
+        /// Creates a parser that frames object-shaped byte sequences up to a configured scan limit.
         /// </summary>
-        /// <param name="maximumObjectLength">TBD</param>
+        /// <param name="maximumObjectLength">The scan limit; parsing throws when scanning reaches this number of bytes.</param>
         public JsonObjectParser(int maximumObjectLength = int.MaxValue)
         {
             _maximumObjectLength = maximumObjectLength;
@@ -74,7 +74,7 @@ namespace Akka.Streams.Implementation
         /// Appends input to internal buffer.
         /// Use <see cref="Poll"/> to extract contained JSON objects.
         /// </summary>
-        /// <param name="input">TBD</param>
+        /// <param name="input">A chunk of bytes to append to the parser's buffer.</param>
         public void Offer(ReadOnlySequence<byte> input)
         {
             if (input.IsEmpty) return;
@@ -85,16 +85,17 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Whether the parser currently has no buffered bytes.
         /// </summary>
         public bool IsEmpty => _buffer.IsEmpty;
 
         /// <summary>
-        /// Attempt to locate next complete JSON object in buffered data and returns it if found.
-        /// May throw a <see cref="Framing.FramingException"/> if the contained JSON is invalid or max object size is exceeded.
+        /// Finds the next complete object-shaped byte sequence in buffered data, if one is available.
+        /// This scans object framing but does not validate the full JSON syntax. A <see cref="Framing.FramingException"/>
+        /// is thrown for invalid framing or when scanning reaches the configured byte limit.
         /// </summary>
-        /// <exception cref="Framing.FramingException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="Framing.FramingException">Thrown when buffered framing is invalid or scanning reaches the configured byte limit.</exception>
+        /// <returns>The next complete object-shaped byte sequence, or <see cref="Option{T}.None"/> when no complete sequence is available.</returns>
         public Option<ReadOnlySequence<byte>> Poll()
         {
             var foundObject = SeekObject();

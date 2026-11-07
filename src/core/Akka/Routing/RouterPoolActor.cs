@@ -21,7 +21,7 @@ namespace Akka.Routing
         private readonly SupervisorStrategy _supervisorStrategy;
 
         /// <summary>
-        /// TBD
+        /// The pool configuration used to create and supervise routees.
         /// </summary>
         protected Pool Pool;
 
@@ -29,7 +29,7 @@ namespace Akka.Routing
         /// Initializes a new instance of the <see cref="RouterPoolActor"/> class.
         /// </summary>
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <exception cref="ActorInitializationException">The router configuration is not a pool configuration.</exception>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
             _supervisorStrategy = supervisorStrategy;
@@ -45,9 +45,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the supervisor strategy configured for this pool router.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The strategy supplied when this actor was created.</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _supervisorStrategy;

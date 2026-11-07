@@ -159,7 +159,7 @@ namespace Akka.Cluster
         public TimeSpan HeartbeatExpectedResponseAfter { get; }
 
         /// <summary>
-        /// TBD
+        /// The number of cluster members each node is configured to monitor with heartbeats.
         /// </summary>
         public int MonitoredByNrOfMembers { get; }
 
@@ -169,22 +169,22 @@ namespace Akka.Cluster
         public ImmutableList<Address> SeedNodes { get; }
 
         /// <summary>
-        /// TBD
+        /// The timeout used by the seed-node process while waiting for seed-node responses.
         /// </summary>
         public TimeSpan SeedNodeTimeout { get; }
 
         /// <summary>
-        /// TBD
+        /// The delay before retrying a failed cluster join, or <c>null</c> when retries are disabled.
         /// </summary>
         public TimeSpan? RetryUnsuccessfulJoinAfter { get; }
 
         /// <summary>
-        /// TBD
+        /// The delay before shutting down after seed-node joining fails, or <c>null</c> when shutdown is disabled.
         /// </summary>
         public TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
 
         /// <summary>
-        /// TBD
+        /// The configured initial delay before periodic cluster tasks begin.
         /// </summary>
         public TimeSpan PeriodicTasksInitialDelay { get; }
 
@@ -194,12 +194,12 @@ namespace Akka.Cluster
         public TimeSpan GossipInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// The configured time to live for gossip messages.
         /// </summary>
         public TimeSpan GossipTimeToLive { get; }
 
         /// <summary>
-        /// TBD
+        /// The interval between periodic leader actions.
         /// </summary>
         public TimeSpan LeaderActionsInterval { get; }
 
@@ -213,12 +213,12 @@ namespace Akka.Cluster
         public TimeSpan PruneGossipTombstonesAfter { get; }
 
         /// <summary>
-        /// TBD
+        /// The interval at which the cluster checks the failure detector and updates local reachability observations for members.
         /// </summary>
         public TimeSpan UnreachableNodesReaperInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// The interval for publishing internal cluster statistics, or <c>null</c> when periodic publication is disabled.
         /// </summary>
         public TimeSpan? PublishStatsInterval { get; }
 
@@ -229,7 +229,7 @@ namespace Akka.Cluster
         public TimeSpan? AutoDownUnreachableAfter { get; }
 
         /// <summary>
-        /// TBD
+        /// The roles configured for this actor system's cluster member.
         /// </summary>
         public ImmutableHashSet<string> Roles { get; }
 
@@ -239,37 +239,37 @@ namespace Akka.Cluster
         public AppVersion AppVersion { get; }
 
         /// <summary>
-        /// TBD
+        /// The configured probability of choosing a node with a different gossip view as a gossip recipient.
         /// </summary>
         public double GossipDifferentViewProbability { get; }
 
         /// <summary>
-        /// TBD
+        /// The cluster-size threshold at which the different-view gossip probability begins to decrease.
         /// </summary>
         public int ReduceGossipDifferentViewProbability { get; }
 
         /// <summary>
-        /// TBD
+        /// The dispatcher identifier used for cluster actors.
         /// </summary>
         public string UseDispatcher => _useDispatcher;
 
         /// <summary>
-        /// TBD
+        /// The duration of one tick in the cluster scheduler's timing wheel.
         /// </summary>
         public TimeSpan SchedulerTickDuration { get; }
 
         /// <summary>
-        /// TBD
+        /// The number of ticks in the cluster scheduler's timing wheel.
         /// </summary>
         public int SchedulerTicksPerWheel { get; }
 
         /// <summary>
-        /// TBD
+        /// The minimum number of cluster members required for the cluster to become operational.
         /// </summary>
         public int MinNrOfMembers { get; }
 
         /// <summary>
-        /// TBD
+        /// The minimum member count required for each configured role.
         /// </summary>
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
@@ -286,7 +286,7 @@ namespace Akka.Cluster
         public bool VerboseGossipReceivedLogging { get; }
 
         /// <summary>
-        /// TBD
+        /// The type of the configured downing provider, selected from configuration and legacy auto-down settings.
         /// </summary>
         public Type DowningProviderType { get; }
 
@@ -323,4 +323,3 @@ namespace Akka.Cluster
         public bool UseLegacyHeartbeatMessage { get; }
     }
 }
-

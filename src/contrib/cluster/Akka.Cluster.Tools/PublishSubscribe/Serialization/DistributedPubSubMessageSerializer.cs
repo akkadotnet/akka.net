@@ -55,6 +55,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             };
         }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// A subclass keeps resolving its own id from HOCON via <see cref="Serializer.Identifier"/>.
+        /// </remarks>
+        public override int Identifier => GetType() == typeof(DistributedPubSubMessageSerializer) ? 9 : base.Identifier;
+
         /// <summary>
         /// Serializes the given object into a byte array
         /// </summary>

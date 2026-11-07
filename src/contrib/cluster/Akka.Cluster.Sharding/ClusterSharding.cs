@@ -129,16 +129,16 @@ namespace Akka.Cluster.Sharding
             => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum shard count configured for this hash-based extractor.
         /// </summary>
         public readonly int MaxNumberOfShards;
 
         private readonly Dictionary<int, string> _cachedIds;
 
         /// <summary>
-        /// TBD
+        /// Initializes the cache of shard ids from the configured shard count.
         /// </summary>
-        /// <param name="maxNumberOfShards">TBD</param>
+        /// <param name="maxNumberOfShards">The number of shard id strings to cache, numbered from zero.</param>
         protected HashCodeMessageExtractor(int maxNumberOfShards)
         {
             MaxNumberOfShards = maxNumberOfShards;
@@ -150,18 +150,18 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Extracts the entity id from the incoming message.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message received by the shard region.</param>
+        /// <returns>The entity id, or <see langword="null"/> when the message has no entity id.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public abstract EntityId? EntityId(Msg message);
 
         /// <summary>
         /// Default implementation pass on the message as is.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message received by the shard region.</param>
+        /// <returns>The message to deliver to the entity; the default implementation returns <paramref name="message"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public virtual Msg? EntityMessage(Msg message)
         {
@@ -169,10 +169,10 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Computes a shard id from the entity id in the message using this extractor's hash partitioning.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message from which to extract an entity id.</param>
+        /// <returns>A shard id, or <see langword="null"/> when the extracted entity id is null or empty.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Obsolete("Use ShardId(string, object?) instead. Since v1.5.15")]
         public virtual ShardId? ShardId(Msg message)
@@ -373,7 +373,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Default HOCON settings for cluster sharding.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default cluster-sharding configuration with distributed-data defaults as fallback.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf")
@@ -1422,11 +1422,11 @@ namespace Akka.Cluster.Sharding
         /// <see cref="ClusterShardingGuardian.StartProxy"/> method before it
         /// can be used here. Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
-        /// <param name="typeName">TBD</param>
+        /// <param name="typeName">The entity type name registered with sharding.</param>
         /// <exception cref="ArgumentException">
         /// Thrown when shard region for provided <paramref name="typeName"/> has not been started yet.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The registered local shard region or proxy for the entity type.</returns>
         public IActorRef ShardRegion(string typeName)
 #pragma warning restore CS0419 // Ambiguous reference in cref attribute
         {
@@ -1518,8 +1518,8 @@ namespace Akka.Cluster.Sharding
         /// If <see langword="null"/> is returned the message will be `unhandled`, i.e. posted as `Unhandled`
         ///  messages on the event stream
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The incoming message to inspect.</param>
+        /// <returns>The entity id extracted from the message, or <see langword="null"/> when the message is not handled.</returns>
         EntityId? EntityId(Msg message);
 
         /// <summary>
@@ -1528,8 +1528,8 @@ namespace Akka.Cluster.Sharding
         /// message to support wrapping in message envelope that is unwrapped before
         /// sending to the entity actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The incoming message to inspect.</param>
+        /// <returns>The message to send to the entity, which may be a wrapper or the original message.</returns>
         Msg? EntityMessage(Msg message);
 
         /// <summary>

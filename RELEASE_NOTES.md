@@ -1,12 +1,253 @@
-#### 1.6.0 August 15th, 2025 ####
+#### 1.6.0-beta6 November 7th, 2026 ####
 
-**Placeholder for nightly build**
+Akka.NET 1.6.0-beta6 adds top-level C# 15 union serialization and makes distributed data the default store for cluster sharding coordinator state. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
 
-* Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
-* Akka.Streams: Add cancellation-aware `Source.Queue` offers so backpressured pending offers can be canceled without later emitting the canceled element.
-* Akka.Streams: Fixed `Source.From(IAsyncEnumerable<T>)` cleanup so cancellation waits for any in-flight `MoveNextAsync()` before disposing the async enumerator and its cancellation token source.
-* Build: Bump `MessagePack` to 3.1.7 to address [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x) (LZ4 decompression out-of-bounds read)
-* [Core: Fix consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/issues/8031) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031) (forward-port of [#8294](https://github.com/akkadotnet/akka.net/pull/8294)): When two virtual nodes collided in the 32-bit consistent-hash ring (increasingly likely at high routee counts, e.g. when the ring was rebuilt after a node was downed), `ConsistentHash.Create` threw `"An entry with the same key already exists"`. The consistent-hashing router swallowed the exception and returned `NoRoutee` for **every** subsequent message until a manual restart. The ring now re-hashes and linear-probes to the next free slot on a collision instead of throwing. This keeps the hash distribution unchanged and produces a byte-identical ring to prior versions whenever no collision occurs (safe for rolling upgrades), and also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
+**Serialization V2**
+
+* C# 15 unions can now be sent or persisted as top-level messages with `[AkkaSerializable(Manifest = "...")]`. Deserialization reconstructs the boxed union, so `Receive<TUnion>` and `Recover<TUnion>` handlers continue to match. Closed generic unions register each construction with `[AkkaSerializerIncludes<T>]`. Standalone cases retain their own manifests, and explicitly included types discovered in referenced assemblies no longer cause duplicate registrations. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908), fixes [#8906](https://github.com/akkadotnet/akka.net/issues/8906))
+* Top-level unions use their own manifest with the existing union-field payload frame. Writing `default(TUnion)` at the top level throws `SerializationException`; field nil semantics are unchanged. AKKASG051 now requires an explicit manifest on a marked union. Reordering cases preserves the wire format; adding cases requires readers to upgrade before writers use them, and removing cases prevents reading stored values of those cases. Switching between a union and a closed hierarchy still requires a migration for top-level messages. ([#8908](https://github.com/akkadotnet/akka.net/pull/8908))
+
+**Akka.Cluster.Sharding - behavior change**
+
+* `akka.cluster.sharding.state-store-mode` now defaults to `ddata` instead of `persistence`. Coordinator state is replicated through Akka.DistributedData. The previous default silently used the in-memory journal when no durable journal was configured, losing coordinator state when the coordinator moved. ([#8905](https://github.com/akkadotnet/akka.net/pull/8905), addresses [#8903](https://github.com/akkadotnet/akka.net/issues/8903))
+* **Migration:** set `akka.cluster.sharding.state-store-mode = persistence` explicitly to preserve the previous behavior. With `remember-entities = on`, the new default follows `remember-entities-store`, which defaults to `ddata`, rather than forcing the event-sourced store. Set `akka.cluster.sharding.remember-entities-store = eventsourced` to keep reading remembered entities from the journal. See the [v1.6 breaking-change ledger](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md). ([#8905](https://github.com/akkadotnet/akka.net/pull/8905))
+
+2 contributors since release 1.6.0-beta5
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 2       | 328  | 30   | Aaron Stannard  |
+| 1       | 1    | 1    | dependabot[bot] |
+
+#### 1.6.0-beta5 November 4th, 2026 ####
+
+Akka.NET 1.6.0-beta5 removes `[AkkaUnion]` in favor of inferring unions from the property type, teaches the source generator to serialize C# 15 union types, and fixes a sharding producer-controller crash plus four Akka.Streams bugs. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+
+**Serialization V2**
+
+* A property typed as an interface, an abstract class, or a closed hierarchy is now a union over every `[AkkaSerializable]` type that implements or derives from it - no attribute needed. `AkkaUnionAttribute` is deleted, and AKKASG018, AKKASG038, AKKASG049 and AKKASG050 retire with it. Framework types and collection-like types are never inferred. The wire format is unchanged. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
+* C# 15 union types work as field types. The generator detects a union as a struct implementing `IUnion`, uses its public single-parameter constructors as the member set, and dispatches on `Value`. `TUnion?` and `default(TUnion)` both read back as null. ([#8888](https://github.com/akkadotnet/akka.net/pull/8888))
+* `[AkkaSerializable<T>]` is renamed to `[AkkaSerializerIncludes<T>]`. A non-generic included type now takes its manifest from its own `[AkkaSerializable(Manifest = ...)]`; setting `Manifest` on the include of a non-generic type is the new AKKASG053 error. Closed generic constructions keep `Manifest`/`ManifestPrefix` on the include. ([#8891](https://github.com/akkadotnet/akka.net/pull/8891))
+* AKKASG048 fails the build when a concrete implementor in the compilation lacks `[AkkaSerializable]`, and AKKASG019 now fires on an empty discovered union instead of emitting a dispatch helper with no arms. AKKASG025 (unsealed union member) is now a Warning instead of Info. ([#8887](https://github.com/akkadotnet/akka.net/pull/8887))
+* New AKKASG052 catches a property typed as a concrete, non-sealed nested value class that some class in the compilation derives from - the property would be written as the base's own fields and lose the subclass state. ([#8890](https://github.com/akkadotnet/akka.net/pull/8890))
+
+**Akka.Streams**
+
+* `Dispose()` on the `ActorSystem`'s shared default materializer no longer shuts it down for every user of the system. A `using` block, a scoped DI registration, or an actor disposing it in `PostStop` used to break `system.Materializer()` and every later materialization. The `ActorSystem` still stops it on termination, and `Shutdown()` still stops it explicitly. ([#8895](https://github.com/akkadotnet/akka.net/pull/8895), fixes [#8885](https://github.com/akkadotnet/akka.net/issues/8885))
+* `SourceRef` now honors `StreamRefAttributes` for buffer capacity, demand redelivery interval and final termination signal deadline, falling back to `StreamRefSettings` when no attribute is set. ([#8880](https://github.com/akkadotnet/akka.net/pull/8880), fixes [#8878](https://github.com/akkadotnet/akka.net/issues/8878))
+* `StreamRefSettings` now initializes `FinalTerminationSignalDeadline` from its constructor, and gains a `WithFinalTerminationSignalDeadline` method. ([#8877](https://github.com/akkadotnet/akka.net/pull/8877))
+* Deferred stream operators now pass inherited attributes through when they materialize their inner graph, so attributes set above a `LazySource`, `LazySink` or `Setup` stage reach the stages inside it. ([#8842](https://github.com/akkadotnet/akka.net/pull/8842))
+* `Flow.Setup` forwards its input correctly instead of dropping elements. ([#8839](https://github.com/akkadotnet/akka.net/pull/8839))
+
+**Akka.Cluster.Sharding**
+
+* `ShardingProducerController` no longer throws `InvalidActorNameException` and restarts when a message arrives for an entity whose delivery child is still terminating. Cleanup now marks the entity as stopping and buffers for it, and the entry is removed only once the child's name is free. Producer demand keeps flowing while the child stops. ([#8869](https://github.com/akkadotnet/akka.net/pull/8869), fixes [#8850](https://github.com/akkadotnet/akka.net/issues/8850))
+
+**Internal**
+
+* NuGet publishing moves to GitHub Actions trusted publishing, replacing the Windows release pipeline. ([#8892](https://github.com/akkadotnet/akka.net/pull/8892))
+* `ReliableDeliveryShardingSpec` no longer races on a legal at-least-once duplicate of msg-3. ([#8894](https://github.com/akkadotnet/akka.net/pull/8894))
+
+2 contributors since release 1.6.0-beta4
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 10      | 4482 | 1834 | Aaron Stannard  |
+| 2       | 256  | 10   | Ariel Fischer   |
+
+#### 1.6.0-beta4 October 28th, 2026 ####
+
+Akka.NET 1.6.0-beta4 simplifies source-generated serializer registration, adds three generator diagnostics that catch schema mistakes earlier, and cuts allocations across Artery, TCP and Akka.Streams. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+
+**Serialization V2**
+
+* Generated serializers now return core `SerializerDetails` instead of the removed `Akka.Serialization.V2.SerializerRegistration`. Declare `CreateSerializerDetails(ExtendedActorSystem)` and pass its method group to Akka.Hosting's `WithCustomSerializer`, or invoke it inside `SerializationSetup.Create`. ([#8852](https://github.com/akkadotnet/akka.net/pull/8852))
+* The generator now validates a marked type's shape as soon as `[AkkaSerializable]` appears, before any serializer references it. Missing fields, duplicate indices, inaccessible declarations and inaccessible getters report at their source declarations, including on open generic definitions. Malformed types that used to compile silently now fail. ([#8860](https://github.com/akkadotnet/akka.net/pull/8860), fixes [#8853](https://github.com/akkadotnet/akka.net/issues/8853))
+* AKKASG046 warns when a marked type declares a public stored property with no `[AkkaField]` - that property is not serialized. AKKASG047 warns when a type carries `[AkkaField]` annotations but no `[AkkaSerializable]`, so the annotations are ignored. Both are warnings, and both fail a warnings-as-errors build. ([#8861](https://github.com/akkadotnet/akka.net/pull/8861), fixes [#8854](https://github.com/akkadotnet/akka.net/issues/8854); [#8862](https://github.com/akkadotnet/akka.net/pull/8862), fixes [#8856](https://github.com/akkadotnet/akka.net/issues/8856))
+* Generated message helper names no longer collide when two message types share a simple name across namespaces. ([#8859](https://github.com/akkadotnet/akka.net/pull/8859))
+
+**Akka.Remote / Artery (experimental)**
+
+* An idle Artery association no longer reconnects to a peer that shut down. A failed stream with no queued traffic or unacknowledged system messages goes dormant instead of retrying forever; channels and reliable delivery state stay intact, and normal sends or `ActorSelection.ResolveOne` wake the association with a fresh handshake. ([#8858](https://github.com/akkadotnet/akka.net/pull/8858), fixes [#8857](https://github.com/akkadotnet/akka.net/issues/8857))
+* Quarantine notices survive bounded control-stream retries, and quarantined reliable delivery resets before restart replay. ([#8863](https://github.com/akkadotnet/akka.net/pull/8863))
+* Artery envelope encoding no longer allocates a closure per message, and metadata is written as UTF-8 straight into the frame buffer. ([#8804](https://github.com/akkadotnet/akka.net/pull/8804), [#8805](https://github.com/akkadotnet/akka.net/pull/8805))
+
+**Akka.Streams**
+
+* `Source.Lazily` now surfaces a factory exception through the materialized task instead of losing it. ([#8843](https://github.com/akkadotnet/akka.net/pull/8843))
+* Value-type elements stay typed across fused connections and restart substream ingress, so they no longer box on every hop. ([#8807](https://github.com/akkadotnet/akka.net/pull/8807), [#8824](https://github.com/akkadotnet/akka.net/pull/8824))
+* Async callbacks skip closure allocation when ingress tracing is off. ([#8823](https://github.com/akkadotnet/akka.net/pull/8823))
+
+**Akka.Cluster.Sharding**
+
+* A shard handoff no longer drops the owner's termination signal while handoff acknowledgements are still in flight. ([#8865](https://github.com/akkadotnet/akka.net/pull/8865))
+
+**Performance**
+
+* TCP reads avoid per-read closures and nested async wrappers. ([#8825](https://github.com/akkadotnet/akka.net/pull/8825))
+* Generated serializers skip counting-writer allocations for known buffer writers, and `IReadOnlyList` serialization no longer boxes enumerators. ([#8822](https://github.com/akkadotnet/akka.net/pull/8822), [#8808](https://github.com/akkadotnet/akka.net/pull/8808))
+
+**Dependency updates**
+
+* MessagePack 3.1.12, Google.Protobuf 3.36.2, LightningDB 0.23.1, Microsoft.Data.Sqlite, Grpc.Tools 2.84.0, FsCheck.Xunit 3.6.0. ([#8803](https://github.com/akkadotnet/akka.net/pull/8803), [#8776](https://github.com/akkadotnet/akka.net/pull/8776), [#8797](https://github.com/akkadotnet/akka.net/pull/8797), [#8801](https://github.com/akkadotnet/akka.net/pull/8801), [#8593](https://github.com/akkadotnet/akka.net/pull/8593), [#8833](https://github.com/akkadotnet/akka.net/pull/8833))
+
+2 contributors since release 1.6.0-beta3
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 21      | 7970 | 1605 | Aaron Stannard  |
+| 1       | 61   | 2    | Ariel Fischer   |
+
+#### 1.6.0-beta3 October 6th, 2026 ####
+
+Akka.NET 1.6.0-beta3 fixes two bugs found in 1.6.0-beta2: persistence plugins that stored the wrong manifest for `SerializerV2` and source-generated serializers, and an Akka.Hosting startup crash under `InvariantGlobalization`.
+
+**Serialization V2**
+
+* `SerializerV2` and source-generated serializers now derive from `SerializerWithStringManifest`. Persistence plugins that pick the stored manifest with the v1.5-era `is SerializerWithStringManifest` check (Akka.Persistence.Sql, Akka.Persistence.Redis snapshots and many third-party plugins) store the serializer's own manifest again. Under 1.6.0-beta2 they stored a CLR type name, so writes were acknowledged but could not be recovered. Rows that 1.6.0-beta2 already wrote this way are not repaired. The same check also gets the v1.5 manifests back for `PrimitiveSerializers` (`"S"`, `"I"`, `"L"`) and `byte[]` (`""`). ([#8785](https://github.com/akkadotnet/akka.net/pull/8785), fixes [#8784](https://github.com/akkadotnet/akka.net/issues/8784))
+* Library authors: a `SerializerV2` subclass built against 1.6.0-beta1 or beta2 that overrides `FromBinary(byte[], Type)` fails to load; move that logic to `FromBinary(byte[], string)` and recompile.
+
+**Akka.Hosting**
+
+* `AddAkka` no longer crashes at startup with `InvariantGlobalization=true` when the app ships satellite resource assemblies (for example, Microsoft.Data.SqlClient). ([#8783](https://github.com/akkadotnet/akka.net/pull/8783), fixes [#8782](https://github.com/akkadotnet/akka.net/issues/8782))
+
+1 contributor since release 1.6.0-beta2
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 3       | 771  | 48   | Aaron Stannard  |
+
+#### 1.6.0-beta2 October 6th, 2026 ####
+
+Akka.NET 1.6.0-beta2 builds on the first public beta of the 1.6 line. It keeps the `.NET 10`-only target and the experimental Artery TCP transport, and it hardens the `SerializerV2` API and the Native AOT story.
+
+**Serialization V2**
+
+The `SerializerV2` work continues, including the generator:
+
+* Formatters inside collections (G-1). ([#8726](https://github.com/akkadotnet/akka.net/pull/8726))
+* Native `TimeSpan` and small scalars (G-3). ([#8727](https://github.com/akkadotnet/akka.net/pull/8727))
+* The V2 switch is HOCON-only; the `SerializationV2Setup` object is dropped. ([#8729](https://github.com/akkadotnet/akka.net/pull/8729))
+* The V2 switch is a global opt-in, off by default. ([#8724](https://github.com/akkadotnet/akka.net/pull/8724))
+* Delete the built-in serializer rows from module HOCON. ([#8711](https://github.com/akkadotnet/akka.net/pull/8711))
+* Remote `PrimitiveSerializers` become a native `SerializerV2` (same id 17, same bytes). ([#8719](https://github.com/akkadotnet/akka.net/pull/8719))
+* Fix docs and diagnostics drift; diagnose private nested message types. ([#8721](https://github.com/akkadotnet/akka.net/pull/8721))
+
+**Native AOT**
+
+* Akka.Persistence.Embedded: SQLite journal, snapshot store and read journal, AOT-compatible. ([#8739](https://github.com/akkadotnet/akka.net/pull/8739))
+* Persistence.Hosting: start plugin types from code (Native AOT). ([#8738](https://github.com/akkadotnet/akka.net/pull/8738))
+* Akka.Streams: build island-boundary subscribers without runtime generics (Native AOT). ([#8732](https://github.com/akkadotnet/akka.net/pull/8732))
+
+**Core and fixes**
+
+* Resolve `akka.loggers` names before starting any logger. ([#8778](https://github.com/akkadotnet/akka.net/pull/8778))
+* Add `Match` extension methods for `Option<T>`. ([#8774](https://github.com/akkadotnet/akka.net/pull/8774))
+
+**Docs**
+
+* Complete XML documentation placeholders across Core, Cluster, Cluster Tools, Distributed Data, Persistence, Remote, Sharding, Streams and TestKit. ([#8760](https://github.com/akkadotnet/akka.net/pull/8760)) ([#8761](https://github.com/akkadotnet/akka.net/pull/8761)) ([#8762](https://github.com/akkadotnet/akka.net/pull/8762)) ([#8763](https://github.com/akkadotnet/akka.net/pull/8763)) ([#8764](https://github.com/akkadotnet/akka.net/pull/8764)) ([#8750](https://github.com/akkadotnet/akka.net/pull/8750)) ([#8751](https://github.com/akkadotnet/akka.net/pull/8751)) ([#8752](https://github.com/akkadotnet/akka.net/pull/8752)) ([#8755](https://github.com/akkadotnet/akka.net/pull/8755)) ([#8756](https://github.com/akkadotnet/akka.net/pull/8756)) ([#8757](https://github.com/akkadotnet/akka.net/pull/8757)) ([#8758](https://github.com/akkadotnet/akka.net/pull/8758))
+* Document channel sink behavior and distributed data reads. ([#8767](https://github.com/akkadotnet/akka.net/pull/8767))
+* Correct serializer loading and supervision documentation. ([#8766](https://github.com/akkadotnet/akka.net/pull/8766))
+* Clarify journal write outcomes and snapshot selection bounds. ([#8765](https://github.com/akkadotnet/akka.net/pull/8765))
+
+**Release pipeline**
+
+* Publish suffixed tags (betas, RCs) as GitHub pre-releases. ([#8710](https://github.com/akkadotnet/akka.net/pull/8710))
+
+3 contributors since release 1.6.0-beta1
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 39      | 37456 | 17026 | Aaron Stannard  |
+| 1       | 110   | 0    | Jan             |
+| 2       | 0     | 0    | dependabot[bot] |
+
+#### 1.6.0-beta1 October 2nd, 2026 ####
+
+Akka.NET 1.6.0-beta1 is the first public beta of the 1.6 line. Every package now targets .NET 10 only. This beta adds an experimental Artery TCP remoting transport, a buffer-based `SerializerV2` API with a source generator for your own messages, a rewritten Akka.IO TCP layer, Native AOT support for local and Akka.Hosting apps, and code-based serializer registration for Akka's built-in modules. Akka.Hosting now ships from this repository. This release has breaking changes.
+
+Start here: [Akka.NET v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta1/GETTING_STARTED_V1.6.md)
+
+Upgrading from 1.5? Read the [breaking changes](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta1/BREAKING_CHANGES_V1.6.md).
+
+**Breaking changes**
+
+The ledger linked above lists every change with its migration step. The ones most apps will hit:
+
+* **.NET 10 only.** Every package, Akka.Hosting included, targets `net10.0` only, so .NET Framework, .NET 6 and .NET 8 apps can't reference 1.6. Dependency minimums rise to `Microsoft.Extensions.*` 10.0 for `Akka`, `Akka.DependencyInjection` and Akka.Hosting (Akka.Hosting 1.5.71 needed 9.0), Google.Protobuf 3.36.1 ([#8577](https://github.com/akkadotnet/akka.net/pull/8577)), LightningDB 0.22.0 for Akka.DistributedData.LightningDB ([#8338](https://github.com/akkadotnet/akka.net/pull/8338)) and FSharp.Core 10.1.302 for Akka.FSharp and Akka.Persistence.FSharp ([#8386](https://github.com/akkadotnet/akka.net/pull/8386)). Move your app to .NET 10. ([#8132](https://github.com/akkadotnet/akka.net/pull/8132), [#8594](https://github.com/akkadotnet/akka.net/pull/8594))
+* **`Akka.IO.ByteString` is gone.** TCP (`Tcp.Received`, `Tcp.Write`) and the Streams byte APIs (`Framing`, `JsonFraming`, `FileIO`, `StreamConverters`, `Tcp`) use `ReadOnlySequence<byte>`, UDP uses `ReadOnlyMemory<byte>`, and `ByteOrder` moved to `Akka.Util`. Replace `ByteString` with `byte[]`, `ReadOnlyMemory<byte>` or `ReadOnlySequence<byte>`. ([#8132](https://github.com/akkadotnet/akka.net/pull/8132))
+* **No more HOCON from `App.config` / `Web.config`.** `ConfigurationFactory.Load()`, `AkkaConfigurationSection` and Akka.FSharp's `Configuration.load` are removed. Load HOCON from a string or file with `ConfigurationFactory.ParseString`, or configure through Akka.Hosting. ([#7456](https://github.com/akkadotnet/akka.net/pull/7456))
+* **Akka.Hosting** ships in lockstep with Akka.NET, so reference every `Akka.Hosting.*` package at the same version as `Akka.*`. `WithExtension<T>()` now registers through `ExtensionsSetup`; see **Akka.Hosting now ships from this repository** below. ([#8594](https://github.com/akkadotnet/akka.net/pull/8594), [#8649](https://github.com/akkadotnet/akka.net/pull/8649))
+* **Serialization.** An `akka.actor.serialization-identifiers` override for a built-in serializer no longer has any effect ([#8694](https://github.com/akkadotnet/akka.net/pull/8694)). A second alias that names a built-in Akka.Remote/Akka.Cluster/... serializer type gets the shared built-in instance, and its own `serialization-settings` block is ignored ([#8698](https://github.com/akkadotnet/akka.net/pull/8698)). `Serializer` gains virtual `FromBinary(byte[], string)` and `Manifest(object)`, so `FromBinary(bytes, null)` no longer compiles without a cast, and `ByteArraySerializer.IncludeManifest` is now `true` ([#8222](https://github.com/akkadotnet/akka.net/pull/8222)). Module serializers now handle some types that used to fall back to `json`; see **Serialization registration** below ([#8702](https://github.com/akkadotnet/akka.net/pull/8702)).
+* **Akka.Cluster.Sharding** uses bounded rebalancing by default (`least-shard-allocation-strategy.rebalance-absolute-limit = 20`), which changes how a running cluster moves shards. Set it to `0` to keep the old strategy. ([#8445](https://github.com/akkadotnet/akka.net/pull/8445))
+
+Also breaking - see the ledger: `long` system UIDs ([#8317](https://github.com/akkadotnet/akka.net/pull/8317)); Akka.IO TCP writes, UDP buffers and DNS ([#8132](https://github.com/akkadotnet/akka.net/pull/8132), [#8606](https://github.com/akkadotnet/akka.net/pull/8606), [#8646](https://github.com/akkadotnet/akka.net/pull/8646), [#8660](https://github.com/akkadotnet/akka.net/pull/8660)); `Cluster.Get()` no longer blocks ([#8359](https://github.com/akkadotnet/akka.net/pull/8359)); `Source.ActorRef<T>` ignores `PoisonPill`/`Kill` ([#8263](https://github.com/akkadotnet/akka.net/pull/8263)); DotNetty `ValidateHostname` checks the name ([#8465](https://github.com/akkadotnet/akka.net/pull/8465)); `Akka.DynamicTypeLoading` turns off for AOT/trimmed publishes ([#8608](https://github.com/akkadotnet/akka.net/pull/8608)); TestKit `IAsyncLifetime` ([#8545](https://github.com/akkadotnet/akka.net/pull/8545)); no more `TargetInvocationException` wrapping ([#8601](https://github.com/akkadotnet/akka.net/pull/8601) and others); `ProviderSelectionType`/`ProviderClass` ([#8599](https://github.com/akkadotnet/akka.net/pull/8599)); the multi-node `Player` needs `TestTransport = true` to throttle or blackhole ([#8378](https://github.com/akkadotnet/akka.net/pull/8378)); new trimming attributes on public APIs.
+
+**Native AOT and trimming**
+
+* CI publishes two apps with `PublishAot=true` and runs them on every pull request: a local `ActorSystem` (`src/aot/Akka.AOT.App`) and an Akka.Hosting app with dependency injection, a custom extension, `Microsoft.Extensions.Logging` and health checks (`src/aot/Akka.Hosting.AOT.App`). Both apps publish with no trim or AOT warnings from the Akka code they use. CI fails on any new warning in core (checked against a full, rooted analysis of `Akka.dll`) or in Akka.Hosting, Akka.DependencyInjection and Akka.Streams.
+* A new feature switch, `Akka.DynamicTypeLoading`, controls whether Akka may resolve HOCON type names with `Type.GetType`. It stays on for ordinary builds. The `Akka` package turns it off for you when your project sets `PublishAot` or `PublishTrimmed`; with it off, only Akka's built-in type names resolve and nearly anything else throws a `ConfigurationException` that names the setting. To turn it back on, add `<RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="true" />`. ([#8601](https://github.com/akkadotnet/akka.net/pull/8601), [#8608](https://github.com/akkadotnet/akka.net/pull/8608))
+* Two new `Setup` types, `LoggerSetup` (custom loggers and the log formatter, [#8218](https://github.com/akkadotnet/akka.net/pull/8218)) and `ExtensionsSetup` (extensions, [#8648](https://github.com/akkadotnet/akka.net/pull/8648)), join the existing `SerializationSetup` (serializers and bindings), so you can register your own types without HOCON type names. Combine them with `ActorSystemSetup` and pass the result to `ActorSystem.Create`. Akka.Hosting's `WithExtension<T>()` uses `ExtensionsSetup` ([#8649](https://github.com/akkadotnet/akka.net/pull/8649)).
+* With the switch off, core doesn't register the reflection-based `json` serializer or its `System.Object` binding, so register a serializer for your own messages through `SerializationSetup`; the source-generated serializer in `Akka.Serialization.V2` is built for this. Stream refs need the switch left on.
+* Not supported under Native AOT yet: classic DotNetty remoting (fails at startup, because it loads its transport by type name); Akka.Cluster (including Sharding and DData), Akka.Persistence and the cluster tools (ClusterClient, PubSub, Singleton); remote deployment; custom mailboxes and dispatchers. Artery is the target transport for Akka.Remote under AOT, but no CI check covers Artery under AOT yet.
+* Full details: [Native AOT and Trimming](https://github.com/akkadotnet/akka.net/blob/1.6.0-beta1/docs/articles/deployment/native-aot.md). Progress is tracked in [#7246](https://github.com/akkadotnet/akka.net/issues/7246).
+
+**Serialization registration**
+
+* Built-in serializers declare their wire ids in code instead of reading them from `akka.actor.serialization-identifiers`. The ids don't change. A subclass of a built-in serializer still reads its id from HOCON. ([#8694](https://github.com/akkadotnet/akka.net/pull/8694))
+* Akka's built-in modules (Remote, Streams, Cluster, Cluster.Tools, Cluster.Sharding, DistributedData, Cluster.Metrics, Persistence) each carry a C# table of their serializers, aliases and bindings, so their serializers resolve without `Type.GetType` ([#8645](https://github.com/akkadotnet/akka.net/pull/8645), [#8658](https://github.com/akkadotnet/akka.net/pull/8658), [#8666](https://github.com/akkadotnet/akka.net/pull/8666), [#8669](https://github.com/akkadotnet/akka.net/pull/8669), [#8695](https://github.com/akkadotnet/akka.net/pull/8695), [#8698](https://github.com/akkadotnet/akka.net/pull/8698)). The modules' HOCON serializer rows are still there.
+* Every built-in module that ships with your app registers its serializers and bindings from that table as defaults when the `ActorSystem` starts, whether or not you configure or start that module. Precedence is module defaults, then HOCON, then `SerializationSetup`, each overriding the one before. A module message that arrives before its extension starts now deserializes instead of being dropped, and stream refs work before any materializer exists. Replacing a module default no longer logs the override warning. ([#8702](https://github.com/akkadotnet/akka.net/pull/8702))
+* What that means for local apps: on any system that ships `Akka.Remote.dll` or `Akka.Cluster.dll`, even one that never turns on remoting or clustering, these types no longer fall back to `json` (or your own `System.Object` binding):
+  * `string`, `int`, `long` go to `primitive` (id 17)
+  * `Google.Protobuf.IMessage` goes to `proto` (id 2)
+  * `Akka.dll` types such as `IActorRef`, `PoisonPill`, `Kill`, `Identify` / `ActorIdentity`, `Status.Success` / `Status.Failure`, the router pools and `Config` go to `akka-misc` (id 16); `ActorSelectionMessage` to `akka-containers` (id 6); `SystemMessage` to `akka-system-msg` (id 22)
+  * `IDeliverySerializable` (reliable delivery, in Akka.dll) goes to `reliable-delivery` (id 36) when `Akka.Cluster.dll` ships
+
+  Akka.Persistence writes events and snapshots of these types with the module serializer. 1.6 still reads your old rows, but a rollback to 1.5.x can't read the new ones unless that process also loads Akka.Remote's config (Akka.Cluster's for `reliable-delivery`). A type that implements one of these interfaces and one of your own bound interfaces now matches two bindings. To keep the old serializer for a type, or to settle an ambiguous match, bind the concrete type in `akka.actor.serialization-bindings` or through `SerializationSetup`.
+* Serializers resolve their own manifests. `SystemMessageSerializer` and the two Persistence serializers map manifests to types from their own tables, and `SerializerV1Adapter` now calls a plain `Serializer`'s own `FromBinary(byte[], string)` override instead of skipping it. With `Akka.DynamicTypeLoading` off, the base `Serializer.FromBinary(byte[], string)` throws for a manifest it hasn't seen, so a custom serializer that writes a manifest should override that method or derive from `SerializerWithStringManifest`. ([#8697](https://github.com/akkadotnet/akka.net/pull/8697))
+
+**SerializerV2 and source-generated serializers**
+
+* `SerializerV2` is a new public base class that writes to an `IBufferWriter<byte>` and reads from a `ReadOnlySequence<byte>`, instead of returning a new `byte[]` per call. ([#8222](https://github.com/akkadotnet/akka.net/pull/8222))
+* `Serialization` stores every serializer as a `SerializerV2`. Existing `Serializer` and `SerializerWithStringManifest` implementations get wrapped in `SerializerV1Adapter` automatically, keep working, and write the same bytes. HOCON and `SerializationSetup` registrations don't change, and the public lookup APIs still return `Serializer`.
+* The new `Akka.Serialization.V2` package ships a Roslyn source generator that writes MessagePack serializers for your messages at compile time: mark messages with `[AkkaSerializable]` and `[AkkaField(n)]`, declare a `[AkkaSerializer<T>("name", id)]` partial class, and register its generated `CreateSerializerDetails` factory through core `SerializationSetup` or Akka.Hosting’s `WithCustomSerializer`. No reflection, and the analyzer reports schema mistakes as build errors. It depends on MessagePack 3.1.8, past the 3.1.7 fix for [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x).
+* Akka's own Cluster, DistributedData, Sharding and Delivery messages keep their existing protobuf serializers in this beta. Only Artery's control messages use the generator today ([#8334](https://github.com/akkadotnet/akka.net/pull/8334)).
+
+**Artery TCP remoting (experimental, off by default)**
+
+* Akka.Remote gains Artery, a new TCP remoting transport built on Akka.Streams. It runs beside classic DotNetty remoting, which stays the default. Turn it on with `akka.remote.artery.enabled = on`. Akka.NET logs a warning at startup that it is experimental; don't use it in production.
+* Artery has its own handshake, a dedicated control stream, reliable system-message delivery, optional inbound and outbound lanes (`akka.remote.artery.advanced.inbound-lanes` / `outbound-lanes`) and a separate stream for large messages (`akka.remote.artery.large-message-destinations`). No compression yet.
+* Artery is not wire-compatible with classic remoting. It uses the `akka://` scheme and port 25520 by default, so every node in a cluster must run the same transport and your seed-node addresses change. `tcp` is the only transport, and there's no Akka.Hosting helper yet; configure it through HOCON.
+
+**Akka.IO**
+
+* `TcpConnection` now runs on `Stream` + `System.IO.Pipelines` instead of `SocketAsyncEventArgs`. With the `ReadOnlySequence<byte>` API, framing decode allocates less. ([#8132](https://github.com/akkadotnet/akka.net/pull/8132))
+* `WriteAck` now means the write is in the connection's output buffer and that buffer is below its resume mark, not that the bytes reached the socket. ([#8646](https://github.com/akkadotnet/akka.net/pull/8646))
+* `akka.io.tcp.write-commands-queue-max-size` now caps a single write instead of the backlog, so use ack-based writes for backpressure. ([#8132](https://github.com/akkadotnet/akka.net/pull/8132), [#8646](https://github.com/akkadotnet/akka.net/pull/8646))
+* `Tcp.ResumeWriting`, `Tcp.WritingResumed` and the `useResumeWriting` parameter are removed; they never did anything. ([#8660](https://github.com/akkadotnet/akka.net/pull/8660))
+* TCP connects to a `DnsEndPoint` use the OS resolver, not `akka.io.dns`. ([#8132](https://github.com/akkadotnet/akka.net/pull/8132))
+* UDP no longer pools buffers. If you pointed `buffer-pool` at `direct-buffer-pool` or a custom pool, move its `buffer-size` to `disabled-buffer-pool.buffer-size`, or datagrams over 512 bytes are truncated. ([#8606](https://github.com/akkadotnet/akka.net/pull/8606))
+* `akka.io.tcp.maximum-frame-size` keeps its 1.5 meaning on the new transport: it caps bytes per socket read and per socket send. ([#8663](https://github.com/akkadotnet/akka.net/pull/8663))
+* A `Tcp.Close` sent while a `ConfirmedClose` is draining now upgrades it to a full close instead of being dropped ([#8636](https://github.com/akkadotnet/akka.net/pull/8636)). If the drain fails during a close, the connection now reports `ErrorClosed` instead of the requested close event ([#8630](https://github.com/akkadotnet/akka.net/pull/8630)).
+
+**Akka.Hosting now ships from this repository**
+
+* `Akka.Hosting`, `Akka.Remote.Hosting`, `Akka.Cluster.Hosting`, `Akka.Persistence.Hosting`, `Akka.Hosting.TestKit` and `Akka.Hosting.TestKit.Xunit2` now live under `src/contrib/hosting` and ship at the Akka.NET version (forward-port of [#8591](https://github.com/akkadotnet/akka.net/pull/8591)). Package ids and namespaces stay the same. Bump `Akka.Hosting.*` to the same version as `Akka.*`; Hosting-only versions no longer exist. The [akkadotnet/Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) repository keeps history up to 1.5.71 and will be archived.
+* On 1.6 the Hosting packages target `net10.0` only and need `Microsoft.Extensions.*` 10.0 or later (Akka.Hosting 1.5.71 needed 9.0). Akka.Hosting's `OpenTelemetry` dependency moves to 1.15.3 or later, which clears [GHSA-g94r-2vxg-569j](https://github.com/advisories/GHSA-g94r-2vxg-569j).
+* Hosting API changes: `WithExtension<T>()` / `WithExtensions(...)` now register through `ExtensionsSetup`, so `akka.extensions` no longer lists those extensions, and an extension id whose constructor throws now fails startup with a `ConfigurationException` (1.5 logged and skipped it). Read `Settings.Setup.Get<ExtensionsSetup>()` or call `HasExtension<T>()` instead of reading `akka.extensions`. `WithExtensions(params Type[])` is now marked `[RequiresUnreferencedCode]` - prefer `WithExtension<T>()`. `AddAkka<T>`, `WithHealthCheck<T>`, `WithDefaultLogMessageFormatter<T>` and `WithExtension<T>` carry new trimming attributes, so apps that run the trim analyzer can see new warnings at those call sites. ([#8649](https://github.com/akkadotnet/akka.net/pull/8649), [#8655](https://github.com/akkadotnet/akka.net/pull/8655))
+
+**Other fixes and changes**
+
+* Akka.Cluster: a node that is `Down` can no longer become leader of its own view, remove itself and keep running outside the cluster. ([#8652](https://github.com/akkadotnet/akka.net/pull/8652), forward-port of [#8650](https://github.com/akkadotnet/akka.net/pull/8650))
+* Akka.Cluster: gossip keeps tombstones for removed members, so they can't come back; new setting `akka.cluster.prune-gossip-tombstones-after` (default `24h`). 1.5 nodes ignore the new field. ([#8484](https://github.com/akkadotnet/akka.net/pull/8484))
+* Akka.Cluster.Metrics: a remote-deployed `AdaptiveLoadBalancingPool` with a non-default `MetricsSelector` now deserializes. ([#8704](https://github.com/akkadotnet/akka.net/pull/8704))
+* Akka.DistributedData: `ReplicatorMessageSerializer` no longer starts a timer that nothing cancels. Its cache never worked and is gone; `serializer-cache-time-to-live` is still accepted but unused. ([#8699](https://github.com/akkadotnet/akka.net/pull/8699))
+* Akka.Remote: classic remoting half-closes the socket on disassociate, so a Windows peer no longer loses the last frames we sent to a TCP reset. ([#8635](https://github.com/akkadotnet/akka.net/pull/8635))
+* Akka.Remote: classic remoting decodes inbound envelopes with fewer allocations. No wire change. ([#8272](https://github.com/akkadotnet/akka.net/pull/8272))
+* Akka.Streams: fixed a lost wakeup that could stall a `MergeHub`. ([#8665](https://github.com/akkadotnet/akka.net/pull/8665))
+* Serialization: the JSON serializer no longer crashes the process with a stack overflow on an `ISurrogated` member that has no `$type` metadata. ([#8358](https://github.com/akkadotnet/akka.net/pull/8358))
+* 1.6.0-beta1 also includes the fixes and features shipped in 1.5.x up to 1.5.71, such as logging context enrichment and scopes (1.5.60), cancellation-aware `Source.Queue` offers (1.5.69) and the consistent-hashing router collision fix for [#8031](https://github.com/akkadotnet/akka.net/issues/8031) (1.5.70).
 
 #### 1.5.47 August 12th, 2025 ####
 

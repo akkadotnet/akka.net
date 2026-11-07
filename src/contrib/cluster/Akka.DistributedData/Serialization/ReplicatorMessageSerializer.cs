@@ -27,108 +27,6 @@ namespace Akka.DistributedData.Serialization
 {
     public sealed class ReplicatorMessageSerializer : SerializerWithStringManifest
     {
-        #region internal classes
-
-        private sealed class SmallCache<TKey, TVal>
-            where TKey : class
-            where TVal : class
-        {
-            private readonly TimeSpan _ttl;
-            private readonly Func<TKey, TVal> _getOrAddFactory;
-            private readonly AtomicCounter _n = new(0);
-            private readonly int _mask;
-            private readonly KeyValuePair<TKey, TVal>[] _elements;
-
-            private DateTime _lastUsed;
-
-            public SmallCache(int capacity, TimeSpan ttl, Func<TKey, TVal> getOrAddFactory)
-            {
-                _mask = capacity - 1;
-                if ((capacity & _mask) != 0) throw new ArgumentException("Capacity must be power of 2 and less than or equal 32", nameof(capacity));
-                if (capacity > 32) throw new ArgumentException("Capacity must be less than or equal 32", nameof(capacity));
-
-                _ttl = ttl;
-                _getOrAddFactory = getOrAddFactory;
-                _elements = new KeyValuePair<TKey, TVal>[capacity];
-                _lastUsed = DateTime.UtcNow;
-            }
-
-            public TVal this[TKey key]
-            {
-                get { return Get(key, _n.Current); }
-                set { Add(key, value); }
-            }
-
-            /// <summary>
-            /// Add value under specified key. Overrides existing entry.
-            /// </summary>
-            public void Add(TKey key, TVal value) => Add(new KeyValuePair<TKey, TVal>(key, value));
-
-            /// <summary>
-            /// Add an entry to the cache. Overrides existing entry.
-            /// </summary>
-            public void Add(KeyValuePair<TKey, TVal> entry)
-            {
-                var i = _n.IncrementAndGet();
-                _elements[i & _mask] = entry;
-                _lastUsed = DateTime.UtcNow;
-            }
-
-            public TVal GetOrAdd(TKey key)
-            {
-                var position = _n.Current;
-                var c = Get(key, position);
-                if (!ReferenceEquals(c, null)) return c;
-                var b2 = _getOrAddFactory(key);
-                if (position == _n.Current)
-                {
-                    // no change, add the new value
-                    Add(key, b2);
-                    return b2;
-                }
-                else
-                {
-                    // some other thread added, try one more time
-                    // to reduce duplicates
-                    var c2 = Get(key, _n.Current);
-                    if (!ReferenceEquals(c2, null)) return c2;
-                    else
-                    {
-                        Add(key, b2);
-                        return b2;
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Remove all elements if the if cache has not been used within <see cref="_ttl"/>.
-            /// </summary>
-            public void Evict()
-            {
-                if (DateTime.UtcNow - _lastUsed > _ttl)
-                {
-                    _elements.Initialize();
-                }
-            }
-
-            private TVal Get(TKey key, int startIndex)
-            {
-                var end = startIndex + _elements.Length;
-                _lastUsed = DateTime.UtcNow;
-                var i = startIndex;
-                while (end - i == 0)
-                {
-                    var x = _elements[i & _mask];
-                    if (x.Key != key) i++;
-                    else return x.Value;
-                }
-
-                return null;
-            }
-        }
-
-        #endregion
-
         private const string GetManifest = "A";
         private const string GetSuccessManifest = "B";
         private const string NotFoundManifest = "C";
@@ -150,23 +48,15 @@ namespace Akka.DistributedData.Serialization
 
         private readonly SerializationSupport _ser;
 
-        private readonly SmallCache<Read, byte[]> _readCache;
-        private readonly SmallCache<Write, byte[]> _writeCache;
         private readonly byte[] _empty = Array.Empty<byte>();
 
         public ReplicatorMessageSerializer(Akka.Actor.ExtendedActorSystem system) : base(system)
         {
-           _ser = new SerializationSupport(system);
-            var cacheTtl = system.Settings.Config.GetTimeSpan("akka.cluster.distributed-data.serializer-cache-time-to-live");
-            _readCache = new SmallCache<Read, byte[]>(4, cacheTtl, m => ReadToProto(m).ToByteArray());
-            _writeCache = new SmallCache<Write, byte[]>(4, cacheTtl, m => WriteToProto(m).ToByteArray());
-
-            system.Scheduler.Advanced.ScheduleRepeatedly(cacheTtl, new TimeSpan(cacheTtl.Ticks / 2), () =>
-            {
-                _readCache.Evict();
-                _writeCache.Evict();
-            });
+            _ser = new SerializationSupport(system);
         }
+
+        /// <inheritdoc />
+        public override int Identifier => 12;
 
         public override string Manifest(object o)
         {
@@ -200,9 +90,9 @@ namespace Akka.DistributedData.Serialization
             switch (obj)
             {
                 case DataEnvelope envelope: return DataEnvelopeToProto(envelope).ToByteArray();
-                case Write write: return _writeCache.GetOrAdd(write);
+                case Write write: return WriteToProto(write).ToByteArray();
                 case WriteAck _: return _empty;
-                case Read read: return _readCache.GetOrAdd(read);
+                case Read read: return ReadToProto(read).ToByteArray();
                 case ReadResult result: return ReadResultToProto(result).ToByteArray();
                 case DeltaPropagation propagation: return DeltaPropagationToProto(propagation).ToByteArray();
                 case Status status: return StatusToProto(status).ToByteArray();

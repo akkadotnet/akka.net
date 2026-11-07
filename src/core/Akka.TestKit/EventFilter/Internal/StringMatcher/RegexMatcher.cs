@@ -18,28 +18,28 @@ public class RegexMatcher : IStringMatcher
     private readonly Regex _regex;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher that uses a regular expression.
     /// </summary>
-    /// <param name="regex">TBD</param>
+    /// <param name="regex">The regular expression to apply.</param>
     public RegexMatcher(Regex regex)
     {
         _regex = regex;
     }
 
     /// <summary>
-    /// TBD
+    /// Checks whether the regular expression matches the string.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns><c>true</c> if the regular expression matches; otherwise, <c>false</c>.</returns>
     public bool IsMatch(string s)
     {
         return _regex.IsMatch(s);
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the regular expression criterion in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description of the regular expression match.</returns>
     public override string ToString()
     {
         return "matches regex \"" + _regex + "\"";

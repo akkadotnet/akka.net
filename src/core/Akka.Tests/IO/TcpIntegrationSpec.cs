@@ -439,7 +439,6 @@ namespace Akka.Tests.IO
                         .Should().Be(InternalConnectionActorMaxQueueSize);
 
                     // Check that almost-overflow size does not cause any problems
-                    //actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
                     (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Length)

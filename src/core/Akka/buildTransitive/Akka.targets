@@ -1,0 +1,67 @@
+<!--
+  Shipped inside the Akka NuGet package as buildTransitive/Akka.targets. The file name has to match
+  the package id or NuGet ignores it entirely. buildTransitive/ is the only copy needed: it covers
+  direct and indirect references alike, and the older build/ folder exists for NuGet clients before
+  5.0, none of which can consume a net10.0 package anyway.
+
+  Purpose: turn the Akka.DynamicTypeLoading feature switch OFF for trimmed and Native AOT publishes,
+  so consumers get the trimming-safe code paths without having to know the switch exists. Under
+  PublishAot or PublishTrimmed, ILLink and ILC substitute
+  Akka.Util.AkkaFeatures.IsDynamicTypeLoadingSupported with 'false' (that is what Trim="true" buys)
+  and remove every reflection fallback behind it. Core then resolves the type names its own
+  akka.conf uses from built-in tables, and anything else throws a ConfigurationException naming the
+  HOCON setting instead of failing obscurely at runtime.
+
+  Ordinary (untrimmed) builds are untouched: the condition does not match, no item is added, and
+  the switch stays at its default of true.
+-->
+<Project>
+
+  <!--
+    This has to be a target, not a bare ItemGroup.
+
+    NuGet imports this file from Microsoft.Common.targets, which is early - ahead of
+    Directory.Build.targets. An evaluation-time ItemGroup here would therefore run BEFORE a
+    consumer's Directory.Build.targets, so the guard below would not yet see an opt-out declared
+    there and both items would end up in RuntimeHostConfigurationOption. That is worse than simply
+    losing: ILLink's _TrimmerFeatureSettings takes the item carrying Trim="true" (ours, false) while
+    runtimeconfig.json takes the last writer (theirs, true). The app would read the switch as ON
+    while the trimmer had already baked it OFF and deleted the fallbacks - so the type the consumer
+    hand-rooted still throws, and nothing in the build says why.
+
+    Running inside a target defers the guard until every file has been evaluated, so an opt-out
+    wins no matter where it is declared: the csproj, Directory.Build.props, Directory.Build.targets,
+    a publish profile, or -p on the command line.
+
+    On the BeforeTargets list, all three verified against the .NET 10 SDK and the ILLink/ILC task
+    packages:
+      * PrepareForILLink populates _TrimmerFeatureSettings from the items whose Trim metadata is
+        true (Microsoft.NET.ILLink.targets). Native AOT goes through it too - ILCompiler puts
+        PrepareForILLink in IlcCompileDependsOn - so this one target covers both the trimmer's
+        substitution and the `feature` / `runtimeknob` arguments ILC writes into its response file.
+      * _GenerateRuntimeConfigurationFilesInputCache hashes @(RuntimeHostConfigurationOption) for
+        the incremental up-to-date check. Being before GenerateBuildRuntimeConfigurationFiles alone
+        is not enough, because that target DependsOnTargets this one, so the hash would already have
+        been taken without our item.
+      * GenerateBuildRuntimeConfigurationFiles writes runtimeconfig.json. Listed for intent; the
+        cache target above already orders us correctly.
+    There is no target called GenerateRuntimeConfigurationFiles in the SDK - only the Build-prefixed
+    one and the input cache - so naming it would be a silently ignored no-op.
+  -->
+  <Target Name="AkkaDefaultDynamicTypeLoadingSwitch"
+          BeforeTargets="PrepareForILLink;_GenerateRuntimeConfigurationFilesInputCache;GenerateBuildRuntimeConfigurationFiles"
+          Condition="'$(PublishAot)' == 'true' Or '$(PublishTrimmed)' == 'true'">
+
+    <!--
+      The guard is an escape hatch, not a nicety: an app that sets Akka.DynamicTypeLoading itself -
+      to 'true' to keep reflection alive for a type it has rooted, or to 'false' for an untrimmed
+      build - has to win. WithMetadataValue on 'Identity' matches the option the app declared, so
+      ours is only added when the app has not spoken.
+    -->
+    <ItemGroup Condition="'@(RuntimeHostConfigurationOption->WithMetadataValue('Identity','Akka.DynamicTypeLoading'))' == ''">
+      <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+    </ItemGroup>
+
+  </Target>
+
+</Project>

@@ -26,7 +26,7 @@ public class PersistenceTestKit : XTestKit
     /// </summary>
     /// <param name="setup">Test ActorSystem configuration</param>
     /// <param name="actorSystemName">Optional: The name of the actor system</param>
-    /// <param name="output">TBD</param>
+    /// <param name="output">The xUnit output helper used to capture test output.</param>
     public PersistenceTestKit(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
         : base(GetConfig(setup), actorSystemName, output)
     {
@@ -45,7 +45,7 @@ public class PersistenceTestKit : XTestKit
     /// </summary>
     /// <param name="config">Test ActorSystem configuration</param>
     /// <param name="actorSystemName">Optional: The name of the actor system</param>
-    /// <param name="output">TBD</param>
+    /// <param name="output">The xUnit output helper used to capture test output.</param>
     public PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
         : base(GetConfig(config), actorSystemName, output)
     {
@@ -75,7 +75,7 @@ public class PersistenceTestKit : XTestKit
     /// A new system with the default configuration will be created.
     /// </summary>
     /// <param name="actorSystemName">Optional: The name of the actor system</param>
-    /// <param name="output">TBD</param>
+    /// <param name="output">The xUnit output helper used to capture test output.</param>
     public PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
         : this(Config.Empty, actorSystemName, output)
     {

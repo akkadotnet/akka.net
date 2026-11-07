@@ -447,6 +447,7 @@ namespace Akka.Cluster.Serialization
     public class ClusterMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override int Identifier { get; }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }

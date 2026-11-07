@@ -151,8 +151,8 @@ public sealed class GeneratorValidatorSpec
             "TestSerializer", "shared-v1", "ValidatorSample.MessageA, ValidatorSample.MessageB"));
     }
 
-    [Fact(DisplayName = "Validate should report AKKASG015 when a union member is not serializable")]
-    public void Validate_should_report_AKKASG015_when_union_member_not_serializable()
+    [Fact(DisplayName = "Validate should report AKKASG019 when an interface field has no [AkkaSerializable] implementor")]
+    public void Validate_should_report_AKKASG019_when_interface_field_has_no_serializable_implementor()
     {
         const string source = """
             #nullable enable
@@ -172,7 +172,7 @@ public sealed class GeneratorValidatorSpec
 
             [AkkaSerializable(Manifest = "outer-v1")]
             public sealed record Outer(
-                [property: AkkaField(1), AkkaUnion(typeof(NotSerializable))] IEvent Event) : IProtocol;
+                [property: AkkaField(1)] IEvent Event) : IProtocol;
             """;
 
         var compilation = Compile(source);
@@ -181,10 +181,8 @@ public sealed class GeneratorValidatorSpec
 
         var diagnostics = AkkaSerializerGenerator.Validate(serializer, ImmutableArray.Create(outer));
 
-        diagnostics.Should().Contain(new AkkaSerializerGenerator.DiagnosticSpec(
-            AkkaSerializerGenerator.DiagnosticKey.UnionMemberNotSerializable,
-            new AkkaSerializerGenerator.LocationKey(outer.Key, "Event"),
-            "ValidatorSample.NotSerializable", "Event", "ValidatorSample.Outer"));
+        diagnostics.Should().ContainSingle(diagnostic => diagnostic.Key == AkkaSerializerGenerator.DiagnosticKey.InvalidUnionMemberSet)
+            .Which.At.Should().Be(new AkkaSerializerGenerator.LocationKey(outer.Key, "Event"));
     }
 
     [Fact(DisplayName = "Validate should report AKKASG023 when a closed generic field type is not registered")]

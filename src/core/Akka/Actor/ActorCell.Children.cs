@@ -116,10 +116,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a child actor with the supplied properties and name.
         /// </summary>
-        /// <param name="props">TBD</param>
-        /// <param name="name">TBD</param>
+        /// <param name="props">The configuration used to create the child.</param>
+        /// <param name="name">The child's name, or <c>null</c> to generate one.</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
         /// </exception>

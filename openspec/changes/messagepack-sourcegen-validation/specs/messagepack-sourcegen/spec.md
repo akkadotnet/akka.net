@@ -97,13 +97,9 @@ Generated serializers SHALL treat a field whose static type, after generic subst
 - **WHEN** a supported collection's element type is `object` (an array, a list, a read-only or immutable collection, or a dictionary value -- a dictionary KEY typed `object` is rejected with AKKASG003 instead)
 - **THEN** the generator SHALL treat each element as its own serializer boundary, writing and reading it as an envelope payload the same way an `object`-typed field is
 
-#### Scenario: Union declaration on an object-typed field rejected
-- **WHEN** an `[AkkaField]` property typed `object` carries a field-level `[AkkaUnion]`
-- **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG038), because an `object`-typed field is always a serializer boundary
-
-#### Scenario: Interface field without a closed set names the fixes
-- **WHEN** an `[AkkaField]` property's static type is an interface, an abstract class, or a type parameter with no closed member set
-- **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG003) whose message names both fixes: declare a closed member set with `[AkkaUnion]`, or type the property as `object`
+#### Scenario: Interface field with no members names the fixes
+- **WHEN** an `[AkkaField]` property's static type is an interface or abstract class that no `[AkkaSerializable]` type implements or derives from
+- **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG019) whose message names both fixes: mark its implementations `[AkkaSerializable]`, or type the property as `object`
 
 ### Requirement: Generated serializers use explicit registration
 
@@ -183,15 +179,15 @@ Generated serializers SHALL initially support immutable message designs and nest
 
 ### Requirement: Generated serializers support manifest-discriminated closed unions
 
-The system SHALL support declaring a closed, explicitly-enumerated set of concrete `[AkkaSerializable]` member types for a field via `[AkkaUnion]`, encoded structurally inline and discriminated by manifest, distinct from the runtime-resolved serializer boundary of an `object`-typed field.
+The system SHALL treat an `[AkkaField]` property whose static type is an interface, an abstract class, a C# 15 `closed` type, or a C# 15 `union` as a union over the `[AkkaSerializable]` types that implement or derive from it (or the union's cases), with no attribute, encoded structurally inline and discriminated by manifest, distinct from the runtime-resolved serializer boundary of an `object`-typed field (design.md Decision 22).
 
-#### Scenario: Type-level union declaration
-- **WHEN** a union base interface or abstract class is annotated with `[AkkaUnion]`
-- **THEN** every `[AkkaField]` property whose static type is that base type SHALL inherit its declared member set
+#### Scenario: Union members are inferred from the property type
+- **WHEN** an `[AkkaField]` property's static type is an interface or abstract class
+- **THEN** its member set SHALL be every `[AkkaSerializable]` type in the compilation, or in a referenced assembly that references `Akka.Serialization.V2`, that implements or derives from it
 
-#### Scenario: Field-level union override
-- **WHEN** an `[AkkaField]` property is itself annotated with `[AkkaUnion]`
-- **THEN** the generator SHALL use that field's declared member set instead of any type-level declaration for the field's static type
+#### Scenario: Framework and collection types are not inferred
+- **WHEN** a property's static type is in the `System` namespace or Akka.NET's own core assembly, or implements `IEnumerable`
+- **THEN** the generator SHALL NOT treat it as a union
 
 #### Scenario: Union wire format
 - **WHEN** a generated serializer writes a union field
@@ -219,10 +215,10 @@ The system SHALL support declaring a closed, explicitly-enumerated set of concre
 
 ### Requirement: Generated serializers support closed generic type registrations
 
-The system SHALL support registering closed generic constructions of a generic `[AkkaSerializable]` type via `[AkkaSerializable<T>]` on the `[AkkaSerializer]` class, since a source generator cannot emit serialization code for an open generic definition.
+The system SHALL support registering closed generic constructions of a generic `[AkkaSerializable]` type via `[AkkaSerializerIncludes<T>]` on the `[AkkaSerializer]` class, since a source generator cannot emit serialization code for an open generic definition.
 
 #### Scenario: Closed construction registered
-- **WHEN** a generic `[AkkaSerializable]` type has an `[AkkaSerializable<T>(Manifest = ...)]` registration on the serializer class
+- **WHEN** a generic `[AkkaSerializable]` type has an `[AkkaSerializerIncludes<T>(Manifest = ...)]` registration on the serializer class
 - **THEN** the generator SHALL emit dispatch for that closed construction as its own top-level message with its own manifest, with generic fields resolved against the concrete type arguments
 
 #### Scenario: Closed construction as nested field

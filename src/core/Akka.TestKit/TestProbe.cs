@@ -23,11 +23,11 @@ namespace Akka.TestKit
     public class TestProbe : TestKitBase, INoImplicitSender, IInternalActorRef
     {
         /// <summary>
-        /// TBD
+        /// Creates a probe attached to an actor system using the supplied assertion adapter and optional actor name.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="assertions">TBD</param>
-        /// <param name="testProbeName">TBD</param>
+        /// <param name="system">The actor system in which the probe actor runs.</param>
+        /// <param name="assertions">The assertion implementation used by the probe.</param>
+        /// <param name="testProbeName">The actor name for the probe, or null to use a generated name.</param>
         public TestProbe(ActorSystem system, ITestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
         {

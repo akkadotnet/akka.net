@@ -35,11 +35,11 @@ namespace Akka.Cluster.Sharding
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
     /// in the mailbox will be dropped. To support graceful passivation without losing such
-    /// messages the entity actor can send this <see cref="Passivate"/> message to its parent <see cref="ShardRegion"/>.
-    /// The specified wrapped <see cref="StopMessage"/> will be sent back to the entity, which is
-    /// then supposed to stop itself. Incoming messages will be buffered by the <see cref="ShardRegion"/>
-    /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
-    /// are thereafter delivered to a new incarnation of the entity.
+    /// messages the entity actor can send this <see cref="Passivate"/> message to its parent shard.
+    /// If the shard starts passivation in response to this command, it sends the specified wrapped
+    /// <see cref="StopMessage"/> to the entity, which is then expected to stop itself. The shard
+    /// buffers incoming messages between the start of passivation and entity termination, then delivers
+    /// those buffered messages to a new entity incarnation.
     ///
     /// <see cref="PoisonPill.Instance"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
@@ -47,16 +47,16 @@ namespace Akka.Cluster.Sharding
     public sealed class Passivate : IShardRegionCommand
     {
         /// <summary>
-        /// TBD
+        /// Creates a passivation command containing the stop message that the shard sends if it starts passivation.
         /// </summary>
-        /// <param name="stopMessage">TBD</param>
+        /// <param name="stopMessage">The message to send to the entity to request that it stops.</param>
         public Passivate(object stopMessage)
         {
             StopMessage = stopMessage;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the message the shard sends to the entity if it starts passivation.
         /// </summary>
         public object StopMessage { get; }
     }
@@ -64,15 +64,16 @@ namespace Akka.Cluster.Sharding
     internal sealed record SupervisorStopDirectivePassivation(IActorRef Child, string Reason, Exception LastCause) : IShardRegionCommand;
     
     /// <summary>
-    /// Send this message to the <see cref="ShardRegion"/> actor to handoff all shards that are hosted by
-    /// the <see cref="ShardRegion"/> and then the <see cref="ShardRegion"/> actor will be stopped. You can <see cref="ICanWatch.Watch"/>
-    /// it to know when it is completed.
+    /// Send this message to a <see cref="ShardRegion"/> to request handoff of its hosted shards and then
+    /// stop the region. The region stops after its shards and buffered messages are drained, but its
+    /// graceful-shutdown timeout can stop it while some shards or buffered messages remain. You can
+    /// <see cref="ICanWatch.Watch"/> the region to observe termination.
     /// </summary>
     [Serializable]
     public sealed class GracefulShutdown : IShardRegionCommand
     {
         /// <summary>
-        /// TBD
+        /// Singleton message requesting graceful shard handoff followed by region shutdown.
         /// </summary>
         public static readonly GracefulShutdown Instance = new();
 
@@ -85,7 +86,7 @@ namespace Akka.Cluster.Sharding
     internal sealed class GracefulShutdownTimeout : IShardRegionCommand
     {
         /// <summary>
-        /// TBD
+        /// Internal message sent when the shard region's graceful-shutdown timeout expires.
         /// </summary>
         public static readonly GracefulShutdownTimeout Instance = new();
 
@@ -103,14 +104,14 @@ namespace Akka.Cluster.Sharding
     internal sealed class ShardInitialized : IEquatable<ShardInitialized>
     {
         /// <summary>
-        /// TBD
+        /// Gets the id of the shard whose initialization completed.
         /// </summary>
         public readonly string ShardId;
 
         /// <summary>
-        /// TBD
+        /// Creates a notification that a shard has completed initialization.
         /// </summary>
-        /// <param name="shardId">TBD</param>
+        /// <param name="shardId">The id of the initialized shard.</param>
         public ShardInitialized(string shardId)
         {
             ShardId = shardId;
@@ -151,7 +152,7 @@ namespace Akka.Cluster.Sharding
     public sealed class GetCurrentRegions : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
-        /// TBD
+        /// Singleton query requesting the addresses of the registered shard regions.
         /// </summary>
         public static readonly GetCurrentRegions Instance = new();
 
@@ -240,13 +241,13 @@ namespace Akka.Cluster.Sharding
     public sealed class CurrentRegions : IClusterShardingSerializable, IEquatable<CurrentRegions>
     {
         /// <summary>
-        /// TBD
+        /// Gets the addresses of the shard regions reported by the reply to <see cref="GetCurrentRegions"/>.
         /// </summary>
         public readonly IImmutableSet<Address> Regions;
         /// <summary>
-        /// TBD
+        /// Creates a reply containing the reported shard-region addresses.
         /// </summary>
-        /// <param name="regions">TBD</param>
+        /// <param name="regions">The addresses of the shard regions included in this reply.</param>
         public CurrentRegions(IImmutableSet<Address> regions)
         {
             Regions = regions;
@@ -399,7 +400,7 @@ namespace Akka.Cluster.Sharding
     public sealed class GetShardRegionStats : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
-        /// TBD
+        /// Singleton query requesting allocation statistics for the shard region.
         /// </summary>
         public static readonly GetShardRegionStats Instance = new();
 
@@ -493,7 +494,7 @@ namespace Akka.Cluster.Sharding
     public sealed class GetShardRegionState : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
-        /// TBD
+        /// Singleton query requesting the current shard and entity state of the shard region.
         /// </summary>
         public static readonly GetShardRegionState Instance = new();
 
@@ -513,15 +514,15 @@ namespace Akka.Cluster.Sharding
     public sealed class CurrentShardRegionState : IClusterShardingSerializable, IEquatable<CurrentShardRegionState>
     {
         /// <summary>
-        /// TBD
+        /// Gets the shard states included in this region-state reply.
         /// </summary>
         public readonly IImmutableSet<ShardState> Shards;
         public readonly IImmutableSet<string> Failed;
 
         /// <summary>
-        /// TBD
+        /// Creates a region-state reply with the supplied shard states and no failed shard queries.
         /// </summary>
-        /// <param name="shards">TBD</param>
+        /// <param name="shards">The shard states gathered for the region.</param>
         [Obsolete("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
         public CurrentShardRegionState(IImmutableSet<ShardState> shards)
             : this(shards, ImmutableHashSet<ShardId>.Empty)
@@ -529,10 +530,10 @@ namespace Akka.Cluster.Sharding
         }
         
         /// <summary>
-        /// TBD
+        /// Creates a region-state reply with the gathered shard states and failed shard ids.
         /// </summary>
-        /// <param name="shards">TBD</param>
-        /// <param name="failed"></param>
+        /// <param name="shards">The shard states gathered successfully for the region.</param>
+        /// <param name="failed">The ids of shards whose state could not be gathered.</param>
         public CurrentShardRegionState(IImmutableSet<ShardState> shards, IImmutableSet<ShardId> failed)
         {
             Shards = shards;
@@ -578,25 +579,25 @@ namespace Akka.Cluster.Sharding
 
 
     /// <summary>
-    /// TBD
+    /// Describes the entity ids reported for one shard in a <see cref="CurrentShardRegionState"/> reply.
     /// </summary>
     [Serializable]
     public sealed class ShardState : IClusterShardingSerializable, IEquatable<ShardState>
     {
         /// <summary>
-        /// TBD
+        /// Gets the id of this shard.
         /// </summary>
         public readonly string ShardId;
         /// <summary>
-        /// TBD
+        /// Gets the entity ids reported for this shard.
         /// </summary>
         public readonly IImmutableSet<string> EntityIds;
 
         /// <summary>
-        /// TBD
+        /// Creates a shard-state value from the shard id and its reported entity ids.
         /// </summary>
-        /// <param name="shardId">TBD</param>
-        /// <param name="entityIds">TBD</param>
+        /// <param name="shardId">The id of the shard.</param>
+        /// <param name="entityIds">The entity ids reported as running on the shard.</param>
         public ShardState(string shardId, IImmutableSet<string> entityIds)
         {
             ShardId = shardId;

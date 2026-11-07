@@ -110,7 +110,7 @@ namespace Akka.Util.Internal
         /// When this Task is completed, either through an exception or a value, invoke the provided function.
         /// If the Task has already been completed, this will either be applied immediately or be scheduled asynchronously.
         /// </summary>
-        /// <param name="source">TBD</param>
+        /// <param name="source">The task whose completion is observed.</param>
         /// <param name="f">The function to be executed when this Task completes</param>
         public static Task OnComplete(this Task source, Action<Try<Done>> f)
         {
@@ -135,7 +135,7 @@ namespace Akka.Util.Internal
         /// When this Task is completed, either through an exception or a value, invoke the provided function.
         /// If the Task has already been completed, this will either be applied immediately or be scheduled asynchronously.
         /// </summary>
-        /// <param name="source">TBD</param>
+        /// <param name="source">The task whose completion and result are observed.</param>
         /// <param name="f">The function to be executed when this Task completes</param>
         public static Task OnComplete<TSource>(this Task<TSource> source, Action<Try<TSource>> f)
         {

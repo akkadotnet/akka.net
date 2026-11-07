@@ -26,14 +26,14 @@ namespace Akka.Actor
             public static readonly Success Instance = new(null);
 
             /// <summary>
-            /// TBD
+            /// An optional value supplied by the operation that completed successfully.
             /// </summary>
             public readonly object Status;
 
             /// <summary>
-            /// TBD
+            /// Initializes a successful status with an optional result value.
             /// </summary>
-            /// <param name="status">TBD</param>
+            /// <param name="status">The result value to carry with the success status.</param>
             public Success(object status)
             {
                 Status = status;
@@ -172,11 +172,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Intercepts timer messages, invokes the current behavior, and reports unhandled messages.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The actor behavior currently handling messages.</param>
+        /// <param name="message">The message being processed.</param>
+        /// <returns><c>true</c> if the behavior handled the message or the message was intercepted; otherwise, <c>false</c>.</returns>
         protected internal virtual bool AroundReceive(Receive receive, object message)
         {
             if (message is TimerScheduler.ITimerMsg tm)
@@ -223,7 +223,7 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>TBD</returns>
+        /// <returns><c>true</c> if this actor handles the message; otherwise, <c>false</c>.</returns>
         protected abstract bool Receive(object message);
 
         /// <summary>
@@ -280,16 +280,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sets the fallback value returned by <see cref="Self"/> after the actor context has been cleared.
         /// </summary>
-        /// <param name="self">TBD</param>
+        /// <param name="self">The fallback actor reference, usually dead letters.</param>
         internal void Clear(IActorRef self)
         {
             _clearedSelf = self;
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the fallback reference so <see cref="Self"/> again reads from the active actor context.
         /// </summary>
         internal void Unclear()
         {

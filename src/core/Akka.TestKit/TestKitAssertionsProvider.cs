@@ -17,16 +17,16 @@ namespace Akka.TestKit
         private readonly ITestKitAssertions _assertions;
 
         /// <summary>
-        /// TBD
+        /// Creates a provider for the specified test assertion implementation.
         /// </summary>
-        /// <param name="assertions">TBD</param>
+        /// <param name="assertions">The assertion implementation supplied by the test framework.</param>
         public TestKitAssertionsProvider(ITestKitAssertions assertions)
         {
             _assertions = assertions;
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the test framework assertion implementation.
         /// </summary>
         public ITestKitAssertions Assertions { get { return _assertions; } }
     }

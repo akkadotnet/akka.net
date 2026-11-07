@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
 
 namespace Akka.DependencyInjection
@@ -33,7 +34,7 @@ namespace Akka.DependencyInjection
         /// <param name="type">The type of actor to instantiate.</param>
         /// <param name="args">Optional. Any constructor arguments that will be passed into the actor's constructor directly without being resolved by DI first.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        Props Props(Type type, params object[] args);
+        Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type, params object[] args);
 
         /// <summary>
         /// Used to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
@@ -44,7 +45,7 @@ namespace Akka.DependencyInjection
         /// </remarks>
         /// <param name="type">The type of actor to instantiate.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        Props Props(Type type);
+        Props Props([DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] Type type);
 
         /// <summary>
         /// Used to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
@@ -56,6 +57,6 @@ namespace Akka.DependencyInjection
         /// <typeparam name="T">The type of actor to instantiate.</typeparam>
         /// <param name="args">Optional. Any constructor arguments that will be passed into the actor's constructor directly without being resolved by DI first.</param>
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
-        Props Props<T>(params object[] args) where T : ActorBase;
+        Props Props<[DynamicallyAccessedMembers(Akka.Actor.Props.ActorTypeMembers)] T>(params object[] args) where T : ActorBase;
     }
 }

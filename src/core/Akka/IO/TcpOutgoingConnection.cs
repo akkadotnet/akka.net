@@ -80,9 +80,12 @@ namespace Akka.IO
             var inputPipeOptions = new PipeOptions(
                 pauseWriterThreshold: pipeBufferSize * 2,
                 resumeWriterThreshold: pipeBufferSize,
+                minimumSegmentSize: Settings.MaxFrameSizeBytes,
                 useSynchronizationContext: false);
 
-            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
+            var outputPipeOptions = ResolveOutputPipeOptions(Settings, _connect.Options);
+            return TcpTransportConnection.CreateForOutgoing(Socket, _connect.RemoteAddress, inputPipeOptions,
+                outputPipeOptions, _connect.Tls, Log);
         }
 
         private void ReleaseConnectionSocketArgs()
@@ -213,17 +216,17 @@ namespace Akka.IO
 
                     ReleaseConnectionSocketArgs();
 
-                    CompleteConnect(_commander, _connect.Options);
+                    ReportConnectFailure(() => InitializeTransport(_commander, _connect.Options));
                 }
                 else
                     switch (remainingFinishConnectRetries)
                     {
                         case > 0:
-                        {
-                            ScheduleConnectRetry();
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args));
-                            break;
-                        }
+                            {
+                                ScheduleConnectRetry();
+                                Become(() => Connecting(remainingFinishConnectRetries - 1, args));
+                                break;
+                            }
                         default:
                             Log.Debug(
                                 "Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
@@ -253,6 +256,11 @@ namespace Akka.IO
 
         private void ScheduleConnectRetry()
             => Timers.StartSingleTimer(RetryConnectTimerKey, RetryConnect.Instance, TimeSpan.FromMilliseconds(1));
+
+        protected override void OnTransportInitializationFailed(Exception cause)
+        {
+            Stop(cause);
+        }
     }
 
     [InternalApi]

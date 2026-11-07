@@ -130,10 +130,10 @@ namespace Akka.Remote
         internal sealed class AccrualState
         {
             /// <summary>
-            /// TBD
+            /// Creates a detector state from heartbeat history and the last heartbeat time.
             /// </summary>
-            /// <param name="history">TBD</param>
-            /// <param name="timeStamp">TBD</param>
+            /// <param name="history">The recorded heartbeat interval statistics.</param>
+            /// <param name="timeStamp">The time of the most recent heartbeat, or <c>null</c> before monitoring starts.</param>
             public AccrualState(HeartbeatHistory history, long? timeStamp)
             {
                 TimeStamp = timeStamp;
@@ -141,12 +141,12 @@ namespace Akka.Remote
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the heartbeat interval history used to estimate failure suspicion.
             /// </summary>
             public HeartbeatHistory History { get; private set; }
 
             /// <summary>
-            /// TBD
+            /// Gets the time of the most recent heartbeat, or <c>null</c> if none has been received.
             /// </summary>
             public long? TimeStamp { get; private set; }
         }
@@ -160,7 +160,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the latest heartbeat history and elapsed time keep the suspicion level below the configured threshold.
         /// </summary>
         public override bool IsAvailable
         {
@@ -168,7 +168,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether at least one heartbeat has been received for the monitored resource.
         /// </summary>
         public override bool IsMonitoring
         {
@@ -176,7 +176,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Records a heartbeat and updates the inter-arrival history used to estimate failure suspicion.
         /// </summary>
         public override void HeartBeat()
         {
@@ -221,7 +221,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the current phi suspicion score using the detector's clock.
         /// </summary>
         internal double CurrentPhi
         {
@@ -229,10 +229,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Calculates the phi suspicion score at a given time from the latest heartbeat history.
         /// </summary>
-        /// <param name="timestamp">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timestamp">The current time in the units returned by the configured clock.</param>
+        /// <returns>The calculated phi suspicion score; zero when no heartbeat has been recorded.</returns>
         internal double Phi(long timestamp)
         {
             var oldState = State;
@@ -262,10 +262,10 @@ namespace Akka.Remote
         ///  Error is 0.00014 at +- 3.16
         /// The calculated value is equivalent to -log10(1 - CDF(y))
         /// </summary>
-        /// <param name="timeDiff">TBD</param>
-        /// <param name="mean">TBD</param>
-        /// <param name="stdDeviation">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="timeDiff">Elapsed time since the last heartbeat.</param>
+        /// <param name="mean">The expected heartbeat interval, including the accepted pause.</param>
+        /// <param name="stdDeviation">The standard deviation of observed heartbeat intervals.</param>
+        /// <returns>The phi suspicion score derived from the normal-distribution approximation.</returns>
         internal double Phi(long timeDiff, double mean, double stdDeviation)
         {
             var y = (timeDiff - mean)/stdDeviation;

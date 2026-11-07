@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -369,6 +370,16 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly ConcurrentDictionary<long, bool> _quarantineDropLogged = new();
 
+        private sealed class QuarantineNotificationDeadline(TimeSpan expiresAt)
+        {
+            public TimeSpan ExpiresAt { get; } = expiresAt;
+        }
+
+        // Weak keys preserve envelope identity and original expiry without retaining sent notices.
+        private readonly ConditionalWeakTable<IOutboundEnvelope, QuarantineNotificationDeadline> _quarantineNotifications = new();
+        private readonly TimeSpan _quarantineNotificationTimeout;
+        private readonly Func<TimeSpan> _monotonicClock;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Association"/> class.
         /// </summary>
@@ -383,13 +394,19 @@ namespace Akka.Remote.Artery
         /// shape (gate B). Clamped to a minimum of 1 defensively; <see cref="ArterySettings"/>
         /// already rejects a configured value below 1 at parse time.
         /// </param>
+        /// <param name="quarantineNotificationTimeout">Bounded best-effort retention, configured from handshake-timeout.</param>
+        /// <param name="monotonicClock">Monotonic clock; injectable for deadline tests.</param>
         public Association(
             Address remoteAddress,
             int outboundQueueCapacity = DefaultOutboundQueueCapacity,
             int controlQueueCapacity = DefaultControlQueueCapacity,
             int largeQueueCapacity = DefaultLargeQueueCapacity,
-            int outboundLanes = 1)
+            int outboundLanes = 1,
+            TimeSpan? quarantineNotificationTimeout = null,
+            Func<TimeSpan>? monotonicClock = null)
         {
+            _quarantineNotificationTimeout = quarantineNotificationTimeout ?? TimeSpan.FromSeconds(20);
+            _monotonicClock = monotonicClock ?? (() => Akka.Util.MonotonicClock.Elapsed);
             RemoteAddress = remoteAddress;
             OutboundQueueCapacity = outboundQueueCapacity;
             ControlQueueCapacity = controlQueueCapacity;
@@ -732,7 +749,7 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Whether the ORDINARY outbound stream should be (re-)materialized right now (design.md
+        /// Whether the ORDINARY outbound stream is permitted to (re-)materialize (design.md
         /// group 9): <see langword="false"/> once this stream has been shut down for good
         /// (<see cref="IsOutboundShutDown"/>), OR while the CURRENT peer uid is quarantined --
         /// <see cref="RemoteTransport.Send"/> already gates every ordinary send for a quarantined
@@ -746,11 +763,12 @@ namespace Akka.Remote.Artery
             !_outboundShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
 
         /// <summary>
-        /// Whether the CONTROL outbound stream should be (re-)materialized right now. Unlike
+        /// Whether the CONTROL outbound stream is permitted to (re-)materialize. Unlike
         /// <see cref="ShouldRestartOutbound"/>, quarantine status is irrelevant here -- the
         /// control stream restarts regardless of quarantine (design.md: "quarantined associations
         /// still restart their CONTROL stream -- piercing requires a live control channel"). The
-        /// only thing that ever permanently stops it is this stream's own shutdown.
+        /// only thing that permanently stops it is this stream's own shutdown. A failed stream
+        /// with no pending work may remain dormant until the next producer checks its gate.
         /// </summary>
         public bool ShouldRestartControl() => !_controlShutDown;
 
@@ -762,6 +780,44 @@ namespace Akka.Remote.Artery
         /// </summary>
         public bool ShouldRestartLargeOutbound() =>
             !_largeShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
+
+        /// <summary>
+        /// Discards obsolete best-effort control traffic before a failed control stream is
+        /// restarted. Called only after its previous materialization stopped and while its gate
+        /// is still held, so delivery state has no active stream owner. Reliable envelopes and
+        /// their original sequence numbers remain intact; a queued local clear is applied in order.
+        /// </summary>
+        /// <returns>Whether unacknowledged reliable messages still require a consumer.</returns>
+        public bool PrepareControlRestart()
+        {
+            _systemMessageDeliveryState.ClearQuarantined(CurrentState);
+            while (_controlChannel.Reader.TryPeek(out var element))
+            {
+                if (element.Message is ClearSystemMessageDelivery clear)
+                {
+                    _controlChannel.Reader.TryRead(out _);
+                    if (clear.Incarnation >= _systemMessageDeliveryState.CurrentIncarnation)
+                    {
+                        _systemMessageDeliveryState.Buffer.Clear();
+                        _systemMessageDeliveryState.NextSeq = 1;
+                        _systemMessageDeliveryState.CurrentIncarnation = clear.Incarnation;
+                    }
+                }
+                else if (IsBestEffortControlMessage(element.Message) || !ShouldSendControl(element))
+                    _controlChannel.Reader.TryRead(out _);
+                else
+                    break;
+            }
+
+            return _systemMessageDeliveryState.Buffer.Count > 0;
+        }
+
+        /// <summary>Housekeeping traffic must not keep a departed peer's restart loop alive.</summary>
+        public static bool IsBestEffortControlMessage(object message) => message is
+            HandshakeReq or HandshakeRsp or ArteryHeartbeat or ArteryHeartbeatRsp or Ack or Nack;
+
+        /// <summary>Whether any ordinary lane still contains accepted user traffic.</summary>
+        public bool HasQueuedOutbound => Array.Exists(_laneChannels, channel => channel.Reader.Count > 0);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE 0. Non-blocking
@@ -813,7 +869,36 @@ namespace Akka.Remote.Artery
         /// Non-blocking, same discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>. See the type-level
         /// remarks on <see cref="DefaultControlQueueCapacity"/> for the GROUP7 overflow-policy note.
         /// </summary>
-        public bool TryEnqueueControl(IOutboundEnvelope element) => _controlChannel.Writer.TryWrite(element);
+        public bool TryEnqueueControl(IOutboundEnvelope element)
+        {
+            if (element.Message is ArteryQuarantined)
+                _quarantineNotifications.GetValue(element, _ => new QuarantineNotificationDeadline(_monotonicClock() + _quarantineNotificationTimeout));
+            return _controlChannel.Writer.TryWrite(element);
+        }
+
+        /// <summary>
+        /// Quarantine notices are one-time best-effort events, not regenerating housekeeping.
+        /// Retain them for one handshake-timeout window from the first enqueue attempt, never renewed by
+        /// a failed stream returning the same envelope. A replacement UID retires the old notice.
+        /// Also checked after handshake, before encoding, since reconnect may discover that UID.
+        /// Reliable envelopes already held downstream are also filtered for a quarantined current UID.
+        /// </summary>
+        public bool ShouldSendControl(IOutboundEnvelope element)
+        {
+            // A handshake can already hold a reliable envelope when quarantine is published.
+            // The delivery owner cannot retract that element; reject it at the final wire gate.
+            if (element.Message is SystemMessageEnvelope)
+            {
+                var association = CurrentState;
+                return !(association.UniqueRemoteAddress is { } current && association.IsQuarantined(current.Uid));
+            }
+            if (element.Message is not ArteryQuarantined notification)
+                return true;
+            var deadline = _quarantineNotifications.GetValue(element,
+                _ => new QuarantineNotificationDeadline(_monotonicClock() + _quarantineNotificationTimeout));
+            return _monotonicClock() < deadline.ExpiresAt &&
+                !(CurrentState.UniqueRemoteAddress is { } peer && peer.Uid != notification.QuarantinedUid);
+        }
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the LARGE-MESSAGE outbound stream to
@@ -830,9 +915,9 @@ namespace Akka.Remote.Artery
         /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
         /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
         /// cheap enough to sample repeatedly from a test without perturbing the property under
-        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/> /
-        /// dead-letter-on-<see langword="false"/> pattern is capacity-agnostic), so this exists
-        /// purely for tests to assert the bound is never exceeded. See <see cref="LaneQueueCount"/>
+        /// test. Restart callbacks also sample queued demand after releasing a stopped stream's
+        /// gate; producers enqueue before checking that gate so no accepted work is stranded.
+        /// See <see cref="LaneQueueCount"/>
         /// for lanes 1..N-1.
         /// </summary>
         public int OutboundQueueCount => _laneChannels[0].Reader.Count;
@@ -1152,6 +1237,7 @@ namespace Akka.Remote.Artery
         private readonly int _controlQueueCapacity;
         private readonly int _largeQueueCapacity;
         private readonly int _outboundLanes;
+        private readonly TimeSpan? _quarantineNotificationTimeout;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistry"/> class.
@@ -1173,12 +1259,15 @@ namespace Akka.Remote.Artery
         /// <see cref="ArterySettings.OutboundLanes"/>. Defaults to 1 (today's single-channel shape,
         /// gate B).
         /// </param>
+        /// <param name="quarantineNotificationTimeout">Bounded notice retention from handshake-timeout.</param>
         public AssociationRegistry(
             int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity,
             int controlQueueCapacity = Association.DefaultControlQueueCapacity,
             int largeQueueCapacity = Association.DefaultLargeQueueCapacity,
-            int outboundLanes = 1)
+            int outboundLanes = 1,
+            TimeSpan? quarantineNotificationTimeout = null)
         {
+            _quarantineNotificationTimeout = quarantineNotificationTimeout;
             _outboundQueueCapacity = outboundQueueCapacity;
             _controlQueueCapacity = controlQueueCapacity;
             _largeQueueCapacity = largeQueueCapacity;
@@ -1192,8 +1281,8 @@ namespace Akka.Remote.Artery
         /// </summary>
         public Association AssociationFor(Address remoteAddress) =>
             _byAddress.GetOrAdd(remoteAddress,
-                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control, caps.Large, caps.Lanes),
-                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity, Large: _largeQueueCapacity, Lanes: _outboundLanes));
+                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control, caps.Large, caps.Lanes, caps.NotificationTimeout),
+                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity, Large: _largeQueueCapacity, Lanes: _outboundLanes, NotificationTimeout: _quarantineNotificationTimeout));
 
         /// <summary>
         /// Looks up the association currently known to own <paramref name="uid"/>. Returns
