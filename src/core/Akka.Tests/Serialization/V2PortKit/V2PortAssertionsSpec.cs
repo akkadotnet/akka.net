@@ -53,6 +53,85 @@ public sealed class V2PortAssertionsSpec
         assertion.Should().Throw<Exception>();
     }
 
+    [Fact(DisplayName = "Should_InvokeDomainAssertion_When_NestedReachabilityUsesIdentityEquality")]
+    public void Should_InvokeDomainAssertion_When_NestedReachabilityUsesIdentityEquality()
+    {
+        var expected = RichMessage.Create();
+        var actual = RichMessage.Create();
+        Assert.False(expected.Equals(actual));
+        var called = false;
+        var sample = new V2PortCase(expected, "G", "gossip")
+        {
+            AssertEquivalent = (left, right) =>
+            {
+                called = true;
+                AssertRichMessage(left, right);
+            }
+        };
+
+        V2PortSpec.AssertSame(sample, actual, "round trip");
+        called.Should().BeTrue();
+    }
+
+    [Theory(DisplayName = "Should_RejectChangedDomainFields_When_ADelegateChecksIdentityEqualMembers")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Should_RejectChangedDomainFields_When_ADelegateChecksIdentityEqualMembers(bool changedMember)
+    {
+        var expected = RichMessage.Create();
+        var actual = changedMember
+            ? expected with { Member = new IdentityMember("node", 2) }
+            : expected with { Reachability = new IdentityReachability(new Dictionary<string, long> { ["observer"] = 24 }) };
+        if (changedMember)
+            Assert.True(expected.Equals(actual));
+        var sample = new V2PortCase(expected, "G", "gossip") { AssertEquivalent = AssertRichMessage };
+
+        Action assertion = () => V2PortSpec.AssertSame(sample, actual, "round trip");
+        assertion.Should().Throw<Exception>();
+    }
+
+    [Fact(DisplayName = "Should_RejectWrongRuntimeTypeBeforeDelegate_When_ACaseHasACustomAssertion")]
+    public void Should_RejectWrongRuntimeTypeBeforeDelegate_When_ACaseHasACustomAssertion()
+    {
+        var called = false;
+        var sample = new V2PortCase(RichMessage.Create(), "G", "gossip")
+        {
+            AssertEquivalent = (_, _) => called = true
+        };
+        Action assertion = () => V2PortSpec.AssertSame(sample, new object(), "round trip");
+
+        assertion.Should().Throw<Exception>();
+        called.Should().BeFalse();
+    }
+
+    private static void AssertRichMessage(object expected, object actual)
+    {
+        var left = (RichMessage)expected;
+        var right = (RichMessage)actual;
+        right.Member.Address.Should().Be(left.Member.Address);
+        right.Member.Status.Should().Be(left.Member.Status);
+        right.Reachability.Counters.Should().BeEquivalentTo(left.Reachability.Counters);
+    }
+
+    private sealed record RichMessage(IdentityMember Member, IdentityReachability Reachability)
+    {
+        public static RichMessage Create() => new(new IdentityMember("node", 1),
+            new IdentityReachability(new Dictionary<string, long> { ["observer"] = 23 }));
+    }
+
+    private sealed class IdentityMember(string address, int status)
+    {
+        public string Address { get; } = address;
+        public int Status { get; } = status;
+        public override bool Equals(object? obj) => obj is IdentityMember other && Address == other.Address;
+        public override int GetHashCode() => Address.GetHashCode();
+    }
+
+    private sealed class IdentityReachability(IReadOnlyDictionary<string, long> counters)
+    {
+        public IReadOnlyDictionary<string, long> Counters { get; } = counters;
+    }
+
     private sealed class OrderedEqualityMessage(IReadOnlyDictionary<string, int> values)
     {
         public IReadOnlyDictionary<string, int> Values { get; } = values;
