@@ -24,6 +24,13 @@ checking only the major/minor version is insufficient.
 | Subsystem | Legacy alias / id | V2 alias / id | First release containing the V2 reader | Native AOT boundary |
 |---|---|---|---|---|
 | Reliable Delivery, including durable producer queues | `reliable-delivery` / 36 | `reliable-delivery-v2` / 76 | Unreleased; [#8409](https://github.com/akkadotnet/akka.net/pull/8409) | Generic Delivery messages throw `SerializationException` when `Akka.DynamicTypeLoading` is off, on the JIT as well as Native AOT. |
+| Cluster Singleton hand-over | `akka-singleton` / 14 | `akka-singleton-v2` / 54 | Unreleased; [#8915](https://github.com/akkadotnet/akka.net/pull/8915) | Local native codec canary passes all four manifests. Cluster startup and ownership hand-over remain separate capabilities. |
+| Cluster Metrics | `akka-cluster-metrics` / 10 | `akka-cluster-metrics-v2` / 50 | Unreleased; [#8917](https://github.com/akkadotnet/akka.net/pull/8917) | A standalone native codec probe passes all five implemented manifests. Tracked CI coverage and complete Metrics subsystem AOT support remain pending. |
+| Replicator protocol | `akka-data-replication` / 12 | `akka-data-replication-v2` / 52 | Unreleased; [#8918](https://github.com/akkadotnet/akka.net/pull/8918) | Nested CRDT serialization still uses id 11. Generic CRDT native reconstruction remains separate work. |
+| Distributed PubSub | `akka-pubsub` / 9 | `akka-pubsub-v2` / 49 | Unreleased; [#8919](https://github.com/akkadotnet/akka.net/pull/8919) | A standalone native codec probe passes all six manifests with supported payloads. User payloads need their own native-compatible serializers. |
+
+| Cluster Client / Receptionist | `akka-cluster-client` / 15 | `akka-cluster-client-v2` / 55 | Unreleased; [#8922](https://github.com/akkadotnet/akka.net/pull/8922) | Codec probes pass all eleven manifests. Complete client delivery additionally depends on PubSub and runtime activation. |
+| Actor-selection containers | `akka-containers` / 6 | `akka-containers-v2` / 46 | Unreleased; [#8923](https://github.com/akkadotnet/akka.net/pull/8923) | The wrapper does not make application payloads or the whole remote subsystem native-compatible. |
 
 The table identifies reader availability, not a performance or Native AOT recommendation.
 Consult the release's validation results before enabling a port. Other built-in serializers
@@ -85,9 +92,81 @@ The id 76 reader remains registered. Remove this override when you are ready to 
 writer. Pin an entire subsystem's binding set; a module with several bindings needs every
 one pinned, not just a convenient example message type.
 
+For other ports, the complete legacy binding sets are:
+
+```hocon
+akka.actor.serialization-bindings {
+    # Singleton hand-over
+    "Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools" = akka-singleton
+
+    # Distributed PubSub: both bindings are needed.
+    "Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools" = akka-pubsub
+    "Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools" = akka-pubsub
+
+    # Replicator protocol
+    "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
+
+    # Metrics: all five bindings are needed.
+    "Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope, Akka.Cluster.Metrics" = akka-cluster-metrics
+    "Akka.Cluster.Metrics.AdaptiveLoadBalancingPool, Akka.Cluster.Metrics" = akka-cluster-metrics
+    "Akka.Cluster.Metrics.MixMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
+    "Akka.Cluster.Metrics.CpuMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
+    "Akka.Cluster.Metrics.MemoryMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
+}
+```
+
+Keep only the subsystem groups you intend to pin. Verify their effective writers with the
+same module versions and application configuration you will deploy.
+
 Enabling the global setting also applies to new ports introduced by a later package upgrade.
 Review that release's takeover table and retain explicit legacy bindings for any subsystem
 you have not validated.
+
+## Cluster Client Compatibility Setting
+
+Cluster Client retains its existing `akka.cluster.client.use-legacy-serialization` setting.
+After client settings are constructed, the effective bindings are:
+
+| Global V2 setting | Client legacy setting | Receptionist messages | Client commands and ticks |
+|---|---|---|---|
+| Off | On (default) | 15 | Existing JSON path |
+| On | On (default) | 55 | Existing JSON path |
+| Off | Off | 15 | 15 |
+| On | Off | 55 | 55 |
+
+To use the generated codec for the complete client protocol, configure both existing keys:
+
+```hocon
+akka.actor.serialization-v2 = on
+akka.cluster.client.use-legacy-serialization = off
+```
+
+The startup takeover log precedes the client setting's removal of its protocol binding.
+Check effective writers after client initialization. To keep built-in legacy id 15 while
+other modules use V2, set the client legacy setting to off and pin both interfaces:
+
+```hocon
+akka.cluster.client.use-legacy-serialization = off
+akka.actor.serialization-bindings {
+    "Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools" = akka-cluster-client
+    "Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, Akka.Cluster.Tools" = akka-cluster-client
+}
+```
+
+## Actor-Selection Format Boundary
+
+Legacy id 6 retains its empty manifest. New id 46 uses nonempty token `a`; this exception to
+manifest parity keeps native manifest validation intact. Its release also includes Artery's
+parser for both outer formats, so upgrade every receiver before sending id 46.
+
+The V2 wrapper retains `WildCardFanOut`, which legacy omits. Recursive path selectors remain
+unsupported and are rejected before output is written. To retain legacy container writes:
+
+```hocon
+akka.actor.serialization-bindings {
+    "Akka.Actor.ActorSelectionMessage, Akka" = akka-containers
+}
+```
 
 ## Roll Back Writers While Retaining Readers
 
@@ -101,9 +180,11 @@ or make them readable by a binary without the V2 serializer. A backup taken befo
 does not include subsequent writes; restoring it requires a separate application data-recovery
 decision.
 
-The DistributedData LMDB store has no per-record serializer id. Its V2 migration must keep
-durable storage pinned to the legacy serializer; changing the network binding must not change
-the storage format. That prerequisite is tracked in [#8716](https://github.com/akkadotnet/akka.net/issues/8716).
+The DistributedData LMDB store has no per-record serializer id. The Replicator port retains the
+legacy built-in storage format while changing network bindings, and preserves existing custom
+durable serializer bindings and legacy-alias overrides. Test the same custom serializer setup
+during recovery; switching the global setting does not convert LMDB values. This protection
+is tracked in [#8716](https://github.com/akkadotnet/akka.net/issues/8716).
 
 ## Native AOT Is a Separate Capability
 
