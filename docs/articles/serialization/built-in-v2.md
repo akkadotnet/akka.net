@@ -30,6 +30,10 @@ checking only the major/minor version is insufficient.
 | Replicator protocol | `akka-data-replication` / 12 | `akka-data-replication-v2` / 52 | Unreleased; [#8918](https://github.com/akkadotnet/akka.net/pull/8918) | Nested CRDT serialization still uses id 11. Generic CRDT native reconstruction remains separate work. |
 | Distributed PubSub | `akka-pubsub` / 9 | `akka-pubsub-v2` / 49 | Unreleased; [#8919](https://github.com/akkadotnet/akka.net/pull/8919) | A standalone native codec probe passes all six manifests with supported payloads. User payloads need their own native-compatible serializers. |
 | Cluster Client / Receptionist | `akka-cluster-client` / 15 | `akka-cluster-client-v2` / 55 | Unreleased; [#8922](https://github.com/akkadotnet/akka.net/pull/8922) | Codec probes pass all eleven manifests. Complete client delivery additionally depends on PubSub and runtime activation. |
+| Cluster Sharding | `akka-sharding` / 13 | `akka-sharding-v2` / 53 | Unreleased; [#8930](https://github.com/akkadotnet/akka.net/pull/8930) | Generic CRDTs and native cluster bootstrap remain separate. Verify composed durable and digest behavior before enabling. |
+| Stream-ref protocol | `akka-stream-ref` / 30 | `akka-stream-ref-v2` / 70 | Unreleased; [#8929](https://github.com/akkadotnet/akka.net/pull/8929) | Only five protocol messages migrate. Bare generic refs keep id 30 and their dynamic-loading guards; typed fields remain [#8673](https://github.com/akkadotnet/akka.net/issues/8673). |
+| Remote deployment | `daemon-create` / 3 | `daemon-create-v2` / 43 | Unreleased; [#8931](https://github.com/akkadotnet/akka.net/pull/8931) | Native remote deployment is explicitly unsupported. V2 rejects writes and reads when dynamic type loading is disabled. |
+| System messages | `akka-system-msg` / 22 | `akka-system-msg-v2` / 62 | Unreleased; [#8932](https://github.com/akkadotnet/akka.net/pull/8932) | The generated known-exception path and historical protobuf exception reads have different native limits. The draft's verification gaps remain explicit. |
 | Actor-selection containers | `akka-containers` / 6 | `akka-containers-v2` / 46 | Unreleased; [#8923](https://github.com/akkadotnet/akka.net/pull/8923) | The wrapper does not make application payloads or the whole remote subsystem native-compatible. |
 
 The table identifies reader availability, not a performance or Native AOT recommendation.
@@ -159,6 +163,8 @@ akka.actor.serialization-bindings {
 
 ## Actor-Selection Format Boundary
 
+Legacy ids 3 and 6 retain their empty manifests. New remote-deployment id 43 also uses token `a`; its stricter native guard does not enable native actor construction.
+
 Legacy id 6 retains its empty manifest. New id 46 uses nonempty token `a`; this exception to
 manifest parity keeps native manifest validation intact. Its release also includes Artery's
 parser for both outer formats, so upgrade every receiver before sending id 46.
@@ -189,6 +195,19 @@ legacy built-in storage format while changing network bindings, and preserves ex
 durable serializer bindings and legacy-alias overrides. Test the same custom serializer setup
 during recovery; switching the global setting does not convert LMDB values. This protection
 is tracked in [#8716](https://github.com/akkadotnet/akka.net/issues/8716).
+
+## Stream-Ref Protocol Boundary
+
+The stream-ref port moves only `IStreamRefsProtocol`. To pin those messages:
+
+```hocon
+akka.actor.serialization-bindings {
+    "Akka.Streams.Implementation.StreamRef.IStreamRefsProtocol, Akka.Streams" = akka-stream-ref
+}
+```
+
+Bare `SourceRefImpl<T>` and `SinkRefImpl<T>` keep their legacy binding. A native codec probe
+for the five protocol messages does not establish native remote stream materialization.
 
 ## Same-Format Native Persistence Envelopes
 
