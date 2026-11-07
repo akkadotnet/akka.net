@@ -1,0 +1,10 @@
+case: DeltaTombstone
+message-type: Delta
+manifest: B
+serializer-id: 9
+byte-count: 56
+
+0000  0a 36 0a 20 0a 06 70 75  62 73 75 62 12 09 31 32  |.6. ..pubsub..12|
+0010  37 2e 30 2e 30 2e 31 18  f8 13 22 08 61 6b 6b 61  |7.0.0.1...".akka|
+0020  2e 74 63 70 10 03 1a 10  0a 0a 2f 75 73 65 72 2f  |.tcp....../user/|
+0030  67 6f 6e 65 12 02 08 07                           |gone....|

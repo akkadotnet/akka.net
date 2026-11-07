@@ -1,0 +1,7 @@
+case: DeltaEmpty
+message-type: Delta
+manifest: B
+serializer-id: 9
+byte-count: 0
+
+(zero-byte payload)

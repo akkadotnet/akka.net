@@ -1,0 +1,9 @@
+case: StatusReply
+message-type: Status
+manifest: A
+serializer-id: 9
+byte-count: 40
+
+0000  0a 24 0a 20 0a 06 70 75  62 73 75 62 12 09 31 32  |.$. ..pubsub..12|
+0010  37 2e 30 2e 30 2e 31 18  f8 13 22 08 61 6b 6b 61  |7.0.0.1...".akka|
+0020  2e 74 63 70 10 11 10 01                           |.tcp....|

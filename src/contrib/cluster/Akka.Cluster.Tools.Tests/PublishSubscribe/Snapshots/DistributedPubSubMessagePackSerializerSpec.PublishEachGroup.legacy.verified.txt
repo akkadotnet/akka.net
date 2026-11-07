@@ -1,0 +1,10 @@
+case: PublishEachGroup
+message-type: Publish
+manifest: E
+serializer-id: 9
+byte-count: 59
+
+0000  0a 05 74 6f 70 69 63 1a  30 0a 05 68 65 6c 6c 6f  |..topic.0..hello|
+0010  10 11 1a 25 53 79 73 74  65 6d 2e 53 74 72 69 6e  |...%System.Strin|
+0020  67 2c 20 53 79 73 74 65  6d 2e 50 72 69 76 61 74  |g, System.Privat|
+0030  65 2e 43 6f 72 65 4c 69  62 20 01                 |e.CoreLib .|
