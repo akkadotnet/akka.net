@@ -1,0 +1,13 @@
+﻿case: mixed-path
+message-type: ActorSelectionMessage
+manifest: a
+serializer-id: 46
+byte-count: 104
+
+0000  83 01 83 01 11 02 d9 25  53 79 73 74 65 6d 2e 53  |.......%System.S|
+0010  74 72 69 6e 67 2c 20 53  79 73 74 65 6d 2e 50 72  |tring, System.Pr|
+0020  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 03 c4 05  |ivate.CoreLib...|
+0030  68 65 6c 6c 6f 02 95 82  01 00 02 a4 75 73 65 72  |hello.......user|
+0040  82 01 00 02 a6 74 61 72  67 65 74 82 01 02 02 c0  |.....target.....|
+0050  82 01 01 02 a8 77 6f 72  6b 65 72 2d 2a 82 01 00  |.....worker-*...|
+0060  02 a4 6c 65 61 66 03 c2                           |..leaf..|

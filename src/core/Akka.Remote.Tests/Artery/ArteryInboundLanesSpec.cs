@@ -45,7 +45,7 @@ namespace Akka.Remote.Tests.Artery
     /// eventually happen"), never a measurement of how long something took.
     /// </para>
     /// </summary>
-    public class ArteryInboundLanesSpec : AkkaSpec
+    public partial class ArteryInboundLanesSpec : AkkaSpec
     {
         public ArteryInboundLanesSpec(ITestOutputHelper output) : base(output)
         {

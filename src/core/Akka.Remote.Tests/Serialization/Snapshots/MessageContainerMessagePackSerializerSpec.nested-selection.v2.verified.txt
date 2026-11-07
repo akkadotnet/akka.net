@@ -1,0 +1,12 @@
+﻿case: nested-selection
+message-type: ActorSelectionMessage
+manifest: a
+serializer-id: 46
+byte-count: 86
+
+0000  83 01 83 01 06 02 a0 03  c4 3e 0a 30 0a 05 69 6e  |.........>.0..in|
+0010  6e 65 72 10 11 1a 25 53  79 73 74 65 6d 2e 53 74  |ner...%System.St|
+0020  72 69 6e 67 2c 20 53 79  73 74 65 6d 2e 50 72 69  |ring, System.Pri|
+0030  76 61 74 65 2e 43 6f 72  65 4c 69 62 12 0a 08 02  |vate.CoreLib....|
+0040  12 06 6e 65 73 74 65 64  02 91 82 01 00 02 a5 6f  |..nested.......o|
+0050  75 74 65 72 03 c2                                 |uter..|

@@ -1,0 +1,11 @@
+﻿case: integer-payload
+message-type: ActorSelectionMessage
+manifest: a
+serializer-id: 46
+byte-count: 67
+
+0000  83 01 83 01 11 02 d9 24  53 79 73 74 65 6d 2e 49  |.......$System.I|
+0010  6e 74 33 32 2c 20 53 79  73 74 65 6d 2e 50 72 69  |nt32, System.Pri|
+0020  76 61 74 65 2e 43 6f 72  65 4c 69 62 03 c4 04 40  |vate.CoreLib...@|
+0030  e2 01 00 02 91 82 01 00  02 a7 69 6e 74 65 67 65  |..........intege|
+0040  72 03 c2                                          |r..|

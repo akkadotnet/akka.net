@@ -24,9 +24,14 @@ namespace Akka.Remote.Serialization
     {
         private static readonly Config PrimitiveDefaults = ConfigurationFactory.ParseString("use-legacy-behavior = on");
 
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-containers-v2", "akka-containers");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-containers", new MessageContainerSerializer(system),
                 ImmutableHashSet.Create(typeof(ActorSelectionMessage))),
+            SerializerDetails.Create("akka-containers-v2", new MessageContainerMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty),
             SerializerDetails.Create("akka-misc", new MiscMessageSerializer(system),
                 ImmutableHashSet.Create(
                     typeof(Identify),

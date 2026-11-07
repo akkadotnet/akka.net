@@ -15,6 +15,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Remote.Serialization;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -106,8 +107,8 @@ namespace Akka.Remote.Artery
     /// (<c>RemoteActorRefProvider.RootGuardianAt</c>). So EVERY <c>ActorSelectionMessage</c> sent to
     /// ANY actor on a given remote system carries the exact SAME <c>RecipientPath</c> string --
     /// hashing it directly would collapse every inbound selection from that peer onto ONE lane,
-    /// regardless of <see cref="InboundLanes"/>. <see cref="Logic.BuildSelectionLaneKey"/> instead
-    /// parses just the OUTER <c>SelectionEnvelope</c> wire wrapper (never the wrapped application
+    /// regardless of <see cref="InboundLanes"/>. <see cref="BuildSelectionLaneKey"/> instead
+    /// parses just the OUTER legacy or V2 selection wrapper (never the wrapped application
     /// message it carries -- that stays fully deferred to the lane, like every other ordinary
     /// message) to recover the selection's OWN target path elements and hashes THOSE, so distinct
     /// selection targets land on distinct lanes. Falls back to <c>RecipientPath</c> (same-lane, but
@@ -297,12 +298,40 @@ namespace Akka.Remote.Artery
         public int ControlMessageSerializerId { get; }
 
         /// <summary>
-        /// <see cref="Akka.Actor.ActorSelectionMessage"/>'s SerializerId -- used ONLY to decide
-        /// whether a frame needs the <see cref="Logic.BuildSelectionLaneKey"/> special case (see
-        /// the type-level "ActorSelectionMessage lane key" remarks). Never resolved at the
+        /// <see cref="Akka.Actor.ActorSelectionMessage"/>'s configured writer id, retained for
+        /// custom legacy serializers. Built-in read ids 6 and 46 are recognized independently
+        /// of this write binding. Never resolved at the
         /// <see cref="InboundLanes"/>=1 default.
         /// </summary>
         public int SelectionMessageSerializerId { get; }
+
+        /// <summary>
+        /// Reads outer selection metadata only. Id 46 has the generated MessagePack format;
+        /// legacy id 6 (and existing configured legacy serializers) retain protobuf parsing.
+        /// Invalid or empty metadata falls back to the recipient anchor without invoking a payload serializer.
+        /// </summary>
+        internal static string? BuildSelectionLaneKey(in ReadOnlySequence<byte> payload, int serializerId)
+        {
+            if (serializerId == MessageContainerMessagePackSerializer.SerializerIdentifier)
+                return MessageContainerMessagePackSerializer.TryReadSelectionLaneKey(payload);
+
+            try
+            {
+                var bytes = payload.IsSingleSegment ? payload.FirstSpan.ToArray() : payload.ToArray();
+                var envelope = Akka.Remote.Serialization.Proto.Msg.SelectionEnvelope.Parser.ParseFrom(bytes);
+                if (envelope.Pattern.Count == 0)
+                    return null;
+
+                var builder = new StringBuilder();
+                foreach (var element in envelope.Pattern)
+                    builder.Append('/').Append(element.Matcher);
+                return builder.ToString();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
 
         public Inlet<ReadOnlySequence<byte>> In { get; } = new("ArteryInboundProcessing.in");
         public Outlet<IInboundEnvelope> Out { get; } = new("ArteryInboundProcessing.out");
@@ -902,44 +931,15 @@ namespace Akka.Remote.Artery
 
                 // ActorSelectionMessage special case -- see the type-level "ActorSelectionMessage
                 // lane key" remarks.
-                var laneKey = decoded.Header.SerializerId == _stage.SelectionMessageSerializerId
-                    ? BuildSelectionLaneKey(decoded.Payload) ?? recipientPath
+                var selectionId = decoded.Header.SerializerId;
+                var laneKey = selectionId == _stage.SelectionMessageSerializerId
+                    || selectionId is MessageContainerMessagePackSerializer.LegacyIdentifier or MessageContainerMessagePackSerializer.SerializerIdentifier
+                    ? BuildSelectionLaneKey(decoded.Payload, selectionId) ?? recipientPath
                     : recipientPath;
 
                 var laneIndex = LaneFor(laneKey, _stage.InboundLanes);
 
                 return TryRouteToLane(laneIndex, new LaneWorkItem(decoded.Payload, decoded.Header.SerializerId, manifest, senderPath, recipientPath));
-            }
-
-            /// <summary>
-            /// Parses ONLY the outer <c>SelectionEnvelope</c> wire wrapper (<c>MessageContainerSerializer</c>'s
-            /// format) to recover an <c>ActorSelectionMessage</c>'s OWN target path elements, WITHOUT
-            /// deserializing the wrapped application message it carries (that stays fully deferred to
-            /// the lane, exactly like any other ordinary message) -- see the type-level
-            /// "ActorSelectionMessage lane key" remarks for why <c>RecipientPath</c> alone cannot be
-            /// used here. Returns <see langword="null"/> (safe fallback to <c>RecipientPath</c>-based
-            /// hashing -- same-lane, never WRONG) if the wrapper has no pattern elements or fails to
-            /// parse for any reason.
-            /// </summary>
-            private static string? BuildSelectionLaneKey(in ReadOnlySequence<byte> payload)
-            {
-                try
-                {
-                    var bytes = payload.IsSingleSegment ? payload.FirstSpan.ToArray() : payload.ToArray();
-                    var envelope = Akka.Remote.Serialization.Proto.Msg.SelectionEnvelope.Parser.ParseFrom(bytes);
-                    if (envelope.Pattern.Count == 0)
-                        return null;
-
-                    var sb = new StringBuilder();
-                    foreach (var element in envelope.Pattern)
-                        sb.Append('/').Append(element.Matcher);
-
-                    return sb.ToString();
-                }
-                catch
-                {
-                    return null;
-                }
             }
 
             /// <summary>

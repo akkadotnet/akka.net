@@ -36,6 +36,7 @@ module Akka.Persistence
 module Akka.Remote
   akka-containers: Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote (id 6)
     Akka.Actor.ActorSelectionMessage, Akka
+  akka-containers-v2: Akka.Remote.Serialization.MessageContainerMessagePackSerializer, Akka.Remote (id 46) supersedes akka-containers
   akka-misc: Akka.Remote.Serialization.MiscMessageSerializer, Akka.Remote (id 16)
     Akka.Actor.ActorIdentity, Akka
     Akka.Actor.IActorRef, Akka
