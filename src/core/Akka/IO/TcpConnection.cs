@@ -427,6 +427,7 @@ namespace Akka.IO
         {
             _transport = transport;
             _cts = new CancellationTokenSource();
+            _pipeReader = new PipeReadToActor(transport.Input, _cts.Token, Self);
 
             // Monitor the read pump for completion/errors
             var self = Self;
@@ -848,12 +849,11 @@ namespace Akka.IO
         /// </summary>
         private void RequestPipeRead()
         {
-            if (_readPending || _transport == null || _cts == null) return;
+            if (_readPending || _pipeReader == null) return;
             _readPending = true;
 
             if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
-            _pipeReader ??= new PipeReadToActor(_transport.Input, _cts.Token, Self);
             _pipeReader.Start();
         }
 
