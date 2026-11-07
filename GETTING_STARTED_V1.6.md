@@ -4,9 +4,9 @@ The [Akka.NET website](https://getakka.net) is frozen on v1.5 until v1.6 stabili
 is the guide for the v1.6 beta until the website catches up. It's current against the `dev`
 branch.
 
-**No v1.6 package is on NuGet yet.** Every `Version="1.6.0-beta*"` reference below fails to
-restore (`NU1102`) until the first beta ships. Until then, build Akka.NET from source and
-reference the projects you need with a `ProjectReference` instead.
+**The v1.6 betas are on NuGet.** `1.6.0-beta1` through `1.6.0-beta5` are published, so the
+`Version="1.6.0-beta*"` references below restore. Pin an exact beta rather than the wildcard if
+you need a reproducible build.
 
 ## What's in v1.6
 
@@ -158,7 +158,7 @@ using Akka.Serialization;
 var setup = ActorSystemSetup.Create(BootstrapSetup.Create())
     .And(LoggerSetup.Create(Props.Create<ConsoleLogger>()))
     .And(ExtensionsSetup.Create(CounterExtensionProvider.Instance))
-    .And(SerializationSetup.Create(system => ImmutableHashSet.Create(
+    .And(SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(
         SerializerDetails.Create(
             "counter",
             new CounterMessageSerializer(system),
@@ -202,10 +202,12 @@ No separate generator package - the generator ships inside `Akka.Serialization.V
 NuGet wires it in automatically.
 
 ```csharp
+using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Serialization;
 using Akka.Serialization.V2;
 
-var setup = OrderSerializer.CreateRegistration().CreateSetup();
+var setup = SerializationSetup.Create(extendedSystem => ImmutableHashSet.Create(OrderSerializer.CreateSerializerDetails(extendedSystem)));
 var bootstrap = BootstrapSetup.Create().And(setup);
 var system = ActorSystem.Create("order-system", bootstrap);
 
@@ -216,37 +218,36 @@ public interface IOrderProtocol
 
 // Index every field with [AkkaField(n)]. Two fields sharing an index is a build error
 // (AKKASG005); on a positional record, a constructor parameter with no matching [AkkaField]
-// is too (AKKASG026). Gaps in the numbering are fine.
+// is too (AKKASG026). Gaps in the numbering are fine. A public stored property with no
+// [AkkaField] warns (AKKASG046) - it is not serialized - and [AkkaField] on a type without
+// [AkkaSerializable] warns too (AKKASG047). Both fail a warnings-as-errors build.
 [AkkaSerializable(Manifest = "submit-order-v1")]
 public sealed record SubmitOrder(
     [property: AkkaField(0)] string OrderId,
     [property: AkkaField(1)] Guid CustomerId,
     [property: AkkaField(2)] decimal Total) : IOrderProtocol;
 
-// A sealed partial class. The generator fills in CreateRegistration(). Name and id are
+// A sealed partial class. The generator fills in CreateSerializerDetails(). Name and id are
 // always explicit - ids 1-100 are reserved for Akka's own built-in serializers.
 [AkkaSerializer<IOrderProtocol>("order-serializer", 120001)]
 public sealed partial class OrderSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 ```
 
-To register several generated serializers at once, use
-`SerializerRegistration.CreateSetup(params SerializerRegistration[])` and merge the result into
-`ActorSystemSetup` the same way. A generated serializer also satisfies Akka's classic
-`Serializer` contract, so you can register it through HOCON instead, exactly like a
-hand-written one.
+To register several generated serializers, return their `SerializerDetails` in the same
+`SerializationSetup.Create` factory. A generated serializer also satisfies Akka's classic
+`Serializer` contract, so you can register it through HOCON instead.
 
-Using Akka.Hosting? `akkaBuilder.AddSetup(registration.CreateSetup())` works. Don't also call
-`WithCustomSerializer` on the same builder - it builds its own `SerializationSetup` and adds
-it last, which replaces yours instead of merging with it (the same one-setup-per-type rule as
-above).
+Using Akka.Hosting? Pass the generated factory directly:
+
+```csharp
+akkaBuilder.WithCustomSerializer(OrderSerializer.CreateSerializerDetails);
+```
 
 One message type can belong to only one serializer. The generator's analyzer catches a
-conflict at compile time (for example, two serializers binding the same protocol interface);
-`SerializerRegistration.CreateSetup` catches the same conflict at startup when registrations
-come from more than one assembly.
+conflict at compile time (for example, two serializers binding the same protocol interface).
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 

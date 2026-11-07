@@ -280,7 +280,62 @@ namespace Akka.Streams.Implementation.Fusing
             /// * A failure (with an optional in-flight element), if elem is an instance of <see cref="Failed"/>
             /// * A cancellation cause, is elem is an instance of <see cref="Cancelled"/>
             /// </summary>
-            public object Slot { get; set; } = Empty.Instance;
+            public object Slot
+            {
+                get => HasTypedElement ? Storage.BoxedValue : _slot;
+                set
+                {
+                    Storage?.Clear();
+                    _slot = value;
+                }
+            }
+
+            private object _slot = Empty.Instance;
+
+#nullable enable annotations
+            internal ElementSlot? Storage { get; set; }
+
+            // Only use after establishing that Storage is null. Public Slot remains the bridge
+            // for connections that may carry typed payloads.
+            internal object ObjectSlot
+            {
+                get => _slot;
+                set => _slot = value;
+            }
+
+            internal bool HasTypedElement => Storage?.HasValue == true;
+
+            internal bool HasElement => HasTypedElement || !ReferenceEquals(_slot, Empty.Instance);
+
+            internal void StoreElement<T>(T element)
+            {
+                var storage = Storage;
+                if (storage is null)
+                {
+                    _slot = element!;
+                }
+                else if (storage is ElementSlot<T> typed)
+                {
+                    _slot = Empty.Instance;
+                    typed.Store(element);
+                }
+                else
+                {
+                    storage.Clear();
+                    _slot = element!;
+                }
+            }
+
+            internal T ReadElement<T>() => Storage is ElementSlot<T> { HasValue: true } typed
+                ? typed.Value
+                : (T)Slot;
+
+            internal void ClearElement()
+            {
+                Storage?.Clear();
+                _slot = Empty.Instance;
+            }
+#nullable restore annotations
 
             /// <summary>
             /// The OpenTelemetry trace context associated with the element currently in <see cref="Slot"/>,

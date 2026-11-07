@@ -425,13 +425,13 @@ public sealed class PositionRefFormatter : IAkkaMessagePackFormatter<IActorRef>
 [AkkaSerializerFormatter<IActorRef, PositionRefFormatter>]
 public sealed partial class FormatterPositionSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializer<INativeRefProtocol>("native-ref-position-test", 122002)]
 public sealed partial class NativeRefPositionSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable(Manifest = "native-ref-list-v1")]

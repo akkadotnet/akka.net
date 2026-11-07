@@ -11,10 +11,10 @@ public sealed partial class RootSerializer
 
     public override int Identifier => 150103;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("golden-root",
-            system => new RootSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("golden-root",
+            new RootSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::IRootProtocol))); 
     }
@@ -30,6 +30,24 @@ public sealed partial class RootSerializer
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)
+        {
+            var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);
+            var initialCount = pooledWriter.WrittenCount;
+            SerializeMessagePack(obj, ref pooledMessagePackWriter);
+            pooledMessagePackWriter.Flush();
+            return checked(pooledWriter.WrittenCount - initialCount);
+        }
+
+        if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)
+        {
+            var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);
+            var initialCount = arrayWriter.WrittenCount;
+            SerializeMessagePack(obj, ref arrayMessagePackWriter);
+            arrayMessagePackWriter.Flush();
+            return checked(arrayWriter.WrittenCount - initialCount);
+        }
+
         var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);
         var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);
         SerializeMessagePack(obj, ref messagePackWriter);
@@ -42,7 +60,7 @@ public sealed partial class RootSerializer
         switch (obj)
         {
             case global::RootMessage message:
-                WriteRootMessage(ref writer, message);
+                WriteRootMessage_bb5579f28219a839(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
@@ -54,7 +72,7 @@ public sealed partial class RootSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "root-v1" => ReadRootMessage(ref reader),
+            "root-v1" => ReadRootMessage_bb5579f28219a839(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -63,7 +81,7 @@ public sealed partial class RootSerializer
     {
         return obj switch
         {
-            global::RootMessage message => SizeOfRootMessage(message),
+            global::RootMessage message => SizeOfRootMessage_bb5579f28219a839(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -96,7 +114,7 @@ public sealed partial class RootSerializer
         }
     }
 
-    private int SizeOfRootMessage(global::RootMessage message)
+    private int SizeOfRootMessage_bb5579f28219a839(global::RootMessage message)
     {
         checked
         {
@@ -107,14 +125,14 @@ public sealed partial class RootSerializer
         }
     }
 
-    private void WriteRootMessage(ref global::MessagePack.MessagePackWriter writer, global::RootMessage message)
+    private void WriteRootMessage_bb5579f28219a839(ref global::MessagePack.MessagePackWriter writer, global::RootMessage message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Value);
     }
 
-    private global::RootMessage ReadRootMessage(ref global::MessagePack.MessagePackReader reader)
+    private global::RootMessage ReadRootMessage_bb5579f28219a839(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? value = null;

@@ -98,11 +98,13 @@ public sealed class GeneratorCompilationFactsSpec
         facts.LocalMarkedImplementorsByClosedSetKey.Should().ContainKey(protocolKey);
         facts.LocalMarkedImplementorsByClosedSetKey[protocolKey].Select(key => key.MetadataName).Should().Equal("FactsSample.Marked");
 
-        // No referenced assembly is involved in this compilation at all, so Decision 19's
-        // referenced-assembly walk (real, not a skeleton) finds nothing to report -- an empty
-        // dictionary, not one padded with an empty entry per requested key (see SortAndBuild's own
-        // doc comment for why that convention differs from LocalUnmarkedImplementorsByProtocol's).
-        facts.ReferencedAssemblyImplementorsByProtocol.Should().BeEmpty();
+        // No referenced assembly implements this compilation's own protocol, so Decision 19's
+        // referenced-assembly walk (real, not a skeleton) has no entry for it -- not one padded with
+        // an empty list (see SortAndBuild's own doc comment for why that convention differs from
+        // LocalUnmarkedImplementorsByProtocol's). The harness references every assembly loaded in
+        // the test process, and union fields declared in those assemblies request their own keys,
+        // so the dictionary as a whole is not necessarily empty.
+        facts.ReferencedAssemblyImplementorsByProtocol.Should().NotContainKey(protocolKey);
     }
 
     [Fact(DisplayName = "ComputeCompilationFacts should produce equal facts across two independent builds of the same compilation")]
@@ -190,7 +192,7 @@ public sealed class GeneratorCompilationFactsSpec
         }
 
         // Hand-written, not partial: CompileToReference never runs the generator against this
-        // compilation, so there is no partial CreateRegistration to implement. Only the
+        // compilation, so there is no partial CreateSerializerDetails to implement. Only the
         // [AkkaSerializer<IRemoteProtocol>] declaration matters here -- it is what forces this
         // assembly's own AssemblyRef table to name Akka.Serialization.V2 (qualifying it for
         // ReferencedAssembliesUsingV2), and it is the one thing ComputeUpstreamSerializerBindings'

@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Immutable;
 using System.Buffers;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -115,7 +116,7 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
     [Fact(DisplayName = "Envelope-payload serialization should throw PayloadSizeExceededException when the staged payload exceeds the outer writer cap")]
     public async Task Envelope_payload_serialization_should_throw_when_staged_payload_exceeds_outer_writer_cap()
     {
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(system => ImmutableHashSet.Create(GeneratedTestSerializer.CreateSerializerDetails(system))));
         var system = ActorSystem.Create("oversized-envelope-payload-spec", setup);
         try
         {

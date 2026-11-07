@@ -852,28 +852,7 @@ namespace Akka.IO
 
             if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
-            var self = Self;
-            var reader = _transport.Input;
-            var ct = _cts.Token;
-
-            _ = AwaitPipeReadAsync();
-
-            async Task AwaitPipeReadAsync()
-            {
-                try
-                {
-                    var result = await ReadPipeChunkAsync(reader, ct).ConfigureAwait(false);
-                    self.Tell(result);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    self.Tell(PipeReadCanceled.Instance);
-                }
-                catch (Exception ex)
-                {
-                    self.Tell(new IoTaskFailed(ex));
-                }
-            }
+            _ = ReadPipeAndSendAsync(_transport.Input, _cts.Token, Self);
         }
 
         /// <summary>
@@ -951,35 +930,45 @@ namespace Akka.IO
                 Log.Debug("Pipe read cancelled");
         }
 
-        private static async ValueTask<PipeReadCompleted> ReadPipeChunkAsync(PipeReader reader, CancellationToken ct)
+        private static async Task ReadPipeAndSendAsync(PipeReader reader, CancellationToken ct, IActorRef self)
         {
-            while (true)
+            try
             {
-                var result = await reader.ReadAsync(ct).ConfigureAwait(false);
-                var buffer = result.Buffer;
-
-                // We must copy out of the pipe's pooled segments before AdvanceTo because
-                // Tell is non-blocking — the handler may not have consumed the data by the
-                // time the segments are returned to the pool. Zero-copy reads require an
-                // explicit ack protocol with the handler that's out of scope here.
-                // The result is wrapped in ReadOnlySequence<byte> (single-segment in practice)
-                // so downstream Streams stages can chain sequences without further copies.
-                ReadOnlySequence<byte> data;
-                if (buffer.Length > 0)
+                while (true)
                 {
-                    var array = new byte[checked((int)buffer.Length)];
-                    buffer.CopyTo(array);
-                    data = new ReadOnlySequence<byte>(array);
-                }
-                else
-                {
-                    data = ReadOnlySequence<byte>.Empty;
-                }
+                    var result = await reader.ReadAsync(ct).ConfigureAwait(false);
+                    var buffer = result.Buffer;
 
-                reader.AdvanceTo(buffer.End);
+                    // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
+                    // returns the pipe's segments to its pool. Keep this copy on the ordinary TCP path.
+                    ReadOnlySequence<byte> data;
+                    if (buffer.Length > 0)
+                    {
+                        var array = new byte[checked((int)buffer.Length)];
+                        buffer.CopyTo(array);
+                        data = new ReadOnlySequence<byte>(array);
+                    }
+                    else
+                    {
+                        data = ReadOnlySequence<byte>.Empty;
+                    }
 
-                if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
-                    return new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled);
+                    reader.AdvanceTo(buffer.End);
+
+                    if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
+                    {
+                        self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
+                        return;
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                self.Tell(PipeReadCanceled.Instance);
+            }
+            catch (Exception ex)
+            {
+                self.Tell(new IoTaskFailed(ex));
             }
         }
 

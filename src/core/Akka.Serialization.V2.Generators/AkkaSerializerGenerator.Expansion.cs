@@ -28,7 +28,7 @@ namespace Akka.Serialization.V2.Generators;
 // WHAT MOVED, WHAT DID NOT: the serializer extraction transform (AkkaSerializerGenerator.Extraction.cs,
 // BuildPrefixExpansionSpec/TryClassifyPrefixArgumentPosition) still does everything that needs only
 // the registration's own symbols -- validity, AllowEmpty, and classifying each type-argument position
-// into Fixed/ExplicitClosedSet/DiscoveredClosedSet (see PrefixArgumentKind). It also still resolves
+// into Fixed/DiscoveredClosedSet (see PrefixArgumentKind). It also still resolves
 // every immediate AKKASG040 failure (an invalid target, an unresolvable fixed argument, no
 // closed-set-flavored position at all) exactly as before, since none of those depend on a
 // whole-compilation walk. What moved here is ONLY the part that genuinely needs one: resolving a

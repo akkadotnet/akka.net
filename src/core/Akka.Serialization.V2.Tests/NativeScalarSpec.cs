@@ -428,7 +428,7 @@ public interface INativeScalarProtocol
 [AkkaSerializer<INativeScalarProtocol>("native-scalar-test", 122003)]
 public sealed partial class NativeScalarSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }
 
 [AkkaSerializable(Manifest = "small-scalars-v1")]

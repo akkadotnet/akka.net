@@ -903,8 +903,10 @@ namespace Akka.Streams.Implementation
 
         private sealed class Logic : InGraphStageLogic
         {
+#nullable enable
             private readonly LazySink<TIn, TMat> _stage;
             private readonly TaskCompletionSource<Option<TMat>> _completion;
+            private readonly Attributes _inheritedAttributes;
             private bool _switching;
 
             public Logic(LazySink<TIn, TMat> stage, Attributes inheritedAttributes, TaskCompletionSource<Option<TMat>> completion) 
@@ -912,9 +914,11 @@ namespace Akka.Streams.Implementation
             {
                 _stage = stage;
                 _completion = completion;
+                _inheritedAttributes = inheritedAttributes;
 
                 SetHandler(stage.In, this);
             }
+#nullable restore
 
             public override void PreStart() => Pull(_stage.In);
 
@@ -1010,7 +1014,8 @@ namespace Akka.Streams.Implementation
 
                 var subOutlet = new SubSourceOutlet<TIn>(this, "LazySink");
 
-                var matVal = Source.FromGraph(subOutlet.Source).RunWith(sink, Interpreter.SubFusingMaterializer);
+                var runnable = Source.FromGraph(subOutlet.Source).ToMaterialized(sink, Keep.Right);
+                var matVal = Interpreter.SubFusingMaterializer.Materialize(runnable, _inheritedAttributes);
 
                 void MaybeCompleteStage()
                 {

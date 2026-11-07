@@ -91,6 +91,46 @@ internal static class GeneratorTestHarness
         CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
 
     /// <summary>
+    /// Preview language version: lets a spec write real C# 15 syntax (<c>closed record</c>,
+    /// <c>union</c>) instead of hand-writing its lowered shape. The harness's Roslyn package (see the
+    /// test csproj) is newer than the generator's own build-time Roslyn for exactly this reason.
+    /// </summary>
+    public static CSharpParseOptions PreviewParseOptions { get; } =
+        CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
+
+    /// <summary>
+    /// Runs <see cref="AkkaSerializerGenerator"/> once over <paramref name="sources"/> parsed with
+    /// <paramref name="parseOptions"/> (for example <see cref="PreviewParseOptions"/>).
+    /// </summary>
+    public static GeneratorRunResult Run(IReadOnlyList<SourceFile> sources, CSharpParseOptions parseOptions, params MetadataReference[] extraReferences)
+    {
+        var compilation = CreateCompilation(DefaultAssemblyName, sources, extraReferences, parseOptions);
+        return RunCore(CreateDriver(parseOptions), compilation);
+    }
+
+    /// <summary>
+    /// Emits <paramref name="result"/>'s output compilation (user source plus generated code) and
+    /// loads it into a collectible <see cref="System.Runtime.Loader.AssemblyLoadContext"/>, so a spec
+    /// can run the generated serializer against types written in syntax the test project's own
+    /// compiler cannot build. Dependencies (Akka, Akka.Serialization.V2, MessagePack) resolve from
+    /// the default context, so the loaded types share them with the test process.
+    /// </summary>
+    public static Assembly EmitAndLoad(GeneratorRunResult result)
+    {
+        using var stream = new MemoryStream();
+        var emitResult = result.OutputCompilation.Emit(stream);
+        if (!emitResult.Success)
+        {
+            throw new InvalidOperationException(
+                "Generated output failed to emit: " + string.Join("; ", emitResult.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.ToString())));
+        }
+
+        stream.Position = 0;
+        var context = new System.Runtime.Loader.AssemblyLoadContext("GeneratorHarness-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+        return context.LoadFromStream(stream);
+    }
+
+    /// <summary>
     /// Runs <see cref="AkkaSerializerGenerator"/> once over a single source file.
     /// </summary>
     public static GeneratorRunResult Run(string source, params MetadataReference[] extraReferences)
@@ -113,13 +153,13 @@ internal static class GeneratorTestHarness
     /// generator" shape used by the cross-assembly baseline spec. The generator never runs over
     /// this compilation.
     /// </summary>
-    public static MetadataReference CompileToReference(string source, string assemblyName)
+    public static MetadataReference CompileToReference(string source, string assemblyName, params MetadataReference[] references)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source, ParseOptions, path: assemblyName + ".cs");
         var compilation = CSharpCompilation.Create(
             assemblyName,
             new[] { syntaxTree },
-            BaseReferences,
+            BaseReferences.Concat(references),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
 
         var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();
@@ -198,11 +238,11 @@ internal static class GeneratorTestHarness
         return new IncrementalGeneratorRunResult(beforeResult, afterResult);
     }
 
-    private static GeneratorDriver CreateDriver()
+    private static GeneratorDriver CreateDriver(CSharpParseOptions? parseOptions = null)
     {
         return CSharpGeneratorDriver.Create(
             ImmutableArray.Create(new AkkaSerializerGenerator().AsSourceGenerator()),
-            parseOptions: ParseOptions,
+            parseOptions: parseOptions ?? ParseOptions,
             driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
     }
 
@@ -230,9 +270,9 @@ internal static class GeneratorTestHarness
             elapsedByGenerator);
     }
 
-    private static CSharpCompilation CreateCompilation(string assemblyName, IReadOnlyList<SourceFile> sources, IReadOnlyList<MetadataReference> extraReferences)
+    private static CSharpCompilation CreateCompilation(string assemblyName, IReadOnlyList<SourceFile> sources, IReadOnlyList<MetadataReference> extraReferences, CSharpParseOptions? parseOptions = null)
     {
-        var trees = sources.Select(s => CSharpSyntaxTree.ParseText(s.Text, ParseOptions, path: s.Path));
+        var trees = sources.Select(s => CSharpSyntaxTree.ParseText(s.Text, parseOptions ?? ParseOptions, path: s.Path));
         return CSharpCompilation.Create(
             assemblyName,
             trees,

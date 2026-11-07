@@ -63,7 +63,9 @@ namespace Akka.Streams
                 dispatchers: system.Dispatchers,
                 supervisor: system.ActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
                 haveShutDown: haveShutDown,
-                flowNames: EnumerableActorName.Create("Flow"));
+                flowNames: EnumerableActorName.Create("Flow"),
+                // the ActorSystem-owned shared instance: Dispose() on it is ignored (#8885)
+                isSharedSystemMaterializer: true);
         }
         
         public static DefaultMaterializer Get(ActorSystem system)
@@ -107,6 +109,15 @@ namespace Akka.Streams
         /// The <paramref name="namePrefix"/> is used as the first part of the names of the actors running
         /// the processing steps. The default <paramref name="namePrefix"/> is "flow". The actor names are built up of
         /// `namePrefix-flowNumber-flowStepNumber-stepName`.
+        /// </para>
+        /// <para>
+        /// When <paramref name="context"/> is an <see cref="ActorSystem"/> and no <paramref name="settings"/> are
+        /// given, this does not create a new materializer: it returns the <see cref="ActorSystem"/>'s shared default
+        /// materializer (or, with a <paramref name="namePrefix"/>, a view of it that shares its supervisor actor).
+        /// The shared materializer is owned by the <see cref="ActorSystem"/> and is shut down when it terminates;
+        /// <see cref="Dispose"/> on it is ignored, while <see cref="Shutdown"/> stops it for every user.
+        /// In all other cases a new materializer with its own supervisor actor is created and the caller is
+        /// responsible for shutting it down.
         /// </para>
         /// </summary>
         /// <param name="context">The actor system or actor context used to create the materializer's supervisor.</param>
@@ -249,7 +260,48 @@ namespace Akka.Streams
         /// <returns>The newly created logging adapter.</returns>
         public abstract ILoggingAdapter MakeLogger(object logSource);
 
-       public void Dispose() => Shutdown();
+        /// <summary>
+        /// Shuts down this materializer, see <see cref="Shutdown"/>.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="ActorSystem"/>'s shared default materializer, returned by
+        /// <see cref="ActorMaterializerExtensions.Materializer"/> or <see cref="Create"/> when called on an
+        /// <see cref="ActorSystem"/> without custom settings, is owned by the <see cref="ActorSystem"/> and is
+        /// shut down when the <see cref="ActorSystem"/> terminates. Calling <see cref="Dispose"/> on it, or on a
+        /// name-prefixed view of it, does nothing, so that one caller's <c>using</c> block or DI scope cannot shut
+        /// it down for every other caller. Call <see cref="Shutdown"/> explicitly to stop it for all users.
+        /// The first ignored call is logged at debug level, so a caller that expected to own the materializer
+        /// gets a hint without spamming the log.
+        /// </remarks>
+        public void Dispose()
+        {
+            if (IsSharedSystemMaterializer)
+            {
+                OnSharedSystemMaterializerDisposeIgnored();
+                return;
+            }
+
+            Shutdown();
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// <c>true</c> for the <see cref="ActorSystem"/>'s shared default materializer and its name-prefixed views.
+        /// </remarks>
+        internal virtual bool IsSharedSystemMaterializer => false;
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// Called instead of <see cref="Shutdown"/> when <see cref="Dispose"/> is invoked on the
+        /// <see cref="ActorSystem"/>'s shared default materializer or a name-prefixed view of it.
+        /// </remarks>
+        internal virtual void OnSharedSystemMaterializerDisposeIgnored()
+        {
+        }
     }
 
     /// <summary>
@@ -851,6 +903,14 @@ namespace Akka.Streams
         /// The <paramref name="namePrefix"/> is used as the first part of the names of the actors running
         /// the processing steps. The default <paramref name="namePrefix"/> is "flow". The actor names are built up of
         /// namePrefix-flowNumber-flowStepNumber-stepName.
+        /// </para>
+        /// <para>
+        /// When called on an <see cref="ActorSystem"/> without <paramref name="settings"/>, this returns the
+        /// <see cref="ActorSystem"/>'s shared default materializer instead of creating a new one, so it is cheap to
+        /// call repeatedly. The shared materializer is owned by the <see cref="ActorSystem"/>: disposing it does
+        /// nothing, and calling <see cref="ActorMaterializer.Shutdown"/> on it stops it for every user. Calls with
+        /// custom <paramref name="settings"/>, or on an <see cref="IActorContext"/>, create a new materializer with its
+        /// own supervisor actor that the caller must dispose or shut down.
         /// </para>
         /// </summary>
         /// <param name="context">The actor system or actor context used to create the materializer.</param>

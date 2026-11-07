@@ -22,10 +22,10 @@ public sealed partial class FormatterPositionsSerializer
 
     public override int Identifier => 150201;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("formatter-positions",
-            system => new FormatterPositionsSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("formatter-positions",
+            new FormatterPositionsSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::FormatterGolden.IProtocol))); 
     }
@@ -53,7 +53,7 @@ public sealed partial class FormatterPositionsSerializer
         switch (obj)
         {
             case global::FormatterGolden.Positions message:
-                WritePositions(ref writer, message);
+                WritePositions_e67b34a2915bc257(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -65,7 +65,7 @@ public sealed partial class FormatterPositionsSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "positions-v1" => ReadPositions(ref reader),
+            "positions-v1" => ReadPositions_e67b34a2915bc257(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -74,7 +74,7 @@ public sealed partial class FormatterPositionsSerializer
     {
         return obj switch
         {
-            global::FormatterGolden.Positions message => SizeOfPositions(message),
+            global::FormatterGolden.Positions message => SizeOfPositions_e67b34a2915bc257(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -107,7 +107,7 @@ public sealed partial class FormatterPositionsSerializer
         }
     }
 
-    private int SizeOfPositions(global::FormatterGolden.Positions message)
+    private int SizeOfPositions_e67b34a2915bc257(global::FormatterGolden.Positions message)
     {
         checked
         {
@@ -242,7 +242,7 @@ public sealed partial class FormatterPositionsSerializer
         }
     }
 
-    private void WritePositions(ref global::MessagePack.MessagePackWriter writer, global::FormatterGolden.Positions message)
+    private void WritePositions_e67b34a2915bc257(ref global::MessagePack.MessagePackWriter writer, global::FormatterGolden.Positions message)
     {
         writer.WriteMapHeader(6);
         writer.Write(1);
@@ -356,7 +356,7 @@ public sealed partial class FormatterPositionsSerializer
         }
     }
 
-    private global::FormatterGolden.Positions ReadPositions(ref global::MessagePack.MessagePackReader reader)
+    private global::FormatterGolden.Positions ReadPositions_e67b34a2915bc257(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::System.Collections.Generic.List<global::Akka.Actor.Address>? listOfAddress = default;

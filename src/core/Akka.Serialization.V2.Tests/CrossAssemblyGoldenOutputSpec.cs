@@ -33,9 +33,9 @@ public sealed class CrossAssemblyGoldenOutputSpec
     private const string RegenEnvVar = "AKKA_GOLDEN_REGEN";
     private const string HintName = "CrossAssemblyGoldenSerializer.AkkaSerialization.g.cs";
 
-    // Assembly A: a nested field type (Money), a type-level union with two members (Placed,
-    // Cancelled), and a generic definition (Wrapper<T>) -- Decision 16's three referenced-assembly
-    // uses. The generator never runs over this compilation; A only supplies types (see
+    // Assembly A: a nested field type (Money), an interface whose two [AkkaSerializable]
+    // implementors (Cancelled, Placed) make up a union, and a generic definition (Wrapper<T>) --
+    // Decision 16's three referenced-assembly uses. The generator never runs over this compilation; A only supplies types (see
     // GeneratorTestHarness.CompileToReference).
     private const string AssemblySourceTemplate = """
         #nullable enable
@@ -46,16 +46,18 @@ public sealed class CrossAssemblyGoldenOutputSpec
         [AkkaSerializable]
         public sealed record Money([property: AkkaField(1)] long Cents);
 
-        [AkkaUnion(typeof(Placed), typeof(Cancelled))]
         public interface IOrderEvent
         {{
         }}
 
-        [AkkaSerializable(Manifest = "placed-v1")]
-        public sealed record Placed([property: AkkaField(1)] string OrderId) : IOrderEvent;
-
+        // Declared in metadata-name order on purpose: a discovered union lists local members in
+        // declaration order and referenced-assembly members sorted by metadata name, so this keeps
+        // the local and cross-assembly runs comparable byte for byte.
         [AkkaSerializable(Manifest = "cancelled-v1")]
         public sealed record Cancelled([property: AkkaField(1)] string OrderId) : IOrderEvent;
+
+        [AkkaSerializable(Manifest = "placed-v1")]
+        public sealed record Placed([property: AkkaField(1)] string OrderId) : IOrderEvent;
 
         [AkkaSerializable]
         public sealed record Wrapper<T>([property: AkkaField(1)] string Id, [property: AkkaField(2)] T Payload);
@@ -90,10 +92,10 @@ public sealed class CrossAssemblyGoldenOutputSpec
         public sealed record Holder([property: AkkaField(1)] Wrapper<int> Count) : IComms;
 
         [AkkaSerializer<IComms>("cross-assembly-golden", 190001)]
-        [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+        [AkkaSerializerIncludes<Wrapper<int>>(Manifest = "wrapper-int-v1")]
         public sealed partial class CrossAssemblyGoldenSerializer : AkkaSerializer
         {{
-            public static partial SerializerRegistration CreateRegistration();
+            public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
         }}
         """;
 
@@ -136,8 +138,8 @@ public sealed class CrossAssemblyGoldenOutputSpec
         }
     }
 
-    [Fact(DisplayName = "Cross-assembly golden: the emitted nested/union/closed-generic helpers are byte-identical to what the same declarations produce locally, except for the namespace")]
-    public void Should_MatchLocalDeclarationOutput_ExceptForNamespace()
+    [Fact(DisplayName = "Cross-assembly golden: metadata-derived and local declarations should generate identical helpers")]
+    public void Should_MatchLocalDeclarationOutput()
     {
         var assemblyA = GeneratorTestHarness.CompileToReference(
             string.Format(AssemblySourceTemplate, "AssemblyA"), "CrossAssemblyGoldenAssemblyA2");
@@ -145,13 +147,8 @@ public sealed class CrossAssemblyGoldenOutputSpec
         var crossAssemblyResult = GeneratorTestHarness.Run(crossAssemblySource, assemblyA);
         crossAssemblyResult.GeneratorDiagnostics.Should().BeEmpty();
 
-        // Same types, same shapes, same manifests -- declared in the SAME compilation as the
-        // serializer instead of a referenced one, under a different namespace. The generated helper
-        // bodies (Write/Read/SizeOf for Money, Placed, Cancelled, and WrapperInt) must be identical
-        // to the cross-assembly run once that one namespace token is normalized away: Decision 16's
-        // whole premise is that a metadata-derived schema is indistinguishable from a local one.
-        var localTypesSource = string.Format(AssemblySourceTemplate, "Local");
-        var localSerializerSource = string.Format(SerializerSourceTemplate, "Local");
+        var localTypesSource = string.Format(AssemblySourceTemplate, "AssemblyA");
+        var localSerializerSource = string.Format(SerializerSourceTemplate, "AssemblyA");
         var localResult = GeneratorTestHarness.Run(new[]
         {
             new SourceFile("Types.cs", localTypesSource),
@@ -162,13 +159,8 @@ public sealed class CrossAssemblyGoldenOutputSpec
         crossAssemblyResult.GeneratedSources.ContainsKey(HintName).Should().BeTrue($"the generator should have emitted [{HintName}]");
         localResult.GeneratedSources.ContainsKey(HintName).Should().BeTrue($"the generator should have emitted [{HintName}]");
 
-        var crossAssemblyNormalized = crossAssemblyResult.GeneratedSources[HintName]
-            .Replace("CrossAssemblyGolden.AssemblyA", "CrossAssemblyGolden.NAMESPACE_TOKEN", StringComparison.Ordinal);
-        var localNormalized = localResult.GeneratedSources[HintName]
-            .Replace("CrossAssemblyGolden.Local", "CrossAssemblyGolden.NAMESPACE_TOKEN", StringComparison.Ordinal);
-
-        crossAssemblyNormalized.Should().Be(localNormalized,
-            "a metadata-derived schema must generate byte-identical code to the same declaration made locally, once the namespace difference is normalized away");
+        crossAssemblyResult.GeneratedSources[HintName].Should().Be(localResult.GeneratedSources[HintName],
+            "a metadata-derived schema must generate byte-identical code to the same declaration made locally");
     }
 
     private static string GetGoldenDirectory([CallerFilePath] string sourceFilePath = "")

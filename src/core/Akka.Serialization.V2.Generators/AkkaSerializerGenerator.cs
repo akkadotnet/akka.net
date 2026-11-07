@@ -108,7 +108,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         /// used to combine with directly -- see <see cref="ReportProtocolCoverage"/> and
         /// <see cref="ReportPlacementDiagnostics"/>. As of Decisions 19 and 21, this IS combined
         /// directly into <see cref="ResolvedSerializers"/>'s own inputs: a referenced-assembly
-        /// protocol or marked-union-base implementor's closed-set membership must be visible to
+        /// protocol or union-base implementor's closed-set membership must be visible to
         /// <see cref="ResolveSerializerMessages"/> for top-level dispatch widening and the implicit
         /// protocol/union-field rule to resolve at all -- the same reason <see cref="MetadataSchemas"/>
         /// is combined in directly. This stage's own walk (<see cref="ComputeLocalMarkedImplementorsByClosedSetKey"/>,
@@ -186,6 +186,26 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // directly and reading .Locations inside MergeExtractedLocations gets the same merged bag one
         // Select cheaper. The schemas-only projections below are NOT removed the same way: Resolve and
         // Emit depend on them directly, so they earn their keep as separate nodes.
+        var ignoredFieldDeclarations = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => node is PropertyDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or IndexerDeclarationSyntax { AttributeLists.Count: > 0 }
+                    or ParameterSyntax { AttributeLists.Count: > 0, Parent.Parent: RecordDeclarationSyntax },
+                static (ctx, cancellationToken) => ExtractIgnoredFieldDeclaration(ctx, cancellationToken))
+            .Where(static declaration => declaration.HasValue)
+            .Select(static (declaration, _) => declaration!.Value)
+            .Collect();
+
+        context.RegisterSourceOutput(ignoredFieldDeclarations.Combine(context.CompilationProvider), static (ctx, pair) =>
+        {
+            foreach (var declaration in pair.Left.GroupBy(d => d.Key).Select(group => group.First()))
+            {
+                var diagnostic = new DiagnosticSpec(DiagnosticKey.IgnoredFieldAnnotations,
+                    new LocationKey(declaration.Key, string.Empty), ToDisplayName(declaration.Key.DisplayName));
+                ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
+            }
+        });
+
         var extractedSerializers = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializerAttributeFullName,
@@ -205,9 +225,22 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         var extractedMessages = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializableAttributeFullName,
-                static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax,
+                // C# 15 union declarations also reach extraction for top-level serialization and
+                // the missing-manifest diagnostic (AKKASG051).
+                static (node, _) => node is TypeDeclarationSyntax and not InterfaceDeclarationSyntax,
                 static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
             .WithTrackingName(TrackingNames.ExtractedMessages);
+
+        context.RegisterSourceOutput(extractedMessages.Collect().Combine(context.CompilationProvider), static (ctx, pair) =>
+        {
+            var reported = new HashSet<DiagnosticSpec>();
+            foreach (var declaration in pair.Left)
+            foreach (var diagnostic in declaration.DeclarationDiagnostics)
+            {
+                if (reported.Add(diagnostic))
+                    ctx.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, declaration.Locations, pair.Right));
+            }
+        });
 
         var messageSchemas = extractedMessages
             .Select(static (extracted, _) => extracted.Info)
@@ -224,8 +257,8 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // Compilation (this stage genuinely needs it, exactly like the coverage scan it replaces)
         // with the collected serializers (their protocol keys: which protocol interfaces anyone
         // actually asked about) and, as of Decisions 19 and 21, the collected messages too (every
-        // discovered-mode union field's own static-type key -- a marked union base with no listed
-        // members). The OUTPUT is symbol-free and value-equatable, so -- unlike the raw Compilation
+        // discovered-mode union field's own static-type key -- an interface, abstract class, or
+        // closed hierarchy whose members are its [AkkaSerializable] implementors). The OUTPUT is symbol-free and value-equatable, so -- unlike the raw Compilation
         // this used to be combined with directly -- a downstream consumer wired to THIS stage can
         // report Unchanged/Cached whenever nothing these facts care about changed, even though the
         // stage itself reruns on every edit (the CompilationProvider input never itself compares
@@ -284,7 +317,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // actually referenced; using effectiveSerializers here, rather than the raw collected array,
         // is what lets an expanded ManifestPrefix member's own foreign field references seed this
         // walk exactly as a literal registration's already did before S7) and, as of Decisions 19 and
-        // 21, compilationFacts too: a referenced-assembly protocol/marked-union-base implementor
+        // 21, compilationFacts too: a referenced-assembly protocol/union-base implementor
         // CompilationFacts' own walk found also needs its full schema extracted here, the same way a
         // locally-named nested field's foreign type already does.
         var metadataSchemas = context.CompilationProvider
@@ -306,7 +339,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // shape is unavoidable, and the RegisterSourceOutput below for why an Unchanged/Cached element
         // here is what makes that serializer's own emitted file Cached, not just this stage.
         // metadataSchemas and compilationFacts are BOTH combined in directly, as of Decisions 19 and
-        // 21: a referenced-assembly nested field, union member, or top-level protocol/marked-union-base
+        // 21: a referenced-assembly nested field, union member, or top-level protocol/union-base
         // implementor needs its schema (metadataSchemas) and its closed-set membership
         // (compilationFacts) visible to ResolveSerializerMessages to resolve at all. See
         // TrackingNames.MetadataSchemas and TrackingNames.CompilationFacts for the run-reason
@@ -359,8 +392,8 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // code emission's own cache key. Diagnostic id, text, and trigger conditions are unchanged --
         // only WHERE they are reported from, and now WITH a real Location, has moved.
         context.RegisterSourceOutput(
-            resolvedSerializers.Combine(allLocations),
-            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left, pair.Right));
+            resolvedSerializers.Combine(allLocations).Combine(messages),
+            static (ctx, pair) => ReportResolvedSerializerDiagnostics(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
 
         // The cross-serializer diagnostics (AKKASG013 duplicate ids, AKKASG031 duplicate protocol
         // bindings, AKKASG037 manifest ignored on a generic definition) cannot be attached to any

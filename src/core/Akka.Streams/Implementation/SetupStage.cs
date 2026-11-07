@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Threading.Tasks;
 using Akka.Annotations;
@@ -46,7 +48,7 @@ namespace Akka.Streams.Implementation
                     onDownstreamFinish: ex => Cancel(_stage.In, ex)));
 
                 SetHandler(_stage.In, new LambdaInHandler(
-                    onPush: () => Grab(_stage.In),
+                    onPush: () => _subOutlet.Push(Grab(_stage.In)),
                     onUpstreamFinish: _subOutlet.Complete,
                     onUpstreamFailure: _subOutlet.Fail));
                 SetHandler(_stage.Out, new LambdaOutHandler(

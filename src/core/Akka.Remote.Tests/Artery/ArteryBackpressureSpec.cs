@@ -185,7 +185,7 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Control channel: flooding system messages against an association whose handshake is complete but whose peer is unresponsive quarantines EXACTLY ONCE (re-entrancy guard holds even though the quarantine notices themselves also overflow the same full channel), dead-letters the overflow, and does not wedge sends to a different, healthy association")]
+        [Fact(DisplayName = "A full control queue quarantines exactly once, dead-letters its rejected quarantine notice, and leaves healthy associations usable")]
         public async Task Should_Quarantine_Exactly_Once_On_Control_Overflow_Against_Unresponsive_Peer_Without_Wedging_Other_Associations()
         {
             // Pinned small (via this test's own config override) rather than relying on the
@@ -221,6 +221,13 @@ namespace Akka.Remote.Tests.Artery
                 // HandleControlOverflow only quarantines once a peer uid is known.
                 transportA.Registry.CompleteHandshake(deadAddress, new UniqueAddress(deadAddress, fakePeerUid));
 
+                // Keep this dead association's consumer inert. A refused TCP connection alone
+                // races the delivery stage draining/resetting its queue after quarantine; it does
+                // not guarantee the reentrant notice encounters the same full queue as the Watch.
+                var association = transportA.Registry.AssociationFor(deadAddress);
+                association.EnsureControlOutboundMaterialized(_ => { });
+                association.IsControlOutboundMaterialized.Should().BeTrue();
+
                 var quarantineProbe = CreateTestProbe(systemA);
                 systemA.EventStream.Subscribe(quarantineProbe.Ref, typeof(QuarantinedEvent));
 
@@ -249,8 +256,8 @@ namespace Akka.Remote.Tests.Artery
 
                 // PROGRESS/COMPLETION: exactly one QuarantinedEvent for this uid, despite
                 // HandleControlOverflow being re-entered for EVERY overflowing message -- including
-                // the ArteryQuarantined + ClearSystemMessageDelivery notices Quarantine() itself
-                // tries to send right back over the SAME, still-full channel. The re-entrancy guard
+                // the ArteryQuarantined notice Quarantine() itself tries to send right back over
+                // the SAME, still-full channel. The re-entrancy guard
                 // (association.IsQuarantined check inside HandleControlOverflow) must hold.
                 var quarantined = await quarantineProbe.ExpectMsgAsync<QuarantinedEvent>(TimeSpan.FromSeconds(20));
                 quarantined.Address.Should().Be(deadAddress);
@@ -258,17 +265,18 @@ namespace Akka.Remote.Tests.Artery
 
                 await quarantineProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
-                // BOUNDED STATE: the control channel's occupied size stays at (or below) its own
-                // capacity even after this whole flood.
-                var association = transportA.Registry.AssociationFor(deadAddress);
-                association.ControlQueueCount.Should().BeLessOrEqualTo(controlCapacity);
+                // BOUNDED STATE: the inert consumer leaves this channel pinned at its exact
+                // capacity, even after the flood and the rejected reentrant notice.
+                association.ControlQueueCount.Should().Be(controlCapacity);
 
-                // The overflow (both the flooded Watch system messages AND the re-entrant
-                // quarantine notices themselves) must show up as dead letters.
-                var deadLetters = await deadLetterProbe
-                    .ReceiveWhileAsync<DeadLetter>(_ => true, max: TimeSpan.FromSeconds(20), idle: TimeSpan.FromSeconds(3), msgs: floodCount + 4)
-                    .ToListAsync();
-                deadLetters.Should().NotBeEmpty("a control channel this saturated must produce dead letters for the overflow");
+                // DeadLetterActorRef handles rejected Watch specially: it notifies the watcher
+                // with DeathWatchNotification instead of publishing a generic DeadLetter event.
+                // The one-time quarantine notice is an ordinary control payload, so its rejection
+                // from this same full queue must publish the concrete dead letter asserted here.
+                var deadLetter = await deadLetterProbe.ExpectMsgAsync<DeadLetter>(TimeSpan.FromSeconds(5),
+                    cancellationToken: TestContext.Current.CancellationToken);
+                deadLetter.Message.Should().BeOfType<ArteryQuarantined>()
+                    .Which.QuarantinedUid.Should().Be(fakePeerUid);
 
                 // NO WEDGE: a quarantined/dead association must not affect A's ability to talk to a
                 // DIFFERENT, healthy association.

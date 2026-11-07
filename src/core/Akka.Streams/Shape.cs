@@ -77,6 +77,11 @@ namespace Akka.Streams
         /// <returns>A new inlet of the same type and with the same name.</returns>
         public abstract Inlet CarbonCopy();
 
+#nullable enable annotations
+        // External custom ports retain object storage; standard typed ports override this factory.
+        internal virtual ElementSlot? CreateElementSlot(Outlet outlet) => null;
+#nullable restore annotations
+
         /// <summary>
         /// INTERNAL API
         /// <para>
@@ -122,6 +127,11 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>A new <see cref="Inlet{T}"/> with the same name.</returns>
         public override Inlet CarbonCopy() => new Inlet<T>(Name);
+
+#nullable enable annotations
+        internal override ElementSlot? CreateElementSlot(Outlet outlet)
+            => typeof(T).IsValueType && outlet is Outlet<T> ? new ElementSlot<T>() : null;
+#nullable restore annotations
 
         internal override IUntypedSubscriber CreateBoundarySubscriber(IActorRef parent, GraphInterpreterShell shell, int id)
             => UntypedSubscriber.FromTyped(new ActorGraphInterpreter.BoundarySubscriber<T>(parent, shell, id));

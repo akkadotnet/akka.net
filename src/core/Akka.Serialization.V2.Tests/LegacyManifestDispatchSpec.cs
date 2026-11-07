@@ -91,5 +91,5 @@ public sealed partial class LegacyDispatchSerializer : AkkaSerializer
 {
     public const string PageChangedManifest = "legacy-dispatch-page-changed-v1";
 
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }

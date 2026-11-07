@@ -493,6 +493,65 @@ namespace Akka.Tests.IO
             queued.DisposeCount.Should().Be(1);
         }
 
+        [Theory(DisplayName = "Should_DeliverStableReadCopies_When_PipeReadCompletesBufferedOrPending")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_deliver_stable_read_copies_when_pipe_read_completes_buffered_or_pending(bool buffered)
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            var handler = CreateTestProbe();
+            var transport = new FakeTransport(_ => new ValueTask<FlushResult>(new FlushResult(false, false)));
+            var first = Enumerable.Range(0, 256).Select(value => (byte)value).ToArray();
+            if (buffered)
+                await transport.InputWriter.WriteAsync(first);
+
+            var connection = await ConnectAsync(pair, transport, handler);
+            (await transport.FirstReadWasBuffered).Should().Be(buffered);
+            if (!buffered)
+                await transport.InputWriter.WriteAsync(first);
+            var received = await handler.ExpectMsgAsync<Tcp.Received>();
+            received.Data.ToArray().Should().Equal(first);
+
+            var second = Enumerable.Repeat((byte)0xA5, 512).ToArray();
+            await transport.InputWriter.WriteAsync(second);
+            (await handler.ExpectMsgAsync<Tcp.Received>()).Data.ToArray().Should().Equal(second);
+            received.Data.ToArray().Should().Equal(first);
+
+            await transport.InputWriter.CompleteAsync();
+            transport.CompleteReadPump();
+            await handler.ExpectMsgAsync<Tcp.PeerClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_ReportReadFailure_When_PipeReaderFaults")]
+        public async Task Should_report_read_failure_when_pipe_reader_faults()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            var handler = CreateTestProbe();
+            var transport = new FakeTransport(_ => new ValueTask<FlushResult>(new FlushResult(false, false)));
+            var connection = await ConnectAsync(pair, transport, handler);
+
+            await transport.InputWriter.CompleteAsync(new IOException("synthetic pipe read failure"));
+
+            (await handler.ExpectMsgAsync<Tcp.ErrorClosed>()).Cause.Should().Be("synthetic pipe read failure");
+            await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact(DisplayName = "Should_ReportPeerClosed_When_BufferedPipeCompletesWithoutData")]
+        public async Task Should_report_peer_closed_when_buffered_pipe_completes_without_data()
+        {
+            using var pair = await ConnectedSocketPair.CreateAsync();
+            var handler = CreateTestProbe();
+            var transport = new FakeTransport(_ => new ValueTask<FlushResult>(new FlushResult(false, false)));
+            await transport.InputWriter.CompleteAsync();
+            transport.CompleteReadPump();
+
+            var connection = await ConnectAsync(pair, transport, handler);
+
+            await handler.ExpectMsgAsync<Tcp.PeerClosed>();
+            await ExpectTerminatedAsync(connection);
+        }
+
         private sealed class FakeTransportConnection : TcpConnection
         {
             private readonly IActorRef _bindHandler;
@@ -510,18 +569,48 @@ namespace Akka.Tests.IO
             protected override ITransportConnection CreateTransport() => _transport;
         }
 
+        private sealed class ObservingPipeReader : PipeReader
+        {
+            private readonly PipeReader _reader;
+            public readonly TaskCompletionSource<bool> FirstRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public ObservingPipeReader(PipeReader reader) => _reader = reader;
+            public override void AdvanceTo(SequencePosition consumed) => _reader.AdvanceTo(consumed);
+            public override void AdvanceTo(SequencePosition consumed, SequencePosition examined) => _reader.AdvanceTo(consumed, examined);
+            public override void CancelPendingRead() => _reader.CancelPendingRead();
+            public override void Complete(Exception? exception = null) => _reader.Complete(exception);
+            public override ValueTask CompleteAsync(Exception? exception = null) => _reader.CompleteAsync(exception);
+            public override bool TryRead(out ReadResult result) => _reader.TryRead(out result);
+
+            public override ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken = default)
+            {
+                var read = _reader.ReadAsync(cancellationToken);
+                FirstRead.TrySetResult(read.IsCompletedSuccessfully);
+                return read;
+            }
+        }
+
         /// <summary>A transport whose Nth flush returns (or throws) whatever the test decides.</summary>
         private sealed class FakeTransport : ITransportConnection
         {
             private readonly Func<int, ValueTask<FlushResult>> _onFlush;
             private readonly Pipe _input = new();
+            private readonly ObservingPipeReader _reader;
+            private readonly TaskCompletionSource<bool> _readCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private readonly TaskCompletionSource<bool> _never = new();
             private int _flushes;
 
-            public FakeTransport(Func<int, ValueTask<FlushResult>> onFlush) => _onFlush = onFlush;
+            public FakeTransport(Func<int, ValueTask<FlushResult>> onFlush)
+            {
+                _onFlush = onFlush;
+                _reader = new ObservingPipeReader(_input.Reader);
+            }
 
-            public PipeReader Input => _input.Reader;
-            public Task ReadCompleted => _never.Task;
+            public PipeReader Input => _reader;
+            public Task<bool> FirstReadWasBuffered => _reader.FirstRead.Task;
+            public void CompleteReadPump() => _readCompleted.TrySetResult(true);
+            public PipeWriter InputWriter => _input.Writer;
+            public Task ReadCompleted => _readCompleted.Task;
             public Task WriteCompleted => _never.Task;
             public bool HasReadError => false;
             public Exception? ReadError => null;

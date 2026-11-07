@@ -15,6 +15,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Akka.Serialization.V2.Generators;
 
@@ -30,13 +31,13 @@ public sealed partial class AkkaSerializerGenerator
     /// <paramref name="serializers"/> is consulted for each serializer's protocol key -- which
     /// protocol interfaces anyone actually declared a <c>[AkkaSerializer&lt;TProtocol&gt;]</c> for
     /// -- and its <see cref="SerializerInfo.ClosedGenericSchemas"/> (a registered construction's own
-    /// fields can name a marked union base too). <paramref name="messages"/> is consulted for every
+    /// fields can name a union base too). <paramref name="messages"/> is consulted for every
     /// discovered-mode (Decision 21) union field's own static-type key, AND (see
     /// <see cref="ComputeLocalMarkedImplementorsFromMessages"/>) as the SOURCE of every local marked
     /// implementor fact -- no symbol walk is needed for that half, since every marked local message
     /// already passed through extraction and left a cached <see cref="MessageInfo"/> behind with
     /// everything this stage needs (<see cref="MessageInfo.Protocols"/>, <see cref="MessageInfo.BaseTypeNames"/>).
-    /// The only symbol walk left in this stage is <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>
+    /// The only symbol walk left in this stage is <see cref="ComputeLocalImplementorFacts"/>
     /// (AKKASG029's own local-only input, unchanged since S5) and the referenced-assembly walk below,
     /// which is itself cached per assembly REFERENCE (see <see cref="ReferencedAssemblyFactsCache"/>).
     /// </summary>
@@ -48,10 +49,14 @@ public sealed partial class AkkaSerializerGenerator
     {
         var knownTypes = GetKnownTypes(compilation);
         var protocolKeys = ComputeDistinctProtocolKeys(serializers);
-        var closedSetKeys = ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers);
         var referencedAssembliesUsingV2 = ComputeReferencedAssembliesUsingV2(compilation, cancellationToken);
+        var closedSetKeys = AddReferencedUnionFieldKeys(compilation, referencedAssembliesUsingV2,
+            ComputeDistinctClosedSetKeys(protocolKeys, messages, serializers), knownTypes, cancellationToken);
 
-        var localUnmarkedImplementorsByProtocol = ComputeLocalUnmarkedImplementorsByProtocol(compilation, protocolKeys, knownTypes, cancellationToken);
+        var unionWalkKeys = ComputeUnionKeys(protocolKeys, messages, serializers);
+        var nestedValueKeys = ComputeNestedValueKeys(messages, serializers);
+        var (localUnmarkedImplementorsByProtocol, unionHierarchies) = ComputeLocalImplementorFacts(
+            compilation, protocolKeys, unionWalkKeys, nestedValueKeys, knownTypes, cancellationToken);
         var localMarkedImplementorsByClosedSetKey = ComputeLocalMarkedImplementorsFromMessages(messages, closedSetKeys);
         var (referencedMarked, referencedUnmarked) = ComputeReferencedAssemblyImplementors(
             compilation, referencedAssembliesUsingV2, closedSetKeys, protocolKeys, knownTypes, cancellationToken);
@@ -63,7 +68,185 @@ public sealed partial class AkkaSerializerGenerator
             referencedMarked,
             referencedUnmarked,
             upstreamSerializerBindings,
-            referencedAssembliesUsingV2);
+            referencedAssembliesUsingV2,
+            unionHierarchies);
+    }
+
+    /// <summary>
+    /// The union keys the source-type walk must bucket unmarked implementors for (AKKASG048): every
+    /// discovered union field's static-type key (a <see cref="FieldKind.Union"/> field whose
+    /// <see cref="FieldInfo.UnionMembers"/> is still empty after extraction), except a protocol key,
+    /// whose unmarked implementors the same walk already buckets for AKKASG029. Scans ordinary
+    /// declarations and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>.
+    /// Sorted by <see cref="TypeKey.MetadataName"/> (ordinal) for a stable facts value.
+    /// </summary>
+    private static ImmutableArray<TypeKey> ComputeUnionKeys(
+        ImmutableArray<TypeKey> protocolKeys,
+        ImmutableArray<MessageInfo?> messages,
+        ImmutableArray<SerializerInfo?> serializers)
+    {
+        var discovered = new HashSet<TypeKey>();
+
+        void CollectFrom(MessageInfo message)
+        {
+            foreach (var field in message.Fields)
+            {
+                // A union field whose static type is not a named type has a default key with a null
+                // MetadataName; there is no hierarchy to walk for it.
+                if (field.Mapping.Kind != FieldKind.Union || !field.UnionMembers.IsEmpty || string.IsNullOrEmpty(field.Mapping.Key.MetadataName))
+                    continue;
+
+                discovered.Add(field.Mapping.Key);
+            }
+        }
+
+        foreach (var message in messages)
+        {
+            if (message != null)
+                CollectFrom(message);
+        }
+
+        foreach (var serializer in serializers)
+        {
+            if (serializer == null)
+                continue;
+
+            foreach (var schema in serializer.ClosedGenericSchemas)
+                CollectFrom(schema);
+        }
+
+        foreach (var protocolKey in protocolKeys)
+            discovered.Remove(protocolKey);
+
+        if (discovered.Count == 0)
+            return ImmutableArray<TypeKey>.Empty;
+
+        var walk = new List<TypeKey>(discovered);
+        walk.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+        return walk.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The AKKASG052 keys: every non-sealed, concrete, non-generic <c>[AkkaSerializable]</c> class
+    /// declared in this compilation that some field uses as a nested value (a
+    /// <see cref="FieldKind.Object"/> mapping). A field like that is written as the class's own
+    /// fields, so a value of a subclass would lose the subclass's fields; the walk looks for such
+    /// subclasses. Scans ordinary declarations and every serializer's
+    /// <see cref="SerializerInfo.ClosedGenericSchemas"/>. Sorted by <see cref="TypeKey.MetadataName"/> (ordinal).
+    /// </summary>
+    private static ImmutableArray<TypeKey> ComputeNestedValueKeys(
+        ImmutableArray<MessageInfo?> messages,
+        ImmutableArray<SerializerInfo?> serializers)
+    {
+        var unsealed = new HashSet<TypeKey>();
+        foreach (var message in messages)
+        {
+            if (message is { IsSealed: false, IsValueType: false, IsAbstract: false, IsGenericDefinition: false } && message.ForeignAssemblyName.Length == 0)
+                unsealed.Add(message.Key);
+        }
+
+        if (unsealed.Count == 0)
+            return ImmutableArray<TypeKey>.Empty;
+
+        var used = new HashSet<TypeKey>();
+
+        void CollectFrom(MessageInfo message)
+        {
+            foreach (var field in message.Fields)
+            {
+                foreach (var nested in EnumerateNestedValueMappings(field.Mapping))
+                {
+                    if (unsealed.Contains(nested.Key))
+                        used.Add(nested.Key);
+                }
+            }
+        }
+
+        foreach (var message in messages)
+        {
+            if (message != null)
+                CollectFrom(message);
+        }
+
+        foreach (var serializer in serializers)
+        {
+            if (serializer == null)
+                continue;
+
+            foreach (var schema in serializer.ClosedGenericSchemas)
+                CollectFrom(schema);
+        }
+
+        if (used.Count == 0)
+            return ImmutableArray<TypeKey>.Empty;
+
+        var keys = new List<TypeKey>(used);
+        keys.Sort(static (a, b) => string.CompareOrdinal(a.MetadataName, b.MetadataName));
+        return keys.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Every reference-type nested value (<see cref="FieldKind.Object"/>) a field writes: the field's
+    /// own mapping, and any collection element, dictionary key, or dictionary value inside it, at any
+    /// depth. Each one is written as that class's own fields, so a subclass value in any of these
+    /// positions would lose its own fields (AKKASG052).
+    /// </summary>
+    internal static IEnumerable<TypeMapping> EnumerateNestedValueMappings(TypeMapping mapping)
+    {
+        if (mapping.Kind == FieldKind.Object && !mapping.IsValueType)
+            yield return mapping;
+
+        foreach (var argument in mapping.TypeArguments)
+        {
+            foreach (var nested in EnumerateNestedValueMappings(argument))
+                yield return nested;
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="candidate"/> has <paramref name="key"/> anywhere in its base-class chain
+    /// or among its interfaces. Compares by metadata identity, with the same cheap name pre-filter
+    /// <see cref="ImplementsProtocol"/> uses.
+    /// </summary>
+    private static bool DerivesFromOrImplements(INamedTypeSymbol candidate, TypeKey key)
+    {
+        for (var baseType = candidate.BaseType; baseType != null && baseType.SpecialType != SpecialType.System_Object; baseType = baseType.BaseType)
+        {
+            if (CouldMatchByMetadataName(key.MetadataName, baseType.MetadataName)
+                && TypeKey.FromSymbol(baseType, includeDisplayName: false).Equals(key))
+                return true;
+        }
+
+        return ImplementsProtocol(candidate, key);
+    }
+
+    private const string IsClosedTypeAttributeFullName = "System.Runtime.CompilerServices.IsClosedTypeAttribute";
+
+    /// <summary>
+    /// A C# 15 <c>closed</c> class or record: the <c>closed</c> modifier on a source declaration, or
+    /// <c>IsClosedTypeAttribute</c> (matched by full metadata name, so a consumer polyfill counts) on
+    /// any declaration. A source-declared <c>closed</c> type is found by its modifier: the compiler only
+    /// adds <c>IsClosedTypeAttribute</c> at emit time, and Roslyn does not return compiler-made
+    /// attributes from a source symbol's <c>GetAttributes()</c>. The modifier is matched by text because
+    /// this generator builds against a Roslyn that predates the keyword.
+    /// </summary>
+    private static bool HasClosedModifier(INamedTypeSymbol symbol, CancellationToken cancellationToken)
+    {
+        foreach (var reference in symbol.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax(cancellationToken) is TypeDeclarationSyntax declaration
+                && declaration.Modifiers.Any(modifier => string.Equals(modifier.ValueText, "closed", StringComparison.Ordinal)))
+                return true;
+        }
+
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (attribute.AttributeClass is { } attributeClass
+                && string.Equals(attributeClass.ToDisplayString(), IsClosedTypeAttributeFullName, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -92,17 +275,17 @@ public sealed partial class AkkaSerializerGenerator
     /// Every distinct closed-set key this compilation actually asks about: every protocol key
     /// (<paramref name="protocolKeys"/>) plus, for Decision 21, every discovered-mode union field's
     /// own static-type key -- a <see cref="FieldKind.Union"/> field whose <see cref="FieldInfo.UnionMembers"/>
-    /// is still empty after extraction, the unambiguous "parameterless <c>[AkkaUnion]</c>, resolve
-    /// the set here" signal (see <c>ExtractUnionMembers</c>) -- plus, as of S7, every
+    /// is still empty after extraction, the unambiguous "resolve the set here" signal (see
+    /// <c>IsInferredUnionBase</c>) -- plus, as of S7, every
     /// <see cref="PrefixArgumentKind.DiscoveredClosedSet"/> position any serializer's own
     /// <see cref="SerializerInfo.PrefixExpansions"/> asks about: a <c>ManifestPrefix</c> registration
-    /// whose type argument is the protocol interface, or a parameterless <c>[AkkaUnion]</c>, needs
+    /// whose type argument is the protocol interface, or any other union base, needs
     /// EXACTLY the same closed-set bucket this stage already builds for every other consumer, so its
     /// own key must be requested here too for <see cref="ComputeLocalMarkedImplementorsFromMessages"/>/
     /// <see cref="ComputeReferencedAssemblyImplementors"/> to compute (and cache) a bucket for it.
     /// Scans <paramref name="messages"/> (ordinary declarations) and every serializer's
     /// <see cref="SerializerInfo.ClosedGenericSchemas"/> (a registered construction's own substituted
-    /// fields can name a marked union base too) for the discovered-union-field half, the same two
+    /// fields can name a union base too) for the discovered-union-field half, the same two
     /// sources <c>ComputeReferencedTypeKeys</c> in AkkaSerializerGenerator.MetadataSchemas.cs scans
     /// for foreign type references.
     /// </summary>
@@ -123,7 +306,7 @@ public sealed partial class AkkaSerializerGenerator
                     continue;
 
                 var key = field.Mapping.Key;
-                if (key.MetadataName.Length == 0 || !seen.Add(key))
+                if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
                     continue;
 
                 builder.Add(key);
@@ -132,7 +315,7 @@ public sealed partial class AkkaSerializerGenerator
 
         void CollectKey(TypeKey key)
         {
-            if (key.MetadataName.Length == 0 || !seen.Add(key))
+            if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
                 return;
 
             builder.Add(key);
@@ -166,7 +349,8 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// The AKKASG029 input (see <see cref="ValidateProtocolCoverage"/>): walks every source-declared
+    /// The AKKASG029 input (see <see cref="ValidateProtocolCoverage"/>), and in the same pass the
+    /// AKKASG048 input (<see cref="UnionHierarchyFacts"/>): walks every source-declared
     /// type in <paramref name="compilation"/> EXACTLY ONCE -- not once per protocol, and not once
     /// per serializer, as the pre-S5 shape inside <c>ValidateProtocolCoverage</c> did -- testing
     /// each non-abstract class/struct candidate against every requested protocol key at once and
@@ -181,19 +365,32 @@ public sealed partial class AkkaSerializerGenerator
     /// bucket's implementor list is sorted by <see cref="TypeKey.MetadataName"/> (ordinal) for a
     /// deterministic diagnostic order across runs.
     /// </summary>
-    private static ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> ComputeLocalUnmarkedImplementorsByProtocol(
+    private static (ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>> UnmarkedByProtocol, UnionHierarchyFacts UnionHierarchies) ComputeLocalImplementorFacts(
         Compilation compilation,
         ImmutableArray<TypeKey> protocolKeys,
+        ImmutableArray<TypeKey> unionKeys,
+        ImmutableArray<TypeKey> nestedValueKeys,
         KnownTypes knownTypes,
         CancellationToken cancellationToken)
     {
-        if (protocolKeys.IsEmpty || knownTypes.SerializableAttribute == null)
-            return ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty;
+        if ((protocolKeys.IsEmpty && unionKeys.IsEmpty && nestedValueKeys.IsEmpty) || knownTypes.SerializableAttribute == null)
+            return (ImmutableDictionary<TypeKey, ImmutableArray<TypeKey>>.Empty, UnionHierarchyFacts.Empty);
 
         var buckets = new Dictionary<TypeKey, List<TypeKey>>();
         foreach (var protocolKey in protocolKeys)
             buckets[protocolKey] = new List<TypeKey>();
 
+        var unionUnmarked = new Dictionary<TypeKey, List<TypeKey>>();
+        foreach (var unionKey in unionKeys)
+            unionUnmarked[unionKey] = new List<TypeKey>();
+
+        var nestedValueSubclasses = new Dictionary<TypeKey, List<TypeKey>>();
+        foreach (var nestedValueKey in nestedValueKeys)
+            nestedValueSubclasses[nestedValueKey] = new List<TypeKey>();
+
+        // ONE pass over the source-declared types serves AKKASG029 (unmarked protocol implementors),
+        // AKKASG048 (unmarked implementors of the union keys ComputeUnionKeys kept), and AKKASG052
+        // (any subclass, marked or not, abstract or not, of a non-sealed nested value class).
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
             // This whole-compilation walk re-runs on every edit (its output combines the
@@ -201,26 +398,56 @@ public sealed partial class AkkaSerializerGenerator
             // as the pre-S5 per-serializer walk did.
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (candidate.TypeKind == TypeKind.Class)
+            {
+                foreach (var nestedValueKey in nestedValueKeys)
+                {
+                    if (DerivesFromOrImplements(candidate, nestedValueKey))
+                        nestedValueSubclasses[nestedValueKey].Add(TypeKey.FromSymbol(candidate));
+                }
+            }
+
             if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract)
                 continue;
 
             var isMarked = candidate.GetAttributes()
                 .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+
+            // A marked candidate is already a case wherever it belongs; nothing to report for it.
             if (isMarked)
                 continue;
 
+            TypeKey? candidateKey = null;
             foreach (var protocolKey in protocolKeys)
             {
                 if (ImplementsProtocol(candidate, protocolKey))
-                    buckets[protocolKey].Add(TypeKey.FromSymbol(candidate));
+                {
+                    candidateKey ??= TypeKey.FromSymbol(candidate);
+                    buckets[protocolKey].Add(candidateKey.Value);
+                }
+            }
+
+            // A ref struct can never be converted to an interface or base type, so it can never
+            // reach a union field.
+            foreach (var unionKey in candidate.IsRefLikeType ? ImmutableArray<TypeKey>.Empty : unionKeys)
+            {
+                if (!DerivesFromOrImplements(candidate, unionKey))
+                    continue;
+
+                candidateKey ??= TypeKey.FromSymbol(candidate);
+                unionUnmarked[unionKey].Add(candidateKey.Value);
             }
         }
 
-        return BuildWithEveryEntry(buckets);
+        var unionHierarchies = unionKeys.IsEmpty && nestedValueKeys.IsEmpty
+            ? UnionHierarchyFacts.Empty
+            : new UnionHierarchyFacts(SortAndBuild(unionUnmarked), SortAndBuild(nestedValueSubclasses));
+
+        return (BuildWithEveryEntry(buckets), unionHierarchies);
     }
 
     /// <summary>
-    /// Decision 19's local closed-set half, and Decision 21's extension of it to a marked union
+    /// Decision 19's local closed-set half, and Decision 21's extension of it to any other union
     /// base -- derived ENTIRELY from <paramref name="messages"/>, the already-collected, already-
     /// cached <see cref="MessageInfo"/> array every other stage reads. No symbol walk runs here at
     /// all: every local marked message already passed through <c>ExtractMessageCore</c>, which
@@ -302,18 +529,28 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private readonly struct ReferencedTypeFacts
     {
-        public ReferencedTypeFacts(TypeKey key, bool isMarked, ImmutableArray<string> protocols, ImmutableArray<string> baseTypeNames)
+        public ReferencedTypeFacts(TypeKey key, bool isMarked, ImmutableArray<string> protocols, ImmutableArray<string> baseTypeNames, ImmutableArray<TypeKey> unionFieldKeys)
         {
             Key = key;
             IsMarked = isMarked;
             Protocols = protocols;
             BaseTypeNames = baseTypeNames;
+            UnionFieldKeys = unionFieldKeys;
         }
 
         public TypeKey Key { get; }
         public bool IsMarked { get; }
         public ImmutableArray<string> Protocols { get; }
         public ImmutableArray<string> BaseTypeNames { get; }
+
+        /// <summary>
+        /// For a marked type: the static type of every <c>[AkkaField]</c> property that is an inferred
+        /// union base (see <c>IsInferredUnionBase</c>). A message from a referenced assembly can reach
+        /// the serializer (as a protocol implementor or a nested value) and bring such a field with it;
+        /// its key must be a requested closed-set key, or the union's members in OTHER referenced
+        /// assemblies are never collected. Empty for an unmarked type.
+        /// </summary>
+        public ImmutableArray<TypeKey> UnionFieldKeys { get; }
     }
 
     /// <summary>One <c>[AkkaSerializer&lt;TProtocol&gt;]</c> declaration found in a referenced assembly, cached alongside <see cref="ReferencedTypeFacts"/> in the same per-assembly walk.</summary>
@@ -365,9 +602,14 @@ public sealed partial class AkkaSerializerGenerator
     /// compilations are created and dropped constantly. The workspace and the generator driver both
     /// keep the SAME <see cref="MetadataReference"/> instance across an edit for as long as the
     /// reference set itself is unchanged (that instance is exactly what "the reference set is
-    /// unchanged" means), and the walk's result depends only on the PE file's own metadata, not on
-    /// which symbol instance happens to represent it right now -- so keying on the reference is both
-    /// safe and the thing that is actually stable. <see cref="Compilation.GetMetadataReference(IAssemblySymbol)"/>
+    /// unchanged" means), and the walk's result depends almost only on the PE file's own metadata,
+    /// not on which symbol instance happens to represent it right now -- so keying on the reference
+    /// is both safe and the thing that is actually stable. One exception, accepted knowingly:
+    /// <see cref="ReferencedTypeFacts.UnionFieldKeys"/> also depends on what a field's type IS (an
+    /// interface or not, collection-like or not), and that type can live in a different reference.
+    /// If that other assembly changes shape while this reference stays the same instance, the cached
+    /// keys go stale until this reference changes too. The worst outcome is a missing union key, which
+    /// surfaces as an AKKASG019 that a full rebuild clears, never as wrong generated code. <see cref="Compilation.GetMetadataReference(IAssemblySymbol)"/>
     /// recovers it from an assembly symbol at lookup time; it returns null for an assembly with no
     /// corresponding reference in this compilation (a source assembly reached via
     /// <c>CompilationReference</c>, or the compilation's own assembly), so the assembly symbol itself
@@ -466,20 +708,91 @@ public sealed partial class AkkaSerializerGenerator
                 continue;
 
             var baseTypeNames = isMarked ? GetBaseTypeNames(candidate) : ImmutableArray<string>.Empty;
-            types.Add(new ReferencedTypeFacts(TypeKey.FromSymbol(candidate), isMarked, protocols, baseTypeNames));
+            var unionFieldKeys = isMarked ? GetUnionFieldKeys(candidate, knownTypes) : ImmutableArray<TypeKey>.Empty;
+            types.Add(new ReferencedTypeFacts(TypeKey.FromSymbol(candidate), isMarked, protocols, baseTypeNames, unionFieldKeys));
         }
 
         return new ReferencedAssemblyFacts(types.ToImmutable(), serializers.ToImmutable());
     }
 
     /// <summary>
+    /// The static types of <paramref name="type"/>'s own <c>[AkkaField]</c> properties that are inferred
+    /// union bases. See <see cref="ReferencedTypeFacts.UnionFieldKeys"/>.
+    /// </summary>
+    private static ImmutableArray<TypeKey> GetUnionFieldKeys(INamedTypeSymbol type, KnownTypes knownTypes)
+    {
+        if (knownTypes.FieldAttribute == null)
+            return ImmutableArray<TypeKey>.Empty;
+
+        ImmutableArray<TypeKey>.Builder? keys = null;
+        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        {
+            if (property.Type is not INamedTypeSymbol fieldType
+                || !property.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute))
+                || !IsInferredUnionBase(fieldType, MapType(fieldType, knownTypes), knownTypes))
+                continue;
+
+            keys ??= ImmutableArray.CreateBuilder<TypeKey>();
+            keys.Add(TypeKey.FromSymbol(fieldType));
+        }
+
+        return keys?.ToImmutable() ?? ImmutableArray<TypeKey>.Empty;
+    }
+
+    /// <summary>
+    /// Adds to <paramref name="closedSetKeys"/> every union field key a marked type in a referenced
+    /// V2 assembly declares (see <see cref="ReferencedTypeFacts.UnionFieldKeys"/>). Without this, a
+    /// message from assembly A with an <c>IDestination</c> field, serialized in C, would resolve to an
+    /// empty union whenever <c>IDestination</c>'s implementors live in a third assembly B: the key
+    /// would never be requested, so B's implementors would never be collected. Reads only the cached
+    /// per-assembly facts. Order is stable: this compilation's own keys first, then referenced ones in
+    /// reference order.
+    /// </summary>
+    private static ImmutableArray<TypeKey> AddReferencedUnionFieldKeys(
+        Compilation compilation,
+        ImmutableArray<string> referencedAssembliesUsingV2,
+        ImmutableArray<TypeKey> closedSetKeys,
+        KnownTypes knownTypes,
+        CancellationToken cancellationToken)
+    {
+        if (referencedAssembliesUsingV2.IsEmpty)
+            return closedSetKeys;
+
+        var qualifyingAssemblies = new HashSet<string>(referencedAssembliesUsingV2, StringComparer.Ordinal);
+        var seen = new HashSet<TypeKey>(closedSetKeys);
+        ImmutableArray<TypeKey>.Builder? builder = null;
+
+        foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!qualifyingAssemblies.Contains(assembly.Name))
+                continue;
+
+            foreach (var type in GetReferencedAssemblyFacts(compilation, assembly, knownTypes, cancellationToken).Types)
+            {
+                foreach (var key in type.UnionFieldKeys)
+                {
+                    if (string.IsNullOrEmpty(key.MetadataName) || !seen.Add(key))
+                        continue;
+
+                    builder ??= closedSetKeys.ToBuilder();
+                    builder.Add(key);
+                }
+            }
+        }
+
+        return builder?.ToImmutable() ?? closedSetKeys;
+    }
+
+    /// <summary>
     /// Decision 19's referenced-assembly half of the closed-set walk (and Decision 21's extension to
-    /// a marked union base): for each of <paramref name="referencedAssembliesUsingV2"/>, reads that
+    /// any other union base): for each of <paramref name="referencedAssembliesUsingV2"/>, reads that
     /// assembly's cached <see cref="ReferencedAssemblyFacts"/> (walked at most once per assembly
     /// symbol -- see <see cref="ReferencedAssemblyFactsCache"/>) and filters it, by ordinal string
     /// membership, against every requested key. <paramref name="protocolKeysOnly"/> ALSO buckets an
-    /// unmarked implementor of a PROTOCOL key (not a marked-union-base key) into the second returned
-    /// dictionary -- AKKASG029's Decision 19 widening; a marked-union-base implementor missing the
+    /// unmarked implementor of a PROTOCOL key (not a union-base key) into the second returned
+    /// dictionary -- AKKASG029's Decision 19 widening; a union-base implementor missing the
     /// attribute is simply invisible to this walk, matching the same rule Decision 19/21's addenda in
     /// design.md record. No attribute is needed to opt an assembly in: any assembly that references
     /// <c>Akka.Serialization.V2</c> qualifies.
@@ -590,7 +903,7 @@ public sealed partial class AkkaSerializerGenerator
 
     /// <summary>
     /// Sorts and builds a closed-set-implementor dictionary, OMITTING any key whose bucket ended up
-    /// empty -- unlike <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>'s own "one entry per
+    /// empty -- unlike <see cref="ComputeLocalImplementorFacts"/>'s own "one entry per
     /// requested key, even an empty one" convention (that convention exists there so a lookup MISS
     /// unambiguously means "no serializer asked", distinguishing it from a HIT with zero unmarked
     /// implementors; nothing downstream of the walks this method serves needs that distinction, and

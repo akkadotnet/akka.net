@@ -13,10 +13,10 @@ public sealed partial class ScalarGoldenSerializer
 
     public override int Identifier => 150202;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("scalar-golden",
-            system => new ScalarGoldenSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("scalar-golden",
+            new ScalarGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::ScalarGolden.IProtocol))); 
     }
@@ -34,6 +34,24 @@ public sealed partial class ScalarGoldenSerializer
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)
+        {
+            var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);
+            var initialCount = pooledWriter.WrittenCount;
+            SerializeMessagePack(obj, ref pooledMessagePackWriter);
+            pooledMessagePackWriter.Flush();
+            return checked(pooledWriter.WrittenCount - initialCount);
+        }
+
+        if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)
+        {
+            var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);
+            var initialCount = arrayWriter.WrittenCount;
+            SerializeMessagePack(obj, ref arrayMessagePackWriter);
+            arrayMessagePackWriter.Flush();
+            return checked(arrayWriter.WrittenCount - initialCount);
+        }
+
         var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);
         var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);
         SerializeMessagePack(obj, ref messagePackWriter);
@@ -46,13 +64,13 @@ public sealed partial class ScalarGoldenSerializer
         switch (obj)
         {
             case global::ScalarGolden.Required message:
-                WriteRequired(ref writer, message);
+                WriteRequired_16ad6097acd319fa(ref writer, message);
                 break;
             case global::ScalarGolden.Optional message:
-                WriteOptional(ref writer, message);
+                WriteOptional_6961f19ed33b9c1d(ref writer, message);
                 break;
             case global::ScalarGolden.Positions message:
-                WritePositions(ref writer, message);
+                WritePositions_070ce42b774b53ba(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -64,9 +82,9 @@ public sealed partial class ScalarGoldenSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "required-v1" => ReadRequired(ref reader),
-            "optional-v1" => ReadOptional(ref reader),
-            "positions-v1" => ReadPositions(ref reader),
+            "required-v1" => ReadRequired_16ad6097acd319fa(ref reader),
+            "optional-v1" => ReadOptional_6961f19ed33b9c1d(ref reader),
+            "positions-v1" => ReadPositions_070ce42b774b53ba(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -75,9 +93,9 @@ public sealed partial class ScalarGoldenSerializer
     {
         return obj switch
         {
-            global::ScalarGolden.Required message => SizeOfRequired(message),
-            global::ScalarGolden.Optional message => SizeOfOptional(message),
-            global::ScalarGolden.Positions message => SizeOfPositions(message),
+            global::ScalarGolden.Required message => SizeOfRequired_16ad6097acd319fa(message),
+            global::ScalarGolden.Optional message => SizeOfOptional_6961f19ed33b9c1d(message),
+            global::ScalarGolden.Positions message => SizeOfPositions_070ce42b774b53ba(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -110,7 +128,7 @@ public sealed partial class ScalarGoldenSerializer
         }
     }
 
-    private int SizeOfRequired(global::ScalarGolden.Required message)
+    private int SizeOfRequired_16ad6097acd319fa(global::ScalarGolden.Required message)
     {
         checked
         {
@@ -137,7 +155,7 @@ public sealed partial class ScalarGoldenSerializer
         }
     }
 
-    private void WriteRequired(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Required message)
+    private void WriteRequired_16ad6097acd319fa(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Required message)
     {
         writer.WriteMapHeader(9);
         writer.Write(1);
@@ -160,7 +178,7 @@ public sealed partial class ScalarGoldenSerializer
         writer.Write((ushort)message.Char);
     }
 
-    private global::ScalarGolden.Required ReadRequired(ref global::MessagePack.MessagePackReader reader)
+    private global::ScalarGolden.Required ReadRequired_16ad6097acd319fa(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::System.TimeSpan span = default;
@@ -249,7 +267,7 @@ public sealed partial class ScalarGoldenSerializer
         return new global::ScalarGolden.Required(Span: span, Single: single, Int16: int16, Byte: @byte, SByte: sByte, UInt16: uInt16, UInt32: uInt32, UInt64: uInt64, Char: @char);
     }
 
-    private int SizeOfOptional(global::ScalarGolden.Optional message)
+    private int SizeOfOptional_6961f19ed33b9c1d(global::ScalarGolden.Optional message)
     {
         checked
         {
@@ -276,7 +294,7 @@ public sealed partial class ScalarGoldenSerializer
         }
     }
 
-    private void WriteOptional(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Optional message)
+    private void WriteOptional_6961f19ed33b9c1d(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Optional message)
     {
         writer.WriteMapHeader(9);
         writer.Write(1);
@@ -326,7 +344,7 @@ public sealed partial class ScalarGoldenSerializer
             writer.Write((ushort)message.Char.Value);
     }
 
-    private global::ScalarGolden.Optional ReadOptional(ref global::MessagePack.MessagePackReader reader)
+    private global::ScalarGolden.Optional ReadOptional_6961f19ed33b9c1d(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::System.TimeSpan? span = null;
@@ -406,7 +424,7 @@ public sealed partial class ScalarGoldenSerializer
         return new global::ScalarGolden.Optional(Span: span, Single: single, Int16: int16, Byte: @byte, SByte: sByte, UInt16: uInt16, UInt32: uInt32, UInt64: uInt64, Char: @char);
     }
 
-    private int SizeOfPositions(global::ScalarGolden.Positions message)
+    private int SizeOfPositions_070ce42b774b53ba(global::ScalarGolden.Positions message)
     {
         checked
         {
@@ -477,7 +495,7 @@ public sealed partial class ScalarGoldenSerializer
         }
     }
 
-    private void WritePositions(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Positions message)
+    private void WritePositions_070ce42b774b53ba(ref global::MessagePack.MessagePackWriter writer, global::ScalarGolden.Positions message)
     {
         writer.WriteMapHeader(4);
         writer.Write(1);
@@ -542,7 +560,7 @@ public sealed partial class ScalarGoldenSerializer
         }
     }
 
-    private global::ScalarGolden.Positions ReadPositions(ref global::MessagePack.MessagePackReader reader)
+    private global::ScalarGolden.Positions ReadPositions_070ce42b774b53ba(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::System.Collections.Generic.List<global::System.TimeSpan>? spans = default;

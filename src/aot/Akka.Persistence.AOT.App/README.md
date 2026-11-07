@@ -20,6 +20,9 @@ the `Akka.Persistence.Hosting` builders. It references `Akka.Persistence.Hosting
    built-in stash overflow strategy resolves. `WithClusterShardingJournalMigrationAdapter` registers Cluster Sharding's migration adapter, and the app checks it resolves with the switch off. Only the canary references Akka.Cluster.Sharding, and that adds warnings from Cluster, DistributedData and Remote code that this baseline does not gate. A second actor persists and snapshots through the
    built-in `inmem` plugins in the same system (`WithInMemoryJournal`, `WithInMemorySnapshotStore`). The canary
    does not drive a real stash overflow.
+   Before shutdown it also runs integer and `ReadOnlySequence<byte>` streams through two real fused
+   forwarding stages each, awaiting and validating 100 elements with sums 300 and 800 respectively.
+   These exercise typed Streams ports in the native binary without reflection-based factories.
 2. **A Hosting app whose journal options name no type in code.** The options name their class in HOCON only, so starting
    that journal has to throw a `ConfigurationException` that names the HOCON setting, the
    `Akka.DynamicTypeLoading` switch and Akka.Persistence.Hosting.
@@ -41,7 +44,9 @@ turn on their trim analyzers.
 
 ## Pass condition
 
-Exit code `0` and `[canary-persistence] OK` on stdout. A `LogFilterSetup` watchdog (`LogWatchdogFilter`)
+Exit code `0`, `[canary-persistence] OK`, and both validated stream totals on stdout:
+`streams-int: 100 elements, sum 300` and `streams-sequence: 100 elements, sum 800`.
+A `LogFilterSetup` watchdog (`LogWatchdogFilter`)
 fails the run on any `WARNING` or `ERROR` the logger sees, because core logs and continues when a
 configured type name does not resolve.
 

@@ -444,7 +444,20 @@ namespace Akka.Persistence.Journal
             }
         }
 
-        internal sealed class Desequenced
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Wraps a journal write reply together with the sequence number used to restore the
+        /// original write order before it is delivered to the persistent actor.
+        ///
+        /// This message only ever travels from a journal to its own <see cref="Resequencer"/> child
+        /// actor on the same node, so it never needs to be serialized. Implementing
+        /// <see cref="INoSerializationVerificationNeeded"/> keeps <c>akka.actor.serialize-messages = on</c>
+        /// from round-tripping the wrapped reply - and the event payload it carries - through the
+        /// <c>System.Object</c> fallback serializer, which would hand the persist callback a
+        /// deserialized copy of the event instead of the original instance.
+        /// </summary>
+        internal sealed class Desequenced : INoSerializationVerificationNeeded
         {
             public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
