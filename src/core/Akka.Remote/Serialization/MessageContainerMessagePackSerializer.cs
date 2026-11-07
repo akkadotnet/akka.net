@@ -169,7 +169,7 @@ internal sealed partial class MessageContainerMessagePackCodec : AkkaSerializer
 
 // The new id has a nonempty native manifest. No token or bytes change under legacy id 6.
 [AkkaSerializable(Manifest = MessageContainerMessagePackSerializer.SelectionManifest)]
-internal sealed record ActorSelectionWire([property: AkkaField(1)] object Payload,
+internal sealed record ActorSelectionWire([property: AkkaField(1)] object? Payload,
     [property: AkkaField(2)] SelectionElementWire[] Elements,
     [property: AkkaField(3)] bool WildCardFanOut) : IActorSelectionWire;
 

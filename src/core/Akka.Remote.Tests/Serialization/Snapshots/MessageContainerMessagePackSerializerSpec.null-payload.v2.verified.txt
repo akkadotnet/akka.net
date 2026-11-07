@@ -1,0 +1,7 @@
+﻿case: null-payload
+message-type: ActorSelectionMessage
+manifest: a
+serializer-id: 46
+byte-count: 7
+
+0000  83 01 c0 02 90 03 c2                              |.......|

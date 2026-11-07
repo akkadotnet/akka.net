@@ -35,6 +35,7 @@ public sealed class MessageContainerMessagePackSerializerSpec : V2PortSpec
     internal static readonly V2PortCase[] Corpus =
     [
         Sample("hello", [], "empty-path"),
+        Sample(null!, [], "null-payload"),
         Sample("", [new SelectChildName("user")], "empty-payload"),
         Sample("hello", [new SelectChildName("user"), new SelectChildName("target")], "child-names"),
         Sample("hello", [new SelectChildPattern("worker-*")], "child-pattern"),
