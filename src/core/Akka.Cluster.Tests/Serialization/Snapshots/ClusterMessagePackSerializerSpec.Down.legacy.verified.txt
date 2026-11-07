@@ -1,0 +1,8 @@
+case: Down
+message-type: Down
+manifest: Akka.Cluster.ClusterUserAction+Down, Akka.Cluster
+serializer-id: 5
+byte-count: 29
+
+0000  0a 07 63 6c 75 73 74 65  72 12 05 6e 6f 64 65 31  |..cluster..node1|
+0010  18 f8 13 22 08 61 6b 6b  61 2e 74 63 70           |...".akka.tcp|

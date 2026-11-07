@@ -1,0 +1,7 @@
+case: InitJoin
+message-type: InitJoin
+manifest: Akka.Cluster.InternalClusterAction+InitJoin, Akka.Cluster
+serializer-id: 5
+byte-count: 0
+
+(zero-byte payload)

@@ -1,0 +1,22 @@
+case: Welcome
+message-type: Welcome
+manifest: Akka.Cluster.InternalClusterAction+Welcome, Akka.Cluster
+serializer-id: 5
+byte-count: 249
+
+0000  0a 26 0a 1d 0a 07 63 6c  75 73 74 65 72 12 05 6e  |.&....cluster..n|
+0010  6f 64 65 31 18 f8 13 22  08 61 6b 6b 61 2e 74 63  |ode1...".akka.tc|
+0020  70 10 91 80 80 80 80 20  12 ce 01 0a 26 0a 1d 0a  |p...... ....&...|
+0030  07 63 6c 75 73 74 65 72  12 05 6e 6f 64 65 31 18  |.cluster..node1.|
+0040  f8 13 22 08 61 6b 6b 61  2e 74 63 70 10 91 80 80  |..".akka.tcp....|
+0050  80 80 20 0a 29 0a 1d 0a  07 63 6c 75 73 74 65 72  |.. .)....cluster|
+0060  12 05 6e 6f 64 65 32 18  f9 13 22 08 61 6b 6b 61  |..node2...".akka|
+0070  2e 74 63 70 10 fe ff ff  ff ff ff ff ff 7f 0a 29  |.tcp...........)|
+0080  0a 1d 0a 07 63 6c 75 73  74 65 72 12 05 6e 6f 64  |....cluster..nod|
+0090  65 32 18 f9 13 22 08 61  6b 6b 61 2e 74 63 70 10  |e2...".akka.tcp.|
+00a0  fd ff ff ff ff ff ff ff  7f 12 07 62 61 63 6b 65  |...........backe|
+00b0  6e 64 1a 0a 66 69 78 65  64 2d 68 61 73 68 22 07  |nd..fixed-hash".|
+00c0  10 07 18 01 22 01 00 22  09 08 01 10 0b 18 02 22  |....".."......."|
+00d0  01 00 2a 0f 0a 01 00 12  0a 12 06 08 01 18 01 20  |..*............ |
+00e0  13 20 17 32 04 12 02 10  1d 3a 07 08 02 10 95 9a  |. .2.....:......|
+00f0  ef 3a 42 05 31 2e 32 2e  33                       |.:B.1.2.3|
