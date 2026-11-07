@@ -1,0 +1,10 @@
+﻿case: Join
+message-type: Join
+manifest: Akka.Cluster.InternalClusterAction+Join, Akka.Cluster
+serializer-id: 45
+byte-count: 58
+
+0000  83 01 82 01 94 a8 61 6b  6b 61 2e 74 63 70 a7 63  |......akka.tcp.c|
+0010  6c 75 73 74 65 72 a5 6e  6f 64 65 31 cd 09 f8 02  |luster.node1....|
+0020  cf 00 00 01 00 00 00 00  11 02 91 a7 62 61 63 6b  |............back|
+0030  65 6e 64 03 a5 31 2e 32  2e 33                    |end..1.2.3|

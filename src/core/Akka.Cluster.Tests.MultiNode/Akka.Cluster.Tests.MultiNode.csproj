@@ -20,4 +20,7 @@
       </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../Akka.Cluster.Tests/Serialization/ClusterWireCases.cs" Link="Serialization/ClusterWireCases.cs" />
+  </ItemGroup>
 </Project>

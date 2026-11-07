@@ -1,0 +1,10 @@
+﻿case: GossipStatus
+message-type: GossipStatus
+manifest: Akka.Cluster.GossipStatus, Akka.Cluster
+serializer-id: 45
+byte-count: 58
+
+0000  82 01 82 01 94 a8 61 6b  6b 61 2e 74 63 70 a7 63  |......akka.tcp.c|
+0010  6c 75 73 74 65 72 a5 6e  6f 64 65 31 cd 09 f8 02  |luster.node1....|
+0020  cf 00 00 01 00 00 00 00  11 02 91 82 01 aa 66 69  |..............fi|
+0030  78 65 64 2d 68 61 73 68  02 1d                    |xed-hash..|

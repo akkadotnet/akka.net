@@ -1,0 +1,25 @@
+﻿case: GossipEnvelope
+message-type: GossipEnvelope
+manifest: Akka.Cluster.GossipEnvelope, Akka.Cluster
+serializer-id: 45
+byte-count: 295
+
+0000  83 01 82 01 94 a8 61 6b  6b 61 2e 74 63 70 a7 63  |......akka.tcp.c|
+0010  6c 75 73 74 65 72 a5 6e  6f 64 65 31 cd 09 f8 02  |luster.node1....|
+0020  cf 00 00 01 00 00 00 00  11 02 82 01 94 a8 61 6b  |..............ak|
+0030  6b 61 2e 74 63 70 a7 63  6c 75 73 74 65 72 a5 6e  |ka.tcp.cluster.n|
+0040  6f 64 65 32 cd 09 f9 02  cf 7f ff ff ff ff ff ff  |ode2............|
+0050  fe 03 89 01 93 82 01 94  a8 61 6b 6b 61 2e 74 63  |.........akka.tc|
+0060  70 a7 63 6c 75 73 74 65  72 a5 6e 6f 64 65 31 cd  |p.cluster.node1.|
+0070  09 f8 02 cf 00 00 01 00  00 00 00 11 82 01 94 a8  |................|
+0080  61 6b 6b 61 2e 74 63 70  a7 63 6c 75 73 74 65 72  |akka.tcp.cluster|
+0090  a5 6e 6f 64 65 32 cd 09  f9 02 cf 7f ff ff ff ff  |.node2..........|
+00a0  ff ff fd 82 01 94 a8 61  6b 6b 61 2e 74 63 70 a7  |.......akka.tcp.|
+00b0  63 6c 75 73 74 65 72 a5  6e 6f 64 65 32 cd 09 f9  |cluster.node2...|
+00c0  02 cf 7f ff ff ff ff ff  ff fe 02 91 a7 62 61 63  |.............bac|
+00d0  6b 65 6e 64 03 91 a5 31  2e 32 2e 33 04 92 85 01  |kend...1.2.3....|
+00e0  00 02 07 03 01 04 91 00  05 00 85 01 02 02 0b 03  |................|
+00f0  02 04 91 00 05 00 05 91  00 06 91 84 01 00 02 02  |................|
+0100  03 01 04 13 07 91 82 01  00 02 17 08 91 82 01 aa  |................|
+0110  66 69 78 65 64 2d 68 61  73 68 02 1d 09 91 82 01  |fixed-hash......|
+0120  01 02 ce 07 5b cd 15                              |....[..|

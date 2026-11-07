@@ -1,0 +1,10 @@
+﻿case: RouterPoolNoRole
+message-type: ClusterRouterPool
+manifest: Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster
+serializer-id: 45
+byte-count: 56
+
+0000  85 01 83 01 10 02 a5 52  4f 52 52 50 03 c4 21 08  |.......RORRP..!.|
+0010  04 12 1d 61 6b 6b 61 2e  61 63 74 6f 72 2e 64 65  |...akka.actor.de|
+0020  66 61 75 6c 74 2d 64 69  73 70 61 74 63 68 65 72  |fault-dispatcher|
+0030  02 0d 03 05 04 c2 05 c0                           |........|

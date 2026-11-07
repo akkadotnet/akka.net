@@ -1,0 +1,9 @@
+﻿case: HeartbeatRsp
+message-type: HeartbeatRsp
+manifest: Akka.Cluster.ClusterHeartbeatSender+HeartbeatRsp, Akka.Cluster
+serializer-id: 45
+byte-count: 41
+
+0000  81 01 82 01 94 a8 61 6b  6b 61 2e 74 63 70 a7 63  |......akka.tcp.c|
+0010  6c 75 73 74 65 72 a5 6e  6f 64 65 31 cd 09 f8 02  |luster.node1....|
+0020  cf 00 00 01 00 00 00 00  11                       |.........|

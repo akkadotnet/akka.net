@@ -1,0 +1,8 @@
+﻿case: Leave
+message-type: Leave
+manifest: Akka.Cluster.ClusterUserAction+Leave, Akka.Cluster
+serializer-id: 45
+byte-count: 29
+
+0000  81 01 94 a8 61 6b 6b 61  2e 74 63 70 a7 63 6c 75  |....akka.tcp.clu|
+0010  73 74 65 72 a5 6e 6f 64  65 31 cd 09 f8           |ster.node1...|
