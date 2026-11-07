@@ -93,5 +93,25 @@ namespace Akka.Tests.Serialization.V2PortKit
 
             act.Should().Throw<Exception>().WithMessage("*V2 node to legacy node*");
         }
+
+        [Theory(DisplayName = "Should_PreserveNamesAndDisposeBothSystems_When_CreatingAMixedPair")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_PreserveNamesAndDisposeBothSystems_When_CreatingAMixedPair(bool sameSystemName)
+        {
+            const string name = "mixed-names";
+            var pair = sameSystemName
+                ? MixedBindingPair.CreateWithSameSystemName(name, Bound("pair-v2"), Bound("pair"))
+                : MixedBindingPair.Create(name, Bound("pair-v2"), Bound("pair"));
+            await using (pair)
+            {
+                Assert.Equal(sameSystemName ? name : name + "-v2", pair.V2Node.Name);
+                Assert.Equal(sameSystemName ? name : name + "-legacy", pair.LegacyNode.Name);
+                pair.AssertRoundTripsBothWays(Cases, 79, 39);
+            }
+
+            Assert.True(pair.V2Node.WhenTerminated.IsCompletedSuccessfully);
+            Assert.True(pair.LegacyNode.WhenTerminated.IsCompletedSuccessfully);
+        }
     }
 }

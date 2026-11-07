@@ -43,11 +43,22 @@ public sealed class MixedBindingPair : IAsyncDisposable
     /// and must register the port's serializers.
     /// </summary>
     public static MixedBindingPair Create(string name, Config v2Side, Config legacySide)
+        => CreatePair(name + "-v2", name + "-legacy", v2Side, legacySide);
+
+    /// <summary>
+    /// Starts both nodes with the same logical actor-system name, as cluster members require.
+    /// Use separate port-zero configs when their providers bind network endpoints. This preserves
+    /// comparisons for protocols that reconstruct an omitted system name from the receiving node.
+    /// </summary>
+    public static MixedBindingPair CreateWithSameSystemName(string name, Config v2Side, Config legacySide)
+        => CreatePair(name, name, v2Side, legacySide);
+
+    private static MixedBindingPair CreatePair(string v2Name, string legacyName, Config v2Side, Config legacySide)
     {
-        var v2 = ActorSystem.Create(name + "-v2", v2Side.WithFallback(AkkaSpec.AkkaSpecConfig));
+        var v2 = ActorSystem.Create(v2Name, v2Side.WithFallback(AkkaSpec.AkkaSpecConfig));
         try
         {
-            return new MixedBindingPair(v2, ActorSystem.Create(name + "-legacy", legacySide.WithFallback(AkkaSpec.AkkaSpecConfig)));
+            return new MixedBindingPair(v2, ActorSystem.Create(legacyName, legacySide.WithFallback(AkkaSpec.AkkaSpecConfig)));
         }
         catch
         {

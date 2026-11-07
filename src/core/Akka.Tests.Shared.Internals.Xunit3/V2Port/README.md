@@ -11,9 +11,17 @@ Test helpers for a serializer port (#8675, #8714): a legacy serializer gets a V2
 2. Put the spec in `[Collection(DynamicTypeLoadingCollection.Name)]`. One check flips a process-wide switch.
 3. For interop, `MixedBindingPair.Create(name, v2Config, legacyConfig)` starts one V2 node and one legacy node, and
    `AssertRoundTripsBothWays(cases, v2Id, legacyId)` checks both directions. `MixedBindingPair.BindTo` builds bindings.
+   For protocols such as DistributedData that omit the actor-system name on the wire, use
+   `CreateWithSameSystemName(name, v2Config, legacyConfig)` and build the corpus for that logical name.
+   The existing `Create` factory retains its `name-v2` / `name-legacy` naming. Use port-zero configs
+   for network providers; these helpers exchange bytes in process and do not prove network transport.
 
 The base class checks the id (legacy + 40, inside 40-79), manifest parity, V2 and legacy round trips, both ids decoding,
-the binding staying legacy, the V2 id resolving with dynamic type loading off, and the golden snapshots below.
+the binding staying legacy, a full V2 corpus round trip with dynamic type loading off, and the golden snapshots below.
+Round trips require the same root runtime type. When domain equality fails, the fallback compares every root member
+structurally while keeping nested values' comparison rules; unordered protocol maps therefore retain all keys and values
+without depending on hash-bucket enumeration order. The test kit's bounded generic dispatch supports the pinned
+FluentAssertions 5 API and runs only in JIT tests; it is not part of serializer or Native AOT product code.
 
 ## Golden snapshots
 
