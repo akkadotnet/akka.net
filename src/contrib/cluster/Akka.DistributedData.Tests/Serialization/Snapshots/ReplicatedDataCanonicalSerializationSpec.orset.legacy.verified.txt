@@ -1,0 +1,13 @@
+﻿case: orset
+message-type: ORSet<GCounter>
+manifest: C
+serializer-id: 11
+byte-count: 109
+
+0000  1f 8b 08 00 00 00 00 00  00 03 e3 92 e3 92 e1 92  |................|
+0010  e0 12 e1 e2 4f ce 2f cd  2b 49 2d d2 4b ad 48 cc  |....O./.+I-.K.H.|
+0020  2d c8 49 15 f8 21 2c a0  25 c0 28 64 ce c1 22 64  |-.I..!,.%.(d.."d|
+0030  ec 98 9d 9d a8 e7 92 59  5c 52 94 99 54 5a 92 9a  |.......Y\R..TZ..|
+0040  e2 92 58 92 a8 e7 ee 0c  d1 a1 a3 80 4d 5a 8a 80  |..X.........MZ..|
+0050  c1 56 ba 5c 6a 5c 2a b8  55 08 71 b0 33 40 80 00  |.V.\j\*.U.q.3@..|
+0060  b7 12 a3 1b 00 e7 26 be  ed a8 00 00 00           |......&......|

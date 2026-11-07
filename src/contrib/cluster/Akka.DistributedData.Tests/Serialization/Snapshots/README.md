@@ -56,3 +56,12 @@ can be selected for its nested payload. Custom legacy aliases and explicit bindi
 The same nested-format audit applies to headerless LMDB storage: its legacy outer envelope
 delegates CRDT serialization too. The id-51 port must prove off/on/off recovery against existing
 stores without silently replacing nested id-11 bytes before that new writer is enabled.
+
+`ReplicatedDataCanonicalSerializationSpec` additionally freezes nested GCounter values in
+GSet, ORSet, LWWRegister and ORDictionary before the canonical-helper change, on the unchanged
+id-11 source and helper at `447fa543d`. Values use UID 42, a fixed full address, counter 7 and
+timestamp 1234567. Independent protobuf field decoding confirms nested id 11 / manifest F;
+ORSet and ORDictionary fixtures include their original gzip containers. These four fixtures
+are historical protobuf controls, not id-51 fixtures. The deliberately different reserved-id-51
+Setup stand-in activates a marker binding only in its on phase; it is not a production CRDT
+codec or evidence of real module Supersedes or Native AOT coverage.

@@ -1,0 +1,15 @@
+﻿case: register
+message-type: LWWRegister<GCounter>
+manifest: E
+serializer-id: 11
+byte-count: 135
+
+0000  08 8e da 96 01 12 18 0a  14 0a 0f 63 6f 75 6e 74  |...........count|
+0010  65 72 2e 65 78 61 6d 70  6c 65 10 f8 13 10 2a 1a  |er.example....*.|
+0020  2d 0a 26 0a 24 0a 18 0a  14 0a 0f 63 6f 75 6e 74  |-.&.$......count|
+0030  65 72 2e 65 78 61 6d 70  6c 65 10 f8 13 10 2a 12  |er.example....*.|
+0040  08 07 00 00 00 00 00 00  00 10 0b 22 01 46 22 37  |...........".F"7|
+0050  08 04 12 33 41 6b 6b 61  2e 44 69 73 74 72 69 62  |...3Akka.Distrib|
+0060  75 74 65 64 44 61 74 61  2e 47 43 6f 75 6e 74 65  |utedData.GCounte|
+0070  72 2c 20 41 6b 6b 61 2e  44 69 73 74 72 69 62 75  |r, Akka.Distribu|
+0080  74 65 64 44 61 74 61                              |tedData|
