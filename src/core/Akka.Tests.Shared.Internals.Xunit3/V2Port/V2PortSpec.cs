@@ -244,7 +244,11 @@ public abstract class V2PortSpec : AkkaSpec
     /// <summary>Asserts <paramref name="actual"/> equals the corpus message, by <c>Equals</c> or else structurally.</summary>
     internal static void AssertSame(V2PortCase c, object? actual, string stage)
     {
-        actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+        if (actual is null || actual.GetType() != c.Message.GetType())
+        {
+            actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+            return;
+        }
         if (c.AssertEquivalent is { } assertEquivalent)
         {
             assertEquivalent(c.Message, actual!);

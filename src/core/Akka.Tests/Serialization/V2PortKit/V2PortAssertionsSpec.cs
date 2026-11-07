@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using Xunit;
 
 namespace Akka.Tests.Serialization.V2PortKit;
@@ -99,6 +100,24 @@ public sealed class V2PortAssertionsSpec
             AssertEquivalent = (_, _) => called = true
         };
         Action assertion = () => V2PortSpec.AssertSame(sample, new object(), "round trip");
+
+        assertion.Should().Throw<Exception>();
+        called.Should().BeFalse();
+    }
+
+    [Fact(DisplayName = "Should_StopBeforeDelegate_When_AnOuterScopeCollectsTheRuntimeTypeFailure")]
+    public void Should_StopBeforeDelegate_When_AnOuterScopeCollectsTheRuntimeTypeFailure()
+    {
+        var called = false;
+        var sample = new V2PortCase(RichMessage.Create(), "G", "gossip")
+        {
+            AssertEquivalent = (_, _) => called = true
+        };
+        Action assertion = () =>
+        {
+            using var scope = new AssertionScope();
+            V2PortSpec.AssertSame(sample, new object(), "round trip");
+        };
 
         assertion.Should().Throw<Exception>();
         called.Should().BeFalse();
