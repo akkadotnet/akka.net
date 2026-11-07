@@ -1,0 +1,11 @@
+﻿case: send-to-all
+message-type: SendToAll
+manifest: AB
+serializer-id: 55
+byte-count: 69
+
+0000  82 01 ac 2f 75 73 65 72  2f 77 6f 72 6b 65 72 02  |.../user/worker.|
+0010  83 01 11 02 d9 25 53 79  73 74 65 6d 2e 53 74 72  |.....%System.Str|
+0020  69 6e 67 2c 20 53 79 73  74 65 6d 2e 50 72 69 76  |ing, System.Priv|
+0030  61 74 65 2e 43 6f 72 65  4c 69 62 03 c4 07 70 61  |ate.CoreLib...pa|
+0040  79 6c 6f 61 64                                    |yload|

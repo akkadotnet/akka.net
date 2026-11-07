@@ -1,0 +1,7 @@
+case: contacts-empty
+message-type: Contacts
+manifest: A
+serializer-id: 15
+byte-count: 0
+
+(zero-byte payload)

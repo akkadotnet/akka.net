@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
-        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
+        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
         <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,6 +23,11 @@
     <Protobuf Access="internal" Include="../../../protobuf/ClusterClientMessages.proto" />
 
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

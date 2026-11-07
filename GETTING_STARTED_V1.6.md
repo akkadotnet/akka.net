@@ -251,6 +251,49 @@ conflict at compile time (for example, two serializers binding the same protocol
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 
+### Cluster Client built-in serialization
+
+Cluster Client adds a generated reader at id 55 (`akka-cluster-client-v2`) beside the
+unchanged reader at id 15 (`akka-cluster-client`). The first release containing the V2
+reader is unreleased, tracked by [#8681](https://github.com/akkadotnet/akka.net/issues/8681).
+Upgrade every reader before enabling new writes; an older v1.6 beta does not imply support.
+
+Two independent settings control this port:
+
+| Global `akka.actor.serialization-v2` | Client `use-legacy-serialization` | Receptionist messages | Public client commands and ticks |
+|---|---|---|---|
+| Off (default) | On (default) | id 15 | Existing JSON path |
+| On | On (default) | id 55 | Existing JSON path |
+| Off (default) | Off | id 15 | id 15 |
+| On | Off | id 55 | id 55 |
+
+`ClusterClientSettings.Create(system)` and client actor startup retain their existing
+behavior of removing the public protocol's write binding when `use-legacy-serialization`
+is on. To use the generated port for every message, configure both settings:
+
+```hocon
+akka.actor.serialization-v2 = on
+akka.cluster.client.use-legacy-serialization = off
+```
+
+Applications already using the global switch can begin writing id 55 when this module is
+upgraded. To retain built-in id 15 writers while other ports use V2, set the client setting
+to off and pin both interfaces:
+
+```hocon
+akka.cluster.client.use-legacy-serialization = off
+akka.actor.serialization-bindings {
+  "Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools" = akka-cluster-client
+  "Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, Akka.Cluster.Tools" = akka-cluster-client
+}
+```
+
+Both readers remain registered regardless of either setting. Turning the global switch
+off affects future writes; it does not add an id 55 reader to older binaries. User payloads
+still require their own serializers. The client actor forwards application delivery using
+PubSub envelopes, so a generated Cluster Client codec alone does not establish native
+end-to-end Cluster Client delivery or full Cluster Native AOT support.
+
 ## Enabling Artery
 
 Artery is experimental. Don't use it in production - Akka.NET logs that warning itself the

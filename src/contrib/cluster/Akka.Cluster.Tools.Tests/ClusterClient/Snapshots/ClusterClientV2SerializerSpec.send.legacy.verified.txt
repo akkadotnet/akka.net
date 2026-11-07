@@ -1,0 +1,11 @@
+case: send
+message-type: Send
+manifest: AA
+serializer-id: 15
+byte-count: 66
+
+0000  0a 0c 2f 75 73 65 72 2f  77 6f 72 6b 65 72 1a 32  |../user/worker.2|
+0010  0a 07 70 61 79 6c 6f 61  64 10 11 1a 25 53 79 73  |..payload...%Sys|
+0020  74 65 6d 2e 53 74 72 69  6e 67 2c 20 53 79 73 74  |tem.String, Syst|
+0030  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0040  69 62                                             |ib|

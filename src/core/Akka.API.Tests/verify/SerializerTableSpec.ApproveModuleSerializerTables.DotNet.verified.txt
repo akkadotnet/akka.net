@@ -18,6 +18,7 @@ module Akka.Cluster.Tools
   akka-cluster-client: Akka.Cluster.Tools.Client.Serialization.ClusterClientMessageSerializer, Akka.Cluster.Tools (id 15)
     Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools
     Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, Akka.Cluster.Tools
+  akka-cluster-client-v2: Akka.Cluster.Tools.Client.Serialization.ClusterClientMessagePackSerializer, Akka.Cluster.Tools (id 55) supersedes akka-cluster-client
   akka-pubsub: Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools (id 9)
     Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools
     Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools

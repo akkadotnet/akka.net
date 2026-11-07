@@ -1,0 +1,11 @@
+case: send-local-affinity
+message-type: Send
+manifest: AA
+serializer-id: 15
+byte-count: 68
+
+0000  0a 0c 2f 75 73 65 72 2f  77 6f 72 6b 65 72 10 01  |../user/worker..|
+0010  1a 32 0a 07 70 61 79 6c  6f 61 64 10 11 1a 25 53  |.2..payload...%S|
+0020  79 73 74 65 6d 2e 53 74  72 69 6e 67 2c 20 53 79  |ystem.String, Sy|
+0030  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0040  65 4c 69 62                                       |eLib|

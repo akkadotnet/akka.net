@@ -1,0 +1,7 @@
+﻿case: refresh-contacts
+message-type: RefreshContactsTick
+manifest: AD
+serializer-id: 55
+byte-count: 1
+
+0000  80                                                |.|

@@ -1,0 +1,7 @@
+case: heartbeat-response
+message-type: HeartbeatRsp
+manifest: D
+serializer-id: 15
+byte-count: 0
+
+(zero-byte payload)

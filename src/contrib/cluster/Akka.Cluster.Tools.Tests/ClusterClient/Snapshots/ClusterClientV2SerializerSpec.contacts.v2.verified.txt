@@ -1,0 +1,10 @@
+﻿case: contacts
+message-type: Contacts
+manifest: A
+serializer-id: 55
+byte-count: 63
+
+0000  81 01 91 d9 3a 61 6b 6b  61 2e 74 63 70 3a 2f 2f  |....:akka.tcp://|
+0010  63 6c 69 65 6e 74 2d 70  72 6f 6f 66 40 31 32 37  |client-proof@127|
+0020  2e 30 2e 30 2e 31 3a 32  35 35 32 2f 73 79 73 74  |.0.0.1:2552/syst|
+0030  65 6d 2f 72 65 63 65 70  74 69 6f 6e 69 73 74     |em/receptionist|

@@ -1,0 +1,10 @@
+case: publish
+message-type: Publish
+manifest: AC
+serializer-id: 15
+byte-count: 59
+
+0000  0a 05 74 6f 70 69 63 1a  32 0a 07 70 61 79 6c 6f  |..topic.2..paylo|
+0010  61 64 10 11 1a 25 53 79  73 74 65 6d 2e 53 74 72  |ad...%System.Str|
+0020  69 6e 67 2c 20 53 79 73  74 65 6d 2e 50 72 69 76  |ing, System.Priv|
+0030  61 74 65 2e 43 6f 72 65  4c 69 62                 |ate.CoreLib|

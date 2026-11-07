@@ -1,0 +1,7 @@
+case: heartbeat
+message-type: Heartbeat
+manifest: C
+serializer-id: 15
+byte-count: 0
+
+(zero-byte payload)

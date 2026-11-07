@@ -1,0 +1,7 @@
+﻿case: contacts-empty
+message-type: Contacts
+manifest: A
+serializer-id: 55
+byte-count: 3
+
+0000  81 01 90                                          |...|

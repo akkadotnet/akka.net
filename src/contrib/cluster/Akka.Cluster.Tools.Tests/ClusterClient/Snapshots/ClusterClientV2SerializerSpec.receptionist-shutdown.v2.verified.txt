@@ -1,0 +1,7 @@
+﻿case: receptionist-shutdown
+message-type: ReceptionistShutdown
+manifest: E
+serializer-id: 55
+byte-count: 1
+
+0000  80                                                |.|

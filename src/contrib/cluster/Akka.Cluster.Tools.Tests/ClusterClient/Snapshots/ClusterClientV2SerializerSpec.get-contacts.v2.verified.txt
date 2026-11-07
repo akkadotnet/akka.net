@@ -1,0 +1,7 @@
+﻿case: get-contacts
+message-type: GetContacts
+manifest: B
+serializer-id: 55
+byte-count: 1
+
+0000  80                                                |.|

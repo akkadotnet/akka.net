@@ -1,0 +1,7 @@
+case: reconnect-timeout
+message-type: ReconnectTimeout
+manifest: AF
+serializer-id: 15
+byte-count: 0
+
+(zero-byte payload)
