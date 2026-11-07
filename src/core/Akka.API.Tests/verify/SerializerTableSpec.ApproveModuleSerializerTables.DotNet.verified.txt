@@ -14,6 +14,7 @@ module Akka.Cluster.Metrics
 module Akka.Cluster.Sharding
   akka-sharding: Akka.Cluster.Sharding.Serialization.ClusterShardingMessageSerializer, Akka.Cluster.Sharding (id 13)
     Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding
+  akka-sharding-v2: Akka.Cluster.Sharding.Serialization.ClusterShardingMessagePackSerializer, Akka.Cluster.Sharding (id 53) supersedes akka-sharding
 module Akka.Cluster.Tools
   akka-cluster-client: Akka.Cluster.Tools.Client.Serialization.ClusterClientMessageSerializer, Akka.Cluster.Tools (id 15)
     Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools
