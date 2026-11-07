@@ -83,18 +83,18 @@ public sealed class MixedBindingPair : IAsyncDisposable
     {
         foreach (var c in cases)
         {
-            Send(V2Node, LegacyNode, v2Id, c, "V2 node to legacy node");
-            Send(LegacyNode, V2Node, legacyId, c, "legacy node to V2 node");
+            Send(V2Node, LegacyNode, v2Id, c, c.V2Manifest ?? c.Manifest, "V2 node to legacy node");
+            Send(LegacyNode, V2Node, legacyId, c, c.Manifest, "legacy node to V2 node");
         }
     }
 
-    private static void Send(ActorSystem writer, ActorSystem reader, int writerId, V2PortCase c, string stage)
+    private static void Send(ActorSystem writer, ActorSystem reader, int writerId, V2PortCase c, string expectedManifest, string stage)
     {
         var serializer = writer.Serialization.FindSerializerFor(c.Message);
         serializer.Identifier.Should().Be(writerId, "{0}: the writing node picks this serializer for {1}", stage, c.Name);
 
         var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, c.Message);
-        manifest.Should().Be(c.Manifest, "{0}: manifest of {1}", stage, c.Name);
+        manifest.Should().Be(expectedManifest, "{0}: manifest of {1}", stage, c.Name);
 
         var received = reader.Serialization.Deserialize(serializer.ToBinary(c.Message), serializer.Identifier, manifest);
         V2PortSpec.AssertSame(c, received, stage);
