@@ -7,6 +7,7 @@
 #nullable enable
 
 using System;
+using System.Net;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography;
@@ -65,6 +66,25 @@ namespace Akka.Tests.IO
             Assert.Equal(0, callbackCalls);
         }
 
+        [Fact(DisplayName = "Should_Require_Chain_Trust_While_Allowing_Separate_Hostname_Validation")]
+        public void Should_require_chain_trust_while_allowing_separate_hostname_validation()
+        {
+            using var certificate = CreateCertificate("worker-one", server: true);
+            var validateChain = TlsCertificateValidation.ValidateChain();
+
+            Assert.True(validateChain(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(validateChain(certificate, null, "peer", SslPolicyErrors.RemoteCertificateNameMismatch,
+                NoLogger.Instance));
+            Assert.False(validateChain(certificate, null, "peer", SslPolicyErrors.RemoteCertificateChainErrors,
+                NoLogger.Instance));
+            Assert.False(validateChain(certificate, null, "peer",
+                SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNameMismatch,
+                NoLogger.Instance));
+            Assert.False(validateChain(certificate, null, "peer", SslPolicyErrors.RemoteCertificateNotAvailable,
+                NoLogger.Instance));
+            Assert.False(validateChain(null, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+        }
+
         [Fact(DisplayName = "Should_Preserve_Original_Errors_And_Only_Narrow_Base_Trust")]
         public void Should_preserve_original_errors_and_only_narrow_base_trust()
         {
@@ -121,7 +141,8 @@ namespace Akka.Tests.IO
         public void Should_accept_only_configured_certificate_pins()
         {
             using var certificate = CreateCertificate("worker-one", server: true);
-            var allowedPins = new[] { certificate.Thumbprint };
+            var spacedPin = string.Join(" ", certificate.Thumbprint.ToLowerInvariant().ToCharArray());
+            var allowedPins = new[] { spacedPin };
             var pinned = TlsCertificateValidation.PinnedCertificate(allowedPins);
             allowedPins[0] = new string('0', 40);
 
@@ -130,6 +151,8 @@ namespace Akka.Tests.IO
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.PinnedCertificate(null!));
             Assert.Throws<ArgumentException>(() => TlsCertificateValidation.PinnedCertificate(" "));
+            Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.ValidateSubject(null!));
+            Assert.Throws<ArgumentException>(() => TlsCertificateValidation.ValidateIssuer(" "));
         }
 
         [Fact(DisplayName = "Should_Reject_Subject_Issuer_And_Hostname_Mismatches")]
@@ -141,16 +164,70 @@ namespace Akka.Tests.IO
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.False(TlsCertificateValidation.ValidateSubject("CN=other-*")(
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateSubject("cn=worker-one")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateSubject("CN=worker-one-extra")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.True(TlsCertificateValidation.ValidateIssuer("CN=worker-one")(
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.False(TlsCertificateValidation.ValidateIssuer("CN=other-*")(
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateIssuer("cn=worker-one")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateIssuer("CN=worker-one-extra")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+
+            using var distinguishedNameCertificate = CreateCertificate("worker.1", server: true);
+            Assert.True(TlsCertificateValidation.ValidateSubject("CN=worker.1")(
+                distinguishedNameCertificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateSubject("CN=workerX1")(
+                distinguishedNameCertificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(TlsCertificateValidation.ValidateIssuer("CN=worker.1")(
+                distinguishedNameCertificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateIssuer("CN=workerX1")(
+                distinguishedNameCertificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.True(TlsCertificateValidation.ValidateHostname("localhost")(
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.False(TlsCertificateValidation.ValidateHostname("wrong.example")(
                 certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.False(TlsCertificateValidation.ValidateHostname()(
                 certificate, null, "peer", SslPolicyErrors.RemoteCertificateNameMismatch, NoLogger.Instance));
+        }
+
+        [Fact(DisplayName = "Should_Match_DNS_Wildcard_And_IP_Subject_Alternative_Names")]
+        public void Should_match_dns_wildcard_and_ip_subject_alternative_names()
+        {
+            using var rsa = RSA.Create(2048);
+            var request = new CertificateRequest("CN=unused.example.net", rsa, HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1);
+            var san = new SubjectAlternativeNameBuilder();
+            san.AddDnsName("*.example.net");
+            san.AddIpAddress(IPAddress.Loopback);
+            request.CertificateExtensions.Add(san.Build());
+            using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1),
+                DateTimeOffset.UtcNow.AddHours(1));
+
+            Assert.True(TlsCertificateValidation.ValidateHostname("worker.example.net")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateHostname("deep.worker.example.net")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(TlsCertificateValidation.ValidateHostname("127.0.0.1")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.False(TlsCertificateValidation.ValidateHostname("127.0.0.2")(
+                certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+        }
+
+        [Fact(DisplayName = "Should_Validate_ECDSA_Private_Key_Access_And_Reject_A_Public_Only_Certificate")]
+        public void Should_validate_ecdsa_private_key_access_and_reject_public_only_certificate()
+        {
+            using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var request = new CertificateRequest("CN=ecdsa.example.net", ecdsa, HashAlgorithmName.SHA256);
+            using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1),
+                DateTimeOffset.UtcNow.AddHours(1));
+            using var publicCertificate = X509CertificateLoader.LoadCertificate(certificate.RawData);
+
+            Assert.Same(certificate, TlsServerSettings.ServerOnly(certificate).Certificate);
+            Assert.Throws<ArgumentException>(() => TlsServerSettings.ServerOnly(publicCertificate));
         }
 
         [Fact(DisplayName = "Should_Snapshot_And_Short_Circuit_Composed_Validation_Callbacks")]
@@ -183,12 +260,28 @@ namespace Akka.Tests.IO
             var chainThen = TlsCertificateValidation.ChainPlusThen((_, _, _) =>
             {
                 laterCalls++;
-                return false;
+                return true;
             });
             Assert.False(chainThen(certificate, null, "peer", SslPolicyErrors.RemoteCertificateChainErrors, NoLogger.Instance));
             Assert.Equal(0, laterCalls);
-            Assert.False(chainThen(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
+            Assert.True(chainThen(certificate, null, "peer", SslPolicyErrors.None, NoLogger.Instance));
             Assert.Equal(1, laterCalls);
+
+            X509Certificate2? observedCertificate = null;
+            X509Chain? observedChain = null;
+            string? observedPeer = null;
+            var successfulChainThen = TlsCertificateValidation.ChainPlusThen((peerCertificate, chain, remotePeer) =>
+            {
+                observedCertificate = peerCertificate;
+                observedChain = chain;
+                observedPeer = remotePeer;
+                return true;
+            });
+            Assert.True(successfulChainThen(certificate, null, "authenticated-peer", SslPolicyErrors.None,
+                NoLogger.Instance));
+            Assert.Same(certificate, observedCertificate);
+            Assert.Null(observedChain);
+            Assert.Equal("authenticated-peer", observedPeer);
             Assert.Throws<ArgumentNullException>(() => TlsCertificateValidation.ChainPlusThen(null!));
         }
 

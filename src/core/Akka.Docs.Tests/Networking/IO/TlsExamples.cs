@@ -103,5 +103,40 @@ namespace DocsExamples.Networking.IO
             return TlsClientSettings.ServerOnly(trust).WithTargetHost(expectedServerName);
         }
         #endregion
+
+        #region tlsCertificateLoading
+        public static X509Certificate2 LoadCertificateFromPkcs12File(string filePath, string password)
+        {
+            return TlsCertificateLoader.LoadPkcs12FromFile(
+                filePath, password, X509KeyStorageFlags.DefaultKeySet);
+        }
+
+        public static X509Certificate2 LoadCertificateFromPkcs12Bytes(byte[] pkcs12Bytes, string password)
+        {
+            return TlsCertificateLoader.LoadPkcs12(
+                pkcs12Bytes, password, X509KeyStorageFlags.DefaultKeySet);
+        }
+
+        public static X509Certificate2 LoadCertificateFromStore(string thumbprint)
+        {
+            return TlsCertificateLoader.LoadFromStore(
+                thumbprint, storeName: "My", storeLocation: StoreLocation.CurrentUser, validOnly: true);
+        }
+        #endregion
+
+        #region tlsTrustPolicyComposition
+        public static TlsPeerPolicy CreatePrivateCaPeerPolicy(string issuerPattern, string expectedHostname)
+        {
+            return TlsPeerPolicy.SystemTrust().And(
+                TlsCertificateValidation.ValidateIssuer(issuerPattern),
+                TlsCertificateValidation.ValidateHostname(expectedHostname));
+        }
+
+        public static TlsPeerPolicy CreatePinnedPeerPolicy(string thumbprint, string expectedHostname)
+        {
+            return TlsPeerPolicy.PinnedCertificates(thumbprint)
+                .And(TlsCertificateValidation.ValidateHostname(expectedHostname));
+        }
+        #endregion
     }
 }
