@@ -88,3 +88,11 @@ Artery can also use server-only TLS when clients should authenticate the server 
 [!code-csharp[ArteryTlsHosting](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsHosting)]
 
 Artery TLS policies authenticate transport peers; they do not authorize cluster membership or actor access. Configure trust and application-level authorization for those separate decisions. Keep the profile's certificate and private key alive until the actor system and its remoting transport have stopped, then dispose the caller-owned certificate.
+
+## Migrate From DotNetty TLS
+
+The [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md#migrating-dotnetty-tls-settings) maps DotNetty certificate, validation, and mTLS settings to Artery and explains the transport/address migration. DotNetty SSL configuration does not enable TLS on Artery; supply a typed TLS profile for every participating node.
+
+This complete node lifecycle loads a PKCS#12 certificate, enables mTLS with system chain trust, and disposes the certificate after remoting stops. It needs the namespaces `System`, `System.Security.Cryptography.X509Certificates`, `Akka.Actor`, `Akka.Actor.Setup`, `Akka.Configuration`, `Akka.IO`, and `Akka.Remote.Artery`. Replace the loopback hostname with an address reachable by the other nodes:
+
+[!code-csharp[ArteryTlsMigration](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsMigration)]
