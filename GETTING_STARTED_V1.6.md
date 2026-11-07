@@ -275,8 +275,132 @@ values fail at startup. One `ActorSystem` uses one transport: classic (`akka.tcp
 Artery (`akka://...`) are not wire-compatible, so every node in a cluster must run the same
 one. That also changes every address and seed node you write down - classic's
 `akka.tcp://MySystem@host:2552` becomes Artery's `akka://MySystem@host:25520`, a different
-scheme and a different default port. There's no `Akka.Hosting` helper for Artery yet;
-configure it through HOCON as shown above.
+scheme and a different default port. With Akka.Hosting, `WithArteryRemoting` enables Artery
+and accepts host, port, and optional TLS settings, as shown below. It preserves an existing
+Cluster provider; a local or unspecified provider becomes Remote.
+
+### TLS and Mutual TLS
+
+Artery supports server-only TLS and mutual TLS (mTLS) through immutable settings configured
+in code. An `ArteryTlsSetup` enables TLS for every inbound and outbound connection, including
+ordinary, control, and large-message channels. Omitting TLS settings uses plaintext TCP;
+a failed TLS handshake never falls back to plaintext. TLS keeps the `akka://` address scheme.
+
+The TLS APIs in this section require a build containing [#8791](https://github.com/akkadotnet/akka.net/pull/8791)
+and its prerequisite PRs; `1.6.0-beta6` and earlier do not include them.
+
+For mTLS, every node needs a certificate with an accessible private key, suitable for both
+client and server authentication. The following console example needs `Akka.Remote`, a
+`node.pfx` file, and its password in `NODE_CERT_PASSWORD`. It uses the operating system's
+certificate-chain trust, matching DotNetty's default validation with hostname checking off.
+Install your private CA in the operating system trust store if you use one.
+
+```csharp
+using System;
+using System.Security.Cryptography.X509Certificates;
+using Akka.Actor;
+using Akka.Actor.Setup;
+using Akka.Configuration;
+using Akka.IO;
+using Akka.Remote.Artery;
+
+using var certificate = TlsCertificateLoader.LoadPkcs12FromFile(
+    "node.pfx", Environment.GetEnvironmentVariable("NODE_CERT_PASSWORD"),
+    X509KeyStorageFlags.DefaultKeySet);
+var peerPolicy = TlsPeerPolicy.SystemTrust();
+var tls = ArteryTlsSettings.Mutual(certificate, peerPolicy);
+var config = ConfigurationFactory.ParseString("""
+    akka.actor.provider = remote
+    akka.remote.artery {
+        enabled = on
+        canonical.hostname = "127.0.0.1"
+        canonical.port = 25520
+    }
+    """);
+var setup = ActorSystemSetup.Create(
+    BootstrapSetup.Create().WithConfig(config), new ArteryTlsSetup(tls));
+var system = ActorSystem.Create("MySystem", setup);
+try
+{
+    Console.WriteLine("TLS node running. Press Enter to stop.");
+    Console.ReadLine();
+}
+finally
+{
+    await system.Terminate();
+}
+```
+
+Use an address reachable by the other nodes in place of the loopback hostname. Keep the
+certificate alive until the actor system has terminated, as above. For server-only TLS,
+replace `Mutual(certificate, peerPolicy)` with `ServerOnly(certificate, peerPolicy)` on each
+node: each listener still presents its server certificate, while incoming clients do not
+have to present one.
+
+For Akka.Hosting, reference `Akka.Remote.Hosting`, add `using Akka.Remote.Hosting;`, and
+pass the same `tls` profile inside your `AddAkka` callback:
+
+```csharp
+akkaBuilder.WithArteryRemoting(options =>
+{
+    options.HostName = "127.0.0.1";
+    options.Port = 25520;
+    options.Tls = tls;
+});
+```
+
+### Migrating DotNetty TLS Settings
+
+Artery does not read `akka.remote.dot-netty.tcp.ssl`, `DotNettySslSetup`, or the DotNetty
+`WithRemoting` SSL options. Replace them with certificate loading and an explicit peer
+policy. For example, this classic configuration's trust and mTLS settings map to the
+`SystemTrust()` and `Mutual(...)` example above:
+
+```hocon
+akka.remote.dot-netty.tcp {
+    enable-ssl = on
+    ssl {
+        certificate.path = "node.pfx"
+        certificate.password = "your-existing-password"
+        suppress-validation = off
+        require-mutual-authentication = on
+        validate-certificate-hostname = off
+    }
+}
+```
+
+| DotNetty setting or API | Artery TLS equivalent |
+| --- | --- |
+| `enable-ssl = on` | Supply `ArteryTlsSetup`, or set `WithArteryRemoting`'s `options.Tls`. |
+| `certificate.path`, `password`, `flags` | `TlsCertificateLoader.LoadPkcs12FromFile(path, password, keyStorageFlags)`. |
+| `certificate.use-thumbprint-over-file`, `thumbprint`, `store-name`, `store-location` | `TlsCertificateLoader.LoadFromStore(thumbprint, storeName, storeLocation, validOnly)`. Choose `validOnly` explicitly; it defaults to `true`. |
+| `DotNettySslSetup.Certificate` / `Ssl.X509Certificate` | Pass the existing caller-owned `X509Certificate2` to the TLS factory. |
+| `require-mutual-authentication = on` / `off` | `ArteryTlsSettings.Mutual(...)` / `ServerOnly(...)`. |
+| `suppress-validation = off` | `TlsPeerPolicy.SystemTrust()` for operating-system chain trust. |
+| `suppress-validation = on` | Choose an explicit trust policy, such as `PinnedCertificates(...)` for known self-signed peers, or `CustomTrust(...)` for your own acceptance rules. |
+| `validate-certificate-hostname = on` | Add `.And(TlsCertificateValidation.ValidateHostname())` to the outbound server policy. |
+| `CustomValidator` and `CertificateValidation` helpers | `TlsPeerPolicy.CustomTrust(...)` and the corresponding `TlsCertificateValidation` helpers. The callback has the same five arguments; wrap an existing delegate in a lambda to adapt its type. |
+
+`SystemTrust()` alone leaves hostname checking off. To enable it, use
+`ArteryTlsSettings.Mutual(certificate, inboundClientPolicy, outboundServerPolicy)` and add
+`ValidateHostname()` to the outbound policy. This validates the remote endpoint's host;
+inbound clients do not have an independently known DNS identity to infer from their address.
+Use explicit pins, subject/issuer checks, or a custom policy for inbound identity rules.
+
+`CustomTrust(...)` replaces the complete trust decision; `.And(...)` only adds restrictions.
+Pins alone do not add chain, expiry, revocation, or hostname checks. A missing required
+certificate is rejected even if a callback would accept it. Store lookup's `validOnly` filter
+is separate from peer validation; DotNetty tied that filter to `suppress-validation`.
+
+As with any classic-to-Artery migration, switch every participating node to the same
+transport and update actor and seed-node addresses. A TLS-enabled classic address such as
+`akka.ssl.tcp://MySystem@host:2552` becomes `akka://MySystem@host:25520` with Artery TLS
+configured in code. Classic and Artery cannot communicate during a mixed-transport rollout.
+
+See [TLS for Akka.IO, Akka.Streams, and Artery](docs/articles/remoting/tls-for-io-streams-artery.md)
+for certificate-store loading, pin rotation, custom policies, Streams APIs, and further
+compiled examples. The console example above is also maintained in
+[ArteryTlsExamples.cs](src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs).
 
 ## Getting Help and Reporting Beta Issues
 
