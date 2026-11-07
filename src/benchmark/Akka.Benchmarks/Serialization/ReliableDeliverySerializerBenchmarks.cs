@@ -16,6 +16,7 @@ using Akka.Cluster.Configuration;
 using Akka.Cluster.Serialization;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
+using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Serialization;
@@ -45,6 +46,8 @@ public class ReliableDeliverySerializerBenchmarks
     private ExtendedActorSystem _system = null!;
     private ReliableDeliverySerializer _protobuf = null!;
     private ReliableDeliveryMessagePackSerializer _msgPack = null!;
+    private SerializerV1Adapter _protobufAdapter = null!;
+    private readonly ArrayBufferWriter<byte> _bufferWriter = new();
 
     private ProducerController.Request _request = null!;
     private ConsumerController.SequencedMessage<string> _sequenced = null!;
@@ -72,6 +75,7 @@ public class ReliableDeliverySerializerBenchmarks
         _system = (ExtendedActorSystem)ActorSystem.Create("rd-serializer-bench", ClusterConfigFactory.Default());
         _protobuf = new ReliableDeliverySerializer(_system);
         _msgPack = new ReliableDeliveryMessagePackSerializer(_system);
+        _protobufAdapter = new SerializerV1Adapter(_system, _protobuf);
 
         var producerController = _system.ActorOf(Props.Empty, "producer-controller");
 
@@ -143,6 +147,12 @@ public class ReliableDeliverySerializerBenchmarks
     public byte[] Request_msgpack_serialize() => _msgPack.ToBinary(_request);
 
     [Benchmark]
+    public int Request_protobuf_buffer_writer() => SerializeToBuffer(_protobufAdapter, _request);
+
+    [Benchmark]
+    public int Request_msgpack_buffer_writer() => SerializeToBuffer(_msgPack, _request);
+
+    [Benchmark]
     public object Request_protobuf_deserialize() => _protobuf.FromBinary(_requestProtobufBytes, _requestManifest);
 
     [Benchmark]
@@ -155,6 +165,12 @@ public class ReliableDeliverySerializerBenchmarks
 
     [Benchmark]
     public byte[] SequencedMessage_msgpack_serialize() => _msgPack.ToBinary(_sequenced);
+
+    [Benchmark]
+    public int SequencedMessage_protobuf_buffer_writer() => SerializeToBuffer(_protobufAdapter, _sequenced);
+
+    [Benchmark]
+    public int SequencedMessage_msgpack_buffer_writer() => SerializeToBuffer(_msgPack, _sequenced);
 
     [Benchmark]
     public object SequencedMessage_protobuf_deserialize() =>
@@ -173,6 +189,12 @@ public class ReliableDeliverySerializerBenchmarks
     public byte[] SequencedMessageChunked_msgpack_serialize() => _msgPack.ToBinary(_sequencedChunked);
 
     [Benchmark]
+    public int SequencedMessageChunked_protobuf_buffer_writer() => SerializeToBuffer(_protobufAdapter, _sequencedChunked);
+
+    [Benchmark]
+    public int SequencedMessageChunked_msgpack_buffer_writer() => SerializeToBuffer(_msgPack, _sequencedChunked);
+
+    [Benchmark]
     public object SequencedMessageChunked_protobuf_deserialize() =>
         _protobuf.FromBinary(_sequencedChunkedProtobufBytes, _sequencedManifest);
 
@@ -189,8 +211,22 @@ public class ReliableDeliverySerializerBenchmarks
     public byte[] State_msgpack_serialize() => _msgPack.ToBinary(_state);
 
     [Benchmark]
+    public int State_protobuf_buffer_writer() => SerializeToBuffer(_protobufAdapter, _state);
+
+    [Benchmark]
+    public int State_msgpack_buffer_writer() => SerializeToBuffer(_msgPack, _state);
+
+    [Benchmark]
     public object State_protobuf_deserialize() => _protobuf.FromBinary(_stateProtobufBytes, _stateManifest);
 
     [Benchmark]
     public object State_msgpack_deserialize() => _msgPack.FromBinary(_stateMsgPackBytes, _stateManifest);
+
+    private int SerializeToBuffer(SerializerV2 serializer, object message)
+    {
+        // Artery hands the serializer a writer it owns. Reuse capacity here so both arms measure
+        // the serializer contract, including the legacy adapter's unavoidable byte-array copy.
+        _bufferWriter.Clear();
+        return serializer.Serialize(message, _bufferWriter);
+    }
 }
