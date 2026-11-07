@@ -9,7 +9,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -56,11 +55,11 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
         }
     }
 
-    [Theory(DisplayName = "Should_KeepNestedProtobufBytes_When_FutureCrdtWriterIsSelected")]
+    [Theory(DisplayName = "Should_KeepNestedProtobufBytes_When_ProtocolBindingsChange")]
     [InlineData("module")]
     [InlineData("typed")]
     [InlineData("legacy-alias")]
-    public async Task Should_KeepNestedProtobufBytes_When_FutureCrdtWriterIsSelected(string binding)
+    public async Task Should_KeepNestedProtobufBytes_When_ProtocolBindingsChange(string binding)
     {
         var oldNode = ActorSystem.Create(CanonicalCrdtSetup.SystemName, CanonicalCrdtSetup.Create(false, binding));
         var newNode = ActorSystem.Create(CanonicalCrdtSetup.SystemName, CanonicalCrdtSetup.Create(true, binding));
@@ -71,7 +70,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             var expectedInnerId = binding == "typed" ? 777 : binding == "legacy-alias" ? 778 : 11;
             var counter = CanonicalCrdtSetup.Counter(7);
             Assert.Equal(expectedInnerId, oldNode.Serialization.FindSerializerFor(counter).Identifier);
-            Assert.Equal(binding == "typed" ? 777 : 51, newNode.Serialization.FindSerializerFor(counter).Identifier);
+            Assert.Equal(expectedInnerId, newNode.Serialization.FindSerializerFor(counter).Identifier);
             Assert.Equal(expectedInnerId, new SerializationSupport((ExtendedActorSystem)newNode).OtherMessageToProto(counter).SerializerId);
 
             var oldLegacy = oldNode.Serialization.GetSerializerById(11);
@@ -79,7 +78,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             foreach (var name in new[] { "gset", "orset", "register", "dictionary" })
             {
                 var message = CanonicalCrdtSetup.Case(name);
-                Assert.Equal(51, newNode.Serialization.FindSerializerFor(message).Identifier);
+                Assert.Equal(binding == "legacy-alias" ? 778 : 11, newNode.Serialization.FindSerializerFor(message).Identifier);
                 var historical = oldLegacy.ToBinary(message);
                 var current = newLegacy.ToBinary(message);
                 Assert.Equal(historical, current);
@@ -91,9 +90,9 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             var newStoreSerializer = newNode.Serialization.GetSerializerForAlias("akka-data-replication");
             Assert.Equal(oldStoreSerializer.ToBinary(durable), newStoreSerializer.ToBinary(durable));
 
-            // The future network codec keeps the selected CRDT serializer. The protobuf-only
+            // The network codec keeps the selected CRDT serializer. The protobuf-only
             // canonical boundary must not change the owning actor system's write bindings.
-            Assert.Equal(binding == "typed" ? 777 : 51, newNode.Serialization.FindSerializerFor(counter).Identifier);
+            Assert.Equal(expectedInnerId, newNode.Serialization.FindSerializerFor(counter).Identifier);
         }
         finally
         {
@@ -101,11 +100,11 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
         }
     }
 
-    [Theory(DisplayName = "Should_KeepDigestBytesAndStateSensitivity_When_FutureCrdtWriterIsSelected")]
+    [Theory(DisplayName = "Should_KeepDigestBytesAndStateSensitivity_When_ProtocolBindingsChange")]
     [InlineData("module")]
     [InlineData("typed")]
     [InlineData("legacy-alias")]
-    public async Task Should_KeepDigestBytesAndStateSensitivity_When_FutureCrdtWriterIsSelected(string binding)
+    public async Task Should_KeepDigestBytesAndStateSensitivity_When_ProtocolBindingsChange(string binding)
     {
         var oldNode = ActorSystem.Create(CanonicalCrdtSetup.SystemName, CanonicalCrdtSetup.Create(false, binding));
         var newNode = ActorSystem.Create(CanonicalCrdtSetup.SystemName, CanonicalCrdtSetup.Create(true, binding));
@@ -115,7 +114,8 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
         {
             var state = new DataEnvelope(CanonicalCrdtSetup.Register(7));
             var changed = new DataEnvelope(CanonicalCrdtSetup.Register(8));
-            Assert.Equal(51, newNode.Serialization.FindSerializerFor(state.Data).Identifier);
+            var selected = newNode.Serialization.FindSerializerFor(state.Data);
+            Assert.Equal(binding == "legacy-alias" ? 778 : 11, selected.Identifier);
             Assert.Equal(52, newNode.Serialization.FindSerializerFor(state).Identifier);
             var oldDigestSerializer = Replicator.FindDigestSerializer(oldNode);
             var newDigestSerializer = Replicator.FindDigestSerializer(newNode);
@@ -127,9 +127,8 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             Assert.False(SHA1.HashData(currentDigestBytes).SequenceEqual(SHA1.HashData(newDigestSerializer.ToBinary(changed))));
 
             var network = newNode.Serialization.FindSerializerFor(state);
-            var before = CanonicalCrdtSetup.FutureWrites(newNode);
             var bytes = network.ToBinary(state);
-            Assert.True(CanonicalCrdtSetup.FutureWrites(newNode) > before);
+            Assert.Same(selected, newNode.Serialization.FindSerializerFor(state.Data));
             Assert.Equal(state, network.FromBinary(bytes, network.Manifest(state)));
         }
         finally
@@ -137,13 +136,46 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             await Task.WhenAll(oldNode.Terminate(), newNode.Terminate()).WaitAsync(TimeSpan.FromSeconds(10));
         }
     }
+
+    [Fact(DisplayName = "Should_KeepExplicitUserSerializer_When_NonCrdtPayloadUsesReservedFutureId")]
+    public async Task Should_KeepExplicitUserSerializer_When_NonCrdtPayloadUsesReservedFutureId()
+    {
+        var setup = SerializationSetup.Create(system => ImmutableHashSet.Create(SerializerDetails.Create(
+            "non-crdt-51", new NonCrdtSerializer(system), ImmutableHashSet.Create(typeof(NonCrdtValue)))));
+        var node = ActorSystem.Create(CanonicalCrdtSetup.SystemName,
+            ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(ReplicatorMessagePackSerializerSpec.PortConfig), setup));
+        InitializeLogger(node);
+        try
+        {
+            var value = new NonCrdtValue("user-value");
+            Assert.Equal(51, node.Serialization.FindSerializerFor(value).Identifier);
+            var helper = new SerializationSupport((ExtendedActorSystem)node);
+            var encoded = helper.OtherMessageToProto(value);
+            Assert.Equal(51, encoded.SerializerId);
+            Assert.Equal(Encoding.UTF8.GetBytes(value.Value), encoded.EnclosedMessage.ToByteArray());
+            Assert.Equal(value, helper.OtherMessageFromProto(encoded));
+        }
+        finally
+        {
+            await node.Terminate().WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    private sealed record NonCrdtValue(string Value);
+
+    private sealed class NonCrdtSerializer(ExtendedActorSystem system) : SerializerWithStringManifest(system)
+    {
+        public override int Identifier => 51;
+        public override string Manifest(object o) => "user";
+        public override byte[] ToBinary(object obj) => Encoding.UTF8.GetBytes(((NonCrdtValue)obj).Value);
+        public override object FromBinary(byte[] bytes, string manifest) => new NonCrdtValue(Encoding.UTF8.GetString(bytes));
+    }
 }
 
 /// <summary>
-/// Reserved-future-id stand-in, not a CRDT port. Setup precedence is independent of the global
-/// toggle, so this fixture deliberately supplies its marker binding only for the on phase.
-/// Both phases register its reader. Real module Supersedes coverage must replace this stand-in
-/// when id 51 ships; its deliberately different bytes expose the nested protobuf regression now.
+/// Fixed nested CRDT values and independent custom type/legacy-alias overrides. Builtin V2
+/// instance selection is tested with a real fake-module Supersedes declaration in Akka.Tests;
+/// a Setup serializer is custom and must not be mistaken for a module-declared builtin.
 /// </summary>
 internal static class CanonicalCrdtSetup
 {
@@ -152,7 +184,6 @@ internal static class CanonicalCrdtSetup
 
     internal static GCounter Counter(ulong value) => GCounter.Empty.Increment(Node, value);
     internal static LWWRegister<GCounter> Register(ulong value) => new(Node, Counter(value), 1234567);
-    internal static int FutureWrites(ActorSystem system) => ((ReservedCrdtSerializer)system.Serialization.GetSerializerById(51)).Writes;
 
     internal static void AssertStoredCrdtIds(byte[] record, string binding)
     {
@@ -215,14 +246,7 @@ internal static class CanonicalCrdtSetup
         var config = ConfigurationFactory.ParseString($"akka.actor.serialization-v2 = {(enabled ? "on" : "off")}")
             .WithFallback(extra ?? Config.Empty).WithFallback(custom)
             .WithFallback(ReplicatorMessagePackSerializerSpec.PortConfig);
-        var setup = SerializationSetup.Create(system => ImmutableHashSet.Create(SerializerDetails.Create(
-            "reserved-crdt-v2-stand-in", new ReservedCrdtSerializer(system), enabled
-                ? ImmutableHashSet.Create(typeof(IReplicatedDataSerialization)) : ImmutableHashSet<Type>.Empty)));
-        return ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), setup);
-    }
-
-    private sealed class ReservedCrdtSerializer(ExtendedActorSystem system) : PrefixedCrdtSerializer(system, 51)
-    {
+        return ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config));
     }
 
     public sealed class TypedCounterSerializer(ExtendedActorSystem system) : PrefixedCrdtSerializer(system, 777)
@@ -237,15 +261,9 @@ internal static class CanonicalCrdtSetup
     {
         private readonly ReplicatedDataSerializer _legacy = new(system);
         private readonly byte[] _prefix = Encoding.UTF8.GetBytes($"stand-in-{identifier}:");
-        private int _writes;
-        public int Writes => Volatile.Read(ref _writes);
         public override int Identifier => identifier;
         public override string Manifest(object o) => _legacy.Manifest(o);
-        public override byte[] ToBinary(object obj)
-        {
-            Interlocked.Increment(ref _writes);
-            return _prefix.Concat(_legacy.ToBinary(obj)).ToArray();
-        }
+        public override byte[] ToBinary(object obj) => _prefix.Concat(_legacy.ToBinary(obj)).ToArray();
 
         public override object FromBinary(byte[] bytes, string manifest)
         {

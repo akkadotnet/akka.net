@@ -194,6 +194,10 @@ namespace Akka.Serialization
         // Deserialize/GetSerializerById hot path. Registration after startup is not supported.
         private readonly Dictionary<int, SerializerV2> _serializersById = new();
         private readonly Dictionary<string, SerializerV2> _serializersByName = new();
+        // Canonical protobuf payloads retain a module's legacy format while network bindings
+        // move to its builtin V2 instance. Keep only identity and alias, never default binding
+        // bookkeeping; custom instances (even with the same type/id) are not module defaults.
+        private readonly Dictionary<SerializerV2, string> _canonicalLegacyAliases = new(ReferenceEqualityComparer.Instance);
 
         // Aliases/types currently holding a module default, not a HOCON or Setup registration, plus (for an
         // id) which alias registered it as a default - overriding one of these never logs the "serializer
@@ -365,6 +369,11 @@ namespace Akka.Serialization
 
                 if (serializationV2 && built.Takeovers.Count > 0)
                     (takeoverModules ??= new List<LoadedModule>()).Add(built);
+
+                // Record all declarations, including when the global switch is off: an explicit
+                // user binding can still select the module's builtin V2 writer in that mode.
+                foreach (var (v2, legacy) in built.Takeovers)
+                    _canonicalLegacyAliases.Add(v2.SerializerV2, legacy.Alias);
 
                 foreach (var details in built.Details)
                 {
@@ -1282,6 +1291,19 @@ namespace Akka.Serialization
         }
 
 #nullable enable
+        /// <summary>
+        /// Uses a module's current legacy alias for its exact builtin V2 instance. Canonical
+        /// digests and headerless durable protobuf records must not follow network takeovers;
+        /// explicit custom serializers and application replacements of legacy aliases still win.
+        /// </summary>
+        internal Serializer FindSerializerForCanonicalFormat(object? obj)
+        {
+            var selected = FindSerializerV2For(obj);
+            return _canonicalLegacyAliases.TryGetValue(selected, out var alias)
+                ? GetSerializerForAlias(alias)
+                : AsPublicSerializer(selected);
+        }
+
         /// <summary>
         /// Resolves a registered alias independently of its current write bindings. Durable stores
         /// use this to retain an existing format when a new module row takes over network bindings.

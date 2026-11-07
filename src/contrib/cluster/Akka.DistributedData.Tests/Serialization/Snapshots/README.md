@@ -49,13 +49,13 @@ neither a new record header nor a storage migration is introduced by this protoc
 
 Replicator SHA1 digests also retain the legacy envelope format when network bindings select id 52.
 Opposing writers must hash equal logical states identically, or repeated differences can starve new
-keys in bounded gossip batches. This currently depends on nested CRDT id 11 staying unchanged.
-The future id-51 CRDT port (#8679) must preserve a canonical nested digest format across bindings;
-pinning only the outer envelope serializer to id 12 will not establish that invariant once id 51
-can be selected for its nested payload. Custom legacy aliases and explicit bindings remain intact.
-The same nested-format audit applies to headerless LMDB storage: its legacy outer envelope
-delegates CRDT serialization too. The id-51 port must prove off/on/off recovery against existing
-stores without silently replacing nested id-11 bytes before that new writer is enabled.
+keys in bounded gossip batches. The protobuf nesting helper resolves each module-declared
+builtin V2 instance to its active legacy alias, using Supersedes metadata regardless of the
+global toggle. This keeps canonical digests and headerless LMDB records stable when nested
+builtin network writers change. Custom serializer instances and legacy-alias replacements
+retain their own formats; normal network serializer selection is unchanged. The future id-51
+CRDT port (#8679) must rerun the canonical and off/on/off durable proofs with its real module
+registration, including generic CRDT state, before enabling that new writer.
 
 `ReplicatedDataCanonicalSerializationSpec` additionally freezes nested GCounter values in
 GSet, ORSet, LWWRegister and ORDictionary before the canonical-helper change, on the unchanged
@@ -64,6 +64,6 @@ timestamp 1234567. The captured ORSet and dictionary key dots are fixed explicit
 1 and 2, respectively; public Add/SetItem would use a process-global counter. Independent
 protobuf field decoding confirms nested id 11 / manifest F;
 ORSet and ORDictionary fixtures include their original gzip containers. These four fixtures
-are historical protobuf controls, not id-51 fixtures. The deliberately different reserved-id-51
-Setup stand-in activates a marker binding only in its on phase; it is not a production CRDT
-codec or evidence of real module Supersedes or Native AOT coverage.
+are historical protobuf controls, not id-51 fixtures. Core fake-module tests exercise actual
+Supersedes metadata at reserved id 51. Custom Setup instances remain custom even if they use
+that id; no CRDT V2 serializer is registered by this canonical-format prerequisite.
