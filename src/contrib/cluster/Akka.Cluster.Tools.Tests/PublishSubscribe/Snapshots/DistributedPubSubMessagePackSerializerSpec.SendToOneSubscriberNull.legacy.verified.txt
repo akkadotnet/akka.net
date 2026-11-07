@@ -1,0 +1,7 @@
+﻿case: SendToOneSubscriberNull
+message-type: SendToOneSubscriber
+manifest: F
+serializer-id: 9
+byte-count: 2
+
+0000  0a 00                                             |..|

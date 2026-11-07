@@ -1,0 +1,8 @@
+﻿case: SendToAllNull
+message-type: SendToAll
+manifest: D
+serializer-id: 49
+byte-count: 19
+
+0000  83 01 ac 2f 75 73 65 72  2f 74 61 72 67 65 74 02  |.../user/target.|
+0010  c0 03 c3                                          |...|

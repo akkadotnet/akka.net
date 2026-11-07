@@ -105,21 +105,21 @@ internal sealed record PubSubValueWire(
 [AkkaSerializable(Manifest = "C")]
 internal sealed record PubSubSendWire(
     [property: AkkaField(1)] string Path,
-    [property: AkkaField(2)] object Message,
+    [property: AkkaField(2)] object? Message,
     [property: AkkaField(3)] bool LocalAffinity) : IPubSubWireMessage;
 
 [AkkaSerializable(Manifest = "D")]
 internal sealed record PubSubSendToAllWire(
     [property: AkkaField(1)] string Path,
-    [property: AkkaField(2)] object Message,
+    [property: AkkaField(2)] object? Message,
     [property: AkkaField(3)] bool ExcludeSelf) : IPubSubWireMessage;
 
 [AkkaSerializable(Manifest = "E")]
 internal sealed record PubSubPublishWire(
     [property: AkkaField(1)] string Topic,
-    [property: AkkaField(2)] object Message,
+    [property: AkkaField(2)] object? Message,
     [property: AkkaField(3)] bool SendOneMessageToEachGroup) : IPubSubWireMessage;
 
 [AkkaSerializable(Manifest = "F")]
 internal sealed record PubSubSendToOneSubscriberWire(
-    [property: AkkaField(1)] object Message) : IPubSubWireMessage;
+    [property: AkkaField(1)] object? Message) : IPubSubWireMessage;

@@ -1,0 +1,8 @@
+﻿case: SendToAllNull
+message-type: SendToAll
+manifest: D
+serializer-id: 9
+byte-count: 18
+
+0000  0a 0c 2f 75 73 65 72 2f  74 61 72 67 65 74 10 01  |../user/target..|
+0010  1a 00                                             |..|

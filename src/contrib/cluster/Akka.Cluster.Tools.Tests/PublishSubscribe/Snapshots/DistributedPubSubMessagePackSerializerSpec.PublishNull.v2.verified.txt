@@ -1,0 +1,7 @@
+﻿case: PublishNull
+message-type: Publish
+manifest: E
+serializer-id: 49
+byte-count: 12
+
+0000  83 01 a5 74 6f 70 69 63  02 c0 03 c3              |...topic....|

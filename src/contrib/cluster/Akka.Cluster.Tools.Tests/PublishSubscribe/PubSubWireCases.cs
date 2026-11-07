@@ -25,6 +25,10 @@ internal static class PubSubWireCases
         (new SendToAll("/user/target", "hello", true), "D", "SendToAllExcludeSelf"),
         (new Publish("topic", "hello", false), "E", "Publish"),
         (new Publish("topic", "hello", true), "E", "PublishEachGroup"),
-        (new SendToOneSubscriber("hello"), "F", "SendToOneSubscriber")
+        (new SendToOneSubscriber("hello"), "F", "SendToOneSubscriber"),
+        (new Send("/user/target", null!, true), "C", "SendNull"),
+        (new SendToAll("/user/target", null!, true), "D", "SendToAllNull"),
+        (new Publish("topic", null!, true), "E", "PublishNull"),
+        (new SendToOneSubscriber(null!), "F", "SendToOneSubscriberNull")
     ];
 }
