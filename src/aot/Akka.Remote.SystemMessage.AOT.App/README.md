@@ -11,4 +11,4 @@ DOTNET_ROOT=/path/to/sdk10.0.114 PATH=/path/to/sdk10.0.114:$PATH dotnet publish 
 /tmp/system-native/Akka.Remote.SystemMessage.AOT.App
 ```
 
-Native proof is pending until a successful run receipt is retained. The app asserts that dynamic code is unavailable and the dynamic type loading switch is explicitly false. ILC warnings stay visible (matching existing native canaries); this is not a warning-free Remote audit. No new NoWarn, warning baseline or global public setting is used.
+The retained Linux x64 receipt passed with 54 registered-id62 cases (18 samples × three modes), 42 legacy22 control reads, 54 selected-writer checks and 18 zero-output rejection checks. The publish receipt retains seven pre-existing Remote diagnostics, including the unsupported legacy exception reader. The app asserts that dynamic code is unavailable and the dynamic type loading switch is explicitly false. ILC warnings stay visible (matching existing native canaries); this is not a warning-free Remote audit. No new NoWarn, warning baseline or global public setting is used.
