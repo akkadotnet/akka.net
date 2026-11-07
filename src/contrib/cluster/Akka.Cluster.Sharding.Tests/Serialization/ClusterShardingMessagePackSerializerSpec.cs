@@ -17,6 +17,7 @@ using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
+using Google.Protobuf;
 using VerifyXunit;
 using Xunit;
 
@@ -39,7 +40,7 @@ public sealed class ClusterShardingMessagePackSerializerSpec : V2PortSpec
         Cases = ShardingWireCases.Create(name => ((ExtendedActorSystem)Sys).Provider.ResolveActorRef(ShardingWireCases.Path(name)))
             .Select(item => new V2PortCase(item.Message, item.Manifest, item.Name)
             {
-                AssertEquivalent = item.Message is ShardCoordinator.CoordinatorState or ClusterShardingStats or ShardRegionStats or CurrentShardRegionState
+                AssertEquivalent = item.Message is ShardingEnvelope or ShardCoordinator.CoordinatorState or ClusterShardingStats or ShardRegionStats or CurrentShardRegionState
                     ? AssertDomainFields : null
             }).ToArray();
     }
@@ -149,6 +150,70 @@ public sealed class ClusterShardingMessagePackSerializerSpec : V2PortSpec
         }
     }
 
+    [Fact(DisplayName = "Should_MatchLegacyReferenceNormalization_When_ActorRefsAreNullOrSentinels")]
+    public async Task Should_MatchLegacyReferenceNormalization_When_ActorRefsAreNullOrSentinels()
+    {
+        (Func<IActorRef?, object> Create, Func<object, IActorRef> Ref)[] forms =
+        [
+            (value => new ShardCoordinator.Register(value!), message => ((ShardCoordinator.Register)message).ShardRegion),
+            (value => new ShardCoordinator.RegisterProxy(value!), message => ((ShardCoordinator.RegisterProxy)message).ShardRegionProxy),
+            (value => new ShardCoordinator.RegisterAck(value!), message => ((ShardCoordinator.RegisterAck)message).Coordinator),
+            (value => new ShardCoordinator.ShardRegionRegistered(value!), message => ((ShardCoordinator.ShardRegionRegistered)message).Region),
+            (value => new ShardCoordinator.ShardRegionProxyRegistered(value!), message => ((ShardCoordinator.ShardRegionProxyRegistered)message).RegionProxy),
+            (value => new ShardCoordinator.ShardRegionTerminated(value!), message => ((ShardCoordinator.ShardRegionTerminated)message).Region),
+            (value => new ShardCoordinator.ShardRegionProxyTerminated(value!), message => ((ShardCoordinator.ShardRegionProxyTerminated)message).RegionProxy),
+            (value => new ShardCoordinator.GracefulShutdownRequest(value!), message => ((ShardCoordinator.GracefulShutdownRequest)message).ShardRegion),
+            (value => new ShardCoordinator.RegionStopped(value!), message => ((ShardCoordinator.RegionStopped)message).ShardRegion),
+            (value => new ShardCoordinator.ShardHomeAllocated("s1", value!), message => ((ShardCoordinator.ShardHomeAllocated)message).Region),
+            (value => new ShardCoordinator.ShardHome("s1", value!), message => ((ShardCoordinator.ShardHome)message).Ref)
+        ];
+        await using var local = new Akka.TestKit.Xunit.TestKit("akka.actor.provider = local", "sharding-local-refs", _output);
+        var remote = ((ExtendedActorSystem)Sys).Provider.ResolveActorRef(ShardingWireCases.Path("region"));
+        foreach (var receiver in new[] { Sys, local.Sys })
+        {
+            var node = (ExtendedActorSystem)receiver;
+            var legacy = CreateLegacy(node);
+            var native = CreateV2(node);
+            foreach (var value in new[] { ActorRefs.NoSender, ActorRefs.Nobody, remote })
+            foreach (var form in forms)
+            {
+                var message = form.Create(value);
+                object? expected = null;
+                object? actual = null;
+                var expectedError = Record.Exception(() => expected = legacy.FromBinary(legacy.ToBinary(message), legacy.Manifest(message)));
+                var actualError = Record.Exception(() => actual = native.FromBinary(native.ToBinary(message), native.Manifest(message)));
+                if (expectedError is not null)
+                {
+                    actualError.Should().NotBeNull().And.BeOfType(expectedError.GetType());
+                    continue;
+                }
+                actualError.Should().BeNull(message.GetType().Name);
+                form.Ref(actual!).Should().Be(form.Ref(expected!), message.GetType().Name);
+                if (value is null) form.Ref(actual!).Should().BeSameAs(node.Provider.ResolveActorRef(string.Empty));
+            }
+
+            var proto = new Akka.Cluster.Sharding.Serialization.Proto.Msg.CoordinatorState();
+            proto.Regions.Add("");
+            proto.RegionProxies.Add("");
+            proto.Shards.Add(new Akka.Cluster.Sharding.Serialization.Proto.Msg.CoordinatorState.Types.ShardEntry
+            {
+                ShardId = "s1", RegionRef = ""
+            });
+            var codec = new ClusterShardingMessagePackCodec(node);
+            var wire = new ShardingCoordinatorWire([new ShardingAllocationWire("s1", null)], [null], [null], []);
+            object? oldState = null;
+            object? newState = null;
+            var oldError = Record.Exception(() => oldState = legacy.FromBinary(proto.ToByteArray(), "AA"));
+            var newError = Record.Exception(() => newState = native.FromBinary(codec.ToBinary(wire), "AA"));
+            if (oldError is not null) newError.Should().NotBeNull().And.BeOfType(oldError.GetType());
+            else
+            {
+                newError.Should().BeNull();
+                AssertDomainFields(oldState!, newState!);
+            }
+        }
+    }
+
     [Fact(DisplayName = "Should_UseTheRegisteredPayloadSerializer_When_ShardingEnvelopeWrapsACustomMessage")]
     public async Task Should_UseTheRegisteredPayloadSerializer_When_ShardingEnvelopeWrapsACustomMessage()
     {
@@ -221,6 +286,11 @@ public sealed class ClusterShardingMessagePackSerializerSpec : V2PortSpec
         actual.GetType().Should().Be(expected.GetType());
         switch (expected)
         {
+            case ShardingEnvelope envelope:
+                var restoredEnvelope = (ShardingEnvelope)actual;
+                restoredEnvelope.EntityId.Should().Be(envelope.EntityId);
+                restoredEnvelope.Message.Should().Be(envelope.Message);
+                break;
             case ShardCoordinator.CoordinatorState state:
                 var restored = (ShardCoordinator.CoordinatorState)actual;
                 restored.Shards.Should().BeEquivalentTo(state.Shards);

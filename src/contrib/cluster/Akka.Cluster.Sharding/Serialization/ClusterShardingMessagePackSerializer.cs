@@ -47,19 +47,19 @@ internal sealed class ClusterShardingMessagePackSerializer : SerializerV2
 
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
     {
-        ShardingEnvelopeWire data => new ShardingEnvelope(data.EntityId, data.Message),
+        ShardingEnvelopeWire data => new ShardingEnvelope(data.EntityId, data.Message!),
         ShardingCoordinatorWire data => FromWire(data),
-        ShardingRegionRegisteredWire data => new ShardCoordinator.ShardRegionRegistered(data.Ref),
-        ShardingProxyRegisteredWire data => new ShardCoordinator.ShardRegionProxyRegistered(data.Ref),
-        ShardingRegionTerminatedWire data => new ShardCoordinator.ShardRegionTerminated(data.Ref),
-        ShardingProxyTerminatedWire data => new ShardCoordinator.ShardRegionProxyTerminated(data.Ref),
-        ShardingRegisterWire data => new ShardCoordinator.Register(data.Ref),
-        ShardingRegisterProxyWire data => new ShardCoordinator.RegisterProxy(data.Ref),
-        ShardingRegisterAckWire data => new ShardCoordinator.RegisterAck(data.Ref),
-        ShardingGracefulShutdownWire data => new ShardCoordinator.GracefulShutdownRequest(data.Ref),
-        ShardingRegionStoppedWire data => new ShardCoordinator.RegionStopped(data.Ref),
-        ShardingHomeAllocatedWire data => new ShardCoordinator.ShardHomeAllocated(data.Shard, data.Ref),
-        ShardingShardHomeWire data => new ShardCoordinator.ShardHome(data.Shard, data.Ref),
+        ShardingRegionRegisteredWire data => new ShardCoordinator.ShardRegionRegistered(Reference(data.Ref)),
+        ShardingProxyRegisteredWire data => new ShardCoordinator.ShardRegionProxyRegistered(Reference(data.Ref)),
+        ShardingRegionTerminatedWire data => new ShardCoordinator.ShardRegionTerminated(Reference(data.Ref)),
+        ShardingProxyTerminatedWire data => new ShardCoordinator.ShardRegionProxyTerminated(Reference(data.Ref)),
+        ShardingRegisterWire data => new ShardCoordinator.Register(Reference(data.Ref)),
+        ShardingRegisterProxyWire data => new ShardCoordinator.RegisterProxy(Reference(data.Ref)),
+        ShardingRegisterAckWire data => new ShardCoordinator.RegisterAck(Reference(data.Ref)),
+        ShardingGracefulShutdownWire data => new ShardCoordinator.GracefulShutdownRequest(Reference(data.Ref)),
+        ShardingRegionStoppedWire data => new ShardCoordinator.RegionStopped(Reference(data.Ref)),
+        ShardingHomeAllocatedWire data => new ShardCoordinator.ShardHomeAllocated(data.Shard, Reference(data.Ref)),
+        ShardingShardHomeWire data => new ShardCoordinator.ShardHome(data.Shard, Reference(data.Ref)),
         ShardingHomeDeallocatedWire data => new ShardCoordinator.ShardHomeDeallocated(data.Shard),
         ShardingGetShardHomeWire data => new ShardCoordinator.GetShardHome(data.Shard),
         ShardingHostShardWire data => new ShardCoordinator.HostShard(data.Shard),
@@ -139,6 +139,10 @@ internal sealed class ClusterShardingMessagePackSerializer : SerializerV2
         _ => throw new ArgumentException($"Unsupported sharding message [{obj.GetType()}]", nameof(obj))
     };
 
+    // Protobuf resolves an empty NoSender path through the actual receiver provider. Local
+    // providers yield DeadLetters; remote providers yield NoSender. Retain both legacy results.
+    private IActorRef Reference(IActorRef? value) => value ?? system.Provider.ResolveActorRef(string.Empty);
+
     private static string[] Sorted(IEnumerable<string> values) => values.OrderBy(value => value, StringComparer.Ordinal).ToArray();
     private static IActorRef[] Sorted(IEnumerable<IActorRef> values) => values
         .OrderBy(Akka.Serialization.Serialization.SerializedActorPath, StringComparer.Ordinal).ToArray();
@@ -149,15 +153,18 @@ internal sealed class ClusterShardingMessagePackSerializer : SerializerV2
         state.Shards.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new ShardingAllocationWire(pair.Key, pair.Value)).ToArray(),
         Sorted(state.Regions.Keys), Sorted(state.RegionProxies), Sorted(state.UnallocatedShards));
 
-    private static ShardCoordinator.CoordinatorState FromWire(ShardingCoordinatorWire state)
+    private ShardCoordinator.CoordinatorState FromWire(ShardingCoordinatorWire state)
     {
-        var shards = state.Shards.ToImmutableDictionary(entry => entry.Shard, entry => entry.Region);
-        var regions = state.Regions.ToImmutableDictionary(region => region, _ => (IImmutableList<string>)ImmutableList<string>.Empty);
+        var shards = state.Shards.ToImmutableDictionary(entry => entry.Shard, entry => Reference(entry.Region));
+        var regions = state.Regions.Select(Reference).ToImmutableDictionary(region => region, _ => (IImmutableList<string>)ImmutableList<string>.Empty);
         foreach (var entry in state.Shards)
-            regions = regions.SetItem(entry.Region, regions[entry.Region].Add(entry.Shard));
+        {
+            var region = Reference(entry.Region);
+            regions = regions.SetItem(region, regions[region].Add(entry.Shard));
+        }
         // The legacy snapshot stores region identities, reconstructs their shard lists, and does
         // not persist RememberEntities. The coordinator reapplies that runtime setting on recovery.
-        return new ShardCoordinator.CoordinatorState(shards, regions, state.Proxies.ToImmutableHashSet(), state.Unallocated.ToImmutableHashSet());
+        return new ShardCoordinator.CoordinatorState(shards, regions, state.Proxies.Select(Reference).ToImmutableHashSet(), state.Unallocated.ToImmutableHashSet());
     }
 
     private static ShardingRegionStatsWire ToWire(ShardRegionStats stats) => new(
@@ -181,60 +188,60 @@ internal sealed partial class ClusterShardingMessagePackCodec : AkkaSerializer
 [AkkaSerializable(Manifest = "a")]
 internal sealed record ShardingEnvelopeWire(
     [property: AkkaField(1)] string EntityId,
-    [property: AkkaField(2)] object Message) : IShardingWireMessage;
+    [property: AkkaField(2)] object? Message) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AA")]
 internal sealed record ShardingCoordinatorWire(
     [property: AkkaField(1)] ShardingAllocationWire[] Shards,
-    [property: AkkaField(2)] IActorRef[] Regions,
-    [property: AkkaField(3)] IActorRef[] Proxies,
+    [property: AkkaField(2)] IActorRef?[] Regions,
+    [property: AkkaField(3)] IActorRef?[] Proxies,
     [property: AkkaField(4)] string[] Unallocated) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AB")]
 internal sealed record ShardingRegionRegisteredWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AC")]
 internal sealed record ShardingProxyRegisteredWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AD")]
 internal sealed record ShardingRegionTerminatedWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AE")]
 internal sealed record ShardingProxyTerminatedWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BA")]
 internal sealed record ShardingRegisterWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BB")]
 internal sealed record ShardingRegisterProxyWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BC")]
 internal sealed record ShardingRegisterAckWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BL")]
 internal sealed record ShardingGracefulShutdownWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BM")]
 internal sealed record ShardingRegionStoppedWire(
-    [property: AkkaField(1)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(1)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AF")]
 internal sealed record ShardingHomeAllocatedWire(
     [property: AkkaField(1)] string Shard,
-    [property: AkkaField(2)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(2)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "BE")]
 internal sealed record ShardingShardHomeWire(
     [property: AkkaField(1)] string Shard,
-    [property: AkkaField(2)] IActorRef Ref) : IShardingWireMessage;
+    [property: AkkaField(2)] IActorRef? Ref) : IShardingWireMessage;
 
 [AkkaSerializable(Manifest = "AG")]
 internal sealed record ShardingHomeDeallocatedWire(
@@ -360,7 +367,7 @@ internal sealed record ShardingOldEntityStoppedWire(
 [AkkaSerializable]
 internal sealed record ShardingAllocationWire(
     [property: AkkaField(1)] string Shard,
-    [property: AkkaField(2)] IActorRef Region);
+    [property: AkkaField(2)] IActorRef? Region);
 
 [AkkaSerializable]
 internal sealed record ShardingCountWire(

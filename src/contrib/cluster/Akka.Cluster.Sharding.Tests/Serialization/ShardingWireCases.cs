@@ -26,6 +26,7 @@ internal static class ShardingWireCases
         return
         [
             (new ShardingEnvelope("e1", "payload"), "a", "Envelope"),
+            (new ShardingEnvelope("e1", null!), "a", "EnvelopeNull"),
             (state, "AA", "CoordinatorState"),
             (ShardCoordinator.CoordinatorState.Empty, "AA", "CoordinatorStateEmpty"),
             (new ShardCoordinator.ShardRegionRegistered(region), "AB", "RegionRegistered"),

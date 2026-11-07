@@ -1,0 +1,7 @@
+﻿case: EnvelopeNull
+message-type: ShardingEnvelope
+manifest: a
+serializer-id: 53
+byte-count: 7
+
+0000  82 01 a2 65 31 02 c0                              |...e1..|
