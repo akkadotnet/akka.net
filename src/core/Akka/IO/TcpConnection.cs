@@ -70,7 +70,7 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: a background task failed with an exception.
         /// </summary>
-        private sealed class IoTaskFailed : INoSerializationVerificationNeeded
+        internal sealed class IoTaskFailed : INoSerializationVerificationNeeded
         {
             public Exception Cause { get; }
             public IoTaskFailed(Exception cause) { Cause = cause; }
@@ -88,7 +88,7 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: PipeReader.ReadAsync completed with data.
         /// </summary>
-        private sealed class PipeReadCompleted : INoSerializationVerificationNeeded
+        internal sealed class PipeReadCompleted : INoSerializationVerificationNeeded
         {
             public ReadOnlySequence<byte> Data { get; }
             public bool IsCompleted { get; }
@@ -102,7 +102,7 @@ namespace Akka.IO
             }
         }
 
-        private sealed class PipeReadCanceled : INoSerializationVerificationNeeded
+        internal sealed class PipeReadCanceled : INoSerializationVerificationNeeded
         {
             public static readonly PipeReadCanceled Instance = new();
             private PipeReadCanceled() { }
@@ -937,7 +937,7 @@ namespace Akka.IO
         /// per connection with one cached continuation, so a read that has to wait allocates no async state machine.
         /// At most one read is in flight (<see cref="_readPending"/>).
         /// </summary>
-        private sealed class PipeReadToActor
+        internal sealed class PipeReadToActor
         {
             private readonly PipeReader _reader;
             private readonly CancellationToken _ct;
