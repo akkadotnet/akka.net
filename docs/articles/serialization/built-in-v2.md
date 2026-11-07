@@ -22,7 +22,7 @@ temporarily offline consumers. A node running an earlier v1.6 beta might lack a 
 checking only the major/minor version is insufficient.
 
 | Subsystem | Legacy alias / id | V2 alias / id | First release containing the V2 reader | Native AOT boundary |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Reliable Delivery, including durable producer queues | `reliable-delivery` / 36 | `reliable-delivery-v2` / 76 | Unreleased; [#8409](https://github.com/akkadotnet/akka.net/pull/8409) | Generic Delivery messages throw `SerializationException` when `Akka.DynamicTypeLoading` is off, on the JIT as well as Native AOT. |
 | Cluster protocol and cluster router pools | `akka-cluster` / 5 | `akka-cluster-v2` / 45 | Unreleased; [#8924](https://github.com/akkadotnet/akka.net/pull/8924) | Local codec probes cover current and historical heartbeat forms. Native cluster bootstrap and transport remain separate capabilities. |
 | Cluster Singleton hand-over | `akka-singleton` / 14 | `akka-singleton-v2` / 54 | Unreleased; [#8915](https://github.com/akkadotnet/akka.net/pull/8915) | Local native codec canary passes all four manifests. Cluster startup and ownership hand-over remain separate capabilities. |
@@ -132,7 +132,7 @@ Cluster Client retains its existing `akka.cluster.client.use-legacy-serializatio
 After client settings are constructed, the effective bindings are:
 
 | Global V2 setting | Client legacy setting | Receptionist messages | Client commands and ticks |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Off | On (default) | 15 | Existing JSON path |
 | On | On (default) | 55 | Existing JSON path |
 | Off | Off | 15 | 15 |
