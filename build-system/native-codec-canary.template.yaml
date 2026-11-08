@@ -5,6 +5,8 @@ parameters:
   displayName: ''
   appName: ''
   expectedMarker: ''
+  baseline: src/aot/Shared/remote-aot-warnings.baseline.txt
+  sourceScope: src/core/Akka.Remote/,src/core/Akka.Serialization.V2/
 
 jobs:
   - job: ${{ parameters.jobName }}
@@ -40,12 +42,12 @@ jobs:
           set -euo pipefail
           dotnet run scripts/CheckAotWarnings.cs -- \
             --log "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/publish.log" \
-            --baseline src/aot/Shared/remote-aot-warnings.baseline.txt \
-            --scope "src/core/Akka.Remote/,src/core/Akka.Serialization.V2/,src/aot/${{ parameters.appName }}/,src/aot/Shared/" \
+            --baseline ${{ parameters.baseline }} \
+            --scope "${{ parameters.sourceScope }},src/aot/${{ parameters.appName }}/,src/aot/Shared/" \
             --repo-root "$(Build.SourcesDirectory)" \
             2>&1 | tee "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/warnings.log"
           grep -Eq '^  no source location: 0 warning' "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/warnings.log"
-        displayName: Reject new Remote, runtime or consumer AOT warnings
+        displayName: Reject new scoped product or consumer AOT warnings
       - task: PublishBuildArtifacts@1
         condition: always()
         inputs:

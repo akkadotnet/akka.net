@@ -377,6 +377,16 @@ jobs:
       appName: Akka.Remote.LegacyException.AOT.App
       expectedMarker: '[legacy-exceptions-native] OK reads=114 rejected=15 overrides=3 empty-sentinels=3'
 
+  # Local Cluster codecs only: the consumer never starts a native Cluster extension.
+  - template: native-codec-canary.template.yaml
+    parameters:
+      jobName: ClusterProtocolAotCanary
+      displayName: "Native Cluster protocol codecs (Linux)"
+      appName: Akka.Cluster.Protocol.AOT.App
+      expectedMarker: '[cluster-public-native] OK frozen-cases=60 native-buffer-segmented=60 writer-selections=60 legacy-full-writes=48 heartbeat-wire-cases=12 unknown-rejections=18 user-codecs=6'
+      baseline: src/aot/Akka.Cluster.Protocol.AOT.App/aot-warnings.baseline.txt
+      sourceScope: src/core/Akka.Remote/,src/core/Akka.Cluster/,src/core/Akka.Serialization.V2/
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"

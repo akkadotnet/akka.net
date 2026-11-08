@@ -72,3 +72,15 @@ it does not approve or suppress them. The retained publish log and warning
 comparison document the remaining module warnings. No transport, native Cluster
 bootstrap, generic ReliableDelivery support, all-assembly AOT readiness or
 performance claim follows from this bounded codec proof.
+
+The PR-validation pipeline also invokes `native-codec-canary.template.yaml` with
+the exact completion marker above, a Cluster/Remote/runtime/app source scope and
+this app's warning inventory. Its composed source includes the finite legacy
+exception reader prerequisite, so the two previous exception-reader diagnostics
+are gone. The remaining 16 keys are exactly the 11 existing Cluster diagnostics
+from the retained public proof plus the five shared Remote diagnostics. Core is
+checked by its separate rooted canary. The shared template defaults preserve the
+existing Legacy/System/Misc job commands and markers. Local expanded-template
+replay evidence is retained under
+`.systematize/plans/builtin-serializers-v2/evidence/cluster-native-ci`; hosted CI
+execution remains separate evidence.
