@@ -24,16 +24,14 @@ DOTNET_ROOT=/path/to/sdk10.0.114 PATH=/path/to/sdk10.0.114:$PATH dotnet publish 
 
 The app asserts dynamic code is unavailable and dynamic type loading is explicitly false. ILC diagnostics remain visible; no new NoWarn is used. The original standalone proof added no warning baseline. This is not full remoting/native transport compatibility, arbitrary user-payload support, or a benchmark signoff.
 
-The fixed-composition receipt is retained separately in `evidence/with-legacy-exception-fix-*`.
+The fixed-composition native run passed separately after the earlier standalone proof.
 Its required completion marker is:
 
 ```text
 [misc-native] FIXED COMPOSITION codec proof: native-cases=138 legacy-reads=138 legacy-exception-reads=6 selected-writer-checks=135 rejected=45 late-payload-calls=36 late-payload-bytes=294912
 ```
 
-The fixed-composition native run passed with five existing Remote warning keys and zero new,
-outside-scope or source-less warnings. Exact commands and compressed full receipts are retained
-next to the original evidence; no old receipt was overwritten.
+The fixed-composition native run passed with five existing Remote warning keys and zero new, outside-scope or source-less warnings. The original standalone result remains distinguished from the corrected composition.
 
 ## CI gate
 
@@ -48,8 +46,4 @@ reported and remain owned by the appropriate separate canaries. This gate does n
 native Remote startup, network transport, arbitrary payload support or performance acceptance.
 Hosted execution of the new Azure invocation remains pending.
 
-The `evidence/ci-template-replay` directory retains the exact expanded Bash, parameters,
-template source, invocation and source hashes, plus compressed full SDK/publish/run/warning
-logs. The final local replay passed every native completion and warning assertion on SDK
-10.0.114/runtime 10.0.14, with five known warnings and zero new, outside-scope or unlocated
-diagnostics. This validates the commands; it does not claim hosted execution of the new job.
+The final local replay passed every native completion and warning assertion on SDK 10.0.114/runtime 10.0.14, with five known warnings and zero new, outside-scope or unlocated diagnostics. This validates the commands; hosted execution of the new job remains pending.
