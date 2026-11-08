@@ -1,8 +1,10 @@
 # Exact warning baseline for the incremental built-in V2 serializer canary (#8718).
-# The corpus is Singleton ids 14/54 using a local provider. Cold SDK 10.0.114 / runtime 10.0.14
-# publishing emitted the 17 legacy dependency warnings below and none from Cluster.Tools or this
-# app. These exact entries are proposed for maintainer review; they are not a claim that Remote,
-# Cluster startup or generic Delivery messages are AOT-safe. No warning is suppressed in source.
+# The corpus has 249 local-provider fixture cases, including same-byte Persistence ids 7/8.
+# Streams protocol is included in scope with no approved warning entries.
+# Final composed SDK 10.0.114 / runtime 10.0.14 publishing emitted the 18 legacy dependency keys
+# below and none from the new codecs or app. The two Persistence keys already appear in the
+# Persistence canary baseline. These entries do not claim Remote/Cluster startup, generic
+# Delivery or generic PersistentFSM native support. No warning is suppressed in source.
 
 # Legacy Delivery retains its protobuf reader and reflective generic factories; this corpus
 # does not call those generic paths. They remain unsupported debt for later Delivery AOT work.
@@ -26,6 +28,10 @@ IL2067|src/core/Akka.Cluster/DowningProvider.cs|Akka.Cluster.DowningProvider.Loa
 IL2057|src/core/Akka.Remote/EndpointManager.cs|Akka.Remote.EndpointManager.Listens.get|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
 IL2057|src/core/Akka.Remote/FailureDetectorRegistry.cs|Akka.Remote.FailureDetectorLoader.Load(String,Config,ActorSystem)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
 IL2057|src/core/Akka.Remote/Serialization/DaemonMsgCreateSerializer.cs|Akka.Remote.Serialization.DaemonMsgCreateSerializer.PropsFromProto(PropsData)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
-IL2057|src/core/Akka.Remote/Serialization/ExceptionSupport.cs|Akka.Remote.Serialization.ExceptionSupport.ExceptionFromProtoNet(ExceptionData)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
 IL2057|src/core/Akka.Remote/Transport/TransportAdapters.cs|Akka.Remote.Transport.TransportAdapters.AdaptersTable()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
 IL2067|src/core/Akka.Remote/Serialization/ProtobufSerializer.cs|Akka.Remote.Serialization.ProtobufSerializer.FromBinary(Byte[],Type)|'type'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicParameterlessConstructor'incallto'System.Activator.CreateInstance(Type)'.Theparameter'type'ofmethod'Akka.Remote.Serialization.ProtobufSerializer.FromBinary(Byte[],Type)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+
+# The unchanged public legacy Persistence codec retains reflective generic FSM reconstruction.
+# Native fixed-shape reads/writes are exercised; generic FSM reads/writes reject before output.
+IL2070|src/core/Akka.Persistence/Serialization/PersistenceMessageSerializer.cs|Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Type,Byte[])|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicConstructors'incallto'System.Type.GetConstructor(Type[])'.Theparameter'type'ofmethod'Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Type,Byte[])'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
+IL2075|src/core/Akka.Persistence/Serialization/PersistenceMessageSerializer.cs|Akka.Persistence.Serialization.PersistenceMessageSerializer.GetPersistentFSMSnapshot(Object)|'this'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicProperties'incallto'System.Type.GetProperty(String)'.Thereturnvalueofmethod'System.Object.GetType()'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.

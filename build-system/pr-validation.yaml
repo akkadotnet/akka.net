@@ -358,8 +358,8 @@ jobs:
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare SQLite AOT warnings against the baseline'
 
-      # Incremental first-party V2 serializer proof (#8718). This keeps the plain-core canary's
-      # dependency surface unchanged; the first corpus is Singleton, not Remote/Cluster startup.
+      # Incremental first-party serializer proof (#8718), including same-byte Persistence ids 7/8.
+      # This keeps the plain-core dependency surface unchanged; local codecs do not prove Remote/Cluster startup.
       - bash: |
           rm -rf src/aot/Akka.Serialization.V2.AOT.App/bin src/aot/Akka.Serialization.V2.AOT.App/obj
           set -o pipefail
@@ -380,7 +380,7 @@ jobs:
             echo "##vso[task.logissue type=error]The built-in V2 serializer AOT canary failed with exit code $rc."
             exit 1
           fi
-          if ! grep -qF '[canary-v2] OK cases=12 native-writes=4 rejected=9' "$(Agent.TempDirectory)/v2-aot-run.log"; then
+          if ! grep -qF '[canary-v2] OK cases=12 metrics=24 pubsub=51 client=48 containers=30 snapshot=15 persistence=33 streams=36 native-writes=4 rejected=9' "$(Agent.TempDirectory)/v2-aot-run.log"; then
             echo "##vso[task.logissue type=error]The built-in V2 serializer AOT canary did not complete its corpus."
             exit 1
           fi
@@ -390,7 +390,7 @@ jobs:
           dotnet run scripts/CheckAotWarnings.cs -- \
             --log "$(Agent.TempDirectory)/v2-aot-publish.log" \
             --baseline src/aot/Akka.Serialization.V2.AOT.App/aot-warnings.baseline.txt \
-            --scope "src/core/Akka.Remote/,src/core/Akka.Cluster/,src/contrib/cluster/Akka.Cluster.Tools/,src/aot/Akka.Serialization.V2.AOT.App/" \
+            --scope "src/core/Akka.Remote/,src/core/Akka.Cluster/,src/core/Akka.Persistence/,src/core/Akka.Streams/,src/core/Akka.Serialization.V2/,src/contrib/cluster/Akka.Cluster.Tools/,src/contrib/cluster/Akka.Cluster.Metrics/,src/aot/Akka.Serialization.V2.AOT.App/" \
             --repo-root "$(Build.SourcesDirectory)"
         displayName: 'Compare built-in V2 serializer AOT warnings against the baseline'
 
