@@ -67,9 +67,11 @@ retained even though the corrected consumer passes.
 
 ## CI gate
 
-`RemoteLegacyExceptionAotCanary` publishes a cold ordinary consumer, requires exit zero and
-its exact 114-read/15-rejection/3-override/3-empty-sentinel marker, checks scoped warnings and
-retains logs even on failure. It also requires zero diagnostics without a source location.
+`RemoteLegacyExceptionAotCanary` uses the shared
+[`native-codec-canary.template.yaml`](../../../build-system/native-codec-canary.template.yaml)
+to publish a cold ordinary consumer, require exit zero and
+its exact 114-read/15-rejection/3-override/3-empty-sentinel marker, check scoped warnings and
+retain logs even on failure. It also requires zero diagnostics without a source location.
 The shared Remote baseline approves only the five existing keys retained above; no new
 codec, consumer or V2 runtime warning is approved. Core warnings remain owned by its
 separate rooted canary. Outside-scope counts are reported, not automatically rejected by
@@ -79,3 +81,9 @@ The `evidence/ci-replay` directory retains the local replay of these Bash steps.
 were moved aside locally instead of deleted; hosted CI uses the explicit clean step. The
 replay passed publish, exact runtime marker and warning checks on SDK 10.0.114/runtime 10.0.14.
 This validates the commands, not hosted execution of the newly added Azure job.
+
+The `evidence/template-replay` directory retains the final shared-template expansion and full
+command output. This replay executed the template's cold clean step, publish, native run,
+exact marker and scoped/zero-unlocated warning assertions successfully. It observed five
+existing warnings and zero new, outside-scope or unlocated diagnostics. Hosted execution of
+the newly added template remains pending.
