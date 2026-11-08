@@ -1,0 +1,11 @@
+case: status-IllegalActorStateException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 75
+
+0000  0a 47 0a 2b 41 6b 6b 61  2e 41 63 74 6f 72 2e 49  |.G.+Akka.Actor.I|
+0010  6c 6c 65 67 61 6c 41 63  74 6f 72 53 74 61 74 65  |llegalActorState|
+0020  45 78 63 65 70 74 69 6f  6e 2c 20 41 6b 6b 61 12  |Exception, Akka.|
+0030  07 6d 65 73 73 61 67 65  22 0d 6c 65 67 61 63 79  |.message".legacy|
+0040  2d 73 6f 75 72 63 65 2a  00 12 00                 |-source*...|

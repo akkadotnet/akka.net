@@ -1,0 +1,15 @@
+case: status-ActorNotFoundException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 141
+
+0000  0a 88 01 0a 27 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....'Akka.Actor.|
+0010  41 63 74 6f 72 4e 6f 74  46 6f 75 6e 64 45 78 63  |ActorNotFoundExc|
+0020  65 70 74 69 6f 6e 2c 20  41 6b 6b 61 12 07 6d 65  |eption, Akka..me|
+0030  73 73 61 67 65 22 0d 6c  65 67 61 63 79 2d 73 6f  |ssage".legacy-so|
+0040  75 72 63 65 2a 45 0a 28  53 79 73 74 65 6d 2e 45  |urce*E.(System.E|
+0050  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0060  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0070  12 0d 69 6e 6e 65 72 20  6d 65 73 73 61 67 65 2a  |..inner message*|
+0080  00 3a 08 6d 73 63 6f 72  6c 69 62 12 00           |.:.mscorlib..|
