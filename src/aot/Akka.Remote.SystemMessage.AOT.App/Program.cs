@@ -18,6 +18,7 @@ var reads = 0;
 var writes = 0;
 var rejected = 0;
 var legacyControls = 0;
+var legacyExceptionReads = 0;
 foreach (var mode in new[] { (Name: "off", Id: 22), (Name: "on", Id: 62), (Name: "pinned", Id: 22) })
 {
     var config = $"akka.actor.serialization-v2 = {(mode.Name == "off" ? "off" : "on")}";
@@ -46,19 +47,15 @@ foreach (var mode in new[] { (Name: "off", Id: 22), (Name: "on", Id: 62), (Name:
             var modernBytes = modern.ToBinary(value);
             Compare(value, system.Serialization.Deserialize(modernBytes, 62, manifest), false);
             reads++;
-            // The unchanged legacy exception reader needs reflective constructor metadata.
-            // Its separately retained native failure is not counted as supported coverage.
-            if (!HasCause(value))
-            {
-                Compare(value, system.Serialization.Deserialize(legacy.ToBinary(value), 22, manifest), true);
-                legacyControls++;
-            }
+            // This composition includes the separately reviewed historical exception fix.
+            Compare(value, system.Serialization.Deserialize(legacy.ToBinary(value), 22, manifest), true);
+            legacyControls++;
+            if (HasCause(value)) legacyExceptionReads++;
             var writer = system.Serialization.FindSerializerFor(value);
             Require(writer.Identifier == mode.Id, "Wrong selected writer.");
             Require(Akka.Serialization.Serialization.ManifestFor(writer, value) == manifest, "Manifest changed.");
             var selectedBytes = writer.ToBinary(value);
-            if (writer.Identifier == 62 || !HasCause(value))
-                Compare(value, system.Serialization.Deserialize(selectedBytes, writer.Identifier, manifest), writer.Identifier == 22);
+            Compare(value, system.Serialization.Deserialize(selectedBytes, writer.Identifier, manifest), writer.Identifier == 22);
             if (writer is SerializerV2 native)
             {
                 var buffer = new ArrayBufferWriter<byte>();
@@ -94,7 +91,9 @@ foreach (var mode in new[] { (Name: "off", Id: 22), (Name: "on", Id: 62), (Name:
     }
     watchdog.ThrowIfAnyProblems(mode.Name, "shutdown");
 }
-Console.WriteLine($"[system-native] BOUNDED codec proof: native-cases={reads} legacy-control-reads={legacyControls} selected-writer-checks={writes} rejected={rejected} dynamic-code=false; legacy-exception-native-reads=UNSUPPORTED");
+Require(reads == 54 && legacyControls == 54 && legacyExceptionReads == 12 && writes == 54 && rejected == 18,
+    "Incomplete fixed-composition codec corpus.");
+Console.WriteLine($"[system-native] FIXED COMPOSITION codec proof: native-cases={reads} legacy-reads={legacyControls} legacy-exception-reads={legacyExceptionReads} selected-writer-checks={writes} rejected={rejected} dynamic-code=false");
 
 static SystemMessage[] Cases(IActorRef actor) =>
 [
