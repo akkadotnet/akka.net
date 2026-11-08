@@ -89,14 +89,17 @@ namespace Akka.Remote.Artery
         /// <see langword="null"/> (the default) resolves to the materializing
         /// <see cref="Akka.Actor.ActorSystem"/>'s scheduler when the stream starts.
         /// </param>
-        public InboundHandshakeStage(IInboundContext context, ITimeProvider? timeProvider = null)
+        /// <param name="onHandshakeAccepted">Optional transport admission notification after a valid Artery handshake.</param>
+        public InboundHandshakeStage(IInboundContext context, ITimeProvider? timeProvider = null, Action? onHandshakeAccepted = null)
         {
             Context = context;
             TimeProvider = timeProvider;
+            OnHandshakeAccepted = onHandshakeAccepted;
             Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
         }
 
         public IInboundContext Context { get; }
+        private Action? OnHandshakeAccepted { get; }
 
         /// <summary>
         /// Explicit clock for the drop-warning throttle, or <see langword="null"/> to use the
@@ -221,6 +224,7 @@ namespace Akka.Remote.Artery
                 }
 
                 _stage.Context.CompleteHandshake(req.From);
+                _stage.OnHandshakeAccepted?.Invoke();
                 _stage.Context.SendControl(req.From.Address, new HandshakeRsp(_stage.Context.LocalAddress));
             }
 
@@ -228,7 +232,11 @@ namespace Akka.Remote.Artery
             // peer has registered OUR uid, which is what gates our ordinary outbound streams
             // (issue #8496). Re-completing with the same uid stays an idempotent no-op, so the
             // duplicate Rsps our own idempotent Req retries produce cost nothing.
-            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteOutboundHandshake(rsp.From);
+            private void HandleRsp(HandshakeRsp rsp)
+            {
+                _stage.Context.CompleteOutboundHandshake(rsp.From);
+                _stage.OnHandshakeAccepted?.Invoke();
+            }
         }
     }
 }

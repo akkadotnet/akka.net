@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
+using System.Net.Quic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -112,6 +113,19 @@ namespace Akka.Remote.Artery
         /// </summary>
         internal AssociationRegistry Registry => _registry;
 
+        internal ArteryQuicIoSnapshot QuicIoSnapshot =>
+            _quic is not null && QuicConnection.IsSupported ? _quic.IoSnapshot : default;
+
+        internal IReadOnlyDictionary<string, int> QuicOrdinaryStreamCounts() =>
+            _quic is not null && QuicConnection.IsSupported
+                ? _quic.OrdinaryStreamCounts()
+                : ImmutableDictionary<string, int>.Empty;
+
+        internal Task QuicOrdinaryStreamsReadyAsync(CancellationToken cancellationToken) =>
+            _quic is not null && QuicConnection.IsSupported
+                ? _quic.OrdinaryStreamsReadyAsync(cancellationToken)
+                : Task.CompletedTask;
+
         /// <summary>
         /// Subscribers notified (task 6.2) for every decoded, non-handshake inbound control
         /// message, across every association's control connection. <see cref="ArteryRemoting"/>
@@ -127,6 +141,7 @@ namespace Akka.Remote.Artery
         private ActorMaterializer? _materializer;
         private TcpExt? _tcp;
         private Tcp.ServerBinding? _binding;
+        private ArteryQuicTransport? _quic;
 
         // Transport-wide shutdown guard + teardown, mirroring Pekko's ArteryTransport (its
         // `hasBeenShutdown` AtomicBoolean + the shared "transportKillSwitch"). _isShutdown is set
@@ -291,14 +306,21 @@ namespace Akka.Remote.Artery
                 new Inet.SO.SendBufferSize(1024 * 1024),
                 new Inet.SO.PipeBufferSize(settings.TcpPipeBufferSize));
 
-        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>>
-            CreateOutgoingConnection(EndPoint remoteEndpoint)
+        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Done>>
+            CreateOutgoingConnection(EndPoint remoteEndpoint, ArteryStreamId streamId, int ordinaryStream = 0)
         {
-            if (_tlsSettings is null)
-                return _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false);
+            if (_quic is not null && QuicConnection.IsSupported)
+                return _quic.Outgoing(remoteEndpoint, streamId, ordinaryStream);
 
-            return _tcp!.OutgoingConnectionTls(remoteEndpoint, _tlsSettings.ClientSettings,
-                options: _arterySocketOptions, halfClose: false);
+            var connection = _tlsSettings is null
+                ? _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false)
+                : _tcp!.OutgoingConnectionTls(remoteEndpoint, _tlsSettings.ClientSettings,
+                    options: _arterySocketOptions, halfClose: false);
+            return connection.MapMaterializedValue(async connected =>
+            {
+                await connected.ConfigureAwait(false);
+                return Done.Instance;
+            });
         }
 
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
@@ -354,13 +376,14 @@ namespace Akka.Remote.Artery
         /// <inheritdoc/>
         public override void Start()
         {
-            _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
+            _log.Info("Starting Artery {0} remoting on [{1}:{2}]", _settings.Transport.ToUpperInvariant(),
+                _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
-                "Artery TCP remoting is EXPERIMENTAL and under active development -- reliable system-message " +
+                "Artery {0} remoting is EXPERIMENTAL and under active development -- reliable system-message " +
                 "delivery (seq/Ack/Nack/resend over the control stream), outbound lanes " +
                 "(akka.remote.artery.advanced.outbound-lanes), and inbound lanes " +
                 "(akka.remote.artery.advanced.inbound-lanes) have landed; no compression yet. " +
-                "Do not use in production.");
+                "Do not use in production.", _settings.Transport.ToUpperInvariant());
 
             // /system, NOT /user. RemotingTerminator's TerminationHook -- the thing that eventually
             // calls Shutdown() below, including its outbound flush -- only fires once the SYSTEM
@@ -378,10 +401,17 @@ namespace Akka.Remote.Artery
             // still alive -- and the flush has something left to flush -- when Shutdown() finally runs.
             // This transport still reaps it explicitly at the end of Shutdown() (materializer?.Shutdown()),
             // so its lifetime does not depend on when /system itself eventually tears down either.
-            _materializer = CreateSystemMaterializer();
-            _tcp = System.TcpStream();
             var tlsSetup = System.Settings.Setup.Get<ArteryTlsSetup>();
             _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings : null;
+            if (_settings.Transport == "quic")
+            {
+                if (!QuicConnection.IsSupported || !QuicListener.IsSupported)
+                    throw new PlatformNotSupportedException("Artery QUIC requires native MsQuic and TLS 1.3 support.");
+                _quic = new ArteryQuicTransport(_tlsSettings, _settings.HandshakeTimeout, _log,
+                    _settings.QuicOrdinaryStreams, _settings.QuicMaximumInboundOrdinaryStreams, _settings.QuicIoStatisticsEnabled);
+            }
+            _materializer = CreateSystemMaterializer();
+            _tcp = _quic is null ? System.TcpStream() : null;
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
             // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
             // than ArrayPool<byte>.Shared (which is what a null value resolves to downstream). Shared is
@@ -424,29 +454,25 @@ namespace Akka.Remote.Artery
             // under the peer within milliseconds of it being accepted. halfClose: true makes it send
             // `Tcp.ConfirmedClose` (FIN on the write half only) instead, keeping the read side open
             // for as long as the peer keeps sending.
-            var inboundConnections = _tlsSettings is null
-                ? _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
-                    options: _arterySocketOptions, halfClose: true)
-                : _tcp.BindTls(_settings.CanonicalHostname, _settings.CanonicalPort,
-                    _tlsSettings.ServerSettings, options: _arterySocketOptions, halfClose: true);
+            using var startupDeadline = new CancellationTokenSource(Provider.RemoteSettings.StartupTimeout);
+            var bindingTask = _quic is not null && QuicConnection.IsSupported
+                ? _quic.BindAsync(_settings.CanonicalHostname, _settings.CanonicalPort, startupDeadline.Token)
+                : BindTcpAsync();
 
-            var (bindingTask, _) = inboundConnections
-                .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(HandleIncomingConnection), Keep.Both)
-                .Run(_materializer);
-
-            // RemoteTransport.Start() is a synchronous override (the base contract classic Remoting.cs
-            // shares) that must not return until DefaultAddress is known -- canonical.port = 0 needs
-            // the BOUND ephemeral port, which is only available once the bind Task completes. Classic
-            // remoting blocks the exact same way on its own startup promise (Remoting.cs Start(),
-            // `addressPromise.Task.Wait(...)`); mirrored here rather than invented. This is the one
-            // place in this file where a blocking wait is unavoidable given the synchronous contract.
-            if (!bindingTask.Wait(Provider.RemoteSettings.StartupTimeout))
-                throw new RemoteTransportException(
-                    $"Artery TCP remoting failed to bind to [{_settings.CanonicalHostname}:{_settings.CanonicalPort}] " +
-                    $"within {Provider.RemoteSettings.StartupTimeout}.");
-
-            _binding = bindingTask.GetAwaiter().GetResult();
-            var boundPort = ((IPEndPoint)_binding.Value.LocalAddress).Port;
+            // RemoteTransport.Start is synchronous and must publish the actual ephemeral port.
+            EndPoint boundAddress;
+            try
+            {
+                boundAddress = bindingTask.WaitAsync(startupDeadline.Token).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                _materializer.Shutdown();
+                if (_quic is not null && QuicConnection.IsSupported)
+                    _ = _quic.ShutdownAsync(startupDeadline.Token);
+                throw;
+            }
+            var boundPort = ((IPEndPoint)boundAddress).Port;
             var address = new Address("akka", System.Name, _settings.CanonicalHostname, boundPort);
 
             // Publish these two BEFORE anything else that runs once the bound port is known (P5):
@@ -483,7 +509,23 @@ namespace Akka.Remote.Artery
             // ThisActorSystemQuarantinedEvent) -- see IControlMessageSubscriber.ControlMessageReceived.
             SubscribeControl(this);
 
-            _log.Info("Artery TCP remoting started; listening on [{0}]", address);
+            if (_quic is not null && QuicConnection.IsSupported)
+                _quic.StartAccepting(HandleIncomingSource);
+            _log.Info("Artery {0} remoting started; listening on [{1}]", _settings.Transport.ToUpperInvariant(), address);
+        }
+
+        private async Task<EndPoint> BindTcpAsync()
+        {
+            var incoming = _tlsSettings is null
+                ? _tcp!.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
+                    options: _arterySocketOptions, halfClose: true)
+                : _tcp!.BindTls(_settings.CanonicalHostname, _settings.CanonicalPort,
+                    _tlsSettings.ServerSettings, options: _arterySocketOptions, halfClose: true);
+            var (binding, _) = incoming
+                .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(HandleIncomingConnection), Keep.Both)
+                .Run(_materializer!);
+            _binding = await binding.ConfigureAwait(false);
+            return _binding.Value.LocalAddress;
         }
 
         /// <summary>
@@ -532,7 +574,7 @@ namespace Akka.Remote.Artery
             // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
             // late system message racing termination can no longer trigger a materialization.
             _isShutdown = true;
-            _log.Info("Shutting down Artery TCP remoting on [{0}]", _defaultAddress);
+            _log.Info("Shutting down Artery {0} remoting on [{1}]", _settings.Transport.ToUpperInvariant(), _defaultAddress);
 
             // Snapshot the associations ONCE: the flush below awaits between the complete pass and
             // the drain pass, and both passes must cover exactly the same set. A send racing
@@ -636,6 +678,8 @@ namespace Akka.Remote.Artery
             // Unbind: stops the TcpListener, which stops its still-open accepted-connection
             // children, which each inbound stage's Watch(_connection) turns into a prompt failure.
             await (_binding?.Unbind() ?? Task.CompletedTask);
+            if (_quic is not null && QuicConnection.IsSupported)
+                await _quic.ShutdownAsync(flushDeadline?.Token ?? new CancellationToken(canceled: true));
 
             // Let every remaining stream finish closing, within what is left of the same deadline.
             if (flushDeadline is not null)
@@ -654,7 +698,7 @@ namespace Akka.Remote.Artery
             // MaterializeOutboundStream both guards on _materializer.IsShutdown and catches the
             // residual race around Run().
             _materializer?.Shutdown();
-            _log.Info("Artery TCP remoting shut down");
+            _log.Info("Artery {0} remoting shut down", _settings.Transport.ToUpperInvariant());
         }
 
         /// <summary>
@@ -955,9 +999,13 @@ namespace Akka.Remote.Artery
             }
         }
 
-        private void HandleIncomingConnection(Tcp.IncomingConnection connection)
+        private void HandleIncomingConnection(Tcp.IncomingConnection connection) =>
+            HandleIncomingSource(Source.Empty<ReadOnlySequence<byte>>().Via(connection.Flow), connection.RemoteAddress);
+
+        private void HandleIncomingSource(Source<ReadOnlySequence<byte>, NotUsed> source, EndPoint remoteAddress,
+            Action? onHandshakeAccepted = null)
         {
-            _log.Debug("Accepted inbound Artery TCP connection from [{0}]", connection.RemoteAddress);
+            _log.Debug("Accepted inbound Artery {0} channel from [{1}]", _settings.Transport, remoteAddress);
 
             // Ordinary, Control, AND (task 10.2) Large connections all feed this SAME inbound
             // shape -- ArteryInboundProcessingStage accepts any of the three preambles; routing
@@ -1023,7 +1071,7 @@ namespace Akka.Remote.Artery
             // Ordinary, control and large connections all use this one sink, so one instance is
             // sufficient.
             var inboundSink = decoded
-                .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler)))
+                .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler, onHandshakeAccepted)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
@@ -1032,7 +1080,7 @@ namespace Akka.Remote.Artery
             // connections, so any reply (a HandshakeRsp, a heartbeat, ...) goes out over a
             // NEW/reused OUTBOUND connection this system originates back towards the peer -- see
             // the type-level "Connection cardinality" remarks. We never write to this socket.
-            connection.HandleWith(Flow.FromSinkAndSource(inboundSink, Source.Empty<ReadOnlySequence<byte>>()), _materializer!);
+            source.RunWith(inboundSink, _materializer!);
         }
 
         private void DispatchInbound(IInboundEnvelope env)
@@ -1824,6 +1872,7 @@ namespace Akka.Remote.Artery
             }
 
             var lanes = association.OutboundLanes;
+            var streams = _quic is null ? 1 : _settings.QuicOrdinaryStreams;
 
             var outboundContext = new AssociationRegistryOutboundContext(
                 _registry,
@@ -1849,101 +1898,125 @@ namespace Akka.Remote.Artery
             // null! satisfies definite-assignment (same pattern/rationale as MaterializeOutboundStream's
             // own terminationWatch): the catch clauses below always return, so these are only read
             // past the try block when it assigned them.
-            Sink<ReadOnlySequence<byte>, NotUsed> mergeSink = null!;
-            Task mergeTailTermination = null!;
+            var mergeSinks = new Sink<ReadOnlySequence<byte>, NotUsed>[streams];
+            var streamTerminations = new Task[streams];
             var laneTerminations = new Task[lanes];
 
             try
             {
-                var mergeHubSource = MergeHub.Source<ReadOnlySequence<byte>>();
+                // TCP retains its one merge/socket tail. QUIC assigns each lane to a fixed
+                // independent byte stream; each group reuses the same framing and write batching.
+                for (var group = 0; group < streams; group++)
+                {
+                    var stream = group;
+                    var mergeHubSource = MergeHub.Source<ReadOnlySequence<byte>>();
+                    if (_quic is not null)
+                    {
+                        // MergeHub normally stays open after its producers finish. Each fixed
+                        // QUIC lane appends an empty completion marker after its encoded frames.
+                        // Per-producer FIFO means the final marker follows every group's frame;
+                        // complete here so batching and the native writer can drain and send FIN.
+                        // Encoded frames are nonempty; markers never reach the byte adapter.
+                        var remaining = (lanes - 1 - stream) / streams + 1;
+                        mergeHubSource = mergeHubSource
+                            .TakeWhile(bytes => !bytes.IsEmpty || --remaining > 0)
+                            .Where(bytes => !bytes.IsEmpty);
+                    }
 
-                // INNER CONNECTION RESTART (Pekko's connectionFlowWithRestart,
-                // ArteryTcpTransport.scala): the TCP connection ALONE is wrapped in
-                // RestartFlow.OnFailuresWithBackoff so a transient connect/write fault (connection
-                // refused at a fresh materialization, a port-rebind race, a reset mid-burst) retries
-                // the SOCKET -- with backoff, up to 3 times (Pekko's message-stream maxRestarts) --
-                // WITHOUT tearing down the lane chains, the MergeHub, or the handshake stages. This
-                // is the message-loss fix: before this wrapper, a single connect fault tripped the
-                // shared kill switch and discarded every element already dequeued from the
-                // (restart-safe) lane channels into the stream stages. Only after the inner retries
-                // are exhausted does the failure propagate and settle the assembly, handing control
-                // to the OUTER tier (ScheduleOutboundRestart) exactly as before.
-                //
-                // The [streamId] preamble is prepended INSIDE the restart factory -- load-bearing:
-                // every reconnect materializes a fresh flow from this factory, so every new socket
-                // re-sends the connection header first (Pekko does the same, prepending the header
-                // inside its lazyFlow: ArteryTcpTransport.scala's connectionFlowWithRestart).
-                //
-                // OnFailures (NOT plain WithBackoff): our outbound connections are one-way --
-                // the read side EOFs immediately and harmlessly -- and a
-                // GRACEFUL completion (this system's own Shutdown()/CompleteOutbound draining
-                // through) must complete the tail, not re-dial the peer.
-                var restartSettings = RestartSettings.Create(
-                        minBackoff: _settings.OutboundRestartBackoff,
-                        maxBackoff: TimeSpan.FromTicks(_settings.OutboundRestartBackoff.Ticks * 5),
-                        randomFactor: 0.1)
-                    .WithMaxRestarts(OrdinaryConnectionMaxInnerRestarts, _settings.OutboundRestartBackoff);
+                    // INNER CONNECTION RESTART (Pekko's connectionFlowWithRestart,
+                    // ArteryTcpTransport.scala): the TCP connection ALONE is wrapped in
+                    // RestartFlow.OnFailuresWithBackoff so a transient connect/write fault (connection
+                    // refused at a fresh materialization, a port-rebind race, a reset mid-burst) retries
+                    // the SOCKET -- with backoff, up to 3 times (Pekko's message-stream maxRestarts) --
+                    // WITHOUT tearing down the lane chains, the MergeHub, or the handshake stages. This
+                    // is the message-loss fix: before this wrapper, a single connect fault tripped the
+                    // shared kill switch and discarded every element already dequeued from the
+                    // (restart-safe) lane channels into the stream stages. Only after the inner retries
+                    // are exhausted does the failure propagate and settle the assembly, handing control
+                    // to the OUTER tier (ScheduleOutboundRestart) exactly as before.
+                    //
+                    // The [streamId] preamble is prepended INSIDE the restart factory -- load-bearing:
+                    // every reconnect materializes a fresh flow from this factory, so every new socket
+                    // re-sends the connection header first (Pekko does the same, prepending the header
+                    // inside its lazyFlow: ArteryTcpTransport.scala's connectionFlowWithRestart).
+                    //
+                    // OnFailures (NOT plain WithBackoff): our outbound connections are one-way --
+                    // the read side EOFs immediately and harmlessly -- and a
+                    // GRACEFUL completion (this system's own Shutdown()/CompleteOutbound draining
+                    // through) must complete the tail, not re-dial the peer.
+                    var restartSettings = RestartSettings.Create(
+                            minBackoff: _settings.OutboundRestartBackoff,
+                            maxBackoff: TimeSpan.FromTicks(_settings.OutboundRestartBackoff.Ticks * 5),
+                            randomFactor: 0.1)
+                        .WithMaxRestarts(OrdinaryConnectionMaxInnerRestarts, _settings.OutboundRestartBackoff);
 
-                // halfClose: false - see WaitForStreamsToStopAsync.
-                var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
-                    () => Flow.Create<ReadOnlySequence<byte>>()
-                        .Prepend(Source.Single(BuildPreamble(ArteryStreamId.Ordinary)))
-                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Right)
-                        .MapMaterializedValue(connectionTask =>
-                        {
-                            // Runs at EVERY (re-)materialization of the socket flow -- including
-                            // the inner RestartFlow retries -- so a successful establish anywhere
-                            // in the retry tiers ends the reconnect-log outage cadence for this
-                            // assembly, same recovery signal as the single-stream path. See
-                            // ReportOutboundConnectionEstablished.
-                            connectionTask.ContinueWith(ct =>
+                    // halfClose: false - see WaitForStreamsToStopAsync.
+                    Func<Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed>> createConnection =
+                        () => Flow.Create<ReadOnlySequence<byte>>()
+                            .Prepend(Source.Single(BuildPreamble(ArteryStreamId.Ordinary)))
+                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, ArteryStreamId.Ordinary, stream), Keep.Right)
+                            .MapMaterializedValue(connectionTask =>
                             {
-                                if (ct.IsCompletedSuccessfully)
-                                    ReportOutboundConnectionEstablished(association, ArteryStreamId.Ordinary, remoteAddress);
-                            }, TaskContinuationOptions.ExecuteSynchronously);
-                            return NotUsed.Instance;
-                        }),
-                    restartSettings);
+                                // Runs at EVERY (re-)materialization of the socket flow -- including
+                                // the inner RestartFlow retries -- so a successful establish anywhere
+                                // in the retry tiers ends the reconnect-log outage cadence for this
+                                // assembly, same recovery signal as the single-stream path. See
+                                // ReportOutboundConnectionEstablished.
+                                connectionTask.ContinueWith(ct =>
+                                {
+                                    if (ct.IsCompletedSuccessfully)
+                                        ReportOutboundConnectionEstablished(association, ArteryStreamId.Ordinary, remoteAddress);
+                                }, TaskContinuationOptions.ExecuteSynchronously);
+                                return NotUsed.Instance;
+                            });
+                    var connectionWithRestart = _quic is null
+                        ? RestartFlow.OnFailuresWithBackoff(createConnection, restartSettings)
+                        : createConnection();
 
-                // MergeHub -> transport-wide kill switch (Shutdown() tears every association's
-                // streams down) -> this assembly's OWN shared kill switch -> watch termination
-                // (write-side completion signal, exactly like MaterializeOutboundStream's
-                // "TERMINATION SIGNAL" remarks) -> frame batching (below) -> restart-wrapped
-                // OutgoingConnection (above).
-                //
-                // FRAME BATCHING: crossing into the restart-wrapped connection flow costs
-                // per-ELEMENT, so under load the merge tail collapses whatever already-encoded
-                // frames are immediately available into ONE multi-segment sequence of up to
-                // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
-                // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
-                // IDENTICAL either way -- the inbound side parses frames off the byte stream and
-                // never sees element boundaries. If bytes are still held (an aggregate or a pending
-                // frame) when the stream stops, the stage reports them: onDropped logs the count and
-                // publishes a Dropped event, because this late in the pipeline -- after encode and
-                // the lane merge -- there is no IOutboundEnvelope left to hand back through
-                // ReturnUndelivered.
-                ((mergeSink, mergeTailTermination), _) = mergeHubSource
-                    .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
-                    .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
-                    .WatchTermination(Keep.Both)
-                    .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes,
-                        onDropped: bytes =>
-                        {
-                            _log.Debug(
-                                "Outbound Artery ordinary-lanes write batch to [{0}] held {1} bytes of " +
-                                "already-encoded frame data when its stream stopped; dropping it.",
-                                remoteAddress, bytes);
+                    // MergeHub -> transport-wide kill switch (Shutdown() tears every association's
+                    // streams down) -> this assembly's OWN shared kill switch -> watch termination
+                    // (write-side completion signal, exactly like MaterializeOutboundStream's
+                    // "TERMINATION SIGNAL" remarks) -> frame batching (below) -> restart-wrapped
+                    // OutgoingConnection (above).
+                    //
+                    // FRAME BATCHING: crossing into the restart-wrapped connection flow costs
+                    // per-ELEMENT, so under load the merge tail collapses whatever already-encoded
+                    // frames are immediately available into ONE multi-segment sequence of up to
+                    // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
+                    // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
+                    // IDENTICAL either way -- the inbound side parses frames off the byte stream and
+                    // never sees element boundaries. If bytes are still held (an aggregate or a pending
+                    // frame) when the stream stops, the stage reports them: onDropped logs the count and
+                    // publishes a Dropped event, because this late in the pipeline -- after encode and
+                    // the lane merge -- there is no IOutboundEnvelope left to hand back through
+                    // ReturnUndelivered.
+                    var ((mergeSink, sourceFinished), writerFinished) = mergeHubSource
+                        .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
+                        .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
+                        .WatchTermination(Keep.Both)
+                        .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes,
+                            onDropped: bytes =>
+                            {
+                                _log.Debug(
+                                    "Outbound Artery ordinary-lanes write batch to [{0}] held {1} bytes of " +
+                                    "already-encoded frame data when its stream stopped; dropping it.",
+                                    remoteAddress, bytes);
 
-                            System.EventStream.Publish(new Dropped(
-                                $"{bytes} bytes of already-encoded Artery frame data",
-                                $"Outbound Artery ordinary-lanes write batch to [{remoteAddress}] held {bytes} " +
-                                "bytes of already-encoded frame data across one or more lanes when its stream stopped",
-                                ActorRefs.NoSender,
-                                System.DeadLetters));
-                        })))
-                    .Via(connectionWithRestart)
-                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
-                    .Run(_materializer!);
+                                System.EventStream.Publish(new Dropped(
+                                    $"{bytes} bytes of already-encoded Artery frame data",
+                                    $"Outbound Artery ordinary-lanes write batch to [{remoteAddress}] held {bytes} " +
+                                    "bytes of already-encoded frame data across one or more lanes when its stream stopped",
+                                    ActorRefs.NoSender,
+                                    System.DeadLetters));
+                            })))
+                        .Via(connectionWithRestart)
+                        .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                        .Run(_materializer!);
+
+                    mergeSinks[stream] = mergeSink;
+                    streamTerminations[stream] = _quic is null
+                        ? sourceFinished : Task.WhenAll(sourceFinished, writerFinished);
+                }
 
                 association.SetOutboundKillSwitch(laneKillSwitch);
 
@@ -1995,13 +2068,16 @@ namespace Akka.Remote.Artery
                     if (_testState is { } laneTestState)
                         laneSource = laneSource.Via(Flow.FromGraph(new OutboundTestStage(outboundContext, laneTestState)));
 
-                    var (laneTermination, _) = laneSource
+                    var encodedLane = laneSource
                         .Via(Flow.FromGraph(handshakeStage))
                         .Via(Flow.FromGraph(encodeStage))
                         .WatchTermination(Keep.Right)
                         .Via(Flow.Create<ReadOnlySequence<byte>>()
-                            .RecoverWithRetries(_ => Source.Empty<ReadOnlySequence<byte>>(), attempts: -1))
-                        .ToMaterialized(mergeSink, Keep.Both)
+                            .RecoverWithRetries(_ => Source.Empty<ReadOnlySequence<byte>>(), attempts: -1));
+                    if (_quic is not null)
+                        encodedLane = encodedLane.ConcatMaterialized(Source.Single(ReadOnlySequence<byte>.Empty), Keep.Left);
+                    var (laneTermination, _) = encodedLane
+                        .ToMaterialized(mergeSinks[i % streams], Keep.Both)
                         .Run(_materializer!);
 
                     laneTerminations[i] = laneTermination;
@@ -2042,12 +2118,12 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            // Whichever piece (any lane, or the merge/socket tail) settles FIRST trips the shared
-            // switch, tearing every OTHER piece down too -- see this method's "one restartable unit"
-            // remarks. Idempotent (SharedKillSwitch.Shutdown()/Abort() are both first-caller-wins).
-            var allPieces = new Task[lanes + 1];
+            // A fault in any piece trips the shared switch and retires the entire assembly.
+            // Outside QUIC shutdown, normal completion also tears siblings down, preserving the
+            // existing restart behavior. QUIC shutdown lets each fixed group drain independently.
+            var allPieces = new Task[lanes + streams];
             Array.Copy(laneTerminations, allPieces, lanes);
-            allPieces[lanes] = mergeTailTermination;
+            Array.Copy(streamTerminations, 0, allPieces, lanes, streams);
 
             foreach (var piece in allPieces)
             {
@@ -2055,8 +2131,10 @@ namespace Akka.Remote.Artery
                 {
                     if (t.IsFaulted)
                         laneKillSwitch.Abort(t.Exception!.GetBaseException());
-                    else
+                    else if (_quic is null || !_isShutdown)
                         laneKillSwitch.Shutdown();
+                    // During QUIC transport shutdown, completed lane queues are allowed to drain
+                    // independently. One empty queue must not cancel other groups' pending writes.
                 }, TaskContinuationOptions.ExecuteSynchronously);
             }
 
@@ -2332,7 +2410,7 @@ namespace Akka.Remote.Artery
                     Task connectionTask;
                     ((terminationWatch, connectionTask), _) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Both)
+                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
@@ -2374,10 +2452,10 @@ namespace Akka.Remote.Artery
                             randomFactor: 0.1)
                         .WithMaxRestarts(OrdinaryConnectionMaxInnerRestarts, _settings.OutboundRestartBackoff);
 
-                    var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
+                    Func<Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed>> createConnection =
                         () => Flow.Create<ReadOnlySequence<byte>>()
                             .Prepend(Source.Single(BuildPreamble(streamId)))
-                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint), Keep.Right)
+                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId), Keep.Right)
                             .MapMaterializedValue(connectionTask =>
                             {
                                 // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2391,8 +2469,10 @@ namespace Akka.Remote.Artery
                                         ReportOutboundConnectionEstablished(association, streamId, remoteAddress);
                                 }, TaskContinuationOptions.ExecuteSynchronously);
                                 return NotUsed.Instance;
-                            }),
-                        restartSettings);
+                            });
+                    var connectionWithRestart = _quic is null
+                        ? RestartFlow.OnFailuresWithBackoff(createConnection, restartSettings)
+                        : createConnection();
 
                     UniqueKillSwitch killSwitch;
                     ((killSwitch, terminationWatch), _) = frames

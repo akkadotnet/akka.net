@@ -14,12 +14,13 @@ Three things, each selectable without touching code:
 
 | Axis | Options | What it changes |
 |------|---------|-----------------|
-| Transport | DotNetty TCP (default), Artery TCP (`--artery`) | Which remote driver carries the traffic |
+| Transport | DotNetty TCP (default), Artery TCP (`--artery`), Artery TLS TCP, QUIC (`--transport`) | Which remote driver carries the traffic |
 | Traffic pattern | ping-pong (default), one-way firehose (`--oneway`) | Whether every message round-trips |
 | Payload | `"hit"` string (default), realistic message (`--payload real --serializer …`) | Whether serialization cost is in the measured path |
 
-Everything else — actor counts, message totals, timing windows — stays the same across those axes, so
-the numbers compare directly.
+Hold actor counts, message totals, timing windows and queue budgets constant within each comparison.
+Ping-pong counts requests plus echoes; one-way counts received payloads. Throughput alone does not
+establish latency or identical internal buffering across transports.
 
 ## Build and run
 
@@ -113,7 +114,13 @@ long-lived server does not accumulate idle actors across runs.
 
 | Option | Default | `run` | `server` | `client` | Maps to |
 |--------|---------|:-----:|:--------:|:--------:|---------|
-| `--artery` | off | ✓ | ✓ | ✓ | `akka.remote.artery.enabled = on` instead of `akka.remote.dot-netty.tcp` |
+| `--artery` | off | ✓ | ✓ | ✓ | Legacy selection of plaintext Artery TCP |
+| `--transport dotnetty\|artery-tcp\|artery-tls\|quic` | `dotnetty` | ✓ | ✓ | ✓ | Explicit transport; incompatible with `--artery` unless selecting `artery-tcp` |
+| `--quic-streams S` | `1` | ✓ | ✓ | ✓ | Native ordinary streams, bounded by outbound lanes and 64 |
+| `--diagnostics` | off | ✓ | ✓ | ✓ | Optional process CPU/allocation/GC and ordinary QUIC I/O counters |
+| `--cert PATH` | ephemeral in encrypted `run` | ✓ | ✓ | ✓ | PKCS#12 identity; required in encrypted split modes |
+| `--cert-password-env NAME` | none | ✓ | ✓ | ✓ | Read the PKCS#12 password from this environment variable; never print its value |
+| `--peer-pin THUMBPRINT[,THUMBPRINT]` | own identity in encrypted `run` | ✓ | ✓ | ✓ | Trusted peer pins; required in encrypted split modes |
 | `--oneway` | off | ✓ | ✓ | ✓ | one-way firehose instead of ping-pong |
 | `--window N` | `50` | ✓ | ✓ | ✓ | in-flight priming window per client |
 | `--clients N` | sweep | ✓ | ✓ | ✓ | pin one client count instead of sweeping |
@@ -147,6 +154,115 @@ Switches both systems from the classic DotNetty TCP transport to Artery TCP. It 
 between a DotNetty run and an Artery run — same actors, same message counts, same timing. Wire
 addresses differ accordingly (`akka.tcp://…` vs `akka://…`), and the harness builds the server address
 by hand in split-client mode, so `--artery` must be passed to **both** sides.
+
+### Explicit TCP/TLS/QUIC selection
+
+The same actor workload and realistic payload run over every transport. For example:
+
+```bash
+dotnet RemotePingPong.dll run --transport dotnetty   --payload real --serializer v2 --clients 16 --msgs 100000 --times 3
+dotnet RemotePingPong.dll run --transport artery-tcp --payload real --serializer v2 --clients 16 --msgs 100000 --times 3
+dotnet RemotePingPong.dll run --transport artery-tls --payload real --serializer v2 --clients 16 --msgs 100000 --times 3
+dotnet RemotePingPong.dll run --transport quic       --payload real --serializer v2 --clients 16 --msgs 100000 --times 3
+```
+
+Use a Release binary; choose enough messages for sustained runs and use explicit warmup before accepting
+performance results. These commands enable a comparison, not a predefined outcome. Artery TLS TCP versus
+QUIC is the equivalent encrypted comparison; DotNetty and Artery plaintext are reference rows. Add
+`--oneway` to compare credit-paced one-way throughput separately from ping-pong.
+
+Both encrypted Artery arms reuse Akka.IO's `TlsCertificateLoader` and `TlsPeerPolicy`, through
+`ArteryTlsSettings`/`ArteryTlsSetup`: mutual TLS 1.3, explicit certificate pin trust and outbound endpoint
+hostname validation. QUIC implements TLS 1.3 internally. No trust-all certificate callback or plaintext
+fallback is used. In `run`, the harness creates one ephemeral self-signed loopback identity for both
+systems when `--cert` is omitted; the header labels it as benchmark-only. This identity is never used
+by split processes. Certificates stay alive until all actor systems terminate, including error paths.
+
+For encrypted `server`/`client` runs, supply a PKCS#12 identity and the expected peer's thumbprint on
+**both** processes. Each identity must support client and server authentication and include the
+advertised DNS/IP in its SANs. To create a shared identity for a local split-process smoke test only:
+
+```bash
+# Work in a temporary directory. RPP_CERT_PASSWORD must be set in your environment.
+openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 1 \
+  -subj /CN=localhost -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+  -addext 'extendedKeyUsage=serverAuth,clientAuth'
+openssl pkcs12 -export -out identity.pfx -inkey key.pem -in cert.pem -passout env:RPP_CERT_PASSWORD
+openssl x509 -in cert.pem -noout -fingerprint -sha1
+```
+
+Remove colons from the printed thumbprint and set `RPP_PEER_PIN` to that public value. The password
+option names an environment variable; its value is not a command-line argument or benchmark output.
+
+```bash
+# Terminal A: wait for SERVER READY before starting B.
+dotnet RemotePingPong.dll server --transport quic --host 127.0.0.1 --port 25520 \
+  --payload real --serializer v2 --cert identity.pfx --cert-password-env RPP_CERT_PASSWORD --peer-pin "$RPP_PEER_PIN"
+
+# Terminal B: same serializer and transport, reachable return address.
+dotnet RemotePingPong.dll client --transport quic --host 127.0.0.1 --port 25520 --myhost 127.0.0.1 \
+  --payload real --serializer v2 --clients 16 --msgs 100000 --times 3 \
+  --cert identity.pfx --cert-password-env RPP_CERT_PASSWORD --peer-pin "$RPP_PEER_PIN"
+```
+
+Use `--transport artery-tls` on both sides for the encrypted TCP arm. For two actual hosts use their
+reachable addresses, matching certificate SANs and each peer's trusted pins; TCP and UDP reachability
+must match the selected arm. Stop the server with Ctrl+C after the client completes and wait for `SERVER STOPPED`, which is
+printed after actor termination and certificate disposal. The CLI may return the conventional SIGINT
+status 130 even after graceful cleanup. Then remove the temporary key/certificate files. A split pair on localhost validates wiring, not
+real-network performance. Native QUIC needs a supported serviced runtime and MsQuic (`libmsquic` on
+Linux); older runtime/native combinations can fail IP-literal handshakes.
+
+Processing-lane flags apply to all Artery arms. QUIC additionally accepts `--quic-streams S`
+(default 1, maximum 64), with `S <= --outbound-lanes`. Each recipient keeps its existing processing
+lane; lane `i` always writes to ordinary stream `i % S` within that connection generation. Control
+and large traffic retain separate streams. The receiver admits at most eight ordinary streams by
+default (`akka.remote.artery.advanced.quic.maximum-inbound-ordinary-streams`, bounded 1–64).
+An explicit benchmark request above eight raises the local receiver cap to that count too. Use
+matching counts on both split processes when exercising more than eight streams.
+
+For a lane sweep, compare TCP with `--inbound-lanes N --outbound-lanes N` against QUIC with
+`--inbound-lanes 1 --outbound-lanes N --quic-streams N`, for N=1/2/4/8. QUIC creates an inbound path
+per stream; using N inbound lanes on each of N streams would create N squared receive consumers.
+The harness prints actual native stream counts and recipient lane occupancy before timing each
+repetition. Use enough clients to populate every lane in both directions. These are matched counts
+of processing paths with different queueing topologies; throughput alone cannot establish a
+head-of-line blocking or latency advantage. `--iobuf` controls Akka.IO TCP buffers and is reported
+as ignored for QUIC native I/O.
+
+`compare_transports.py` runs sequential, rotated arms with one equal-sized warmup and one measurement
+per process. It requires the real V2 payload, checks counts/serialized size and rejects errors,
+drops, resends, short measurements, unused lanes and incorrect native stream counts. It retains
+raw logs and JSON rows plus a CSV distribution summary. `--keep-going` retains failures and finishes
+the matrix while still returning nonzero; invalid attempts never enter the summary. For example:
+
+```bash
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --pattern oneway --clients 128 --window 10 --messages 37500 \
+  --repetitions 5 --lanes 1 2 4 8 --queue-budget 8192 \
+  --output /tmp/artery-transport-comparison
+```
+
+Add `--lanes 8 --quic-stream-counts 1 2 4 8` for a fixed-eight-lane native-stream sweep.
+Each QUIC stream then gets `8 / S` inbound processing lanes, keeping eight total receive paths
+while S varies; TCP reference arms keep eight inbound lanes. The output retains these actual
+budgets and native stream counts. Stream counts must divide every selected lane count.
+
+Use `--pattern ping-pong` for the echo workload and increase messages if a measured row is under
+three seconds. Historical plaintext regression mode accepts `--historical-root` containing the
+pinned `pre-tls` and `post-tls` checkouts. An optional `--adapter-revision COMMIT` also includes an
+`adapter` checkout at that commit. The driver verifies that their original benchmark source trees
+are identical and uses the old `--artery` interface. Keep build/test work separate from timed runs.
+Record native/runtime versions and preserve failed attempts alongside successful repetitions.
+
+`--diagnostics` prints a separate `PROFILE` JSON record before each normal CSV row in `run`/`client`.
+It measures CPU, managed allocation and GC counts for the current process; loopback includes both
+actor systems, while split-client mode includes only the client process. QUIC I/O counters cover
+ordinary streams and include protocol/credit traffic. A zero I/O counter on another transport means
+it is not instrumented. Server mode accepts the flag to enable counters but has no measured repetition
+and emits no `PROFILE` row. These counters do not measure native memory or native function CPU.
+Leave diagnostics off for the primary unprofiled throughput comparison.
 
 ### `--oneway`
 
@@ -289,21 +405,8 @@ The header reports the environment and the effective configuration, then one tab
 count:
 
 ```
-Transport:                         DotNetty
-Mode:                              ping-pong
-OSVersion:                         Unix 6.8.0.137
-ProcessorCount:                    8
-ClockSpeed:                        0 MHZ
-Actor Count:                       16
-Messages sent/received per client: 400000  (4e5)
-Is Server GC:                      True
-Thread count:                      35
-Window size (in-flight):           50
-Pinned client count:               1
-
 Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads
-         1,  400000,    120410,    3322.71,            35,              59
-Done..
+<clients>, <counted messages>, <rate>, <elapsed ms>, <start threads>, <end threads>
 ```
 
 - **`Messages sent/received per client`** is `msgs × 2` in ping-pong (every message travels out and

@@ -39,9 +39,20 @@ namespace Akka.Remote.Artery
         public bool Enabled { get; }
 
         /// <summary>
-        /// The configured transport substrate. Only <c>"tcp"</c> is supported for now.
+        /// The configured transport substrate. Supports <c>"tcp"</c> and experimental <c>"quic"</c>.
         /// </summary>
         public string Transport { get; }
+
+        internal const int MaximumQuicOrdinaryStreams = 64;
+
+        /// <summary>Independent ordinary QUIC streams; outbound lanes map to fixed stream groups.</summary>
+        public int QuicOrdinaryStreams { get; }
+
+        /// <summary>Upper bound on ordinary QUIC channels admitted from any one connection.</summary>
+        public int QuicMaximumInboundOrdinaryStreams { get; }
+
+        /// <summary>Opt-in native I/O-size diagnostics for prototype profiling.</summary>
+        public bool QuicIoStatisticsEnabled { get; }
 
         /// <summary>
         /// The hostname (or IP) this system advertises for other systems to connect to.
@@ -309,9 +320,9 @@ namespace Akka.Remote.Artery
             Enabled = arteryConfig.GetBoolean("enabled");
 
             Transport = arteryConfig.GetString("transport", "tcp");
-            if (Transport != "tcp")
+            if (Transport is not ("tcp" or "quic"))
                 throw new ConfigurationException(
-                    $"Unsupported akka.remote.artery.transport [{Transport}]. Only \"tcp\" is supported at this time.");
+                    $"Unsupported akka.remote.artery.transport [{Transport}]. Supported values are \"tcp\" and \"quic\".");
 
             CanonicalHostname = arteryConfig.GetString("canonical.hostname", "localhost");
             CanonicalPort = arteryConfig.GetInt("canonical.port", 25520);
@@ -340,6 +351,15 @@ namespace Akka.Remote.Artery
             if (OutboundLanes < 1)
                 throw new ConfigurationException(
                     $"akka.remote.artery.advanced.outbound-lanes must be >= 1, but was [{OutboundLanes}].");
+
+            QuicIoStatisticsEnabled = arteryConfig.GetBoolean("advanced.quic.io-statistics", false);
+            QuicOrdinaryStreams = arteryConfig.GetInt("advanced.quic.ordinary-streams", 1);
+            QuicMaximumInboundOrdinaryStreams = arteryConfig.GetInt("advanced.quic.maximum-inbound-ordinary-streams", 8);
+            if (QuicOrdinaryStreams is < 1 or > MaximumQuicOrdinaryStreams ||
+                QuicMaximumInboundOrdinaryStreams is < 1 or > MaximumQuicOrdinaryStreams)
+                throw new ConfigurationException($"Artery QUIC ordinary stream limits must be between 1 and {MaximumQuicOrdinaryStreams}.");
+            if (Transport == "quic" && QuicOrdinaryStreams > OutboundLanes)
+                throw new ConfigurationException("akka.remote.artery.advanced.quic.ordinary-streams must not exceed outbound-lanes.");
 
             HandshakeTimeout = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-timeout", TimeSpan.FromSeconds(20));
             HandshakeRetryInterval = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-retry-interval", TimeSpan.FromSeconds(1));

@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -20,6 +22,8 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Serialization;
+using Akka.Remote;
+using Akka.Remote.Artery;
 using Akka.Util.Internal;
 
 namespace RemotePingPong
@@ -51,6 +55,27 @@ namespace RemotePingPong
         // baseline); "--artery" points the exact same benchmark at Artery.Tcp so the two produce
         // directly comparable msgs/sec numbers over an otherwise-identical workload.
         private static bool _useArtery;
+        private static BenchmarkTransport _transport = BenchmarkTransport.Default();
+        private static int? _quicStreamsOverride;
+        private static bool _diagnostics;
+        private static readonly HashSet<ActorSystem> ActorSystems = new();
+
+        private static bool SelectTransport(bool artery, string? transport, string? certificatePath,
+            string? passwordEnvironmentVariable, string? peerPins, int? quicStreams, bool splitMode, bool diagnostics = false)
+        {
+            _diagnostics = diagnostics;
+            _quicStreamsOverride = quicStreams;
+            _transport = BenchmarkTransport.Create(transport ?? (artery ? "artery-tcp" : "dotnetty"),
+                splitMode, certificatePath, passwordEnvironmentVariable, peerPins);
+            return _transport.IsArtery;
+        }
+
+        private static ActorSystem CreateBenchmarkActorSystem(string name, string host, int port)
+        {
+            var system = ActorSystem.Create(name, _transport.Setup(CreateActorSystemConfig(name, host, port)));
+            ActorSystems.Add(system);
+            return system;
+        }
 
         // Selected once at startup via the "--oneway" option. Default mode is ping-pong
         // (client sends, destination echoes every message back - see EchoActor/BenchmarkActor).
@@ -160,6 +185,7 @@ namespace RemotePingPong
         // handled directly by which subcommand's action runs - see BuildRootCommand() - so unlike
         // the old positional parser there is no standalone "_serverMode" flag to check.)
         private static bool _clientMode;
+        private static bool _serverMode;
 
         // "--host" - in server mode, the address this process advertises to clients (required).
         // NOTE: neither transport's config sets a separate bind hostname here - ArterySettings'
@@ -284,6 +310,22 @@ namespace RemotePingPong
                 }}");
 
             var config = transportConfig.WithFallback(commonConfig);
+            if (_transport.Kind == "quic")
+            {
+                config = ConfigurationFactory.ParseString("akka.remote.artery.transport = quic").WithFallback(config);
+                if (_diagnostics)
+                    config = ConfigurationFactory.ParseString("akka.remote.artery.advanced.quic.io-statistics = on").WithFallback(config);
+                if (_quicStreamsOverride.HasValue)
+                {
+                    config = ConfigurationFactory.ParseString($"akka.remote.artery.advanced.quic.ordinary-streams = {_quicStreamsOverride.Value}")
+                        .WithFallback(config);
+                    // The prototype admits eight incoming ordinary streams by default. A larger
+                    // explicit benchmark request needs matching admission on both loopback peers.
+                    if (_quicStreamsOverride.Value > 8)
+                        config = ConfigurationFactory.ParseString($"akka.remote.artery.advanced.quic.maximum-inbound-ordinary-streams = {_quicStreamsOverride.Value}")
+                            .WithFallback(config);
+                }
+            }
 
             if (!string.IsNullOrEmpty(_ioBufSize))
             {
@@ -492,9 +534,27 @@ namespace RemotePingPong
                 await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
             }
 
-            var rootCommand = BuildRootCommand();
-            var parseResult = rootCommand.Parse(args);
-            return await parseResult.InvokeAsync();
+            try
+            {
+                var rootCommand = BuildRootCommand();
+                var parseResult = rootCommand.Parse(args);
+                // The parser's two-second default can terminate the process before Artery's
+                // bounded flush and caller-owned certificate cleanup finish after Ctrl+C.
+                return await parseResult.InvokeAsync(new InvocationConfiguration
+                {
+                    ProcessTerminationTimeout = TimeSpan.FromSeconds(30)
+                });
+            }
+            finally
+            {
+                // Includes setup/readiness/benchmark failures: do not dispose caller-owned TLS
+                // identities while a surviving actor system can still use its private key.
+                await Task.WhenAll(ActorSystems.Select(system => system.Terminate()));
+                ActorSystems.Clear();
+                _transport.Dispose();
+                if (_serverMode)
+                    Console.WriteLine("SERVER STOPPED");
+            }
         }
 
         /// <summary>
@@ -522,6 +582,40 @@ namespace RemotePingPong
                 Description = "Use the Artery.Tcp transport instead of the classic DotNetty TCP transport (the default)."
             };
 
+            var transportOption = new Option<string?>("--transport")
+            {
+                Description = "Remote transport: dotnetty (default), artery-tcp, artery-tls, or quic. " +
+                              "Both encrypted Artery arms reuse Akka.IO TLS policies with mutual TLS 1.3."
+            };
+            transportOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<string?>();
+                if (value is not null && value is not ("dotnetty" or "artery-tcp" or "artery-tls" or "quic"))
+                    result.AddError("--transport must be dotnetty, artery-tcp, artery-tls, or quic.");
+            });
+            var diagnosticsOption = new Option<bool>("--diagnostics")
+            {
+                Description = "Print process CPU, managed allocations/GC and ordinary QUIC native I/O sizes for profiling."
+            };
+            var quicStreamsOption = new Option<int?>("--quic-streams")
+            {
+                Description = "Independent ordinary QUIC streams (default 1), between 1 and outbound-lanes. " +
+                              "Lanes map to fixed stream groups; distinct from inbound processing lanes per stream."
+            };
+            var certificateOption = new Option<string?>("--cert")
+            {
+                Description = "PKCS#12 identity with client/server usages and endpoint SANs. " +
+                              "Encrypted loopback runs generate an ephemeral identity when omitted; required in server/client modes."
+            };
+            var passwordEnvironmentOption = new Option<string?>("--cert-password-env")
+            {
+                Description = "Name of the environment variable containing the PKCS#12 password (never printed)."
+            };
+            var peerPinsOption = new Option<string?>("--peer-pin")
+            {
+                Description = "Comma-separated trusted peer certificate thumbprints; required for encrypted server/client modes. " +
+                              "Loopback defaults to trusting its own identity. Hostname validation remains enabled."
+            };
             var onewayOption = new Option<bool>("--oneway")
             {
                 Description = "Switch from ping-pong mode to one-directional firehose mode: the sender fires a " +
@@ -571,7 +665,7 @@ namespace RemotePingPong
             {
                 Description = "Override akka.remote.artery.advanced.inbound-lanes - how many lanes " +
                               "inbound ordinary-stream messages are fanned out across for parallel " +
-                              "deserialization/dispatch. Artery mode only; ignored without --artery. When " +
+                              "deserialization/dispatch. Artery mode only; ignored for DotNetty. When " +
                               "omitted, the Remote.conf default applies untouched."
             };
             inboundLanesOption.Validators.Add(result =>
@@ -633,6 +727,37 @@ namespace RemotePingPong
                     result.AddError($"--serializer must be \"v2\", \"protobuf\", or \"msgpack\" (got \"{value}\").");
             });
 
+            void AddTransportOptions(Command command, bool splitMode)
+            {
+                command.Options.Add(diagnosticsOption);
+                command.Options.Add(transportOption);
+                command.Options.Add(quicStreamsOption);
+                command.Options.Add(certificateOption);
+                command.Options.Add(passwordEnvironmentOption);
+                command.Options.Add(peerPinsOption);
+                command.Validators.Add(result =>
+                {
+                    var selected = result.GetValue(transportOption);
+                    var streams = result.GetValue(quicStreamsOption);
+                    if (streams.HasValue && (selected != "quic" || streams.Value < 1 || streams.Value > 64))
+                        result.AddError("--quic-streams requires --transport quic and a count between 1 and 64.");
+                    if (streams.HasValue && streams.Value > (result.GetValue(outboundLanesOption) ?? 1))
+                        result.AddError("--quic-streams must not exceed --outbound-lanes.");
+                    var certificate = result.GetValue(certificateOption);
+                    var passwordEnvironment = result.GetValue(passwordEnvironmentOption);
+                    var pins = result.GetValue(peerPinsOption);
+                    if (result.GetValue(arteryOption) && selected is not null && selected != "artery-tcp")
+                        result.AddError("--artery selects artery-tcp; use --transport alone for another transport.");
+                    var encrypted = selected is "artery-tls" or "quic";
+                    if (!encrypted && (certificate is not null || passwordEnvironment is not null || pins is not null))
+                        result.AddError("Certificate options require --transport artery-tls or quic.");
+                    if (encrypted && splitMode && (string.IsNullOrWhiteSpace(certificate) || string.IsNullOrWhiteSpace(pins)))
+                        result.AddError("Encrypted server/client modes require --cert and --peer-pin on both processes.");
+                    if (certificate is null && (passwordEnvironment is not null || pins is not null))
+                        result.AddError("--cert-password-env and --peer-pin require --cert.");
+                });
+            }
+
             void AddPayloadSerializerValidation(Command command)
             {
                 command.Validators.Add(result =>
@@ -663,8 +788,11 @@ namespace RemotePingPong
             runCommand.Options.Add(payloadOption);
             runCommand.Options.Add(serializerOption);
             AddPayloadSerializerValidation(runCommand);
+            AddTransportOptions(runCommand, splitMode: false);
             runCommand.SetAction(parseResult => RunLoopbackAsync(
-                parseResult.GetValue(arteryOption),
+                SelectTransport(parseResult.GetValue(arteryOption), parseResult.GetValue(transportOption),
+                    parseResult.GetValue(certificateOption), parseResult.GetValue(passwordEnvironmentOption),
+                    parseResult.GetValue(peerPinsOption), parseResult.GetValue(quicStreamsOption), splitMode: false, diagnostics: parseResult.GetValue(diagnosticsOption)),
                 parseResult.GetValue(onewayOption),
                 parseResult.GetValue(windowOption),
                 parseResult.GetValue(clientsOption),
@@ -707,8 +835,11 @@ namespace RemotePingPong
             serverCommand.Options.Add(payloadOption);
             serverCommand.Options.Add(serializerOption);
             AddPayloadSerializerValidation(serverCommand);
+            AddTransportOptions(serverCommand, splitMode: true);
             serverCommand.SetAction(parseResult => RunServerModeAsync(
-                parseResult.GetValue(arteryOption),
+                SelectTransport(parseResult.GetValue(arteryOption), parseResult.GetValue(transportOption),
+                    parseResult.GetValue(certificateOption), parseResult.GetValue(passwordEnvironmentOption),
+                    parseResult.GetValue(peerPinsOption), parseResult.GetValue(quicStreamsOption), splitMode: true, diagnostics: parseResult.GetValue(diagnosticsOption)),
                 parseResult.GetValue(onewayOption),
                 parseResult.GetValue(windowOption),
                 parseResult.GetValue(clientsOption),
@@ -716,7 +847,7 @@ namespace RemotePingPong
                 parseResult.GetValue(qsizeOption),
                 parseResult.GetValue(inboundLanesOption),
                 parseResult.GetValue(outboundLanesOption),
-                parseResult.GetValue(serverHostOption),
+                parseResult.GetValue(serverHostOption)!,
                 parseResult.GetValue(serverPortOption),
                 parseResult.GetValue(payloadOption)!,
                 parseResult.GetValue(serializerOption)));
@@ -761,8 +892,11 @@ namespace RemotePingPong
             clientCommand.Options.Add(payloadOption);
             clientCommand.Options.Add(serializerOption);
             AddPayloadSerializerValidation(clientCommand);
+            AddTransportOptions(clientCommand, splitMode: true);
             clientCommand.SetAction(parseResult => RunClientModeAsync(
-                parseResult.GetValue(arteryOption),
+                SelectTransport(parseResult.GetValue(arteryOption), parseResult.GetValue(transportOption),
+                    parseResult.GetValue(certificateOption), parseResult.GetValue(passwordEnvironmentOption),
+                    parseResult.GetValue(peerPinsOption), parseResult.GetValue(quicStreamsOption), splitMode: true, diagnostics: parseResult.GetValue(diagnosticsOption)),
                 parseResult.GetValue(onewayOption),
                 parseResult.GetValue(windowOption),
                 parseResult.GetValue(clientsOption),
@@ -772,7 +906,7 @@ namespace RemotePingPong
                 parseResult.GetValue(inboundLanesOption),
                 parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
-                parseResult.GetValue(clientHostOption),
+                parseResult.GetValue(clientHostOption)!,
                 parseResult.GetValue(clientPortOption),
                 parseResult.GetValue(myHostOption),
                 parseResult.GetValue(payloadOption)!,
@@ -886,7 +1020,8 @@ namespace RemotePingPong
                 return;
             }
 
-            Console.WriteLine("Transport:                         {0}", _useArtery ? "Artery.Tcp" : "DotNetty");
+            Console.WriteLine("Transport:                         {0}", _transport.DisplayName);
+            _transport.PrintSecurity();
             Console.WriteLine("Mode:                              {0}", _onewayMode ? "one-way" : "ping-pong");
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
@@ -905,7 +1040,7 @@ namespace RemotePingPong
             }
             if (!string.IsNullOrEmpty(_ioBufSize))
             {
-                Console.WriteLine("IO buffer size (akka.io.tcp):      {0}", _ioBufSize);
+                Console.WriteLine(_transport.Kind == "quic" ? "--iobuf ignored (QUIC native I/O): {0}" : "IO buffer size (akka.io.tcp):      {0}", _ioBufSize);
             }
             if (_useArtery)
             {
@@ -1046,7 +1181,8 @@ namespace RemotePingPong
         /// </summary>
         private static async Task RunServer()
         {
-            var system = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", _host!, _splitPort));
+            _serverMode = true;
+            var system = CreateBenchmarkActorSystem("SystemB", _host!, _splitPort);
             EnsureRealPayloadWiring(system);
             // DefaultAddress reflects the ACTUALLY-bound endpoint (ActorSystem.Create doesn't
             // return until the transport's listener is up), so printing READY from it is truthful.
@@ -1094,7 +1230,8 @@ namespace RemotePingPong
         /// </summary>
         private static void PrintServerInfo()
         {
-            Console.WriteLine("Transport:                         {0}", _useArtery ? "Artery.Tcp" : "DotNetty");
+            Console.WriteLine("Transport:                         {0}", _transport.DisplayName);
+            _transport.PrintSecurity();
             Console.WriteLine("Mode:                              {0} (split: server side)", _onewayMode ? "one-way" : "ping-pong");
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", Environment.ProcessorCount);
@@ -1170,7 +1307,7 @@ namespace RemotePingPong
             // mode keeps the historical loopback binding. Port 0 either way: a fresh OS-assigned
             // port per rep, which split mode additionally relies on for server-side actor-path
             // uniqueness (see the system2 comment below).
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", _clientMode ? _myHost! : "127.0.0.1", 0));
+            var system1 = CreateBenchmarkActorSystem("SystemA", _clientMode ? _myHost! : "127.0.0.1", 0);
             EnsureRealPayloadWiring(system1);
 
             // system2 - the serving side (echo actors in ping-pong, receivers in one-way) - only
@@ -1196,7 +1333,7 @@ namespace RemotePingPong
             }
             else
             {
-                system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
+                system2 = CreateBenchmarkActorSystem("SystemB", "127.0.0.1", 0);
                 system2Address = ((ExtendedActorSystem)system2).Provider.DefaultAddress;
             }
 
@@ -1314,7 +1451,44 @@ namespace RemotePingPong
                 PrintSysInfo(numberOfRepeats);
             }
 
+            if (_useArtery)
+            {
+                var lanes = _outboundLanesOverride ?? 1;
+                var sendRecipients = serverSideActors.GroupBy(actor => Association.SelectLane(actor.Path.Uid, lanes))
+                    .ToDictionary(group => group.Key, group => group.Count());
+                var replyRecipients = primeTargets.GroupBy(actor => Association.SelectLane(actor.Path.Uid, lanes))
+                    .ToDictionary(group => group.Key, group => group.Count());
+                Console.WriteLine("Recipient lane occupancy (send):   {0}",
+                    string.Join(",", Enumerable.Range(0, lanes).Select(lane => sendRecipients.GetValueOrDefault(lane))));
+                Console.WriteLine("Recipient lane occupancy (reply):  {0}",
+                    string.Join(",", Enumerable.Range(0, lanes).Select(lane => replyRecipients.GetValueOrDefault(lane))));
+            }
+
+            if (_transport.Kind == "quic")
+            {
+                var remoting = (ArteryRemoting)((RemoteActorRefProvider)((ExtendedActorSystem)system1).Provider).Transport;
+                using var readyDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await remoting.QuicOrdinaryStreamsReadyAsync(readyDeadline.Token);
+                var actualStreams = remoting.QuicOrdinaryStreamCounts().Values.Sum();
+                var configuredStreams = _quicStreamsOverride ?? 1;
+                if (actualStreams != configuredStreams)
+                    throw new InvalidOperationException($"Expected {configuredStreams} ordinary QUIC streams, observed {actualStreams}.");
+                Console.WriteLine("QUIC ordinary streams open:        {0} (configured {1}; per-stream inbound lanes {2}; receive paths {3})",
+                    actualStreams, configuredStreams, _inboundLanesOverride ?? 1, actualStreams * (_inboundLanesOverride ?? 1));
+            }
+
             var startThreads = Process.GetCurrentProcess().Threads.Count;
+            using var diagnosticProcess = _diagnostics ? Process.GetCurrentProcess() : null;
+            var allocatedBefore = _diagnostics ? GC.GetTotalAllocatedBytes(precise: true) : 0;
+            var cpuBefore = diagnosticProcess?.TotalProcessorTime ?? TimeSpan.Zero;
+            var gen0Before = _diagnostics ? GC.CollectionCount(0) : 0;
+            var gen1Before = _diagnostics ? GC.CollectionCount(1) : 0;
+            var gen2Before = _diagnostics ? GC.CollectionCount(2) : 0;
+            ArteryQuicIoSnapshot SnapshotIo(ActorSystem? system) =>
+                system is not null && _transport.Kind == "quic"
+                    ? ((ArteryRemoting)((RemoteActorRefProvider)((ExtendedActorSystem)system).Provider).Transport).QuicIoSnapshot
+                    : default;
+            var ioBefore = _diagnostics ? SnapshotIo(system1) + SnapshotIo(system2) : default;
 
             var sw = Stopwatch.StartNew();
             if (_onewayMode)
@@ -1335,7 +1509,31 @@ namespace RemotePingPong
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);
             sw.Stop();
-            
+            if (_diagnostics)
+            {
+                diagnosticProcess!.Refresh();
+                var cpu = diagnosticProcess.TotalProcessorTime - cpuBefore;
+                var allocated = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
+                var io = SnapshotIo(system1) + SnapshotIo(system2) - ioBefore;
+                Console.WriteLine("PROFILE " + System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    countedMessages = totalMessagesReceived,
+                    elapsedMilliseconds = sw.Elapsed.TotalMilliseconds,
+                    processCpuMilliseconds = cpu.TotalMilliseconds,
+                    managedAllocatedBytes = allocated,
+                    managedBytesPerCountedMessage = (double)allocated / totalMessagesReceived,
+                    gen0Collections = GC.CollectionCount(0) - gen0Before,
+                    gen1Collections = GC.CollectionCount(1) - gen1Before,
+                    gen2Collections = GC.CollectionCount(2) - gen2Before,
+                    ordinaryReads = io.ReadOperations,
+                    ordinaryReadBytes = io.ReadBytes,
+                    meanOrdinaryReadBytes = io.ReadOperations == 0 ? 0 : (double)io.ReadBytes / io.ReadOperations,
+                    ordinaryWrites = io.WriteOperations,
+                    ordinaryWriteBytes = io.WriteBytes,
+                    meanOrdinaryWriteBytes = io.WriteOperations == 0 ? 0 : (double)io.WriteBytes / io.WriteOperations
+                }));
+            }
+
             var endThreads = Process.GetCurrentProcess().Threads.Count;
 
             if (_clientMode)
@@ -1357,6 +1555,9 @@ namespace RemotePingPong
             await Task.WhenAll(system2 == null
                 ? new[] { system1.Terminate() }
                 : new[] { system1.Terminate(), system2.Terminate() });
+            ActorSystems.Remove(system1);
+            if (system2 is not null)
+                ActorSystems.Remove(system2);
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
