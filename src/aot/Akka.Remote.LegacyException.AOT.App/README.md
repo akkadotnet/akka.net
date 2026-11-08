@@ -37,8 +37,8 @@ custom exception construction under Native AOT.
 
 Install SDK **10.0.114**. The runtime/compiler pack is pinned to **10.0.14** for this proof.
 The script creates an app-local SDK selection directory inside its artifact output, so the
-base branch's older `global.json` cannot silently select SDK 10.0.101. The repository SDK pin
-is unchanged. Point `AKKA_NATIVE_DOTNET` at a full dotnet CLI path if necessary:
+original base branch's older `global.json` cannot silently select SDK 10.0.101. This branch
+now also includes the repository SDK servicing dependency [#8914](https://github.com/akkadotnet/akka.net/pull/8914). Point `AKKA_NATIVE_DOTNET` at a full dotnet CLI path if necessary:
 
 ```bash
 AKKA_NATIVE_DOTNET=/path/to/dotnet \
@@ -64,3 +64,18 @@ Remote keys, not a newly approved CI baseline. Five existing keys remain in the 
 publish; the old ExceptionSupport reflection key is no longer emitted. No new, outside-scope
 or source-less diagnostics were observed. The original failed System native receipt remains
 retained even though the corrected consumer passes.
+
+## CI gate
+
+`RemoteLegacyExceptionAotCanary` publishes a cold ordinary consumer, requires exit zero and
+its exact 114-read/15-rejection/3-override/3-empty-sentinel marker, checks scoped warnings and
+retains logs even on failure. It also requires zero diagnostics without a source location.
+The shared Remote baseline approves only the five existing keys retained above; no new
+codec, consumer or V2 runtime warning is approved. Core warnings remain owned by its
+separate rooted canary. Outside-scope counts are reported, not automatically rejected by
+this lane; the local replay observed zero. The SDK servicing prerequisite is included.
+
+The `evidence/ci-replay` directory retains the local replay of these Bash steps. Cold outputs
+were moved aside locally instead of deleted; hosted CI uses the explicit clean step. The
+replay passed publish, exact runtime marker and warning checks on SDK 10.0.114/runtime 10.0.14.
+This validates the commands, not hosted execution of the newly added Azure job.

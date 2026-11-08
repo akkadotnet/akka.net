@@ -369,6 +369,51 @@ jobs:
           contents: '*.log'
           artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
+  # Ordinary public consumer for historical id 16/id 22 exception records.
+  # The unrooted binary, exact corpus marker and scoped warnings are all required.
+  - job: RemoteLegacyExceptionAotCanary
+    displayName: "Native legacy exception reader (Linux)"
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        submodules: recursive
+      - task: UseDotNet@2
+        inputs:
+          packageType: sdk
+          useGlobalJson: true
+      - bash: |
+          set -euo pipefail
+          rm -rf src/aot/Akka.Remote.LegacyException.AOT.App/bin src/aot/Akka.Remote.LegacyException.AOT.App/obj
+          mkdir -p "$(Agent.TempDirectory)/legacy-exception-proof"
+          dotnet --info > "$(Agent.TempDirectory)/legacy-exception-proof/sdk-info.log"
+          dotnet publish src/aot/Akka.Remote.LegacyException.AOT.App -c Release -r linux-x64 \
+            -o "$(Agent.TempDirectory)/legacy-exception-publish" 2>&1 | tee "$(Agent.TempDirectory)/legacy-exception-proof/publish.log"
+        displayName: Publish the ordinary native consumer
+      - bash: |
+          set -euo pipefail
+          timeout 300 "$(Agent.TempDirectory)/legacy-exception-publish/Akka.Remote.LegacyException.AOT.App" \
+            2>&1 | tee "$(Agent.TempDirectory)/legacy-exception-proof/run.log"
+          grep -Fxq '[legacy-exceptions-native] OK reads=114 rejected=15 overrides=3 empty-sentinels=3' \
+            "$(Agent.TempDirectory)/legacy-exception-proof/run.log"
+        displayName: Require complete historical reads and explicit rejection controls
+      - bash: |
+          set -euo pipefail
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/legacy-exception-proof/publish.log" \
+            --baseline src/aot/Shared/remote-aot-warnings.baseline.txt \
+            --scope "src/core/Akka.Remote/,src/core/Akka.Serialization.V2/,src/aot/Akka.Remote.LegacyException.AOT.App/,src/aot/Shared/" \
+            --repo-root "$(Build.SourcesDirectory)" \
+            2>&1 | tee "$(Agent.TempDirectory)/legacy-exception-proof/warnings.log"
+          grep -Eq '^  no source location: 0 warning' "$(Agent.TempDirectory)/legacy-exception-proof/warnings.log"
+        displayName: Reject new Remote, runtime or consumer AOT warnings
+      - task: PublishBuildArtifacts@1
+        condition: always()
+        inputs:
+          PathtoPublish: "$(Agent.TempDirectory)/legacy-exception-proof"
+          ArtifactName: "legacy-exception-native-proof-$(Build.BuildId)"
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"
