@@ -1,0 +1,16 @@
+case: status-IOException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 157
+
+0000  0a 98 01 0a 2d 53 79 73  74 65 6d 2e 49 4f 2e 49  |....-System.IO.I|
+0010  4f 45 78 63 65 70 74 69  6f 6e 2c 20 53 79 73 74  |OException, Syst|
+0020  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0030  69 62 12 07 6d 65 73 73  61 67 65 22 0d 6c 65 67  |ib..message".leg|
+0040  61 63 79 2d 73 6f 75 72  63 65 2a 45 0a 28 53 79  |acy-source*E.(Sy|
+0050  73 74 65 6d 2e 45 78 63  65 70 74 69 6f 6e 2c 20  |stem.Exception, |
+0060  53 79 73 74 65 6d 2e 50  72 69 76 61 74 65 2e 43  |System.Private.C|
+0070  6f 72 65 4c 69 62 12 0d  69 6e 6e 65 72 20 6d 65  |oreLib..inner me|
+0080  73 73 61 67 65 2a 00 3a  08 6d 73 63 6f 72 6c 69  |ssage*.:.mscorli|
+0090  62 3a 08 6d 73 63 6f 72  6c 69 62 12 00           |b:.mscorlib..|

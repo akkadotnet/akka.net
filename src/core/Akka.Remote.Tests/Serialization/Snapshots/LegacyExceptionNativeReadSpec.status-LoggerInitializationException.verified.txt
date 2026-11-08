@@ -1,0 +1,16 @@
+case: status-LoggerInitializationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 148
+
+0000  0a 8f 01 0a 2e 41 6b 6b  61 2e 41 63 74 6f 72 2e  |.....Akka.Actor.|
+0010  4c 6f 67 67 65 72 49 6e  69 74 69 61 6c 69 7a 61  |LoggerInitializa|
+0020  74 69 6f 6e 45 78 63 65  70 74 69 6f 6e 2c 20 41  |tionException, A|
+0030  6b 6b 61 12 07 6d 65 73  73 61 67 65 22 0d 6c 65  |kka..message".le|
+0040  67 61 63 79 2d 73 6f 75  72 63 65 2a 45 0a 28 53  |gacy-source*E.(S|
+0050  79 73 74 65 6d 2e 45 78  63 65 70 74 69 6f 6e 2c  |ystem.Exception,|
+0060  20 53 79 73 74 65 6d 2e  50 72 69 76 61 74 65 2e  | System.Private.|
+0070  43 6f 72 65 4c 69 62 12  0d 69 6e 6e 65 72 20 6d  |CoreLib..inner m|
+0080  65 73 73 61 67 65 2a 00  3a 08 6d 73 63 6f 72 6c  |essage*.:.mscorl|
+0090  69 62 12 00                                       |ib..|

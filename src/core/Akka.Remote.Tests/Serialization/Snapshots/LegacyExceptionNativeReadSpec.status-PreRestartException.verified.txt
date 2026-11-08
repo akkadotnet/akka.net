@@ -1,0 +1,33 @@
+case: status-PreRestartException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 425
+
+0000  0a a4 03 0a 24 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....$Akka.Actor.|
+0010  50 72 65 52 65 73 74 61  72 74 45 78 63 65 70 74  |PreRestartExcept|
+0020  69 6f 6e 2c 20 41 6b 6b  61 12 28 45 78 63 65 70  |ion, Akka.(Excep|
+0030  74 69 6f 6e 20 70 72 65  20 72 65 73 74 61 72 74  |tion pre restart|
+0040  20 28 53 79 73 74 65 6d  2e 45 78 63 65 70 74 69  | (System.Excepti|
+0050  6f 6e 29 22 0d 6c 65 67  61 63 79 2d 73 6f 75 72  |on)".legacy-sour|
+0060  63 65 2a 45 0a 28 53 79  73 74 65 6d 2e 45 78 63  |ce*E.(System.Exc|
+0070  65 70 74 69 6f 6e 2c 20  53 79 73 74 65 6d 2e 50  |eption, System.P|
+0080  72 69 76 61 74 65 2e 43  6f 72 65 4c 69 62 12 0d  |rivate.CoreLib..|
+0090  69 6e 6e 65 72 20 6d 65  73 73 61 67 65 2a 00 3a  |inner message*.:|
+00a0  08 6d 73 63 6f 72 6c 69  62 32 98 01 0a 10 52 65  |.mscorlib2....Re|
+00b0  73 74 61 72 74 45 78 63  65 70 74 69 6f 6e 12 83  |startException..|
+00c0  01 0a 3f 0a 28 53 79 73  74 65 6d 2e 45 78 63 65  |..?.(System.Exce|
+00d0  70 74 69 6f 6e 2c 20 53  79 73 74 65 6d 2e 50 72  |ption, System.Pr|
+00e0  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 12 07 72  |ivate.CoreLib..r|
+00f0  65 73 74 61 72 74 2a 00  3a 08 6d 73 63 6f 72 6c  |estart*.:.mscorl|
+0100  69 62 10 02 1a 3e 41 6b  6b 61 2e 52 65 6d 6f 74  |ib...>Akka.Remot|
+0110  65 2e 53 65 72 69 61 6c  69 7a 61 74 69 6f 6e 2e  |e.Serialization.|
+0120  50 72 6f 74 6f 2e 4d 73  67 2e 45 78 63 65 70 74  |Proto.Msg.Except|
+0130  69 6f 6e 44 61 74 61 2c  20 41 6b 6b 61 2e 52 65  |ionData, Akka.Re|
+0140  6d 6f 74 65 32 46 0a 0f  4f 70 74 69 6f 6e 61 6c  |mote2F..Optional|
+0150  4d 65 73 73 61 67 65 12  33 0a 08 6f 70 74 69 6f  |Message.3..optio|
+0160  6e 61 6c 10 11 1a 25 53  79 73 74 65 6d 2e 53 74  |nal...%System.St|
+0170  72 69 6e 67 2c 20 53 79  73 74 65 6d 2e 50 72 69  |ring, System.Pri|
+0180  76 61 74 65 2e 43 6f 72  65 4c 69 62 32 19 0a 05  |vate.CoreLib2...|
+0190  41 63 74 6f 72 12 10 0a  08 0a 06 6e 6f 62 6f 64  |Actor......nobod|
+01a0  79 10 10 1a 02 41 52 12  00                       |y....AR..|

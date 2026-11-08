@@ -1,0 +1,16 @@
+case: status-ConfigurationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 149
+
+0000  0a 90 01 0a 2f 41 6b 6b  61 2e 43 6f 6e 66 69 67  |..../Akka.Config|
+0010  75 72 61 74 69 6f 6e 2e  43 6f 6e 66 69 67 75 72  |uration.Configur|
+0020  61 74 69 6f 6e 45 78 63  65 70 74 69 6f 6e 2c 20  |ationException, |
+0030  41 6b 6b 61 12 07 6d 65  73 73 61 67 65 22 0d 6c  |Akka..message".l|
+0040  65 67 61 63 79 2d 73 6f  75 72 63 65 2a 45 0a 28  |egacy-source*E.(|
+0050  53 79 73 74 65 6d 2e 45  78 63 65 70 74 69 6f 6e  |System.Exception|
+0060  2c 20 53 79 73 74 65 6d  2e 50 72 69 76 61 74 65  |, System.Private|
+0070  2e 43 6f 72 65 4c 69 62  12 0d 69 6e 6e 65 72 20  |.CoreLib..inner |
+0080  6d 65 73 73 61 67 65 2a  00 3a 08 6d 73 63 6f 72  |message*.:.mscor|
+0090  6c 69 62 12 00                                    |lib..|

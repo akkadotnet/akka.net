@@ -1,0 +1,11 @@
+case: status-InvalidMessageException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 72
+
+0000  0a 44 0a 28 41 6b 6b 61  2e 41 63 74 6f 72 2e 49  |.D.(Akka.Actor.I|
+0010  6e 76 61 6c 69 64 4d 65  73 73 61 67 65 45 78 63  |nvalidMessageExc|
+0020  65 70 74 69 6f 6e 2c 20  41 6b 6b 61 12 07 6d 65  |eption, Akka..me|
+0030  73 73 61 67 65 22 0d 6c  65 67 61 63 79 2d 73 6f  |ssage".legacy-so|
+0040  75 72 63 65 2a 00 12 00                           |urce*...|

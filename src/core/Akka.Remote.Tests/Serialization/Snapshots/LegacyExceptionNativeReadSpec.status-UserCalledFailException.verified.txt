@@ -1,0 +1,16 @@
+case: status-UserCalledFailException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 147
+
+0000  0a 8e 01 0a 2a 41 6b 6b  61 2e 50 61 74 74 65 72  |....*Akka.Patter|
+0010  6e 2e 55 73 65 72 43 61  6c 6c 65 64 46 61 69 6c  |n.UserCalledFail|
+0020  45 78 63 65 70 74 69 6f  6e 2c 20 41 6b 6b 61 12  |Exception, Akka.|
+0030  4f 55 73 65 72 20 63 6f  64 65 20 63 61 75 73 65  |OUser code cause|
+0040  64 20 5b 43 69 72 63 75  69 74 42 72 65 61 6b 65  |d [CircuitBreake|
+0050  72 5d 20 74 6f 20 66 61  69 6c 20 62 65 63 61 75  |r] to fail becau|
+0060  73 65 20 69 74 20 63 61  6c 6c 73 20 74 68 65 20  |se it calls the |
+0070  5b 46 61 69 6c 28 29 5d  20 6d 65 74 68 6f 64 2e  |[Fail()] method.|
+0080  22 0d 6c 65 67 61 63 79  2d 73 6f 75 72 63 65 2a  |".legacy-source*|
+0090  00 12 00                                          |...|
