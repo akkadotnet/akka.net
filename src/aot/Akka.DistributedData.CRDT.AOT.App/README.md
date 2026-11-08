@@ -99,3 +99,19 @@ reflection debt remains visible, and this proof does not approve it away.
 original failure output, commands and hashes. Hosted CI execution, native Remote/Cluster
 startup, transport interoperability, arbitrary payload support and performance acceptance
 remain outside this consumer's evidence.
+
+## Prepared CI composition
+
+The isolated composition includes reviewed SDK servicing #8914 and historical exception
+reader/shared CI #8935, plus the reviewed parameterized native template from the Cluster
+consumer. `DistributedDataCrdtAotCanary` uses the exact marker above, cold app outputs,
+pipefail, a bounded native process and always-retained logs. Its warning scope includes
+DData, Cluster, Remote, the V2 runtime and this app/Shared sources; Core remains owned by
+the separate rooted canary.
+
+The proposed 68-key existing-debt inventory contains only 52 old DData, 11 old Cluster
+and five old Remote identities. It removes the old exception-reader identity fixed by
+#8935 and permits no new codec/runtime/app/Shared diagnostic. Its final cold composed
+publish and expanded-command replay are pending the benchmark quiet-window release.
+Hosted execution is also pending. The original 69-key comparison remains retained
+separately, so the dependency's warning removal cannot overwrite historical evidence.
