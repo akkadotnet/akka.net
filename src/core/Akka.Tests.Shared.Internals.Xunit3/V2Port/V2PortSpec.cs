@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -43,6 +44,13 @@ public sealed record V2PortCase(object Message, string Manifest, string Name)
     /// check. Null retains the shared equality/structural checks.
     /// </summary>
     public Action<object, object>? AssertEquivalent { get; init; }
+
+    /// <summary>
+    /// A generic shape intentionally requiring dynamic type loading. The off gate must reject
+    /// both writes and reads with an explicit feature-switch reason, including warmed codecs.
+    /// False retains the strict positive round-trip checks.
+    /// </summary>
+    public bool RequiresDynamicTypeLoading { get; init; }
 }
 
 /// <summary>
@@ -159,17 +167,38 @@ public abstract class V2PortSpec : AkkaSpec
 
     [Fact(DisplayName = "Should_ResolveV2Id_When_DynamicTypeLoadingIsOff")]
     public void Should_ResolveV2Id_When_DynamicTypeLoadingIsOff()
+        => AssertDynamicTypeLoadingGate(Cases, () => CreateV2(Node), () => new Akka.Serialization.Serialization(Node));
+
+    internal static void AssertDynamicTypeLoadingGate(IReadOnlyList<V2PortCase> cases,
+        Func<SerializerV2> createV2, Func<Akka.Serialization.Serialization> createRegistry)
     {
         // a process-wide switch: the spec class belongs in a collection that doesn't run beside others (see the README)
         var hadSwitch = AppContext.TryGetSwitch(DynamicTypeLoadingSwitch, out var previous);
-        AppContext.SetSwitch(DynamicTypeLoadingSwitch, false);
+        var encoded = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        SerializerV2? warm = null;
         try
         {
-            var serialization = new Akka.Serialization.Serialization(Node);
-            var v2 = CreateV2(Node);
-
-            foreach (var c in Cases)
+            foreach (var sample in cases)
             {
+                if (!sample.RequiresDynamicTypeLoading)
+                    continue;
+                AppContext.SetSwitch(DynamicTypeLoadingSwitch, true);
+                warm ??= createV2();
+                var bytes = warm.ToBinary(sample.Message);
+                AssertSame(sample, warm.FromBinary(bytes, sample.V2Manifest ?? sample.Manifest), "warm enabled round trip");
+                encoded.Add(sample.Name, bytes);
+            }
+            AppContext.SetSwitch(DynamicTypeLoadingSwitch, false);
+            var serialization = createRegistry();
+            var v2 = createV2();
+
+            foreach (var c in cases)
+            {
+                if (c.RequiresDynamicTypeLoading)
+                {
+                    AssertDynamicTypeLoadingBoundary(c, warm!, serialization, encoded[c.Name]);
+                    continue;
+                }
                 AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "dynamic type loading off");
                 AssertV2RoundTrip(v2, c);
             }
@@ -177,6 +206,24 @@ public abstract class V2PortSpec : AkkaSpec
         finally
         {
             AppContext.SetSwitch(DynamicTypeLoadingSwitch, !hadSwitch || previous); // unset means enabled
+        }
+    }
+
+    private static void AssertDynamicTypeLoadingBoundary(V2PortCase sample, SerializerV2 warm,
+        Akka.Serialization.Serialization registered, byte[] bytes)
+    {
+        var manifest = sample.V2Manifest ?? sample.Manifest;
+        RequireReason(() => warm.ToBinary(sample.Message));
+        var writer = new ArrayBufferWriter<byte>();
+        RequireReason(() => warm.Serialize(sample.Message, writer));
+        Assert.Equal(0, writer.WrittenCount);
+        RequireReason(() => registered.Deserialize(bytes, warm.Identifier, manifest));
+        RequireReason(() => warm.Deserialize(new ReadOnlySequence<byte>(bytes), manifest));
+
+        static void RequireReason(Action operation)
+        {
+            var error = Assert.Throws<SerializationException>(operation);
+            Assert.Contains("Akka.DynamicTypeLoading", error.Message);
         }
     }
 
