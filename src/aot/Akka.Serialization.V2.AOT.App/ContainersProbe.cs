@@ -35,7 +35,7 @@ internal static class ContainersProbe
                 var settings = $"akka.actor.serialization-v2 = {(mode.Name == "off" ? "off" : "on")}";
                 if (mode.Name == "pinned")
                     settings += """
-        
+
                         akka.actor.serialization-bindings {
                           "Akka.Actor.ActorSelectionMessage, Akka" = akka-containers
                         }
@@ -78,7 +78,7 @@ internal static class ContainersProbe
                         }
                         cases++;
                     }
-        
+
                     foreach (var actorRef in new IActorRef[] { ActorRefs.Nobody, system.DeadLetters })
                     {
                         var wrapper = new ActorSelectionMessage(actorRef, [new SelectChildName("refs")]);
@@ -90,7 +90,7 @@ internal static class ContainersProbe
                         Compare(wrapper, system.Serialization.Deserialize(writer.ToBinary(wrapper), mode.Id, AkkaSerialization.ManifestFor(writer, wrapper)));
                         actorRefPayloads++;
                     }
-        
+
                     // All modes read the new true flag; only the V2 writer can preserve it.
                     var fanOut = new ActorSelectionMessage("hello", [new SelectChildPattern("worker-*")], true);
                     var patternFixture = fixtures.Single(f => f.Name == "child-pattern");
@@ -136,7 +136,7 @@ internal static class ContainersProbe
             Console.Error.WriteLine("[containers-native] FAILED: " + error);
             return 1;
         }
-        
+
         static ActorSelectionMessage Create(string name) => name switch
         {
             "empty-path" => new ActorSelectionMessage("hello", []),
@@ -167,13 +167,13 @@ internal static class ContainersProbe
         else
             Require(Equals(expected.Message, selection.Message), "Nested payload differs.");
     }
-    
+
     static void Require(bool condition, string message)
     {
         if (!condition)
             throw new InvalidOperationException(message);
     }
-    
+
     static void Reject(Action action)
     {
         try
