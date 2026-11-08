@@ -1,0 +1,15 @@
+case: status-DeathPactException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 142
+
+0000  0a 89 01 0a 23 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....#Akka.Actor.|
+0010  44 65 61 74 68 50 61 63  74 45 78 63 65 70 74 69  |DeathPactExcepti|
+0020  6f 6e 2c 20 41 6b 6b 61  12 32 4d 6f 6e 69 74 6f  |on, Akka.2Monito|
+0030  72 65 64 20 61 63 74 6f  72 20 5b 5b 61 6b 6b 61  |red actor [[akka|
+0040  3a 2f 2f 61 6c 6c 2d 73  79 73 74 65 6d 73 2f 5d  |://all-systems/]|
+0050  5d 20 74 65 72 6d 69 6e  61 74 65 64 22 0d 6c 65  |] terminated".le|
+0060  67 61 63 79 2d 73 6f 75  72 63 65 2a 00 32 1d 0a  |gacy-source*.2..|
+0070  09 44 65 61 64 41 63 74  6f 72 12 10 0a 08 0a 06  |.DeadActor......|
+0080  6e 6f 62 6f 64 79 10 10  1a 02 41 52 12 00        |nobody....AR..|

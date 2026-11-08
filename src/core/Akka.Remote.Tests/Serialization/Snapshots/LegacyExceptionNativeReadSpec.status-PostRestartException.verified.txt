@@ -1,0 +1,29 @@
+case: status-PostRestartException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 353
+
+0000  0a dc 02 0a 25 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....%Akka.Actor.|
+0010  50 6f 73 74 52 65 73 74  61 72 74 45 78 63 65 70  |PostRestartExcep|
+0020  74 69 6f 6e 2c 20 41 6b  6b 61 12 29 45 78 63 65  |tion, Akka.)Exce|
+0030  70 74 69 6f 6e 20 70 6f  73 74 20 72 65 73 74 61  |ption post resta|
+0040  72 74 20 28 53 79 73 74  65 6d 2e 45 78 63 65 70  |rt (System.Excep|
+0050  74 69 6f 6e 29 22 0d 6c  65 67 61 63 79 2d 73 6f  |tion)".legacy-so|
+0060  75 72 63 65 2a 45 0a 28  53 79 73 74 65 6d 2e 45  |urce*E.(System.E|
+0070  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0080  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0090  12 0d 69 6e 6e 65 72 20  6d 65 73 73 61 67 65 2a  |..inner message*|
+00a0  00 3a 08 6d 73 63 6f 72  6c 69 62 32 96 01 0a 0d  |.:.mscorlib2....|
+00b0  4f 72 69 67 69 6e 61 6c  43 61 75 73 65 12 84 01  |OriginalCause...|
+00c0  0a 40 0a 28 53 79 73 74  65 6d 2e 45 78 63 65 70  |.@.(System.Excep|
+00d0  74 69 6f 6e 2c 20 53 79  73 74 65 6d 2e 50 72 69  |tion, System.Pri|
+00e0  76 61 74 65 2e 43 6f 72  65 4c 69 62 12 08 6f 72  |vate.CoreLib..or|
+00f0  69 67 69 6e 61 6c 2a 00  3a 08 6d 73 63 6f 72 6c  |iginal*.:.mscorl|
+0100  69 62 10 02 1a 3e 41 6b  6b 61 2e 52 65 6d 6f 74  |ib...>Akka.Remot|
+0110  65 2e 53 65 72 69 61 6c  69 7a 61 74 69 6f 6e 2e  |e.Serialization.|
+0120  50 72 6f 74 6f 2e 4d 73  67 2e 45 78 63 65 70 74  |Proto.Msg.Except|
+0130  69 6f 6e 44 61 74 61 2c  20 41 6b 6b 61 2e 52 65  |ionData, Akka.Re|
+0140  6d 6f 74 65 32 19 0a 05  41 63 74 6f 72 12 10 0a  |mote2...Actor...|
+0150  08 0a 06 6e 6f 62 6f 64  79 10 10 1a 02 41 52 12  |...nobody....AR.|
+0160  00                                                |.|
