@@ -1,0 +1,13 @@
+edf07b18d907926d7904c636ec2a82ae052fc6f983cdc5db2e4d30a1fe77f321  src/aot/Akka.Serialization.V2.AOT.App/Akka.Serialization.V2.AOT.App.csproj  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+ab1cd2d7d41f8e79ee4fd7b059e43ab5da95a798bb22e6547352492d6dfbcb8e  src/aot/Akka.Serialization.V2.AOT.App/ClientProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+75aa6246d7c0f0edb439ffbc7f1ea95d512a6a0e070a0b399206eb2af8ec74b6  src/aot/Akka.Serialization.V2.AOT.App/ContainerFrozenFixtures.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+fe4c1d8102bbb990e007946128a1fad4b784150e280fefbe7db871aca97b1194  src/aot/Akka.Serialization.V2.AOT.App/ContainersProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+815641e735e98a0397d8bf144cb2498d3af43c439cdec95523a6f1d3ecd63b5c  src/aot/Akka.Serialization.V2.AOT.App/MetricsProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+eeda378ea54d167971f3f31c32f21b3286fb427bba54cab23961a7867857d078  src/aot/Akka.Serialization.V2.AOT.App/PersistenceMessageProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+21c62b67655a772a6a5c817ec01c76d42707d75a51ebe69ccff4fe88339ec6d0  src/aot/Akka.Serialization.V2.AOT.App/Program.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+f4d169c2f56c2b9b34e75e3a0a623a23af5273c2c71b267f0c87f451f9b3c4cc  src/aot/Akka.Serialization.V2.AOT.App/PubSubProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+97daff588c832182357ca218e04d95cfc83257e119e636d9a045c9d143568726  src/aot/Akka.Serialization.V2.AOT.App/README.md  documentation-only extraction/dependency notice added
+0aa75b108061b9e51cf78ece31d6dd61d4da8f76b2e898ac534df00fa7ce6249  src/aot/Akka.Serialization.V2.AOT.App/SnapshotProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+e43853279397c70debc2eb4177b53b9e966f6c63fd1c8a5902123aa7a3747b31  src/aot/Akka.Serialization.V2.AOT.App/StreamProtocolFrozenFixtures.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+082eedda007189cc12a07bf83845d60d7d3bd09373f6c8faa39e208fb72b95a2  src/aot/Akka.Serialization.V2.AOT.App/StreamsProbe.cs  byte-identical to composed proof 053480698 and extraction source bfb6b72f0
+bf83de8bc0cd94032c17ddf28e730b6063a8b1a27d8a19a284eb4d54206f739c  src/aot/Akka.Serialization.V2.AOT.App/aot-warnings.baseline.txt  same 18 warning keys; historical header count corrected
