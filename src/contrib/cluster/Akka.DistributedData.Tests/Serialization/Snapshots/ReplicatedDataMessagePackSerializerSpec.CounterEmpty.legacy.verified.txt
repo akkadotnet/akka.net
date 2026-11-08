@@ -1,0 +1,7 @@
+case: CounterEmpty
+message-type: GCounter
+manifest: F
+serializer-id: 11
+byte-count: 0
+
+(zero-byte payload)

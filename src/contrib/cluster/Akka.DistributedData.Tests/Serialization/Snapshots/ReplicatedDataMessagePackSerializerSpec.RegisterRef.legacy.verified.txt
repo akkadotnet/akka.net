@@ -1,0 +1,13 @@
+case: RegisterRef
+message-type: LWWRegister<IActorRef>
+manifest: E
+serializer-id: 11
+byte-count: 99
+
+0000  08 aa b4 de 75 12 1d 0a  14 0a 0f 63 6f 75 6e 74  |....u......count|
+0010  65 72 2e 65 78 61 6d 70  6c 65 10 f8 13 10 80 80  |er.example......|
+0020  80 80 80 20 1a 39 0a 31  0a 2f 61 6b 6b 61 2e 74  |... .9.1./akka.t|
+0030  63 70 3a 2f 2f 63 72 64  74 2d 77 69 72 65 40 31  |cp://crdt-wire@1|
+0040  32 37 2e 30 2e 30 2e 31  3a 32 35 35 32 2f 75 73  |27.0.0.1:2552/us|
+0050  65 72 2f 72 65 66 23 34  32 10 10 22 02 41 52 22  |er/ref#42..".AR"|
+0060  02 08 03                                          |...|

@@ -1,0 +1,25 @@
+case: LWWDictionaryDelta
+message-type: LWWDictionaryDelta<String, String>
+manifest: Ig
+serializer-id: 11
+byte-count: 301
+
+0000  0a bf 01 12 53 0a 23 0a  21 0a 1d 0a 14 0a 0f 63  |....S.#.!......c|
+0010  6f 75 6e 74 65 72 2e 65  78 61 6d 70 6c 65 10 f8  |ounter.example..|
+0020  13 10 80 80 80 80 80 20  10 11 12 02 08 02 1a 23  |....... .......#|
+0030  0a 21 0a 1d 0a 14 0a 0f  63 6f 75 6e 74 65 72 2e  |.!......counter.|
+0040  65 78 61 6d 70 6c 65 10  f8 13 10 80 80 80 80 80  |example.........|
+0050  20 10 11 22 03 6b 65 79  22 68 0a 03 6b 65 79 12  | ..".key"h..key.|
+0060  61 0a 5a 08 aa b4 de 75  12 1d 0a 14 0a 0f 63 6f  |a.Z....u......co|
+0070  75 6e 74 65 72 2e 65 78  61 6d 70 6c 65 10 f8 13  |unter.example...|
+0080  10 80 80 80 80 80 20 1a  30 0a 05 76 61 6c 75 65  |...... .0..value|
+0090  10 11 22 25 53 79 73 74  65 6d 2e 53 74 72 69 6e  |.."%System.Strin|
+00a0  67 2c 20 53 79 73 74 65  6d 2e 50 72 69 76 61 74  |g, System.Privat|
+00b0  65 2e 43 6f 72 65 4c 69  62 22 02 08 02 10 0b 22  |e.CoreLib"....."|
+00c0  01 45 12 02 08 02 1a 65  08 04 12 61 41 6b 6b 61  |.E.....e...aAkka|
+00d0  2e 44 69 73 74 72 69 62  75 74 65 64 44 61 74 61  |.DistributedData|
+00e0  2e 4c 57 57 52 65 67 69  73 74 65 72 60 31 5b 5b  |.LWWRegister`1[[|
+00f0  53 79 73 74 65 6d 2e 53  74 72 69 6e 67 2c 20 53  |System.String, S|
+0100  79 73 74 65 6d 2e 50 72  69 76 61 74 65 2e 43 6f  |ystem.Private.Co|
+0110  72 65 4c 69 62 5d 5d 2c  20 41 6b 6b 61 2e 44 69  |reLib]], Akka.Di|
+0120  73 74 72 69 62 75 74 65  64 44 61 74 61           |stributedData|

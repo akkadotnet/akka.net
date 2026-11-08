@@ -1,0 +1,7 @@
+case: PNCounterEmpty
+message-type: PNCounter
+manifest: G
+serializer-id: 11
+byte-count: 4
+
+0000  0a 00 12 00                                       |....|

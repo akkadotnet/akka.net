@@ -1,0 +1,7 @@
+case: Deleted
+message-type: DeletedData
+manifest: A
+serializer-id: 11
+byte-count: 0
+
+(zero-byte payload)

@@ -1,0 +1,24 @@
+case: MultiDictionaryDeltaValueDeltas
+message-type: ORMultiValueDictionaryDelta<String, String>
+manifest: Ko
+serializer-id: 11
+byte-count: 278
+
+0000  0a 91 02 0a a9 01 12 53  0a 23 0a 21 0a 1d 0a 14  |.......S.#.!....|
+0010  0a 0f 63 6f 75 6e 74 65  72 2e 65 78 61 6d 70 6c  |..counter.exampl|
+0020  65 10 f8 13 10 80 80 80  80 80 20 10 11 12 02 08  |e......... .....|
+0030  02 1a 23 0a 21 0a 1d 0a  14 0a 0f 63 6f 75 6e 74  |..#.!......count|
+0040  65 72 2e 65 78 61 6d 70  6c 65 10 f8 13 10 80 80  |er.example......|
+0050  80 80 80 20 10 11 22 03  6b 65 79 22 52 0a 03 6b  |... ..".key"R..k|
+0060  65 79 12 4b 0a 44 1f 8b  08 00 00 00 00 00 00 03  |ey.K.D..........|
+0070  e3 52 e6 52 e4 92 e5 12  e1 e2 4f ce 2f cd 2b 49  |.R.R......O./.+I|
+0080  2d d2 4b ad 48 cc 2d c8  49 15 f8 21 2c d0 00 02  |-.K.H.-.I..!,...|
+0090  0a 02 82 42 4c 1c 4c 52  c4 28 54 62 c9 2c 49 cd  |...BL.LR.(Tb.,I.|
+00a0  05 00 d3 f6 3f f0 54 00  00 00 10 0b 22 01 43 12  |....?.T.....".C.|
+00b0  02 08 02 1a 5f 08 04 12  5b 41 6b 6b 61 2e 44 69  |...._...[Akka.Di|
+00c0  73 74 72 69 62 75 74 65  64 44 61 74 61 2e 4f 52  |stributedData.OR|
+00d0  53 65 74 60 31 5b 5b 53  79 73 74 65 6d 2e 53 74  |Set`1[[System.St|
+00e0  72 69 6e 67 2c 20 53 79  73 74 65 6d 2e 50 72 69  |ring, System.Pri|
+00f0  76 61 74 65 2e 43 6f 72  65 4c 69 62 5d 5d 2c 20  |vate.CoreLib]], |
+0100  41 6b 6b 61 2e 44 69 73  74 72 69 62 75 74 65 64  |Akka.Distributed|
+0110  44 61 74 61 10 01                                 |Data..|

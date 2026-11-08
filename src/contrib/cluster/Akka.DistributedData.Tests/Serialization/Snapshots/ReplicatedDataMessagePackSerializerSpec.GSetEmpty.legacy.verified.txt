@@ -1,0 +1,7 @@
+case: GSetEmpty
+message-type: GSet<String>
+manifest: B
+serializer-id: 11
+byte-count: 4
+
+0000  12 02 08 02                                       |....|

@@ -1,0 +1,7 @@
+case: ORSetKey
+message-type: ORSetKey<String>
+manifest: c
+serializer-id: 11
+byte-count: 9
+
+0000  0a 03 6b 65 79 1a 02 08  02                       |..key....|

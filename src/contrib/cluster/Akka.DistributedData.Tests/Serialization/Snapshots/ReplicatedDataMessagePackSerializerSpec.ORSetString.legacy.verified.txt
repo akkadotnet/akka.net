@@ -1,0 +1,11 @@
+case: ORSetString
+message-type: ORSet<String>
+manifest: C
+serializer-id: 11
+byte-count: 69
+
+0000  1f 8b 08 00 00 00 00 00  00 03 e3 52 e6 52 e4 92  |...........R.R..|
+0010  e5 12 e1 e2 4f ce 2f cd  2b 49 2d d2 4b ad 48 cc  |....O./.+I-.K.H.|
+0020  2d c8 49 15 f8 21 2c d0  00 02 0a 02 82 42 4c 1c  |-.I..!,......BL.|
+0030  4c 52 c4 28 54 62 2d 4b  cc 29 4d 05 00 4f 11 11  |LR.(Tb-K.)M..O..|
+0040  33 55 00 00 00                                    |3U...|

@@ -1,0 +1,7 @@
+case: RegisterKey
+message-type: LWWRegisterKey<String>
+manifest: e
+serializer-id: 11
+byte-count: 11
+
+0000  0a 03 6b 65 79 10 05 1a  02 08 02                 |..key......|

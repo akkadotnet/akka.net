@@ -1,0 +1,8 @@
+case: PNCounterDictionaryEmpty
+message-type: PNCounterDictionary<String>
+manifest: J
+serializer-id: 11
+byte-count: 28
+
+0000  1f 8b 08 00 00 00 00 00  00 03 e3 62 e3 62 10 62  |...........b.b.b|
+0010  e2 60 02 00 a3 75 ea e9  08 00 00 00              |.`...u......|

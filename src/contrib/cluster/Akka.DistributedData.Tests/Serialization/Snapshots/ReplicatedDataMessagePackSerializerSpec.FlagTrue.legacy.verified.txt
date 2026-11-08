@@ -1,0 +1,7 @@
+case: FlagTrue
+message-type: Flag
+manifest: D
+serializer-id: 11
+byte-count: 2
+
+0000  08 01                                             |..|

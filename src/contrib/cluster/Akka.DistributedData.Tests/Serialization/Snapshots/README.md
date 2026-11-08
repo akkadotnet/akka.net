@@ -67,3 +67,20 @@ ORSet and ORDictionary fixtures include their original gzip containers. These fo
 are historical protobuf controls, not id-51 fixtures. Core fake-module tests exercise actual
 Supersedes metadata at reserved id 51. Custom Setup instances remain custom even if they use
 that id; no CRDT V2 serializer is registered by this canonical-format prerequisite.
+
+## CRDT id-11 baseline
+
+The 61 `ReplicatedDataMessagePackSerializerSpec.*.legacy.verified.txt` fixtures cover all 34
+legacy CRDT manifests: twelve full-state forms, twelve delta forms and ten key forms.
+They were captured from untouched upstream `2d6a067972bfc7c49e5e4b898c542861eae9f6d9`, including
+its original SerializationSupport helper, before any id-51 implementation. A second cold
+capture checked the same bytes and exact runtime types/domain equality without rewriting files.
+The capture used Linux x64, SDK 10.0.101 and runtime 10.0.12.
+
+`ReplicatedDataWireCases` constructs causal dots explicitly at version 17, UID `1L << 40`,
+counter 7, timestamp 123456789 and fixed actor paths with UID 42. Delta wrapper fixtures use
+their canonical group form, matching the legacy reader's reconstruction. Empty collections,
+unsigned counter maximum, signed scalar/timestamp extremes, nested/null register values and
+both multi-dictionary value-delta modes have separate records. Legacy ORSet/ORMap-family gzip
+containers and platform-endian counter bytes remain intact. No V2 format is generated from
+these bytes; the independent historical files are the compatibility baseline for the port.

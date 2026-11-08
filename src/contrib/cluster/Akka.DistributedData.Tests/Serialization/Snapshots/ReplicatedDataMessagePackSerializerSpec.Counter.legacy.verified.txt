@@ -1,0 +1,9 @@
+case: Counter
+message-type: GCounter
+manifest: F
+serializer-id: 11
+byte-count: 43
+
+0000  0a 29 0a 1d 0a 14 0a 0f  63 6f 75 6e 74 65 72 2e  |.)......counter.|
+0010  65 78 61 6d 70 6c 65 10  f8 13 10 80 80 80 80 80  |example.........|
+0020  20 12 08 07 00 00 00 00  00 00 00                 | ..........|

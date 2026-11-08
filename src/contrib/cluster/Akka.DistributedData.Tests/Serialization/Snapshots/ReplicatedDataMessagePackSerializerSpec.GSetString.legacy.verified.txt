@@ -1,0 +1,7 @@
+case: GSetString
+message-type: GSet<String>
+manifest: B
+serializer-id: 11
+byte-count: 11
+
+0000  0a 05 76 61 6c 75 65 12  02 08 02                 |..value....|

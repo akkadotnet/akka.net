@@ -1,0 +1,11 @@
+case: DictionaryKey
+message-type: ORDictionaryKey<String, GCounter>
+manifest: h
+serializer-id: 11
+byte-count: 68
+
+0000  0a 03 6b 65 79 10 06 1a  02 08 02 22 37 08 04 12  |..key......"7...|
+0010  33 41 6b 6b 61 2e 44 69  73 74 72 69 62 75 74 65  |3Akka.Distribute|
+0020  64 44 61 74 61 2e 47 43  6f 75 6e 74 65 72 2c 20  |dData.GCounter, |
+0030  41 6b 6b 61 2e 44 69 73  74 72 69 62 75 74 65 64  |Akka.Distributed|
+0040  44 61 74 61                                       |Data|

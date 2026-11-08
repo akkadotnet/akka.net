@@ -1,0 +1,12 @@
+case: RegisterInt
+message-type: LWWRegister<Int32>
+manifest: E
+serializer-id: 11
+byte-count: 92
+
+0000  08 ff ff ff ff ff ff ff  ff ff 01 12 1d 0a 14 0a  |................|
+0010  0f 63 6f 75 6e 74 65 72  2e 65 78 61 6d 70 6c 65  |.counter.example|
+0020  10 f8 13 10 80 80 80 80  80 20 1a 2e 0a 04 00 00  |......... ......|
+0030  00 80 10 11 22 24 53 79  73 74 65 6d 2e 49 6e 74  |...."$System.Int|
+0040  33 32 2c 20 53 79 73 74  65 6d 2e 50 72 69 76 61  |32, System.Priva|
+0050  74 65 2e 43 6f 72 65 4c  69 62 22 00              |te.CoreLib".|

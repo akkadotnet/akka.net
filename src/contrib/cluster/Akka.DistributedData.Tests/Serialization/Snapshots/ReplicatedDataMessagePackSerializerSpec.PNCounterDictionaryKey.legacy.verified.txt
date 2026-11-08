@@ -1,0 +1,7 @@
+case: PNCounterDictionaryKey
+message-type: PNCounterDictionaryKey<String>
+manifest: j
+serializer-id: 11
+byte-count: 11
+
+0000  0a 03 6b 65 79 10 08 1a  02 08 02                 |..key......|

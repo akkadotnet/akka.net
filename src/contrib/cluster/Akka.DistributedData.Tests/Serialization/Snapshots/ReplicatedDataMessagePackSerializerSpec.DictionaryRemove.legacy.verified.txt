@@ -1,0 +1,14 @@
+case: DictionaryRemove
+message-type: RemoveDeltaOperation<String, GCounter>
+manifest: Hr
+serializer-id: 11
+byte-count: 115
+
+0000  0a 34 08 01 12 30 0a 00  12 02 08 02 1a 23 0a 21  |.4...0.......#.!|
+0010  0a 1d 0a 14 0a 0f 63 6f  75 6e 74 65 72 2e 65 78  |......counter.ex|
+0020  61 6d 70 6c 65 10 f8 13  10 80 80 80 80 80 20 10  |ample......... .|
+0030  11 22 03 6b 65 79 12 02  08 02 1a 37 08 04 12 33  |.".key.....7...3|
+0040  41 6b 6b 61 2e 44 69 73  74 72 69 62 75 74 65 64  |Akka.Distributed|
+0050  44 61 74 61 2e 47 43 6f  75 6e 74 65 72 2c 20 41  |Data.GCounter, A|
+0060  6b 6b 61 2e 44 69 73 74  72 69 62 75 74 65 64 44  |kka.DistributedD|
+0070  61 74 61                                          |ata|

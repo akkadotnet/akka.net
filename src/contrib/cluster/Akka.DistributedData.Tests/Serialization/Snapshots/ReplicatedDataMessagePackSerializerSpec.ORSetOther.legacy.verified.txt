@@ -1,0 +1,14 @@
+case: ORSetOther
+message-type: ORSet<Object>
+manifest: C
+serializer-id: 11
+byte-count: 118
+
+0000  1f 8b 08 00 00 00 00 00  00 03 e3 52 e6 52 e4 92  |...........R.R..|
+0010  e5 12 e1 e2 4f ce 2f cd  2b 49 2d d2 4b ad 48 cc  |....O./.+I-.K.H.|
+0020  2d c8 49 15 f8 21 2c d0  00 02 0a 02 82 42 9a 1c  |-.I..!,......B..|
+0030  2c 42 aa c1 95 c5 25 a9  b9 7a fe 49 59 a9 c9 25  |,B....%..z.IY..%|
+0040  3a 0a 50 6e 40 51 66 59  62 49 aa 9e 73 7e 51 aa  |:.Pn@QfYbI..s~Q.|
+0050  4f 66 92 14 31 e6 59 19  70 b1 96 25 e6 94 a6 0a  |Of..1.Y.p..%....|
+0060  08 2a c1 8c 0d 2e 29 ca  cc 4b c7 65 2c 00 8e 54  |.*....)..K.e,..T|
+0070  1a 07 a7 00 00 00                                 |......|

@@ -1,0 +1,9 @@
+case: RegisterNull
+message-type: LWWRegister<String>
+manifest: E
+serializer-id: 11
+byte-count: 42
+
+0000  08 aa b4 de 75 12 1d 0a  14 0a 0f 63 6f 75 6e 74  |....u......count|
+0010  65 72 2e 65 78 61 6d 70  6c 65 10 f8 13 10 80 80  |er.example......|
+0020  80 80 80 20 1a 00 22 02  08 02                    |... .."...|

@@ -1,0 +1,7 @@
+case: LWWDictionaryKey
+message-type: LWWDictionaryKey<String, String>
+manifest: i
+serializer-id: 11
+byte-count: 15
+
+0000  0a 03 6b 65 79 10 07 1a  02 08 02 22 02 08 02     |..key......"...|

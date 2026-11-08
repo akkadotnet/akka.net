@@ -1,0 +1,13 @@
+case: RegisterLong
+message-type: LWWRegister<Int64>
+manifest: E
+serializer-id: 11
+byte-count: 98
+
+0000  08 fe ff ff ff ff ff ff  ff ff 01 12 1d 0a 14 0a  |................|
+0010  0f 63 6f 75 6e 74 65 72  2e 65 78 61 6d 70 6c 65  |.counter.example|
+0020  10 f8 13 10 80 80 80 80  80 20 1a 32 0a 08 00 00  |......... .2....|
+0030  00 00 00 00 00 80 10 11  22 24 53 79 73 74 65 6d  |........"$System|
+0040  2e 49 6e 74 36 34 2c 20  53 79 73 74 65 6d 2e 50  |.Int64, System.P|
+0050  72 69 76 61 74 65 2e 43  6f 72 65 4c 69 62 22 02  |rivate.CoreLib".|
+0060  08 01                                             |..|

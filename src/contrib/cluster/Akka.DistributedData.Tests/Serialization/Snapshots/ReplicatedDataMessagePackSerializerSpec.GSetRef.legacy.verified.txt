@@ -1,0 +1,10 @@
+case: GSetRef
+message-type: GSet<IActorRef>
+manifest: B
+serializer-id: 11
+byte-count: 53
+
+0000  12 02 08 03 32 2f 61 6b  6b 61 2e 74 63 70 3a 2f  |....2/akka.tcp:/|
+0010  2f 63 72 64 74 2d 77 69  72 65 40 31 32 37 2e 30  |/crdt-wire@127.0|
+0020  2e 30 2e 31 3a 32 35 35  32 2f 75 73 65 72 2f 72  |.0.1:2552/user/r|
+0030  65 66 23 34 32                                    |ef#42|
