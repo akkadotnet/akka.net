@@ -63,9 +63,52 @@ for name in ("consumer", "missing-target-control"):
     properties = ET.SubElement(project.getroot(), "PropertyGroup")
     ET.SubElement(properties, "TreatWarningsAsErrors").text = "true"
     project.write(destination / "Akka.AOT.App.csproj", encoding="utf-8", xml_declaration=True)
+
+# The full core corpus requires false. A separate small consumer verifies that a late user
+# declaration wins in the other direction, without pretending arbitrary reflection is AOT safe.
+override = output / "user-override-control"
+override.mkdir()
+project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
+properties = ET.SubElement(project, "PropertyGroup")
+for name, value in {
+    "OutputType": "Exe", "TargetFramework": "net10.0", "Nullable": "enable",
+    "ImplicitUsings": "enable", "TreatWarningsAsErrors": "true",
+    "TrimmerSingleWarn": "false",
+    "InvariantGlobalization": "true",
+}.items():
+    ET.SubElement(properties, name).text = value
+publish = ET.SubElement(project, "PropertyGroup", Condition="'$(RuntimeIdentifier)' != ''")
+ET.SubElement(publish, "PublishAot").text = "true"
+ET.ElementTree(project).write(override / "Akka.AOT.App.csproj", encoding="utf-8", xml_declaration=True)
+(override / "Program.cs").write_text('''#nullable enable
+using System.Runtime.CompilerServices;
+
+if (RuntimeFeature.IsDynamicCodeSupported)
+    throw new InvalidOperationException("[packaged-aot] Actual native execution is required.");
+var found = AppContext.TryGetSwitch("Akka.DynamicTypeLoading", out var enabled);
+if (!found || !enabled)
+    throw new InvalidOperationException($"[packaged-aot] Late override must be explicit true: found={found}, value={enabled}.");
+Console.WriteLine("[packaged-aot] late override OK found=true value=true");
+''')
+(override / "Directory.Build.targets").write_text('''<Project>
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="true" Trim="true" />
+  </ItemGroup>
+  <Target Name="VerifyLateAkkaDynamicTypeLoadingOverride" AfterTargets="AkkaDefaultDynamicTypeLoadingSwitch">
+    <ItemGroup>
+      <_PackagedUserSwitch Include="@(RuntimeHostConfigurationOption->WithMetadataValue('Identity','Akka.DynamicTypeLoading'))" />
+    </ItemGroup>
+    <Error Condition="'@(_PackagedUserSwitch->Count())' != '1'"
+           Text="The late user override must be the only Akka.DynamicTypeLoading item." />
+    <Error Condition="'%(_PackagedUserSwitch.Value)' != 'true' Or '%(_PackagedUserSwitch.Trim)' != 'true'"
+           Text="The late user override must retain Value=true and Trim=true for ILC and runtime." />
+    <Message Importance="High" Text="[packaged-aot] late override item OK count=1 value=true trim=true" />
+  </Target>
+</Project>
+''')
 PY
 
-for consumer in consumer missing-target-control; do
+for consumer in consumer missing-target-control user-override-control; do
     dotnet add "$run_dir/$consumer/Akka.AOT.App.csproj" package Akka --version "$version" --no-restore
 done
 
@@ -95,4 +138,10 @@ if [ "$negative_exit" -eq 0 ] || ! grep -qF '[canary] Akka.DynamicTypeLoading mu
     echo 'The missing-target negative control did not fail at the expected runtime boundary.' >&2
     exit 1
 fi
-echo '[packaged-aot] OK: shipped target enables the full native core corpus; excluding it fails the runtime control.'
+
+dotnet publish "$run_dir/user-override-control/Akka.AOT.App.csproj" -r linux-x64 -c Release \
+    -o "$run_dir/override-publish" 2>&1 | tee "$run_dir/override-publish.log"
+grep -qF '[packaged-aot] late override item OK count=1 value=true trim=true' "$run_dir/override-publish.log"
+timeout 300 "$run_dir/override-publish/Akka.AOT.App" 2>&1 | tee "$run_dir/override-run.log"
+grep -Fxq '[packaged-aot] late override OK found=true value=true' "$run_dir/override-run.log"
+echo '[packaged-aot] OK: shipped target enables the full native core corpus; excluding it fails the runtime control; late explicit true override wins.'

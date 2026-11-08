@@ -31,6 +31,13 @@ A second fresh consumer deliberately excludes `buildTransitive`; it must publish
 and fail at the exact runtime switch assertion. Both projects retain NuGet auditing, publish
 warnings and the shared runtime log watchdog. The script retains packages and logs under a
 unique directory inside the supplied output directory, and CI publishes that evidence.
+A third small native consumer declares `Akka.DynamicTypeLoading=true` with `Trim=true` in
+its own late `Directory.Build.targets`. After the packaged target runs, it requires exactly
+one matching item with those metadata values; the native process also requires
+`TryGetSwitch` to report both found and true. An unset switch cannot pass. This checks user
+override precedence for compiler input and runtime configuration, while retaining both full
+core corpora above. It does not claim that arbitrary reflection works under Native AOT.
+The small configuration consumer keeps compiler and native analysis warnings fatal.
 
 `IlcTreatWarningsAsErrors` is off here on purpose: the repo turns warnings into errors everywhere,
 and this project's job is to *print* the `IL2xxx`/`IL3xxx` list rather than fail the publish on it.
