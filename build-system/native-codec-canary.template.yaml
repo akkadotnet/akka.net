@@ -1,0 +1,54 @@
+# Ordinary public native consumers: exact completion, visible scoped diagnostics and retained logs.
+# Callers provide a tracked app under src/aot; AOT settings belong to that app, not the CLI.
+parameters:
+  jobName: ''
+  displayName: ''
+  appName: ''
+  expectedMarker: ''
+
+jobs:
+  - job: ${{ parameters.jobName }}
+    displayName: ${{ parameters.displayName }}
+    timeoutInMinutes: 30
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        submodules: recursive
+      - task: UseDotNet@2
+        inputs:
+          packageType: sdk
+          useGlobalJson: true
+      - bash: |
+          set -euo pipefail
+          rm -rf src/aot/${{ parameters.appName }}/bin src/aot/${{ parameters.appName }}/obj
+          mkdir -p "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof"
+          dotnet --info > "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/sdk-info.log"
+          dotnet publish src/aot/${{ parameters.appName }} -c Release -r linux-x64 \
+            -o "$(Agent.TempDirectory)/${{ parameters.jobName }}-publish" 2>&1 | tee "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/publish.log"
+        displayName: Publish the ordinary native consumer
+      - bash: |
+          set -euo pipefail
+          timeout 300 "$(Agent.TempDirectory)/${{ parameters.jobName }}-publish/${{ parameters.appName }}" \
+            2>&1 | tee "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/run.log"
+          grep -Fxq "$EXPECTED_MARKER" \
+            "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/run.log"
+        displayName: Require complete native codec checks
+        env:
+          EXPECTED_MARKER: ${{ parameters.expectedMarker }}
+      - bash: |
+          set -euo pipefail
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/publish.log" \
+            --baseline src/aot/Shared/remote-aot-warnings.baseline.txt \
+            --scope "src/core/Akka.Remote/,src/core/Akka.Serialization.V2/,src/aot/${{ parameters.appName }}/,src/aot/Shared/" \
+            --repo-root "$(Build.SourcesDirectory)" \
+            2>&1 | tee "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/warnings.log"
+          grep -Eq '^  no source location: 0 warning' "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof/warnings.log"
+        displayName: Reject new Remote, runtime or consumer AOT warnings
+      - task: PublishBuildArtifacts@1
+        condition: always()
+        inputs:
+          PathtoPublish: "$(Agent.TempDirectory)/${{ parameters.jobName }}-proof"
+          ArtifactName: "${{ parameters.jobName }}-$(Build.BuildId)"
+

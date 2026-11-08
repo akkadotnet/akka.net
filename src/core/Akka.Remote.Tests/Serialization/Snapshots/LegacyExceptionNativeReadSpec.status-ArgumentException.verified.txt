@@ -1,0 +1,22 @@
+case: status-ArgumentException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 251
+
+0000  0a f6 01 0a 30 53 79 73  74 65 6d 2e 41 72 67 75  |....0System.Argu|
+0010  6d 65 6e 74 45 78 63 65  70 74 69 6f 6e 2c 20 53  |mentException, S|
+0020  79 73 74 65 6d 2e 50 72  69 76 61 74 65 2e 43 6f  |ystem.Private.Co|
+0030  72 65 4c 69 62 12 1f 6d  65 73 73 61 67 65 20 28  |reLib..message (|
+0040  50 61 72 61 6d 65 74 65  72 20 27 70 61 72 61 6d  |Parameter 'param|
+0050  65 74 65 72 27 29 22 0d  6c 65 67 61 63 79 2d 73  |eter')".legacy-s|
+0060  6f 75 72 63 65 2a 45 0a  28 53 79 73 74 65 6d 2e  |ource*E.(System.|
+0070  45 78 63 65 70 74 69 6f  6e 2c 20 53 79 73 74 65  |Exception, Syste|
+0080  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0090  62 12 0d 69 6e 6e 65 72  20 6d 65 73 73 61 67 65  |b..inner message|
+00a0  2a 00 3a 08 6d 73 63 6f  72 6c 69 62 32 41 0a 09  |*.:.mscorlib2A..|
+00b0  50 61 72 61 6d 4e 61 6d  65 12 34 0a 09 70 61 72  |ParamName.4..par|
+00c0  61 6d 65 74 65 72 10 11  1a 25 53 79 73 74 65 6d  |ameter...%System|
+00d0  2e 53 74 72 69 6e 67 2c  20 53 79 73 74 65 6d 2e  |.String, System.|
+00e0  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 3a  |Private.CoreLib:|
+00f0  08 6d 73 63 6f 72 6c 69  62 12 00                 |.mscorlib..|

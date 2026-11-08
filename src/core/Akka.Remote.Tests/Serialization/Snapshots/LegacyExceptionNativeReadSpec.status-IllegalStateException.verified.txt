@@ -1,0 +1,15 @@
+case: status-IllegalStateException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 142
+
+0000  0a 89 01 0a 28 41 6b 6b  61 2e 50 61 74 74 65 72  |....(Akka.Patter|
+0010  6e 2e 49 6c 6c 65 67 61  6c 53 74 61 74 65 45 78  |n.IllegalStateEx|
+0020  63 65 70 74 69 6f 6e 2c  20 41 6b 6b 61 12 07 6d  |ception, Akka..m|
+0030  65 73 73 61 67 65 22 0d  6c 65 67 61 63 79 2d 73  |essage".legacy-s|
+0040  6f 75 72 63 65 2a 45 0a  28 53 79 73 74 65 6d 2e  |ource*E.(System.|
+0050  45 78 63 65 70 74 69 6f  6e 2c 20 53 79 73 74 65  |Exception, Syste|
+0060  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0070  62 12 0d 69 6e 6e 65 72  20 6d 65 73 73 61 67 65  |b..inner message|
+0080  2a 00 3a 08 6d 73 63 6f  72 6c 69 62 12 00        |*.:.mscorlib..|

@@ -1,0 +1,17 @@
+set -euo pipefail
+mkdir -p "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof"
+dotnet --info > "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/sdk-info.log"
+dotnet publish src/aot/Akka.Remote.LegacyException.AOT.App -c Release -r linux-x64 \
+  -o "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-publish" 2>&1 | tee "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/publish.log"
+set -euo pipefail
+timeout 300 "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-publish/Akka.Remote.LegacyException.AOT.App" \
+  2>&1 | tee "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/run.log"
+grep -Fxq '[legacy-exceptions-native] OK reads=114 rejected=15 overrides=3 empty-sentinels=3' \
+  "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/run.log"
+set -euo pipefail
+dotnet run scripts/CheckAotWarnings.cs -- \
+  --log "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/publish.log" \
+  --baseline src/aot/Shared/remote-aot-warnings.baseline.txt \
+  --scope "src/core/Akka.Remote/,src/core/Akka.Serialization.V2/,src/aot/Akka.Remote.LegacyException.AOT.App/,src/aot/Shared/" \
+  --repo-root "/tmp/akka-serialization-v2/native-legacy-exceptions" \
+  2>&1 | tee "/tmp/akka-serialization-v2/legacy-ci-replay/legacy-exception-proof/warnings.log"

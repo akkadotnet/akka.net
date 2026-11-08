@@ -1,0 +1,17 @@
+case: status-InvalidOperationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 168
+
+0000  0a a3 01 0a 38 53 79 73  74 65 6d 2e 49 6e 76 61  |....8System.Inva|
+0010  6c 69 64 4f 70 65 72 61  74 69 6f 6e 45 78 63 65  |lidOperationExce|
+0020  70 74 69 6f 6e 2c 20 53  79 73 74 65 6d 2e 50 72  |ption, System.Pr|
+0030  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 12 07 6d  |ivate.CoreLib..m|
+0040  65 73 73 61 67 65 22 0d  6c 65 67 61 63 79 2d 73  |essage".legacy-s|
+0050  6f 75 72 63 65 2a 45 0a  28 53 79 73 74 65 6d 2e  |ource*E.(System.|
+0060  45 78 63 65 70 74 69 6f  6e 2c 20 53 79 73 74 65  |Exception, Syste|
+0070  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0080  62 12 0d 69 6e 6e 65 72  20 6d 65 73 73 61 67 65  |b..inner message|
+0090  2a 00 3a 08 6d 73 63 6f  72 6c 69 62 3a 08 6d 73  |*.:.mscorlib:.ms|
+00a0  63 6f 72 6c 69 62 12 00                           |corlib..|
