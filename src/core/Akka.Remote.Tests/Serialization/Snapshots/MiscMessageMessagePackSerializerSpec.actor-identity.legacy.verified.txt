@@ -1,0 +1,13 @@
+﻿case: actor-identity
+message-type: ActorIdentity
+manifest: AID
+serializer-id: 16
+byte-count: 97
+
+0000  0a 2d 0a 02 69 64 10 11  1a 25 53 79 73 74 65 6d  |.-..id...%System|
+0010  2e 53 74 72 69 6e 67 2c  20 53 79 73 74 65 6d 2e  |.String, System.|
+0020  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 12  |Private.CoreLib.|
+0030  30 61 6b 6b 61 2e 74 63  70 3a 2f 2f 66 69 78 74  |0akka.tcp://fixt|
+0040  75 72 65 40 31 32 37 2e  30 2e 30 2e 31 3a 32 35  |ure@127.0.0.1:25|
+0050  35 32 2f 75 73 65 72 2f  63 68 69 6c 64 23 31 32  |52/user/child#12|
+0060  33                                                |3|

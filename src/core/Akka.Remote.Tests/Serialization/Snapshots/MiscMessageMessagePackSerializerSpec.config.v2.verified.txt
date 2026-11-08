@@ -1,0 +1,10 @@
+﻿case: config
+message-type: Config
+manifest: CF
+serializer-id: 56
+byte-count: 57
+
+0000  81 01 d9 35 20 20 6e 65  73 74 65 64 20 3a 20 7b  |...5  nested : {|
+0010  0d 0a 20 20 20 20 76 61  6c 75 65 20 3a 20 34 32  |..    value : 42|
+0020  0d 0a 20 20 20 20 74 65  78 74 20 3a 20 68 65 6c  |..    text : hel|
+0030  6c 6f 0d 0a 20 20 7d 0d  0a                       |lo..  }..|

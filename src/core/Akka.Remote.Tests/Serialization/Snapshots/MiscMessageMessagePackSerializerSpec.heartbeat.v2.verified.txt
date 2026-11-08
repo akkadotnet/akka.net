@@ -1,0 +1,7 @@
+﻿case: heartbeat
+message-type: Heartbeat
+manifest: RWHB
+serializer-id: 56
+byte-count: 1
+
+0000  80                                                |.|

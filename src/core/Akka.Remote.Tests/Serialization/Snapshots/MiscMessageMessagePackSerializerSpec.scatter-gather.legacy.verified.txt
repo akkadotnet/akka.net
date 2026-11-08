@@ -1,0 +1,9 @@
+﻿case: scatter-gather
+message-type: ScatterGatherFirstCompletedPool
+manifest: ROSGP
+serializer-id: 16
+byte-count: 44
+
+0000  0a 21 08 03 12 1d 61 6b  6b 61 2e 61 63 74 6f 72  |.!....akka.actor|
+0010  2e 64 65 66 61 75 6c 74  2d 64 69 73 70 61 74 63  |.default-dispatc|
+0020  68 65 72 12 07 08 01 10  f8 f0 ec 6f              |her........o|

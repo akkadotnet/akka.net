@@ -1,0 +1,7 @@
+﻿case: success-null
+message-type: Success
+manifest: STS
+serializer-id: 56
+byte-count: 3
+
+0000  81 01 c0                                          |...|

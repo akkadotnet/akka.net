@@ -1,0 +1,7 @@
+﻿case: identify-bytes
+message-type: Identify
+manifest: ID
+serializer-id: 16
+byte-count: 10
+
+0000  0a 08 0a 04 00 01 7f ff  10 04                    |..........|

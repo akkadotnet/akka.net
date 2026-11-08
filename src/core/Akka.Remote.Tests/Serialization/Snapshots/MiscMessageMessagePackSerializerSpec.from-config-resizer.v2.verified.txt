@@ -1,0 +1,11 @@
+﻿case: from-config-resizer
+message-type: FromConfig
+manifest: FC
+serializer-id: 56
+byte-count: 68
+
+0000  83 01 83 01 10 02 a2 44  52 03 c4 23 08 02 10 0a  |.......DR..#....|
+0010  18 03 21 9a 99 99 99 99  99 d9 3f 29 9a 99 99 99  |..!.......?)....|
+0020  99 99 c9 3f 31 9a 99 99  99 99 99 b9 3f 38 11 02  |...?1.......?8..|
+0030  b1 63 75 73 74 6f 6d 2d  64 69 73 70 61 74 63 68  |.custom-dispatch|
+0040  65 72 03 c2                                       |er..|

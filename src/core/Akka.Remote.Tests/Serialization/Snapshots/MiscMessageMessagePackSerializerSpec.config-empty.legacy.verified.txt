@@ -1,0 +1,7 @@
+﻿case: config-empty
+message-type: Config
+manifest: CF
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

@@ -1,0 +1,20 @@
+﻿case: failure-original-state
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 224
+
+0000  0a ab 01 0a 33 53 79 73  74 65 6d 2e 41 70 70 6c  |....3System.Appl|
+0010  69 63 61 74 69 6f 6e 45  78 63 65 70 74 69 6f 6e  |icationException|
+0020  2c 20 53 79 73 74 65 6d  2e 50 72 69 76 61 74 65  |, System.Private|
+0030  2e 43 6f 72 65 4c 69 62  12 0b 61 70 70 6c 69 63  |.CoreLib..applic|
+0040  61 74 69 6f 6e 22 0e 66  69 78 74 75 72 65 2d 73  |ation".fixture-s|
+0050  6f 75 72 63 65 2a 4d 0a  38 53 79 73 74 65 6d 2e  |ource*M.8System.|
+0060  49 6e 76 61 6c 69 64 4f  70 65 72 61 74 69 6f 6e  |InvalidOperation|
+0070  45 78 63 65 70 74 69 6f  6e 2c 20 53 79 73 74 65  |Exception, Syste|
+0080  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0090  62 12 05 69 6e 6e 65 72  2a 00 3a 08 6d 73 63 6f  |b..inner*.:.msco|
+00a0  72 6c 69 62 3a 08 6d 73  63 6f 72 6c 69 62 12 30  |rlib:.mscorlib.0|
+00b0  0a 05 73 74 61 74 65 10  11 1a 25 53 79 73 74 65  |..state...%Syste|
+00c0  6d 2e 53 74 72 69 6e 67  2c 20 53 79 73 74 65 6d  |m.String, System|
+00d0  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|

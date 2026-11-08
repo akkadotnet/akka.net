@@ -1,0 +1,10 @@
+﻿case: identify-long
+message-type: Identify
+manifest: ID
+serializer-id: 56
+byte-count: 55
+
+0000  81 01 83 01 11 02 d9 24  53 79 73 74 65 6d 2e 49  |.......$System.I|
+0010  6e 74 36 34 2c 20 53 79  73 74 65 6d 2e 50 72 69  |nt64, System.Pri|
+0020  76 61 74 65 2e 43 6f 72  65 4c 69 62 03 c4 08 ff  |vate.CoreLib....|
+0030  ff ff ff ff ff ff 7f                              |.......|

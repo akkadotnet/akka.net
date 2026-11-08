@@ -1,0 +1,7 @@
+﻿case: intentional-restart
+message-type: IntentionalRestart
+manifest: IR
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

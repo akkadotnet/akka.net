@@ -1,0 +1,10 @@
+﻿case: identify-long
+message-type: Identify
+manifest: ID
+serializer-id: 16
+byte-count: 52
+
+0000  0a 32 0a 08 ff ff ff ff  ff ff ff 7f 10 11 1a 24  |.2.............$|
+0010  53 79 73 74 65 6d 2e 49  6e 74 36 34 2c 20 53 79  |System.Int64, Sy|
+0020  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0030  65 4c 69 62                                       |eLib|

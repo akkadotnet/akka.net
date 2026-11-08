@@ -58,6 +58,7 @@ module Akka.Remote
     Akka.Routing.RoundRobinPool, Akka
     Akka.Routing.ScatterGatherFirstCompletedPool, Akka
     Akka.Routing.TailChoppingPool, Akka
+  akka-misc-v2: Akka.Remote.Serialization.MiscMessageMessagePackSerializer, Akka.Remote (id 56) supersedes akka-misc
   akka-system-msg: Akka.Remote.Serialization.SystemMessageSerializer, Akka.Remote (id 22)
     Akka.Dispatch.SysMsg.SystemMessage, Akka
   artery-control: Akka.Remote.Artery.ArteryControlMessageSerializer, Akka.Remote (id 23)

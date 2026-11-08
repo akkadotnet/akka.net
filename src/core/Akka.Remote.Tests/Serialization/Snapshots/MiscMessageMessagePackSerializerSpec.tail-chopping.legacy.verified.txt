@@ -1,0 +1,9 @@
+﻿case: tail-chopping
+message-type: TailChoppingPool
+manifest: ROTCP
+serializer-id: 16
+byte-count: 46
+
+0000  0a 21 08 03 12 1d 61 6b  6b 61 2e 61 63 74 6f 72  |.!....akka.actor|
+0010  2e 64 65 66 61 75 6c 74  2d 64 69 73 70 61 74 63  |.default-dispatc|
+0020  68 65 72 12 02 08 02 1a  05 10 c0 cc 8d 08        |her...........|

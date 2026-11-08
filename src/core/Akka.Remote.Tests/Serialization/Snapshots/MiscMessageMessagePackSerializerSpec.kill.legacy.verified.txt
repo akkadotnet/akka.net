@@ -1,0 +1,7 @@
+﻿case: kill
+message-type: Kill
+manifest: K
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

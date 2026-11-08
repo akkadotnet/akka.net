@@ -1,0 +1,10 @@
+﻿case: actor-ref
+message-type: RemoteActorRef
+manifest: AR
+serializer-id: 16
+byte-count: 50
+
+0000  0a 30 61 6b 6b 61 2e 74  63 70 3a 2f 2f 66 69 78  |.0akka.tcp://fix|
+0010  74 75 72 65 40 31 32 37  2e 30 2e 30 2e 31 3a 32  |ture@127.0.0.1:2|
+0020  35 35 32 2f 75 73 65 72  2f 63 68 69 6c 64 23 31  |552/user/child#1|
+0030  32 33                                             |23|

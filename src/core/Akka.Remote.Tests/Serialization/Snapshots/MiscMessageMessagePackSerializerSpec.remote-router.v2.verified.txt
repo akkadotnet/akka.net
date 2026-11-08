@@ -1,0 +1,14 @@
+﻿case: remote-router
+message-type: RemoteRouterConfig
+manifest: RORRC
+serializer-id: 56
+byte-count: 119
+
+0000  82 01 83 01 10 02 a5 52  4f 52 52 50 03 c4 21 08  |.......RORRP..!.|
+0010  05 12 1d 61 6b 6b 61 2e  61 63 74 6f 72 2e 64 65  |...akka.actor.de|
+0020  66 61 75 6c 74 2d 64 69  73 70 61 74 63 68 65 72  |fault-dispatcher|
+0030  02 92 84 01 a8 61 6b 6b  61 2e 74 63 70 02 ac 6f  |.....akka.tcp..o|
+0040  74 68 65 72 2d 73 79 73  74 65 6d 03 a9 31 32 37  |ther-system..127|
+0050  2e 30 2e 30 2e 31 04 cd  09 f8 84 01 a4 61 6b 6b  |.0.0.1.......akk|
+0060  61 02 ad 73 65 63 6f 6e  64 2d 73 79 73 74 65 6d  |a..second-system|
+0070  03 a3 3a 3a 31 04 c0                              |..::1..|

@@ -1,0 +1,8 @@
+﻿case: remote-scope-null-port
+message-type: RemoteScope
+manifest: RS
+serializer-id: 16
+byte-count: 26
+
+0000  0a 18 0a 0b 69 70 76 36  2d 73 79 73 74 65 6d 12  |....ipv6-system.|
+0010  03 3a 3a 31 22 04 61 6b  6b 61                    |.::1".akka|

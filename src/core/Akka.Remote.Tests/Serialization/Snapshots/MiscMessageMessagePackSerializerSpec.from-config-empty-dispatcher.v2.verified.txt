@@ -1,0 +1,9 @@
+﻿case: from-config-empty-dispatcher
+message-type: FromConfig
+manifest: FC
+serializer-id: 56
+byte-count: 36
+
+0000  83 01 c0 02 bd 61 6b 6b  61 2e 61 63 74 6f 72 2e  |.....akka.actor.|
+0010  64 65 66 61 75 6c 74 2d  64 69 73 70 61 74 63 68  |default-dispatch|
+0020  65 72 03 c3                                       |er..|

@@ -1,0 +1,11 @@
+﻿case: scatter-gather-options
+message-type: ScatterGatherFirstCompletedPool
+manifest: ROSGP
+serializer-id: 56
+byte-count: 78
+
+0000  82 01 84 01 05 02 83 01  10 02 a2 44 52 03 c4 23  |...........DR..#|
+0010  08 02 10 0a 18 03 21 9a  99 99 99 99 99 d9 3f 29  |......!.......?)|
+0020  9a 99 99 99 99 99 c9 3f  31 9a 99 99 99 99 99 b9  |.......?1.......|
+0030  3f 38 11 03 b1 63 75 73  74 6f 6d 2d 64 69 73 70  |?8...custom-disp|
+0040  61 74 63 68 65 72 04 c3  02 ce 00 bc 61 4e        |atcher......aN|

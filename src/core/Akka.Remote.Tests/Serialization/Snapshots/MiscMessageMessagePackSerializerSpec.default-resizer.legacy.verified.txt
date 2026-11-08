@@ -1,0 +1,9 @@
+﻿case: default-resizer
+message-type: DefaultResizer
+manifest: DR
+serializer-id: 16
+byte-count: 35
+
+0000  08 02 10 0a 18 03 21 9a  99 99 99 99 99 d9 3f 29  |......!.......?)|
+0010  9a 99 99 99 99 99 c9 3f  31 9a 99 99 99 99 99 b9  |.......?1.......|
+0020  3f 38 11                                          |?8.|

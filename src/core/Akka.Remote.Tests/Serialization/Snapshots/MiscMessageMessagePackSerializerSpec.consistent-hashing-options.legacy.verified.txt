@@ -1,0 +1,11 @@
+﻿case: consistent-hashing-options
+message-type: ConsistentHashingPool
+manifest: ROCHP
+serializer-id: 16
+byte-count: 68
+
+0000  08 05 12 11 63 75 73 74  6f 6d 2d 64 69 73 70 61  |....custom-dispa|
+0010  74 63 68 65 72 18 01 22  2b 0a 23 08 02 10 0a 18  |tcher.."+.#.....|
+0020  03 21 9a 99 99 99 99 99  d9 3f 29 9a 99 99 99 99  |.!.......?).....|
+0030  99 c9 3f 31 9a 99 99 99  99 99 b9 3f 38 11 10 10  |..?1.......?8...|
+0040  1a 02 44 52                                       |..DR|

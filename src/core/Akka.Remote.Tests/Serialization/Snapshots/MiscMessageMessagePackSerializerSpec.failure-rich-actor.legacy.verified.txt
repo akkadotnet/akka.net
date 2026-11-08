@@ -1,0 +1,21 @@
+﻿case: failure-rich-actor
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 231
+
+0000  0a da 01 0a 2d 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....-Akka.Actor.|
+0010  41 63 74 6f 72 49 6e 69  74 69 61 6c 69 7a 61 74  |ActorInitializat|
+0020  69 6f 6e 45 78 63 65 70  74 69 6f 6e 2c 20 41 6b  |ionException, Ak|
+0030  6b 61 12 0e 69 6e 69 74  69 61 6c 69 7a 61 74 69  |ka..initializati|
+0040  6f 6e 22 0e 66 69 78 74  75 72 65 2d 73 6f 75 72  |on".fixture-sour|
+0050  63 65 2a 44 0a 2f 53 79  73 74 65 6d 2e 54 69 6d  |ce*D./System.Tim|
+0060  65 6f 75 74 45 78 63 65  70 74 69 6f 6e 2c 20 53  |eoutException, S|
+0070  79 73 74 65 6d 2e 50 72  69 76 61 74 65 2e 43 6f  |ystem.Private.Co|
+0080  72 65 4c 69 62 12 05 69  6e 6e 65 72 2a 00 3a 08  |reLib..inner*.:.|
+0090  6d 73 63 6f 72 6c 69 62  32 43 0a 05 41 63 74 6f  |mscorlib2C..Acto|
+00a0  72 12 3a 0a 32 0a 30 61  6b 6b 61 2e 74 63 70 3a  |r.:.2.0akka.tcp:|
+00b0  2f 2f 66 69 78 74 75 72  65 40 31 32 37 2e 30 2e  |//fixture@127.0.|
+00c0  30 2e 31 3a 32 35 35 32  2f 75 73 65 72 2f 63 68  |0.1:2552/user/ch|
+00d0  69 6c 64 23 31 32 33 10  10 1a 02 41 52 12 08 0a  |ild#123....AR...|
+00e0  04 00 01 7f ff 10 04                              |.......|

@@ -1,0 +1,7 @@
+﻿case: identify-null
+message-type: Identify
+manifest: ID
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

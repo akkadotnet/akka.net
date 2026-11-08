@@ -1,0 +1,7 @@
+﻿case: failure-null
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 4
+
+0000  0a 00 12 00                                       |....|

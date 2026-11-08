@@ -1,0 +1,8 @@
+﻿case: from-config-default-instance
+message-type: FromConfig
+manifest: FC
+serializer-id: 16
+byte-count: 31
+
+0000  12 1d 61 6b 6b 61 2e 61  63 74 6f 72 2e 64 65 66  |..akka.actor.def|
+0010  61 75 6c 74 2d 64 69 73  70 61 74 63 68 65 72     |ault-dispatcher|

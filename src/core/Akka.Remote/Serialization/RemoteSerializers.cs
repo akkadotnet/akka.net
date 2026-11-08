@@ -22,6 +22,9 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-misc-v2", "akka-misc");
+
         private static readonly Config PrimitiveDefaults = ConfigurationFactory.ParseString("use-legacy-behavior = on");
 
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
@@ -50,6 +53,8 @@ namespace Akka.Remote.Serialization
                     typeof(RemoteWatcher.Heartbeat),
                     typeof(RemoteWatcher.HeartbeatRsp),
                     typeof(RemoteRouterConfig))),
+            SerializerDetails.Create("akka-misc-v2", new MiscMessageMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty),
             // the only built-in serializer with its own settings block; without Remote.conf, use the same default Remote.conf sets
             SerializerDetails.Create("primitive",
                 new PrimitiveSerializers(system,

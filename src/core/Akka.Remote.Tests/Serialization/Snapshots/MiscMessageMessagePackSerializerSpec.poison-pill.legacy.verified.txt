@@ -1,0 +1,7 @@
+﻿case: poison-pill
+message-type: PoisonPill
+manifest: PP
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

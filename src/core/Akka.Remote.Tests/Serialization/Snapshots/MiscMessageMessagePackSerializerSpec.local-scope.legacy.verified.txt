@@ -1,0 +1,7 @@
+﻿case: local-scope
+message-type: LocalScope
+manifest: LS
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

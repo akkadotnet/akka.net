@@ -1,0 +1,10 @@
+﻿case: actor-identity-null-subject
+message-type: ActorIdentity
+manifest: AID
+serializer-id: 56
+byte-count: 52
+
+0000  82 01 83 01 11 02 d9 25  53 79 73 74 65 6d 2e 53  |.......%System.S|
+0010  74 72 69 6e 67 2c 20 53  79 73 74 65 6d 2e 50 72  |tring, System.Pr|
+0020  69 76 61 74 65 2e 43 6f  72 65 4c 69 62 03 c4 02  |ivate.CoreLib...|
+0030  69 64 02 a0                                       |id..|

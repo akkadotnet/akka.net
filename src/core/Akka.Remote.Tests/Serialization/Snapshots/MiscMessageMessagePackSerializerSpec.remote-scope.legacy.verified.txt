@@ -1,0 +1,9 @@
+﻿case: remote-scope
+message-type: RemoteScope
+manifest: RS
+serializer-id: 16
+byte-count: 40
+
+0000  0a 26 0a 0c 6f 74 68 65  72 2d 73 79 73 74 65 6d  |.&..other-system|
+0010  12 09 31 32 37 2e 30 2e  30 2e 31 18 f8 13 22 08  |..127.0.0.1...".|
+0020  61 6b 6b 61 2e 74 63 70                           |akka.tcp|

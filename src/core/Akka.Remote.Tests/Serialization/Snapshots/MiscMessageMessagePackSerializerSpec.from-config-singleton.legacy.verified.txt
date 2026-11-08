@@ -1,0 +1,7 @@
+﻿case: from-config-singleton
+message-type: FromConfig
+manifest: FC
+serializer-id: 16
+byte-count: 0
+
+(zero-byte payload)

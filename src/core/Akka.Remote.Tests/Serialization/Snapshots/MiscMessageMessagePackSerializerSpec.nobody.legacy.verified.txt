@@ -1,0 +1,7 @@
+﻿case: nobody
+message-type: Nobody
+manifest: AR
+serializer-id: 16
+byte-count: 8
+
+0000  0a 06 6e 6f 62 6f 64 79                           |..nobody|

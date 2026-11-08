@@ -1,0 +1,7 @@
+﻿case: heartbeat-negative-uid
+message-type: HeartbeatRsp
+manifest: RWHR
+serializer-id: 56
+byte-count: 11
+
+0000  81 01 d3 80 00 00 00 00  00 00 00                 |...........|

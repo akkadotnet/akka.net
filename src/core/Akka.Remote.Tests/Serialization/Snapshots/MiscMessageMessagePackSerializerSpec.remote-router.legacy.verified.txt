@@ -1,0 +1,14 @@
+﻿case: remote-router
+message-type: RemoteRouterConfig
+manifest: RORRC
+serializer-id: 16
+byte-count: 114
+
+0000  0a 2c 0a 21 08 05 12 1d  61 6b 6b 61 2e 61 63 74  |.,.!....akka.act|
+0010  6f 72 2e 64 65 66 61 75  6c 74 2d 64 69 73 70 61  |or.default-dispa|
+0020  74 63 68 65 72 10 10 1a  05 52 4f 52 52 50 12 26  |tcher....RORRP.&|
+0030  0a 0c 6f 74 68 65 72 2d  73 79 73 74 65 6d 12 09  |..other-system..|
+0040  31 32 37 2e 30 2e 30 2e  31 18 f8 13 22 08 61 6b  |127.0.0.1...".ak|
+0050  6b 61 2e 74 63 70 12 1a  0a 0d 73 65 63 6f 6e 64  |ka.tcp....second|
+0060  2d 73 79 73 74 65 6d 12  03 3a 3a 31 22 04 61 6b  |-system..::1".ak|
+0070  6b 61                                             |ka|

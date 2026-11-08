@@ -1,0 +1,9 @@
+﻿case: identify-int
+message-type: Identify
+manifest: ID
+serializer-id: 16
+byte-count: 48
+
+0000  0a 2e 0a 04 00 00 00 80  10 11 1a 24 53 79 73 74  |...........$Syst|
+0010  65 6d 2e 49 6e 74 33 32  2c 20 53 79 73 74 65 6d  |em.Int32, System|
+0020  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|

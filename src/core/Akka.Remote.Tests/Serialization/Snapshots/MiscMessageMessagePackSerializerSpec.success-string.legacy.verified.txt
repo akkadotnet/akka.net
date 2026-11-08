@@ -1,0 +1,10 @@
+﻿case: success-string
+message-type: Success
+manifest: STS
+serializer-id: 16
+byte-count: 50
+
+0000  0a 30 0a 05 73 74 61 74  65 10 11 1a 25 53 79 73  |.0..state...%Sys|
+0010  74 65 6d 2e 53 74 72 69  6e 67 2c 20 53 79 73 74  |tem.String, Syst|
+0020  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0030  69 62                                             |ib|

@@ -1,0 +1,9 @@
+﻿case: random
+message-type: RandomPool
+manifest: RORP
+serializer-id: 56
+byte-count: 40
+
+0000  81 01 84 01 03 02 c0 03  bd 61 6b 6b 61 2e 61 63  |.........akka.ac|
+0010  74 6f 72 2e 64 65 66 61  75 6c 74 2d 64 69 73 70  |tor.default-disp|
+0020  61 74 63 68 65 72 04 c2                           |atcher..|

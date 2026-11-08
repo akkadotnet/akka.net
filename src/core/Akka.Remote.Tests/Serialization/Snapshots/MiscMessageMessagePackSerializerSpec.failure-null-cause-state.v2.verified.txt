@@ -1,0 +1,10 @@
+﻿case: failure-null-cause-state
+message-type: Failure
+manifest: STF
+serializer-id: 56
+byte-count: 55
+
+0000  82 01 c0 02 83 01 11 02  d9 25 53 79 73 74 65 6d  |.........%System|
+0010  2e 53 74 72 69 6e 67 2c  20 53 79 73 74 65 6d 2e  |.String, System.|
+0020  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 03  |Private.CoreLib.|
+0030  c4 05 73 74 61 74 65                              |..state|

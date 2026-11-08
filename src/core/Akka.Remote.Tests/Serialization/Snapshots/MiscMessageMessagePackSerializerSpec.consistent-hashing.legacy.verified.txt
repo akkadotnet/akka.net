@@ -1,0 +1,9 @@
+﻿case: consistent-hashing
+message-type: ConsistentHashingPool
+manifest: ROCHP
+serializer-id: 16
+byte-count: 33
+
+0000  08 03 12 1d 61 6b 6b 61  2e 61 63 74 6f 72 2e 64  |....akka.actor.d|
+0010  65 66 61 75 6c 74 2d 64  69 73 70 61 74 63 68 65  |efault-dispatche|
+0020  72                                                |r|

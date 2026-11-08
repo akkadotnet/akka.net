@@ -1,0 +1,7 @@
+﻿case: intentional-restart
+message-type: IntentionalRestart
+manifest: IR
+serializer-id: 56
+byte-count: 1
+
+0000  80                                                |.|
