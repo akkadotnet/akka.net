@@ -1,0 +1,5 @@
+DOTNET_ROOT=/tmp/akka-serialization-v2/toolchain-install PATH=/tmp/akka-serialization-v2/toolchain-install:$PATH /tmp/akka-serialization-v2/toolchain-install/dotnet --info
+DOTNET_ROOT=/tmp/akka-serialization-v2/toolchain-install PATH=/tmp/akka-serialization-v2/toolchain-install:$PATH bash scripts/verify-packaged-aot.sh /tmp/akka-serialization-v2/package-override-final
+# Full script returned 0. The bounded negative-only exit receipt then recorded exact exit 1:
+timeout 300 /tmp/akka-serialization-v2/package-override-final/akka-packaged-aot.H4MKlV/negative-publish/Akka.AOT.App
+slopwatch analyze --files scripts/verify-packaged-aot.sh /tmp/akka-serialization-v2/package-override-final/akka-packaged-aot.H4MKlV/user-override-control/Program.cs /tmp/akka-serialization-v2/package-override-final/akka-packaged-aot.H4MKlV/user-override-control/Akka.AOT.App.csproj --no-baseline --fail-on warning

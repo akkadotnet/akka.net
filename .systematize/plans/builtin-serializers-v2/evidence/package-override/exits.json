@@ -1,0 +1,8 @@
+{
+  "complete_script": 0,
+  "positive_native": 0,
+  "negative_native": 1,
+  "override_native": 0,
+  "negative_exit_source": "direct bounded recheck; original full script also requires nonzero and exact switch failure",
+  "positive_and_override_exit_source": "complete script set -euo pipefail, each runtime pipeline completed successfully"
+}

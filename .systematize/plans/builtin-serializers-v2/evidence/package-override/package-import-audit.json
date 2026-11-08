@@ -1,0 +1,31 @@
+[
+  {
+    "consumer": "consumer",
+    "package": "Akka/1.6.0-aot-package-probe.1794103083.4121753",
+    "excludeAssets": null,
+    "projectReferences": 0,
+    "projectSwitchItems": 0,
+    "akkaTargetImports": 1
+  },
+  {
+    "consumer": "missing-target-control",
+    "package": "Akka/1.6.0-aot-package-probe.1794103083.4121753",
+    "excludeAssets": "buildTransitive",
+    "projectReferences": 0,
+    "projectSwitchItems": 0,
+    "akkaTargetImports": 0
+  },
+  {
+    "consumer": "user-override-control",
+    "package": "Akka/1.6.0-aot-package-probe.1794103083.4121753",
+    "excludeAssets": null,
+    "projectReferences": 0,
+    "projectSwitchItems": 0,
+    "akkaTargetImports": 1,
+    "lateOverride": {
+      "Include": "Akka.DynamicTypeLoading",
+      "Value": "true",
+      "Trim": "true"
+    }
+  }
+]
