@@ -29,6 +29,7 @@ module Akka.DistributedData
   akka-data-replication-v2: Akka.DistributedData.Serialization.ReplicatorMessagePackSerializer, Akka.DistributedData (id 52) supersedes akka-data-replication
   akka-replicated-data: Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData (id 11)
     Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData
+  akka-replicated-data-v2: Akka.DistributedData.Serialization.ReplicatedDataMessagePackSerializer, Akka.DistributedData (id 51) supersedes akka-replicated-data
 module Akka.Persistence
   akka-persistence-message: Akka.Persistence.Serialization.PersistenceMessageSerializer, Akka.Persistence (id 7)
     Akka.Persistence.Serialization.IMessage, Akka.Persistence

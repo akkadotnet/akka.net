@@ -32,5 +32,7 @@ public sealed class ReplicatorV2MixedBindingSpec : ReplicatorSpec
         var expected = config.Myself == config.Second ? 12 : 52;
         Sys.Serialization.FindSerializerFor(new Get(new GCounterKey("binding-check"), ReadLocal.Instance))
             .Identifier.Should().Be(expected, "this participant must use its configured protocol writer");
+        Sys.Serialization.FindSerializerFor(GCounter.Empty).Identifier.Should().Be(expected == 12 ? 11 : 51,
+            "the real replicated values must also use opposing legacy/generated writers");
     }
 }
