@@ -1,0 +1,10 @@
+# Existing Remote debt observed in the cold SDK 10.0.114/runtime 10.0.14 ordinary native consumer.
+# Five exact keys from the retained before/after logs in the legacy exception app evidence.
+# The exception reader warning is removed by the finite factory fix. No new codec/app/runtime
+# warning is approved here. Core is checked by its separate rooted canary baseline.
+# These entries do not establish native Remote startup or dynamic actor construction.
+IL2057|src/core/Akka.Remote/EndpointManager.cs|Akka.Remote.EndpointManager.Listens.get|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2057|src/core/Akka.Remote/FailureDetectorRegistry.cs|Akka.Remote.FailureDetectorLoader.Load(String,Config,ActorSystem)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2057|src/core/Akka.Remote/Serialization/DaemonMsgCreateSerializer.cs|Akka.Remote.Serialization.DaemonMsgCreateSerializer.PropsFromProto(PropsData)|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2057|src/core/Akka.Remote/Transport/TransportAdapters.cs|Akka.Remote.Transport.TransportAdapters.AdaptersTable()|Unrecognizedvaluepassedtotheparameter'typeName'ofmethod'System.Type.GetType(String)'.It'snotpossibletoguaranteetheavailabilityofthetargettype.
+IL2067|src/core/Akka.Remote/Serialization/ProtobufSerializer.cs|Akka.Remote.Serialization.ProtobufSerializer.FromBinary(Byte[],Type)|'type'argumentdoesnotsatisfy'DynamicallyAccessedMemberTypes.PublicParameterlessConstructor'incallto'System.Activator.CreateInstance(Type)'.Theparameter'type'ofmethod'Akka.Remote.Serialization.ProtobufSerializer.FromBinary(Byte[],Type)'doesnothavematchingannotations.Thesourcevaluemustdeclareatleastthesamerequirementsasthosedeclaredonthetargetlocationitisassignedto.
