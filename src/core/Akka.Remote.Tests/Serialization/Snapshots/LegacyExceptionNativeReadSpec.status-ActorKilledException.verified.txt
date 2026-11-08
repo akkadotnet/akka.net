@@ -1,0 +1,11 @@
+case: status-ActorKilledException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 69
+
+0000  0a 41 0a 25 41 6b 6b 61  2e 41 63 74 6f 72 2e 41  |.A.%Akka.Actor.A|
+0010  63 74 6f 72 4b 69 6c 6c  65 64 45 78 63 65 70 74  |ctorKilledExcept|
+0020  69 6f 6e 2c 20 41 6b 6b  61 12 07 6d 65 73 73 61  |ion, Akka..messa|
+0030  67 65 22 0d 6c 65 67 61  63 79 2d 73 6f 75 72 63  |ge".legacy-sourc|
+0040  65 2a 00 12 00                                    |e*...|
