@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Linq;
 using Akka.Actor;
@@ -59,6 +60,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+
+            // Exercise actual hand-over across processes with opposite write bindings. Every node
+            // can read both ids; first -> second -> third moves ownership across both directions.
+            NodeConfig(new[] { First, Third }, new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = on") });
+            NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = off") });
         }
 
         // The singleton actor
@@ -138,6 +144,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         [MultiNodeFact]
         public void ClusterSingletonManagerLeaveSpecs()
         {
+            var expectedId = IsNode(_config.Second) ? 14 : 54;
+            foreach (var message in new IClusterSingletonMessage[]
+                     { HandOverToMe.Instance, HandOverInProgress.Instance, HandOverDone.Instance, TakeOverFromMe.Instance })
+                Sys.Serialization.FindSerializerFor(message).Identifier.Should().Be(expectedId);
+
             Leaving_ClusterSingletonManager_must_handover_to_new_instance();
         }
 

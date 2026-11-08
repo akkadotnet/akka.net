@@ -1,0 +1,24 @@
+case: status-ArgumentOutOfRangeException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 277
+
+0000  0a 90 02 0a 3a 53 79 73  74 65 6d 2e 41 72 67 75  |....:System.Argu|
+0010  6d 65 6e 74 4f 75 74 4f  66 52 61 6e 67 65 45 78  |mentOutOfRangeEx|
+0020  63 65 70 74 69 6f 6e 2c  20 53 79 73 74 65 6d 2e  |ception, System.|
+0030  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 12  |Private.CoreLib.|
+0040  35 6d 65 73 73 61 67 65  20 28 50 61 72 61 6d 65  |5message (Parame|
+0050  74 65 72 20 27 70 61 72  61 6d 65 74 65 72 27 29  |ter 'parameter')|
+0060  0a 41 63 74 75 61 6c 20  76 61 6c 75 65 20 77 61  |.Actual value wa|
+0070  73 20 31 32 33 2e 22 0d  6c 65 67 61 63 79 2d 73  |s 123.".legacy-s|
+0080  6f 75 72 63 65 2a 00 32  41 0a 09 50 61 72 61 6d  |ource*.2A..Param|
+0090  4e 61 6d 65 12 34 0a 09  70 61 72 61 6d 65 74 65  |Name.4..paramete|
+00a0  72 10 11 1a 25 53 79 73  74 65 6d 2e 53 74 72 69  |r...%System.Stri|
+00b0  6e 67 2c 20 53 79 73 74  65 6d 2e 50 72 69 76 61  |ng, System.Priva|
+00c0  74 65 2e 43 6f 72 65 4c  69 62 32 3d 0a 0b 41 63  |te.CoreLib2=..Ac|
+00d0  74 75 61 6c 56 61 6c 75  65 12 2e 0a 04 7b 00 00  |tualValue....{..|
+00e0  00 10 11 1a 24 53 79 73  74 65 6d 2e 49 6e 74 33  |....$System.Int3|
+00f0  32 2c 20 53 79 73 74 65  6d 2e 50 72 69 76 61 74  |2, System.Privat|
+0100  65 2e 43 6f 72 65 4c 69  62 3a 08 6d 73 63 6f 72  |e.CoreLib:.mscor|
+0110  6c 69 62 12 00                                    |lib..|

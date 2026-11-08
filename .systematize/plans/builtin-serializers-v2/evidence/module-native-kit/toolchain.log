@@ -1,0 +1,44 @@
+.NET SDK:
+ Version:           10.0.114
+ Commit:            0427b9abbe
+ Workload version:  10.0.100-manifests.a00bebb6
+ MSBuild version:   18.0.36+0427b9abb
+
+Runtime Environment:
+ OS Name:     ubuntu
+ OS Version:  24.04
+ OS Platform: Linux
+ RID:         linux-x64
+ Base Path:   /tmp/akka-serialization-v2/toolchain-install/sdk/10.0.114/
+
+.NET workloads installed:
+There are no installed workloads to display.
+Configured to use workload sets when installing new manifests.
+No workload sets are installed. Run "dotnet workload restore" to install a workload set.
+
+Host:
+  Version:      10.0.14
+  Architecture: x64
+  Commit:       0427b9abbe
+
+.NET SDKs installed:
+  10.0.114 [/tmp/akka-serialization-v2/toolchain-install/sdk]
+
+.NET runtimes installed:
+  Microsoft.AspNetCore.App 10.0.14 [/tmp/akka-serialization-v2/toolchain-install/shared/Microsoft.AspNetCore.App]
+  Microsoft.NETCore.App 10.0.14 [/tmp/akka-serialization-v2/toolchain-install/shared/Microsoft.NETCore.App]
+
+Other architectures found:
+  None
+
+Environment variables:
+  DOTNET_ROOT                              [/tmp/akka-serialization-v2/toolchain-install]
+
+global.json file:
+  /tmp/akka-serialization-v2/module-native-kit/global.json
+
+Learn more:
+  https://aka.ms/dotnet/info
+
+Download .NET:
+  https://aka.ms/dotnet/download

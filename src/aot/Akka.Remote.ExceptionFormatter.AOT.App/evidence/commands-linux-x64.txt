@@ -1,0 +1,12 @@
+Validated SDK: 10.0.114 (isolated serviced toolchain)
+Compiler/runtime pack: 10.0.14
+Runtime identifier: linux-x64
+
+From /tmp/akka-serialization-v2/g8-native-probe (outside the base's older global.json):
+PATH=/tmp/akka-serialization-v2/toolchain-install:$PATH DOTNET_ROOT=/tmp/akka-serialization-v2/toolchain-install /tmp/akka-serialization-v2/toolchain-install/dotnet publish /tmp/akka-serialization-v2/exceptions/src/aot/Akka.Remote.ExceptionFormatter.AOT.App/Akka.Remote.ExceptionFormatter.AOT.App.csproj -c Release -r linux-x64 -o /tmp/akka-serialization-v2/g8-tracked-native-publish
+
+/tmp/akka-serialization-v2/g8-tracked-native-publish/Akka.Remote.ExceptionFormatter.AOT.App
+
+The executable was an ELF 64-bit x86-64 PIE and exited 0. Its own assertions require
+RuntimeFeature.IsDynamicCodeSupported == false and Akka.DynamicTypeLoading == false.
+No private product DTOs, friend identity, blanket trimmer roots or audit bypass were used.

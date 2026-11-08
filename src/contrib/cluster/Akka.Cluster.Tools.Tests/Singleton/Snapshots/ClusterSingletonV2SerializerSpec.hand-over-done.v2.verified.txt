@@ -1,0 +1,7 @@
+﻿case: hand-over-done
+message-type: HandOverDone
+manifest: C
+serializer-id: 54
+byte-count: 1
+
+0000  80                                                |.|

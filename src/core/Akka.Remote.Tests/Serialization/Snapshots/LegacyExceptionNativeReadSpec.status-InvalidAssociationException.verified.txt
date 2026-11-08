@@ -1,0 +1,17 @@
+case: status-InvalidAssociationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 164
+
+0000  0a 9f 01 0a 3e 41 6b 6b  61 2e 52 65 6d 6f 74 65  |....>Akka.Remote|
+0010  2e 54 72 61 6e 73 70 6f  72 74 2e 49 6e 76 61 6c  |.Transport.Inval|
+0020  69 64 41 73 73 6f 63 69  61 74 69 6f 6e 45 78 63  |idAssociationExc|
+0030  65 70 74 69 6f 6e 2c 20  41 6b 6b 61 2e 52 65 6d  |eption, Akka.Rem|
+0040  6f 74 65 12 07 6d 65 73  73 61 67 65 22 0d 6c 65  |ote..message".le|
+0050  67 61 63 79 2d 73 6f 75  72 63 65 2a 45 0a 28 53  |gacy-source*E.(S|
+0060  79 73 74 65 6d 2e 45 78  63 65 70 74 69 6f 6e 2c  |ystem.Exception,|
+0070  20 53 79 73 74 65 6d 2e  50 72 69 76 61 74 65 2e  | System.Private.|
+0080  43 6f 72 65 4c 69 62 12  0d 69 6e 6e 65 72 20 6d  |CoreLib..inner m|
+0090  65 73 73 61 67 65 2a 00  3a 08 6d 73 63 6f 72 6c  |essage*.:.mscorl|
+00a0  69 62 12 00                                       |ib..|

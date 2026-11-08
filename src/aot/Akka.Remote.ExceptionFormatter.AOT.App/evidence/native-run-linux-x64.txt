@@ -1,0 +1,3 @@
+[g8-native] known-factories=36 verified
+[g8-native] OK known=36 rich=3 null-field=1 native-user-payload=true rejected=6
+[INFO][11/07/2026 22:54:12.533Z][Thread 0001][CoordinatedShutdown (akka://g8-native)] CoordinatedShutdown invoked due to [Reason:Akka.Actor.CoordinatedShutdown+ActorSystemTerminateReason]. Exiting with [ExitCode:0].

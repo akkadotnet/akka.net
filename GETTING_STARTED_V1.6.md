@@ -192,6 +192,13 @@ To opt back into reflection-based loading (and bring back its `IL2026`/`IL3050` 
 Full details, including everything not yet supported:
 [Native AOT and Trimming](docs/articles/deployment/native-aot.md).
 
+**Unreleased ([#8935](https://github.com/akkadotnet/akka.net/pull/8935)): historical exception reads.** Legacy system-message and
+`Status.Failure` readers keep known exception causes when dynamic loading is disabled by
+using static constructors. Unknown types and unsupported old payload fields fail explicitly.
+The original protobuf format still loses `HResult`, `Data` and `HelpLink`; JSON-backed rich
+fields are not made native-compatible automatically. See
+[Historical Exception Payloads](docs/articles/deployment/native-aot.md#historical-exception-payloads).
+
 ## Source-Generated Serializer (Akka.Serialization.V2)
 
 ```xml
@@ -250,6 +257,38 @@ One message type can belong to only one serializer. The generator's analyzer cat
 conflict at compile time (for example, two serializers binding the same protocol interface).
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
+
+### Built-in serializers: global V2 opt-in
+
+The source generator for your messages and the built-in serializer migration are separate.
+Built-in V2 serializers live beside their legacy readers. `akka.actor.serialization-v2` is
+off by default; enabling it moves the default write bindings of each deployed V2 port.
+
+| Protocol | Legacy reader | V2 reader | First release containing the V2 reader |
+|---|---|---|---|
+| Cluster Singleton hand-over | `akka-singleton`, id 14 | `akka-singleton-v2`, id 54 | Unreleased; this change is tracked by [#8682](https://github.com/akkadotnet/akka.net/issues/8682). Earlier v1.6 betas do not imply reader support. |
+
+Upgrade every participating reader before enabling the switch. An application that already
+has it on can start writing a newly added V2 port when its module is upgraded.
+
+```hocon
+akka.actor.serialization-v2 = on
+```
+
+With Akka.Hosting, `akkaBuilder.WithSerializationV2()` writes that same setting. To keep the
+whole Singleton hand-over protocol on legacy while other deployed ports use V2:
+
+```hocon
+akka.actor.serialization-bindings {
+  "Akka.Cluster.Tools.Singleton.IClusterSingletonMessage, Akka.Cluster.Tools" = akka-singleton
+}
+```
+
+Both ids remain registered regardless of the switch or pin. Turning the switch off changes
+future writes; it does not add a V2 reader to older binaries. This setting does not replace
+user-message serializer registration or imply that the entire Cluster subsystem supports
+Native AOT. The native serializer canary verifies the four Singleton hand-over messages
+with a local provider; cross-process cluster hand-over is tested separately on the JIT.
 
 ## Enabling Artery
 

@@ -1,0 +1,23 @@
+case: status-FileNotFoundException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 269
+
+0000  0a 88 02 0a 37 53 79 73  74 65 6d 2e 49 4f 2e 46  |....7System.IO.F|
+0010  69 6c 65 4e 6f 74 46 6f  75 6e 64 45 78 63 65 70  |ileNotFoundExcep|
+0020  74 69 6f 6e 2c 20 53 79  73 74 65 6d 2e 50 72 69  |tion, System.Pri|
+0030  76 61 74 65 2e 43 6f 72  65 4c 69 62 12 07 6d 65  |vate.CoreLib..me|
+0040  73 73 61 67 65 22 0d 6c  65 67 61 63 79 2d 73 6f  |ssage".legacy-so|
+0050  75 72 63 65 2a 45 0a 28  53 79 73 74 65 6d 2e 45  |urce*E.(System.E|
+0060  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0070  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0080  12 0d 69 6e 6e 65 72 20  6d 65 73 73 61 67 65 2a  |..inner message*|
+0090  00 3a 08 6d 73 63 6f 72  6c 69 62 32 48 0a 15 46  |.:.mscorlib2H..F|
+00a0  69 6c 65 4e 6f 74 46 6f  75 6e 64 5f 46 69 6c 65  |ileNotFound_File|
+00b0  4e 61 6d 65 12 2f 0a 04  66 69 6c 65 10 11 1a 25  |Name./..file...%|
+00c0  53 79 73 74 65 6d 2e 53  74 72 69 6e 67 2c 20 53  |System.String, S|
+00d0  79 73 74 65 6d 2e 50 72  69 76 61 74 65 2e 43 6f  |ystem.Private.Co|
+00e0  72 65 4c 69 62 32 1a 0a  16 46 69 6c 65 4e 6f 74  |reLib2...FileNot|
+00f0  46 6f 75 6e 64 5f 46 75  73 69 6f 6e 4c 6f 67 12  |Found_FusionLog.|
+0100  00 3a 08 6d 73 63 6f 72  6c 69 62 12 00           |.:.mscorlib..|

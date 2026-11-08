@@ -1,0 +1,7 @@
+Exactly8 inherited whitespace-only blank lines trimmed in ClientProbe.cs/ContainersProbe.cs/MetricsProbe.cs.
+
+git diff --ignore-space-at-eol --exit-code 053480698 -- src/aot/Akka.Serialization.V2.AOT.App/*.cs
+Exit0: no C# differences after ignoring trailing whitespace.
+
+git diff --ignore-space-at-eol --exit-code bfb6b72f0 -- src/aot/Akka.Serialization.V2.AOT.App/*.cs
+Exit0: no C# differences after ignoring trailing whitespace.
