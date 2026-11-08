@@ -55,7 +55,7 @@ internal static class ClientProbe
                 var settings = $"akka.actor.serialization-v2 = {(mode.Name == "off" ? "off" : "on")}\nakka.cluster.client.use-legacy-serialization = off";
                 if (mode.Name == "pinned")
                     settings += """
-        
+
                         akka.actor.serialization-bindings {
                           "Akka.Cluster.Tools.Client.IClusterClientMessage, Akka.Cluster.Tools" = akka-cluster-client
                           "Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, Akka.Cluster.Tools" = akka-cluster-client

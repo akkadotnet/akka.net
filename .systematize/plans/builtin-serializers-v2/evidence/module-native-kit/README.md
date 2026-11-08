@@ -5,9 +5,14 @@ Legacy exception/CI/SDK prerequisite `ba3aa8898` as `9673a2e976a7db3756de59898a0
 It copies only the existing app and module-canary pipeline section from stable
 integration `bfb6b72f0`; no other production port implementations are imported.
 
-All C# and project files are byte-identical to the app in both `bfb6b72f0` and
-the positively tested composed source `053480698`. `source-provenance.txt`
-records those comparisons. README extraction/dependency documentation is new;
+At initial extraction, all C# and project files were byte-identical to the app in
+both `bfb6b72f0` and positively tested composed source `053480698`.
+`source-provenance.txt` retains those original hashes/comparisons. Final style
+cleanup trims eight whitespace-only blank lines in Client/Containers/Metrics;
+an ignore-space-at-eol comparison against both source commits reports no C#
+differences. `style-only-comparison.txt` records that check; final working-file
+and canonical git-blob hashes are retained separately. README
+extraction/dependency documentation is new;
 the warning inventory's historical header count is corrected from 19 to 18,
 with all 18 existing keys unchanged. The existing pipeline section is copied
 exactly; its snapshot/hash are retained separately.
