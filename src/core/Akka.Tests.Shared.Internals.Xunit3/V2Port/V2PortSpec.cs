@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -27,13 +28,35 @@ namespace Akka.TestKit;
 
 /// <summary>One message of a port's corpus and the manifest the legacy serializer gives it.</summary>
 /// <param name="Message">A deterministic message (no clock, no random values), or the golden bytes drift.</param>
-/// <param name="Manifest">The legacy manifest token. The V2 serializer must reuse it.</param>
+/// <param name="Manifest">The legacy manifest token. V2 reuses it unless <see cref="V2Manifest"/> explicitly differs.</param>
 /// <param name="Name">Unique in the corpus. Names the snapshot files.</param>
-public sealed record V2PortCase(object Message, string Manifest, string Name);
+public sealed record V2PortCase(object Message, string Manifest, string Name)
+{
+    /// <summary>
+    /// Explicit V2 token for a new id whose legacy serializer had no manifest. Null preserves
+    /// strict legacy-token parity; native V2 serializers still require a nonempty token.
+    /// </summary>
+    public string? V2Manifest { get; init; }
+
+    /// <summary>
+    /// Optional complete domain assertion for messages whose nested equality omits wire fields or
+    /// compares collection identities. Receives expected then actual, after the exact runtime-type
+    /// check. Null retains the shared equality/structural checks.
+    /// </summary>
+    public Action<object, object>? AssertEquivalent { get; init; }
+
+    /// <summary>
+    /// A generic shape intentionally requiring dynamic type loading. The off gate must reject
+    /// both writes and reads with an explicit feature-switch reason, including warmed codecs.
+    /// False retains the strict positive round-trip checks.
+    /// </summary>
+    public bool RequiresDynamicTypeLoading { get; init; }
+}
 
 /// <summary>
 /// The spec a V2 serializer port derives from: a legacy serializer gets a V2 twin at id + 40 (inside 40-79) with
-/// the same manifests. Supply the two serializers and a corpus; the tests come with the base class. The golden checks
+/// the same manifests unless an empty legacy token requires an explicit new native token. Supply the two serializers
+/// and a corpus; the tests come with the base class. The golden checks
 /// are Verify snapshots in a <c>Snapshots</c> folder next to the derived spec's source file (see the README).
 /// Both serializers must be registered the way a deployed node has them (a module's table, or a setup), with no bindings on the V2 row.
 /// </summary>
@@ -95,7 +118,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             legacy.Manifest(c.Message).Should().Be(c.Manifest, "legacy manifest of {0}", c.Name);
-            v2.Manifest(c.Message).Should().Be(c.Manifest, "V2 reuses the legacy manifest of {0}", c.Name);
+            v2.Manifest(c.Message).Should().Be(c.V2Manifest ?? c.Manifest, "declared V2 manifest of {0}", c.Name);
         }
     }
 
@@ -126,7 +149,7 @@ public abstract class V2PortSpec : AkkaSpec
         foreach (var c in Cases)
         {
             AssertSame(c, Sys.Serialization.Deserialize(legacy.ToBinary(c.Message), legacy.Identifier, c.Manifest), "legacy id");
-            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "V2 id");
+            AssertSame(c, Sys.Serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "V2 id");
         }
     }
 
@@ -144,18 +167,39 @@ public abstract class V2PortSpec : AkkaSpec
 
     [Fact(DisplayName = "Should_ResolveV2Id_When_DynamicTypeLoadingIsOff")]
     public void Should_ResolveV2Id_When_DynamicTypeLoadingIsOff()
+        => AssertDynamicTypeLoadingGate(Cases, () => CreateV2(Node), () => new Akka.Serialization.Serialization(Node));
+
+    internal static void AssertDynamicTypeLoadingGate(IReadOnlyList<V2PortCase> cases,
+        Func<SerializerV2> createV2, Func<Akka.Serialization.Serialization> createRegistry)
     {
         // a process-wide switch: the spec class belongs in a collection that doesn't run beside others (see the README)
         var hadSwitch = AppContext.TryGetSwitch(DynamicTypeLoadingSwitch, out var previous);
-        AppContext.SetSwitch(DynamicTypeLoadingSwitch, false);
+        var encoded = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        SerializerV2? warm = null;
         try
         {
-            var serialization = new Akka.Serialization.Serialization(Node);
-            var v2 = CreateV2(Node);
-
-            foreach (var c in Cases)
+            foreach (var sample in cases)
             {
-                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.Manifest), "dynamic type loading off");
+                if (!sample.RequiresDynamicTypeLoading)
+                    continue;
+                AppContext.SetSwitch(DynamicTypeLoadingSwitch, true);
+                warm ??= createV2();
+                var bytes = warm.ToBinary(sample.Message);
+                AssertSame(sample, warm.FromBinary(bytes, sample.V2Manifest ?? sample.Manifest), "warm enabled round trip");
+                encoded.Add(sample.Name, bytes);
+            }
+            AppContext.SetSwitch(DynamicTypeLoadingSwitch, false);
+            var serialization = createRegistry();
+            var v2 = createV2();
+
+            foreach (var c in cases)
+            {
+                if (c.RequiresDynamicTypeLoading)
+                {
+                    AssertDynamicTypeLoadingBoundary(c, warm!, v2, serialization, encoded[c.Name]);
+                    continue;
+                }
+                AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "dynamic type loading off");
                 AssertV2RoundTrip(v2, c);
             }
         }
@@ -165,12 +209,33 @@ public abstract class V2PortSpec : AkkaSpec
         }
     }
 
+    private static void AssertDynamicTypeLoadingBoundary(V2PortCase sample, SerializerV2 warm, SerializerV2 cold,
+        Akka.Serialization.Serialization registered, byte[] bytes)
+    {
+        var manifest = sample.V2Manifest ?? sample.Manifest;
+        foreach (var codec in new[] { warm, cold })
+        {
+            RequireReason(() => codec.ToBinary(sample.Message));
+            var writer = new ArrayBufferWriter<byte>();
+            RequireReason(() => codec.Serialize(sample.Message, writer));
+            Assert.Equal(0, writer.WrittenCount);
+            RequireReason(() => codec.Deserialize(new ReadOnlySequence<byte>(bytes), manifest));
+        }
+        RequireReason(() => registered.Deserialize(bytes, warm.Identifier, manifest));
+
+        static void RequireReason(Action operation)
+        {
+            var error = Assert.Throws<SerializationException>(operation);
+            Assert.Contains("Akka.DynamicTypeLoading", error.Message);
+        }
+    }
+
     [Fact(DisplayName = "Should_MatchGoldenV2Bytes_When_V2Serializes")]
     public Task Should_MatchGoldenV2Bytes_When_V2Serializes()
     {
         var v2 = CreateV2(Node);
 
-        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message));
+        return VerifyAll("v2", v2.Identifier, c => v2.ToBinary(c.Message), c => c.V2Manifest ?? c.Manifest);
     }
 
     [Fact(DisplayName = "Should_MatchGoldenLegacyBytes_When_LegacySerializes")]
@@ -178,20 +243,21 @@ public abstract class V2PortSpec : AkkaSpec
     {
         var legacy = CreateLegacy(Node);
 
-        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message));
+        return VerifyAll("legacy", legacy.Identifier, c => legacy.ToBinary(c.Message), c => c.Manifest);
     }
 
     /// <summary>
     /// Verifies one hex dump per case as <c>{prefix}.{case}.{kind}</c>. Every case runs before the test fails, so a first
     /// run writes all the <c>.received.txt</c> files at once.
     /// </summary>
-    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize)
+    private async Task VerifyAll(string kind, int serializerId, Func<V2PortCase, byte[]> serialize,
+        Func<V2PortCase, string> manifest)
     {
         var failures = new List<string>();
 
         foreach (var c in Cases)
         {
-            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), c.Manifest, serializerId, serialize(c));
+            var hexDump = HexDumpFormatter.Format(c.Name, HexDumpFormatter.FriendlyTypeName(c.Message.GetType()), manifest(c), serializerId, serialize(c));
 
             try
             {
@@ -212,8 +278,9 @@ public abstract class V2PortSpec : AkkaSpec
     private static void AssertV2RoundTrip(SerializerV2 v2, V2PortCase c)
     {
         var bytes = v2.ToBinary(c.Message);
-        AssertSame(c, v2.FromBinary(bytes, c.Manifest), "V2 FromBinary");
-        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), c.Manifest), "V2 Deserialize");
+        var manifest = c.V2Manifest ?? c.Manifest;
+        AssertSame(c, v2.FromBinary(bytes, manifest), "V2 FromBinary");
+        AssertSame(c, v2.Deserialize(new ReadOnlySequence<byte>(bytes), manifest), "V2 Deserialize");
 
         var writer = new ArrayBufferWriter<byte>();
         v2.Serialize(c.Message, writer).Should().Be(writer.WrittenCount, "{0}: Serialize reports what it wrote", c.Name);
@@ -227,7 +294,16 @@ public abstract class V2PortSpec : AkkaSpec
     /// <summary>Asserts <paramref name="actual"/> equals the corpus message, by <c>Equals</c> or else structurally.</summary>
     internal static void AssertSame(V2PortCase c, object? actual, string stage)
     {
-        actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+        if (actual is null || actual.GetType() != c.Message.GetType())
+        {
+            actual.Should().BeOfType(c.Message.GetType(), "{0}: {1}", stage, c.Name);
+            return;
+        }
+        if (c.AssertEquivalent is { } assertEquivalent)
+        {
+            assertEquivalent(c.Message, actual!);
+            return;
+        }
         if (!Equals(c.Message, actual))
         {
             // FA 5 only exposes ComparingByMembers<T>. This JIT-only test dispatch changes the
