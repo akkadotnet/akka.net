@@ -81,24 +81,14 @@ bin/obj directories because those generated outputs are cleaned for the cold pub
 
 ## Evidence and limits
 
-The initial and final native executions passed on SDK 10.0.114/runtime 10.0.14. Root review
-required installing/checking the already-linked log watchdog; the final cold expanded CI
-replay passed with startup, serialization and shutdown checks enabled. The managed build has
-zero warnings/errors and Slopwatch reports zero issues. The initial managed compile tried
-an internal id lookup; that consumer mistake was corrected using the existing public alias
-overload, with distinct marker types to preserve cache semantics. The original failure
-receipt remains retained. No product API or registration change was made.
+The initial and final native executions passed on SDK 10.0.114/runtime 10.0.14, with startup, serialization and shutdown checks enabled. The managed build has zero warnings/errors and Slopwatch reports zero issues. An initial internal id lookup failed; the app now uses the existing public alias overload and distinct marker types to preserve cache semantics. No product API or registration change was made.
 
 The ordinary and retained friend publishes emit the same 70 warning lines / 69 normalized
 legacy/dependency keys, with zero added/gone keys and zero unlocated diagnostics. None is
-attributed to the new MessagePack codec, app, V2 runtime or Shared sources. The comparison
-reference is retained as evidence; it is not an approved CI warning baseline. The old
+attributed to the new MessagePack codec, app, V2 runtime or Shared sources. The comparison reference is not an approved CI warning baseline. The old
 reflection debt remains visible, and this proof does not approve it away.
 
-`evidence` retains compressed full build, publish, run, warning comparison and SDK output,
-original failure output, commands and hashes. Hosted CI execution, native Remote/Cluster
-startup, transport interoperability, arbitrary payload support and performance acceptance
-remain outside this consumer's evidence.
+The validation above does not establish hosted CI execution, native Remote/Cluster startup, transport interoperability, arbitrary payload support or performance acceptance.
 
 ## Prepared CI composition
 
@@ -113,9 +103,6 @@ The proposed 68-key existing-debt inventory contains only 52 old DData, 11 old C
 and five old Remote identities. It removes the old exception-reader identity fixed by
 #8935 and permits no new codec/runtime/app/Shared diagnostic. The final cold composed
 publish and expanded-command replay passed with exactly those 68 identities, zero new/gone
-keys and zero outside-scope/unlocated diagnostics. Hosted execution remains pending. The original 69-key comparison remains retained
-separately, so the dependency's warning removal cannot overwrite historical evidence.
+keys and zero outside-scope/unlocated diagnostics. Hosted execution remains pending. The original 69-key comparison was kept distinct from the updated 68-key inventory.
 
-`evidence/ci-template-replay` retains the final complete native/SDK/publish/run/warning logs,
-exact expanded commands and parameters, source revisions and canonical/raw input hashes.
-The parent evidence directory also retains the exact copied-fixture audit. The completed source/CI replay did not alter the reviewed CRDT production code.
+The final expanded-command replay passed the native completion and warning assertions. The copied-fixture audit passed byte-exact comparisons. The source/CI replay did not alter the reviewed CRDT production code.

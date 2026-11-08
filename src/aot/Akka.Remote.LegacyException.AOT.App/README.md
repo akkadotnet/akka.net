@@ -52,20 +52,11 @@ warnings. Use an isolated checkout and do not build the same output directories 
 It adds no global command-line `PublishAot` property, warning suppression, package-audit bypass
 or trimmer root. Ordinary solution builds remain managed.
 
-## Retained receipts
+## Validation summary
 
-The [`evidence`](evidence) directory contains compressed full command output, original failed
-native output, and exact commands. `gzip -dc evidence/<name>.log.gz` displays a receipt.
-The publish/run logs retain their original machine paths for provenance; reproduction uses
-the relative project references and the script above.
+The corrected consumer passed native publish/run on SDK 10.0.114/runtime 10.0.14. Five existing Remote warning keys remained; no new, outside-scope or source-less diagnostics were observed. The earlier failed System native run preceded the corrected proof.
 
-`previous-remote-warning-keys.txt` is a comparison-only copy of the six previously observed
-Remote keys, not a newly approved CI baseline. Five existing keys remain in the corrected
-publish; the old ExceptionSupport reflection key is no longer emitted. No new, outside-scope
-or source-less diagnostics were observed. The original failed System native receipt remains
-retained even though the corrected consumer passes.
-
-## CI gate
+`baselines/previous-remote-warning-keys.txt` is a comparison-only copy of the six previously observed Remote keys, not an approved CI baseline. The corrected publish emits five existing keys; the former ExceptionSupport reflection key is no longer emitted.
 
 `RemoteLegacyExceptionAotCanary` uses the shared
 [`native-codec-canary.template.yaml`](../../../build-system/native-codec-canary.template.yaml)
@@ -77,13 +68,4 @@ codec, consumer or V2 runtime warning is approved. Core warnings remain owned by
 separate rooted canary. Outside-scope counts are reported, not automatically rejected by
 this lane; the local replay observed zero. The SDK servicing prerequisite is included.
 
-The `evidence/ci-replay` directory retains the local replay of these Bash steps. Cold outputs
-were moved aside locally instead of deleted; hosted CI uses the explicit clean step. The
-replay passed publish, exact runtime marker and warning checks on SDK 10.0.114/runtime 10.0.14.
-This validates the commands, not hosted execution of the newly added Azure job.
-
-The `evidence/template-replay` directory retains the final shared-template expansion and full
-command output. This replay executed the template's cold clean step, publish, native run,
-exact marker and scoped/zero-unlocated warning assertions successfully. It observed five
-existing warnings and zero new, outside-scope or unlocated diagnostics. Hosted execution of
-the newly added template remains pending.
+The local replay passed publish, the exact runtime marker and warning checks on SDK 10.0.114/runtime 10.0.14. The final shared-template replay also passed its cold clean step, native run, exact marker and scoped/zero-unlocated warning assertions; it observed five existing warnings and zero new, outside-scope or unlocated diagnostics. These checks validate the commands, not hosted execution of the newly added Azure job.
