@@ -20,6 +20,7 @@ Require(!RuntimeFeature.IsDynamicCodeSupported, "Actual native execution is requ
 Require(AppContext.TryGetSwitch("Akka.DynamicTypeLoading", out var dynamicLoading) && !dynamicLoading, "Dynamic loading must be disabled.");
 var nativeCases = 0;
 var legacyControls = 0;
+var legacyExceptionReads = 0;
 var writerChecks = 0;
 var rejected = 0;
 var lateCalls = 0;
@@ -65,11 +66,9 @@ foreach (var mode in new[] { (Name: "off", Id: 16), (Name: "on", Id: 56), (Name:
             Require(buffer.WrittenSpan.SequenceEqual(bytes), "Native bytes differ.");
             CompareSample(sample.Message, modern.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), sample.Manifest), system);
             nativeCases++;
-            if (sample.Message is not Status.Failure { Cause: not null })
-            {
-                CompareSample(sample.Message, system.Serialization.Deserialize(legacy.ToBinary(sample.Message), 16, sample.Manifest), system);
-                legacyControls++;
-            }
+            CompareSample(sample.Message, system.Serialization.Deserialize(legacy.ToBinary(sample.Message), 16, sample.Manifest), system, legacyFormat: true);
+            legacyControls++;
+            if (sample.Message is Status.Failure { Cause: not null }) legacyExceptionReads++;
             if (sample.Message is LocalScope)
             {
                 try { system.Serialization.FindSerializerFor(LocalScope.Instance); throw new InvalidOperationException("LocalScope unexpectedly acquired a native default binding."); }
@@ -84,6 +83,8 @@ foreach (var mode in new[] { (Name: "off", Id: 16), (Name: "on", Id: 56), (Name:
                 CompareSample(sample.Message, system.Serialization.Deserialize(selectedBytes, mode.Id, sample.Manifest), system);
             else
                 Require(selectedBytes.AsSpan().SequenceEqual(legacy.ToBinary(sample.Message)), "Legacy selected writer bytes differ.");
+            if (mode.Id == 16)
+                CompareSample(sample.Message, system.Serialization.Deserialize(selectedBytes, 16, sample.Manifest), system, legacyFormat: true);
             writerChecks++;
         }
         var invalid = UnsupportedMessages(system.DeadLetters);
@@ -103,8 +104,8 @@ foreach (var mode in new[] { (Name: "off", Id: 16), (Name: "on", Id: 56), (Name:
     finally { await system.Terminate().WaitAsync(TimeSpan.FromSeconds(10)); }
     watchdog.ThrowIfAnyProblems(mode.Name, "shutdown");
 }
-Require(nativeCases == 138 && legacyControls == 132 && writerChecks == 135 && rejected == 45, "Coverage counters differ.");
-Console.WriteLine($"[misc-native] BOUNDED codec proof: native-cases={nativeCases} legacy-control-reads={legacyControls} selected-writer-checks={writerChecks} rejected={rejected} late-payload-calls={lateCalls} late-payload-bytes={lateBytes}; legacy-exception-native-reads=UNSUPPORTED");
+Require(nativeCases == 138 && legacyControls == 138 && legacyExceptionReads == 6 && writerChecks == 135 && rejected == 45, "Coverage counters differ.");
+Console.WriteLine($"[misc-native] FIXED COMPOSITION codec proof: native-cases={nativeCases} legacy-reads={legacyControls} legacy-exception-reads={legacyExceptionReads} selected-writer-checks={writerChecks} rejected={rejected} late-payload-calls={lateCalls} late-payload-bytes={lateBytes}");
 
 static WireSample Sample(object message, string manifest, string name) => new(message, manifest, name);
 static WireSample[] BuildCases(ActorSystem system)
@@ -261,7 +262,7 @@ static WireSample[] RichCases(ActorSystem system)
     return [Sample(new Status.Failure(simple, "state"), "STF", "failure-original-state"),
         Sample(new Status.Failure(rich, new byte[] { 0, 1, 127, 255 }), "STF", "failure-rich-actor")];
 }
-static void CompareSample(object expected, object actual, ActorSystem system)
+static void CompareSample(object expected, object actual, ActorSystem system, bool legacyFormat = false)
 {
     if (expected is IActorRef actor)
     {
@@ -287,19 +288,19 @@ static void CompareSample(object expected, object actual, ActorSystem system)
     {
         var decoded = As<Status.Failure>(actual);
         AssertPayload(failure.State, decoded.State);
-        CompareException(failure.Cause, decoded.Cause);
+        CompareException(failure.Cause, decoded.Cause, legacyFormat);
     }
     else Compare(expected, actual, system);
 }
-static void CompareException(Exception? expected, Exception? actual)
+static void CompareException(Exception? expected, Exception? actual, bool legacy)
 {
     if (expected is null) { RequireNull(actual); return; }
     var decoded = actual ?? throw new InvalidOperationException("Cause was lost.");
     Equal(expected.GetType(), decoded.GetType()); Equal(expected.Message, decoded.Message); Equal(expected.Source, decoded.Source);
-    Equal(expected.StackTrace, decoded.StackTrace); Equal(expected.HResult, decoded.HResult); Equal(expected.HelpLink, decoded.HelpLink);
-    Equal(expected.Data.Count, decoded.Data.Count);
-    foreach (var key in expected.Data.Keys) Equal(expected.Data[key], decoded.Data[key]);
-    CompareException(expected.InnerException, decoded.InnerException);
+    Equal(expected.StackTrace, decoded.StackTrace); Equal(legacy ? int.MinValue : expected.HResult, decoded.HResult); Equal(legacy ? "" : expected.HelpLink, decoded.HelpLink);
+    Equal(legacy ? 0 : expected.Data.Count, decoded.Data.Count);
+    if (!legacy) foreach (var key in expected.Data.Keys) Equal(expected.Data[key], decoded.Data[key]);
+    CompareException(expected.InnerException, decoded.InnerException, legacy);
     if (expected is ActorInitializationException initialization) Equal(initialization.Actor, ((ActorInitializationException)decoded).Actor);
 }
 static object[] UnsupportedMessages(IActorRef actor)
