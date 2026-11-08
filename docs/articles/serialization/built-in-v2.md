@@ -261,7 +261,7 @@ akka.actor.serialization-bindings {
 }
 ```
 
-A native codec proof is bounded by its retained source and receipts. The unchanged legacy exception reader's Native AOT constructor-metadata gap is a separate prerequisite. Generated serializers and `akka.actor.serialization-v2` do not by themselves enable dynamic actor construction or full remoting Native AOT. Performance and broader transport gates must be cleared before recommending this port for production activation.
+A native codec proof is bounded by its retained source and receipts. Historical non-null exception reads require the finite native reader in [#8935](https://github.com/akkadotnet/akka.net/pull/8935). It reconstructs known exception types using the old format's state; JSON-backed historical fields still require a compatible application reader. Generated serializers and `akka.actor.serialization-v2` do not by themselves enable dynamic actor construction or full remoting Native AOT. Performance and broader transport gates must be cleared before recommending this port for production activation.
 
 ## Same-Format Native Persistence Envelopes
 
