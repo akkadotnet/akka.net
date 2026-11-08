@@ -451,6 +451,13 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
+    public sealed class ExceptionMessagePackFormatter : Akka.Serialization.V2.IAkkaMessagePackFormatter<System.Exception>
+    {
+        public ExceptionMessagePackFormatter(Akka.Actor.ExtendedActorSystem system) { }
+        public System.Exception Read(ref MessagePack.MessagePackReader reader) { }
+        public int SizeOf(System.Exception value) { }
+        public void Write(ref MessagePack.MessagePackWriter writer, System.Exception value) { }
+    }
     public class MessageContainerSerializer : Akka.Serialization.Serializer
     {
         public MessageContainerSerializer(Akka.Actor.ExtendedActorSystem system) { }
