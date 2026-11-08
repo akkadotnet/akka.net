@@ -1,0 +1,18 @@
+case: status-SerializationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 187
+
+0000  0a b6 01 0a 4b 53 79 73  74 65 6d 2e 52 75 6e 74  |....KSystem.Runt|
+0010  69 6d 65 2e 53 65 72 69  61 6c 69 7a 61 74 69 6f  |ime.Serializatio|
+0020  6e 2e 53 65 72 69 61 6c  69 7a 61 74 69 6f 6e 45  |n.SerializationE|
+0030  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0040  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0050  12 07 6d 65 73 73 61 67  65 22 0d 6c 65 67 61 63  |..message".legac|
+0060  79 2d 73 6f 75 72 63 65  2a 45 0a 28 53 79 73 74  |y-source*E.(Syst|
+0070  65 6d 2e 45 78 63 65 70  74 69 6f 6e 2c 20 53 79  |em.Exception, Sy|
+0080  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0090  65 4c 69 62 12 0d 69 6e  6e 65 72 20 6d 65 73 73  |eLib..inner mess|
+00a0  61 67 65 2a 00 3a 08 6d  73 63 6f 72 6c 69 62 3a  |age*.:.mscorlib:|
+00b0  08 6d 73 63 6f 72 6c 69  62 12 00                 |.mscorlib..|

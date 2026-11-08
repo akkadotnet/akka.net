@@ -1,0 +1,37 @@
+case: status-json-state
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 483
+
+0000  0a de 03 0a 24 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....$Akka.Actor.|
+0010  50 72 65 52 65 73 74 61  72 74 45 78 63 65 70 74  |PreRestartExcept|
+0020  69 6f 6e 2c 20 41 6b 6b  61 12 28 45 78 63 65 70  |ion, Akka.(Excep|
+0030  74 69 6f 6e 20 70 72 65  20 72 65 73 74 61 72 74  |tion pre restart|
+0040  20 28 53 79 73 74 65 6d  2e 45 78 63 65 70 74 69  | (System.Excepti|
+0050  6f 6e 29 2a 3d 0a 28 53  79 73 74 65 6d 2e 45 78  |on)*=.(System.Ex|
+0060  63 65 70 74 69 6f 6e 2c  20 53 79 73 74 65 6d 2e  |ception, System.|
+0070  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 12  |Private.CoreLib.|
+0080  05 63 61 75 73 65 2a 00  3a 08 6d 73 63 6f 72 6c  |.cause*.:.mscorl|
+0090  69 62 32 98 01 0a 10 52  65 73 74 61 72 74 45 78  |ib2....RestartEx|
+00a0  63 65 70 74 69 6f 6e 12  83 01 0a 3f 0a 28 53 79  |ception....?.(Sy|
+00b0  73 74 65 6d 2e 45 78 63  65 70 74 69 6f 6e 2c 20  |stem.Exception, |
+00c0  53 79 73 74 65 6d 2e 50  72 69 76 61 74 65 2e 43  |System.Private.C|
+00d0  6f 72 65 4c 69 62 12 07  72 65 73 74 61 72 74 2a  |oreLib..restart*|
+00e0  00 3a 08 6d 73 63 6f 72  6c 69 62 10 02 1a 3e 41  |.:.mscorlib...>A|
+00f0  6b 6b 61 2e 52 65 6d 6f  74 65 2e 53 65 72 69 61  |kka.Remote.Seria|
+0100  6c 69 7a 61 74 69 6f 6e  2e 50 72 6f 74 6f 2e 4d  |lization.Proto.M|
+0110  73 67 2e 45 78 63 65 70  74 69 6f 6e 44 61 74 61  |sg.ExceptionData|
+0120  2c 20 41 6b 6b 61 2e 52  65 6d 6f 74 65 32 96 01  |, Akka.Remote2..|
+0130  0a 0f 4f 70 74 69 6f 6e  61 6c 4d 65 73 73 61 67  |..OptionalMessag|
+0140  65 12 82 01 0a 7e 7b 22  24 69 64 22 3a 22 31 22  |e....~{"$id":"1"|
+0150  2c 22 24 74 79 70 65 22  3a 22 41 6b 6b 61 2e 52  |,"$type":"Akka.R|
+0160  65 6d 6f 74 65 2e 54 65  73 74 73 2e 4c 65 67 61  |emote.Tests.Lega|
+0170  63 79 45 78 63 65 70 74  69 6f 6e 4e 61 74 69 76  |cyExceptionNativ|
+0180  65 52 65 61 64 53 70 65  63 2b 55 6e 72 65 67 69  |eReadSpec+Unregi|
+0190  73 74 65 72 65 64 53 74  61 74 65 2c 20 41 6b 6b  |steredState, Akk|
+01a0  61 2e 52 65 6d 6f 74 65  2e 54 65 73 74 73 22 2c  |a.Remote.Tests",|
+01b0  22 56 61 6c 75 65 22 3a  7b 22 24 22 3a 22 49 31  |"Value":{"$":"I1|
+01c0  37 22 7d 7d 10 01 32 19  0a 05 41 63 74 6f 72 12  |7"}}..2...Actor.|
+01d0  10 0a 08 0a 06 6e 6f 62  6f 64 79 10 10 1a 02 41  |.....nobody....A|
+01e0  52 12 00                                          |R..|

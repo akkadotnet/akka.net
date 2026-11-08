@@ -1,0 +1,18 @@
+case: status-ArgumentNullException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 186
+
+0000  0a b5 01 0a 34 53 79 73  74 65 6d 2e 41 72 67 75  |....4System.Argu|
+0010  6d 65 6e 74 4e 75 6c 6c  45 78 63 65 70 74 69 6f  |mentNullExceptio|
+0020  6e 2c 20 53 79 73 74 65  6d 2e 50 72 69 76 61 74  |n, System.Privat|
+0030  65 2e 43 6f 72 65 4c 69  62 12 1f 6d 65 73 73 61  |e.CoreLib..messa|
+0040  67 65 20 28 50 61 72 61  6d 65 74 65 72 20 27 70  |ge (Parameter 'p|
+0050  61 72 61 6d 65 74 65 72  27 29 22 0d 6c 65 67 61  |arameter')".lega|
+0060  63 79 2d 73 6f 75 72 63  65 2a 00 32 41 0a 09 50  |cy-source*.2A..P|
+0070  61 72 61 6d 4e 61 6d 65  12 34 0a 09 70 61 72 61  |aramName.4..para|
+0080  6d 65 74 65 72 10 11 1a  25 53 79 73 74 65 6d 2e  |meter...%System.|
+0090  53 74 72 69 6e 67 2c 20  53 79 73 74 65 6d 2e 50  |String, System.P|
+00a0  72 69 76 61 74 65 2e 43  6f 72 65 4c 69 62 3a 08  |rivate.CoreLib:.|
+00b0  6d 73 63 6f 72 6c 69 62  12 00                    |mscorlib..|

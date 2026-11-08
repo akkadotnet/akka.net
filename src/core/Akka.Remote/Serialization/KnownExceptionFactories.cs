@@ -15,6 +15,7 @@ using Akka.Dispatch;
 using Akka.IO.Buffers;
 using Akka.Pattern;
 using Akka.Remote.Transport;
+using Akka.Util;
 
 namespace Akka.Remote.Serialization;
 
@@ -65,9 +66,33 @@ internal static class KnownExceptionFactories
 
     private static readonly Dictionary<Type, Entry> ByType = Entries.ToDictionary(entry => entry.Type);
     private static readonly Dictionary<int, Entry> ByDescriptor = Entries.ToDictionary(entry => entry.Descriptor);
+    private static readonly Dictionary<string, Entry> ByLegacyName = Entries.ToDictionary(entry => entry.Type.FullName!, StringComparer.Ordinal);
 
     internal static bool TryFind(Type type, out Entry entry) => ByType.TryGetValue(type, out entry!);
     internal static bool TryFind(int descriptor, out Entry entry) => ByDescriptor.TryGetValue(descriptor, out entry!);
+
+    // The old protobuf format carries CLR names rather than G8's descriptors. Resolve only
+    // the same finite factory set, including historical mscorlib identities for BCL types.
+    internal static bool TryFindLegacy(string name, string? forwardedFrom, out Entry entry)
+    {
+        entry = null!;
+        if (!TypeExtensions.TrySplitTypeName(name, out var typeName, out var assembly) ||
+            !ByLegacyName.TryGetValue(typeName, out var candidate))
+            return false;
+        if (!MatchesAssembly(candidate.Type, assembly) &&
+            (assembly is null || string.IsNullOrEmpty(forwardedFrom) || !MatchesAssembly(candidate.Type, forwardedFrom)))
+            return false;
+        entry = candidate;
+        return true;
+    }
+
+    private static bool MatchesAssembly(Type type, string? assembly)
+    {
+        if (assembly is null)
+            return type.Assembly == typeof(Exception).Assembly || type.Assembly == typeof(KnownExceptionFactories).Assembly;
+        return string.Equals(assembly, type.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase) ||
+               (type.Assembly == typeof(Exception).Assembly && string.Equals(assembly, "mscorlib", StringComparison.OrdinalIgnoreCase));
+    }
 
     [UnsafeAccessor(UnsafeAccessorKind.Constructor)]
     private static extern Exception NewException(SerializationInfo info, StreamingContext context);
