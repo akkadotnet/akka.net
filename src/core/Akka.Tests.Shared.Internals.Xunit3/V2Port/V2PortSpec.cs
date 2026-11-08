@@ -196,7 +196,7 @@ public abstract class V2PortSpec : AkkaSpec
             {
                 if (c.RequiresDynamicTypeLoading)
                 {
-                    AssertDynamicTypeLoadingBoundary(c, warm!, serialization, encoded[c.Name]);
+                    AssertDynamicTypeLoadingBoundary(c, warm!, v2, serialization, encoded[c.Name]);
                     continue;
                 }
                 AssertSame(c, serialization.Deserialize(v2.ToBinary(c.Message), v2.Identifier, c.V2Manifest ?? c.Manifest), "dynamic type loading off");
@@ -209,16 +209,19 @@ public abstract class V2PortSpec : AkkaSpec
         }
     }
 
-    private static void AssertDynamicTypeLoadingBoundary(V2PortCase sample, SerializerV2 warm,
+    private static void AssertDynamicTypeLoadingBoundary(V2PortCase sample, SerializerV2 warm, SerializerV2 cold,
         Akka.Serialization.Serialization registered, byte[] bytes)
     {
         var manifest = sample.V2Manifest ?? sample.Manifest;
-        RequireReason(() => warm.ToBinary(sample.Message));
-        var writer = new ArrayBufferWriter<byte>();
-        RequireReason(() => warm.Serialize(sample.Message, writer));
-        Assert.Equal(0, writer.WrittenCount);
+        foreach (var codec in new[] { warm, cold })
+        {
+            RequireReason(() => codec.ToBinary(sample.Message));
+            var writer = new ArrayBufferWriter<byte>();
+            RequireReason(() => codec.Serialize(sample.Message, writer));
+            Assert.Equal(0, writer.WrittenCount);
+            RequireReason(() => codec.Deserialize(new ReadOnlySequence<byte>(bytes), manifest));
+        }
         RequireReason(() => registered.Deserialize(bytes, warm.Identifier, manifest));
-        RequireReason(() => warm.Deserialize(new ReadOnlySequence<byte>(bytes), manifest));
 
         static void RequireReason(Action operation)
         {
