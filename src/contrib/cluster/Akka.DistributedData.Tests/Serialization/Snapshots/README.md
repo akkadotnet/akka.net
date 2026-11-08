@@ -70,7 +70,7 @@ that id; no CRDT V2 serializer is registered by this canonical-format prerequisi
 
 ## CRDT id-11 baseline
 
-The 61 `ReplicatedDataMessagePackSerializerSpec.*.legacy.verified.txt` fixtures cover all 34
+The 62 `ReplicatedDataMessagePackSerializerSpec.*.legacy.verified.txt` fixtures cover all 34
 legacy CRDT manifests: twelve full-state forms, twelve delta forms and ten key forms.
 They were captured from untouched upstream `2d6a067972bfc7c49e5e4b898c542861eae9f6d9`, including
 its original SerializationSupport helper, before any id-51 implementation. A second cold
@@ -84,3 +84,5 @@ unsigned counter maximum, signed scalar/timestamp extremes, nested/null register
 both multi-dictionary value-delta modes have separate records. Legacy ORSet/ORMap-family gzip
 containers and platform-endian counter bytes remain intact. No V2 format is generated from
 these bytes; the independent historical files are the compatibility baseline for the port.
+The additional NoSender GSet fixture was captured separately from the same untouched baseline;
+its empty path retains receiver-provider-specific reference resolution.

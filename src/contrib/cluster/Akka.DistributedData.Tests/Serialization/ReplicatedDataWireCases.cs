@@ -92,6 +92,7 @@ internal static class ReplicatedDataWireCases
             (GSet.Create(int.MinValue), "B", "GSetInt"),
             (GSet.Create(long.MinValue), "B", "GSetLong"),
             (GSet.Create<IActorRef>(reference), "B", "GSetRef"),
+            (GSet.Create<IActorRef>(ActorRefs.NoSender), "B", "GSetRefNoSender"),
             (GSet.Create<object>("value"), "B", "GSetOther"),
             (GSet<object?>.Empty.Add(null), "B", "GSetNull"),
             (Set(int.MinValue), "C", "ORSetInt"),
