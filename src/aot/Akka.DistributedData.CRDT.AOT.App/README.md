@@ -81,9 +81,9 @@ bin/obj directories because those generated outputs are cleaned for the cold pub
 
 ## Evidence and limits
 
-The retained initial native execution passed on SDK 10.0.114/runtime 10.0.14. Root review
-then required installing/checking the already-linked log watchdog; the current source includes
-those checks and awaits a final rerun after the benchmark quiet window. The managed build has
+The initial and final native executions passed on SDK 10.0.114/runtime 10.0.14. Root review
+required installing/checking the already-linked log watchdog; the final cold expanded CI
+replay passed with startup, serialization and shutdown checks enabled. The managed build has
 zero warnings/errors and Slopwatch reports zero issues. The initial managed compile tried
 an internal id lookup; that consumer mistake was corrected using the existing public alias
 overload, with distinct marker types to preserve cache semantics. The original failure
@@ -111,7 +111,11 @@ the separate rooted canary.
 
 The proposed 68-key existing-debt inventory contains only 52 old DData, 11 old Cluster
 and five old Remote identities. It removes the old exception-reader identity fixed by
-#8935 and permits no new codec/runtime/app/Shared diagnostic. Its final cold composed
-publish and expanded-command replay are pending the benchmark quiet-window release.
-Hosted execution is also pending. The original 69-key comparison remains retained
+#8935 and permits no new codec/runtime/app/Shared diagnostic. The final cold composed
+publish and expanded-command replay passed with exactly those 68 identities, zero new/gone
+keys and zero outside-scope/unlocated diagnostics. Hosted execution remains pending. The original 69-key comparison remains retained
 separately, so the dependency's warning removal cannot overwrite historical evidence.
+
+`evidence/ci-template-replay` retains the final complete native/SDK/publish/run/warning logs,
+exact expanded commands and parameters, source revisions and canonical/raw input hashes.
+The parent evidence directory also retains the exact copied-fixture audit. The completed source/CI replay did not alter the reviewed CRDT production code.
