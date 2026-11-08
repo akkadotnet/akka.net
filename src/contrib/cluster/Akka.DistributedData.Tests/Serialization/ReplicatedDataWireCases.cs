@@ -17,9 +17,9 @@ internal static class ReplicatedDataWireCases
 {
     internal const string ReferencePath = "akka.tcp://crdt-wire@127.0.0.1:2552/user/ref#42";
 
-    internal static IReadOnlyList<(object Message, string Manifest, string Name)> Create(string systemName, Func<string, IActorRef> resolve)
+    internal static IReadOnlyList<(object Message, string Manifest, string Name)> Create(string systemName, Func<string, IActorRef> resolve, string protocol = "akka.tcp")
     {
-        var node = new UniqueAddress(new Address("akka.tcp", systemName, "counter.example", 2552), 1L << 40);
+        var node = new UniqueAddress(new Address(protocol, systemName, "counter.example", 2552), 1L << 40);
         var vector = VersionVector.Create(node, 17);
         var counter = GCounter.Empty.Increment(node, 7);
         var pnCounter = PNCounter.Empty.Increment(node, 9).Decrement(node, 2);
@@ -92,7 +92,8 @@ internal static class ReplicatedDataWireCases
             (GSet.Create(int.MinValue), "B", "GSetInt"),
             (GSet.Create(long.MinValue), "B", "GSetLong"),
             (GSet.Create<IActorRef>(reference), "B", "GSetRef"),
-            (GSet.Create<IActorRef>(ActorRefs.NoSender), "B", "GSetRefNoSender"),
+            (GSet<IActorRef>.Empty, "B", "GSetRefEmpty"),
+            (GSet<IActorRef>.Empty.Add(ActorRefs.NoSender!), "B", "GSetRefNoSender"),
             (GSet.Create<object>("value"), "B", "GSetOther"),
             (GSet<object?>.Empty.Add(null), "B", "GSetNull"),
             (Set(int.MinValue), "C", "ORSetInt"),

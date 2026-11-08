@@ -1,0 +1,7 @@
+﻿case: PNCounterEmpty
+message-type: PNCounter
+manifest: G
+serializer-id: 51
+byte-count: 9
+
+0000  82 01 81 01 90 02 81 01  90                       |.........|

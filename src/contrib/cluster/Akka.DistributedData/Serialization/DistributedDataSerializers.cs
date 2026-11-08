@@ -18,7 +18,8 @@ namespace Akka.DistributedData.Serialization
     internal sealed class DistributedDataSerializers : ModuleSerializers
     {
         public override ImmutableDictionary<string, string> Supersedes { get; } =
-            ImmutableDictionary<string, string>.Empty.Add("akka-data-replication-v2", "akka-data-replication");
+            ImmutableDictionary<string, string>.Empty.Add("akka-data-replication-v2", "akka-data-replication")
+                .Add("akka-replicated-data-v2", "akka-replicated-data");
 
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-replicated-data", new ReplicatedDataSerializer(system),
@@ -26,6 +27,8 @@ namespace Akka.DistributedData.Serialization
             SerializerDetails.Create("akka-data-replication", new ReplicatorMessageSerializer(system),
                 ImmutableHashSet.Create(typeof(IReplicatorMessage))),
             SerializerDetails.Create("akka-data-replication-v2", new ReplicatorMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty),
+            SerializerDetails.Create("akka-replicated-data-v2", new ReplicatedDataMessagePackSerializer(system),
                 ImmutableHashSet<System.Type>.Empty)
         );
     }

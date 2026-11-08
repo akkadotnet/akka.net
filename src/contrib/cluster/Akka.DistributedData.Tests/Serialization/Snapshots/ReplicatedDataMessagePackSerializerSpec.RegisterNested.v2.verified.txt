@@ -1,0 +1,16 @@
+﻿case: RegisterNested
+message-type: LWWRegister<GCounter>
+manifest: E
+serializer-id: 51
+byte-count: 153
+
+0000  84 01 82 01 04 02 d9 33  41 6b 6b 61 2e 44 69 73  |.......3Akka.Dis|
+0010  74 72 69 62 75 74 65 64  44 61 74 61 2e 47 43 6f  |tributedData.GCo|
+0020  75 6e 74 65 72 2c 20 41  6b 6b 61 2e 44 69 73 74  |unter, Akka.Dist|
+0030  72 69 62 75 74 65 64 44  61 74 61 02 83 01 0b 02  |ributedData.....|
+0040  a1 46 03 c4 2b 0a 29 0a  1d 0a 14 0a 0f 63 6f 75  |.F..+.)......cou|
+0050  6e 74 65 72 2e 65 78 61  6d 70 6c 65 10 f8 13 10  |nter.example....|
+0060  80 80 80 80 80 20 12 08  07 00 00 00 00 00 00 00  |..... ..........|
+0070  03 82 01 82 01 af 63 6f  75 6e 74 65 72 2e 65 78  |......counter.ex|
+0080  61 6d 70 6c 65 02 cd 09  f8 02 cf 00 00 01 00 00  |ample...........|
+0090  00 00 00 04 ce 07 5b cd  15                       |......[..|

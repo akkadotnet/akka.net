@@ -1,0 +1,7 @@
+﻿case: PNCounterKey
+message-type: PNCounterKey
+manifest: g
+serializer-id: 51
+byte-count: 6
+
+0000  81 01 a3 6b 65 79                                 |...key|

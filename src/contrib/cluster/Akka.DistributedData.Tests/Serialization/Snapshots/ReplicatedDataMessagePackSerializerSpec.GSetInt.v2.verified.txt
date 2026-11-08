@@ -1,0 +1,8 @@
+﻿case: GSetInt
+message-type: GSet<Int32>
+manifest: B
+serializer-id: 51
+byte-count: 24
+
+0000  81 01 86 01 82 01 00 02  c0 02 91 d2 80 00 00 00  |................|
+0010  03 90 04 90 05 90 06 90                           |........|

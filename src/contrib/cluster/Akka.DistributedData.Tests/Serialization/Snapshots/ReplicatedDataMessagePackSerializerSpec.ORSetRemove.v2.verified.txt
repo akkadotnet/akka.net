@@ -1,0 +1,11 @@
+﻿case: ORSetRemove
+message-type: RemoveDeltaOperation<String>
+manifest: Cr
+serializer-id: 51
+byte-count: 70
+
+0000  81 01 83 01 86 01 82 01  02 02 c0 02 90 03 90 04  |................|
+0010  91 a3 6b 65 79 05 90 06  90 02 90 03 91 81 01 91  |..key...........|
+0020  82 01 82 01 82 01 af 63  6f 75 6e 74 65 72 2e 65  |.......counter.e|
+0030  78 61 6d 70 6c 65 02 cd  09 f8 02 cf 00 00 01 00  |xample..........|
+0040  00 00 00 00 02 11                                 |......|

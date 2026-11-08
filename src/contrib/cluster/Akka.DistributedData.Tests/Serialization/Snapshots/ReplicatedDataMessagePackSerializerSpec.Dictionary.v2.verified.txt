@@ -1,0 +1,17 @@
+﻿case: Dictionary
+message-type: ORDictionary<String, GCounter>
+manifest: H
+serializer-id: 51
+byte-count: 164
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 61 6c 66 6c 63  |..........kalflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb c4 c5 d9 a9 95  |lbdb:.4.y.......|
+0020  ac 13 d8 26 30 4d 6c 62  04 c1 f5 c9 f9 a5 79 25  |...&0Mlb......y%|
+0030  a9 45 7a a9 15 89 b9 05  39 a9 4c 67 39 7f 30 9d  |.Ez.....9.Lg9.0.|
+0040  67 60 60 64 00 01 26 41  e6 89 8d 8c 44 2a 65 c2  |g``d..&A....D*e.|
+0050  6a 11 73 13 23 0b d3 4d  63 c7 ec ec 44 3d 97 cc  |j.s.#..Mc...D=..|
+0060  e2 92 a2 cc a4 d2 92 d4  14 97 c4 92 44 3d 77 67  |............D=wg|
+0070  88 89 3a 0a d8 a4 59 26  36 33 72 33 2d 74 63 3e  |..:...Y&63r3-tc>|
+0080  a2 cd a5 c9 25 cb 25 c2  c5 8f e6 02 81 1f c2 02  |....%.%.........|
+0090  0d 20 a0 20 c4 c1 0e 76  05 03 03 00 35 ed 55 cf  |. . ...v....5.U.|
+00a0  f2 00 00 00                                       |....|

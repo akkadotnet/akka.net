@@ -70,7 +70,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             var expectedInnerId = binding == "typed" ? 777 : binding == "legacy-alias" ? 778 : 11;
             var counter = CanonicalCrdtSetup.Counter(7);
             Assert.Equal(expectedInnerId, oldNode.Serialization.FindSerializerFor(counter).Identifier);
-            Assert.Equal(expectedInnerId, newNode.Serialization.FindSerializerFor(counter).Identifier);
+            Assert.Equal(binding == "typed" ? 777 : 51, newNode.Serialization.FindSerializerFor(counter).Identifier);
             Assert.Equal(expectedInnerId, new SerializationSupport((ExtendedActorSystem)newNode).OtherMessageToProto(counter).SerializerId);
 
             var oldLegacy = oldNode.Serialization.GetSerializerById(11);
@@ -78,7 +78,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             foreach (var name in new[] { "gset", "orset", "register", "dictionary" })
             {
                 var message = CanonicalCrdtSetup.Case(name);
-                Assert.Equal(binding == "legacy-alias" ? 778 : 11, newNode.Serialization.FindSerializerFor(message).Identifier);
+                Assert.Equal(51, newNode.Serialization.FindSerializerFor(message).Identifier);
                 var historical = oldLegacy.ToBinary(message);
                 var current = newLegacy.ToBinary(message);
                 Assert.Equal(historical, current);
@@ -92,7 +92,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
 
             // The network codec keeps the selected CRDT serializer. The protobuf-only
             // canonical boundary must not change the owning actor system's write bindings.
-            Assert.Equal(expectedInnerId, newNode.Serialization.FindSerializerFor(counter).Identifier);
+            Assert.Equal(binding == "typed" ? 777 : 51, newNode.Serialization.FindSerializerFor(counter).Identifier);
         }
         finally
         {
@@ -115,7 +115,7 @@ public sealed class ReplicatedDataCanonicalSerializationSpec : AkkaSpec
             var state = new DataEnvelope(CanonicalCrdtSetup.Register(7));
             var changed = new DataEnvelope(CanonicalCrdtSetup.Register(8));
             var selected = newNode.Serialization.FindSerializerFor(state.Data);
-            Assert.Equal(binding == "legacy-alias" ? 778 : 11, selected.Identifier);
+            Assert.Equal(51, selected.Identifier);
             Assert.Equal(52, newNode.Serialization.FindSerializerFor(state).Identifier);
             var oldDigestSerializer = Replicator.FindDigestSerializer(oldNode);
             var newDigestSerializer = Replicator.FindDigestSerializer(newNode);

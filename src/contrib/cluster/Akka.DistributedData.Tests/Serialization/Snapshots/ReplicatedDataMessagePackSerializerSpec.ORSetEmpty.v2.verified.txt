@@ -1,0 +1,9 @@
+﻿case: ORSetEmpty
+message-type: ORSet<String>
+manifest: C
+serializer-id: 51
+byte-count: 41
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 66 6c 63 6c 62  |..........kflclb|
+0010  64 62 3a c0 34 81 79 02  cb 04 d6 09 6c 13 40 2c  |db:.4.y.....l.@,|
+0020  00 f1 34 bc db 17 00 00  00                       |..4......|

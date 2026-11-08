@@ -1,0 +1,13 @@
+﻿case: RegisterString
+message-type: LWWRegister<String>
+manifest: E
+serializer-id: 51
+byte-count: 100
+
+0000  84 01 82 01 02 02 c0 02  83 01 11 02 d9 25 53 79  |.............%Sy|
+0010  73 74 65 6d 2e 53 74 72  69 6e 67 2c 20 53 79 73  |stem.String, Sys|
+0020  74 65 6d 2e 50 72 69 76  61 74 65 2e 43 6f 72 65  |tem.Private.Core|
+0030  4c 69 62 03 c4 05 76 61  6c 75 65 03 82 01 82 01  |Lib...value.....|
+0040  af 63 6f 75 6e 74 65 72  2e 65 78 61 6d 70 6c 65  |.counter.example|
+0050  02 cd 09 f8 02 cf 00 00  01 00 00 00 00 00 04 ce  |................|
+0060  07 5b cd 15                                       |.[..|

@@ -70,7 +70,7 @@ that id; no CRDT V2 serializer is registered by this canonical-format prerequisi
 
 ## CRDT id-11 baseline
 
-The 62 `ReplicatedDataMessagePackSerializerSpec.*.legacy.verified.txt` fixtures cover all 34
+The 63 `ReplicatedDataMessagePackSerializerSpec.*.legacy.verified.txt` fixtures cover all 34
 legacy CRDT manifests: twelve full-state forms, twelve delta forms and ten key forms.
 They were captured from untouched upstream `2d6a067972bfc7c49e5e4b898c542861eae9f6d9`, including
 its original SerializationSupport helper, before any id-51 implementation. A second cold
@@ -84,5 +84,19 @@ unsigned counter maximum, signed scalar/timestamp extremes, nested/null register
 both multi-dictionary value-delta modes have separate records. Legacy ORSet/ORMap-family gzip
 containers and platform-endian counter bytes remain intact. No V2 format is generated from
 these bytes; the independent historical files are the compatibility baseline for the port.
-The additional NoSender GSet fixture was captured separately from the same untouched baseline;
-its empty path retains receiver-provider-specific reference resolution.
+Actor-reference sets distinguish an empty set (four bytes) from a single NoSender path (six
+bytes). The latter keeps its original frozen bytes and now uses an explicit Add call instead
+of an ambiguous null params-array overload. Empty paths retain receiver-provider-specific resolution.
+
+The generated id-51 fixtures have been independently decoded to check each top-level map,
+the full-state-only gzip boundary, unsigned counter maximum, 64-bit UID, null values and
+multi-dictionary value-delta flags. The primitive set schema has more framing than legacy
+protobuf (for example, the singleton string GSet is 11→25 bytes); measurements must retain
+these wire-size tradeoffs alongside timings and allocations. Native claims are restricted to
+the statically constructed forms. Explicit dynamic-only cases must reject cold and warm
+reads/writes before nested payload callbacks when `Akka.DynamicTypeLoading` is disabled.
+The port registers `akka-replicated-data-v2` read-only at id 51 and declares its takeover of
+`akka-replicated-data`; the existing global toggle or explicit application bindings choose
+network writes. Canonical protobuf payloads still resolve the active legacy alias. This does
+not remove legacy generic reflection from canonical id-11 reconstruction or make Sharding
+Native AOT compatible. All native support statements must name the concrete static forms tested.

@@ -1,0 +1,12 @@
+﻿case: DictionaryEmpty
+message-type: ORDictionary<String, GCounter>
+manifest: H
+serializer-id: 51
+byte-count: 89
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 61 6c 66 6c 63  |..........kalflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb 04 d6 09 6c 13  |lbdb:.4.y.....l.|
+0020  40 2c 26 0c 51 e6 26 46  16 a6 9b c6 8e d9 d9 89  |@,&.Q.&F........|
+0030  7a 2e 99 c5 25 45 99 49  a5 25 a9 29 2e 89 25 89  |z...%E.I.%.)..%.|
+0040  7a ee ce f9 a5 79 25 a9  45 3a 0a d8 a4 59 26 00  |z....y%.E:...Y&.|
+0050  00 99 07 c1 05 67 00 00  00                       |.....g...|

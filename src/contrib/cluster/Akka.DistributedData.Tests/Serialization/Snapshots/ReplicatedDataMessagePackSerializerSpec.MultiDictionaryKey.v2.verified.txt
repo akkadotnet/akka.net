@@ -1,0 +1,8 @@
+﻿case: MultiDictionaryKey
+message-type: ORMultiValueDictionaryKey<String, String>
+manifest: k
+serializer-id: 51
+byte-count: 18
+
+0000  83 01 a3 6b 65 79 02 82  01 02 02 c0 03 82 01 02  |...key..........|
+0010  02 c0                                             |..|

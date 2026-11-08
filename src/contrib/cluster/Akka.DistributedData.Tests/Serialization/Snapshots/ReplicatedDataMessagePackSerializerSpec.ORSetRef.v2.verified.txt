@@ -1,0 +1,15 @@
+﻿case: ORSetRef
+message-type: ORSet<IActorRef>
+manifest: C
+serializer-id: 51
+byte-count: 131
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 66 6c 63 6c 62  |..........kflclb|
+0010  64 66 3a c0 34 81 79 02  cb 04 d6 89 37 f5 13 b3  |df:.4.y.....7...|
+0020  b3 13 f5 4a 92 0b ac f4  f5 93 8b 52 4a 74 cb 33  |...J.......RJt.3|
+0030  8b 52 1d 0c 8d cc f5 0c  f4 0c f4 0c ad 8c 4c 4d  |.R............LM|
+0040  8d f4 4b 8b 53 8b f4 8b  52 d3 94 4d 8c d8 26 30  |..K.S...R..M..&0|
+0050  4d 6c 62 04 c1 f5 c9 f9  a5 79 25 a9 45 7a a9 15  |Mlb......y%.Ez..|
+0060  89 b9 05 39 a9 4c 67 39  7f 30 9d 67 60 60 64 00  |...9.Lg9.0.g``d.|
+0070  01 26 41 e6 89 8d 8c 44  2a 05 00 b6 6f 6a 5b 97  |.&A....D*...oj[.|
+0080  00 00 00                                          |...|

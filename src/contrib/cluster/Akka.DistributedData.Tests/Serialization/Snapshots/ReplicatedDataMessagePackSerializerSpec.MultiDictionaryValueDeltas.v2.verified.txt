@@ -1,0 +1,13 @@
+﻿case: MultiDictionaryValueDeltas
+message-type: ORMultiValueDictionary<String, String>
+manifest: K
+serializer-id: 51
+byte-count: 108
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 65 6c 66 6c 63  |..........kelflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb c4 c5 d9 a9 95  |lbdb:.4.y.......|
+0020  ac 13 d8 26 30 4d 6c 62  04 c1 f5 c9 f9 a5 79 25  |...&0Mlb......y%|
+0030  a9 45 7a a9 15 89 b9 05  39 a9 4c 67 39 7f 30 9d  |.Ez.....9.Lg9.0.|
+0040  67 60 60 64 00 01 26 41  e6 89 8d 8c 44 2a 65 c2  |g``d..&A....D*e.|
+0050  6a 11 33 58 8c 65 22 9a  3b 96 64 96 a4 e6 d2 c8  |j.3X.e".;.d.....|
+0060  21 ac 87 01 e9 c5 95 55  f7 00 00 00              |!......U....|

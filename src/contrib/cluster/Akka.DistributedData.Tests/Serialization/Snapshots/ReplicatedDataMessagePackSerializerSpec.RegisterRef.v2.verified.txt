@@ -1,0 +1,13 @@
+﻿case: RegisterRef
+message-type: LWWRegister<IActorRef>
+manifest: E
+serializer-id: 51
+byte-count: 108
+
+0000  84 01 82 01 03 02 c0 02  83 01 10 02 a2 41 52 03  |.............AR.|
+0010  c4 31 0a 2f 61 6b 6b 61  2e 74 63 70 3a 2f 2f 63  |.1./akka.tcp://c|
+0020  72 64 74 2d 77 69 72 65  40 31 32 37 2e 30 2e 30  |rdt-wire@127.0.0|
+0030  2e 31 3a 32 35 35 32 2f  75 73 65 72 2f 72 65 66  |.1:2552/user/ref|
+0040  23 34 32 03 82 01 82 01  af 63 6f 75 6e 74 65 72  |#42......counter|
+0050  2e 65 78 61 6d 70 6c 65  02 cd 09 f8 02 cf 00 00  |.example........|
+0060  01 00 00 00 00 00 04 ce  07 5b cd 15              |.........[..|

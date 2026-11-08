@@ -1,0 +1,16 @@
+﻿case: LWWDictionary
+message-type: LWWDictionary<String, String>
+manifest: I
+serializer-id: 51
+byte-count: 155
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 61 6c 66 6c 63  |..........kalflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb c4 c5 d9 a9 95  |lbdb:.4.y.......|
+0020  ac 13 d8 26 30 4d 6c 62  04 c1 f5 c9 f9 a5 79 25  |...&0Mlb......y%|
+0030  a9 45 7a a9 15 89 b9 05  39 a9 4c 67 39 7f 30 9d  |.Ez.....9.Lg9.0.|
+0040  67 60 60 64 00 01 26 41  e6 89 8d 8c 44 2a 65 c2  |g``d..&A....D*e.|
+0050  6a 11 33 58 8c 65 62 0b  54 b2 99 51 90 e9 a6 6a  |j.3X.eb.T..Q...j|
+0060  70 65 71 49 6a ae 5e 70  49 51 66 5e ba 8e 02 94  |peqIj.^pIQf^....|
+0070  1b 50 94 59 96 58 92 aa  e7 9c 5f 94 ea 93 99 c4  |.P.Y.X...._.....|
+0080  7c 84 b5 2c 31 a7 34 95  99 b0 ed 2c e7 d8 a3 cf  ||..,1.4....,....|
+0090  8a 02 00 fb f2 f6 29 ee  00 00 00                 |......)....|

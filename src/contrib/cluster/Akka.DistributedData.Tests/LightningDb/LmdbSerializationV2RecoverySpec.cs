@@ -76,7 +76,7 @@ public sealed class LmdbSerializationV2RecoverySpec : AkkaSpec
                 Assert.Equal(binding == "type-pin" ? 777 : 52,
                     kit.Sys.Serialization.FindSerializerForType(typeof(DurableDataEnvelope)).Identifier);
                 if (nestedCrdt)
-                    Assert.Equal(binding == "crdt-legacy-alias" ? 778 : 11, kit.Sys.Serialization.FindSerializerFor(before.Data).Identifier);
+                    Assert.Equal(51, kit.Sys.Serialization.FindSerializerFor(before.Data).Identifier);
                 Assert.Equal(before, Assert.Single(loaded).Value);
                 await Store(kit, store, "after", after);
             });

@@ -1,0 +1,7 @@
+﻿case: CounterEmpty
+message-type: GCounter
+manifest: F
+serializer-id: 51
+byte-count: 3
+
+0000  81 01 90                                          |...|

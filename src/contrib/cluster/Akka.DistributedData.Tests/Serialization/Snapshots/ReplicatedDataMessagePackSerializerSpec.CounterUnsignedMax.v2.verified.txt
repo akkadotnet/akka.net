@@ -1,0 +1,10 @@
+﻿case: CounterUnsignedMax
+message-type: GCounter
+manifest: F
+serializer-id: 51
+byte-count: 49
+
+0000  81 01 91 82 01 82 01 82  01 af 63 6f 75 6e 74 65  |..........counte|
+0010  72 2e 65 78 61 6d 70 6c  65 02 cd 09 f8 02 cf 00  |r.example.......|
+0020  00 01 00 00 00 00 00 02  cf ff ff ff ff ff ff ff  |................|
+0030  ff                                                |.|

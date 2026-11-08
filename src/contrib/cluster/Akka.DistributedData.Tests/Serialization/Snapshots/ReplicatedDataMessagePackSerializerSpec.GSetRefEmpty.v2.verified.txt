@@ -1,0 +1,8 @@
+﻿case: GSetRefEmpty
+message-type: GSet<IActorRef>
+manifest: B
+serializer-id: 51
+byte-count: 19
+
+0000  81 01 86 01 82 01 03 02  c0 02 90 03 90 04 90 05  |................|
+0010  90 06 90                                          |...|

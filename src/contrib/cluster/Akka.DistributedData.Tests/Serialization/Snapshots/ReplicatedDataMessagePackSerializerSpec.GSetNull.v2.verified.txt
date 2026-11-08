@@ -1,0 +1,10 @@
+﻿case: GSetNull
+message-type: GSet<Object>
+manifest: B
+serializer-id: 51
+byte-count: 58
+
+0000  81 01 86 01 82 01 04 02  d9 25 53 79 73 74 65 6d  |.........%System|
+0010  2e 4f 62 6a 65 63 74 2c  20 53 79 73 74 65 6d 2e  |.Object, System.|
+0020  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 02  |Private.CoreLib.|
+0030  90 03 90 04 90 05 90 06  91 c0                    |..........|

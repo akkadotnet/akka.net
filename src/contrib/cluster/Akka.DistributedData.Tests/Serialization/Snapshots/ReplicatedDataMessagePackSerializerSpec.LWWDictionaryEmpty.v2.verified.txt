@@ -1,0 +1,10 @@
+﻿case: LWWDictionaryEmpty
+message-type: LWWDictionary<String, String>
+manifest: I
+serializer-id: 51
+byte-count: 51
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 61 6c 66 6c 63  |..........kalflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb 04 d6 09 6c 13  |lbdb:.4.y.....l.|
+0020  40 2c 26 0c 51 66 30 9f  65 02 00 5a 64 bf fc 33  |@,&.Qf0.e..Zd..3|
+0030  00 00 00                                          |...|

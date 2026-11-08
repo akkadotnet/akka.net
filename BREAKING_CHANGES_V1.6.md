@@ -40,6 +40,7 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | [#8679](https://github.com/akkadotnet/akka.net/issues/8679) | `Akka.DistributedData` | Behavior + Wire | With `akka.actor.serialization-v2 = on`, CRDT states, deltas and keys now write generated MessagePack id 51; legacy id 11 stays readable. Installing the port also activates writers for already-on users. Canonical protobuf digest and LMDB payload boundaries retain the active legacy aliases. | Install id 51 readers on every peer before enabling writers. Disable the toggle or pin `IReplicatedDataSerialization` to `akka-replicated-data` for legacy CRDT writes. Independently stored id 51 records still need the new reader; older-binary rollback needs backups or a verified migration. Generic shapes outside the static known forms still require dynamic type loading. |
 | Proposed | [#8856](https://github.com/akkadotnet/akka.net/issues/8856) | `Akka.Serialization.V2` | Source | AKKASG047 now warns when a type declares `[AkkaField]` properties without `[AkkaSerializable]`, including public and nested payload types. Builds that treat warnings as errors now reject these ignored annotations. | Add `[AkkaSerializable]` to opt into generated serialization, remove unused annotations when a custom formatter handles the type, or suppress AKKASG047. |
 | Merged | link | `Akka.Xyz` | Behavior | one-line summary | what users must do |
 

@@ -1,0 +1,12 @@
+﻿case: ORSetLong
+message-type: ORSet<Int64>
+manifest: C
+serializer-id: 51
+byte-count: 86
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 66 6c 63 6c 62  |..........kflclb|
+0010  64 64 3a c0 34 81 79 e2  e5 06 06 08 60 99 c0 3a  |dd:.4.y.....`..:|
+0020  81 6d 02 d3 c4 26 46 10  5c 9f 9c 5f 9a 57 92 5a  |.m...&F.\.._.W.Z|
+0030  a4 97 5a 91 98 5b 90 93  ca 74 96 f3 07 d3 79 06  |..Z..[...t....y.|
+0040  06 46 b0 5a 26 41 e6 89  8d 8c 44 2a 05 00 ef f7  |.F.Z&A....D*....|
+0050  a1 63 6f 00 00 00                                 |.co...|

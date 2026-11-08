@@ -1,0 +1,9 @@
+﻿case: PNCounterDictionaryEmpty
+message-type: PNCounterDictionary<String>
+manifest: J
+serializer-id: 51
+byte-count: 48
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 66 6c 66 6c 63  |..........kflflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb 04 d6 09 6c 13  |lbdb:.4.y.....l.|
+0020  40 2c 26 0c 51 e6 09 00  80 a2 ac e3 2d 00 00 00  |@,&.Q.......-...|

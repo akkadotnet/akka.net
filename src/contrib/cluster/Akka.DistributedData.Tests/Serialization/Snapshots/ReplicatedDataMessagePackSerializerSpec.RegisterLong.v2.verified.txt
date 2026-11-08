@@ -1,0 +1,13 @@
+﻿case: RegisterLong
+message-type: LWWRegister<Int64>
+manifest: E
+serializer-id: 51
+byte-count: 106
+
+0000  84 01 82 01 01 02 c0 02  83 01 11 02 d9 24 53 79  |.............$Sy|
+0010  73 74 65 6d 2e 49 6e 74  36 34 2c 20 53 79 73 74  |stem.Int64, Syst|
+0020  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0030  69 62 03 c4 08 00 00 00  00 00 00 00 80 03 82 01  |ib..............|
+0040  82 01 af 63 6f 75 6e 74  65 72 2e 65 78 61 6d 70  |...counter.examp|
+0050  6c 65 02 cd 09 f8 02 cf  00 00 01 00 00 00 00 00  |le..............|
+0060  04 cf 7f ff ff ff ff ff  ff ff                    |..........|

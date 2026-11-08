@@ -1,0 +1,7 @@
+﻿case: CounterKey
+message-type: GCounterKey
+manifest: f
+serializer-id: 51
+byte-count: 6
+
+0000  81 01 a3 6b 65 79                                 |...key|

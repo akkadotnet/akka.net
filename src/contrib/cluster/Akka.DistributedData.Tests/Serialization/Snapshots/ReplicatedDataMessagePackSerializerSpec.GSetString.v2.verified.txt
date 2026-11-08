@@ -1,0 +1,8 @@
+﻿case: GSetString
+message-type: GSet<String>
+manifest: B
+serializer-id: 51
+byte-count: 25
+
+0000  81 01 86 01 82 01 02 02  c0 02 90 03 90 04 91 a5  |................|
+0010  76 61 6c 75 65 05 90 06  90                       |value....|

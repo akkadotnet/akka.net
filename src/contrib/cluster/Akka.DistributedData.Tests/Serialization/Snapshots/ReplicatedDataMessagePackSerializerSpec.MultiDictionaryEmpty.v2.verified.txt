@@ -1,0 +1,10 @@
+﻿case: MultiDictionaryEmpty
+message-type: ORMultiValueDictionary<String, String>
+manifest: K
+serializer-id: 51
+byte-count: 53
+
+0000  1f 8b 08 00 00 00 00 00  00 03 6b 65 6c 66 6c 63  |..........kelflc|
+0010  6c 62 64 62 3a c0 34 81  79 02 cb 04 d6 09 6c 13  |lbdb:.4.y.....l.|
+0020  40 2c 26 0c 51 66 30 9f  65 02 eb 21 00 47 19 97  |@,&.Qf0.e..!.G..|
+0030  3d 35 00 00 00                                    |=5...|
