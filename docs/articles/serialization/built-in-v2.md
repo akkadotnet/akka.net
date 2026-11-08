@@ -40,7 +40,7 @@ checking only the major/minor version is insufficient.
 
 The table identifies reader availability, not a performance or Native AOT recommendation.
 
-Identifiers below 100 are reserved for Akka.NET, including the 40–79 block used by these
+Identifiers 0 through 99 are reserved for Akka.NET, including the 40–79 block used by these
 V2 ports. Audit custom serializer IDs before upgrading: new readers are registered even
 when V2 writing is off. Do not renumber a serializer that has already written durable data
 without a migration that preserves access to the original records.
