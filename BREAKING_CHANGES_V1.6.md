@@ -86,6 +86,13 @@ add `Wire` when the bytes on the wire change.
 
 ### Not breaking, for the record
 
+* **Unreleased ([#8935](https://github.com/akkadotnet/akka.net/pull/8935)), `Akka.Remote` legacy exception reads:** with
+  `Akka.DynamicTypeLoading` disabled, known protobuf exception types use static constructors
+  instead of silently losing a cause when reflection metadata is absent. Unknown native
+  types and unsupported payload fields throw `SerializationException`. JIT behavior,
+  historical bytes and old per-format state losses remain unchanged. This repairs the new
+  v1.6 strict/native path; it introduces no public API or serializer-row change.
+
 * **Proposed #8857, `Akka.Remote` / Artery (behavior):** a failed stream with no
   queued traffic or unacknowledged system messages becomes dormant instead of retrying a
   departed peer forever. Channels and reliable delivery state stay intact; normal sends and

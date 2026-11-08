@@ -369,6 +369,14 @@ jobs:
           contents: '*.log'
           artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
+  # Ordinary public consumer for historical id 16/id 22 exception records.
+  - template: native-codec-canary.template.yaml
+    parameters:
+      jobName: RemoteLegacyExceptionAotCanary
+      displayName: "Native legacy exception reader (Linux)"
+      appName: Akka.Remote.LegacyException.AOT.App
+      expectedMarker: '[legacy-exceptions-native] OK reads=114 rejected=15 overrides=3 empty-sentinels=3'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"

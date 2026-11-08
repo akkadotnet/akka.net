@@ -1,0 +1,16 @@
+case: status-TimeoutException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 159
+
+0000  0a 9a 01 0a 2f 53 79 73  74 65 6d 2e 54 69 6d 65  |..../System.Time|
+0010  6f 75 74 45 78 63 65 70  74 69 6f 6e 2c 20 53 79  |outException, Sy|
+0020  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0030  65 4c 69 62 12 07 6d 65  73 73 61 67 65 22 0d 6c  |eLib..message".l|
+0040  65 67 61 63 79 2d 73 6f  75 72 63 65 2a 45 0a 28  |egacy-source*E.(|
+0050  53 79 73 74 65 6d 2e 45  78 63 65 70 74 69 6f 6e  |System.Exception|
+0060  2c 20 53 79 73 74 65 6d  2e 50 72 69 76 61 74 65  |, System.Private|
+0070  2e 43 6f 72 65 4c 69 62  12 0d 69 6e 6e 65 72 20  |.CoreLib..inner |
+0080  6d 65 73 73 61 67 65 2a  00 3a 08 6d 73 63 6f 72  |message*.:.mscor|
+0090  6c 69 62 3a 08 6d 73 63  6f 72 6c 69 62 12 00     |lib:.mscorlib..|

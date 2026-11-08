@@ -1,0 +1,27 @@
+case: system-post-restart
+message-type: Recreate
+manifest: Akka.Dispatch.SysMsg.Recreate, Akka
+serializer-id: 22
+byte-count: 328
+
+0000  0a c5 02 0a 25 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....%Akka.Actor.|
+0010  50 6f 73 74 52 65 73 74  61 72 74 45 78 63 65 70  |PostRestartExcep|
+0020  74 69 6f 6e 2c 20 41 6b  6b 61 12 29 45 78 63 65  |tion, Akka.)Exce|
+0030  70 74 69 6f 6e 20 70 6f  73 74 20 72 65 73 74 61  |ption post resta|
+0040  72 74 20 28 53 79 73 74  65 6d 2e 45 78 63 65 70  |rt (System.Excep|
+0050  74 69 6f 6e 29 2a 3d 0a  28 53 79 73 74 65 6d 2e  |tion)*=.(System.|
+0060  45 78 63 65 70 74 69 6f  6e 2c 20 53 79 73 74 65  |Exception, Syste|
+0070  6d 2e 50 72 69 76 61 74  65 2e 43 6f 72 65 4c 69  |m.Private.CoreLi|
+0080  62 12 05 63 61 75 73 65  2a 00 3a 08 6d 73 63 6f  |b..cause*.:.msco|
+0090  72 6c 69 62 32 96 01 0a  0d 4f 72 69 67 69 6e 61  |rlib2....Origina|
+00a0  6c 43 61 75 73 65 12 84  01 0a 40 0a 28 53 79 73  |lCause....@.(Sys|
+00b0  74 65 6d 2e 45 78 63 65  70 74 69 6f 6e 2c 20 53  |tem.Exception, S|
+00c0  79 73 74 65 6d 2e 50 72  69 76 61 74 65 2e 43 6f  |ystem.Private.Co|
+00d0  72 65 4c 69 62 12 08 6f  72 69 67 69 6e 61 6c 2a  |reLib..original*|
+00e0  00 3a 08 6d 73 63 6f 72  6c 69 62 10 02 1a 3e 41  |.:.mscorlib...>A|
+00f0  6b 6b 61 2e 52 65 6d 6f  74 65 2e 53 65 72 69 61  |kka.Remote.Seria|
+0100  6c 69 7a 61 74 69 6f 6e  2e 50 72 6f 74 6f 2e 4d  |lization.Proto.M|
+0110  73 67 2e 45 78 63 65 70  74 69 6f 6e 44 61 74 61  |sg.ExceptionData|
+0120  2c 20 41 6b 6b 61 2e 52  65 6d 6f 74 65 32 19 0a  |, Akka.Remote2..|
+0130  05 41 63 74 6f 72 12 10  0a 08 0a 06 6e 6f 62 6f  |.Actor......nobo|
+0140  64 79 10 10 1a 02 41 52                           |dy....AR|

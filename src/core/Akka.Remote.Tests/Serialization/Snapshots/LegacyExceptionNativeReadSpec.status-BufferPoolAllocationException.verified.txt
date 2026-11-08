@@ -1,0 +1,12 @@
+case: status-BufferPoolAllocationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 83
+
+0000  0a 4f 0a 33 41 6b 6b 61  2e 49 4f 2e 42 75 66 66  |.O.3Akka.IO.Buff|
+0010  65 72 73 2e 42 75 66 66  65 72 50 6f 6f 6c 41 6c  |ers.BufferPoolAl|
+0020  6c 6f 63 61 74 69 6f 6e  45 78 63 65 70 74 69 6f  |locationExceptio|
+0030  6e 2c 20 41 6b 6b 61 12  07 6d 65 73 73 61 67 65  |n, Akka..message|
+0040  22 0d 6c 65 67 61 63 79  2d 73 6f 75 72 63 65 2a  |".legacy-source*|
+0050  00 12 00                                          |...|

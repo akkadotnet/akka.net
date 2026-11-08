@@ -1,0 +1,16 @@
+case: status-RemoteTransportException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 151
+
+0000  0a 92 01 0a 31 41 6b 6b  61 2e 52 65 6d 6f 74 65  |....1Akka.Remote|
+0010  2e 52 65 6d 6f 74 65 54  72 61 6e 73 70 6f 72 74  |.RemoteTransport|
+0020  45 78 63 65 70 74 69 6f  6e 2c 20 41 6b 6b 61 2e  |Exception, Akka.|
+0030  52 65 6d 6f 74 65 12 07  6d 65 73 73 61 67 65 22  |Remote..message"|
+0040  0d 6c 65 67 61 63 79 2d  73 6f 75 72 63 65 2a 45  |.legacy-source*E|
+0050  0a 28 53 79 73 74 65 6d  2e 45 78 63 65 70 74 69  |.(System.Excepti|
+0060  6f 6e 2c 20 53 79 73 74  65 6d 2e 50 72 69 76 61  |on, System.Priva|
+0070  74 65 2e 43 6f 72 65 4c  69 62 12 0d 69 6e 6e 65  |te.CoreLib..inne|
+0080  72 20 6d 65 73 73 61 67  65 2a 00 3a 08 6d 73 63  |r message*.:.msc|
+0090  6f 72 6c 69 62 12 00                              |orlib..|
