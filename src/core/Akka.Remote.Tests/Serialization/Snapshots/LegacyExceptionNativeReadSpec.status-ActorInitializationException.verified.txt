@@ -1,0 +1,17 @@
+case: status-ActorInitializationException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 174
+
+0000  0a a9 01 0a 2d 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....-Akka.Actor.|
+0010  41 63 74 6f 72 49 6e 69  74 69 61 6c 69 7a 61 74  |ActorInitializat|
+0020  69 6f 6e 45 78 63 65 70  74 69 6f 6e 2c 20 41 6b  |ionException, Ak|
+0030  6b 61 12 07 6d 65 73 73  61 67 65 22 0d 6c 65 67  |ka..message".leg|
+0040  61 63 79 2d 73 6f 75 72  63 65 2a 45 0a 28 53 79  |acy-source*E.(Sy|
+0050  73 74 65 6d 2e 45 78 63  65 70 74 69 6f 6e 2c 20  |stem.Exception, |
+0060  53 79 73 74 65 6d 2e 50  72 69 76 61 74 65 2e 43  |System.Private.C|
+0070  6f 72 65 4c 69 62 12 0d  69 6e 6e 65 72 20 6d 65  |oreLib..inner me|
+0080  73 73 61 67 65 2a 00 3a  08 6d 73 63 6f 72 6c 69  |ssage*.:.mscorli|
+0090  62 32 19 0a 05 41 63 74  6f 72 12 10 0a 08 0a 06  |b2...Actor......|
+00a0  6e 6f 62 6f 64 79 10 10  1a 02 41 52 12 00        |nobody....AR..|

@@ -1,0 +1,34 @@
+Repository base: G8 c37da8e93 (PR #8928).
+Original exception helper blob: ab1ac13716307407ad93b85c807c55ee07388e28.
+Original failed System native run: retained as initial-system-native-failure.log.gz.
+
+The tracked source was replayed on Linux x64 with SDK 10.0.114 / runtime 10.0.14:
+
+AKKA_NATIVE_DOTNET=/tmp/akka-serialization-v2/toolchain-install/dotnet \
+  bash src/aot/Akka.Remote.LegacyException.AOT.App/reproduce.sh \
+  /tmp/akka-serialization-v2/legacy-exceptions-retained-replay
+
+The script selected SDK 10.0.114 in an app-local work directory and ran, in order:
+dotnet clean <tracked-project> -c Release -r linux-x64 --nologo
+dotnet test src/core/Akka.Remote.Tests -c Release --framework net10.0 --nologo \
+  --filter 'FullyQualifiedName~ExceptionSupportSpec|FullyQualifiedName~ExceptionMessagePackFormatterSpec|FullyQualifiedName~LegacyExceptionNativeReadSpec|FullyQualifiedName~SystemMessageSerializationSpec|FullyQualifiedName~MiscMessageSerializerSpec'
+dotnet test src/core/Akka.API.Tests -c Release --framework net10.0 --nologo
+dotnet publish <tracked-project> -c Release -r linux-x64 --nologo -o <output>/publish
+timeout 300 <output>/publish/Akka.Remote.LegacyException.AOT.App
+dotnet run scripts/CheckAotWarnings.cs -- \
+  --log <output>/native-publish.log \
+  --baseline src/aot/Akka.Remote.LegacyException.AOT.App/evidence/previous-remote-warning-keys.txt \
+  --repo-root <checkout> \
+  --scope 'src/core/Akka.Remote/,src/core/Akka.Serialization.V2/,src/aot/Akka.Remote.LegacyException.AOT.App/'
+
+Full exact commands, paths and pipefail handling are in ../reproduce.sh. Its native publish
+is app-local; no global PublishAot property, warning suppression, audit bypass or blanket root
+was used. All listed steps exited 0. Managed execution is rejected by the app's own guard.
+
+Retained replay: 154 focused passed / one existing LocalScope skip; 35 API passed;
+native reads=114 / rejected=15 / overrides=3 / empty-sentinels=3;
+five existing Remote warning keys, zero new/outside/no-location diagnostics.
+The previous ExceptionSupport reflection key is no longer emitted.
+
+Compressed receipt bytes are original output with original machine paths, not summaries.
+SHA256SUMS checks the compressed files. gzip -dc <name>.log.gz displays each receipt.

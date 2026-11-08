@@ -1,0 +1,18 @@
+case: status-OpenCircuitException
+message-type: Failure
+manifest: STF
+serializer-id: 16
+byte-count: 186
+
+0000  0a b5 01 0a 27 41 6b 6b  61 2e 50 61 74 74 65 72  |....'Akka.Patter|
+0010  6e 2e 4f 70 65 6e 43 69  72 63 75 69 74 45 78 63  |n.OpenCircuitExc|
+0020  65 70 74 69 6f 6e 2c 20  41 6b 6b 61 12 07 6d 65  |eption, Akka..me|
+0030  73 73 61 67 65 22 0d 6c  65 67 61 63 79 2d 73 6f  |ssage".legacy-so|
+0040  75 72 63 65 2a 45 0a 28  53 79 73 74 65 6d 2e 45  |urce*E.(System.E|
+0050  78 63 65 70 74 69 6f 6e  2c 20 53 79 73 74 65 6d  |xception, System|
+0060  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|
+0070  12 0d 69 6e 6e 65 72 20  6d 65 73 73 61 67 65 2a  |..inner message*|
+0080  00 3a 08 6d 73 63 6f 72  6c 69 62 32 2b 0a 11 52  |.:.mscorlib2+..R|
+0090  65 6d 61 69 6e 69 6e 67  44 75 72 61 74 69 6f 6e  |emainingDuration|
+00a0  12 16 0a 12 22 30 30 3a  30 30 3a 30 30 2e 31 32  |...."00:00:00.12|
+00b0  33 34 35 36 37 22 10 01  12 00                    |34567"....|

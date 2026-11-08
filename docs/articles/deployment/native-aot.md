@@ -135,6 +135,29 @@ With the switch off, these do not work:
   type's interfaces through reflection. Akka.Streams no longer calls them; they are obsolete since
   v1.6.0 and will be removed in 1.7.
 
+## Historical Exception Payloads
+
+In **Unreleased (this PR)**, the legacy protobuf exception readers used by system messages
+(id `22`) and `Status.Failure` (id `16`) reconstruct a finite set of known exceptions with
+static constructors when dynamic loading is disabled. A nonempty cause is never replaced
+with `null` because constructor reflection metadata is missing. Unknown exception types or
+nonempty records without a type descriptor fail with `SerializationException`. The ordinary
+JIT path still supports custom serialization constructors and historical type forwarding.
+
+The bytes and old format's meaning stay the same: its default `HResult` is `int.MinValue`,
+and it does not retain `Data` or `HelpLink`. This does not upgrade an old protobuf record
+to the richer generated exception format. Known actor-related members and nested exceptions
+are restored only when their independently registered payload codecs can read them.
+
+Nested `ExceptionData` fields use a static protobuf parser only for the exact built-in
+protobuf reader and its known manifest. An application override remains the selected reader.
+Default JSON-backed fields, such as an arbitrary `PreRestartException.OptionalMessage` or
+the historical `OpenCircuitException.RemainingDuration`, remain unsupported under Native AOT.
+They fail with a message naming the field and serializer id. Registering a codec for future
+writes does not convert old id `1` JSON payloads: a replacement reader must understand the
+historical id, manifest and bytes it receives. No JSON parser or global exception registry
+is added by this fix, and it does not establish Remote or Cluster startup support.
+
 ## Persistence Plugins
 
 Akka.Persistence reads the type of every journal and snapshot store from the `class` setting of its

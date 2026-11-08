@@ -1,0 +1,16 @@
+case: system-create
+message-type: Create
+manifest: Akka.Dispatch.SysMsg.Create, Akka
+serializer-id: 22
+byte-count: 156
+
+0000  0a 99 01 0a 2d 41 6b 6b  61 2e 41 63 74 6f 72 2e  |....-Akka.Actor.|
+0010  41 63 74 6f 72 49 6e 69  74 69 61 6c 69 7a 61 74  |ActorInitializat|
+0020  69 6f 6e 45 78 63 65 70  74 69 6f 6e 2c 20 41 6b  |ionException, Ak|
+0030  6b 61 12 0e 69 6e 69 74  69 61 6c 69 7a 61 74 69  |ka..initializati|
+0040  6f 6e 2a 3d 0a 28 53 79  73 74 65 6d 2e 45 78 63  |on*=.(System.Exc|
+0050  65 70 74 69 6f 6e 2c 20  53 79 73 74 65 6d 2e 50  |eption, System.P|
+0060  72 69 76 61 74 65 2e 43  6f 72 65 4c 69 62 12 05  |rivate.CoreLib..|
+0070  69 6e 6e 65 72 2a 00 3a  08 6d 73 63 6f 72 6c 69  |inner*.:.mscorli|
+0080  62 32 19 0a 05 41 63 74  6f 72 12 10 0a 08 0a 06  |b2...Actor......|
+0090  6e 6f 62 6f 64 79 10 10  1a 02 41 52              |nobody....AR|
