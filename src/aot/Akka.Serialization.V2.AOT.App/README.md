@@ -16,11 +16,7 @@ gate requires the unmerged reader ports: [Metrics #8917](https://github.com/akka
 [Misc #8934](https://github.com/akkadotnet/akka.net/pull/8934) for nested actor-reference
 bindings. Missing registrations fail; no module or assertion is skipped. The branch includes
 the existing Singleton canary and the reviewed Legacy exception/SDK prerequisite #8935/#8914.
-The retained positive 249-case native evidence is the composed source at `053480698`,
-recorded in `652b9c83a`, under
-`.systematize/plans/builtin-serializers-v2/evidence/integration-053480698`. It is not an
-isolated-branch runtime pass. Extraction and compile evidence is retained separately under
-`.systematize/plans/builtin-serializers-v2/evidence/module-native-kit`.
+The positive 249-case native proof passed on composed source `053480698`, originally recorded in `652b9c83a`. This is not an isolated-branch runtime pass. The isolated extraction compiles with SDK 10.0.114 with zero warnings/errors; it has no isolated complete native run.
 
 | Protocol | Legacy / V2 ids | Executed fixture cases |
 |---|---|---|
