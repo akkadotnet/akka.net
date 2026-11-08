@@ -1,8 +1,8 @@
-Implementation handoff: [accepted delivery plan](../../../.systematize/plans/builtin-serializers-v2/plan.html). The epic remains [#8675](https://github.com/akkadotnet/akka.net/issues/8675).
+Implementation handoff: [Reliable Delivery PR #8409](https://github.com/akkadotnet/akka.net/pull/8409). The epic remains [#8675](https://github.com/akkadotnet/akka.net/issues/8675).
 
 Checkboxes track merged upstream work. Published draft implementations and their current
-verification evidence are recorded in the delivery plan; an unchecked item can have a
-completed, tested candidate awaiting merge.
+verification outcomes are recorded in the relevant PR descriptions; an unchecked item can
+have a completed, tested candidate awaiting merge.
 
 ## 1. Foundation (amended 2026-10-02: one global opt-in switch, V2 rows are read-only C# table rows)
 
