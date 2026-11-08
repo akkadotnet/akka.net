@@ -198,7 +198,7 @@ When dynamic type loading is enabled and a custom serializer is configured by ty
 
 ### Serializer Ids
 
-Serializer ids are part of the wire format: two nodes that disagree about an id cannot read each other's messages. Ids from 0 to 40 are reserved for Akka.NET.
+Serializer ids are part of the wire format: two nodes that disagree about an id cannot read each other's messages. Ids from 0 to 99 are reserved for Akka.NET, including the 40–79 block used by the built-in V2 ports (`new id = legacy id + 40`). Custom serializers must use ids of 100 or higher. Do not renumber a serializer that has already written durable data without a migration that preserves access to the original records.
 
 Every serializer Akka.NET ships declares its id in code: `json` and `bytes` in core, and the serializers of Akka.Remote, Akka.Cluster and the other first-party modules. Nothing in HOCON changes them, so there is nothing to override. To change which serializer handles a type, change the serialization binding instead, as when we [replace the default serializer with Hyperion](xref:serialization#how-to-setup-hyperion-as-the-default-serializer).
 

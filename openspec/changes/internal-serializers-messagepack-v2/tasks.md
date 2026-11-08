@@ -1,9 +1,13 @@
 Implementation handoff: [accepted delivery plan](../../../.systematize/plans/builtin-serializers-v2/plan.html). The epic remains [#8675](https://github.com/akkadotnet/akka.net/issues/8675).
 
+Checkboxes track merged upstream work. Published draft implementations and their current
+verification evidence are recorded in the delivery plan; an unchecked item can have a
+completed, tested candidate awaiting merge.
+
 ## 1. Foundation (amended 2026-10-02: one global opt-in switch, V2 rows are read-only C# table rows)
 
 - [ ] 1.1 Document the operator recipe (design.md Decision 3): how to turn the global switch on, how to pin a binding back to legacy in `application.conf`, and the per-subsystem marker-interface/alias table (feeds 8.2)
-- [ ] 1.2 Reserve serializer-id block 40-79: document the `legacy + 40` mapping in code comments, and fix any stale "Identifier values from 0 to 40 are reserved" comment
+- [ ] 1.2 Reserve serializer-id block 40-79: document the `legacy + 40` mapping in code comments, and fix stale reserved-id documentation (candidate published with reference PR #8409; awaiting merge)
 - [ ] 1.3 First additive registration proves the pattern: ReliableDelivery PR #8409 (not merged yet)
 - [ ] 1.4 Rework PR #8409 to the C# table model: read-only row `reliable-delivery-v2` (id 76, empty `UseFor`) in `ClusterSerializers`, delete its `Cluster.conf` rows, and remove the stale text about the withdrawn #8403 `write-bindings` flag
 - [x] 1.5 Global opt-in switch implemented by #8724/#8729: HOCON-only `akka.actor.serialization-v2`, default off, with Hosting `WithSerializationV2`; user bindings retain precedence. Issue #8713 remains open for wider integration evidence.
@@ -16,7 +20,7 @@ Implementation handoff: [accepted delivery plan](../../../.systematize/plans/bui
 - [ ] 2.2 Source-generated codec + thin `SerializerV2` wrapper, manifests `"a"`..`"i"` reused verbatim (in PR #8409; not merged)
 - [ ] 2.3 Wrapped user payloads ride an `object`-typed property, the serializer boundary (already object-typed in PR #8409; not merged)
 - [ ] 2.4 Register the V2 row read-only in `ClusterSerializers`: alias `reliable-delivery-v2`, id 76, empty `UseFor`; no `Cluster.conf` rows (rework in task 1.4)
-- [ ] 2.5 Parity/round-trip/cross-read specs, legacy-regression specs, golden V2 bytes, golden legacy bytes, benchmark A/B with payload sizes (in PR #8409; golden bytes still to add)
+- [ ] 2.5 Parity/round-trip/cross-read specs, legacy-regression specs, golden V2 bytes, golden legacy bytes, benchmark A/B with payload sizes (candidate and full benchmark evidence published in PR #8409; awaiting merge)
 - [ ] 2.6 Switch-on readiness: write-side optimization pass and a full-length benchmark job, signed off by the maintainer. The PR body carries `## Breaking changes` (task 8.1).
 
 ## 3. Subsystem 2: DistributedData (ids 12->52, 11->51) [headline hot-path]

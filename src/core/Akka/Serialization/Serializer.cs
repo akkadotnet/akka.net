@@ -55,7 +55,8 @@ namespace Akka.Serialization
 
         /// <summary>
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
-        /// Values from 0 to 16 is reserved for Akka internal usage
+        /// Values from 0 to 99 are reserved for Akka.NET internal usage.
+        /// The built-in V2 serializer ports use ids 40 to 79, with new id = legacy id + 40.
         /// </summary>
         public virtual int Identifier => _value.Value;
 
