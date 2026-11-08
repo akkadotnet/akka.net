@@ -80,7 +80,5 @@ exception reader prerequisite, so the two previous exception-reader diagnostics
 are gone. The remaining 16 keys are exactly the 11 existing Cluster diagnostics
 from the retained public proof plus the five shared Remote diagnostics. Core is
 checked by its separate rooted canary. The shared template defaults preserve the
-existing Legacy/System/Misc job commands and markers. Local expanded-template
-replay evidence is retained under
-`.systematize/plans/builtin-serializers-v2/evidence/cluster-native-ci`; hosted CI
-execution remains separate evidence.
+existing Legacy/System/Misc job commands and markers. The expanded Cluster and
+Legacy jobs were replayed locally; hosted CI execution remains pending.
