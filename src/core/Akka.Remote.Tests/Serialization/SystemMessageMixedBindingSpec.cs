@@ -19,12 +19,35 @@ public sealed class SystemMessageMixedBindingSpec : AkkaSpec
 {
     public SystemMessageMixedBindingSpec(ITestOutputHelper output) : base(output) { }
 
-    [Theory(DisplayName = "Should_DeliverWatchUnwatchAndTerminationBothWays_When_SystemMessageWritersDiffer")]
+    [Theory(DisplayName = "Should_DeliverWatchAndTerminationBothWays_When_SystemMessageWritersDiffer")]
     [InlineData(false, true)]
     [InlineData(true, true)]
     [InlineData(false, false)]
     [InlineData(true, false)]
-    public async Task Should_DeliverWatchUnwatchAndTerminationBothWays_When_SystemMessageWritersDiffer(bool artery, bool modern)
+    public async Task Should_DeliverWatchAndTerminationBothWays_When_SystemMessageWritersDiffer(bool artery, bool modern)
+    {
+        await using var pair = CreatePair(artery, modern);
+        Assert.Equal(modern ? 62 : 22, pair.V2Node.Serialization.FindSerializerFor(new Suspend()).Identifier);
+        Assert.Equal(22, pair.LegacyNode.Serialization.FindSerializerFor(new Suspend()).Identifier);
+        await VerifyDeathWatch(pair.V2Node, pair.LegacyNode);
+        await VerifyDeathWatch(pair.LegacyNode, pair.V2Node);
+    }
+
+    [Theory(DisplayName = "Should_RemoveRemoteSelfWatchBothWays_When_SystemMessageWritersDiffer")]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    public async Task Should_RemoveRemoteSelfWatchBothWays_When_SystemMessageWritersDiffer(bool artery, bool modern)
+    {
+        await using var pair = CreatePair(artery, modern);
+        Assert.Equal(modern ? 62 : 22, pair.V2Node.Serialization.FindSerializerFor(new Suspend()).Identifier);
+        Assert.Equal(22, pair.LegacyNode.Serialization.FindSerializerFor(new Suspend()).Identifier);
+        await VerifyUnwatch(pair.V2Node, pair.LegacyNode);
+        await VerifyUnwatch(pair.LegacyNode, pair.V2Node);
+    }
+
+    private static MixedBindingPair CreatePair(bool artery, bool modern)
     {
         var transport = ConfigurationFactory.ParseString(artery ? """
             akka.actor.provider = remote
@@ -38,14 +61,36 @@ public sealed class SystemMessageMixedBindingSpec : AkkaSpec
             """);
         var enabled = ConfigurationFactory.ParseString($"akka.actor.serialization-v2 = {(modern ? "on" : "off")}").WithFallback(transport);
         var pinned = MixedBindingPair.BindTo("akka-system-msg", typeof(SystemMessage)).WithFallback(enabled);
-        await using var pair = MixedBindingPair.Create(artery ? "system-artery" : "system-classic", enabled, pinned);
-        Assert.Equal(modern ? 62 : 22, pair.V2Node.Serialization.FindSerializerFor(new Suspend()).Identifier);
-        Assert.Equal(22, pair.LegacyNode.Serialization.FindSerializerFor(new Suspend()).Identifier);
-        await VerifyDeathWatch(pair.V2Node, pair.LegacyNode);
-        await VerifyDeathWatch(pair.LegacyNode, pair.V2Node);
+        return MixedBindingPair.Create(artery ? "system-artery" : "system-classic", enabled, pinned);
     }
 
     private async Task VerifyDeathWatch(ActorSystem watchingSystem, ActorSystem targetSystem)
+    {
+        var observer = CreateTestProbe(watchingSystem);
+        var inspector = CreateTestProbe(targetSystem);
+        var address = RARP.For(targetSystem).Provider.DefaultAddress;
+        var watched = targetSystem.ActorOf(Props.Create(() => new WatchStateTarget()));
+        var watchedRemote = await watchingSystem.ActorSelection(watched.Path.ToSerializationFormatWithAddress(address))
+            .ResolveOne(TimeSpan.FromSeconds(10));
+        await observer.WatchAsync(watchedRemote);
+        await AssertRemoteWatchCount(watched, inspector, 1);
+        targetSystem.Stop(watched);
+        var terminated = await observer.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
+        Assert.Equal(watchedRemote, terminated.ActorRef);
+        Assert.True(terminated.ExistenceConfirmed);
+        Assert.False(terminated.AddressTerminated);
+        await observer.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+
+        var missing = ((ExtendedActorSystem)watchingSystem).Provider.ResolveActorRef(
+            new RootActorPath(address) / "user" / "missing-target");
+        await observer.WatchAsync(missing);
+        var absent = await observer.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
+        Assert.Equal(missing, absent.ActorRef);
+        Assert.False(absent.ExistenceConfirmed);
+        Assert.False(absent.AddressTerminated);
+    }
+
+    private async Task VerifyUnwatch(ActorSystem watchingSystem, ActorSystem targetSystem)
     {
         var observer = CreateTestProbe(watchingSystem);
         var inspector = CreateTestProbe(targetSystem);
@@ -66,25 +111,6 @@ public sealed class SystemMessageMixedBindingSpec : AkkaSpec
         targetSystem.Stop(target);
         await observer.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
-        var watched = targetSystem.ActorOf(Props.Create(() => new WatchStateTarget()));
-        var watchedRemote = await watchingSystem.ActorSelection(watched.Path.ToSerializationFormatWithAddress(address))
-            .ResolveOne(TimeSpan.FromSeconds(10));
-        await observer.WatchAsync(watchedRemote);
-        await AssertRemoteWatchCount(watched, inspector, 1);
-        targetSystem.Stop(watched);
-        var terminated = await observer.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
-        Assert.Equal(watchedRemote, terminated.ActorRef);
-        Assert.True(terminated.ExistenceConfirmed);
-        Assert.False(terminated.AddressTerminated);
-        await observer.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
-
-        var missing = ((ExtendedActorSystem)watchingSystem).Provider.ResolveActorRef(
-            new RootActorPath(address) / "user" / "missing-target");
-        await observer.WatchAsync(missing);
-        var absent = await observer.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
-        Assert.Equal(missing, absent.ActorRef);
-        Assert.False(absent.ExistenceConfirmed);
-        Assert.False(absent.AddressTerminated);
     }
 
     private async Task AssertRemoteWatchCount(IActorRef target, TestProbe inspector, int expected)
