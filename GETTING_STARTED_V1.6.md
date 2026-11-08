@@ -192,7 +192,7 @@ To opt back into reflection-based loading (and bring back its `IL2026`/`IL3050` 
 Full details, including everything not yet supported:
 [Native AOT and Trimming](docs/articles/deployment/native-aot.md).
 
-**Unreleased (this PR): historical exception reads.** Legacy system-message and
+**Unreleased ([#8935](https://github.com/akkadotnet/akka.net/pull/8935)): historical exception reads.** Legacy system-message and
 `Status.Failure` readers keep known exception causes when dynamic loading is disabled by
 using static constructors. Unknown types and unsupported old payload fields fail explicitly.
 The original protobuf format still loses `HResult`, `Data` and `HelpLink`; JSON-backed rich

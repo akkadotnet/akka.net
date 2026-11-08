@@ -137,7 +137,7 @@ With the switch off, these do not work:
 
 ## Historical Exception Payloads
 
-In **Unreleased (this PR)**, the legacy protobuf exception readers used by system messages
+In **Unreleased ([#8935](https://github.com/akkadotnet/akka.net/pull/8935))**, the legacy protobuf exception readers used by system messages
 (id `22`) and `Status.Failure` (id `16`) reconstruct a finite set of known exceptions with
 static constructors when dynamic loading is disabled. A nonempty cause is never replaced
 with `null` because constructor reflection metadata is missing. Unknown exception types or

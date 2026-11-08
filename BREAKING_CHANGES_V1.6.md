@@ -84,7 +84,7 @@ add `Wire` when the bytes on the wire change.
 
 ### Not breaking, for the record
 
-* **Unreleased (this PR), `Akka.Remote` legacy exception reads:** with
+* **Unreleased ([#8935](https://github.com/akkadotnet/akka.net/pull/8935)), `Akka.Remote` legacy exception reads:** with
   `Akka.DynamicTypeLoading` disabled, known protobuf exception types use static constructors
   instead of silently losing a cause when reflection metadata is absent. Unknown native
   types and unsupported payload fields throw `SerializationException`. JIT behavior,
