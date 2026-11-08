@@ -34,6 +34,7 @@ checking only the major/minor version is insufficient.
 | Stream-ref protocol | `akka-stream-ref` / 30 | `akka-stream-ref-v2` / 70 | Unreleased; [#8929](https://github.com/akkadotnet/akka.net/pull/8929) | Only five protocol messages migrate. Bare generic refs keep id 30 and their dynamic-loading guards; typed fields remain [#8673](https://github.com/akkadotnet/akka.net/issues/8673). |
 | Remote deployment | `daemon-create` / 3 | `daemon-create-v2` / 43 | Unreleased; [#8931](https://github.com/akkadotnet/akka.net/pull/8931) | Native remote deployment is explicitly unsupported. V2 rejects writes and reads when dynamic type loading is disabled. |
 | System messages | `akka-system-msg` / 22 | `akka-system-msg-v2` / 62 | Unreleased; [#8932](https://github.com/akkadotnet/akka.net/pull/8932) | The generated known-exception path and historical protobuf exception reads have different native limits. The draft's verification gaps remain explicit. |
+| Miscellaneous protocol messages | `akka-misc` / 16 | `akka-misc-v2` / 56 | Unreleased; [#8934](https://github.com/akkadotnet/akka.net/pull/8934) | Known generated exception frames use static factories. Historical exception and arbitrary payload readers have separate native limits; all 21 bindings must be pinned for legacy writes. |
 | Actor-selection containers | `akka-containers` / 6 | `akka-containers-v2` / 46 | Unreleased; [#8923](https://github.com/akkadotnet/akka.net/pull/8923) | The wrapper does not make application payloads or the whole remote subsystem native-compatible. |
 
 The table identifies reader availability, not a performance or Native AOT recommendation.
@@ -110,6 +111,15 @@ akka.actor.serialization-bindings {
     # Cluster protocol and router pools: both bindings are needed.
     "Akka.Cluster.IClusterMessage, Akka.Cluster" = akka-cluster
     "Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster" = akka-cluster
+
+    # Sharding, including remembered entities and coordinator snapshots
+    "Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding" = akka-sharding
+
+    # System messages
+    "Akka.Dispatch.SysMsg.SystemMessage, Akka" = akka-system-msg
+
+    # Remote deployment (still requires dynamic type loading)
+    "Akka.Remote.DaemonMsgCreate, Akka.Remote" = daemon-create
 
     # Replicator protocol
     "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
@@ -196,6 +206,14 @@ durable serializer bindings and legacy-alias overrides. Test the same custom ser
 during recovery; switching the global setting does not convert LMDB values. This protection
 is tracked in [#8716](https://github.com/akkadotnet/akka.net/issues/8716).
 
+Nested formats matter too. A sharding coordinator snapshot inside a CRDT can otherwise change
+LMDB bytes and Replicator digests even when the outer durable serializer stays legacy.
+The composed migration requires the canonical-payload policy in
+[#8933](https://github.com/akkadotnet/akka.net/pull/8933): built-in replacements retain the
+active legacy alias at that boundary, including explicit application alias overrides.
+Network writer selection still follows the global setting and application bindings.
+Verify the complete module set and saved state together before enabling.
+
 ## Stream-Ref Protocol Boundary
 
 The stream-ref port moves only `IStreamRefsProtocol`. To pin those messages:
@@ -208,6 +226,42 @@ akka.actor.serialization-bindings {
 
 Bare `SourceRefImpl<T>` and `SinkRefImpl<T>` keep their legacy binding. A native codec probe
 for the five protocol messages does not establish native remote stream materialization.
+
+## Miscellaneous Protocol Binding Set
+
+Miscellaneous protocol messages (`akka-misc`, id 16 → `akka-misc-v2`, id 56) retain all 22 legacy manifest tokens. Both readers are registered; default writes remain legacy. The first reader release is **unreleased**. The generated Status.Failure format preserves original exception HResult, HelpLink and Data, which legacy id 16 discards. LocalScope retains its explicit codec but still has no default binding.
+
+Enable the global switch only after every reader has upgraded, including any process that stores or later decodes these protocol bytes. User payload serializers inside Identify, ActorIdentity, Status, resizers and remote router pools remain separate. Switching back off changes future writes; it does not let an older binary read existing id 56 bytes.
+
+To retain this entire protocol's legacy writer while the global switch enables other completed ports, pin all of its existing bindings:
+
+```hocon
+akka.actor.serialization-bindings {
+  "Akka.Actor.Identify, Akka" = akka-misc
+  "Akka.Actor.ActorIdentity, Akka" = akka-misc
+  "Akka.Actor.IActorRef, Akka" = akka-misc
+  "Akka.Actor.PoisonPill, Akka" = akka-misc
+  "Akka.Actor.IntentionalRestart, Akka" = akka-misc
+  "Akka.Actor.Kill, Akka" = akka-misc
+  "Akka.Actor.Status+Failure, Akka" = akka-misc
+  "Akka.Actor.Status+Success, Akka" = akka-misc
+  "Akka.Actor.RemoteScope, Akka" = akka-misc
+  "Akka.Routing.FromConfig, Akka" = akka-misc
+  "Akka.Routing.DefaultResizer, Akka" = akka-misc
+  "Akka.Routing.RoundRobinPool, Akka" = akka-misc
+  "Akka.Routing.BroadcastPool, Akka" = akka-misc
+  "Akka.Routing.RandomPool, Akka" = akka-misc
+  "Akka.Routing.ScatterGatherFirstCompletedPool, Akka" = akka-misc
+  "Akka.Routing.TailChoppingPool, Akka" = akka-misc
+  "Akka.Routing.ConsistentHashingPool, Akka" = akka-misc
+  "Akka.Configuration.Config, Akka" = akka-misc
+  "Akka.Remote.RemoteWatcher+Heartbeat, Akka.Remote" = akka-misc
+  "Akka.Remote.RemoteWatcher+HeartbeatRsp, Akka.Remote" = akka-misc
+  "Akka.Remote.Routing.RemoteRouterConfig, Akka.Remote" = akka-misc
+}
+```
+
+A native codec proof is bounded by its retained source and receipts. The unchanged legacy exception reader's Native AOT constructor-metadata gap is a separate prerequisite. Generated serializers and `akka.actor.serialization-v2` do not by themselves enable dynamic actor construction or full remoting Native AOT. Performance and broader transport gates must be cleared before recommending this port for production activation.
 
 ## Same-Format Native Persistence Envelopes
 
