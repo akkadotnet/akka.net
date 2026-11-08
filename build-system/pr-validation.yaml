@@ -377,6 +377,13 @@ jobs:
       appName: Akka.Remote.LegacyException.AOT.App
       expectedMarker: '[legacy-exceptions-native] OK reads=114 rejected=15 overrides=3 empty-sentinels=3'
 
+  - template: native-codec-canary.template.yaml
+    parameters:
+      jobName: RemoteSystemMessageAotCanary
+      displayName: "Native System message codecs (Linux)"
+      appName: Akka.Remote.SystemMessage.AOT.App
+      expectedMarker: '[system-native] FIXED COMPOSITION codec proof: native-cases=54 legacy-reads=54 legacy-exception-reads=12 selected-writer-checks=54 rejected=18 dynamic-code=false'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"

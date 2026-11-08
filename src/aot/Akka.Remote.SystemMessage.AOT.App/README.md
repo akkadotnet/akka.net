@@ -13,14 +13,14 @@ writer read-back. Legacy comparisons retain old HResult, HelpLink and Data losse
 not demand G8's richer state. Full remoting, native transport and arbitrary user payloads
 remain outside this bounded consumer.
 
-From outside the repository (so global.json does not select SDK10.0.101), use serviced SDK10.0.114/compiler-runtime10.0.14:
+The composed branch includes the SDK servicing prerequisite #8914. Publish using SDK 10.0.114/compiler-runtime 10.0.14:
 
 ```bash
 DOTNET_ROOT=/path/to/sdk10.0.114 PATH=/path/to/sdk10.0.114:$PATH dotnet publish /path/to/akka.net/src/aot/Akka.Remote.SystemMessage.AOT.App/Akka.Remote.SystemMessage.AOT.App.csproj -c Release -r linux-x64 -o /tmp/system-native
 /tmp/system-native/Akka.Remote.SystemMessage.AOT.App
 ```
 
-The retained Linux x64 receipt passed with 54 registered-id62 cases (18 samples × three modes), 42 legacy22 control reads, 54 selected-writer checks and 18 zero-output rejection checks. The publish receipt retains seven pre-existing Remote diagnostics, including the unsupported legacy exception reader. The app asserts that dynamic code is unavailable and the dynamic type loading switch is explicitly false. ILC warnings stay visible (matching existing native canaries); this is not a warning-free Remote audit. No new NoWarn, warning baseline or global public setting is used.
+The retained Linux x64 receipt passed with 54 registered-id62 cases (18 samples × three modes), 42 legacy22 control reads, 54 selected-writer checks and 18 zero-output rejection checks. The publish receipt retains seven pre-existing Remote diagnostics, including the unsupported legacy exception reader. The app asserts that dynamic code is unavailable and the dynamic type loading switch is explicitly false. ILC warnings stay visible (matching existing native canaries); this is not a warning-free Remote audit. The original standalone proof added no NoWarn, warning baseline or global public setting.
 
 The fixed-composition receipt is retained separately in `evidence/with-legacy-exception-fix-*`.
 Its required completion marker is:
@@ -32,3 +32,22 @@ Its required completion marker is:
 The fixed-composition native run passed with five existing Remote warning keys and zero new,
 outside-scope or source-less warnings. Exact commands and compressed full receipts are retained
 next to the original evidence; no old receipt was overwritten.
+
+## CI gate
+
+`RemoteSystemMessageAotCanary` invokes the shared
+[`native-codec-canary.template.yaml`](../../../build-system/native-codec-canary.template.yaml)
+from the merged [#8935](https://github.com/akkadotnet/akka.net/pull/8935) dependency. The job
+cold-publishes this ordinary consumer, requires native exit zero and the exact completion
+marker above, checks Remote/V2 runtime/app/Shared warnings against the reviewed five-key
+Remote debt baseline, and requires zero diagnostics without a source location. Full SDK,
+publish, run and warning logs are retained even on failure. Outside-scope diagnostics are
+reported and remain owned by the appropriate separate canaries. This gate does not establish
+native Remote startup, network transport, arbitrary payload support or performance acceptance.
+Hosted execution of the new Azure invocation remains pending.
+
+The `evidence/ci-template-replay` directory retains the exact expanded Bash, parameters,
+template source, invocation and source hashes, plus compressed full SDK/publish/run/warning
+logs. The final local replay passed every native completion and warning assertion on SDK
+10.0.114/runtime 10.0.14, with five known warnings and zero new, outside-scope or unlocated
+diagnostics. This validates the commands; it does not claim hosted execution of the new job.
