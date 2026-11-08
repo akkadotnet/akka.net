@@ -15,14 +15,14 @@ follow-up composes the reviewed fix from [#8935](https://github.com/akkadotnet/a
 product commit `59dd249e2`, and requires all 138 legacy reads, including six exception reads.
 Legacy comparisons retain old HResult, HelpLink and Data losses; V2 comparisons retain full state.
 
-The retained Linux x64 receipt passed: 138 native cases,132 legacy control reads,135 selected-writer checks and45 rejection checks. A late native payload ran36 times and attempted294,912 bytes; each containing message retained empty caller output. Seven pre-existing Remote ILC warnings remain visible. The initial failed AR assertion receipt is retained: AR expectations are now canonicalized through the unchanged legacy reader and checked for canonical runtime type, full path/UID and public equality; other exact type/field assertions remain. From outside the repository (so global.json does not select SDK10.0.101), publish with serviced SDK10.0.114/compiler-runtime10.0.14:
+The retained Linux x64 receipt passed: 138 native cases,132 legacy control reads,135 selected-writer checks and45 rejection checks. A late native payload ran36 times and attempted294,912 bytes; each containing message retained empty caller output. Seven pre-existing Remote ILC warnings remain visible. The initial failed AR assertion receipt is retained: AR expectations are now canonicalized through the unchanged legacy reader and checked for canonical runtime type, full path/UID and public equality; other exact type/field assertions remain. The composed branch includes the SDK servicing prerequisite #8914. Publish with SDK 10.0.114/compiler-runtime 10.0.14:
 
 ```bash
 DOTNET_ROOT=/path/to/sdk10.0.114 PATH=/path/to/sdk10.0.114:$PATH dotnet publish /path/to/akka.net/src/aot/Akka.Remote.MiscMessage.AOT.App/Akka.Remote.MiscMessage.AOT.App.csproj -c Release -r linux-x64 -o /tmp/misc-native
 /tmp/misc-native/Akka.Remote.MiscMessage.AOT.App
 ```
 
-The app asserts dynamic code is unavailable and dynamic type loading is explicitly false. ILC diagnostics remain visible; no new NoWarn or warning baseline is used. This is not full remoting/native transport compatibility, arbitrary user-payload support, or a benchmark signoff.
+The app asserts dynamic code is unavailable and dynamic type loading is explicitly false. ILC diagnostics remain visible; no new NoWarn is used. The original standalone proof added no warning baseline. This is not full remoting/native transport compatibility, arbitrary user-payload support, or a benchmark signoff.
 
 The fixed-composition receipt is retained separately in `evidence/with-legacy-exception-fix-*`.
 Its required completion marker is:
@@ -34,3 +34,22 @@ Its required completion marker is:
 The fixed-composition native run passed with five existing Remote warning keys and zero new,
 outside-scope or source-less warnings. Exact commands and compressed full receipts are retained
 next to the original evidence; no old receipt was overwritten.
+
+## CI gate
+
+`RemoteMiscMessageAotCanary` invokes the shared
+[`native-codec-canary.template.yaml`](../../../build-system/native-codec-canary.template.yaml)
+from the merged [#8935](https://github.com/akkadotnet/akka.net/pull/8935) dependency. The job
+cold-publishes this ordinary consumer, requires native exit zero and the exact completion
+marker above, checks Remote/V2 runtime/app/Shared warnings against the reviewed five-key
+Remote debt baseline, and requires zero diagnostics without a source location. Full SDK,
+publish, run and warning logs are retained even on failure. Outside-scope diagnostics are
+reported and remain owned by the appropriate separate canaries. This gate does not establish
+native Remote startup, network transport, arbitrary payload support or performance acceptance.
+Hosted execution of the new Azure invocation remains pending.
+
+The `evidence/ci-template-replay` directory retains the exact expanded Bash, parameters,
+template source, invocation and source hashes, plus compressed full SDK/publish/run/warning
+logs. The final local replay passed every native completion and warning assertion on SDK
+10.0.114/runtime 10.0.14, with five known warnings and zero new, outside-scope or unlocated
+diagnostics. This validates the commands; it does not claim hosted execution of the new job.
