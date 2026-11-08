@@ -31,7 +31,7 @@ relax native manifest validation, change the positional case constructor, or alt
 
 Generic shapes intentionally requiring dynamic type loading set the optional init property
 `RequiresDynamicTypeLoading = true`. The gate pre-encodes and reads only those shapes while enabled,
-then requires byte-array writes, buffer writes, registered-id reads and direct warmed-codec reads to
+then requires byte-array writes, buffer writes and direct reads on both warm and fresh codecs, plus registered-id reads, to
 throw `SerializationException` naming `Akka.DynamicTypeLoading` while disabled. A rejected buffer write
 must leave the caller's output empty. Other cases retain every positive round-trip check; no case is
 skipped. Prior switch semantics are restored after success or failure. This declares a tested boundary,

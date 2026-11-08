@@ -51,6 +51,9 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
     [InlineData("partial-write")]
     [InlineData("id-read")]
     [InlineData("warm-read")]
+    [InlineData("cold-write")]
+    [InlineData("cold-partial-write")]
+    [InlineData("cold-direct-read")]
     [InlineData("wrong-reason")]
     public void Should_RejectBoundaryBypasses_When_AFlaggedCodecWritesOrReadsWithoutTheGuard(string mode)
     {
@@ -87,6 +90,7 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
     private sealed class BoundarySerializer(ExtendedActorSystem system, string mode) : SerializerV2(system)
     {
         private bool _readWhileEnabled;
+        private readonly bool _constructedWhileDisabled = !AkkaFeatures.IsDynamicTypeLoadingSupported;
         public override int Identifier => 51;
         public override string Manifest(object obj) => "P";
 
@@ -94,7 +98,7 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
         {
             if (((BoundaryValue)obj).IsGeneric && !AkkaFeatures.IsDynamicTypeLoadingSupported)
             {
-                if (mode == "array-write")
+                if (mode == "array-write" || mode == "cold-write" && _constructedWhileDisabled)
                     return [1];
                 throw Error();
             }
@@ -104,9 +108,10 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
         public override int Serialize(object obj, IBufferWriter<byte> writer)
         {
             var value = (BoundaryValue)obj;
-            if (value.IsGeneric && !AkkaFeatures.IsDynamicTypeLoadingSupported && mode != "buffer-write")
+            if (value.IsGeneric && !AkkaFeatures.IsDynamicTypeLoadingSupported &&
+                !(mode == "buffer-write" || mode == "cold-write" && _constructedWhileDisabled))
             {
-                if (mode == "partial-write")
+                if (mode == "partial-write" || mode == "cold-partial-write" && _constructedWhileDisabled)
                     writer.Write(new byte[] { 1 });
                 throw Error();
             }
@@ -119,9 +124,21 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
             var value = new BoundaryValue(bytes.FirstSpan[0] == 1);
             if (AkkaFeatures.IsDynamicTypeLoadingSupported)
                 _readWhileEnabled = true;
-            else if (value.IsGeneric && !(mode == "warm-read" && _readWhileEnabled || mode == "id-read" && !_readWhileEnabled))
+            else if (value.IsGeneric && !(mode == "warm-read" && _readWhileEnabled || mode == "cold-direct-read" && !_readWhileEnabled))
                 throw Error();
             return value;
+        }
+
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (bytes[0] == 1 && !AkkaFeatures.IsDynamicTypeLoadingSupported)
+            {
+                if (mode == "id-read")
+                    return new BoundaryValue(true);
+                if (mode == "cold-direct-read")
+                    throw Error();
+            }
+            return base.FromBinary(bytes, manifest);
         }
 
         private SerializationException Error() => new(mode == "wrong-reason"
