@@ -27,17 +27,38 @@ checking only the major/minor version is insufficient.
 | Cluster protocol and cluster router pools | `akka-cluster` / 5 | `akka-cluster-v2` / 45 | Unreleased; [#8924](https://github.com/akkadotnet/akka.net/pull/8924) | Local codec probes cover current and historical heartbeat forms. Native cluster bootstrap and transport remain separate capabilities. |
 | Cluster Singleton hand-over | `akka-singleton` / 14 | `akka-singleton-v2` / 54 | Unreleased; [#8915](https://github.com/akkadotnet/akka.net/pull/8915) | Local native codec canary passes all four manifests. Cluster startup and ownership hand-over remain separate capabilities. |
 | Cluster Metrics | `akka-cluster-metrics` / 10 | `akka-cluster-metrics-v2` / 50 | Unreleased; [#8917](https://github.com/akkadotnet/akka.net/pull/8917) | A standalone native codec probe passes all five implemented manifests. Tracked CI coverage and complete Metrics subsystem AOT support remain pending. |
-| Replicator protocol | `akka-data-replication` / 12 | `akka-data-replication-v2` / 52 | Unreleased; [#8918](https://github.com/akkadotnet/akka.net/pull/8918) | Nested CRDT serialization still uses id 11. Generic CRDT native reconstruction remains separate work. |
+| CRDT states, deltas and keys | `akka-replicated-data` / 11 | `akka-replicated-data-v2` / 51 | Unreleased; [#8937](https://github.com/akkadotnet/akka.net/pull/8937) | Known primitive/ref forms have static factories. Generic maps, arbitrary type arguments and some historical generic readers remain separate native boundaries. |
+| Replicator protocol | `akka-data-replication` / 12 | `akka-data-replication-v2` / 52 | Unreleased; [#8918](https://github.com/akkadotnet/akka.net/pull/8918) | Network CRDTs use id 11 or 51 according to the deployed port and bindings. Canonical legacy nesting stays on the active legacy alias; generic native reconstruction remains bounded. |
 | Distributed PubSub | `akka-pubsub` / 9 | `akka-pubsub-v2` / 49 | Unreleased; [#8919](https://github.com/akkadotnet/akka.net/pull/8919) | A standalone native codec probe passes all six manifests with supported payloads. User payloads need their own native-compatible serializers. |
 | Cluster Client / Receptionist | `akka-cluster-client` / 15 | `akka-cluster-client-v2` / 55 | Unreleased; [#8922](https://github.com/akkadotnet/akka.net/pull/8922) | Codec probes pass all eleven manifests. Complete client delivery additionally depends on PubSub and runtime activation. |
 | Cluster Sharding | `akka-sharding` / 13 | `akka-sharding-v2` / 53 | Unreleased; [#8930](https://github.com/akkadotnet/akka.net/pull/8930) | Generic CRDTs and native cluster bootstrap remain separate. Verify composed durable and digest behavior before enabling. |
 | Stream-ref protocol | `akka-stream-ref` / 30 | `akka-stream-ref-v2` / 70 | Unreleased; [#8929](https://github.com/akkadotnet/akka.net/pull/8929) | Only five protocol messages migrate. Bare generic refs keep id 30 and their dynamic-loading guards; typed fields remain [#8673](https://github.com/akkadotnet/akka.net/issues/8673). |
 | Remote deployment | `daemon-create` / 3 | `daemon-create-v2` / 43 | Unreleased; [#8931](https://github.com/akkadotnet/akka.net/pull/8931) | Native remote deployment is explicitly unsupported. V2 rejects writes and reads when dynamic type loading is disabled. |
-| System messages | `akka-system-msg` / 22 | `akka-system-msg-v2` / 62 | Unreleased; [#8932](https://github.com/akkadotnet/akka.net/pull/8932) | The generated known-exception path and historical protobuf exception reads have different native limits. The draft's verification gaps remain explicit. |
+| System messages | `akka-system-msg` / 22 | `akka-system-msg-v2` / 62 | Unreleased; [#8932](https://github.com/akkadotnet/akka.net/pull/8932) | Known generated and historical protobuf exception reads have native proofs. Historical JSON fields need a compatible application reader; native actor activation and transport remain separate. |
 | Miscellaneous protocol messages | `akka-misc` / 16 | `akka-misc-v2` / 56 | Unreleased; [#8934](https://github.com/akkadotnet/akka.net/pull/8934) | Known generated exception frames use static factories. Historical exception and arbitrary payload readers have separate native limits; all 21 bindings must be pinned for legacy writes. |
 | Actor-selection containers | `akka-containers` / 6 | `akka-containers-v2` / 46 | Unreleased; [#8923](https://github.com/akkadotnet/akka.net/pull/8923) | The wrapper does not make application payloads or the whole remote subsystem native-compatible. |
 
 The table identifies reader availability, not a performance or Native AOT recommendation.
+
+## Performance Readiness
+
+The draft ports require maintainer review of the complete benchmark results before this
+guide recommends activation. The measurements compare serializer operations; application
+latency, throughput and capacity need workload-specific checks. Results and host/runtime
+limits are retained in the linked PRs, including regressions.
+
+| Completed full benchmark | Observed trade-offs |
+| --- | --- |
+| [Reliable Delivery #8409](https://github.com/akkadotnet/akka.net/pull/8409) | Buffer writes improve by 20–71%. The small Request byte-array write takes 118% longer and allocates 61% more; its read takes 42% longer. |
+| [Singleton #8915](https://github.com/akkadotnet/akka.net/pull/8915) | All four fieldless controls are slower. V2 buffer writes take about 12–13 ns versus 2–3 ns; byte-array writes allocate 128 B and reads 24 B versus no allocation. Wire size grows from zero to one byte. |
+| [Metrics #8917](https://github.com/akkadotnet/akka.net/pull/8917) | Gossip buffer writes improve by 78% time and 58% allocation. Default-pool byte-array writes are about 29 times slower; gossip wire size grows from 377 to 476 bytes. |
+| [PubSub #8919](https://github.com/akkadotnet/akka.net/pull/8919) | Send, Publish and Status buffer writes improve by 41–51%. Delta tombstone byte-array time/allocation grows by 97%/66% and reads take 38% longer. |
+| [Cluster Client #8922](https://github.com/akkadotnet/akka.net/pull/8922) | Contacts, Send and Publish buffer writes improve by 32–46%. Heartbeat buffer writes grow from 2.65 to 12.19 ns and allocate 32 B; Contacts byte-array time/allocation grows by 70%/84%. |
+| [Actor-selection containers #8923](https://github.com/akkadotnet/akka.net/pull/8923) | Buffer writes improve by 8–36% time and 60–77% allocation. EmptyPath, NestedSelection and PatternAndParent reads take 12–22% longer; wire sizes grow by 3–13 bytes. |
+| [Streams #8929](https://github.com/akkadotnet/akka.net/pull/8929) | Buffer writes improve by 31–44% time and 57–82% allocation. Demand byte-array time/allocation grows by 54%/150%; Demand and Next reads take 39% and 11% longer. |
+
+The remaining ports' full measurements are pending. Keep the global switch off, or use
+the complete subsystem pins below, until the deployed combination has been reviewed.
 Consult the release's validation results before enabling a port. Other built-in serializers
 keep their existing behavior until a V2 replacement is shipped. Native `SerializerV2`
 implementations that retain their original bytes and id, such as Primitive (17), are unaffected
@@ -120,6 +141,9 @@ akka.actor.serialization-bindings {
 
     # Remote deployment (still requires dynamic type loading)
     "Akka.Remote.DaemonMsgCreate, Akka.Remote" = daemon-create
+
+    # CRDT states, deltas and keys
+    "Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData" = akka-replicated-data
 
     # Replicator protocol
     "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
