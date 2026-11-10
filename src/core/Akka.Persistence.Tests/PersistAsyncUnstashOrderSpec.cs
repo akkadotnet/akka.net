@@ -110,5 +110,66 @@ namespace Akka.Persistence.Tests
 
             replies.Should().Equal(sent);
         }
+
+        public enum AsyncHandlerPath
+        {
+            PersistAsyncHandlerUnstashingUserStash,
+            PersistAsyncHandlerFromRecoveryCompleted,
+        }
+
+        private sealed class AsyncHandlerPathActor : ReceivePersistentActor
+        {
+            public override string PersistenceId { get; }
+
+            public AsyncHandlerPathActor(string persistenceId, AsyncHandlerPath path)
+            {
+                PersistenceId = persistenceId;
+                var holding = path == AsyncHandlerPath.PersistAsyncHandlerUnstashingUserStash;
+
+                Recover<Evt>(_ => { });
+                Recover<RecoveryCompleted>(_ =>
+                {
+                    // commands that arrive before this handler finishes stay stashed
+                    if (path == AsyncHandlerPath.PersistAsyncHandlerFromRecoveryCompleted)
+                        Persist(new Evt(0), _ => Task.Delay(10));
+                });
+
+                Command<int>(n =>
+                {
+                    if (holding)
+                        Stash.Stash();
+                    else
+                        Sender.Tell(n);
+                });
+
+                // non-stashing persist whose async handler releases the commands held in the user stash
+                Command<string>(_ => PersistAsync(new Evt(0), async _ =>
+                {
+                    await Task.Delay(10);
+                    holding = false;
+                    Stash.UnstashAll();
+                }));
+            }
+        }
+
+        [Theory(DisplayName = "Should_RunStashedCommandsInSendOrder_When_AsyncHandlerCompletesOutsideCommandHandler")]
+        [InlineData(AsyncHandlerPath.PersistAsyncHandlerUnstashingUserStash)]
+        [InlineData(AsyncHandlerPath.PersistAsyncHandlerFromRecoveryCompleted)]
+        public async Task Should_RunStashedCommandsInSendOrder_When_AsyncHandlerCompletesOutsideCommandHandler(AsyncHandlerPath path)
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new AsyncHandlerPathActor(Name, path)));
+
+            var sent = Enumerable.Range(1, CommandCount).ToArray();
+            foreach (var n in sent)
+                actor.Tell(n);
+            if (path == AsyncHandlerPath.PersistAsyncHandlerUnstashingUserStash)
+                actor.Tell("release");
+
+            var replies = new int[CommandCount];
+            for (var i = 0; i < CommandCount; i++)
+                replies[i] = await ExpectMsgAsync<int>(TimeSpan.FromSeconds(10));
+
+            replies.Should().Equal(sent);
+        }
     }
 }
