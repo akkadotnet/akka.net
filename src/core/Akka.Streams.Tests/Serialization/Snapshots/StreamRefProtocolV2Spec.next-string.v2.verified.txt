@@ -1,0 +1,10 @@
+﻿case: next-string
+message-type: SequencedOnNext
+manifest: A
+serializer-id: 70
+byte-count: 57
+
+0000  82 01 00 02 83 01 11 02  d9 25 53 79 73 74 65 6d  |.........%System|
+0010  2e 53 74 72 69 6e 67 2c  20 53 79 73 74 65 6d 2e  |.String, System.|
+0020  50 72 69 76 61 74 65 2e  43 6f 72 65 4c 69 62 03  |Private.CoreLib.|
+0030  c4 07 70 61 79 6c 6f 61  64                       |..payload|

@@ -70,4 +70,9 @@
     <Protobuf Access="internal" Include="../../protobuf/StreamRefMessages.proto" />
 
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+    <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
 </Project>

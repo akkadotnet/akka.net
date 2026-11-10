@@ -1,0 +1,7 @@
+﻿case: handshake-empty
+message-type: OnSubscribeHandshake
+manifest: G
+serializer-id: 70
+byte-count: 3
+
+0000  81 01 a0                                          |...|

@@ -75,3 +75,4 @@ module Akka.Streams
     Akka.Streams.Implementation.StreamRef.IStreamRefsProtocol, Akka.Streams
     Akka.Streams.Implementation.StreamRef.SinkRefImpl, Akka.Streams
     Akka.Streams.Implementation.StreamRef.SourceRefImpl, Akka.Streams
+  akka-stream-ref-v2: Akka.Streams.Serialization.StreamRefProtocolMessagePackSerializer, Akka.Streams (id 70) supersedes akka-stream-ref

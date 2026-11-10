@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AkkaRepositoryRoot>$(MSBuildThisFileDirectory)../../../</AkkaRepositoryRoot>
+    <TargetFramework>net10.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <RuntimeFrameworkVersion>10.0.14</RuntimeFrameworkVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+    <ProjectReference Include="$(AkkaRepositoryRoot)/src/core/Akka.Streams/Akka.Streams.csproj" />
+    <Compile Include="$(AkkaRepositoryRoot)/src/aot/Shared/LogWatchdogFilter.cs" Link="LogWatchdogFilter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(AkkaRepositoryRoot)/src/core/Akka.Remote/Akka.Remote.csproj" />
+  </ItemGroup>
+</Project>

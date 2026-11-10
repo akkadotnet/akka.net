@@ -1,0 +1,2 @@
+# Streams generated protocol and this probe add no scoped trim/AOT warnings.
+# Existing Remote dependency diagnostics remain visible outside this scope.

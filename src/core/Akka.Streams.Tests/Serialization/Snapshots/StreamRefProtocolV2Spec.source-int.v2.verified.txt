@@ -1,0 +1,10 @@
+﻿case: source-int
+message-type: SourceRefImpl<Int32>
+manifest: E
+serializer-id: 70
+byte-count: 61
+
+0000  82 01 d9 24 53 79 73 74  65 6d 2e 49 6e 74 33 32  |...$System.Int32|
+0010  2c 20 53 79 73 74 65 6d  2e 50 72 69 76 61 74 65  |, System.Private|
+0020  2e 43 6f 72 65 4c 69 62  02 b3 61 6b 6b 61 3a 2f  |.CoreLib..akka:/|
+0030  2f 61 6c 6c 2d 73 79 73  74 65 6d 73 2f           |/all-systems/|

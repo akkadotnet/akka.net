@@ -40,6 +40,7 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | [#8929](https://github.com/akkadotnet/akka.net/pull/8929) | `Akka.Streams` | Behavior + Wire | With `akka.actor.serialization-v2 = on`, installing the stream-ref port moves all seven forms (five protocol messages plus bare source/sink refs) from protobuf id 30 to generated MessagePack id 70. Both readers remain registered; the new bare-ref paths require dynamic type loading. | Reader availability: unreleased. Upgrade every reader before enabling; bind `IStreamRefsProtocol`, `SourceRefImpl` and `SinkRefImpl` to `akka-stream-ref` to retain all legacy stream-ref writes. Turning off changes future writes and does not add id 70 to older binaries. Typed stream-ref field generation remains separate issue #8673. |
 | Proposed | [#8856](https://github.com/akkadotnet/akka.net/issues/8856) | `Akka.Serialization.V2` | Source | AKKASG047 now warns when a type declares `[AkkaField]` properties without `[AkkaSerializable]`, including public and nested payload types. Builds that treat warnings as errors now reject these ignored annotations. | Add `[AkkaSerializable]` to opt into generated serialization, remove unused annotations when a custom formatter handles the type, or suppress AKKASG047. |
 | Merged | link | `Akka.Xyz` | Behavior | one-line summary | what users must do |
 

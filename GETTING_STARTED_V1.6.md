@@ -251,6 +251,30 @@ conflict at compile time (for example, two serializers binding the same protocol
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 
+### Built-in stream-ref serialization
+
+The opt-in generated stream-ref serializer uses id 70 (`akka-stream-ref-v2`) beside the
+unchanged protobuf reader at id 30 (`akka-stream-ref`). Its first reader release is
+unreleased, tracked by [#8693](https://github.com/akkadotnet/akka.net/issues/8693).
+Upgrade every participating reader before enabling `akka.actor.serialization-v2 = on`.
+To retain all legacy stream-ref writers while other modules use V2:
+
+```hocon
+akka.actor.serialization-bindings {
+    "Akka.Streams.Implementation.StreamRef.IStreamRefsProtocol, Akka.Streams" = akka-stream-ref
+    "Akka.Streams.Implementation.StreamRef.SourceRefImpl, Akka.Streams" = akka-stream-ref
+    "Akka.Streams.Implementation.StreamRef.SinkRefImpl, Akka.Streams" = akka-stream-ref
+}
+```
+
+All seven forms move: the five protocol messages and bare `SourceRefImpl<T>` / `SinkRefImpl<T>`.
+Bare refs carry an element type name and actor path; their JIT reconstruction uses the existing
+guarded generic factories. The new codec rejects bare-ref reads and writes when dynamic type
+loading is disabled. The five protocol forms remain available in that mode. Source-generated typed
+stream-ref fields are separate work under [#8673](https://github.com/akkadotnet/akka.net/issues/8673);
+this port adds no element-type registry. A native local codec probe and JIT network streaming
+are separate evidence; neither establishes native remote stream materialization.
+
 ## Enabling Artery
 
 Moving an existing deployment? Follow [Migrating From DotNetty to Artery](docs/articles/remoting/dotnetty-to-artery.md)

@@ -1,0 +1,10 @@
+﻿case: next-int
+message-type: SequencedOnNext
+manifest: A
+serializer-id: 70
+byte-count: 53
+
+0000  82 01 04 02 83 01 11 02  d9 24 53 79 73 74 65 6d  |.........$System|
+0010  2e 49 6e 74 33 32 2c 20  53 79 73 74 65 6d 2e 50  |.Int32, System.P|
+0020  72 69 76 61 74 65 2e 43  6f 72 65 4c 69 62 03 c4  |rivate.CoreLib..|
+0030  04 11 00 00 00                                    |.....|

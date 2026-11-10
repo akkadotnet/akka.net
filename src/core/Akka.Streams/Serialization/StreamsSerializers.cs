@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Serialization;
@@ -18,9 +19,14 @@ namespace Akka.Streams.Serialization
     /// </summary>
     internal sealed class StreamsSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-stream-ref-v2", "akka-stream-ref");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-stream-ref", new StreamRefSerializer(system),
-                ImmutableHashSet.Create(typeof(SinkRefImpl), typeof(SourceRefImpl), typeof(IStreamRefsProtocol)))
+                ImmutableHashSet.Create(typeof(SinkRefImpl), typeof(SourceRefImpl), typeof(IStreamRefsProtocol))),
+            SerializerDetails.Create("akka-stream-ref-v2", new StreamRefProtocolMessagePackSerializer(system),
+                ImmutableHashSet<Type>.Empty)
         );
     }
 }
