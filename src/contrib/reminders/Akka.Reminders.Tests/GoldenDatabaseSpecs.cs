@@ -56,7 +56,7 @@ internal sealed class GoldenTempDatabase : IDisposable
             {
                 File.Delete(Path + suffix);
             }
-            catch (IOException)
+            catch (IOException) // slopwatch-ignore: SW003 best-effort temp file cleanup; a leftover file in the OS temp directory is harmless and must not fail the test run
             {
                 // best effort: a temp file left behind is harmless
             }
