@@ -219,6 +219,7 @@ public abstract class V2PortSpec : AkkaSpec
             var writer = new ArrayBufferWriter<byte>();
             RequireReason(() => codec.Serialize(sample.Message, writer));
             Assert.Equal(0, writer.WrittenCount);
+            RequireReason(() => codec.FromBinary(bytes, manifest));
             RequireReason(() => codec.Deserialize(new ReadOnlySequence<byte>(bytes), manifest));
         }
         RequireReason(() => registered.Deserialize(bytes, warm.Identifier, manifest));

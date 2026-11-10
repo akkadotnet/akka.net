@@ -51,6 +51,7 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
     [InlineData("partial-write")]
     [InlineData("id-read")]
     [InlineData("warm-read")]
+    [InlineData("warm-array-read")]
     [InlineData("cold-write")]
     [InlineData("cold-partial-write")]
     [InlineData("cold-direct-read")]
@@ -133,7 +134,7 @@ public sealed class V2PortDynamicBoundarySpec : AkkaSpec
         {
             if (bytes[0] == 1 && !AkkaFeatures.IsDynamicTypeLoadingSupported)
             {
-                if (mode == "id-read")
+                if (mode == "id-read" || mode == "warm-array-read" && _readWhileEnabled)
                     return new BoundaryValue(true);
                 if (mode == "cold-direct-read")
                     throw Error();
