@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,7 +39,7 @@ namespace Akka.DistributedData.Serialization
 
         public ExtendedActorSystem System { get; }
 
-        private volatile Akka.Serialization.Serialization _ser;
+        private volatile Akka.Serialization.Serialization? _ser;
 
         public Akka.Serialization.Serialization Serialization
         {
@@ -53,7 +54,7 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private volatile string _protocol;
+        private volatile string? _protocol;
 
         public string AddressProtocol
         {
@@ -65,7 +66,7 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private volatile Information _transportInfo;
+        private volatile Information? _transportInfo;
 
         public Information TransportInfo
         {
@@ -192,7 +193,11 @@ namespace Akka.DistributedData.Serialization
             Proto.Msg.OtherMessage BuildOther()
             {
                 var m = new OtherMessage();
-                var msgSerializer = Serialization.FindSerializerFor(msg);
+                // Protobuf envelopes also feed canonical digests and headerless durable storage.
+                // A builtin network takeover must not change their nested format. Resolve the
+                // registered legacy alias so application replacements of that alias still win;
+                // other explicitly selected serializers retain their existing format.
+                var msgSerializer = Serialization.FindSerializerForCanonicalFormat(msg);
                 m.SerializerId = msgSerializer.Identifier;
                 m.EnclosedMessage = ByteString.CopyFrom(msgSerializer.ToBinary(msg));
 

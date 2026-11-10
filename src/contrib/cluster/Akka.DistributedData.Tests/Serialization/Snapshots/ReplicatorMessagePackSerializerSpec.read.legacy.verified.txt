@@ -1,0 +1,9 @@
+﻿case: read
+message-type: Read
+manifest: K
+serializer-id: 12
+byte-count: 38
+
+0000  0a 07 63 6f 75 6e 74 65  72 12 1b 0a 12 0a 0d 66  |..counter......f|
+0010  69 72 73 74 2e 65 78 61  6d 70 6c 65 10 f8 13 10  |irst.example....|
+0020  80 80 80 80 80 20                                 |..... |

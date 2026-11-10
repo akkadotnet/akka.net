@@ -1,0 +1,12 @@
+﻿case: unsubscribe
+message-type: Unsubscribe
+manifest: F
+serializer-id: 12
+byte-count: 93
+
+0000  0a 12 0a 0b 0a 07 63 6f  75 6e 74 65 72 10 02 10  |......counter...|
+0010  0b 22 01 66 12 47 61 6b  6b 61 2e 74 63 70 3a 2f  |.".f.Gakka.tcp:/|
+0020  2f 73 75 62 73 63 72 69  62 65 72 2d 73 79 73 74  |/subscriber-syst|
+0030  65 6d 40 73 75 62 73 63  72 69 62 65 72 2e 65 78  |em@subscriber.ex|
+0040  61 6d 70 6c 65 3a 32 35  35 32 2f 75 73 65 72 2f  |ample:2552/user/|
+0050  73 75 62 73 63 72 69 62  65 72 23 31 37           |subscriber#17|

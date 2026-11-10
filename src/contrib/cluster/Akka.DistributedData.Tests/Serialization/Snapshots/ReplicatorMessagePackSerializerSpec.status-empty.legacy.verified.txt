@@ -1,0 +1,7 @@
+﻿case: status-empty
+message-type: Status
+manifest: M
+serializer-id: 12
+byte-count: 2
+
+0000  10 01                                             |..|

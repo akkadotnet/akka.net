@@ -1,0 +1,12 @@
+﻿case: subscribe
+message-type: Subscribe
+manifest: E
+serializer-id: 52
+byte-count: 96
+
+0000  82 01 83 01 0b 02 a1 66  03 c4 0b 0a 07 63 6f 75  |.......f.....cou|
+0010  6e 74 65 72 10 02 02 d9  47 61 6b 6b 61 2e 74 63  |nter....Gakka.tc|
+0020  70 3a 2f 2f 73 75 62 73  63 72 69 62 65 72 2d 73  |p://subscriber-s|
+0030  79 73 74 65 6d 40 73 75  62 73 63 72 69 62 65 72  |ystem@subscriber|
+0040  2e 65 78 61 6d 70 6c 65  3a 32 35 35 32 2f 75 73  |.example:2552/us|
+0050  65 72 2f 73 75 62 73 63  72 69 62 65 72 23 31 37  |er/subscriber#17|

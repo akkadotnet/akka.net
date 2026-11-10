@@ -1,0 +1,7 @@
+﻿case: write-ack
+message-type: WriteAck
+manifest: J
+serializer-id: 12
+byte-count: 0
+
+(zero-byte payload)

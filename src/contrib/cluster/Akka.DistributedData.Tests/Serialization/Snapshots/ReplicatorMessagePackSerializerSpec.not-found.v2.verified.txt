@@ -1,0 +1,11 @@
+﻿case: not-found
+message-type: NotFound
+manifest: C
+serializer-id: 52
+byte-count: 72
+
+0000  82 01 83 01 0b 02 a1 66  03 c4 0b 0a 07 63 6f 75  |.......f.....cou|
+0010  6e 74 65 72 10 02 02 83  01 11 02 d9 25 53 79 73  |nter........%Sys|
+0020  74 65 6d 2e 53 74 72 69  6e 67 2c 20 53 79 73 74  |tem.String, Syst|
+0030  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0040  69 62 03 c4 03 63 74 78                           |ib...ctx|

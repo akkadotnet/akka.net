@@ -1,0 +1,8 @@
+﻿case: get-all
+message-type: Get
+manifest: A
+serializer-id: 12
+byte-count: 25
+
+0000  0a 12 0a 0b 0a 07 63 6f  75 6e 74 65 72 10 02 10  |......counter...|
+0010  0b 22 01 66 10 01 18 d0  0f                       |.".f.....|

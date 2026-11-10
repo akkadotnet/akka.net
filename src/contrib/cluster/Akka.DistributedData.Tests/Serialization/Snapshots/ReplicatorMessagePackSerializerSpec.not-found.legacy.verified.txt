@@ -1,0 +1,11 @@
+﻿case: not-found
+message-type: NotFound
+manifest: C
+serializer-id: 12
+byte-count: 68
+
+0000  0a 12 0a 0b 0a 07 63 6f  75 6e 74 65 72 10 02 10  |......counter...|
+0010  0b 22 01 66 12 2e 0a 03  63 74 78 10 11 22 25 53  |.".f....ctx.."%S|
+0020  79 73 74 65 6d 2e 53 74  72 69 6e 67 2c 20 53 79  |ystem.String, Sy|
+0030  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0040  65 4c 69 62                                       |eLib|

@@ -1,0 +1,9 @@
+﻿case: read
+message-type: Read
+manifest: K
+serializer-id: 52
+byte-count: 43
+
+0000  82 01 a7 63 6f 75 6e 74  65 72 02 82 01 82 01 ad  |...counter......|
+0010  66 69 72 73 74 2e 65 78  61 6d 70 6c 65 02 cd 09  |first.example...|
+0020  f8 02 cf 00 00 01 00 00  00 00 00                 |...........|

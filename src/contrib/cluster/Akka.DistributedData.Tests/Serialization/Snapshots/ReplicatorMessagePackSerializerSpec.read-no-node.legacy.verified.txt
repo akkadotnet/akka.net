@@ -1,0 +1,7 @@
+﻿case: read-no-node
+message-type: Read
+manifest: K
+serializer-id: 12
+byte-count: 9
+
+0000  0a 07 63 6f 75 6e 74 65  72                       |..counter|

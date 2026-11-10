@@ -1,0 +1,14 @@
+﻿case: dictionary
+message-type: ORDictionary<String, GCounter>
+manifest: H
+serializer-id: 11
+byte-count: 123
+
+0000  1f 8b 08 00 00 00 00 00  00 03 e3 f2 e6 92 e3 92  |................|
+0010  e1 92 e0 12 e1 e2 4f ce  2f cd 2b 49 2d d2 4b ad  |......O./.+I-.K.|
+0020  48 cc 2d c8 49 15 f8 21  2c a0 25 c0 24 c4 c4 c1  |H.-.I..!,.%.$...|
+0030  24 45 40 8d 12 2b 58 5c  c8 8c 0b ca d0 e5 52 e3  |$E@..+X\......R.|
+0040  52 c1 ad 43 88 83 9d 01  02 04 b8 95 18 dd 94 cc  |R..C............|
+0050  39 58 84 8c 1d b3 b3 13  f5 5c 32 8b 4b 8a 32 93  |9X.......\2.K.2.|
+0060  4a 4b 52 53 5c 12 4b 12  f5 dc 9d 21 da 75 14 b0  |JKRS\.K....!.u..|
+0070  49 03 00 48 f2 93 13 be  00 00 00                 |I..H.......|

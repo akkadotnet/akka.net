@@ -1,0 +1,7 @@
+﻿case: write-nack
+message-type: WriteNack
+manifest: O
+serializer-id: 52
+byte-count: 1
+
+0000  80                                                |.|

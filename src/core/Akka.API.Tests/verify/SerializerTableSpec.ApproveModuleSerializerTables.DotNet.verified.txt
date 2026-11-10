@@ -26,6 +26,7 @@ module Akka.Cluster.Tools
 module Akka.DistributedData
   akka-data-replication: Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData (id 12)
     Akka.DistributedData.IReplicatorMessage, Akka.DistributedData
+  akka-data-replication-v2: Akka.DistributedData.Serialization.ReplicatorMessagePackSerializer, Akka.DistributedData (id 52) supersedes akka-data-replication
   akka-replicated-data: Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData (id 11)
     Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData
 module Akka.Persistence

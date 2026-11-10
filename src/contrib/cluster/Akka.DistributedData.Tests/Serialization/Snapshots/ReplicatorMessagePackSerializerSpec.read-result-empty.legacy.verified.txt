@@ -1,0 +1,7 @@
+﻿case: read-result-empty
+message-type: ReadResult
+manifest: L
+serializer-id: 12
+byte-count: 0
+
+(zero-byte payload)
