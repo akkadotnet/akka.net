@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -9,14 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
     <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
     <ProjectReference Include="..\Akka.Reminders.PostgreSql\Akka.Reminders.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka.Cluster.Hosting" />
-    <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="Npgsql" />
+    <PackageReference Include="BenchmarkDotNet" Version="$(BenchmarkDotNetVersion)" />
+    <PackageReference Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,134 @@
+{
+  "revisions": {
+    "dev": "1f2710e4ae3ba830d8deeb2a2bfe1ea0ba32f9f7",
+    "unfixed": "c39d4d8cc369c0cf05527d33ec692c23d8db1bb7",
+    "fixed": "4ce82642c07328ce3eb012069c7cfb803e677000"
+  },
+  "validated_implementation": "55feaa03fae843169c176715e14b29d1fab28787",
+  "harness_sha256": "f67507e9a842857d501ecef7b1a44f854a8e34e1406b21e6b56c61680459b62c",
+  "environment": {
+    "os": "Ubuntu 24.04",
+    "cpu": "Intel Core i9-9900K, 8 virtual CPUs",
+    "sdk": "10.0.401",
+    "runtime": ".NET 9.0.13",
+    "database": "dedicated PostgreSQL 16 Alpine, localhost:55432"
+  },
+  "method": {
+    "warmup_runs": 1,
+    "measured_runs": 3,
+    "statistic": "median",
+    "fetch_batch_size": 1000,
+    "commit_chunk_size": 100,
+    "max_slippage_seconds": 5,
+    "recurrence_interval_hours": 1,
+    "ack_timeout_hours": 2,
+    "clock": "fixed within each throughput run",
+    "early_due_seconds_ahead": 2,
+    "retry_attempt_count": 1,
+    "retry_successor": "already exists",
+    "timed": "FetchReminders message through following mailbox query",
+    "excluded": "initialization, population, reset, shutdown, consumer processing and acknowledgements",
+    "concurrency": "revision runs serial; no concurrent builds/tests"
+  },
+  "validation": {
+    "integrated_tests": {
+      "passed": 316,
+      "failed": 0,
+      "skipped": 0,
+      "sql_model_enabled": true,
+      "excluded_classes": [
+        "Storage.SqlServerReminderStorageSpecs",
+        "Storage.PostgreSqlReminderStorageSpecs"
+      ],
+      "trx": "/tmp/akka-reminders-implementation-results/all-local-and-sql-model-final.trx"
+    },
+    "conditional_provider_tests": {
+      "passed": 12,
+      "providers": [
+        "InMemory",
+        "SQLite",
+        "PostgreSQL",
+        "SQLServer"
+      ],
+      "log": "/tmp/akka-reminders-impl-conditional-v3.log",
+      "overlap": "InMemory/SQLite cases also included in integrated tests"
+    },
+    "solution_build": "0 warnings, 0 errors",
+    "slopwatch": "0 issues in changed C#"
+  },
+  "limits": [
+    "Shared host and short runs; no production-capacity or equivalence claim",
+    "Frozen clock measures throughput; virtual-clock tests check deadline and recovery behavior",
+    "Full per-test-container SQL storage fixture suites excluded; changed SQL paths checked by focused all-provider tests and SQL model scenarios",
+    "Benchmark fixed commit differs from validated implementation only in model assertions; runtime and benchmark source trees identical",
+    "Recovery and acknowledgement throughput are not benchmarked"
+  ],
+  "confirmation": {
+    "case": "due-recurring 25000",
+    "order": [
+      "fixed",
+      "dev"
+    ],
+    "warmup_runs": 1,
+    "measured_runs": 5,
+    "reason": "initial fixed timing slower despite unchanged read count; retain original result and confirm separately",
+    "results": [
+      {
+        "revision": "fixed",
+        "median_ms": "3974.0775",
+        "min_ms": "3826.7211",
+        "max_ms": "4069.6",
+        "status_reads": "0",
+        "fetches": "26",
+        "commits": "250"
+      },
+      {
+        "revision": "dev",
+        "median_ms": "3888.5646",
+        "min_ms": "3829.9541",
+        "max_ms": "4038.3283",
+        "status_reads": "0",
+        "fetches": "26",
+        "commits": "250"
+      }
+    ]
+  },
+  "storage_crosscheck": {
+    "benchmark": "ReminderStorageBenchmarks.FetchAndCompleteAllReminders",
+    "revision_order": [
+      "dev",
+      "fixed"
+    ],
+    "launches": 1,
+    "warmup_iterations": 1,
+    "measured_iterations": 3,
+    "statistic": "BenchmarkDotNet mean",
+    "scope": "Existing storage-only fetch and complete benchmark; bypasses scheduler and conditional recurring mutations",
+    "artifacts": [
+      "storage-dev.csv",
+      "storage-fixed.csv",
+      "storage-dev.md",
+      "storage-fixed.md"
+    ],
+    "limits": "Short shared-host run with wide error bars; not evidence of equivalence"
+  },
+  "post_review_validation": {
+    "source_revision": "5db864e",
+    "integrated_tests": {
+      "passed": 335,
+      "failed": 0,
+      "skipped": 0,
+      "sql_model_enabled": true,
+      "trx": "/tmp/akka-reminders-implementation-results/adversarial-qualified-integrated-final.trx",
+      "excluded_classes": [
+        "Storage.SqlServerReminderStorageSpecs",
+        "Storage.PostgreSqlReminderStorageSpecs"
+      ]
+    },
+    "adversarial_review": "runtime, storage, model, and benchmark scopes; acknowledgement corrections re-reviewed independently",
+    "checker_tests": 47,
+    "local_model_tests": 68,
+    "runtime_change_since_benchmarks": false,
+    "publication": "Existing PRs #155, #157, #159, #149; remaining merges use squash after maintainer instruction"
+  }
+}
