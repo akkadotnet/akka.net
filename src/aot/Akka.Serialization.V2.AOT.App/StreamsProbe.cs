@@ -41,6 +41,8 @@ internal static class StreamsProbe
 
                         akka.actor.serialization-bindings {
                           "Akka.Streams.Implementation.StreamRef.IStreamRefsProtocol, Akka.Streams" = akka-stream-ref
+                          "Akka.Streams.Implementation.StreamRef.SourceRefImpl, Akka.Streams" = akka-stream-ref
+                          "Akka.Streams.Implementation.StreamRef.SinkRefImpl, Akka.Streams" = akka-stream-ref
                         }
                         """;
                 var watchdog = new LogWatchdogFilter();
@@ -107,15 +109,12 @@ internal static class StreamsProbe
                         userPayloads++;
                     }
 
-                    // The wire format of bare refs is unchanged; native reads still reject their
-                    // runtime generic reconstruction. Neither E nor F belongs to the new codec.
-                    var typeName = Encoding.UTF8.GetBytes("System.Int32, System.Private.CoreLib");
-                    var eventType = new byte[] { 0x0a, checked((byte)typeName.Length) }.Concat(typeName).ToArray();
-                    var bare = new byte[] { 0x0a, 0x00, 0x12, checked((byte)eventType.Length) }.Concat(eventType).ToArray();
-                    foreach (var manifest in new[] { "E", "F" })
+                    // Both codecs own E/F, but arbitrary runtime generic reconstruction remains
+                    // unavailable with dynamic loading disabled. Exercise valid records for both.
+                    foreach (var fixture in StreamProtocolFrozenFixtures.BareRefs)
                     {
-                        Reject(() => system.Serialization.Deserialize(bare, 30, manifest), "Akka.DynamicTypeLoading");
-                        Reject(() => system.Serialization.Deserialize(new byte[] { 0x80 }, 70, manifest), null);
+                        Reject(() => system.Serialization.Deserialize(Convert.FromHexString(fixture.LegacyHex), 30, fixture.Manifest), "Akka.DynamicTypeLoading");
+                        Reject(() => system.Serialization.Deserialize(Convert.FromHexString(fixture.V2Hex), 70, fixture.Manifest), "Akka.DynamicTypeLoading");
                         rejected += 2;
                     }
                     watchdog.ThrowIfAnyProblems(mode.Name, "serialization");

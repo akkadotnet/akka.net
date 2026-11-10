@@ -1,9 +1,18 @@
 // Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
+#nullable enable
 namespace Akka.AOT.SerializationV2;
 
 internal static class StreamProtocolFrozenFixtures
 {
     internal sealed record Fixture(string Name, string Manifest, string LegacyHex, string V2Hex);
+    // Legacy bytes were captured at 47f62528c from unchanged StreamRefSerializer blob 49b1656555b795a1964fb2cbb4642d9c05427e66.
+    // Reviewed legacy/V2 pairs: #8929, commit 1f8017977905de15f0641a917bcaaaad6eaba6de, FrozenFixtures.BareRefs.
+    internal static readonly Fixture[] BareRefs =
+    [
+        new("source-empty", "E", "0a0012270a2553797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c6962", "8201d92553797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c696202a0"),
+        new("sink-empty", "F", "0a0012270a2553797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c6962", "8201d92553797374656d2e537472696e672c2053797374656d2e507269766174652e436f72654c696202a0"),
+    ];
+
     internal static readonly Fixture[] Cases =
     [
         new("completed-max", "D", "08ffffffffffffffff7f", "8101cf7fffffffffffffff"),

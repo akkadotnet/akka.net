@@ -27,7 +27,14 @@ The positive 249-case native proof passed on composed source `053480698`, origin
 | Actor-selection containers | 6 / 46 | 30; ten reader pairs including nulls, six actor-reference payloads, wildcard flag and seven rejections |
 | Snapshot envelope | 8, same bytes | 15; five frozen legacy shapes across default/stripped/versioned old serializer names, required native writes, segmented reads, six user payloads and nine rejections |
 | Persistence messages | 7, same bytes | 33; eleven fixed legacy shapes across three serializer-name spellings, required native writes, six manifest-alias reads, six user payloads and thirty-three rejections |
-| Stream-ref protocol | 30 / 70 | 36; all five forms, fourteen required writes, six user payloads, twelve bare-ref rejections |
+| Stream-ref protocol | 30 / 70 | 36; all five native protocol forms, fourteen required writes, six user payloads, twelve valid bare-ref read rejections |
+
+The Streams replacement owns seven forms in JIT: five protocol forms plus bare source/sink
+refs (E/F). Native positive cases cover only the five protocol forms. Valid frozen E/F records
+must reach the `Akka.DynamicTypeLoading` rejection through both ids 30 and 70 in all three
+binding modes. The legacy pin covers the protocol and both bare-ref bindings. These updated
+assertions depend on the E/F support in #8929; the earlier composed native receipt above
+predates this follow-up and does not establish its execution.
 
 The two Persistence implementations retain their original ids, manifests and protobuf bytes;
 the global V2 switch does not select them. The canary requires the native buffer writer for
@@ -39,8 +46,9 @@ dynamic type loading is disabled; this is not native PersistentFSM support.
 These consumers use public serialization APIs without a test assembly identity or blanket
 assembly roots. PubSub's private domain types are obtained from frozen legacy records; their
 fields are checked by re-encoding with the unchanged legacy writer. The client explicitly sets
-its existing legacy-serialization setting off; bare stream refs and whole client delivery are
-not claimed. Unknown paths must fail before the completion marker is printed.
+its existing legacy-serialization setting off; native bare stream-ref reconstruction and
+whole client delivery are not claimed. Unknown paths must fail before the completion marker
+is printed.
 
 This app is separate from the plain-core canary so adding a module does not change the
 core-only boot and warning surface. It reuses `Shared/LogWatchdogFilter.cs`; runtime warnings
