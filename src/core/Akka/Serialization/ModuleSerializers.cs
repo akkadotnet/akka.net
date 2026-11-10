@@ -54,9 +54,8 @@ namespace Akka.Serialization
         private readonly Dictionary<string, (SerializerDetails Details, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
-        // V2 row -> the legacy row it supersedes, and the reverse, both by alias
+        // Legacy row -> its V2 replacement, and V2 row -> the bindings it takes over, both by alias
         private readonly Dictionary<string, SerializerDetails> _supersededBy = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, SerializerDetails> _supersedes = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ImmutableHashSet<Type>> _takeoverBindings = new(StringComparer.Ordinal);
 
         /// <summary>Every row <see cref="ModuleSerializers.Create"/> returned, for registering the module's defaults.</summary>
@@ -107,7 +106,6 @@ namespace Akka.Serialization
                     throw new InvalidOperationException(
                         $"Module [{moduleName}] declares an empty or non-legacy binding set for V2 takeover [{kv.Key}].");
 
-                _supersedes[kv.Key] = legacy;
                 _supersededBy[kv.Value] = v2;
                 _takeoverBindings[kv.Key] = bindings;
                 Takeovers.Add((v2, legacy, bindings));
@@ -116,8 +114,8 @@ namespace Akka.Serialization
 
         /// <summary>
         /// The types <paramref name="row"/> binds as a module default. With <paramref name="serializationV2"/> off, that is
-        /// its own <see cref="SerializerDetails.UseFor"/>. With it on, a superseded legacy row binds nothing, and the V2
-        /// row that supersedes it binds the legacy row's types.
+        /// its own <see cref="SerializerDetails.UseFor"/>. With it on, the declared binding subset moves to the V2 row,
+        /// and the legacy row retains its other bindings. An omitted subset moves all of the legacy row's bindings.
         /// </summary>
         internal ImmutableHashSet<Type> DefaultBindings(SerializerDetails row, bool serializationV2)
         {
@@ -125,7 +123,7 @@ namespace Akka.Serialization
                 return row.UseFor;
             if (_supersededBy.TryGetValue(row.Alias, out var replacement))
                 return row.UseFor.Except(_takeoverBindings[replacement.Alias]);
-            return _supersedes.ContainsKey(row.Alias) ? row.UseFor.Union(_takeoverBindings[row.Alias]) : row.UseFor;
+            return _takeoverBindings.TryGetValue(row.Alias, out var bindings) ? row.UseFor.Union(bindings) : row.UseFor;
         }
 
         /// <summary>
