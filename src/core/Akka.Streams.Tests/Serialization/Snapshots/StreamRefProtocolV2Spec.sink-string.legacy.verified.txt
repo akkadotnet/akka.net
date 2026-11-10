@@ -1,0 +1,10 @@
+﻿case: sink-string
+message-type: SinkRefImpl<String>
+manifest: F
+serializer-id: 30
+byte-count: 64
+
+0000  0a 15 0a 13 61 6b 6b 61  3a 2f 2f 61 6c 6c 2d 73  |....akka://all-s|
+0010  79 73 74 65 6d 73 2f 12  27 0a 25 53 79 73 74 65  |ystems/.'.%Syste|
+0020  6d 2e 53 74 72 69 6e 67  2c 20 53 79 73 74 65 6d  |m.String, System|
+0030  2e 50 72 69 76 61 74 65  2e 43 6f 72 65 4c 69 62  |.Private.CoreLib|

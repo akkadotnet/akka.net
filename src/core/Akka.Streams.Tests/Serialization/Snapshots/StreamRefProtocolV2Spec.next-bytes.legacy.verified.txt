@@ -1,0 +1,7 @@
+﻿case: next-bytes
+message-type: SequencedOnNext
+manifest: A
+serializer-id: 30
+byte-count: 12
+
+0000  08 03 12 08 0a 04 00 01  7f ff 10 04              |............|

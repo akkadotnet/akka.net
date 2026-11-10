@@ -1,0 +1,7 @@
+﻿case: failure-empty
+message-type: RemoteStreamFailure
+manifest: C
+serializer-id: 30
+byte-count: 0
+
+(zero-byte payload)

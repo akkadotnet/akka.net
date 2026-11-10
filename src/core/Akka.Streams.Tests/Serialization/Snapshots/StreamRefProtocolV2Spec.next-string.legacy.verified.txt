@@ -1,0 +1,10 @@
+﻿case: next-string
+message-type: SequencedOnNext
+manifest: A
+serializer-id: 30
+byte-count: 52
+
+0000  12 32 0a 07 70 61 79 6c  6f 61 64 10 11 1a 25 53  |.2..payload...%S|
+0010  79 73 74 65 6d 2e 53 74  72 69 6e 67 2c 20 53 79  |ystem.String, Sy|
+0020  73 74 65 6d 2e 50 72 69  76 61 74 65 2e 43 6f 72  |stem.Private.Cor|
+0030  65 4c 69 62                                       |eLib|

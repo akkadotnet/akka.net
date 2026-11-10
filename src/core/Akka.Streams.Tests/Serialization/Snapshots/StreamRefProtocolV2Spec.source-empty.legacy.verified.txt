@@ -1,0 +1,9 @@
+﻿case: source-empty
+message-type: SourceRefImpl<String>
+manifest: E
+serializer-id: 30
+byte-count: 43
+
+0000  0a 00 12 27 0a 25 53 79  73 74 65 6d 2e 53 74 72  |...'.%System.Str|
+0010  69 6e 67 2c 20 53 79 73  74 65 6d 2e 50 72 69 76  |ing, System.Priv|
+0020  61 74 65 2e 43 6f 72 65  4c 69 62                 |ate.CoreLib|

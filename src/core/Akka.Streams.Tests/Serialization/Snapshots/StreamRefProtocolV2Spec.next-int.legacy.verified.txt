@@ -1,0 +1,10 @@
+﻿case: next-int
+message-type: SequencedOnNext
+manifest: A
+serializer-id: 30
+byte-count: 50
+
+0000  08 04 12 2e 0a 04 11 00  00 00 10 11 1a 24 53 79  |.............$Sy|
+0010  73 74 65 6d 2e 49 6e 74  33 32 2c 20 53 79 73 74  |stem.Int32, Syst|
+0020  65 6d 2e 50 72 69 76 61  74 65 2e 43 6f 72 65 4c  |em.Private.CoreL|
+0030  69 62                                             |ib|

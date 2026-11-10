@@ -1,0 +1,8 @@
+﻿case: handshake
+message-type: OnSubscribeHandshake
+manifest: G
+serializer-id: 30
+byte-count: 23
+
+0000  0a 15 0a 13 61 6b 6b 61  3a 2f 2f 61 6c 6c 2d 73  |....akka://all-s|
+0010  79 73 74 65 6d 73 2f                              |ystems/|
