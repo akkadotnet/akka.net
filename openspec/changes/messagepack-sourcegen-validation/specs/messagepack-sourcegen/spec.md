@@ -113,6 +113,10 @@ Generated serializers SHALL expose per-serializer registration helpers and SHALL
 - **WHEN** an application uses serializers from multiple assemblies
 - **THEN** the application SHALL compose per-serializer registrations explicitly into one `SerializationSetup`
 
+#### Scenario: Generated serializers choose a formatter for a message field
+- **WHEN** a serializable type supplies a default formatter for one of its field types
+- **THEN** generated serializers SHALL honor the default for both local and imported schemas, with an exact registration on the serializer taking precedence
+
 ### Requirement: Generated serializers support actor references
 
 Generated serializers SHALL support `IActorRef` fields using Akka's transport-aware actor-ref serialization helpers.

@@ -128,7 +128,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor InvalidFormatterType = new(
         "AKKASG008",
         "Formatter type must not be abstract",
-        "Formatter '{0}' on serializer '{1}' must not be abstract: it cannot be instantiated as the runtime IAkkaMessagePackFormatter<{2}>",
+        "Formatter '{0}' on {1} must not be abstract: it cannot be instantiated as the runtime IAkkaMessagePackFormatter<{2}>",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -136,7 +136,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor DuplicateFormatterRegistration = new(
         "AKKASG009",
         "Duplicate formatter registration",
-        "Serializer '{0}' registers multiple formatters for type '{1}'",
+        "The {0} registers multiple formatters for type '{1}'",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -144,7 +144,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor FormatterConstructorNotUsable = new(
         "AKKASG010",
         "Formatter constructor not usable",
-        "Formatter '{0}' on serializer '{1}' must have a public parameterless constructor or a public constructor taking ExtendedActorSystem",
+        "Formatter '{0}' on {1} must have a public parameterless constructor or a public constructor taking ExtendedActorSystem",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -152,7 +152,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor FormatterTargetNotSupported = new(
         "AKKASG011",
         "Formatter target type is not supported",
-        "Formatter target type '{0}' on serializer '{1}' must be a non-generic, non-array named type",
+        "Formatter target type '{0}' on {1} must be a closed, non-array named type other than Nullable<T>. Register the underlying type for nullable values.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -552,6 +552,14 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor FormatterTypeNotAccessible = new(
+        "AKKASG054",
+        "Selected formatter cannot be named by the generated serializer",
+        "Formatter '{0}' for '{1}' in message '{2}' cannot be named from generated serializer '{3}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
@@ -615,6 +623,7 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.SerializableOnCSharpUnion => SerializableOnCSharpUnion,
             DiagnosticKey.ManifestOnNonGenericInclude => ManifestOnNonGenericInclude,
             DiagnosticKey.NestedValueHasSubclasses => NestedValueHasSubclasses,
+            DiagnosticKey.FormatterTypeNotAccessible => FormatterTypeNotAccessible,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

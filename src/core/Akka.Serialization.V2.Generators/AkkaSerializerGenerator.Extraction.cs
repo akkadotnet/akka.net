@@ -29,6 +29,7 @@ public sealed partial class AkkaSerializerGenerator
 
     private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializerIncludesAttribute`1";
 
+    private const string MessageFormatterAttributeFullName = "Akka.Serialization.V2.AkkaMessageFormatterAttribute`2";
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute`2";
 
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
@@ -115,8 +116,7 @@ public sealed partial class AkkaSerializerGenerator
         var protocolTypeKey = protocolType != null ? TypeKey.FromSymbol(protocolType) : default;
         var protocolTypeIsInterface = protocolType?.TypeKind == TypeKind.Interface;
 
-        var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
-        var formatters = ExtractFormatters(symbol, knownTypes.FormatterAttribute, extendedActorSystemType);
+        var formatters = ExtractFormatters(symbol, knownTypes.FormatterAttribute, knownTypes.ExtendedActorSystem, compilation);
         var serializerKey = TypeKey.FromSymbol(symbol);
         var (closedGenericRegistrations, closedGenericSchemas, prefixExpansions, explicitManifestsByTarget) =
             ExtractClosedGenericRegistrations(symbol, compilation, knownTypes, protocolType, cancellationToken, locationEntries);
@@ -524,90 +524,77 @@ public sealed partial class AkkaSerializerGenerator
     /// <c>Wrapper&lt;Pair&lt;Foo, Bar&gt;&gt;</c> qualify; <c>Wrapper&lt;T&gt;</c> inside another
     /// generic declaration does not.
     /// </summary>
-    private static bool IsFullyClosed(INamedTypeSymbol type)
-    {
-        foreach (var argument in type.TypeArguments)
-        {
-            switch (argument)
-            {
-                case ITypeParameterSymbol:
-                    return false;
-                case INamedTypeSymbol { IsGenericType: true } nested when !IsFullyClosed(nested):
-                    return false;
-            }
-        }
+    private static bool IsFullyClosed(INamedTypeSymbol type) =>
+        !type.IsUnboundGenericType
+        && (type.ContainingType == null || IsFullyClosed(type.ContainingType))
+        && type.TypeArguments.All(IsClosedTypeArgument);
 
-        return true;
-    }
+    private static bool IsClosedTypeArgument(ITypeSymbol type) => type switch
+    {
+        ITypeParameterSymbol => false,
+        IArrayTypeSymbol array => IsClosedTypeArgument(array.ElementType),
+        INamedTypeSymbol named => IsFullyClosed(named),
+        _ => true
+    };
 
     private static ImmutableArray<FormatterInfo> ExtractFormatters(
         INamedTypeSymbol symbol,
         INamedTypeSymbol? formatterAttributeType,
-        INamedTypeSymbol? extendedActorSystemType)
+        INamedTypeSymbol? extendedActorSystemType,
+        Compilation compilation,
+        bool isMessageDefault = false)
     {
         if (formatterAttributeType == null)
             return ImmutableArray<FormatterInfo>.Empty;
 
-        // AkkaSerializerFormatterAttribute<TTarget, TFormatter> where TFormatter :
-        // IAkkaMessagePackFormatter<TTarget> -- a constructed generic attribute, so matching
-        // requires comparing against OriginalDefinition (the same pattern used for
-        // AkkaSerializerIncludesAttribute<TMessage> in ExtractClosedGenericRegistrations).
-        var formatterAttributes = symbol.GetAttributes()
-            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, formatterAttributeType))
-            .ToImmutableArray();
-
-        if (formatterAttributes.IsEmpty)
-            return ImmutableArray<FormatterInfo>.Empty;
-
-        var builder = ImmutableArray.CreateBuilder<FormatterInfo>(formatterAttributes.Length);
-        foreach (var attribute in formatterAttributes)
+        ImmutableArray<FormatterInfo>.Builder? formatters = null;
+        ISymbol within = isMessageDefault ? compilation.Assembly : symbol;
+        foreach (var attribute in symbol.OriginalDefinition.GetAttributes())
         {
-            // TTarget and TFormatter come from the constructed attribute's own type arguments, not
-            // ConstructorArguments -- there is no constructor argument carrying either type
-            // anymore. Both slots are always present for a successfully-compiled two-arity
-            // construction: neither a null target nor an unbound generic target/formatter can be
-            // written here (the compiler rejects both at the attribute usage site), so unlike the
-            // former Type-typed constructor arguments, these can never be "missing" or "not a
-            // type" -- AKKASG011's former null-target check is unreachable and has been removed.
-            var targetTypeSymbol = attribute.AttributeClass!.TypeArguments[0];
-            var formatterTypeSymbol = attribute.AttributeClass!.TypeArguments[1];
+            if (attribute.AttributeClass is not { IsGenericType: true } attributeClass
+                || !SymbolEqualityComparer.Default.Equals(attributeClass.OriginalDefinition, formatterAttributeType))
+                continue;
 
-            // Formatter targets must still be plain named types: arrays are not INamedTypeSymbol,
-            // and CLOSED generic targets (e.g. List<int>) -- now directly expressible as TTarget --
-            // would still collide on the arity-less fully-qualified name used for field matching.
-            // Both remain recorded with IsTargetSupported = false so AKKASG011 fires.
-            var targetNamedType = targetTypeSymbol as INamedTypeSymbol;
-            var isTargetSupported = targetNamedType is { IsGenericType: false };
-            var targetTypeKey = TypeKey.FromSymbol(targetTypeSymbol);
-
-            var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
-            var formatterTypeFullName = formatterNamedType != null
-                ? GetFullyQualifiedTypeName(formatterNamedType)
-                : formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-            // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint is enforced by
-            // the compiler at the attribute usage site, so AKKASG008's former interface-conformance
-            // check can never fire here and has been removed. A generic constraint cannot express
-            // "and not abstract", though: an abstract TFormatter still satisfies the constraint
-            // (it has no `new()` clause to rule that out either -- formatters with an
-            // ExtendedActorSystem-only constructor are legitimate), so AKKASG008 now guards
-            // abstractness alone.
-            var isAbstract = formatterNamedType?.IsAbstract ?? false;
-
-            var ctorKind = formatterNamedType != null
-                ? GetFormatterCtorKind(formatterNamedType, extendedActorSystemType)
-                : FormatterCtorKind.None;
-
-            builder.Add(new FormatterInfo(
-                targetTypeKey,
-                targetTypeSymbol.IsValueType,
-                formatterTypeFullName,
-                isAbstract,
-                ctorKind,
-                isTargetSupported));
+            var target = attributeClass.TypeArguments[0];
+            var formatter = attributeClass.TypeArguments[1];
+            var formatterNamedType = formatter as INamedTypeSymbol;
+            formatters ??= ImmutableArray.CreateBuilder<FormatterInfo>();
+            formatters.Add(new FormatterInfo(
+                TypeKey.FromFormatterSymbol(target),
+                target.IsValueType,
+                TypeKey.FromFormatterSymbol(formatter),
+                formatterNamedType?.IsAbstract ?? false,
+                formatterNamedType != null ? GetFormatterCtorKind(formatterNamedType, extendedActorSystemType) : FormatterCtorKind.None,
+                IsFormatterTarget(target),
+                IsFormatterTypeNameable(formatter, compilation, within) && IsFormatterTypeNameable(target, compilation, within),
+                isMessageDefault));
         }
 
-        return builder.ToImmutable();
+        return formatters?.ToImmutable() ?? ImmutableArray<FormatterInfo>.Empty;
+    }
+
+    private static bool IsFormatterTarget(ITypeSymbol type) =>
+        type is INamedTypeSymbol { TypeKind: not TypeKind.Error, IsUnboundGenericType: false } named
+        && !IsNullableValueType(named)
+        && (!named.IsGenericType || IsFullyClosed(named));
+
+    private static bool IsFormatterTypeNameable(ITypeSymbol type, Compilation compilation, ISymbol within)
+    {
+        if (type is IArrayTypeSymbol array)
+            return IsFormatterTypeNameable(array.ElementType, compilation, within);
+
+        if (type is not INamedTypeSymbol { IsFileLocal: false } named || !compilation.IsSymbolAccessibleWithin(named, within))
+            return false;
+
+        // Emission uses a global-qualified name. An extern-alias-only or ambiguous type cannot be
+        // named that way, even when the original attribute was able to use it.
+        var definition = named.OriginalDefinition;
+        var metadataName = TypeKey.FromSymbol(definition, includeDisplayName: false).MetadataName;
+        if (!SymbolEqualityComparer.Default.Equals(definition, compilation.GetTypeByMetadataName(metadataName)))
+            return false;
+
+        return (named.ContainingType == null || IsFormatterTypeNameable(named.ContainingType, compilation, within))
+            && named.TypeArguments.All(argument => IsFormatterTypeNameable(argument, compilation, within));
     }
 
     private static FormatterCtorKind GetFormatterCtorKind(INamedTypeSymbol formatterType, INamedTypeSymbol? extendedActorSystemType)
@@ -860,6 +847,8 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableArray<LocationEntry>.Builder? locationEntries = null,
         ImmutableArray<DiagnosticSpec>.Builder? declarationDiagnostics = null)
     {
+        var formatters = ExtractFormatters(symbol, knownTypes.MessageFormatterAttribute,
+            knownTypes.ExtendedActorSystem, compilation, isMessageDefault: true);
         if (IsDeclaredAsUnion(symbol))
         {
             var unionField = new FieldInfo(0, string.Empty, key.DisplayName ?? string.Empty,
@@ -869,7 +858,7 @@ public sealed partial class AkkaSerializerGenerator
                 GetProtocolNames(symbol), allowEmpty: true, invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
                 constructionPlan: ConstructionPlan.Empty, definitionFullName: definitionFullName,
                 isSealed: true, isValueType: true, foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes),
-                inaccessibleReason: DescribeInaccessibleDeclaration(symbol));
+                inaccessibleReason: DescribeInaccessibleDeclaration(symbol), formatters: formatters);
         }
 
         var fields = new List<FieldInfo>();
@@ -931,13 +920,13 @@ public sealed partial class AkkaSerializerGenerator
             else if (TryGetCSharpUnionType(member.Type, knownTypes) is { } csharpUnionType)
             {
                 unionMembers = ExtractCSharpUnionCases(csharpUnionType, knownTypes);
-                mapping = new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(csharpUnionType), isValueType: true);
+                mapping = WithFormatterTarget(new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(csharpUnionType), isValueType: true), csharpUnionType);
             }
             else
             {
                 mapping = MapType(member.Type, knownTypes);
                 if (member.Type is INamedTypeSymbol namedFieldType && IsInferredUnionBase(namedFieldType, mapping, knownTypes))
-                    mapping = new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(namedFieldType));
+                    mapping = new TypeMapping(FieldKind.Union, TypeKey.FromSymbol(namedFieldType), formatterTarget: mapping.FormatterTarget);
             }
 
             fields.Add(new FieldInfo(
@@ -968,7 +957,7 @@ public sealed partial class AkkaSerializerGenerator
             isValueType: symbol.IsValueType,
             foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes),
             baseTypeNames: GetBaseTypeNames(symbol),
-            inaccessibleReason: DescribeInaccessibleDeclaration(symbol));
+            inaccessibleReason: DescribeInaccessibleDeclaration(symbol), formatters: formatters);
     }
 
     /// <summary>
@@ -1340,29 +1329,18 @@ public sealed partial class AkkaSerializerGenerator
         if (TryGetNullableValueType(type, out var underlyingType))
             return MapType(underlyingType, knownTypes);
 
-        // Only attach the fallback underlying-type key for NON-GENERIC named types: stamping a key
-        // onto a generic field type (e.g. Result<int>) would let it match a formatter registered for
-        // a same-named non-generic type (Result) and emit ill-typed code -- TypeKey's metadata name
-        // carries the arity suffix, so this guard still matters even though the key is no longer a
-        // bare arity-less string. Generic field types keep a default (empty) key, can never match a
-        // formatter, and still fail with AKKASG003.
-        return WithFallbackKey(MapTypeCore(type, knownTypes), type);
+        return WithFormatterTarget(MapTypeCore(type, knownTypes), type);
     }
 
-    /// <summary>
-    /// Stamps a keyless mapping with the type's own <see cref="TypeKey"/> when the type is a plain,
-    /// non-generic named type, so a formatter registered for it can match (the formatter dictionary is
-    /// keyed by <see cref="TypeKey"/>). Shared by FIELD position (<see cref="MapType"/>) and collection
-    /// ELEMENT/KEY/VALUE position (<see cref="MapCollectionElement"/>), which is what makes formatter
-    /// resolution position-independent. A mapping that already names its type (Object, Enum, ...) keeps
-    /// the key it has; a generic or array type stays keyless and can never match a formatter.
-    /// </summary>
-    private static TypeMapping WithFallbackKey(TypeMapping mapping, ITypeSymbol type)
+    private static TypeMapping WithFormatterTarget(TypeMapping mapping, ITypeSymbol type)
     {
-        if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol { IsGenericType: false } namedType)
-            return mapping.WithKey(TypeKey.FromSymbol(namedType));
+        if (type is not INamedTypeSymbol named || !IsFormatterTarget(named))
+            return mapping;
 
-        return mapping;
+        var key = mapping.TypeFullName.Length == 0 && !named.IsGenericType
+            ? TypeKey.FromSymbol(named)
+            : mapping.Key;
+        return mapping.WithFormatterTarget(key, TypeKey.FromFormatterSymbol(named, includeDisplayName: false, schemaKey: key));
     }
 
     private static TypeMapping MapTypeCore(ITypeSymbol type, KnownTypes knownTypes)
@@ -1613,7 +1591,7 @@ public sealed partial class AkkaSerializerGenerator
         var declaredTypeName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         if (TryGetNullableValueType(type, out var underlyingType))
-            return WithFallbackKey(MapTypeCore(underlyingType, knownTypes), underlyingType).AsCollectionElement(declaredTypeName, isNullable: true);
+            return WithFormatterTarget(MapTypeCore(underlyingType, knownTypes), underlyingType).AsCollectionElement(declaredTypeName, isNullable: true);
 
         var isNullable = type.IsReferenceType && type.NullableAnnotation == NullableAnnotation.Annotated;
 
@@ -1636,7 +1614,7 @@ public sealed partial class AkkaSerializerGenerator
                 : new TypeMapping(FieldKind.EnvelopePayload).AsCollectionElement(declaredTypeName, isNullable);
         }
 
-        return WithFallbackKey(MapTypeCore(type, knownTypes), type).AsCollectionElement(declaredTypeName, isNullable);
+        return WithFormatterTarget(MapTypeCore(type, knownTypes), type).AsCollectionElement(declaredTypeName, isNullable);
     }
 
     private static bool IsNullableValueType(ITypeSymbol type)
@@ -1750,6 +1728,8 @@ public sealed partial class AkkaSerializerGenerator
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
             SerializerAttribute = compilation.GetTypeByMetadataName(SerializerAttributeFullName);
             FormatterAttribute = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
+            MessageFormatterAttribute = compilation.GetTypeByMetadataName(MessageFormatterAttributeFullName);
+            ExtendedActorSystem = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
             GenericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
@@ -1782,6 +1762,8 @@ public sealed partial class AkkaSerializerGenerator
 
         /// <summary>The open <c>AkkaSerializerFormatterAttribute&lt;TTarget, TFormatter&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractFormatters"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
         public INamedTypeSymbol? FormatterAttribute { get; }
+        public INamedTypeSymbol? MessageFormatterAttribute { get; }
+        public INamedTypeSymbol? ExtendedActorSystem { get; }
 
         /// <summary>The open <c>AkkaSerializerIncludesAttribute&lt;TMessage&gt;</c> definition -- resolved once per compilation, shared by <see cref="ExtractClosedGenericRegistrations"/> and <see cref="BuildSerializerLocationBag"/>.</summary>
         public INamedTypeSymbol? GenericSerializableAttribute { get; }

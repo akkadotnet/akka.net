@@ -336,7 +336,7 @@ public sealed partial class AkkaSerializerGenerator
 
             if (knownTypes.FormatterAttribute != null && SymbolEqualityComparer.Default.Equals(attributeClass.OriginalDefinition, knownTypes.FormatterAttribute))
             {
-                var targetKey = TypeKey.FromSymbol(attributeClass.TypeArguments[0]);
+                var targetKey = TypeKey.FromFormatterSymbol(attributeClass.TypeArguments[0]);
                 var member = FormatterLocationMember(targetKey.DisplayName ?? string.Empty);
                 AddLocationEntry(entries, new LocationKey(serializerKey, member), GetAttributeLocation(attribute, cancellationToken));
                 continue;

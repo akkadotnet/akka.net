@@ -9,6 +9,7 @@
     <ItemGroup>
         <EmbeddedResource Include="reference.conf" />
         <ProjectReference Include="..\Akka\Akka.csproj" />
+        <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Update="CodeGen\Dsl\GraphApply.tt">

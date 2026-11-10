@@ -140,10 +140,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG008" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG009 when a serializer registers multiple formatters for the same target type")]
-    public void Generator_should_report_AKKASG009_when_formatters_duplicate_target_type()
+    [Theory(DisplayName = "Should_ReportAKKASG009_When_OneScopeDeclaresMultipleFormattersForAnExactTarget")]
+    [InlineData("AkkaSerializerFormatter")]
+    [InlineData("AkkaMessageFormatter")]
+    public void Should_ReportAKKASG009_When_OneScopeDeclaresMultipleFormattersForAnExactTarget(string attribute)
     {
-        const string source = """
+        var registrations = $"[{attribute}<Foreign, FirstFormatter>] [{attribute}<Foreign, SecondFormatter>]";
+        var source = $$"""
             #nullable enable
             using Akka.Actor;
             using Akka.Serialization.V2;
@@ -172,20 +175,20 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>("sample", 120603)]
-            [AkkaSerializerFormatter<Foreign, FirstFormatter>]
-            [AkkaSerializerFormatter<Foreign, SecondFormatter>]
+            {{(attribute == "AkkaSerializerFormatter" ? registrations : string.Empty)}}
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializable(Manifest = "outer-v1")]
+            {{(attribute == "AkkaMessageFormatter" ? registrations : string.Empty)}}
             public sealed record Outer([property: AkkaField(1)] Foreign Value) : IProtocol;
             """;
 
         var diagnostics = RunGenerator(source);
 
-        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG009" && diagnostic.Severity == DiagnosticSeverity.Error);
+        diagnostics.Should().ContainSingle(diagnostic => diagnostic.Id == "AKKASG009" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
     [Fact(DisplayName = "Generator should report AKKASG010 when a registered formatter has no usable constructor")]
@@ -273,10 +276,12 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG011 when a formatter target type is an array")]
-    public void Generator_should_report_AKKASG011_when_formatter_target_type_is_an_array()
+    [Theory(DisplayName = "Should_ReportAKKASG011_When_FormatterTargetsArrayOrNullable")]
+    [InlineData("int[]")]
+    [InlineData("System.Nullable<int>")]
+    public void Should_ReportAKKASG011_When_FormatterTargetsArrayOrNullable(string target)
     {
-        const string source = """
+        var source = $$"""
             #nullable enable
             using Akka.Actor;
             using Akka.Serialization.V2;
@@ -288,15 +293,15 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            public sealed class IntArrayFormatter : IAkkaMessagePackFormatter<int[]>
+            public sealed class UnsupportedFormatter : IAkkaMessagePackFormatter<{{target}}>
             {
-                public void Write(ref MessagePackWriter writer, int[] value) => writer.Write(value.Length);
-                public int[] Read(ref MessagePackReader reader) => new int[reader.ReadInt32()];
-                public int SizeOf(int[] value) => Akka.Serialization.SerializerV2.UnknownSize;
+                public void Write(ref MessagePackWriter writer, {{target}} value) => writer.WriteNil();
+                public {{target}} Read(ref MessagePackReader reader) => default;
+                public int SizeOf({{target}} value) => 1;
             }
 
             [AkkaSerializer<IProtocol>("sample", 120606)]
-            [AkkaSerializerFormatter<int[], IntArrayFormatter>]
+            [AkkaSerializerFormatter<{{target}}, UnsupportedFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
@@ -311,8 +316,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG011 when a formatter target type is a closed generic")]
-    public void Generator_should_report_AKKASG011_when_formatter_target_type_is_a_closed_generic()
+    [Fact(DisplayName = "Should_CompileGeneratedCode_When_AFormatterTargetsAClosedCollection")]
+    public void Should_CompileGeneratedCode_When_AFormatterTargetsAClosedCollection()
     {
         const string source = """
             #nullable enable
@@ -323,31 +328,41 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             namespace DiagnosticSample;
 
-            public interface IProtocol
-            {
-            }
+            public interface IProtocol;
 
-            public sealed class IntListFormatter : IAkkaMessagePackFormatter<List<int>>
+            public sealed class @event;
+            public sealed class Holder<T>
             {
-                public void Write(ref MessagePackWriter writer, List<int> value) => writer.Write(value.Count);
-                public List<int> Read(ref MessagePackReader reader) => new List<int>(reader.ReadInt32());
-                public int SizeOf(List<int> value) => Akka.Serialization.SerializerV2.UnknownSize;
+                public sealed class Item;
             }
 
             [AkkaSerializer<IProtocol>("sample", 120607)]
-            [AkkaSerializerFormatter<List<int>, IntListFormatter>]
+            [AkkaSerializerFormatter<List<Holder<@event>.Item>, SampleSerializer.ListFormatter<Holder<@event>.Item>>]
+            [AkkaSerializerFormatter<List<Holder<int>.Item>, SampleSerializer.ListFormatter<Holder<int>.Item>>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
+
+                private sealed class ListFormatter<T> : IAkkaMessagePackFormatter<List<T>>
+                {
+                    public void Write(ref MessagePackWriter writer, List<T> value) => writer.Write(value.Count);
+                    public List<T> Read(ref MessagePackReader reader) => new List<T>(reader.ReadInt32());
+                    public int SizeOf(List<T> value) => Akka.Serialization.SerializerV2.UnknownSize;
+                }
             }
 
             [AkkaSerializable(Manifest = "outer-v1")]
-            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            public sealed record Outer(
+                [property: AkkaField(1)] List<Holder<@event>.Item> Value,
+                [property: AkkaField(2)] List<Holder<int>.Item> Other) : IProtocol;
             """;
 
-        var diagnostics = RunGenerator(source);
+        var result = GeneratorTestHarness.Run(source);
 
-        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
+        result.AllDiagnostics.Should().NotContain(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        result.GeneratedSources.Values.Should().ContainSingle().Subject.Should()
+            .Contain("new global::DiagnosticSample.SampleSerializer.ListFormatter<global::DiagnosticSample.Holder<global::DiagnosticSample.@event>.Item>()")
+            .And.Contain("new global::DiagnosticSample.SampleSerializer.ListFormatter<global::DiagnosticSample.Holder<int>.Item>()");
     }
 
     [Fact(DisplayName = "Generator should report AKKASG003 when a generic field type shares its name with a non-generic formatter target")]
