@@ -322,7 +322,11 @@ namespace Akka.Persistence
                 var handled = CommonProcessingStateBehavior(message, err =>
                 {
                     _pendingInvocations.Pop();
-                    UnstashInternally(err);
+
+                    // an async handler that did not complete synchronously is still inside RunTask:
+                    // its continuation (OnProcessingCommandsAroundReceiveComplete) unstashes instead
+                    if (!_asyncTaskRunning)
+                        UnstashInternally(err);
                 });
                 if (!handled)
                 {
@@ -389,7 +393,11 @@ namespace Akka.Persistence
                     if (_pendingStashingPersistInvocations == 0)
                     {
                         ChangeState(ProcessingCommands());
-                        UnstashInternally(err);
+
+                        // an async handler that did not complete synchronously is still inside RunTask:
+                        // its continuation (OnProcessingCommandsAroundReceiveComplete) unstashes instead
+                        if (!_asyncTaskRunning)
+                            UnstashInternally(err);
                     }
                 });
 
@@ -410,7 +418,9 @@ namespace Akka.Persistence
 
             if (invocation is IAsyncHandlerInvocation asyncInv)
             {
-                // Async handler - run via RunTask
+                // Async handler - run via RunTask. If the handler's task does not complete synchronously,
+                // onComplete runs while _asyncTaskRunning is set and leaves the unstash to the RunTask
+                // continuation, so each invocation unstashes at most once.
                 RunTask(async () =>
                 {
                     try
