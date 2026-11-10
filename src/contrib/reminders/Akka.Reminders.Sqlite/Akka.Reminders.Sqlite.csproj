@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Aaron.Akka.Reminders.Sqlite</PackageId>
+    <Description>SQLite storage implementation for Akka.Reminders.</Description>
+    <PackageTags>akka;akkadotnet;akka.reminders;sql;sqlite;</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\Sqlite-Create.sql" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Akka.Cluster.Hosting" />
+    <PackageReference Include="Akka.Hosting.TestKit" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="CsCheck" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.PostgreSql\Akka.Reminders.PostgreSql.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.Sql\Akka.Reminders.Sql.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.SqlServer\Akka.Reminders.SqlServer.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.Sqlite\Akka.Reminders.Sqlite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    The golden databases are written by Fixtures/golden-1.5.73/generator, a separate console project
+    that references the released 1.5.73 packages. It is not part of this build, so keep its sources out.
+  -->
+  <ItemGroup>
+    <Compile Remove="Fixtures\golden-1.5.73\generator\**" />
+    <None Remove="Fixtures\golden-1.5.73\generator\**" />
+    <EmbeddedResource Remove="Fixtures\golden-1.5.73\generator\**" />
+    <None Include="Fixtures\golden-1.5.73\*.db" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
