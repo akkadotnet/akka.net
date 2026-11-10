@@ -1,0 +1,6 @@
+{"scenario": "due-recurring", "count": 25000, "run": 0, "warmup": true, "extraLatencyMs": 0, "elapsedMs": 4502.6884, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
+{"scenario": "due-recurring", "count": 25000, "run": 1, "warmup": false, "extraLatencyMs": 0, "elapsedMs": 3829.9541, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
+{"scenario": "due-recurring", "count": 25000, "run": 2, "warmup": false, "extraLatencyMs": 0, "elapsedMs": 4038.3283, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
+{"scenario": "due-recurring", "count": 25000, "run": 3, "warmup": false, "extraLatencyMs": 0, "elapsedMs": 4002.7341, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
+{"scenario": "due-recurring", "count": 25000, "run": 4, "warmup": false, "extraLatencyMs": 0, "elapsedMs": 3888.5646, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
+{"scenario": "due-recurring", "count": 25000, "run": 5, "warmup": false, "extraLatencyMs": 0, "elapsedMs": 3830.7964, "statusReads": 0, "fetches": 26, "commits": 250, "overviews": 0, "deliveries": 25000, "revision": "dev"}
