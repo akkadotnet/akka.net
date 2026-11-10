@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <!-- Pinned old packages on purpose. This tool is never shipped. -->
+    <NuGetAudit>false</NuGetAudit>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <!--
+      Stored manifests for JSON and type-manifest payloads embed the assembly name
+      ("Namespace.Type, AssemblyName"). The test project reads them, so this tool must use the
+      same assembly name as the test project.
+    -->
+    <AssemblyName>Akka.Reminders.Tests</AssemblyName>
+    <RootNamespace>Akka.Reminders.Tests.Golden</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The published 1.5.73 packages. Do not change these versions: the fixture records what 1.5.73 wrote. -->
+    <PackageReference Include="Aaron.Akka.Reminders" Version="1.5.73" />
+    <PackageReference Include="Aaron.Akka.Reminders.Sqlite" Version="1.5.73" />
+    <PackageReference Include="Akka" Version="1.5.73" />
+    <PackageReference Include="Akka.Cluster" Version="1.5.73" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Payload types, serializers and the row list, shared with the test project. -->
+    <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
+  </ItemGroup>
+
+</Project>
