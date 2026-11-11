@@ -49,3 +49,16 @@ controls; they are not selected production source. The retained baseline is `70a
 This update contains planning/specification only. Proposed source changes, tests and new performance
 comparisons have not been executed. Benchmark numbers and private machine records remain outside
 this source/specification change. Current default transport and stream counts are unchanged.
+
+## 5. Safety and multi-node readiness
+
+- [x] Record unpooled owned receive storage as a constraint; pooled writes may be released only after their native use settles.
+- [ ] Extend retained-receive checks through later reads, FIN/reset and system shutdown without actor disposal obligations.
+- [ ] Add an explicit opt-in QUIC mode to the existing multi-node transport selection, with invalid-mode rejection and effective-transport reporting.
+- [ ] Provide validated test credentials/TLS setup for initial, restarted and directly created actor systems; preserve per-spec config precedence.
+- [ ] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
+- [ ] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
+- [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
+
+These are requirements and planned checks. This change does not enable the QUIC runner mode or claim
+new tests passed. See the design's safety punch list for concrete integration boundaries and cases.

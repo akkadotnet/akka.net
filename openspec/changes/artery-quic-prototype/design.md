@@ -120,11 +120,12 @@ comparison is Artery TLS TCP versus QUIC; plaintext transports are references. K
 credit-paced one-way units separate. Optional diagnostics report process CPU/allocation/GC and
 ordinary QUIC I/O operations; they are separate from unprofiled throughput measurements.
 
-## Candidate performance follow-up: pipes beneath Streams
+## Deferred write-side alternative: pipes beneath Streams
 
-This section is a proposed follow-up, not an implemented pipe adapter or a performance claim.
-Keep protocol stages and fixed stream routing. Introduce pooled byte pipes and persistent native
-pumps below the graph boundary, using the existing Akka.IO pipe and ownership patterns.
+This is a write-side research alternative, not the selected adapter or required next step.
+Keep protocol stages and fixed stream routing. A future output pipe would need resource/latency
+evidence against the retained writer. Receive data that escapes to parsing or actors stays in
+stable, unpooled owned storage; no pooled input pipe or actor receive lease is proposed.
 
 ```mermaid
 flowchart TB
@@ -135,12 +136,13 @@ flowchart TB
     B --> OP["Bounded pooled output pipe"]
     OP --> SP["Persistent send pump"]
     SP --> OUT["Sending native QUIC stream"]
-    IN["Receiving native QUIC stream"] --> RP["Persistent receive pump"]
-    RP --> IP["Bounded pooled input pipe"]
-    IP --> R
+    IN["Receiving native QUIC stream"] --> RS["Private read scratch: never published"]
+    RS --> RC["Copy actual bytes into owned, unpooled storage"]
+    RC --> R
 ```
 
-The source bridge must publish stable bytes before advancing its pipe reader. The write bridge can
+The receive owner may outlive the stream or actor system and is never returned to a pool.
+Private scratch may be reused only after copying. The write bridge can
 return original owners after copying their bytes; the send pump advances only after its native write
 settles. Bound native write chunks as well as pipe payload. MsQuic can buffer whole requests past
 its connection-wide target, so a managed pipe threshold is not a native memory cap.
@@ -177,9 +179,9 @@ one MsQuic connection and its streams execute on one native worker at a time.
 
 1. **Current prototype:** native adapter, fixed ordinary-stream groups, shared TLS policy, comparison
    source, optional diagnostics, and native correctness tests. Keep TCP/default behavior unchanged.
-2. **Bounded byte-adapter follow-up:** a working bridge and pumps together with retained-byte,
-   poisoned-owner, cancellation, saturation/resume and actual writer-drain tests. Include empty,
-   single-lane, control and large paths. Preserve connection retirement and FIFO.
+2. **Safety and adapter follow-up:** use the current punch list below. A write bridge/pump is only
+   a deferred alternative after smaller changes. Preserve unpooled published receive storage,
+   pending-write ownership, connection retirement and FIFO for every role.
 3. **Performance/reliability evaluation:** warmed repeated comparisons, matched effective budgets,
    separate diagnostics and explicit invalid attempts. Native resource, lost-ACK/quarantine,
    percentile-latency and two-host/impairment gates need their own evidence before promotion.
@@ -270,10 +272,15 @@ buffers, so a permanent 16 KiB rental per stream is not automatically a memory o
 queue-entry limits are not byte caps, and managed limits do not cap native/kernel storage. Hold the
 aggregate queue budget fixed while varying S; do not multiply buffers silently with stream count.
 
-Keep the current stable inbound chunk copy. An upstream PipeReader cannot advance/recycle bytes
-while frame parsing or asynchronous actor delivery retains them. Removing this copy requires a
-separate end-to-end ownership contract. An input pipe, permanent coalescing rental or output pump
-needs independent evidence and resource gates before joining the selected design.
+**Receive ownership is a design constraint:** keep the current stable inbound chunk copy in
+unpooled owned storage. Actors and parsers may retain the published bytes indefinitely, including
+after stream/system shutdown. Do not publish pooled receive arrays or pipe segments, require actor
+receive leases/disposal acknowledgments, or return storage according to native-read completion.
+A private reusable scratch array is allowed only because its bytes are copied before publication.
+Pooled writes remain allowed: source owners can be released after copying, while the native input
+rental remains leased until the write actually settles, even if cancellation was requested.
+A permanent coalescing rental or output pump still needs resource evidence; an input-pipe or
+receive-lease redesign is excluded by the requested ownership policy.
 
 ### Delivery
 
@@ -349,7 +356,7 @@ an experiment whose gain requires unacceptable tail latency, retained capacity o
 write geometry are still limiting and a smaller change fails; prior pipe trials do not establish an
 acceptable replacement. Native execution-profile controls belong to the standalone/custom-runtime
 study. Connection striping changes topology and would need equally striped TCP controls and new
-ordering/failure analysis. Scheduler tuning and receive-lease redesign are outside this sequence.
+ordering/failure analysis. Scheduler tuning is outside this sequence; pooled published receives and receive leases are excluded.
 TCP remains default and this remains an experimental transport; no production cutover is authorized.
 
 ### Source leads and falsification
@@ -363,3 +370,55 @@ for the immediate correctness boundary; two-host impairment/fairness work requir
 or network namespace and a separately specified setup. Do not modify shared host qdiscs casually.
 If increasing S does not improve the relevant workload, or loaded latency/capacity regresses, revise
 the recommendation instead of assuming parallel streams must win. This plan executes no benchmarks.
+
+## Safety punch list and multi-node coverage
+
+The receive-ownership policy above is maintainer direction, not an optional optimization tradeoff.
+A throughput improvement cannot weaken it. Existing write pooling remains supported with explicit
+ownership through settlement. The following work is separate from claiming a faster adapter:
+
+1. **Protect retained receive bytes.** Extend the stable-chunk test to retain several received
+   messages while subsequent reads, FIN, reset and system termination occur. Retained bytes must
+   remain exact without actor disposal or receive acknowledgments. Keep private scratch reuse
+   separate from published storage. This applies across frame parsing and actor delivery boundaries.
+2. **Preserve pooled write safety.** Retain delayed-write/ignored-cancellation and rent/copy/submission
+   failure cases. Assert no active native input is returned early, each owner returns once, and old
+   generation callbacks/cancellation cannot affect a restarted channel. Moving linked cancellation
+   to channel lifetime must pass these cases before performance selection.
+3. **Add an opt-in QUIC multi-node arm.** Extend the existing internal transport selection in
+   `src/core/Akka.Remote.TestKit/MultiNodeSpec.cs`, where `AKKA_MNTR_TRANSPORT=artery` currently selects
+   Artery TCP. Proposed value `artery-quic` is not implemented yet. Retain the unset/classic and artery
+   modes; reject unsupported requested values rather than silently run another transport. Keep
+   runner/conductor coordination unchanged; select QUIC for the actor remoting under test.
+   Initial `MultiNodeSpec` actor-system creation and `StartNewSystemAsync` must both receive the
+   typed `ArteryTlsSetup`; copying HOCON alone does not copy that bootstrap object. Provide test-only
+   credentials/trust through existing Akka.IO policy primitives, with bounded lifecycle and consistent
+   trust across roles. Never disable certificate validation to make the suite run. Cover additional
+   systems created directly by individual specs as an explicit audit, not an assumed helper benefit.
+4. **Prove which multi-node tests actually use QUIC.** Each role reports effective transport and
+   native availability; require the intended QUIC roles before counting coverage. Missing credentials,
+   unsupported native prerequisites or failed startup cannot become passing QUIC evidence. Respect
+   explicit per-spec transport overrides and report classic-only specs separately. The existing Artery
+   test transport implements blackhole/pass-through, while rate-throttle specs can be pinned to
+   classic; do not claim QUIC throttling coverage from those runs. Config-precedence checks need
+   unset/classic, artery TCP, QUIC and explicit classic overrides, plus negative invalid-mode/identity
+   cases. Restart checks must verify QUIC remains active with correct identity and a fresh UID.
+5. **Exercise distributed failure and shutdown before qualification.** Start a bounded remote/cluster
+   subset covering ordered numbered delivery, remote DeathWatch, restart/new UID, quarantine,
+   reliable system-message retries and blackhole/heal, then expand compatible suites. Add distinct
+   one-stream and parallel-stream cases, a blocked ordinary reader with healthy-lane/control progress,
+   and teardown with queued traffic plus a surviving recipient. The current prototype can close its
+   connection before the peer consumes buffered ordinary data; native send completion/FIN alone is
+   not application delivery confirmation. Keep this gap explicit and resolve its protocol/timeout
+   semantics separately from buffer optimization. Ordinary messages acquire no replay guarantee.
+6. **Keep performance acceptance separate.** Fresh paired throughput, CPU, loaded/sparse latency,
+   actual write geometry and aggregate outstanding leased capacity remain required for a selected
+   optimization. Multi-node correctness success is not a performance result. No whole-suite QUIC,
+   impairment, native resource or production-readiness claim follows from this planning update.
+
+The multi-node arm is a bounded enabling change before expanding distributed qualification. Reuse
+existing remote/cluster specifications and TestConductor fault controls rather than invent a second
+runner. Credential fixture/configuration tests come before native smoke tests, followed by compatible
+multi-node subsets. Existing TCP/classic behavior remains covered throughout. QUIC prerequisite and
+coverage inventory need implementation before a portable QUIC multi-node command can be published;
+there is deliberately no claim that setting the proposed environment value works today.
