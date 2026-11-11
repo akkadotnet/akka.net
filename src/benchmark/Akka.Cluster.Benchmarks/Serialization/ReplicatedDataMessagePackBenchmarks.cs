@@ -85,6 +85,8 @@ public class ReplicatedDataMessagePackBenchmarks
         Validate(_native.FromBinary(_nativeBytes, _manifest));
         Validate(_adapter.Deserialize(new ReadOnlySequence<byte>(_legacyBytes), _manifest));
         Validate(_native.Deserialize(new ReadOnlySequence<byte>(_nativeBytes), _manifest));
+        Validate(_off.Serialization.Deserialize(_nativeBytes, 51, _manifest));
+        Validate(_on.Serialization.Deserialize(_legacyBytes, 11, _manifest));
         ValidateBuffer(_adapter, _legacyBytes);
         ValidateBuffer(_native, _nativeBytes);
         Console.WriteLine($"[crdt-wire] {Shape}: legacy={_legacyBytes.Length}B generated={_nativeBytes.Length}B; ids=11/51");
