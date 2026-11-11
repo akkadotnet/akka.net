@@ -37,7 +37,9 @@ TCP keeps its existing merge/batching path. QUIC groups reuse the same handshake
 test-mode and kill-switch stages. A group consumes completion markers from all its lane producers
 so its MergeHub can finish, drain queued frames and send FIN.
 
-The QUIC adapter currently writes each sequence segment through one outstanding native write.
+The QUIC adapter permits one outstanding native write per stream. Ordinary multi-segment batches
+up to 16 KiB use one pooled coalescing copy and one native submission. Contiguous inputs, larger
+sequences and other roles retain direct segment writes.
 Its read path reuses a scratch array and publishes a separate copy of the actual bytes received.
 That copy is necessary because frame parsing and asynchronous consumers can retain chunk memory.
 
@@ -52,7 +54,9 @@ That copy is necessary because frame parsing and asynchronous consumers can reta
 | Certificates, trust and peer identity | Existing Akka.IO policies through typed Artery TLS setup |
 | TLS packet protection, congestion and native stream credit | `System.Net.Quic` / MsQuic |
 
-Ordinary encoded owners remain live until their write operation settles and are returned once.
+Coalesced ordinary writes return original encoded owners once their bytes have been copied into
+the coalescing rental. That rental remains owned until the native write settles. Direct writes
+retain their original owners through settlement. Each owner is returned once, including failures.
 Cancellation must not return memory while an asynchronous operation can still use it. The
 connection owner disposes native streams; individual graph stages signal retirement rather than
 independently competing to dispose a shared connection.

@@ -20,7 +20,8 @@ using Akka.Streams.Stage;
 namespace Akka.Remote.Artery
 {
     /// <summary>
-    /// One outstanding native write, with ownership held until that write settles. The unused
+    /// One outstanding native write, with native input held until that write settles. Coalesced
+    /// writes return the original encoded owners after copying their bytes. The unused
     /// read outlet preserves the existing byte-flow graph shape for a unidirectional channel.
     /// </summary>
     [SupportedOSPlatform("linux")]
@@ -58,17 +59,30 @@ namespace Akka.Remote.Artery
         internal static async ValueTask WriteCoalescedAsync(Stream stream, ReadOnlySequence<byte> bytes,
             ArrayPool<byte> pool, CancellationToken cancellationToken)
         {
-            var length = checked((int)bytes.Length);
-            var buffer = pool.Rent(length);
+            byte[]? buffer = null;
             try
             {
+                var length = checked((int)bytes.Length);
+                buffer = pool.Rent(length);
                 var memory = buffer.AsMemory(0, length);
                 bytes.CopyTo(memory.Span);
+                // The coalesced rental now owns the bytes submitted to native I/O.
+                // Return the original encoded arrays as soon as the copy finishes.
+                bytes.DisposeOwnedSegments();
+                bytes = default;
                 await stream.WriteAsync(memory, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
-                pool.Return(buffer);
+                try
+                {
+                    bytes.DisposeOwnedSegments();
+                }
+                finally
+                {
+                    if (buffer is not null)
+                        pool.Return(buffer);
+                }
             }
         }
 
@@ -173,8 +187,12 @@ namespace Akka.Remote.Artery
                     if (_stage._role == ArteryStreamId.Ordinary && !bytes.IsSingleSegment &&
                         !bytes.IsEmpty && bytes.Length <= MaximumCoalescedWriteSize)
                     {
-                        await WriteCoalescedAsync(channel.Stream, bytes, ArrayPool<byte>.Shared, lifetime.Token).ConfigureAwait(false);
-                        _stage._transport.RecordWrite(_stage._role, (int)bytes.Length);
+                        var length = (int)bytes.Length;
+                        var coalesced = bytes;
+                        // Transfer cleanup to the copying operation, including rent/copy failure.
+                        bytes = default;
+                        await WriteCoalescedAsync(channel.Stream, coalesced, ArrayPool<byte>.Shared, lifetime.Token).ConfigureAwait(false);
+                        _stage._transport.RecordWrite(_stage._role, length);
                     }
                     else
                     {
@@ -192,8 +210,8 @@ namespace Akka.Remote.Artery
                 }
                 finally
                 {
-                    // PostStop never frees this memory: an asynchronous native write may still
-                    // be reading it after cancellation. The operation returns every owner here.
+                    // Direct writes return original owners here after native settlement.
+                    // Copied writes transferred their cleanup to WriteCoalescedAsync.
                     bytes.DisposeOwnedSegments();
                 }
             }

@@ -202,15 +202,141 @@ namespace Akka.Remote.Tests.Artery
             pool.Returned.Should().BeSameAs(pool.Buffer);
         }
 
-        private sealed class PendingWriteStream : MemoryStream
+        [Theory(DisplayName = "QUIC coalescing releases copied encoded owners while retaining native input until settlement")]
+        [InlineData("success")]
+        [InlineData("failure")]
+        [InlineData("cancellation")]
+        [InlineData("deferred-cancellation")]
+        [InlineData("rent-failure")]
+        public async Task Should_ReleaseEncodedOwners_When_CoalescedCopyFinishes(string outcome)
+        {
+            var first = new TrackingOwner(3, 0x13);
+            var second = new TrackingOwner(4, 0xB1);
+            var input = ArteryRemoting.AppendFrameToBatch(
+                OwnedSequenceSegment.Create(first), OwnedSequenceSegment.Create(second));
+            var expected = input.ToArray();
+            var pool = new TrackingPool();
+            var error = new IOException("Controlled coalescing failure.");
+            using var stream = new PendingWriteStream(outcome != "deferred-cancellation");
+            using var cancellation = new CancellationTokenSource();
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var write = ArteryQuicWriteStage.WriteCoalescedAsync(stream, input,
+                outcome == "rent-failure" ? new ThrowingPool(error) : pool, cancellation.Token).AsTask();
+            try
+            {
+                first.DisposeCount.Should().Be(1);
+                second.DisposeCount.Should().Be(1);
+                pool.ReturnCount.Should().Be(0);
+                if (outcome == "rent-failure")
+                {
+                    (await Assert.ThrowsAsync<IOException>(() => write.WaitAsync(deadline.Token))).Should().BeSameAs(error);
+                    return;
+                }
+
+                write.IsCompleted.Should().BeFalse();
+                stream.Submitted.ToArray().Should().Equal(expected, "returning original arrays poisons their bytes");
+                stream.Submitted.Length.Should().Be(expected.Length);
+                switch (outcome)
+                {
+                    case "success":
+                        stream.Completion.SetResult();
+                        await write.WaitAsync(deadline.Token);
+                        break;
+                    case "failure":
+                        stream.Completion.SetException(error);
+                        (await Assert.ThrowsAsync<IOException>(() => write.WaitAsync(deadline.Token))).Should().BeSameAs(error);
+                        break;
+                    case "cancellation":
+                        cancellation.Cancel();
+                        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write.WaitAsync(deadline.Token));
+                        break;
+                    case "deferred-cancellation":
+                        cancellation.Cancel();
+                        write.IsCompleted.Should().BeFalse();
+                        pool.ReturnCount.Should().Be(0);
+                        stream.Submitted.ToArray().Should().Equal(expected);
+                        stream.Completion.SetCanceled(cancellation.Token);
+                        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write.WaitAsync(deadline.Token));
+                        break;
+                }
+                pool.ReturnCount.Should().Be(1);
+                pool.Returned.Should().BeSameAs(pool.Buffer);
+                input.DisposeOwnedSegments();
+                first.DisposeCount.Should().Be(1);
+                second.DisposeCount.Should().Be(1);
+            }
+            finally
+            {
+                cancellation.Cancel();
+                stream.Completion.TrySetCanceled();
+                await write.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                input.DisposeOwnedSegments();
+            }
+        }
+
+        private sealed class ThrowingPool(Exception error) : ArrayPool<byte>
+        {
+            public override byte[] Rent(int minimumLength) => throw error;
+            public override void Return(byte[] array, bool clearArray = false) =>
+                throw new InvalidOperationException("No buffer was rented.");
+        }
+
+        [Fact(DisplayName = "QUIC coalescing returns source owners and rental when copying fails before native submission")]
+        public async Task Should_ReturnOriginalsAndRental_When_CoalescingCopyFails()
+        {
+            var error = new IOException("Controlled source span failure.");
+            var first = new FailingCopyOwner(error);
+            var second = new TrackingOwner(4, 0xB1);
+            var input = ArteryRemoting.AppendFrameToBatch(
+                OwnedSequenceSegment.Create(first), OwnedSequenceSegment.Create(second));
+            var pool = new TrackingPool();
+            using var stream = new PendingWriteStream();
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            first.FailReads();
+            var write = ArteryQuicWriteStage.WriteCoalescedAsync(stream, input, pool, CancellationToken.None).AsTask();
+            try
+            {
+                (await Assert.ThrowsAsync<IOException>(() => write.WaitAsync(deadline.Token))).Should().BeSameAs(error);
+                first.DisposeCount.Should().Be(1);
+                second.DisposeCount.Should().Be(1);
+                pool.ReturnCount.Should().Be(1);
+                pool.Returned.Should().BeSameAs(pool.Buffer);
+                stream.Submissions.Should().Be(0);
+            }
+            finally
+            {
+                stream.Completion.TrySetCanceled();
+                await write.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                input.DisposeOwnedSegments();
+            }
+        }
+
+        private sealed class FailingCopyOwner(Exception error) : MemoryManager<byte>
+        {
+            private readonly byte[] _bytes = new byte[3];
+            private bool _failReads;
+            public int DisposeCount { get; private set; }
+            internal void FailReads() => _failReads = true;
+            public override Span<byte> GetSpan() => _failReads ? throw error : _bytes;
+            public override MemoryHandle Pin(int elementIndex = 0) => _bytes.AsMemory(elementIndex).Pin();
+            public override void Unpin()
+            {
+                // The array memory handle owns its pin.
+            }
+            protected override void Dispose(bool disposing) => DisposeCount++;
+        }
+
+        private sealed class PendingWriteStream(bool observeCancellation = true) : MemoryStream
         {
             public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
             public ReadOnlyMemory<byte> Submitted { get; private set; }
+            public int Submissions { get; private set; }
 
             public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
             {
                 Submitted = buffer;
-                return new ValueTask(Completion.Task.WaitAsync(cancellationToken));
+                Submissions++;
+                return new ValueTask(observeCancellation ? Completion.Task.WaitAsync(cancellationToken) : Completion.Task);
             }
         }
 
