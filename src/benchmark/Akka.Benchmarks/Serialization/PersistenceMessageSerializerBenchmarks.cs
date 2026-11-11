@@ -55,6 +55,7 @@ public class PersistenceMessageSerializerBenchmarks
         _bytes = LegacySerialize();
         if (_legacy.Identifier != 7 || _native.Identifier != 7 || _native.Manifest(_message) != _manifest ||
             !ReferenceEquals(_system.Serialization.GetSerializerById(7), _native) ||
+            !ReferenceEquals(_system.Serialization.FindSerializerFor(_message), _native) ||
             !NativeSerialize().AsSpan().SequenceEqual(_bytes))
             throw new InvalidOperationException("Native persistence benchmark changed id, manifest or historical bytes.");
         ValidateMessage(LegacyDeserialize());
