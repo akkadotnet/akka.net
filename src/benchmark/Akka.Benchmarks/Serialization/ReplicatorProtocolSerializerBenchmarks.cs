@@ -65,23 +65,39 @@ public class ReplicatorProtocolSerializerBenchmarks
         if (_manifest != "N" && !_legacyBytes.AsSpan().SequenceEqual(Convert.FromHexString(hex)))
             throw new InvalidOperationException("Frozen bootstrap changed protocol fields or actor-reference paths.");
         _v2Bytes = _generated.ToBinary(_message);
-        var reader = _legacy;
         foreach (var restored in new[]
                  {
                      _legacySystem.Serialization.Deserialize(_v2Bytes, 52, _manifest),
                      _generated.FromBinary(_v2Bytes, _manifest),
                      _legacy.FromBinary(_legacyBytes, _manifest),
-                     _legacySystem.Serialization.Deserialize(_legacyBytes, 12, _manifest)
+                     _v2System.Serialization.Deserialize(_legacyBytes, 12, _manifest)
                  })
         {
-            if (restored.GetType() != _message.GetType())
-                throw new InvalidOperationException("Protocol benchmark changed the runtime type.");
-            if (_manifest == "N")
-                ValidateGossip(_message, restored);
-            else if (!reader.ToBinary(restored).AsSpan().SequenceEqual(reader.ToBinary(_message)))
-                throw new InvalidOperationException("Protocol benchmark failed full-member validation.");
+            Validate(restored);
         }
+        ValidateBuffer(_legacyAdapter, _legacyBytes);
+        ValidateBuffer(_generated, _v2Bytes);
         Console.WriteLine($"{Shape}: protobuf={_legacyBytes.Length}B MessagePack={_v2Bytes.Length}B");
+    }
+
+    private void Validate(object restored)
+    {
+        if (restored.GetType() != _message.GetType())
+            throw new InvalidOperationException("Protocol benchmark changed the runtime type.");
+        if (_manifest == "J" && !ReferenceEquals(restored, _message))
+            throw new InvalidOperationException("WriteAck singleton identity changed.");
+        if (_manifest == "N")
+            ValidateGossip(_message, restored);
+        else if (!_legacy.ToBinary(restored).AsSpan().SequenceEqual(_legacyBytes))
+            throw new InvalidOperationException("Protocol benchmark failed full-member validation.");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expected)
+    {
+        var count = WriteToBuffer(serializer);
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expected))
+            throw new InvalidOperationException("Replicator buffer output/count differs from byte-array output.");
+        Validate(serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), _manifest));
     }
 
     // Gossip is internal; this bounded JIT-only setup inspects its four public protocol
