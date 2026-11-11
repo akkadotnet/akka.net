@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Akka.Reminders.SqlServer</PackageId>
+    <Description>SQL Server storage implementation for Akka.Reminders.</Description>
+    <PackageTags>$(AkkaPackageTags);reminders;sql;sqlserver</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Akka.Event" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <!-- Transitive security pin (NuGet audit): Microsoft.Data.SqlClient 6.1.4 depends on
+         System.Security.Cryptography.Pkcs 9.0.11; GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx
+         are fixed in 9.0.21. Remove once SqlClient ships a patched dependency. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\SqlServer-Create.sql" />
+  </ItemGroup>
+
+</Project>
