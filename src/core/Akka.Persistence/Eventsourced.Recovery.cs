@@ -481,6 +481,7 @@ namespace Akka.Persistence
                     {
                         var p = m2.Persistent;
                         UpdateLastSequenceNr(p);
+                        _lastRejectedSequenceNr = p.SequenceNr;
                         onWriteMessageComplete(false);
                         OnPersistRejected(m2.Cause, p.Payload, p.SequenceNr);
                     }

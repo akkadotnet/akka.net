@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\..\xunitSettings.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="CsCheck" Version="$(CsCheckVersion)" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="Testcontainers.MsSql" Version="4.15.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
+    <ProjectReference Include="..\..\hosting\Akka.Hosting.TestKit\Akka.Hosting.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.PostgreSql\Akka.Reminders.PostgreSql.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.Sql\Akka.Reminders.Sql.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.SqlServer\Akka.Reminders.SqlServer.csproj" />
+    <ProjectReference Include="..\Akka.Reminders.Sqlite\Akka.Reminders.Sqlite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Akka.Event" />
+  </ItemGroup>
+
+  <!--
+    The golden databases are written by Fixtures/golden-1.5.73/generator, a separate console project
+    that references the released 1.5.73 packages. It is not part of this build, so keep its sources out.
+  -->
+  <ItemGroup>
+    <Compile Remove="Fixtures\golden-1.5.73\generator\**" />
+    <None Remove="Fixtures\golden-1.5.73\generator\**" />
+    <EmbeddedResource Remove="Fixtures\golden-1.5.73\generator\**" />
+    <None Include="Fixtures\golden-1.5.73\*.db" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
