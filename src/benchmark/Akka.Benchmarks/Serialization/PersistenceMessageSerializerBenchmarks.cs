@@ -7,6 +7,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
@@ -51,15 +52,82 @@ public class PersistenceMessageSerializerBenchmarks
             _ => throw new InvalidOperationException($"Unknown benchmark shape [{Shape}]")
         };
         _manifest = _legacy.Manifest(_message);
-        _bytes = _legacy.ToBinary(_message);
-        if (_native.Identifier != 7 || _native.Manifest(_message) != _manifest ||
-            !_native.ToBinary(_message).AsSpan().SequenceEqual(_bytes))
+        _bytes = LegacySerialize();
+        if (_legacy.Identifier != 7 || _native.Identifier != 7 || _native.Manifest(_message) != _manifest ||
+            !ReferenceEquals(_system.Serialization.GetSerializerById(7), _native) ||
+            !NativeSerialize().AsSpan().SequenceEqual(_bytes))
             throw new InvalidOperationException("Native persistence benchmark changed id, manifest or historical bytes.");
-        var back = _native.Deserialize(new ReadOnlySequence<byte>(_bytes), _manifest);
-        var expected = _legacy.FromBinary(_bytes, _message.GetType());
-        if (!_native.ToBinary(back).AsSpan().SequenceEqual(_legacy.ToBinary(expected)))
-            throw new InvalidOperationException("Native persistence benchmark did not preserve decoded fields.");
+        ValidateMessage(LegacyDeserialize());
+        ValidateMessage(NativeDeserialize());
+        ValidateMessage(_system.Serialization.Deserialize(_bytes, 7, _manifest));
+        ValidateWriter(LegacyBufferWrite());
+        ValidateWriter(NativeBufferWrite());
         Console.WriteLine($"{Shape}: legacy=native={_bytes.Length}B");
+    }
+
+    private void ValidateWriter(int count)
+    {
+        Require(count == _buffer.WrittenCount && _buffer.WrittenSpan.SequenceEqual(_bytes),
+            "writer byte count and historical bytes");
+    }
+
+    private void ValidateMessage(object decoded)
+    {
+        Require(decoded.GetType() == _message.GetType(), "root runtime type");
+        switch (_message)
+        {
+            case Persistent expectedPersistent:
+                ValidatePersistent(expectedPersistent, (Persistent)decoded);
+                break;
+            case AtomicWrite expectedWrite:
+                var write = (AtomicWrite)decoded;
+                var expectedPayload = (IImmutableList<IPersistentRepresentation>)expectedWrite.Payload;
+                var payload = (IImmutableList<IPersistentRepresentation>)write.Payload;
+                Require(write.Size == expectedWrite.Size && write.PersistenceId == expectedWrite.PersistenceId
+                    && write.LowestSequenceNr == expectedWrite.LowestSequenceNr
+                    && write.HighestSequenceNr == expectedWrite.HighestSequenceNr
+                    && Equals(write.Sender, expectedWrite.Sender) && payload.Count == expectedPayload.Count,
+                    "atomic write fields");
+                for (var i = 0; i < expectedPayload.Count; i++)
+                    ValidatePersistent(expectedPayload[i], payload[i]);
+                break;
+            case AtLeastOnceDeliverySnapshot expectedDelivery:
+                var delivery = (AtLeastOnceDeliverySnapshot)decoded;
+                Require(delivery.CurrentDeliveryId == expectedDelivery.CurrentDeliveryId
+                    && delivery.UnconfirmedDeliveries.Length == expectedDelivery.UnconfirmedDeliveries.Length,
+                    "delivery snapshot fields");
+                for (var i = 0; i < expectedDelivery.UnconfirmedDeliveries.Length; i++)
+                {
+                    var expectedItem = expectedDelivery.UnconfirmedDeliveries[i];
+                    var item = delivery.UnconfirmedDeliveries[i];
+                    Require(item.DeliveryId == expectedItem.DeliveryId && item.Destination.Equals(expectedItem.Destination)
+                        && Equals(item.Message, expectedItem.Message), "ordered unconfirmed delivery fields");
+                }
+                break;
+            case Akka.Persistence.Fsm.PersistentFSM.StateChangeEvent expectedChange:
+                var change = (Akka.Persistence.Fsm.PersistentFSM.StateChangeEvent)decoded;
+                Require(change.StateIdentifier == expectedChange.StateIdentifier && change.Timeout == expectedChange.Timeout,
+                    "state-change fields");
+                break;
+            default:
+                throw new InvalidOperationException($"No persistence benchmark validator for [{Shape}].");
+        }
+    }
+
+    private void ValidatePersistent(IPersistentRepresentation expected, IPersistentRepresentation actual)
+    {
+        // The legacy reader resolves an absent sender through the provider, rather than retaining null.
+        var sender = _system.Provider.ResolveActorRef(Akka.Serialization.Serialization.SerializedActorPath(expected.Sender));
+        Require(actual.SequenceNr == expected.SequenceNr && actual.PersistenceId == expected.PersistenceId
+            && actual.Manifest == expected.Manifest && actual.IsDeleted == expected.IsDeleted
+            && actual.Timestamp == expected.Timestamp && actual.WriterGuid == expected.WriterGuid
+            && Equals(actual.Payload, expected.Payload) && Equals(actual.Sender, sender), "persistent representation fields");
+    }
+
+    private static void Require(bool condition, string contract)
+    {
+        if (!condition)
+            throw new InvalidOperationException($"Persistence benchmark setup failed: {contract}.");
     }
 
     [GlobalCleanup]
