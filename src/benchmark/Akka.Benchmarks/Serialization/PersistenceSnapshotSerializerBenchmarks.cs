@@ -49,15 +49,31 @@ public class PersistenceSnapshotSerializerBenchmarks
             _ => throw new InvalidOperationException($"Unknown benchmark shape [{Shape}]")
         };
         _manifest = _legacy.Manifest(_snapshot);
-        _bytes = _legacy.ToBinary(_snapshot);
-        if (_native.Identifier != 8 || _native.Manifest(_snapshot) != _manifest ||
-            !_native.ToBinary(_snapshot).AsSpan().SequenceEqual(_bytes))
+        _bytes = LegacySerialize();
+        if (_legacy.Identifier != 8 || _native.Identifier != 8 || _native.Manifest(_snapshot) != _manifest ||
+            !ReferenceEquals(_system.Serialization.GetSerializerById(8), _native) ||
+            !NativeSerialize().AsSpan().SequenceEqual(_bytes))
             throw new InvalidOperationException("Native snapshot benchmark changed id, manifest or historical bytes.");
-        var back = (Snapshot)_native.Deserialize(new ReadOnlySequence<byte>(_bytes), _manifest);
+        ValidateSnapshot(LegacyDeserialize());
+        ValidateSnapshot(NativeDeserialize());
+        ValidateSnapshot(_system.Serialization.Deserialize(_bytes, 8, _manifest));
+        ValidateWriter(LegacyBufferWrite());
+        ValidateWriter(NativeBufferWrite());
+        Console.WriteLine($"{Shape}: legacy=native={_bytes.Length}B");
+    }
+
+    private void ValidateSnapshot(object decoded)
+    {
+        var back = (Snapshot)decoded;
         if (_snapshot.Data is byte[] expected ? back.Data is not byte[] actual || !expected.AsSpan().SequenceEqual(actual)
             : !Equals(_snapshot.Data, back.Data))
-            throw new InvalidOperationException("Native snapshot benchmark did not roundtrip its corpus.");
-        Console.WriteLine($"{Shape}: legacy=native={_bytes.Length}B");
+            throw new InvalidOperationException("Snapshot benchmark reader did not preserve its complete payload.");
+    }
+
+    private void ValidateWriter(int count)
+    {
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(_bytes))
+            throw new InvalidOperationException("Snapshot benchmark writer changed its count or historical bytes.");
     }
 
     [GlobalCleanup]
