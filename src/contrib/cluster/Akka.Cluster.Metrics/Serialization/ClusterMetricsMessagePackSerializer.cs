@@ -85,7 +85,7 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
                 new MetricsGossip(gossip.Nodes.Select(FromWire).ToImmutableHashSet()), gossip.Reply),
             MetricsPoolWire pool => new AdaptiveLoadBalancingPool((IMetricsSelector)pool.Selector,
                 pool.Instances, null, pool.Dispatcher, pool.UsePoolDispatcher),
-            MetricsMixWire mix => new MixMetricsSelector(mix.Selectors.Cast<CapacityMetricsSelector>().ToImmutableArray()),
+            MetricsMixWire mix => FromWire(mix),
             MetricsCpuWire => CpuMetricsSelector.Instance,
             MetricsMemoryWire => MemoryMetricsSelector.Instance,
             var wire => throw new SerializationException($"Unknown metrics wire message [{wire.GetType()}].")
@@ -107,11 +107,28 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
         // Do not create a second private Serialization instance for these nested envelopes.
         AdaptiveLoadBalancingPool pool => new MetricsPoolWire(pool.MetricsSelector, pool.NrOfInstances,
             pool.RouterDispatcher, pool.UsePoolDispatcher),
-        MixMetricsSelector mix => new MetricsMixWire(mix.Selectors.Cast<object>().ToArray()),
+        MixMetricsSelector mix => new MetricsMixWire(ToWire(mix)),
         CpuMetricsSelector => new MetricsCpuWire(),
         MemoryMetricsSelector => new MetricsMemoryWire(),
         _ => throw new ArgumentException($"Unsupported metrics message [{obj.GetType()}].", nameof(obj))
     };
+
+    private static object[] ToWire(MixMetricsSelector mix)
+    {
+        var selectors = mix.Selectors;
+        var wire = new object[selectors.Length];
+        for (var i = 0; i < selectors.Length; i++)
+            wire[i] = selectors[i];
+        return wire;
+    }
+
+    private static MixMetricsSelector FromWire(MetricsMixWire mix)
+    {
+        var selectors = ImmutableArray.CreateBuilder<CapacityMetricsSelector>(mix.Selectors.Length);
+        foreach (var selector in mix.Selectors)
+            selectors.Add((CapacityMetricsSelector)selector);
+        return new MixMetricsSelector(selectors.MoveToImmutable());
+    }
 
     private static MetricsNodeWire ToWire(NodeMetrics node) => new(node.Address, node.Timestamp,
         node.Metrics.OrderBy(m => m.Name, StringComparer.Ordinal).Select(m => new MetricsValueWire(m.Name,
