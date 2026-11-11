@@ -6,8 +6,11 @@
 
 #nullable enable
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -137,6 +140,113 @@ public sealed class ClusterMetricsV2SerializerSpec : V2PortSpec
         custom.Reads.Should().BeGreaterThan(0);
     }
 
+    [Theory(DisplayName = "Should_ReturnIndependentArrays_When_MetricsWritesReuseScratchStorage")]
+    [InlineData("cpu")]
+    [InlineData("pool-memory")]
+    [InlineData("gossip-double")]
+    public void Should_ReturnIndependentArrays_When_MetricsWritesReuseScratchStorage(string name)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = Cases.Single(sample => sample.Name == name).Message;
+        var first = serializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var second = serializer.ToBinary(message);
+        _ = serializer.ToBinary(MixMetricsSelector.Instance);
+        second[0] ^= 0xff;
+        var third = serializer.ToBinary(message);
+
+        // Assert
+        first.Should().Equal(expected);
+        third.Should().Equal(expected);
+    }
+
+    [Theory(DisplayName = "Should_ReturnOriginalSelectors_When_ReadingCanonicalFieldlessMaps")]
+    [InlineData("d")]
+    [InlineData("e")]
+    public void Should_ReturnOriginalSelectors_When_ReadingCanonicalFieldlessMaps(string manifest)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        IMetricsSelector expected = manifest == "d" ? CpuMetricsSelector.Instance : MemoryMetricsSelector.Instance;
+        byte[] bytes = [0x80];
+
+        // Act
+        var fromArray = serializer.FromBinary(bytes, manifest);
+        var fromSequence = serializer.Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+
+        // Assert
+        fromArray.Should().BeSameAs(expected);
+        fromSequence.Should().BeSameAs(expected);
+    }
+
+    [Theory(DisplayName = "Should_ReadSelectors_When_AFutureMapContainsAnUnknownField")]
+    [InlineData("d")]
+    [InlineData("e")]
+    public void Should_ReadSelectors_When_AFutureMapContainsAnUnknownField(string manifest)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        IMetricsSelector expected = manifest == "d" ? CpuMetricsSelector.Instance : MemoryMetricsSelector.Instance;
+        byte[] bytes = [0x81, 99, 0xc0];
+
+        // Act
+        var restored = serializer.FromBinary(bytes, manifest);
+
+        // Assert
+        restored.Should().BeSameAs(expected);
+    }
+
+    [Theory(DisplayName = "Should_RejectTruncatedSelectors_When_TheMapAdvertisesAMissingField")]
+    [InlineData("d")]
+    [InlineData("e")]
+    public void Should_RejectTruncatedSelectors_When_TheMapAdvertisesAMissingField(string manifest)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+
+        // Act
+        Action read = () => serializer.FromBinary([0x81], manifest);
+
+        // Assert
+        read.Should().Throw<EndOfStreamException>();
+    }
+
+    [Theory(DisplayName = "Should_UseRegisteredSelectors_When_BuiltInSelectorsHaveExplicitBindings")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_UseRegisteredSelectors_When_BuiltInSelectorsHaveExplicitBindings(bool usePool)
+    {
+        // Arrange
+        var config = ConfigurationFactory.ParseString($$"""
+            akka.actor.serialization-v2 = on
+            akka.actor.serializers.selector-override = "{{typeof(BuiltInSelectorSerializer).AssemblyQualifiedName}}"
+            akka.actor.serialization-bindings {
+                "{{typeof(CpuMetricsSelector).AssemblyQualifiedName}}" = selector-override
+                "{{typeof(MemoryMetricsSelector).AssemblyQualifiedName}}" = selector-override
+            }
+            """).WithFallback(ClusterMetrics.DefaultConfig());
+        await using var kit = new Akka.TestKit.Xunit.TestKit(config, "metrics-selector-override", _output);
+        var custom = (BuiltInSelectorSerializer)kit.Sys.Serialization.FindSerializerFor(CpuMetricsSelector.Instance);
+        var mix = new MixMetricsSelector(ImmutableArray.Create<CapacityMetricsSelector>(
+            CpuMetricsSelector.Instance, MemoryMetricsSelector.Instance));
+        object message = usePool ? new AdaptiveLoadBalancingPool(mix, 3) : mix;
+        var serializer = kit.Sys.Serialization.FindSerializerFor(message);
+
+        // Act
+        var restored = serializer.FromBinary(serializer.ToBinary(message), serializer.Manifest(message));
+        var selector = usePool ? ((AdaptiveLoadBalancingPool)restored).MetricsSelector : (IMetricsSelector)restored;
+
+        // Assert
+        serializer.Identifier.Should().Be(50);
+        selector.Should().BeOfType<MixMetricsSelector>().Which.Selectors
+            .Should().Equal(CpuMetricsSelector.Instance, MemoryMetricsSelector.Instance);
+        custom.Writes.Should().Be(2);
+        custom.Reads.Should().Be(2);
+    }
+
     [Fact(DisplayName = "Should_RejectUnknownInputs_When_AMetricsManifestOrMessageIsUnsupported")]
     public void Should_RejectUnknownInputs_When_AMetricsManifestOrMessageIsUnsupported()
     {
@@ -199,6 +309,33 @@ public sealed class ClusterMetricsV2SerializerSpec : V2PortSpec
         {
             Reads++;
             return new CustomSelector(BitConverter.ToInt32(bytes));
+        }
+    }
+
+    public sealed class BuiltInSelectorSerializer(ExtendedActorSystem system) : SerializerWithStringManifest(system)
+    {
+        public int Writes { get; private set; }
+        public int Reads { get; private set; }
+        public override int Identifier => 778;
+        public override string Manifest(object obj) => obj is CpuMetricsSelector ? "cpu" : "memory";
+
+        public override byte[] ToBinary(object obj)
+        {
+            Writes++;
+            return [42];
+        }
+
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            if (bytes.Length != 1 || bytes[0] != 42)
+                throw new SerializationException("The registered selector reader requires its own bytes.");
+            Reads++;
+            return manifest switch
+            {
+                "cpu" => CpuMetricsSelector.Instance,
+                "memory" => MemoryMetricsSelector.Instance,
+                _ => throw new SerializationException($"Unknown selector override manifest [{manifest}].")
+            };
         }
     }
 }

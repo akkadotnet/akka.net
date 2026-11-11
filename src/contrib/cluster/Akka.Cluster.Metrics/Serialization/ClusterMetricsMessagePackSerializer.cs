@@ -41,20 +41,62 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
         _ => throw new ArgumentException($"Unsupported metrics message [{obj.GetType()}].", nameof(obj))
     };
 
-    public override int Serialize(object obj, IBufferWriter<byte> writer) => _codec.Serialize(ToWire(obj), writer);
-
-    public override int SizeHint(object obj) => _codec.SizeHint(ToWire(obj));
-
-    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
+    public override byte[] ToBinary(object obj)
     {
-        MetricsGossipWire gossip => new MetricsGossipEnvelope(gossip.From,
-            new MetricsGossip(gossip.Nodes.Select(FromWire).ToImmutableHashSet()), gossip.Reply),
-        MetricsPoolWire pool => new AdaptiveLoadBalancingPool((IMetricsSelector)pool.Selector,
-            pool.Instances, null, pool.Dispatcher, pool.UsePoolDispatcher),
-        MetricsMixWire mix => new MixMetricsSelector(mix.Selectors.Cast<CapacityMetricsSelector>().ToImmutableArray()),
-        MetricsCpuWire => CpuMetricsSelector.Instance,
-        MetricsMemoryWire => MemoryMetricsSelector.Instance,
-        var wire => throw new SerializationException($"Unknown metrics wire message [{wire.GetType()}].")
+        if (obj is CpuMetricsSelector or MemoryMetricsSelector)
+            return [0x80];
+
+        // Prepare the graph once; asking the wrapper for a size hint would build it again.
+        var wire = ToWire(obj);
+        using var output = new PooledPayloadWriter();
+        _codec.Serialize(wire, output);
+        return output.WrittenSpan.ToArray();
+    }
+
+    public override int Serialize(object obj, IBufferWriter<byte> writer)
+    {
+        if (obj is CpuMetricsSelector or MemoryMetricsSelector)
+        {
+            writer.GetSpan(1)[0] = 0x80;
+            writer.Advance(1);
+            return 1;
+        }
+
+        return _codec.Serialize(ToWire(obj), writer);
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        if (bytes is { Length: 1 } && bytes[0] == 0x80 && ReadSelector(manifest) is { } selector)
+            return selector;
+
+        return Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+    }
+
+    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+    {
+        if (bytes.IsSingleSegment && bytes.FirstSpan.Length == 1 && bytes.FirstSpan[0] == 0x80
+            && ReadSelector(manifest) is { } selector)
+            return selector;
+
+        return _codec.Deserialize(bytes, manifest) switch
+        {
+            MetricsGossipWire gossip => new MetricsGossipEnvelope(gossip.From,
+                new MetricsGossip(gossip.Nodes.Select(FromWire).ToImmutableHashSet()), gossip.Reply),
+            MetricsPoolWire pool => new AdaptiveLoadBalancingPool((IMetricsSelector)pool.Selector,
+                pool.Instances, null, pool.Dispatcher, pool.UsePoolDispatcher),
+            MetricsMixWire mix => new MixMetricsSelector(mix.Selectors.Cast<CapacityMetricsSelector>().ToImmutableArray()),
+            MetricsCpuWire => CpuMetricsSelector.Instance,
+            MetricsMemoryWire => MemoryMetricsSelector.Instance,
+            var wire => throw new SerializationException($"Unknown metrics wire message [{wire.GetType()}].")
+        };
+    }
+
+    private static IMetricsSelector? ReadSelector(string manifest) => manifest switch
+    {
+        "d" => CpuMetricsSelector.Instance,
+        "e" => MemoryMetricsSelector.Instance,
+        _ => null
     };
 
     private static IMetricsWireMessage ToWire(object obj) => obj switch
