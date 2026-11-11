@@ -9,6 +9,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
@@ -131,7 +132,65 @@ public sealed class ClusterClientV2SerializerSpec : V2PortSpec
                                                c.Message is not ClientProtocol.Send &&
                                                c.Message is not ClientProtocol.SendToAll &&
                                                c.Message is not ClientProtocol.Publish))
-            writer.Deserialize(new ReadOnlySequence<byte>(writer.ToBinary(sample.Message)), sample.Manifest).Should().BeSameAs(sample.Message);
+        {
+            var bytes = writer.ToBinary(sample.Message);
+            writer.FromBinary(bytes, sample.Manifest).Should().BeSameAs(sample.Message);
+            writer.Deserialize(new ReadOnlySequence<byte>(bytes), sample.Manifest).Should().BeSameAs(sample.Message);
+        }
+    }
+
+    [Theory(DisplayName = "Should_ReturnIndependentArrays_When_ClientWritesAreRepeated")]
+    [InlineData("heartbeat")]
+    [InlineData("contacts")]
+    [InlineData("send-local-affinity")]
+    public void Should_ReturnIndependentArrays_When_ClientWritesAreRepeated(string name)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = Cases.Single(sample => sample.Name == name).Message;
+        var first = serializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var second = serializer.ToBinary(message);
+        _ = serializer.ToBinary(new ClientProtocol.Publish("other", "different payload"));
+        second[0] ^= 0xff;
+        var third = serializer.ToBinary(message);
+
+        // Assert
+        first.Should().Equal(expected);
+        third.Should().Equal(expected);
+    }
+
+    [Theory(DisplayName = "Should_ReadOriginalControls_When_AFutureMapContainsAnUnknownField")]
+    [InlineData("heartbeat")]
+    [InlineData("heartbeat-tick")]
+    public void Should_ReadOriginalControls_When_AFutureMapContainsAnUnknownField(string name)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var sample = Cases.Single(value => value.Name == name);
+
+        // Act
+        var restored = serializer.FromBinary([0x81, 99, 0xc0], sample.Manifest);
+
+        // Assert
+        restored.Should().BeSameAs(sample.Message);
+    }
+
+    [Theory(DisplayName = "Should_RejectTruncatedControls_When_TheMapAdvertisesAMissingField")]
+    [InlineData("C")]
+    [InlineData("AE")]
+    public void Should_RejectTruncatedControls_When_TheMapAdvertisesAMissingField(string manifest)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+
+        // Act
+        Action read = () => serializer.FromBinary([0x81], manifest);
+
+        // Assert
+        read.Should().Throw<EndOfStreamException>();
     }
 
     [Fact(DisplayName = "Should_UseTheRegisteredPayloadSerializer_When_ClientEnvelopesContainUserMessages")]
@@ -150,10 +209,17 @@ public sealed class ClusterClientV2SerializerSpec : V2PortSpec
             object[] envelopes = [new ClientProtocol.Send("/user/worker", payload, true),
                 new ClientProtocol.SendToAll("/user/worker", payload), new ClientProtocol.Publish("topic", payload)];
             foreach (var envelope in envelopes)
-                writer.FromBinary(writer.ToBinary(envelope), writer.Manifest(envelope)).Should().Be(envelope);
+            {
+                var bytes = writer.ToBinary(envelope);
+                writer.FromBinary(bytes, writer.Manifest(envelope)).Should().Be(envelope);
+                var buffer = new ArrayBufferWriter<byte>();
+                writer.Serialize(envelope, buffer).Should().Be(buffer.WrittenCount);
+                buffer.WrittenSpan.ToArray().Should().Equal(bytes);
+                writer.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), writer.Manifest(envelope)).Should().Be(envelope);
+            }
             var payloadSerializer = (ClientPayloadSerializer)system.Serialization.FindSerializerFor(payload);
-            payloadSerializer.WriteCount.Should().Be(3);
-            payloadSerializer.ReadCount.Should().Be(3);
+            payloadSerializer.WriteCount.Should().Be(6);
+            payloadSerializer.ReadCount.Should().Be(6);
             system.Serialization.FindSerializerFor(payload).Identifier.Should().Be(55555);
         }
         finally
