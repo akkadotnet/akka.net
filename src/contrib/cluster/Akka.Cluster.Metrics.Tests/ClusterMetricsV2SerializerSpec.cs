@@ -247,6 +247,24 @@ public sealed class ClusterMetricsV2SerializerSpec : V2PortSpec
         custom.Reads.Should().Be(2);
     }
 
+    [Fact(DisplayName = "Should_RejectAnUninitializedSelectorArray_When_SerializingAMix")]
+    public void Should_RejectAnUninitializedSelectorArray_When_SerializingAMix()
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = new MixMetricsSelector(default);
+        var output = new ArrayBufferWriter<byte>();
+
+        // Act
+        Action arrayWrite = () => serializer.ToBinary(message);
+        Action bufferWrite = () => serializer.Serialize(message, output);
+
+        // Assert
+        arrayWrite.Should().Throw<InvalidOperationException>();
+        bufferWrite.Should().Throw<InvalidOperationException>();
+        output.WrittenCount.Should().Be(0);
+    }
+
     [Fact(DisplayName = "Should_RejectUnknownInputs_When_AMetricsManifestOrMessageIsUnsupported")]
     public void Should_RejectUnknownInputs_When_AMetricsManifestOrMessageIsUnsupported()
     {
