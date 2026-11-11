@@ -6,6 +6,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -36,6 +37,79 @@ public sealed class SystemMessageMessagePackSerializerSpec : V2PortSpec
 
     protected override Serializer CreateLegacy(ExtendedActorSystem system) => new SystemMessageSerializer(system);
     protected override SerializerV2 CreateV2(ExtendedActorSystem system) => new SystemMessageMessagePackSerializer(system);
+
+    [Theory(DisplayName = "Should_KeepByteArrayResultsIndependent_When_ACallerMutatesItsPreviousResult")]
+    [InlineData("suspend")]
+    [InlineData("watch")]
+    [InlineData("failed-negative-uid")]
+    public void Should_KeepByteArrayResultsIndependent_When_ACallerMutatesItsPreviousResult(string name)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = _cases.Single(sample => sample.Name == name).Message;
+        var first = serializer.ToBinary(message);
+        var expected = first.ToArray();
+
+        // Act
+        first[0] = 0;
+        var second = serializer.ToBinary(message);
+
+        // Assert
+        Assert.Equal(expected, second);
+    }
+
+    [Theory(DisplayName = "Should_CreateIndependentControls_When_TheSameBytesAreReadTwice")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_CreateIndependentControls_When_TheSameBytesAreReadTwice(bool terminate)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        SystemMessage message = terminate ? new Terminate() : new Suspend();
+        var manifest = serializer.Manifest(message);
+        var bytes = serializer.ToBinary(message);
+
+        // Act
+        var first = serializer.FromBinary(bytes, manifest);
+        var second = serializer.FromBinary(bytes, manifest);
+
+        // Assert: system messages carry mutable mailbox links and cannot be shared.
+        Assert.NotSame(first, second);
+    }
+
+    [Theory(DisplayName = "Should_ReadFieldlessControls_When_AFutureWriterAddsAnUnknownField")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_ReadFieldlessControls_When_AFutureWriterAddsAnUnknownField(bool terminate)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        SystemMessage message = terminate ? new Terminate() : new Suspend();
+        byte[] bytes = [0x81, 99, 0xc0];
+
+        // Act
+        var restored = serializer.FromBinary(bytes, serializer.Manifest(message));
+
+        // Assert
+        Assert.Equal(message.GetType(), restored.GetType());
+    }
+
+    [Theory(DisplayName = "Should_RejectTruncatedControls_When_TheMapAdvertisesAMissingField")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Should_RejectTruncatedControls_When_TheMapAdvertisesAMissingField(bool terminate)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        SystemMessage message = terminate ? new Terminate() : new Suspend();
+
+        // Act
+        var read = () => serializer.FromBinary([0x81], serializer.Manifest(message));
+
+        // Assert
+        Assert.Throws<EndOfStreamException>(read);
+    }
+
     // Non-null exceptions have intentionally richer V2 state. They retain their original
     // inputs and frozen bytes, with explicit per-writer assertions below instead of false parity.
     protected override IReadOnlyList<V2PortCase> Cases => _cases.Where(c => !IsRich(c)).ToArray();

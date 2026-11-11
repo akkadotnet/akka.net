@@ -17,6 +17,8 @@ namespace Akka.Remote.Serialization;
 internal sealed class SystemMessageMessagePackSerializer : SerializerV2
 {
     internal const int SerializerIdentifier = 62;
+    private const int MaximumCachedBufferCapacity = 1024;
+    [ThreadStatic] private static ArrayBufferWriter<byte>? _arrayBuffer;
     private readonly SystemMessageMessagePackCodec _codec;
 
     public SystemMessageMessagePackSerializer(ExtendedActorSystem system) : base(system)
@@ -44,43 +46,71 @@ internal sealed class SystemMessageMessagePackSerializer : SerializerV2
 
     public override byte[] ToBinary(object obj)
     {
-        var output = new ArrayBufferWriter<byte>();
-        Serialize(obj, output);
-        return output.WrittenSpan.ToArray();
+        if (obj is Suspend or Terminate)
+            return [0x80]; // The generated AllowEmpty record is an empty MessagePack map.
+
+        var wire = ToWire(obj);
+        if (HasExceptionPayload(wire))
+        {
+            using var output = new PooledPayloadWriter();
+            SerializeWire(wire, output);
+            return output.WrittenSpan.ToArray();
+        }
+
+        // Small path-only controls need UTF-8 reservation headroom, but renting and
+        // returning a pooled array on each call can dominate their encoding cost.
+        // Lease this bounded scratch writer so reentrant calls cannot share it.
+        var scratch = _arrayBuffer ?? new ArrayBufferWriter<byte>();
+        _arrayBuffer = null;
+        try
+        {
+            SerializeWire(wire, scratch);
+            return scratch.WrittenSpan.ToArray();
+        }
+        finally
+        {
+            if (scratch.Capacity <= MaximumCachedBufferCapacity)
+            {
+                scratch.Clear();
+                _arrayBuffer = scratch;
+            }
+        }
     }
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
-        ISystemMessageWire wire = obj switch
+        if (obj is Suspend or Terminate)
         {
-            Create value => new CreateWire(value.Failure),
-            Recreate value => new RecreateWire(value.Cause),
-            Suspend => new SuspendWire(),
-            Resume value => new ResumeWire(value.CausedByFailure),
-            Terminate => new TerminateWire(),
-            Supervise value => new SuperviseWire(Path(value.Child), value.Async),
-            Watch value when value.GetType() == typeof(Watch) => new WatchWire(Path(value.Watchee), Path(value.Watcher)),
-            Unwatch value => new UnwatchWire(Path(value.Watchee), Path(value.Watcher)),
-            Failed value => new FailedWire(Path(value.Child), value.Cause, value.Uid),
-            DeathWatchNotification value => new DeathWatchNotificationWire(Path(value.Actor),
-                value.ExistenceConfirmed, value.AddressTerminated),
-            _ => throw new ArgumentException($"Unsupported system message [{obj?.GetType()}].", nameof(obj))
-        };
+            writer.GetSpan(1)[0] = 0x80;
+            writer.Advance(1);
+            return 1;
+        }
+
+        var wire = ToWire(obj);
+        if (!HasExceptionPayload(wire))
+            return SerializeWire(wire, writer);
+
+        // A late exception/payload formatter failure must not leave a partial system
+        // message in the transport's caller-owned writer.
+        using var staged = new PooledPayloadWriter();
+        SerializeWire(wire, staged);
+        staged.WrittenSpan.CopyTo(writer.GetSpan(staged.WrittenCount));
+        writer.Advance(staged.WrittenCount);
+        return staged.WrittenCount;
+    }
+
+    private static bool HasExceptionPayload(ISystemMessageWire wire) => wire is
+        CreateWire { Cause: not null } or RecreateWire { Cause: not null }
+        or ResumeWire { Cause: not null } or FailedWire { Cause: not null };
+
+    private int SerializeWire(ISystemMessageWire wire, IBufferWriter<byte> writer)
+    {
         var previous = Akka.Serialization.Serialization.CurrentTransportInformation;
         try
         {
             if (previous is null)
                 Akka.Serialization.Serialization.CurrentTransportInformation = system.Provider.SerializationInformation;
-            // Path-only controls have already materialized all fields and can write directly.
-            if (wire is not (CreateWire or RecreateWire or ResumeWire or FailedWire))
-                return _codec.Serialize(wire, writer);
-            // A late exception/payload formatter failure must not leave a partial system message
-            // in the transport's caller-owned writer.
-            var staged = new ArrayBufferWriter<byte>();
-            _codec.Serialize(wire, staged);
-            staged.WrittenSpan.CopyTo(writer.GetSpan(staged.WrittenCount));
-            writer.Advance(staged.WrittenCount);
-            return staged.WrittenCount;
+            return _codec.Serialize(wire, writer);
         }
         finally
         {
@@ -88,8 +118,21 @@ internal sealed class SystemMessageMessagePackSerializer : SerializerV2
         }
     }
 
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        if (bytes is { Length: 1 } && bytes[0] == 0x80 && ReadControl(manifest) is { } control)
+            return control;
+        return Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+    }
+
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
     {
+        // Avoid an intermediate wire record for the canonical fieldless controls. All
+        // other inputs still use the generated reader, including future fields and errors.
+        if (bytes.IsSingleSegment && bytes.FirstSpan.Length == 1 && bytes.FirstSpan[0] == 0x80
+            && ReadControl(manifest) is { } control)
+            return control;
+
         var wire = _codec.Deserialize(bytes, manifest);
         return wire switch
         {
@@ -110,6 +153,27 @@ internal sealed class SystemMessageMessagePackSerializer : SerializerV2
             _ => throw new SerializationException($"Unsupported system-message payload for manifest [{manifest}].")
         };
     }
+
+    private static SystemMessage? ReadControl(string manifest) => manifest switch
+    {
+        SystemMessageManifests.Suspend => new Suspend(),
+        SystemMessageManifests.Terminate => new Terminate(),
+        _ => null
+    };
+
+    private static ISystemMessageWire ToWire(object obj) => obj switch
+    {
+        Create value => new CreateWire(value.Failure),
+        Recreate value => new RecreateWire(value.Cause),
+        Resume value => new ResumeWire(value.CausedByFailure),
+        Supervise value => new SuperviseWire(Path(value.Child), value.Async),
+        Watch value when value.GetType() == typeof(Watch) => new WatchWire(Path(value.Watchee), Path(value.Watcher)),
+        Unwatch value => new UnwatchWire(Path(value.Watchee), Path(value.Watcher)),
+        Failed value => new FailedWire(Path(value.Child), value.Cause, value.Uid),
+        DeathWatchNotification value => new DeathWatchNotificationWire(Path(value.Actor),
+            value.ExistenceConfirmed, value.AddressTerminated),
+        _ => throw new ArgumentException($"Unsupported system message [{obj?.GetType()}].", nameof(obj))
+    };
 
     private static string Path(IActorRef? actor) => Akka.Serialization.Serialization.SerializedActorPath(actor);
     private IActorRef? Resolve(string path) => string.IsNullOrEmpty(path) ? null : system.Provider.ResolveActorRef(path);
