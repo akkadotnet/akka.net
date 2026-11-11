@@ -9,6 +9,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Quic;
@@ -92,6 +93,139 @@ namespace Akka.Remote.Tests.Artery
                 using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await sender.ShutdownAsync(shutdown.Token);
                 materializer.Shutdown();
+            }
+        }
+
+        [Theory(DisplayName = "QUIC writes a bounded ordinary batch with fewer calls and the same bytes")]
+        [InlineData(4096, 0, 1)]
+        [InlineData(8192, 8192, 1)]
+        [InlineData(8192, 8193, 2)]
+        public async Task Should_CoalesceEligibleOrdinaryBatch_When_WritingOwnedSegments(
+            int firstSize, int secondSize, int expectedWrites)
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TrustCertificate(certificate));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log, enableIoStatistics: true);
+            var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var materializer = ActorMaterializer.Create(Sys);
+            var received = new TaskCompletionSource<Task<IImmutableList<ReadOnlySequence<byte>>>>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var first = new TrackingOwner(firstSize, 0x13);
+            var second = secondSize == 0 ? null : new TrackingOwner(secondSize, 0xB1);
+            var input = OwnedSequenceSegment.Create(first, firstSize);
+            if (second is not null)
+                input = ArteryRemoting.AppendFrameToBatch(input, OwnedSequenceSegment.Create(second, secondSize));
+            var expected = input.ToArray();
+            try
+            {
+                var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
+                receiver.StartAccepting((source, _, admitted) =>
+                {
+                    received.TrySetResult(source.RunWith(Sink.Seq<ReadOnlySequence<byte>>(), materializer));
+                    admitted();
+                });
+                var preamble = Preamble(ArteryStreamId.Ordinary);
+                await Source.Single(new ReadOnlySequence<byte>(preamble)).Concat(Source.Single(input))
+                    .Via(sender.Outgoing(endpoint, ArteryStreamId.Ordinary))
+                    .RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer).WaitAsync(deadline.Token);
+                var chunks = await (await received.Task.WaitAsync(deadline.Token)).WaitAsync(deadline.Token);
+                chunks.SelectMany(chunk => chunk.ToArray()).Should().Equal(preamble.Concat(expected));
+                first.DisposeCount.Should().Be(1);
+                if (second is not null)
+                    second.DisposeCount.Should().Be(1);
+                sender.IoSnapshot.WriteBytes.Should().Be(preamble.Length + expected.Length);
+                sender.IoSnapshot.WriteOperations.Should().Be(1 + expectedWrites);
+            }
+            finally
+            {
+                using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await sender.ShutdownAsync(shutdown.Token);
+                await receiver.ShutdownAsync(shutdown.Token);
+                materializer.Shutdown();
+            }
+        }
+
+        private sealed class TrackingOwner(int length, byte fill) : IMemoryOwner<byte>
+        {
+            private readonly byte[] _bytes = Enumerable.Repeat(fill, length).ToArray();
+            private int _disposeCount;
+
+            public Memory<byte> Memory => _bytes;
+            public int DisposeCount => Volatile.Read(ref _disposeCount);
+
+            public void Dispose()
+            {
+                Interlocked.Increment(ref _disposeCount);
+                Array.Fill(_bytes, (byte)0xEE);
+            }
+        }
+
+        [Theory(DisplayName = "QUIC coalescing returns the rental once the write settles")]
+        [InlineData("success")]
+        [InlineData("cancellation")]
+        [InlineData("failure")]
+        public async Task Should_ReturnRentalOnlyAfterSettlement_When_CoalescedWriteIsPending(string outcome)
+        {
+            var bytes = new byte[] { 0x13, 0xB1, 0x2C };
+            var pool = new TrackingPool();
+            using var stream = new PendingWriteStream();
+            using var cancellation = new CancellationTokenSource();
+            var write = ArteryQuicWriteStage.WriteCoalescedAsync(
+                stream, new ReadOnlySequence<byte>(bytes), pool, cancellation.Token).AsTask();
+
+            write.IsCompleted.Should().BeFalse();
+            pool.ReturnCount.Should().Be(0);
+            stream.Submitted.ToArray().Should().Equal(bytes);
+            stream.Submitted.Length.Should().Be(bytes.Length, "a rental can be larger than the write");
+
+            switch (outcome)
+            {
+                case "success":
+                    stream.Completion.SetResult();
+                    await write;
+                    break;
+                case "cancellation":
+                    cancellation.Cancel();
+                    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write);
+                    break;
+                case "failure":
+                    var error = new IOException("write failed");
+                    stream.Completion.SetException(error);
+                    (await Assert.ThrowsAsync<IOException>(() => write)).Should().BeSameAs(error);
+                    break;
+            }
+
+            pool.ReturnCount.Should().Be(1);
+            pool.Returned.Should().BeSameAs(pool.Buffer);
+        }
+
+        private sealed class PendingWriteStream : MemoryStream
+        {
+            public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            public ReadOnlyMemory<byte> Submitted { get; private set; }
+
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                Submitted = buffer;
+                return new ValueTask(Completion.Task.WaitAsync(cancellationToken));
+            }
+        }
+
+        private sealed class TrackingPool : ArrayPool<byte>
+        {
+            public byte[] Buffer { get; } = new byte[16];
+            public byte[]? Returned { get; private set; }
+            public int ReturnCount { get; private set; }
+
+            public override byte[] Rent(int minimumLength) => Buffer;
+
+            public override void Return(byte[] array, bool clearArray = false)
+            {
+                Returned = array;
+                ReturnCount++;
             }
         }
 

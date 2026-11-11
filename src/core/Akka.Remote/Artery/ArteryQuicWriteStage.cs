@@ -8,6 +8,7 @@
 
 using System;
 using System.Buffers;
+using System.IO;
 using System.Net;
 using System.Runtime.Versioning;
 using System.Threading;
@@ -28,6 +29,9 @@ namespace Akka.Remote.Artery
     internal sealed class ArteryQuicWriteStage
         : GraphStageWithMaterializedValue<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>, Task<Done>>
     {
+        // Match the ordinary lane batch cap. Larger sequences keep the segmented path.
+        private const int MaximumCoalescedWriteSize = 16 * 1024;
+
         private readonly ArteryQuicTransport _transport;
         private readonly EndPoint _endpoint;
         private readonly ArteryStreamId _role;
@@ -49,6 +53,23 @@ namespace Akka.Remote.Artery
         {
             var connected = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
             return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, connected), connected.Task);
+        }
+
+        internal static async ValueTask WriteCoalescedAsync(Stream stream, ReadOnlySequence<byte> bytes,
+            ArrayPool<byte> pool, CancellationToken cancellationToken)
+        {
+            var length = checked((int)bytes.Length);
+            var buffer = pool.Rent(length);
+            try
+            {
+                var memory = buffer.AsMemory(0, length);
+                bytes.CopyTo(memory.Span);
+                await stream.WriteAsync(memory, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                pool.Return(buffer);
+            }
         }
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
@@ -147,11 +168,21 @@ namespace Akka.Remote.Artery
             {
                 try
                 {
-                    using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token, _channel!.CancellationToken);
-                    foreach (var segment in bytes)
+                    var channel = _channel!;
+                    using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token, channel.CancellationToken);
+                    if (_stage._role == ArteryStreamId.Ordinary && !bytes.IsSingleSegment &&
+                        !bytes.IsEmpty && bytes.Length <= MaximumCoalescedWriteSize)
                     {
-                        await _channel.Stream.WriteAsync(segment, lifetime.Token).ConfigureAwait(false);
-                        _stage._transport.RecordWrite(_stage._role, segment.Length);
+                        await WriteCoalescedAsync(channel.Stream, bytes, ArrayPool<byte>.Shared, lifetime.Token).ConfigureAwait(false);
+                        _stage._transport.RecordWrite(_stage._role, (int)bytes.Length);
+                    }
+                    else
+                    {
+                        foreach (var segment in bytes)
+                        {
+                            await channel.Stream.WriteAsync(segment, lifetime.Token).ConfigureAwait(false);
+                            _stage._transport.RecordWrite(_stage._role, segment.Length);
+                        }
                     }
                     _written!(Done.Instance);
                 }
