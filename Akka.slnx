@@ -76,6 +76,16 @@
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/Akka.DependencyInjection.Tests.csproj" />
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection/Akka.DependencyInjection.csproj" />
   </Folder>
+  <Folder Name="/Contrib/Reminders/">
+    <Project Path="src/contrib/reminders/Akka.Reminders.Benchmarks/Akka.Reminders.Benchmarks.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Migration.Tests/Akka.Reminders.Migration.Tests.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.PostgreSql/Akka.Reminders.PostgreSql.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Sql/Akka.Reminders.Sql.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.SqlServer/Akka.Reminders.SqlServer.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Sqlite/Akka.Reminders.Sqlite.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Tests/Akka.Reminders.Tests.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders/Akka.Reminders.csproj" />
+  </Folder>
   <Folder Name="/Contrib/Hosting/">
     <Project Path="src/contrib/hosting/Akka.Cluster.Hosting.Tests/Akka.Cluster.Hosting.Tests.csproj" />
     <Project Path="src/contrib/hosting/Akka.Cluster.Hosting/Akka.Cluster.Hosting.csproj" />
