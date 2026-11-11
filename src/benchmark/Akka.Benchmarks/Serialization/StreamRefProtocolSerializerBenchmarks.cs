@@ -67,23 +67,37 @@ public class StreamRefProtocolSerializerBenchmarks
         _manifest = Akka.Serialization.Serialization.ManifestFor(_legacy, _message);
         if (_legacy.Identifier != 30 || _generated.Identifier != 70 || _generated.Manifest(_message) != _manifest)
             throw new InvalidOperationException("Stream protocol benchmark selected the wrong ids or manifests.");
-        _legacyBytes = _legacy.ToBinary(_message);
-        _v2Bytes = _generated.ToBinary(_message);
+        _legacyBytes = ProtobufSerialize();
+        _v2Bytes = MessagePackSerialize();
         var reader = new StreamRefSerializer(_legacySystem);
         foreach (var restored in new[]
                  {
-                     _legacy.FromBinary(_legacyBytes, _manifest),
-                     _generated.FromBinary(_v2Bytes, _manifest),
-                     _generated.Deserialize(new ReadOnlySequence<byte>(_v2Bytes), _manifest),
-                     _legacySystem.Serialization.Deserialize(_v2Bytes, 70, _manifest),
-                     _legacySystem.Serialization.Deserialize(_legacyBytes, 30, _manifest)
+                     ProtobufDeserialize(),
+                     MessagePackDeserialize()
                  })
+            Validate(restored, reader);
+        foreach (var system in new[] { _legacySystem, _v2System })
         {
-            if (restored.GetType() != _message.GetType() ||
-                !reader.ToBinary(restored).AsSpan().SequenceEqual(reader.ToBinary(_message)))
-                throw new InvalidOperationException("Stream protocol benchmark failed full-member validation.");
+            Validate(system.Serialization.Deserialize(_v2Bytes, 70, _manifest), reader);
+            Validate(system.Serialization.Deserialize(_legacyBytes, 30, _manifest), reader);
         }
+        ValidateWriter(ProtobufBufferWrite(), _legacyBytes, _legacyAdapter, reader);
+        ValidateWriter(MessagePackBufferWrite(), _v2Bytes, _generated, reader);
         Console.WriteLine($"{Shape}: protobuf={_legacyBytes.Length}B MessagePack={_v2Bytes.Length}B");
+    }
+
+    private void Validate(object restored, StreamRefSerializer reader)
+    {
+        if (restored.GetType() != _message.GetType() ||
+            !reader.ToBinary(restored).AsSpan().SequenceEqual(reader.ToBinary(_message)))
+            throw new InvalidOperationException("Stream protocol benchmark failed full-member validation.");
+    }
+
+    private void ValidateWriter(int count, byte[] expected, SerializerV2 serializer, StreamRefSerializer reader)
+    {
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expected))
+            throw new InvalidOperationException("Stream protocol benchmark failed buffer count or byte validation.");
+        Validate(serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), _manifest), reader);
     }
 
     private static Config Config(bool v2) => ConfigurationFactory.ParseString($$"""
