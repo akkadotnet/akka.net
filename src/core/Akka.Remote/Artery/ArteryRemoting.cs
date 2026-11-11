@@ -1994,21 +1994,7 @@ namespace Akka.Remote.Artery
                         .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                         .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
                         .WatchTermination(Keep.Both)
-                        .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes,
-                            onDropped: bytes =>
-                            {
-                                _log.Debug(
-                                    "Outbound Artery ordinary-lanes write batch to [{0}] held {1} bytes of " +
-                                    "already-encoded frame data when its stream stopped; dropping it.",
-                                    remoteAddress, bytes);
-
-                                System.EventStream.Publish(new Dropped(
-                                    $"{bytes} bytes of already-encoded Artery frame data",
-                                    $"Outbound Artery ordinary-lanes write batch to [{remoteAddress}] held {bytes} " +
-                                    "bytes of already-encoded frame data across one or more lanes when its stream stopped",
-                                    ActorRefs.NoSender,
-                                    System.DeadLetters));
-                            })))
+                        .Via(Flow.FromGraph(CreateOrdinaryWriteBatch(remoteAddress)))
                         .Via(connectionWithRestart)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
@@ -2475,13 +2461,22 @@ namespace Akka.Remote.Artery
                         : createConnection();
 
                     UniqueKillSwitch killSwitch;
-                    ((killSwitch, terminationWatch), _) = frames
+                    var watchedFrames = frames
                         .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                         .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
-                        .WatchTermination(Keep.Both)
+                        .WatchTermination(Keep.Both);
+                    var batchOrdinaryQuic = _quic is not null && streamId == ArteryStreamId.Ordinary;
+                    if (batchOrdinaryQuic)
+                        watchedFrames = watchedFrames.Via(Flow.FromGraph(CreateOrdinaryWriteBatch(remoteAddress)));
+
+                    Task<Done> writerFinished;
+                    ((killSwitch, terminationWatch), writerFinished) = watchedFrames
                         .Via(connectionWithRestart)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
+
+                    if (batchOrdinaryQuic)
+                        terminationWatch = Task.WhenAll(terminationWatch, writerFinished);
 
                     if (isLargeStream)
                         association.SetLargeOutboundKillSwitch(killSwitch);
@@ -2799,18 +2794,30 @@ namespace Akka.Remote.Artery
         private static readonly TimeSpan StreamStopAskTimeout = TimeSpan.FromMilliseconds(500);
 
         /// <summary>
-        /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
-        /// bytes of already-encoded frames one batched element may carry. Mirrors the TCP
-        /// write-coalescing cap it feeds into
-        /// (<c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.WriteBufferCap</c>, 16 KiB):
-        /// that is the largest accumulation the connection stage itself builds before it stops
-        /// pulling, so batching further upstream past it buys nothing.
+        /// Weight cap for combining encoded frames with <see cref="LaneWriteBatchStage"/>.
+        /// Matches the 16 KiB TCP connection write buffer and the single-lane QUIC write
+        /// coalescing limit. Oversized frames pass through individually.
         /// </summary>
         private const long LaneWriteBatchMaxBytes = 16 * 1024;
 
+        private LaneWriteBatchStage CreateOrdinaryWriteBatch(Address remoteAddress) =>
+            new(LaneWriteBatchMaxBytes, onDropped: bytes =>
+            {
+                _log.Debug(
+                    "Outbound Artery ordinary-lanes write batch to [{0}] held {1} bytes of " +
+                    "already-encoded frame data when its stream stopped; dropping it.",
+                    remoteAddress, bytes);
+
+                System.EventStream.Publish(new Dropped(
+                    $"{bytes} bytes of already-encoded Artery frame data",
+                    $"Outbound Artery ordinary-lanes write batch to [{remoteAddress}] held {bytes} " +
+                    "bytes of already-encoded frame data across one or more lanes when its stream stopped",
+                    ActorRefs.NoSender,
+                    System.DeadLetters));
+            });
+
         /// <summary>
-        /// Aggregate operation used by <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail (see
-        /// <see cref="MaterializeOrdinaryOutboundWithLanes"/>): chains every segment of
+        /// Aggregate operation used by <see cref="LaneWriteBatchStage"/>. Chains every segment of
         /// <paramref name="frame"/> onto the tail of <paramref name="batch"/>'s segment chain --
         /// zero-copy, no memcpy anywhere -- and returns a single <see cref="ReadOnlySequence{T}"/>
         /// spanning both. The ownership transfer follows

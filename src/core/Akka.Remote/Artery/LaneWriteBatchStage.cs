@@ -20,12 +20,9 @@ namespace Akka.Remote.Artery
     /// retained pooled owner when the stage stops before a batch can be pushed.
     ///
     /// <para>
-    /// <b>Reachability.</b> This stage is only materialized by
-    /// <see cref="ArteryRemoting.MaterializeOrdinaryOutboundWithLanes"/>, which
-    /// <c>MaterializeOutbound</c> only calls when <c>akka.remote.artery.advanced.outbound-lanes</c>
-    /// is greater than 1. The shipping default is <c>outbound-lanes = 1</c> (see <c>Remote.conf</c>,
-    /// which itself says to raise it only after validating), so on every default deployment this
-    /// stage -- and the <c>onDropped</c> held-bytes reporting below -- is never constructed at all.
+    /// <see cref="ArteryRemoting.MaterializeOrdinaryOutboundWithLanes"/> uses this stage after each
+    /// ordinary lane merge. <see cref="ArteryRemoting.MaterializeOutboundStream"/> also uses it on
+    /// ordinary single-lane QUIC, before the stream preamble and native writer.
     /// </para>
     /// </summary>
     internal sealed class LaneWriteBatchStage : GraphStage<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>>
@@ -40,15 +37,10 @@ namespace Akka.Remote.Artery
         /// failed materialization, e.g. the connection-restart tail settling for the last time), OR
         /// discarded earlier by <see cref="Logic.OnPush"/>'s catch (an append failure -- see its
         /// remarks; the count is folded into the same PostStop-time invocation, not called twice). By
-        /// this point the data is already-ENCODED, merged-lane frame bytes -- it crossed
-        /// <see cref="OutboundHandshakeStage"/> and <see cref="ArteryEncodeStage"/> long ago and the
-        /// MergeHub upstream has already interleaved multiple lanes' output into one sequence -- so,
-        /// unlike <see cref="IOutboundContext.ReturnUndelivered"/>, there is no single
-        /// <see cref="IOutboundEnvelope"/> left to hand back to an association-owned channel. The
-        /// caller's own job is only to make the loss VISIBLE (publish a <see cref="Akka.Event.Dropped"/>
-        /// event) instead of the silent pooled-buffer reclaim this stage used to do alone. Defaults to
-        /// a no-op so existing callers (and the lane-batching unit specs, which never drive a mid-batch
-        /// stop) are unaffected.
+        /// this point the data is encoded frame bytes from <see cref="ArteryEncodeStage"/>. The
+        /// association-owned channel accepts <see cref="IOutboundEnvelope"/> instances, so these
+        /// frames cannot be returned through <see cref="IOutboundContext.ReturnUndelivered"/>.
+        /// The caller can report the loss with an <see cref="Akka.Event.Dropped"/> event.
         /// </param>
         public LaneWriteBatchStage(long maxBytes, Action<long>? onDropped = null)
         {

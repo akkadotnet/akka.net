@@ -124,8 +124,16 @@ namespace Akka.Remote.Tests.Artery
 
                 // Keep one group idle while the other groups still have queued data. Replies
                 // stay local to the receiver, so they can witness the sender's transport drain.
-                var received = recipients.Where(pair => pair.Key != 0)
-                    .ToDictionary(pair => pair.Key, _ => CreateTestProbe(second));
+                var drainRecipients = recipients.Where(pair => pair.Key != 0).ToDictionary();
+                if (lanes == 1)
+                {
+                    // The only original recipient was stopped to check reliable control.
+                    // Use a live recipient so the single-lane arm also checks ordinary drain.
+                    localRecipients[0] = second.ActorOf(Props.Create(() => new Echo()), "drain-echo");
+                    drainRecipients[0] = await first.ActorSelection($"{address}/user/drain-echo")
+                        .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                }
+                var received = drainRecipients.Keys.ToDictionary(lane => lane, _ => CreateTestProbe(second));
                 foreach (var (lane, probe) in received)
                 {
                     localRecipients[lane].Tell(probe.Ref, probe.Ref);
@@ -133,7 +141,7 @@ namespace Akka.Remote.Tests.Artery
                 }
                 for (var sequence = 0; sequence < messages; sequence++)
                     foreach (var lane in received.Keys)
-                        recipients[lane].Tell(sequence, ActorRefs.NoSender);
+                        drainRecipients[lane].Tell(sequence, ActorRefs.NoSender);
                 await remoting.Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(5));
                 await Task.WhenAll(received.Values.Select(async probe =>
                 {
