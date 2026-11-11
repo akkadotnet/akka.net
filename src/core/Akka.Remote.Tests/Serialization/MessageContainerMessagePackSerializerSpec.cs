@@ -54,6 +54,20 @@ public sealed class MessageContainerMessagePackSerializerSpec : V2PortSpec
             V2Manifest = MessageContainerMessagePackSerializer.SelectionManifest
         };
 
+    [Fact(DisplayName = "Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated")]
+    public void Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = Corpus[^1].Message;
+        var earlier = serializer.ToBinary(message);
+        var expected = (byte[])earlier.Clone();
+
+        var later = serializer.ToBinary(message);
+        later.AsSpan().Clear();
+
+        Assert.Equal(expected, earlier);
+    }
+
     [Fact(DisplayName = "Should_UseANativeManifestWithoutChangingLegacy_When_TheNewIdIsSelected")]
     public void Should_UseANativeManifestWithoutChangingLegacy_When_TheNewIdIsSelected()
     {
