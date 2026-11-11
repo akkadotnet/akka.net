@@ -74,7 +74,17 @@ public class MiscMessageSerializerBenchmarks
         Validate(_legacySystem.Serialization.Deserialize(_nativeBytes, 56, _manifest), legacy: false);
         Validate(_v2System.Serialization.Deserialize(_legacyBytes, 16, _manifest), legacy: true);
         Validate(_v2System.Serialization.Deserialize(_nativeBytes, 56, _manifest), legacy: false);
+        ValidateBuffer(_adapter, _legacyBytes, legacy: true);
+        ValidateBuffer(_native, _nativeBytes, legacy: false);
         Console.WriteLine($"[misc-wire] {Shape}: legacy16={_legacyBytes.Length}B native56={_nativeBytes.Length}B");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expectedBytes, bool legacy)
+    {
+        var count = Write(serializer);
+        Require(count == _buffer.WrittenCount, "Buffer writer reported a different byte count.");
+        Require(_buffer.WrittenSpan.SequenceEqual(expectedBytes), "Buffer bytes differ from the array writer.");
+        Validate(serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), _manifest), legacy);
     }
 
     private static Config Settings(bool enabled) => ConfigurationFactory.ParseString($$"""
