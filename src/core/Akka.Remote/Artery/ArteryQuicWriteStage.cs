@@ -56,33 +56,55 @@ namespace Akka.Remote.Artery
             return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, connected), connected.Task);
         }
 
-        internal static async ValueTask WriteCoalescedAsync(Stream stream, ReadOnlySequence<byte> bytes,
+        internal static ValueTask WriteCoalescedAsync(Stream stream, ReadOnlySequence<byte> bytes,
             ArrayPool<byte> pool, CancellationToken cancellationToken)
         {
-            byte[]? buffer = null;
+            // Keep source sequence, stream and cancellation state out of the suspended write.
+            // Preserve faulted-ValueTask behavior for synchronous preparation/submission errors.
             try
             {
-                var length = checked((int)bytes.Length);
-                buffer = pool.Rent(length);
-                var memory = buffer.AsMemory(0, length);
-                bytes.CopyTo(memory.Span);
-                // The coalesced rental now owns the bytes submitted to native I/O.
-                // Return the original encoded arrays as soon as the copy finishes.
-                bytes.DisposeOwnedSegments();
-                bytes = default;
-                await stream.WriteAsync(memory, cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
+                byte[]? buffer = null;
                 try
                 {
+                    var length = checked((int)bytes.Length);
+                    buffer = pool.Rent(length);
+                    var memory = buffer.AsMemory(0, length);
+                    bytes.CopyTo(memory.Span);
                     bytes.DisposeOwnedSegments();
+                    bytes = default;
+                    var write = stream.WriteAsync(memory, cancellationToken);
+                    var submitted = buffer;
+                    buffer = null;
+                    return CompleteCoalescedWriteAsync(write, submitted, pool);
                 }
                 finally
                 {
-                    if (buffer is not null)
-                        pool.Return(buffer);
+                    try
+                    {
+                        bytes.DisposeOwnedSegments();
+                    }
+                    finally
+                    {
+                        if (buffer is not null)
+                            pool.Return(buffer);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                return ValueTask.FromException(ex);
+            }
+        }
+
+        private static async ValueTask CompleteCoalescedWriteAsync(ValueTask write, byte[] buffer, ArrayPool<byte> pool)
+        {
+            try
+            {
+                await write.ConfigureAwait(false);
+            }
+            finally
+            {
+                pool.Return(buffer);
             }
         }
 

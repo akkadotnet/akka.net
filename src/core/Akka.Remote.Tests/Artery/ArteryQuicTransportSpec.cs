@@ -311,6 +311,51 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Theory(DisplayName = "QUIC coalescing returns all owners when native submission completes or throws synchronously")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_ReturnAllOwners_When_NativeSubmissionIsSynchronous(bool fail)
+        {
+            var first = new TrackingOwner(3, 0x13);
+            var second = new TrackingOwner(4, 0xB1);
+            var input = ArteryRemoting.AppendFrameToBatch(
+                OwnedSequenceSegment.Create(first), OwnedSequenceSegment.Create(second));
+            var expected = input.ToArray();
+            var pool = new TrackingPool();
+            var error = new IOException("Controlled synchronous submission failure.");
+            using var stream = new ImmediateWriteStream(fail ? error : null);
+            var write = ArteryQuicWriteStage.WriteCoalescedAsync(stream, input, pool, CancellationToken.None);
+            try
+            {
+                write.IsCompleted.Should().BeTrue();
+                if (fail)
+                    (await Assert.ThrowsAsync<IOException>(() => write.AsTask())).Should().BeSameAs(error);
+                else
+                {
+                    await write;
+                    stream.ToArray().Should().Equal(expected);
+                }
+                first.DisposeCount.Should().Be(1);
+                second.DisposeCount.Should().Be(1);
+                pool.ReturnCount.Should().Be(1);
+                pool.Returned.Should().BeSameAs(pool.Buffer);
+            }
+            finally
+            {
+                input.DisposeOwnedSegments();
+            }
+        }
+
+        private sealed class ImmediateWriteStream(Exception? error) : MemoryStream
+        {
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                if (error is not null)
+                    throw error;
+                return base.WriteAsync(buffer, cancellationToken);
+            }
+        }
+
         private sealed class FailingCopyOwner(Exception error) : MemoryManager<byte>
         {
             private readonly byte[] _bytes = new byte[3];

@@ -55,7 +55,9 @@ That copy is necessary because frame parsing and asynchronous consumers can reta
 | TLS packet protection, congestion and native stream credit | `System.Net.Quic` / MsQuic |
 
 Coalesced ordinary writes return original encoded owners once their bytes have been copied into
-the coalescing rental. That rental remains owned until the native write settles. Direct writes
+the coalescing rental. Synchronous preparation releases those source owners before submission;
+only the pending native operation, rental and pool remain in the copying operation's async state.
+That rental remains owned until the native write settles. Direct writes
 retain their original owners through settlement. Each owner is returned once, including failures.
 Cancellation must not return memory while an asynchronous operation can still use it. The
 connection owner disposes native streams; individual graph stages signal retirement rather than
