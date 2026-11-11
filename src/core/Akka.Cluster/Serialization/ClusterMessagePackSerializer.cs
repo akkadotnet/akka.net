@@ -2,6 +2,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -51,8 +52,16 @@ internal sealed class ClusterMessagePackSerializer : SerializerV2
         _ => throw new ArgumentException($"Unsupported cluster message [{obj.GetType()}]", nameof(obj))
     };
 
+    public override byte[] ToBinary(object obj)
+    {
+        // Construct the wire graph once. Computing an exact size first would repeat its
+        // canonical tables and all of the member/reachability conversions.
+        using var writer = new PooledPayloadWriter();
+        _codec.Serialize(ToWire(obj), writer);
+        return writer.WrittenSpan.ToArray();
+    }
+
     public override int Serialize(object obj, IBufferWriter<byte> writer) => _codec.Serialize(ToWire(obj), writer);
-    public override int SizeHint(object obj) => _codec.SizeHint(ToWire(obj));
 
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
     {
@@ -111,22 +120,57 @@ internal sealed class ClusterMessagePackSerializer : SerializerV2
     {
         // Addresses occur throughout reachability. Keep one canonical table instead of repeating
         // full addresses per record; the latter can multiply a large cluster's gossip frame size.
+        // Preserve the stable address ordering: null and zero ports compare equally even
+        // though Address equality distinguishes them.
         var addresses = gossip.Members.Select(member => member.UniqueAddress).Concat(gossip.Tombstones.Keys)
             .Distinct().OrderBy(address => address).ToArray();
-        var addressIndexes = addresses.Select((address, index) => (address, index)).ToDictionary(pair => pair.address, pair => pair.index);
-        var roles = gossip.Members.SelectMany(member => member.Roles).Distinct(StringComparer.Ordinal)
-            .OrderBy(role => role, StringComparer.Ordinal).ToArray();
-        var roleIndexes = roles.Select((role, index) => (role, index)).ToDictionary(pair => pair.role, pair => pair.index);
-        var versions = gossip.Members.Select(member => member.AppVersion.Version).Distinct(StringComparer.Ordinal)
-            .OrderBy(version => version, StringComparer.Ordinal).ToArray();
-        var versionIndexes = versions.Select((version, index) => (version, index)).ToDictionary(pair => pair.version, pair => pair.index);
+        var addressIndexes = new Dictionary<UniqueAddress, int>(addresses.Length);
+        var wireAddresses = new ClusterAddressWire[addresses.Length];
+        for (var index = 0; index < addresses.Length; index++)
+        {
+            addressIndexes.Add(addresses[index], index);
+            wireAddresses[index] = ToWire(addresses[index]);
+        }
+
+        // Collect distinct roles and versions in the index dictionaries themselves.
+        var roleIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
+        var versionIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var member in gossip.Members)
+        {
+            foreach (var role in member.Roles)
+                roleIndexes[role] = 0;
+            versionIndexes[member.AppVersion.Version] = 0;
+        }
+        var roles = new string[roleIndexes.Count];
+        roleIndexes.Keys.CopyTo(roles, 0);
+        Array.Sort(roles, StringComparer.Ordinal);
+        for (var index = 0; index < roles.Length; index++)
+            roleIndexes[roles[index]] = index;
+
+        var versions = new string[versionIndexes.Count];
+        versionIndexes.Keys.CopyTo(versions, 0);
+        Array.Sort(versions, StringComparer.Ordinal);
+        for (var index = 0; index < versions.Length; index++)
+            versionIndexes[versions[index]] = index;
+
         int Index(UniqueAddress address) => addressIndexes.TryGetValue(address, out var index) ? index
             : throw new ArgumentException($"Unknown address [{address}] in cluster gossip");
 
-        return new ClusterGossipWire(addresses.Select(ToWire).ToArray(), roles, versions,
-            gossip.Members.Select(member => new ClusterMemberWire(Index(member.UniqueAddress), member.UpNumber,
-                (int)member.Status, member.Roles.OrderBy(role => role, StringComparer.Ordinal).Select(role => roleIndexes[role]).ToArray(),
-                versionIndexes[member.AppVersion.Version])).ToArray(),
+        var members = new ClusterMemberWire[gossip.Members.Count];
+        var memberIndex = 0;
+        foreach (var member in gossip.Members)
+        {
+            var memberRoles = new int[member.Roles.Count];
+            var roleIndex = 0;
+            foreach (var role in member.Roles)
+                memberRoles[roleIndex++] = roleIndexes[role];
+            // Canonical table indices have the same ordering as the strings they identify.
+            Array.Sort(memberRoles);
+            members[memberIndex++] = new ClusterMemberWire(Index(member.UniqueAddress), member.UpNumber,
+                (int)member.Status, memberRoles, versionIndexes[member.AppVersion.Version]);
+        }
+
+        return new ClusterGossipWire(wireAddresses, roles, versions, members,
             gossip.Overview.Seen.OrderBy(address => address).Select(Index).ToArray(),
             gossip.Overview.Reachability.Records.OrderBy(record => record.Observer).ThenBy(record => record.Subject)
                 .Select(record => new ClusterReachabilityWire(Index(record.Observer), Index(record.Subject), (int)record.Status, record.Version)).ToArray(),

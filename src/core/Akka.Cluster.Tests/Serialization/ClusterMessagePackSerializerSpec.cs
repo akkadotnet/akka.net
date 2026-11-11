@@ -34,6 +34,22 @@ public sealed class ClusterMessagePackSerializerSpec : ClusterV2PortSpec
             AssertEquivalent = item.Message is GossipEnvelope or InternalClusterAction.Welcome ? AssertGossipMessage : null
         }).ToArray();
 
+    [Fact(DisplayName = "Should_KeepReturnedGossipBytes_When_AnotherMessageUsesThePooledWriter")]
+    public void Should_KeepReturnedGossipBytes_When_AnotherMessageUsesThePooledWriter()
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var envelope = Cases.Select(item => item.Message).OfType<GossipEnvelope>().First();
+        var first = serializer.ToBinary(envelope);
+        var expected = first.ToArray();
+
+        // Act
+        serializer.ToBinary(new GossipEnvelope(envelope.To, envelope.From, envelope.Gossip));
+
+        // Assert
+        Assert.Equal(expected, first);
+    }
+
     [Fact(DisplayName = "Should_PreserveEveryGossipField_When_MembershipHasAllStatesAndReachability")]
     public void Should_PreserveEveryGossipField_When_MembershipHasAllStatesAndReachability()
     {
