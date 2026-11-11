@@ -58,6 +58,8 @@ public class DistributedPubSubSerializerBenchmarks
         Validate(_generatedSystem.Serialization.Deserialize(_legacyBytes, 9, _manifest));
         Validate(_legacy.FromBinary(_legacyBytes, _manifest));
         Validate(_generated.FromBinary(_generatedBytes, _manifest));
+        ValidateBuffer(_adapter, _legacyBytes);
+        ValidateBuffer(_generated, _generatedBytes);
         Console.WriteLine($"{Shape}: protobuf={_legacyBytes.Length}B MessagePack={_generatedBytes.Length}B");
     }
 
@@ -66,6 +68,14 @@ public class DistributedPubSubSerializerBenchmarks
         // Domain Equals omits some registry fields; compare every legacy wire field instead.
         if (value.GetType() != _message.GetType() || !_legacy.ToBinary(value).AsSpan().SequenceEqual(_legacyBytes))
             throw new InvalidOperationException("PubSub benchmark lost a registry/payload field.");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expected)
+    {
+        var count = Write(serializer);
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expected))
+            throw new InvalidOperationException("PubSub buffer output/count differs from byte-array output.");
+        Validate(serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), _manifest));
     }
 
     private static Config Config(bool enabled) => ConfigurationFactory.ParseString(
