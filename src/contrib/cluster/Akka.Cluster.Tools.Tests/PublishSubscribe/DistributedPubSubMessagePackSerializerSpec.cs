@@ -34,6 +34,20 @@ public sealed class DistributedPubSubMessagePackSerializerSpec : V2PortSpec
     protected override IReadOnlyList<V2PortCase> Cases { get; } = PubSubWireCases.Create()
         .Select(item => new V2PortCase(item.Message, item.Manifest, item.Name)).ToArray();
 
+    [Fact(DisplayName = "Should_PreserveEarlierBytes_When_AnotherPayloadIsWrittenAndMutated")]
+    public void Should_PreserveEarlierBytes_When_AnotherPayloadIsWrittenAndMutated()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var delta = Cases.Single(sample => sample.Name == "DeltaTombstone").Message;
+        var earlier = serializer.ToBinary(delta);
+        var expected = (byte[])earlier.Clone();
+
+        var later = serializer.ToBinary(new Send("/user/target", "different", true));
+        later.AsSpan().Clear();
+
+        Assert.Equal(expected, earlier);
+    }
+
     [Theory(DisplayName = "Should_SelectPubSubWriter_When_GlobalToggleChanges")]
     [InlineData(false, 9)]
     [InlineData(true, 49)]

@@ -42,20 +42,37 @@ internal sealed class DistributedPubSubMessagePackSerializer : SerializerV2
 
     public override int Serialize(object obj, IBufferWriter<byte> writer) => _codec.Serialize(ToWire(obj), writer);
 
-    public override int SizeHint(object obj) => _codec.SizeHint(ToWire(obj));
+    public override byte[] ToBinary(object obj)
+    {
+        var wire = ToWire(obj);
+        using var writer = new PooledPayloadWriter();
+        _codec.Serialize(wire, writer);
+        return writer.WrittenSpan.ToArray();
+    }
 
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
     {
         PubSubStatusWire status => new Status(status.Versions, status.IsReplyToStatus),
-        PubSubDeltaWire delta => new Delta(delta.Buckets.Select(bucket => new Bucket(bucket.Owner, bucket.Version,
-            bucket.Content.ToImmutableDictionary(pair => pair.Key, pair => new ValueHolder(pair.Value.Version, pair.Value.Ref!))))
-            .ToImmutableList()),
+        PubSubDeltaWire delta => FromWire(delta),
         PubSubSendWire send => new Send(send.Path, send.Message, send.LocalAffinity),
         PubSubSendToAllWire all => new SendToAll(all.Path, all.Message, all.ExcludeSelf),
         PubSubPublishWire publish => new Publish(publish.Topic, publish.Message, publish.SendOneMessageToEachGroup),
         PubSubSendToOneSubscriberWire subscriber => new SendToOneSubscriber(subscriber.Message),
         var wire => throw new SerializationException($"Unknown PubSub wire message [{wire.GetType()}]")
     };
+
+    private static Delta FromWire(PubSubDeltaWire delta)
+    {
+        var buckets = ImmutableList.CreateBuilder<Bucket>();
+        foreach (var bucket in delta.Buckets)
+        {
+            var content = ImmutableDictionary.CreateBuilder<string, ValueHolder>();
+            foreach (var pair in bucket.Content)
+                content.Add(pair.Key, new ValueHolder(pair.Value.Version, pair.Value.Ref!));
+            buckets.Add(new Bucket(bucket.Owner, bucket.Version, content.ToImmutable()));
+        }
+        return new Delta(buckets.ToImmutable());
+    }
 
     private static IPubSubWireMessage ToWire(object obj) => obj switch
     {
