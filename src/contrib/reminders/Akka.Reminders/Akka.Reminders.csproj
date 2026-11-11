@@ -21,7 +21,7 @@
       <!-- Ship this module's README instead of the repo-root one that
            Directory.Build.props packs into every package. -->
       <None Remove="$([System.IO.Path]::GetDirectoryName($(DirectoryBuildPropsPath)))/README.md" />
-      <None Update="README.md" Pack="true" PackagePath="\" />
+      <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
     <ItemGroup>
