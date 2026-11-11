@@ -100,14 +100,45 @@ public class ReliableDeliverySerializerBenchmarks
         _stateManifest = _protobuf.Manifest(_state);
         AssertManifestParity();
 
-        _requestProtobufBytes = _protobuf.ToBinary(_request);
-        _requestMsgPackBytes = _msgPack.ToBinary(_request);
-        _sequencedProtobufBytes = _protobuf.ToBinary(_sequenced);
-        _sequencedMsgPackBytes = _msgPack.ToBinary(_sequenced);
-        _sequencedChunkedProtobufBytes = _protobuf.ToBinary(_sequencedChunked);
-        _sequencedChunkedMsgPackBytes = _msgPack.ToBinary(_sequencedChunked);
-        _stateProtobufBytes = _protobuf.ToBinary(_state);
-        _stateMsgPackBytes = _msgPack.ToBinary(_state);
+        _requestProtobufBytes = Request_protobuf_serialize();
+        _requestMsgPackBytes = Request_msgpack_serialize();
+        _sequencedProtobufBytes = SequencedMessage_protobuf_serialize();
+        _sequencedMsgPackBytes = SequencedMessage_msgpack_serialize();
+        _sequencedChunkedProtobufBytes = SequencedMessageChunked_protobuf_serialize();
+        _sequencedChunkedMsgPackBytes = SequencedMessageChunked_msgpack_serialize();
+        _stateProtobufBytes = State_protobuf_serialize();
+        _stateMsgPackBytes = State_msgpack_serialize();
+
+        Require(_protobuf.Identifier == 36 && _msgPack.Identifier == 76
+            && _system.Serialization.GetSerializerById(36) is ReliableDeliverySerializer
+            && _system.Serialization.GetSerializerById(76) is ReliableDeliveryMessagePackSerializer, "registered serializer ids");
+        ValidateMessage(_request, Request_protobuf_deserialize());
+        ValidateMessage(_request, Request_msgpack_deserialize());
+        ValidateMessage(_sequenced, SequencedMessage_protobuf_deserialize());
+        ValidateMessage(_sequenced, SequencedMessage_msgpack_deserialize());
+        ValidateMessage(_sequencedChunked, SequencedMessageChunked_protobuf_deserialize());
+        ValidateMessage(_sequencedChunked, SequencedMessageChunked_msgpack_deserialize());
+        ValidateMessage(_state, State_protobuf_deserialize());
+        ValidateMessage(_state, State_msgpack_deserialize());
+        ValidateWriter(Request_protobuf_buffer_writer(), _requestProtobufBytes);
+        ValidateWriter(Request_msgpack_buffer_writer(), _requestMsgPackBytes);
+        ValidateWriter(SequencedMessage_protobuf_buffer_writer(), _sequencedProtobufBytes);
+        ValidateWriter(SequencedMessage_msgpack_buffer_writer(), _sequencedMsgPackBytes);
+        ValidateWriter(SequencedMessageChunked_protobuf_buffer_writer(), _sequencedChunkedProtobufBytes);
+        ValidateWriter(SequencedMessageChunked_msgpack_buffer_writer(), _sequencedChunkedMsgPackBytes);
+        ValidateWriter(State_protobuf_buffer_writer(), _stateProtobufBytes);
+        ValidateWriter(State_msgpack_buffer_writer(), _stateMsgPackBytes);
+        foreach (var (message, protobuf, msgPack, manifest) in new[]
+                 {
+                     ((object)_request, _requestProtobufBytes, _requestMsgPackBytes, _requestManifest),
+                     ((object)_sequenced, _sequencedProtobufBytes, _sequencedMsgPackBytes, _sequencedManifest),
+                     ((object)_sequencedChunked, _sequencedChunkedProtobufBytes, _sequencedChunkedMsgPackBytes, _sequencedManifest),
+                     ((object)_state, _stateProtobufBytes, _stateMsgPackBytes, _stateManifest)
+                 })
+        {
+            ValidateMessage(message, _system.Serialization.Deserialize(protobuf, 36, manifest));
+            ValidateMessage(message, _system.Serialization.Deserialize(msgPack, 76, manifest));
+        }
 
         // serialized payload size is a first-class gate metric - report it side by side
         Console.WriteLine("ReliableDelivery payload sizes (bytes): message | protobuf (id 36) | MessagePack (id 76)");
@@ -130,6 +161,74 @@ public class ReliableDeliverySerializerBenchmarks
     {
         var delta = (msgPack.Length - protobuf.Length) * 100.0 / protobuf.Length;
         Console.WriteLine($"{label}: {protobuf.Length} | {msgPack.Length} ({delta:+0.0;-0.0}%)");
+    }
+
+    private void ValidateWriter(int count, byte[] expected)
+    {
+        Require(count == _bufferWriter.WrittenCount, "reported writer count");
+        Require(_bufferWriter.WrittenSpan.SequenceEqual(expected), "array/buffer byte parity");
+    }
+
+    private static void ValidateMessage(object expected, object actual)
+    {
+        Require(actual.GetType() == expected.GetType(), "root runtime type");
+        switch (expected)
+        {
+            case ProducerController.Request expectedRequest:
+                var request = (ProducerController.Request)actual;
+                Require(request.ConfirmedSeqNr == expectedRequest.ConfirmedSeqNr
+                    && request.RequestUpToSeqNr == expectedRequest.RequestUpToSeqNr
+                    && request.SupportResend == expectedRequest.SupportResend
+                    && request.ViaTimeout == expectedRequest.ViaTimeout, "Request fields");
+                break;
+            case ConsumerController.SequencedMessage<string> expectedMessage:
+                var message = (ConsumerController.SequencedMessage<string>)actual;
+                Require(message.ProducerId == expectedMessage.ProducerId && message.SeqNr == expectedMessage.SeqNr
+                    && message.First == expectedMessage.First && message.Ack == expectedMessage.Ack
+                    && message.ProducerController.Equals(expectedMessage.ProducerController)
+                    && message.Message.IsMessage == expectedMessage.Message.IsMessage, "SequencedMessage fields");
+                if (expectedMessage.Message.Chunk is { } expectedChunk)
+                {
+                    Require(message.Message.Chunk is { } chunk && chunk.FirstChunk == expectedChunk.FirstChunk
+                        && chunk.LastChunk == expectedChunk.LastChunk && chunk.SerializerId == expectedChunk.SerializerId
+                        && chunk.Manifest == expectedChunk.Manifest
+                        && chunk.SerializedMessage.Span.SequenceEqual(expectedChunk.SerializedMessage.Span), "chunk fields and bytes");
+                }
+                else
+                {
+                    Require(message.Message.Chunk is null && message.Message.Message == expectedMessage.Message.Message,
+                        "complete user payload");
+                }
+                break;
+            case DurableProducerQueue.State<string> expectedState:
+                var state = (DurableProducerQueue.State<string>)actual;
+                Require(state.CurrentSeqNr == expectedState.CurrentSeqNr
+                    && state.HighestConfirmedSeqNr == expectedState.HighestConfirmedSeqNr
+                    && state.ConfirmedSeqNr.Count == expectedState.ConfirmedSeqNr.Count
+                    && state.Unconfirmed.Count == expectedState.Unconfirmed.Count, "durable state fields");
+                foreach (var confirmed in expectedState.ConfirmedSeqNr)
+                    Require(state.ConfirmedSeqNr.TryGetValue(confirmed.Key, out var value) && value == confirmed.Value,
+                        "confirmed qualifier/sequence/timestamp");
+                for (var i = 0; i < expectedState.Unconfirmed.Count; i++)
+                {
+                    var sent = state.Unconfirmed[i];
+                    var expectedSent = expectedState.Unconfirmed[i];
+                    Require(sent.SeqNr == expectedSent.SeqNr && sent.Ack == expectedSent.Ack
+                        && sent.ConfirmationQualifier == expectedSent.ConfirmationQualifier
+                        && sent.Timestamp == expectedSent.Timestamp && sent.Message.IsMessage
+                        && sent.Message.Chunk is null && sent.Message.Message == expectedSent.Message.Message,
+                        "ordered unconfirmed message fields");
+                }
+                break;
+            default:
+                throw new InvalidOperationException($"No Delivery benchmark validator for [{expected.GetType()}].");
+        }
+    }
+
+    private static void Require(bool condition, string contract)
+    {
+        if (!condition)
+            throw new InvalidOperationException($"Reliable Delivery benchmark setup failed: {contract}.");
     }
 
     [GlobalCleanup]
