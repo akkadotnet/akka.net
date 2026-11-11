@@ -144,6 +144,8 @@ namespace Akka.Persistence
         private List<IPersistentEnvelope> _journalBatch = new();
         private bool _isWriteInProgress;
         private long _sequenceNr;
+        /// Sequence number of the last event rejected by the journal, see CompletionUnlessRejected
+        private long _lastRejectedSequenceNr;
         private EventsourcedState _currentState;
         private LinkedList<IPersistentEnvelope> _eventBatch = new();
         private bool _asyncTaskRunning = false;
@@ -441,7 +443,7 @@ namespace Akka.Persistence
 
             PersistAll(events, handler);
             if (onComplete != null)
-                Defer<object>(null, _ => onComplete());
+                Defer<object>(null, CompletionUnlessRejected(onComplete));
         }
 
         /// <summary>
@@ -464,7 +466,7 @@ namespace Akka.Persistence
 
             PersistAll(events, handler);
             if (onCompleteAsync != null)
-                Defer<object>(null, async _ => await onCompleteAsync());
+                Defer<object>(null, CompletionUnlessRejected(onCompleteAsync));
         }
 
         /// <summary>
@@ -518,7 +520,7 @@ namespace Akka.Persistence
 
             PersistAll(events, handler);
             if (onComplete != null)
-                Defer<object>(null, _ => onComplete());
+                Defer<object>(null, CompletionUnlessRejected(onComplete));
         }
 
         /// <summary>
@@ -541,7 +543,7 @@ namespace Akka.Persistence
 
             PersistAll(events, handler);
             if (onCompleteAsync != null)
-                Defer<object>(null, async _ => await onCompleteAsync());
+                Defer<object>(null, CompletionUnlessRejected(onCompleteAsync));
         }
 
         /// <summary>
@@ -652,7 +654,7 @@ namespace Akka.Persistence
 
             PersistAllAsync(events, handler);
             if (onComplete != null)
-                DeferAsync<object>(null, _ => onComplete());
+                DeferAsync<object>(null, CompletionUnlessRejected(onComplete));
         }
 
         /// <summary>
@@ -676,7 +678,7 @@ namespace Akka.Persistence
 
             PersistAllAsync(events, handler);
             if (onCompleteAsync != null)
-                DeferAsync<object>(null, async _ => await onCompleteAsync());
+                DeferAsync<object>(null, CompletionUnlessRejected(onCompleteAsync));
         }
 
         /// <summary>
@@ -728,7 +730,7 @@ namespace Akka.Persistence
 
             PersistAllAsync(events, handler);
             if (onComplete != null)
-                DeferAsync<object>(null, _ => onComplete());
+                DeferAsync<object>(null, CompletionUnlessRejected(onComplete));
         }
 
         /// <summary>
@@ -752,7 +754,7 @@ namespace Akka.Persistence
 
             PersistAllAsync(events, handler);
             if (onCompleteAsync != null)
-                DeferAsync<object>(null, async _ => await onCompleteAsync());
+                DeferAsync<object>(null, CompletionUnlessRejected(onCompleteAsync));
         }
 
         /// <summary>
@@ -866,6 +868,30 @@ namespace Akka.Persistence
             _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
         }
 
+        // Wraps the completion callback of a non-empty PersistAll/PersistAllAsync batch so that it does not
+        // run when the journal rejected the batch. Call it right after the batch's events have been added.
+        // The journal rejects an AtomicWrite as a whole, and its reply for the completion's NonPersistentMessage
+        // comes right after its replies for the batch's events, so the batch was rejected if its last event was.
+        private Action<object> CompletionUnlessRejected(Action onComplete)
+        {
+            var lastSequenceNr = _sequenceNr;
+            return _ =>
+            {
+                if (_lastRejectedSequenceNr != lastSequenceNr)
+                    onComplete();
+            };
+        }
+
+        private Func<object, Task> CompletionUnlessRejected(Func<Task> onCompleteAsync)
+        {
+            var lastSequenceNr = _sequenceNr;
+            return async _ =>
+            {
+                if (_lastRejectedSequenceNr != lastSequenceNr)
+                    await onCompleteAsync();
+            };
+        }
+
         /// <summary>
         /// Permanently deletes all persistent messages with sequence numbers less than or equal <paramref name="toSequenceNr"/>.
         /// If the delete is successful a <see cref="DeleteMessagesSuccess"/> will be sent to the actor.
@@ -955,7 +981,8 @@ namespace Akka.Persistence
         /// Called when the journal rejected <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> of an event.
         /// The event was not stored. By default this method logs the problem as an error, and the actor continues.
         /// The callback handler that was passed to the <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/>
-        /// method will not be invoked.
+        /// method will not be invoked, nor will the completion callback of a <c>PersistAll</c> or <c>PersistAllAsync</c>
+        /// call whose events were rejected.
         /// </summary>
         /// <param name="cause">Cause reported by the journal for rejecting the event.</param>
         /// <param name="event">Event rejected by the journal.</param>

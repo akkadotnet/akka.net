@@ -9,6 +9,8 @@ In the [Akka.Remote overview](xref:remote-overview) we introduced the concept of
 
 A "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
 
+For Akka.NET v1.6's experimental Artery TCP transport, see [Migrating From DotNetty to Artery](dotnetty-to-artery.md). That guide covers transport configuration, cluster addresses, Hosting, and TLS. The classic transport-driver and `public-hostname` configuration described below applies to DotNetty; check the guide's bind-address limitations before carrying those settings to Artery.
+
 In this section we'll expand a bit more on what transports are and how Akka.Remote can support multiple transports simultaneously.
 
 ## What Are Transports?
