@@ -31,7 +31,10 @@ public static class HexDumpFormatter
         var builder = new StringBuilder();
         builder.Append("case: ").Append(caseName).Append('\n');
         builder.Append("message-type: ").Append(messageType).Append('\n');
-        builder.Append("manifest: ").Append(manifest).Append('\n');
+        builder.Append("manifest:");
+        if (manifest.Length > 0)
+            builder.Append(' ').Append(manifest);
+        builder.Append('\n');
         builder.Append("serializer-id: ").Append(serializerId).Append('\n');
         builder.Append("byte-count: ").Append(bytes.Length).Append('\n');
         builder.Append('\n');

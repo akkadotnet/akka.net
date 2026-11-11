@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Intentionally has no central package versions. It stops NuGet from importing the repository's
+    root Directory.Packages.props, so the generator keeps its own pinned 1.5.73 versions.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
