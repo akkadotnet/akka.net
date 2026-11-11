@@ -55,7 +55,17 @@ public class ClusterSingletonSerializerBenchmarks
             !ReferenceEquals(_legacy.FromBinary(_legacyBytes, _manifest), _message) ||
             !ReferenceEquals(_generated.FromBinary(_generatedBytes, _manifest), _message))
             throw new InvalidOperationException("Singleton byte/instance validation failed.");
+        ValidateBuffer(_adapter, _legacyBytes);
+        ValidateBuffer(_generated, _generatedBytes);
         Console.WriteLine($"{Control}: protobuf={_legacyBytes.Length}B MessagePack={_generatedBytes.Length}B");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expected)
+    {
+        var count = Write(serializer);
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expected) ||
+            !ReferenceEquals(serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), _manifest), _message))
+            throw new InvalidOperationException("Singleton buffer/count/instance validation failed.");
     }
 
     private static Config Config(bool enabled) => ConfigurationFactory.ParseString(
