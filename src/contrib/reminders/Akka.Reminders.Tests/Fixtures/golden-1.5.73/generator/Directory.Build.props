@@ -1,0 +1,7 @@
+<Project>
+  <!--
+    Intentionally empty. It stops MSBuild from importing the repository's root
+    Directory.Build.props, so this tool does not pick up the repo's version numbers,
+    warning-as-error settings or SourceLink reference.
+  -->
+</Project>
