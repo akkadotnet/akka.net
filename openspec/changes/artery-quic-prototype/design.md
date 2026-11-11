@@ -9,6 +9,10 @@ This specification includes no benchmark results or machine-specific execution r
 No Aeron interoperability, HTTP/3, QUIC datagrams, 0-RTT actor traffic, connection migration,
 compression implementation or production support commitment belongs to this change.
 
+The [parallel-lane performance direction](#parallel-lane-performance-direction--2026-11-11) below
+supersedes treating a pipe rewrite as the required next step. It is a design and delivery plan;
+its proposed changes and verification have not been executed.
+
 ## Current architecture
 
 Processing lanes and native streams are different quantities. Let N be the number of outbound
@@ -184,3 +188,178 @@ Run the affected Artery, API approval and scoped incremental checks for code cha
 OpenSpec validation. Unsupported/skipped native tests are not native passes. Keep benchmark
 execution separate from builds/tests/profiling. No performance result or default switch follows
 from compilation, unit tests or this proposed architecture alone.
+
+## Parallel-lane performance direction — 2026-11-11
+
+### Objective and evidence boundary
+
+Optimize the existing transport for concurrent, independently ordered Artery lanes, while preserving
+control progress, bounded ownership, loaded latency and failure semantics. The retained source baseline
+is `70a2ed1d6480e4657de320a824064832210dfe29`, the source in draft PR #8939. Earlier prototype
+checkouts and experimental pipe branches are not the starting point. The standalone single-stream
+investigation informs mechanisms; it is not an Artery benchmark or proof of a multi-stream gain.
+
+Parallel streams are a workload assumption, not a performance guarantee. MsQuic serializes one
+connection's protocol work on one worker at a time. Application stages can make concurrent progress
+on different streams, but eight streams do not supply eight native protocol cores. A blocked stream
+can still affect connection credit and congestion; separate control traffic on the same connection
+is not a hard latency reservation. Keep one stream as a regression/control case.
+
+### Keep the accepted structure; minimize coordination within each stream
+
+```mermaid
+flowchart TB
+    Q["Recipient-hashed bounded actor queues"] --> E["Shared Artery handshake, encoding and metadata"]
+    E --> G["Fixed groups: lane i → ordinary stream i modulo S"]
+    G --> B1["Stream 0: bounded frame batcher"]
+    G --> BN["Stream S-1: bounded frame batcher"]
+    B1 --> W1["Writer 0: copy fragmented batch, release sources"]
+    BN --> WN["Writer S-1: copy fragmented batch, release sources"]
+    W1 --> P1["One pending public WriteAsync; retain rental until settlement"]
+    WN --> PN["One pending public WriteAsync; retain rental until settlement"]
+    C["Control stream: prompt writes, independent stage demand"] --> N
+    P1 --> N["One directional QUIC connection: shared MsQuic worker and congestion"]
+    PN --> N
+    N --> R["Per-stream read scratch → stable owned chunks → existing frame parser"]
+```
+
+Keep `LaneWriteBatchStage`, fixed routing, `ArteryQuicWriteStage`, the coalescing helper and
+`ArteryQuicTransport` connection-generation ownership. A producer batch chains frame owners;
+the writer coalesces small fragmented batches into one contiguous native submission. The accepted
+helper releases original owners before submission and keeps only the rental until completion.
+Do not add a second accumulation queue or hold both representations longer to simplify a pump.
+
+Batch already available ordinary traffic while downstream is busy, dispatch promptly when idle,
+and preserve per-lane FIFO. Never wait for every lane, fill a batch on a timer, or merge independent
+stream groups through a common writer barrier. Control retains prompt dispatch. Preserve the existing
+16 KiB batching/coalescing caps and oversized/direct-write path for the first change. A larger
+application write cap is a later controlled variable, not a consequence of adding more streams.
+
+The concrete first code change is to move linked cancellation state from each write to the lifetime
+of its opened channel. All writes in that stage already link the same stage-stop and channel-generation
+tokens. This targets repeated adapter allocation while leaving byte geometry and ownership unchanged:
+
+```text
+Current, for every input batch:
+  create linked cancellation(stage stop, channel generation)
+  prepare/copy using accepted helper; await one native write; dispose linked cancellation
+
+Proposed:
+  when channel opens: create the linked cancellation once
+  for every batch: use that token with the same preparation/write helper
+  on stop/reset: cancel via the same owners, retire according to current policy
+  after all initialization/write/finish/monitor operations settle: dispose linked cancellation
+```
+
+Do not change faulted versus canceled completion status or the helper's exception handling. The
+standalone cancellation experiment reduced allocation without demonstrating throughput improvement;
+this small adapter change is an allocation hypothesis, not an established speedup or a fix for native
+worker saturation. Reject it if cancellation/lifetime behavior or measured resource use worsens.
+
+### Ownership, bounded memory and receive-side constraints
+
+Each stream retains its own write credit, pending native input and stage demand. Other streams must
+not await its stage callback. Keep admission/shutdown coordination with the connection owner; do not
+introduce a connection-wide lock or wait around native writes. Generation retirement still cancels
+siblings on failure, so lane independence applies to healthy operation, not survival of a reset peer.
+
+Account per peer and per direction: queued encoded owners, batcher-held inputs, active coalescing
+rentals and any proposed pipe pages. Count written bytes and actual leased backing-array capacity
+separately; do not count a batch's chained owners twice. Retained capacity includes idle per-stream
+buffers, so a permanent 16 KiB rental per stream is not automatically a memory optimization. Existing
+queue-entry limits are not byte caps, and managed limits do not cap native/kernel storage. Hold the
+aggregate queue budget fixed while varying S; do not multiply buffers silently with stream count.
+
+Keep the current stable inbound chunk copy. An upstream PipeReader cannot advance/recycle bytes
+while frame parsing or asynchronous actor delivery retains them. Removing this copy requires a
+separate end-to-end ownership contract. An input pipe, permanent coalescing rental or output pump
+needs independent evidence and resource gates before joining the selected design.
+
+### Delivery
+
+**Next PR: channel-lifetime cancellation state.** Start from the retained baseline in an isolated
+checkout, reproduce the existing source gates, freeze the control, then change only cancellation
+ownership in `ArteryQuicWriteStage`. Add focused cancellation/reset/cleanup cases in
+`ArteryQuicTransportSpec`; retain coalescing-copy failures and canceled-status assertions. No wire,
+public API, TCP, topology, batch-cap, scheduler or buffer-pool changes belong in this PR. Intermediate
+behavior uses the same writer and byte layout with one linked token source per opened stage/channel.
+Reverting the small change restores prior cancellation ownership without a compatibility migration.
+
+Before promotion, run:
+
+```sh
+dotnet test src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj -c Release --framework net10.0 --filter FullyQualifiedName~ArteryQuicTransportSpec
+dotnet test src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj -c Release --framework net10.0 --filter FullyQualifiedName~ArteryQuicStreamsSpec
+dotnet test src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj -c Release --framework net10.0 --filter FullyQualifiedName~Artery
+dotnet test src/core/Akka.API.Tests/Akka.API.Tests.csproj -c Release --framework net10.0
+```
+
+Use a host with working native QUIC, prepared test credentials and the pinned runtime/native files.
+Zero native skips are required. Extend the existing controlled delayed-write fixture: block a native
+write, cancel stage/channel separately, verify cancellation reaches it, prevent reuse of the active
+rental, settle it, and assert exactly-once owner return. Repeat reset/reconnect with a new channel;
+old cancellation must not cancel the new generation. Include stop-before-open and finish-before-open.
+Retain the real-native blocked-reader/control-and-healthy-stream test. These are procedures to execute
+on the candidate, not claims that the new behavior has passed. Perform Slopwatch, scoped incremental
+checks and independent ownership/evidence review before calling the slice verified.
+
+**Contemporary performance control.** Use the existing RemotePingPong rotated comparison driver;
+first confirm the retained QUIC baseline against encrypted Artery TCP with eight outbound processing
+lanes, eight total receive processing paths, and S=1/2/4/8. The existing recipe is:
+
+```sh
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --pattern oneway --clients 128 --window 10 --messages 37500 \
+  --repetitions 5 --lanes 8 --quic-stream-counts 1 2 4 8 --queue-budget 8192 \
+  --output /tmp/artery-parallel-lane-control
+```
+
+Use a fresh output directory; extend equal message counts for all arms if any measurement is under
+three seconds. Verify actual stream counts, recipient occupancy in both directions and receive-path
+budgets. For QUIC, inbound lanes per stream are 8/S, not eight for each stream. Keep TCP at eight
+processing lanes with its ordinary connection topology unchanged. Include the driver's plaintext
+arms as labeled context only; encrypted TCP is the security-matched comparison.
+
+Then use the retained paired frozen-build experiment controller for candidate versus control at S=8,
+with S=1 as a regression guard. Record its exact private command/source/hash before execution; that
+private controller is not a portable repository deliverable. If unavailable, parameterize the existing
+comparison tooling for two frozen builds before attempting this acceptance comparison. Do not invent
+an executable command or silently use unmatched harness revisions. Primary timings have allocation,
+progress and profiling diagnostics off. Measure allocations, write sizes/counts, endpoint CPU and
+leased capacity in separate blocks. Retain failed runs and paired differences, not fastest attempts.
+Keep builds, analysis, journal writes and other owned work outside measurement intervals.
+
+Reuse the existing private paced-RTT and leased-capacity fixtures with matched control/candidate:
+sparse traffic, equal offered-load bursts, and a slow ordinary reader while control and another lane
+remain active. Preserve sequence/duplicate, drop, shutdown and zero-leased-owner checks. The public
+harness lacks some of these private acceptance modes: port the relevant fixture if needed rather
+than describe `--pattern ping-pong` as an offered-load tail-latency test. No acceptance threshold is
+relaxed by this plan. Mixed or overlapping results stay inconclusive; an allocation reduction alone
+is not a throughput claim. Stop on correctness/security/pin failures. No wholesale historical rerun.
+
+**Later PR, only if selected by those observations: ordinary batch geometry.** Hold processing lanes,
+S, aggregate queue budget and protocol constant. Separate producer batching from the native coalescing
+cap; change one at a time. Measure real bytes/submission, CPU, paired throughput, sparse/loaded p99
+and outstanding leased capacity against the contemporary predecessor. Preserve immediate idle and
+control behavior. Reuse the batcher/coalescing helper before considering a new pipe. Revert or narrow
+an experiment whose gain requires unacceptable tail latency, retained capacity or lost fairness.
+
+**Deferred alternatives.** A bounded persistent pump/pipe is reasonable only if adapter handoffs or
+write geometry are still limiting and a smaller change fails; prior pipe trials do not establish an
+acceptable replacement. Native execution-profile controls belong to the standalone/custom-runtime
+study. Connection striping changes topology and would need equally striped TCP controls and new
+ordering/failure analysis. Scheduler tuning and receive-lease redesign are outside this sequence.
+TCP remains default and this remains an experimental transport; no production cutover is authorized.
+
+### Source leads and falsification
+
+[MsQuic execution](https://github.com/microsoft/msquic/blob/v2.6.3/docs/Execution.md),
+[.NET send buffer ownership](https://github.com/dotnet/runtime/blob/v10.0.14/src/libraries/System.Net.Quic/src/System/Net/Quic/Internal/MsQuicBuffers.cs),
+and [Kestrel's stream loops](https://github.com/dotnet/aspnetcore/blob/v10.0.0/src/Servers/Kestrel/Transport.Quic/src/Internal/QuicStreamContext.cs)
+explain mechanisms, not the speed of this adapter. Check their exact deployed versions for every run.
+A loopback gain does not prove lane isolation under loss. Use the existing blocked-reader native test
+for the immediate correctness boundary; two-host impairment/fairness work requires an isolated host
+or network namespace and a separately specified setup. Do not modify shared host qdiscs casually.
+If increasing S does not improve the relevant workload, or loaded latency/capacity regresses, revise
+the recommendation instead of assuming parallel streams must win. This plan executes no benchmarks.
