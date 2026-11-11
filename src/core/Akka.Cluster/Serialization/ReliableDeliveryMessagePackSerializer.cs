@@ -129,15 +129,14 @@ internal sealed class ReliableDeliveryMessagePackSerializer : SerializerV2
 
     // SizeHint deliberately stays at the SerializerV2 default (UnknownSize): computing an exact
     // size on the OUTER serializer would require a second domain->wire conversion per message.
-    // ToBinary below converts once and sizes off the codec's exact wire-level SizeHint instead.
+    // ToBinary prepares the wire graph once and copies its private pooled output to an owned array.
 
     public override byte[] ToBinary(object obj)
     {
         var wire = ToWire(obj);
-        var sizeHint = _codec.SizeHint(wire);
-        var writer = sizeHint > 0 ? new ArrayBufferWriter<byte>(sizeHint) : new ArrayBufferWriter<byte>();
+        using var writer = new PooledPayloadWriter();
         _codec.Serialize(wire, writer);
-        return writer.WrittenMemory.ToArray();
+        return writer.WrittenSpan.ToArray();
     }
 
     #region domain -> wire

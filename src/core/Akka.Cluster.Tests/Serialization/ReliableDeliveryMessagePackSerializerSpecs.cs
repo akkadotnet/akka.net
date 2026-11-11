@@ -256,6 +256,25 @@ public class ReliableDeliveryMessagePackSerializerSpecs : AkkaSpec
         fromMsgPack.ProducerController.Path.Should().Be(fromLegacy.ProducerController.Path);
     }
 
+    [Fact(DisplayName = "Should_ReturnIndependentArrays_When_DeliveryWritesReusePooledStorage")]
+    public void Should_ReturnIndependentArrays_When_DeliveryWritesReusePooledStorage()
+    {
+        // Arrange
+        var message = new ProducerController.Request(5L, 25L, true, true);
+        var first = MsgPackSerializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var second = MsgPackSerializer.ToBinary(message);
+        _ = MsgPackSerializer.ToBinary(new ProducerController.Request(9L, 40L, false, true));
+        second[0] ^= 0xff;
+        var third = MsgPackSerializer.ToBinary(message);
+
+        // Assert
+        first.Should().Equal(expected);
+        third.Should().Equal(expected);
+    }
+
     private const int ReliableDeliverySerializerId = 36;
 
     private object WithRealActorRefs(IDeliverySerializable msg)
