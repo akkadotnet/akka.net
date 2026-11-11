@@ -61,19 +61,19 @@ public sealed class ExceptionMessagePackFormatter : IAkkaMessagePackFormatter<Ex
         // All classification, recursive validation, payload encoding and JIT fallback complete
         // before the caller's MessagePack writer receives even the first byte of this value.
         var previous = Akka.Serialization.Serialization.CurrentTransportInformation;
-        byte[] bytes;
+        using var buffer = new PooledPayloadWriter();
         try
         {
             if (previous is null)
                 Akka.Serialization.Serialization.CurrentTransportInformation = _system.Provider.SerializationInformation;
             var wire = Capture(value, new HashSet<Exception>(ReferenceEqualityComparer.Instance), 0);
-            bytes = _codec.ToBinary(wire);
+            _codec.Serialize(wire, buffer);
         }
         finally
         {
             Akka.Serialization.Serialization.CurrentTransportInformation = previous;
         }
-        writer.WriteRaw(bytes);
+        writer.WriteRaw(buffer.WrittenSpan);
     }
 
     /// <inheritdoc />
