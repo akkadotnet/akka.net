@@ -63,13 +63,23 @@ internal sealed class ReplicatorMessagePackSerializer : SerializerV2
 
     public override byte[] ToBinary(object obj)
     {
-        var writer = new ArrayBufferWriter<byte>();
+        if (obj is WriteAck or WriteNack or DeltaNack)
+            return [0x80];
+
+        using var writer = new PooledPayloadWriter();
         Serialize(obj, writer);
         return writer.WrittenSpan.ToArray();
     }
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (obj is WriteAck or WriteNack or DeltaNack)
+        {
+            writer.GetSpan(1)[0] = 0x80;
+            writer.Advance(1);
+            return 1;
+        }
+
         var previous = Akka.Serialization.Serialization.CurrentTransportInformation;
         try
         {
@@ -83,13 +93,15 @@ internal sealed class ReplicatorMessagePackSerializer : SerializerV2
                 return _codec.Serialize(wire, writer);
 
             // Gossip stays compressed at the wrapper boundary, as in the legacy protocol.
-            var uncompressed = _codec.ToBinary(wire);
+            using var uncompressed = new PooledPayloadWriter();
+            _codec.Serialize(wire, uncompressed);
             using var compressed = new MemoryStream();
             using (var gzip = new GZipStream(compressed, CompressionMode.Compress, leaveOpen: true))
-                gzip.Write(uncompressed);
-            var bytes = compressed.ToArray();
-            writer.Write(bytes);
-            return bytes.Length;
+                gzip.Write(uncompressed.WrittenSpan);
+            if (!compressed.TryGetBuffer(out var bytes))
+                throw new SerializationException("The completed gossip buffer is unavailable.");
+            writer.Write(bytes.AsSpan());
+            return bytes.Count;
         }
         finally
         {
@@ -97,8 +109,15 @@ internal sealed class ReplicatorMessagePackSerializer : SerializerV2
         }
     }
 
+    public override object FromBinary(byte[] bytes, string manifest) => bytes is [0x80] && ReadControl(manifest) is { } control
+        ? control
+        : Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
     {
+        if (bytes.Length == 1 && bytes.FirstSpan is [0x80] && ReadControl(manifest) is { } control)
+            return control;
+
         if (manifest != "N")
             return FromWire(_codec.Deserialize(bytes, manifest));
 
@@ -106,8 +125,18 @@ internal sealed class ReplicatorMessagePackSerializer : SerializerV2
         using var gzip = new GZipStream(compressed, CompressionMode.Decompress);
         using var uncompressed = new MemoryStream();
         gzip.CopyTo(uncompressed);
-        return FromWire(_codec.Deserialize(new ReadOnlySequence<byte>(uncompressed.ToArray()), manifest));
+        if (!uncompressed.TryGetBuffer(out var payload))
+            throw new SerializationException("The decompressed gossip buffer is unavailable.");
+        return FromWire(_codec.Deserialize(new ReadOnlySequence<byte>(payload.Array!, payload.Offset, payload.Count), manifest));
     }
+
+    private static object? ReadControl(string manifest) => manifest switch
+    {
+        "J" => WriteAck.Instance,
+        "O" => WriteNack.Instance,
+        "R" => DeltaNack.Instance,
+        _ => null
+    };
 
     private object ToWire(object obj) => obj switch
     {

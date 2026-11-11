@@ -4,6 +4,7 @@
 
 #nullable enable
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -49,6 +50,80 @@ public sealed class ReplicatorMessagePackSerializerSpec : V2PortSpec
     protected override Serializer CreateLegacy(ExtendedActorSystem system) => new ReplicatorMessageSerializer(system);
     protected override SerializerV2 CreateV2(ExtendedActorSystem system) => new ReplicatorMessagePackSerializer(system);
     protected override IReadOnlyList<V2PortCase> Cases => Corpus(Sys.Name, ((ExtendedActorSystem)Sys).Provider);
+
+    [Theory(DisplayName = "Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated")]
+    [InlineData("write-ack")]
+    [InlineData("gossip")]
+    public void Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated(string name)
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = Cases.Single(sample => sample.Name == name).Message;
+        var earlier = serializer.ToBinary(message);
+        var expected = (byte[])earlier.Clone();
+
+        var later = serializer.ToBinary(message);
+        later.AsSpan().Clear();
+
+        Assert.Equal(expected, earlier);
+    }
+
+    [Theory(DisplayName = "Should_RestoreControlIdentity_When_MapsAreCanonicalOrContainFutureFields")]
+    [InlineData("J")]
+    [InlineData("O")]
+    [InlineData("R")]
+    public void Should_RestoreControlIdentity_When_MapsAreCanonicalOrContainFutureFields(string manifest)
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var expected = Cases.Single(sample => sample.Manifest == manifest).Message;
+
+        foreach (var bytes in new byte[][] { [0x80], [0x81, 99, 0xc0] })
+        {
+            var fromArray = serializer.FromBinary(bytes, manifest);
+            var fromSequence = serializer.Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+
+            Assert.Same(expected, fromArray);
+            Assert.Same(expected, fromSequence);
+        }
+    }
+
+    [Theory(DisplayName = "Should_RejectTruncatedControls_When_The_MapIsIncomplete")]
+    [InlineData("J")]
+    [InlineData("O")]
+    [InlineData("R")]
+    public void Should_RejectTruncatedControls_When_The_MapIsIncomplete(string manifest)
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var bytes = new byte[] { 0x81 };
+
+        Action fromArray = () => serializer.FromBinary(bytes, manifest);
+        Action fromSequence = () => serializer.Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+
+        Assert.Throws<EndOfStreamException>(fromArray);
+        Assert.Throws<EndOfStreamException>(fromSequence);
+    }
+
+    [Fact(DisplayName = "Should_RestoreCompleteGossip_When_CompressedInputIsSplitAtAnyByte")]
+    public void Should_RestoreCompleteGossip_When_CompressedInputIsSplitAtAnyByte()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var expected = (Gossip)Cases.Single(sample => sample.Name == "gossip").Message;
+        var bytes = serializer.ToBinary(expected);
+
+        for (var cut = 1; cut < bytes.Length; cut++)
+        {
+            var first = new SequencePart(bytes.AsMemory(0, cut));
+            var last = new SequencePart(bytes.AsMemory(cut), first);
+            var sequence = new ReadOnlySequence<byte>(first, 0, last, last.Memory.Length);
+            var restored = Assert.IsType<Gossip>(serializer.Deserialize(sequence, "N"));
+
+            Assert.Equal(expected.SendBack, restored.SendBack);
+            Assert.Equal(expected.ToSystemUid, restored.ToSystemUid);
+            Assert.Equal(expected.FromSystemUid, restored.FromSystemUid);
+            Assert.Equal(expected.UpdatedData.Count, restored.UpdatedData.Count);
+            foreach (var entry in expected.UpdatedData)
+                Assert.Equal(entry.Value, restored.UpdatedData[entry.Key]);
+        }
+    }
 
     [Fact(DisplayName = "Should_ExchangeEveryManifest_When_NodesUseOpposingBindingsAndTheSameSystemName")]
     public async Task Should_ExchangeEveryManifest_When_NodesUseOpposingBindingsAndTheSameSystemName()
@@ -183,6 +258,18 @@ public sealed class ReplicatorMessagePackSerializerSpec : V2PortSpec
 
     internal static UniqueAddress Node(string systemName, string host, long uid)
         => new(new Address("akka.tcp", systemName, host, 2552), uid);
+
+    private sealed class SequencePart : ReadOnlySequenceSegment<byte>
+    {
+        public SequencePart(ReadOnlyMemory<byte> memory, SequencePart? previous = null)
+        {
+            Memory = memory;
+            if (previous is null)
+                return;
+            RunningIndex = previous.RunningIndex + previous.Memory.Length;
+            previous.Next = this;
+        }
+    }
 
     private sealed class StableKeyComparer : IEqualityComparer<string>
     {
