@@ -48,6 +48,20 @@ public sealed class ClusterShardingMessagePackSerializerSpec : V2PortSpec
     protected override Serializer CreateLegacy(ExtendedActorSystem system) => new ClusterShardingMessageSerializer(system);
     protected override SerializerV2 CreateV2(ExtendedActorSystem system) => new ClusterShardingMessagePackSerializer(system);
 
+    [Fact(DisplayName = "Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated")]
+    public void Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var state = Cases.Single(sample => sample.Name == "CoordinatorState").Message;
+        var earlier = serializer.ToBinary(state);
+        var expected = (byte[])earlier.Clone();
+
+        var later = serializer.ToBinary(state);
+        later.AsSpan().Clear();
+
+        Assert.Equal(expected, earlier);
+    }
+
     [Fact(DisplayName = "Should_ReadBothFormats_When_GlobalToggleAndUserPinDiffer")]
     public async Task Should_ReadBothFormats_When_GlobalToggleAndUserPinDiffer()
     {

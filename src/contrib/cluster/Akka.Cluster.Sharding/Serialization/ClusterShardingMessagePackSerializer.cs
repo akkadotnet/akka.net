@@ -43,7 +43,14 @@ internal sealed class ClusterShardingMessagePackSerializer : SerializerV2
     }
 
     public override int Serialize(object obj, IBufferWriter<byte> writer) => _codec.Serialize(ToWire(obj), writer);
-    public override int SizeHint(object obj) => _codec.SizeHint(ToWire(obj));
+
+    public override byte[] ToBinary(object obj)
+    {
+        var wire = ToWire(obj);
+        using var writer = new PooledPayloadWriter();
+        _codec.Serialize(wire, writer);
+        return writer.WrittenSpan.ToArray();
+    }
 
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
     {
