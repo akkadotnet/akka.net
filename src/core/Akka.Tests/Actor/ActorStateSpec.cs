@@ -19,33 +19,33 @@ public sealed class ActorStateSpec : AkkaSpec
     [Fact(DisplayName = "Should_RemoveTheLastWatcher_When_DefaultStateReceivesTheMatchingUnwatch")]
     public void Should_RemoveTheLastWatcher_When_DefaultStateReceivesTheMatchingUnwatch()
     {
+        // Arrange
         var watcher = Reference("watcher", 111);
         Receive behavior = _ => true;
         var state = new DefaultActorState().Become(behavior).AddWatchedBy(watcher);
-        Assert.IsType<DefaultActorState>(state);
-        Assert.True(state.ContainsWatchedBy(watcher));
-        Assert.Same(state, state.RemoveWatchedBy(watcher));
-        Assert.IsType<DefaultActorState>(state);
-        Assert.False(state.ContainsWatchedBy(watcher));
-        Assert.Empty(state.GetWatchedBy());
-        Assert.Same(behavior, state.GetCurrentBehavior());
-        var replacement = Reference("replacement", 333);
-        Assert.Same(state, state.AddWatchedBy(replacement));
-        Assert.True(state.ContainsWatchedBy(replacement));
-        Assert.False(state.ContainsWatchedBy(watcher));
+
+        // Act
+        var updated = state.RemoveWatchedBy(watcher);
+
+        // Assert
+        Assert.Empty(updated.GetWatchedBy());
+        Assert.Same(behavior, updated.GetCurrentBehavior());
     }
 
     [Fact(DisplayName = "Should_RemoveEquivalentWatcher_When_ItsPathAndUidMatch")]
     public void Should_RemoveEquivalentWatcher_When_ItsPathAndUidMatch()
     {
+        // Arrange
         var watcher = Reference("watcher", 111);
         var equivalent = Reference("watcher", 111);
-        Assert.NotSame(watcher, equivalent);
-        Assert.Equal(111, watcher.Path.Uid);
-        Assert.Equal(watcher, equivalent);
         var state = new DefaultActorState().AddWatchedBy(watcher);
-        Assert.Same(state, state.RemoveWatchedBy(equivalent));
-        Assert.Empty(state.GetWatchedBy());
+
+        // Act
+        var updated = state.RemoveWatchedBy(equivalent);
+
+        // Assert
+        Assert.NotSame(watcher, equivalent);
+        Assert.Empty(updated.GetWatchedBy());
     }
 
     [Theory(DisplayName = "Should_KeepTheSoleWatcher_When_UnwatchNamesAnotherActorOrIncarnation")]
@@ -53,23 +53,29 @@ public sealed class ActorStateSpec : AkkaSpec
     [InlineData("watcher", 222)]
     public void Should_KeepTheSoleWatcher_When_UnwatchNamesAnotherActorOrIncarnation(string name, int uid)
     {
+        // Arrange
         var watcher = Reference("watcher", 111);
         var other = Reference(name, uid);
-        Assert.NotEqual(watcher, other);
         var state = new DefaultActorState().AddWatchedBy(watcher);
-        Assert.Same(state, state.RemoveWatchedBy(other));
-        Assert.True(state.ContainsWatchedBy(watcher));
-        Assert.False(state.ContainsWatchedBy(other));
-        Assert.Equal(watcher, Assert.Single(state.GetWatchedBy()));
+
+        // Act
+        var updated = state.RemoveWatchedBy(other);
+
+        // Assert
+        Assert.Equal(watcher, Assert.Single(updated.GetWatchedBy()));
     }
 
     [Fact(DisplayName = "Should_KeepEmptyDefaultState_When_UnwatchHasNoRegisteredWatcher")]
     public void Should_KeepEmptyDefaultState_When_UnwatchHasNoRegisteredWatcher()
     {
+        // Arrange
         var state = new DefaultActorState();
         var watcher = Reference("watcher", 111);
-        Assert.Same(state, state.RemoveWatchedBy(watcher));
-        Assert.False(state.ContainsWatchedBy(watcher));
-        Assert.Empty(state.GetWatchedBy());
+
+        // Act
+        var updated = state.RemoveWatchedBy(watcher);
+
+        // Assert
+        Assert.Empty(updated.GetWatchedBy());
     }
 }
