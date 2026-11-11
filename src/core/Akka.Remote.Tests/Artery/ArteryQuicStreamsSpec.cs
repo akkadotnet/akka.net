@@ -105,7 +105,13 @@ namespace Akka.Remote.Tests.Artery
                 await remoting.QuicOrdinaryStreamsReadyAsync(ready.Token);
                 remoting.QuicOrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
 
-                var probes = recipients.Keys.ToDictionary(lane => lane, _ => CreateTestProbe(first));
+                var probes = new Dictionary<int, TestProbe>();
+                for (var i = 0; i < 256 && probes.Count < lanes; i++)
+                {
+                    var probe = CreateTestProbe(first);
+                    probes.TryAdd(Association.SelectLane(probe.Ref.Path.Uid, lanes), probe);
+                }
+                probes.Should().HaveCount(lanes, "reply traffic must also occupy every processing lane");
                 const int messages = 500;
                 for (var sequence = 0; sequence < messages; sequence++)
                     foreach (var (lane, recipient) in recipients)
