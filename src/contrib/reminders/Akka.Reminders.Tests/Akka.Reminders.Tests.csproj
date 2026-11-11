@@ -15,7 +15,7 @@
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-    <PackageReference Include="CsCheck" Version="$(CsCheckVersion)" />
+    <PackageReference Include="CsCheck" Version="4.9.1" />
     <PackageReference Include="coverlet.collector" Version="10.1.0" />
     <PackageReference Include="Testcontainers.MsSql" Version="4.15.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />

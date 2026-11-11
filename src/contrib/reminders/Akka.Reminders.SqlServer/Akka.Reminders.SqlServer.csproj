@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFrameworks>$(NetStandardLibVersion);net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Akka.Reminders.SqlServer</PackageId>
     <Description>SQL Server storage implementation for Akka.Reminders.</Description>
     <PackageTags>$(AkkaPackageTags);reminders;sql;sqlserver</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +28,11 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Scripts\SqlServer-Create.sql" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+    <Compile Remove="$(NuGetPackageRoot)polyfill/1.28.0/contentFiles/cs/netstandard2.0/Polyfill/Nullability/**" />
   </ItemGroup>
 
 </Project>

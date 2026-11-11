@@ -55,7 +55,12 @@ public static class SqlServerStorageExtensions
         string? tableName = null,
         bool? autoInitialize = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(connectionFactory);
+#else
+        if (connectionFactory is null)
+            throw new ArgumentNullException(nameof(connectionFactory));
+#endif
 
         var settings = new SqlServerReminderStorageSettings
         {

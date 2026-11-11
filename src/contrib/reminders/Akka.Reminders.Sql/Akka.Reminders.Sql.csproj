@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFrameworks>$(NetStandardLibVersion);net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Description>Compatibility package for SQL Server, PostgreSQL, and SQLite storage in Akka.Reminders.</Description>
     <PackageTags>$(AkkaPackageTags);reminders;sql;sqlserver;postgresql;sqlite;compatibility</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +14,11 @@
     <ProjectReference Include="..\Akka.Reminders.SqlServer\Akka.Reminders.SqlServer.csproj" />
     <ProjectReference Include="..\Akka.Reminders.PostgreSql\Akka.Reminders.PostgreSql.csproj" />
     <ProjectReference Include="..\Akka.Reminders.Sqlite\Akka.Reminders.Sqlite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+    <Compile Remove="$(NuGetPackageRoot)polyfill/1.28.0/contentFiles/cs/netstandard2.0/Polyfill/Nullability/**" />
   </ItemGroup>
 
 </Project>

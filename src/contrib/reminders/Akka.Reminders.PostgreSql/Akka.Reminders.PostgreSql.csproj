@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFrameworks>$(NetStandardLibVersion);net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Akka.Reminders.PostgreSql</PackageId>
     <Description>PostgreSQL storage implementation for Akka.Reminders.</Description>
     <PackageTags>$(AkkaPackageTags);reminders;sql;postgresql</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +18,15 @@
     <Using Include="Akka.Event" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- Npgsql 9+ dropped netstandard2.0, so the .NET Framework-compatible leg stays
+       on 8.x while the net10.0 leg tracks current. -->
+  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+    <PackageReference Include="Npgsql" Version="8.0.5" />
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+    <Compile Remove="$(NuGetPackageRoot)polyfill/1.28.0/contentFiles/cs/netstandard2.0/Polyfill/Nullability/**" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != '$(NetStandardLibVersion)'">
     <PackageReference Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
 

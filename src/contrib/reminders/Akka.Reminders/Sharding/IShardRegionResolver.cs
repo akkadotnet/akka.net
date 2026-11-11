@@ -1,4 +1,4 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Akka.Cluster.Sharding;
 
 namespace Akka.Reminders.Sharding;
@@ -84,7 +84,13 @@ public sealed class TestShardRegionResolver : IShardRegionResolver
     /// <param name="shardRegions">A dictionary mapping shard region names to actor references.</param>
     public TestShardRegionResolver(IReadOnlyDictionary<string, IActorRef> shardRegions)
     {
+#if NET5_0_OR_GREATER
         _shardRegions = new Dictionary<string, IActorRef>(shardRegions);
+#else
+        _shardRegions = new Dictionary<string, IActorRef>();
+        foreach (var kvp in shardRegions)
+            _shardRegions[kvp.Key] = kvp.Value;
+#endif
     }
 
     /// <summary>

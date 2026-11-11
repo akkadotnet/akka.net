@@ -289,7 +289,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
 
     private void ScheduleStorageRecovery()
     {
-        _storageRecoveryAt ??= TimeProvider.Now.Add(Settings.StorageTimeout * 2);
+        _storageRecoveryAt ??= TimeProvider.Now.Add(Settings.StorageTimeout.Double());
         TryScheduleFetchReminders();
     }
 
@@ -576,7 +576,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
             case Status.Failure failure:
                 _log.Error(failure.Cause, "Failed to load reminder overview from storage - restarting...");
                 Timers.StartSingleTimer(RestartBackoffTimer.Instance, RestartBackoffTimer.Instance,
-                    Settings.StorageTimeout * 2);
+                    Settings.StorageTimeout.Double());
                 break;
             case RestartBackoffTimer:
                 // TODO: fail after we've tried to load the reminder overview too many times
@@ -1333,7 +1333,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         }
 
         if (processingFailed)
-            ScheduleAckTimeoutCheck(TimeProvider.Now.Add(Settings.StorageTimeout * 2));
+            ScheduleAckTimeoutCheck(TimeProvider.Now.Add(Settings.StorageTimeout.Double()));
         else
             await RefreshAckTimeoutScheduleFromStorageAsync();
 
@@ -1713,7 +1713,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         // An old, already-due overview must not turn a failed fetch into immediate polling.
         // Count a recovery delay from the end of the failed pass, even when the overview read works.
         if (fetchFailed)
-            _fetchRetryNotBefore = TimeProvider.Now.Add(Settings.StorageTimeout * 2);
+            _fetchRetryNotBefore = TimeProvider.Now.Add(Settings.StorageTimeout.Double());
         TryScheduleFetchReminders();
     }
 

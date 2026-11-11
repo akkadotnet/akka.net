@@ -72,15 +72,23 @@ internal static class ReminderEnvelopeFactory
     /// trimmed publish turns it off, and the trimmer then replaces this getter with <c>false</c>.
     /// On the JIT it is read on every call, so <see cref="AppContext.SetSwitch"/> takes effect at once.
     /// </summary>
+#if NET9_0_OR_GREATER
     [FeatureSwitchDefinition(DynamicTypeLoadingSwitch)]
+#endif
     internal static bool IsDynamicTypeLoadingEnabled =>
         !AppContext.TryGetSwitch(DynamicTypeLoadingSwitch, out var enabled) || enabled;
 
     /// <summary>
     /// <c>true</c> when an unregistered type can still be handled through reflection.
     /// </summary>
+#if NET6_0_OR_GREATER
     internal static bool IsReflectionFallbackAvailable =>
         RuntimeFeature.IsDynamicCodeSupported && IsDynamicTypeLoadingEnabled;
+#else
+    // netstandard2.0 has no RuntimeFeature.IsDynamicCodeSupported; every runtime that
+    // consumes this target (including .NET Framework) JITs, so dynamic code is available.
+    internal static bool IsReflectionFallbackAvailable => IsDynamicTypeLoadingEnabled;
+#endif
 
     internal static void Register<TMessage>() where TMessage : notnull
     {
@@ -128,7 +136,11 @@ internal static class ReminderEnvelopeFactory
 
         // Keep this check inline: the analyzer and ILC only treat the reflection call as guarded
         // when it sits directly behind RuntimeFeature.IsDynamicCodeSupported.
+#if NET6_0_OR_GREATER
         if (allowReflection && RuntimeFeature.IsDynamicCodeSupported && IsDynamicTypeLoadingEnabled)
+#else
+        if (allowReflection && IsDynamicTypeLoadingEnabled)
+#endif
         {
             factory = Reflected.GetOrAdd(messageType, CreateReflectionFactory);
             return factory(entity, key, dueTimeUtc, deadline, message);
@@ -147,13 +159,19 @@ internal static class ReminderEnvelopeFactory
     private static InvalidOperationException NotRegistered(Type messageType)
         => new(NotRegisteredMessage(messageType));
 
+#if NET7_0_OR_GREATER
     [RequiresDynamicCode("Builds ReminderEnvelope<T> for a runtime type. Register the type with WithReminderMessage<T>() for Native AOT.")]
+#endif
     private static EnvelopeFactory CreateReflectionFactory(Type messageType)
     {
         var method = typeof(ReminderEnvelopeFactory)
             .GetMethod(nameof(CreateTyped), BindingFlags.NonPublic | BindingFlags.Static)!
             .MakeGenericMethod(messageType);
+#if NET5_0_OR_GREATER
         return method.CreateDelegate<EnvelopeFactory>();
+#else
+        return (EnvelopeFactory)method.CreateDelegate(typeof(EnvelopeFactory));
+#endif
     }
 
     private static ReminderEnvelope CreateTyped<TMessage>(

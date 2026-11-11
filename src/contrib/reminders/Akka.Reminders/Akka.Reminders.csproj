@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <TargetFrameworks>$(NetStandardLibVersion);net10.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Description>Durable, re-entrant reminders system for Akka.Cluster.Sharding.</Description>
         <PackageTags>$(AkkaPackageTags);cluster;sharding;reminders;scheduling</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
 
     <ItemGroup>
@@ -27,6 +26,16 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
+    </ItemGroup>
+
+    <!-- netstandard2.0 lacks records/init (IsExternalInit) and the .NET 7+ AOT
+         annotations. Polyfill supplies them as source; compile-only.
+         The Nullability polyfills are excluded: this module never uses
+         NullabilityInfoContext, and Polyfill's copy collides with the global
+         Akka.Event using on the unqualified Debug reference. -->
+    <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+      <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+      <Compile Remove="$(NuGetPackageRoot)polyfill/1.28.0/contentFiles/cs/netstandard2.0/Polyfill/Nullability/**" />
     </ItemGroup>
 
 </Project>

@@ -47,11 +47,11 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-            await using (var cancelCommand = CreateCommand(connection, transaction))
+            using (var cancelCommand = CreateCommand(connection, transaction))
             {
                 cancelCommand.CommandText = _dialect.GetCancelReminderSql(_settings.SchemaName, _settings.TableName);
                 cancelCommand.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
@@ -87,7 +87,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         return await UpsertReminderOccurrencesAsync(connection, null, reminders.Select(NormalizeReminder), cancellationToken);
     }
@@ -98,9 +98,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         if (mutationBatch.IsEmpty)
             return true;
 
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -165,7 +165,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             for (var offset = 0; offset < remindersList.Count; offset += MaxUpsertedRemindersPerStatement)
             {
                 var chunk = remindersList.Skip(offset).Take(MaxUpsertedRemindersPerStatement).ToList();
-                await using var command = CreateCommand(connection, transaction);
+                using var command = CreateCommand(connection, transaction);
                 command.CommandText = _dialect.GetBatchUpsertRemindersSql(_settings.SchemaName, _settings.TableName, chunk.Count, insertIfAbsent);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
 
@@ -190,7 +190,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await EnsureInitializedAsync(cancellationToken);
 
         var reminders = new List<ScheduledReminder>();
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         var unreadable = new List<CompletedReminder>();
@@ -205,13 +205,13 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         {
             var unusable = skipped + unreadable.Count;
             var rows = 0;
-            await using var command = connection.CreateCommand();
+            using var command = connection.CreateCommand();
             command.CommandText = _dialect.GetSelectDueRemindersSql(_settings.SchemaName, _settings.TableName, limit);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@UntilDeadline", TruncateToMicroseconds(untilDeadline));
             _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
 
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
                 rows++;
@@ -253,16 +253,16 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         if (unreadable.Count > 0)
             await MarkRemindersAsCompletedAsync(connection, null, unreadable, cancellationToken);
 
-        await using var conn2 = _dialect.CreateConnection(_settings.ConnectionString);
+        using var conn2 = _dialect.CreateConnection(_settings.ConnectionString);
         await conn2.OpenAsync(cancellationToken);
 
         long totalPending = 0;
-        await using (var cmd2 = conn2.CreateCommand())
+        using (var cmd2 = conn2.CreateCommand())
         {
             cmd2.CommandText = _dialect.GetOverviewAggregateSql(_settings.SchemaName, _settings.TableName);
             cmd2.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(cmd2, "@Now", TruncateToMicroseconds(now));
-            await using var reader2 = await cmd2.ExecuteReaderAsync(cancellationToken);
+            using var reader2 = await cmd2.ExecuteReaderAsync(cancellationToken);
             if (await reader2.ReadAsync(cancellationToken))
                 totalPending = reader2.GetInt64(reader2.GetOrdinal("total_count"));
         }
@@ -275,7 +275,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
         if (remainingCount > 0)
         {
-            await using var cmd3 = conn2.CreateCommand();
+            using var cmd3 = conn2.CreateCommand();
             cmd3.CommandText = _dialect.GetNextReminderTimeSql(_settings.SchemaName, _settings.TableName);
             cmd3.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(cmd3, "@Skip", consumed);
@@ -305,7 +305,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             return await MarkRemindersAsCompletedAsync(connection, null,
                 remindersList.Select(NormalizeCompletedReminder), cancellationToken);
@@ -319,9 +319,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     public async Task<int> ExpireRemindersAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = _dialect.GetExpireRemindersSql(_settings.SchemaName, _settings.TableName);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
@@ -331,13 +331,13 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     public async Task<ReminderOverview> GetRemindersOverviewAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = _dialect.GetOverviewAggregateSql(_settings.SchemaName, _settings.TableName);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         if (await reader.ReadAsync(cancellationToken))
         {
@@ -362,9 +362,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await EnsureInitializedAsync(cancellationToken);
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
+            using var command = connection.CreateCommand();
             command.CommandText = _dialect.GetCleanupSql(_settings.SchemaName, _settings.TableName);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@OlderThan", TruncateToMicroseconds(olderThan));
@@ -382,9 +382,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await EnsureInitializedAsync(cancellationToken);
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
+            using var command = connection.CreateCommand();
             command.CommandText = _dialect.GetCancelReminderSql(_settings.SchemaName, _settings.TableName);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@ShardRegionName", entity.ShardRegionName);
@@ -407,18 +407,18 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await EnsureInitializedAsync(cancellationToken);
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             var cancelledKeys = new HashSet<ReminderKey>();
 
-            await using (var selectCommand = connection.CreateCommand())
+            using (var selectCommand = connection.CreateCommand())
             {
                 selectCommand.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
                 selectCommand.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 _dialect.AddParameter(selectCommand, "@ShardRegionName", entity.ShardRegionName);
                 _dialect.AddParameter(selectCommand, "@EntityId", entity.EntityId);
                 _dialect.AddParameter(selectCommand, "@Now", TruncateToMicroseconds(DateTimeOffset.UtcNow));
-                await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
+                using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
                 while (await reader.ReadAsync(cancellationToken))
                 {
                     cancelledKeys.Add(new ReminderKey(reader.GetString(reader.GetOrdinal("reminder_key"))));
@@ -428,7 +428,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             if (cancelledKeys.Count == 0)
                 return new ReminderProtocol.RemindersCancelled(entity, ReminderCancelResponseCode.NotFound, []);
 
-            await using var command = connection.CreateCommand();
+            using var command = connection.CreateCommand();
             command.CommandText = _dialect.GetCancelAllRemindersSql(_settings.SchemaName, _settings.TableName);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@ShardRegionName", entity.ShardRegionName);
@@ -448,16 +448,16 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     {
         await EnsureInitializedAsync(cancellationToken);
         var reminders = new List<ScheduledReminder>();
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@ShardRegionName", entity.ShardRegionName);
         _dialect.AddParameter(command, "@EntityId", entity.EntityId);
         _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(DateTimeOffset.UtcNow));
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             try
@@ -482,7 +482,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
         try
         {
-            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            using var connection = _dialect.CreateConnection(_settings.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             return await MarkRemindersAsAwaitingAckAsync(connection, null,
                 remindersList.Select(NormalizeAwaitingAckReminder), cancellationToken);
@@ -497,13 +497,13 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     {
         await EnsureInitializedAsync(cancellationToken);
         var reminders = new List<ScheduledReminder>();
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = _dialect.GetTimedOutAckRemindersSql(_settings.SchemaName, _settings.TableName, maxCount.Value);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             reminders.Add(ReadReminderFromReader(reader));
@@ -519,9 +519,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT *
             FROM "{_settings.SchemaName}"."{_settings.TableName}"
@@ -539,16 +539,16 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         _dialect.AddParameter(command, "@ReminderKey", key.Name);
         _dialect.AddParameter(command, "@DueTimeUtc", TruncateToMicroseconds(dueTimeUtc));
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadReminderFromReader(reader) : null;
     }
 
     public async Task<DateTimeOffset?> GetNextAwaitingAckDeadlineAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = "SELECT MIN(ack_deadline_utc) FROM \"" + _settings.SchemaName + "\".\"" + _settings.TableName + "\" WHERE completion_status = 'AwaitingAck' AND is_completed = FALSE;";
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         var result = await command.ExecuteScalarAsync(cancellationToken);
@@ -572,7 +572,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         if (normalizedAcknowledgements.Count == 0)
             return results;
 
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         for (var offset = 0; offset < normalizedAcknowledgements.Count; offset += MaxRemindersPerStatusUpdate)
@@ -591,9 +591,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+        using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT when_utc, attempt_count, last_failure_reason, completion_status,
                    delivery_deadline_utc, delivered_at_utc, ack_deadline_utc, completed_at_utc
@@ -610,7 +610,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         _dialect.AddParameter(command, "@ReminderKey", key.Name);
         _dialect.AddParameter(command, "@DueTimeUtc", dueTimeUtc.ToUniversalTime().UtcDateTime);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
             return null;
 
@@ -658,9 +658,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
             Task.Run(async () =>
             {
-                await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+                using var connection = _dialect.CreateConnection(_settings.ConnectionString);
                 await connection.OpenAsync(cancellationToken);
-                await using var command = connection.CreateCommand();
+                using var command = connection.CreateCommand();
                 command.CommandText = _dialect.GetCreateTableSql(_settings.SchemaName, _settings.TableName);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 await command.ExecuteNonQueryAsync(cancellationToken);
@@ -711,8 +711,8 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     {
         try
         {
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            await using var command = CreateCommand(connection, transaction);
+            using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            using var command = CreateCommand(connection, transaction);
             command.CommandText = _dialect.GetBatchAcknowledgeRemindersSql(_settings.SchemaName, _settings.TableName, acknowledgements.Count);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
 
@@ -759,7 +759,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         {
             try
             {
-                await using var command = CreateCommand(connection, null);
+                using var command = CreateCommand(connection, null);
                 command.CommandText = _dialect.GetAcknowledgeReminderSql(_settings.SchemaName, _settings.TableName);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 _dialect.AddParameter(command, "@ShardRegionName", acknowledgement.Entity.ShardRegionName);
@@ -819,7 +819,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             for (var offset = 0; offset < items.Count; offset += MaxRemindersPerStatusUpdate)
             {
                 var chunk = items.Skip(offset).Take(MaxRemindersPerStatusUpdate).ToList();
-                await using var command = CreateCommand(connection, transaction);
+                using var command = CreateCommand(connection, transaction);
                 command.CommandText = _dialect.GetBatchMarkCompletedSql(_settings.SchemaName, _settings.TableName, chunk.Count, activeOnly);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 _dialect.AddParameter(command, "@CompletedAtUtc", group.Key.CompletedAt);
@@ -855,7 +855,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         for (var offset = 0; offset < remindersList.Count; offset += MaxRemindersPerStatusUpdate)
         {
             var chunk = remindersList.Skip(offset).Take(MaxRemindersPerStatusUpdate).ToList();
-            await using var command = CreateCommand(connection, transaction);
+            using var command = CreateCommand(connection, transaction);
             command.CommandText = _dialect.GetBatchMarkAsAwaitingAckSql(_settings.SchemaName, _settings.TableName, chunk.Count);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
 
