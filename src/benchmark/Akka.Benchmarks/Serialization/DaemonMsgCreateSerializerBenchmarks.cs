@@ -21,7 +21,8 @@ namespace Akka.Benchmarks.Serialization;
 [Config(typeof(MicroBenchmarkConfig))]
 public class DaemonMsgCreateSerializerBenchmarks
 {
-    private ExtendedActorSystem _system = null!;
+    private ExtendedActorSystem _legacySystem = null!;
+    private ExtendedActorSystem _generatedSystem = null!;
     private Serializer _legacy = null!;
     private SerializerV2 _legacyAdapter = null!;
     private SerializerV2 _generated = null!;
@@ -36,10 +37,8 @@ public class DaemonMsgCreateSerializerBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _system = (ExtendedActorSystem)ActorSystem.Create("daemon-benchmark");
-        _legacy = _system.Serialization.GetSerializerById(3);
-        _generated = (SerializerV2)_system.Serialization.GetSerializerById(43);
-        _legacyAdapter = new SerializerV1Adapter(_system, _legacy);
+        _legacySystem = (ExtendedActorSystem)ActorSystem.Create("daemon-benchmark", Settings(false));
+        _generatedSystem = (ExtendedActorSystem)ActorSystem.Create("daemon-benchmark", Settings(true));
         var props = Props.Create<BenchmarkActor>();
         var deploy = new Deploy();
         switch (Shape)
@@ -62,26 +61,51 @@ public class DaemonMsgCreateSerializerBenchmarks
                 throw new InvalidOperationException($"Unknown shape [{Shape}].");
         }
         _message = new DaemonMsgCreate(props, deploy, "/remote/benchmark", ActorRefs.NoSender);
+        _legacy = _legacySystem.Serialization.FindSerializerFor(_message);
+        _generated = (SerializerV2)_generatedSystem.Serialization.FindSerializerFor(_message);
+        _legacyAdapter = new SerializerV1Adapter(_legacySystem, _legacy);
         _legacyBytes = _legacy.ToBinary(_message);
         _generatedBytes = _generated.ToBinary(_message);
         if (_legacy.Identifier != 3 || _legacy.Manifest(_message) != "" || _generated.Identifier != 43 || _generated.Manifest(_message) != "a")
             throw new InvalidOperationException("Incorrect daemon serializer ids/manifests.");
-        foreach (var decoded in new[]
+
+        ValidateMessage((DaemonMsgCreate)ProtobufDeserialize(), _legacySystem, "timed legacy reader");
+        ValidateMessage((DaemonMsgCreate)MessagePackDeserialize(), _generatedSystem, "timed generated reader");
+        foreach (var readerSystem in new[] { _legacySystem, _generatedSystem })
         {
-            (DaemonMsgCreate)_system.Serialization.Deserialize(_legacyBytes, 3, ""),
-            (DaemonMsgCreate)_system.Serialization.Deserialize(_generatedBytes, 43, "a")
-        })
-        {
-            if (decoded.Props.Type != props.Type || !decoded.Props.Arguments.SequenceEqual(props.Arguments) ||
-                decoded.Path != _message.Path || !decoded.Deploy.Equals(deploy) || !decoded.Props.Deploy.Equals(props.Deploy) ||
-                decoded.Supervisor != _system.DeadLetters)
-                throw new InvalidOperationException("Daemon benchmark corpus failed reader validation.");
+            ValidateMessage((DaemonMsgCreate)readerSystem.Serialization.Deserialize(_legacyBytes, 3, ""),
+                readerSystem, "registered legacy reader");
+            ValidateMessage((DaemonMsgCreate)readerSystem.Serialization.Deserialize(_generatedBytes, 43, "a"),
+                readerSystem, "registered generated reader");
         }
+        ValidateBuffer(_legacyAdapter, _legacyBytes, "", _legacySystem);
+        ValidateBuffer(_generated, _generatedBytes, "a", _generatedSystem);
         Console.WriteLine($"{Shape}: protobuf={_legacyBytes.Length}B MessagePack={_generatedBytes.Length}B");
     }
 
+    private static Config Settings(bool enabled) => ConfigurationFactory.ParseString(
+        $"akka.actor.serialization-v2 = {(enabled ? "on" : "off")}");
+
+    private void ValidateMessage(DaemonMsgCreate decoded, ExtendedActorSystem readerSystem, string context)
+    {
+        if (decoded.Props.Type != _message.Props.Type || !decoded.Props.Arguments.SequenceEqual(_message.Props.Arguments) ||
+            decoded.Path != _message.Path || !decoded.Deploy.Equals(_message.Deploy) ||
+            !decoded.Props.Deploy.Equals(_message.Props.Deploy) || !ReferenceEquals(decoded.Supervisor, readerSystem.DeadLetters))
+            throw new InvalidOperationException($"Daemon benchmark failed {context}: actor/arguments/deploy/supervisor state differs.");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expectedBytes, string manifest, ExtendedActorSystem readerSystem)
+    {
+        var count = Write(serializer);
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expectedBytes))
+            throw new InvalidOperationException("Daemon benchmark buffer output/count differs from its byte-array writer.");
+        ValidateMessage((DaemonMsgCreate)serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), manifest),
+            readerSystem, "buffer sequence reader");
+    }
+
     [GlobalCleanup]
-    public async Task Cleanup() => await _system.Terminate().WaitAsync(TimeSpan.FromSeconds(10));
+    public async Task Cleanup() => await Task.WhenAll(_legacySystem.Terminate(), _generatedSystem.Terminate())
+        .WaitAsync(TimeSpan.FromSeconds(10));
 
     [Benchmark] public byte[] ProtobufSerialize() => _legacy.ToBinary(_message);
     [Benchmark] public byte[] MessagePackSerialize() => _generated.ToBinary(_message);
