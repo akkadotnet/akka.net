@@ -27,11 +27,6 @@ internal sealed class ClusterSingletonMessagePackSerializer : SerializerV2
     internal const string HandOverDoneManifest = "C";
     internal const string TakeOverFromMeManifest = "D";
 
-    private static readonly HandOverToMeWire HandOverToMeMessage = new();
-    private static readonly HandOverInProgressWire HandOverInProgressMessage = new();
-    private static readonly HandOverDoneWire HandOverDoneMessage = new();
-    private static readonly TakeOverFromMeWire TakeOverFromMeMessage = new();
-
     private readonly ClusterSingletonMessagePackCodec _codec;
 
     public ClusterSingletonMessagePackSerializer(ExtendedActorSystem system) : base(system)
@@ -50,26 +45,53 @@ internal sealed class ClusterSingletonMessagePackSerializer : SerializerV2
         _ => throw new ArgumentException($"Cannot serialize object of type [{obj.GetType()}] in [{GetType()}]", nameof(obj))
     };
 
-    public override int Serialize(object obj, IBufferWriter<byte> writer) => _codec.Serialize(ToWire(obj), writer);
-
-    public override int SizeHint(object obj) => _codec.SizeHint(ToWire(obj));
-
-    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
+    public override byte[] ToBinary(object obj)
     {
-        HandOverToMeWire => HandOverToMe.Instance,
-        HandOverInProgressWire => HandOverInProgress.Instance,
-        HandOverDoneWire => HandOverDone.Instance,
-        TakeOverFromMeWire => TakeOverFromMe.Instance,
-        var wire => throw new SerializationException($"Unknown singleton wire message [{wire.GetType()}]")
-    };
+        _ = Manifest(obj);
+        return [0x80]; // Every existing AllowEmpty wire record is an empty MessagePack map.
+    }
 
-    private static IClusterSingletonWireMessage ToWire(object obj) => obj switch
+    public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
-        HandOverToMe => HandOverToMeMessage,
-        HandOverInProgress => HandOverInProgressMessage,
-        HandOverDone => HandOverDoneMessage,
-        TakeOverFromMe => TakeOverFromMeMessage,
-        _ => throw new ArgumentException($"Cannot serialize object of type [{obj.GetType()}] in [{typeof(ClusterSingletonMessagePackSerializer)}]", nameof(obj))
+        _ = Manifest(obj);
+        writer.GetSpan(1)[0] = 0x80;
+        writer.Advance(1);
+        return 1;
+    }
+
+    public override int SizeHint(object obj)
+    {
+        _ = Manifest(obj);
+        return 1;
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest) => bytes is [0x80]
+        ? ReadSingleton(manifest)
+        : Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+
+    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+    {
+        if (bytes.Length == 1 && bytes.FirstSpan is [0x80])
+            return ReadSingleton(manifest);
+
+        // Future fields and malformed records retain the generated reader's behavior.
+        return _codec.Deserialize(bytes, manifest) switch
+        {
+            HandOverToMeWire => HandOverToMe.Instance,
+            HandOverInProgressWire => HandOverInProgress.Instance,
+            HandOverDoneWire => HandOverDone.Instance,
+            TakeOverFromMeWire => TakeOverFromMe.Instance,
+            var wire => throw new SerializationException($"Unknown singleton wire message [{wire.GetType()}]")
+        };
+    }
+
+    private static object ReadSingleton(string manifest) => manifest switch
+    {
+        HandOverToMeManifest => HandOverToMe.Instance,
+        HandOverInProgressManifest => HandOverInProgress.Instance,
+        HandOverDoneManifest => HandOverDone.Instance,
+        TakeOverFromMeManifest => TakeOverFromMe.Instance,
+        _ => throw new SerializationException($"Unknown singleton manifest [{manifest}]")
     };
 }
 

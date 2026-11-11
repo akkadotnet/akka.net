@@ -8,6 +8,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -56,6 +57,51 @@ public sealed class ClusterSingletonV2SerializerSpec : V2PortSpec
         }
     }
 
+    [Fact(DisplayName = "Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated")]
+    public void Should_PreserveEarlierBytes_When_A_LaterPayloadIsMutated()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var earlier = serializer.ToBinary(HandOverToMe.Instance);
+        var expected = (byte[])earlier.Clone();
+
+        var later = serializer.ToBinary(HandOverDone.Instance);
+        later[0] = 0;
+
+        Assert.Equal(expected, earlier);
+    }
+
+    [Fact(DisplayName = "Should_ReturnOriginalSingletons_When_RecordsContainFutureFields")]
+    public void Should_ReturnOriginalSingletons_When_RecordsContainFutureFields()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var bytes = new byte[] { 0x81, 99, 0xc0 };
+
+        foreach (var sample in Cases)
+        {
+            var fromArray = serializer.FromBinary(bytes, sample.Manifest);
+            var fromSequence = serializer.Deserialize(new ReadOnlySequence<byte>(bytes), sample.Manifest);
+
+            Assert.Same(sample.Message, fromArray);
+            Assert.Same(sample.Message, fromSequence);
+        }
+    }
+
+    [Fact(DisplayName = "Should_RejectTruncatedRecords_When_An_EmptyMapIsNotPresent")]
+    public void Should_RejectTruncatedRecords_When_An_EmptyMapIsNotPresent()
+    {
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var bytes = new byte[] { 0x81 };
+
+        foreach (var sample in Cases)
+        {
+            Action fromArray = () => serializer.FromBinary(bytes, sample.Manifest);
+            Action fromSequence = () => serializer.Deserialize(new ReadOnlySequence<byte>(bytes), sample.Manifest);
+
+            Assert.Throws<EndOfStreamException>(fromArray);
+            Assert.Throws<EndOfStreamException>(fromSequence);
+        }
+    }
+
     [Fact(DisplayName = "Should_ReadBothDirections_When_TheGlobalSwitchIsEnabledOnOneNode")]
     public async Task Should_ReadBothDirections_When_TheGlobalSwitchIsEnabledOnOneNode()
     {
@@ -80,9 +126,11 @@ public sealed class ClusterSingletonV2SerializerSpec : V2PortSpec
         var serializer = CreateV2((ExtendedActorSystem)Sys);
         Action manifest = () => serializer.Manifest(new object());
         Action write = () => serializer.ToBinary(new object());
+        Action readBytes = () => serializer.FromBinary([0x80], "unknown");
         Action read = () => serializer.Deserialize(new ReadOnlySequence<byte>(new byte[] { 0x80 }), "unknown");
         manifest.Should().Throw<ArgumentException>();
         write.Should().Throw<ArgumentException>();
+        readBytes.Should().Throw<SerializationException>();
         read.Should().Throw<SerializationException>();
     }
 }
