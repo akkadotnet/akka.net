@@ -4,7 +4,7 @@ The [Akka.NET website](https://getakka.net) is frozen on v1.5 until v1.6 stabili
 is the guide for the v1.6 beta until the website catches up. It's current against the `dev`
 branch.
 
-**The v1.6 betas are on NuGet.** `1.6.0-beta1` through `1.6.0-beta5` are published, so the
+**The v1.6 betas are on NuGet.** `1.6.0-beta1` through `1.6.0-beta6` are published, so the
 `Version="1.6.0-beta*"` references below restore. Pin an exact beta rather than the wildcard if
 you need a reproducible build.
 
@@ -295,6 +295,9 @@ PubSub envelopes, so a generated Cluster Client codec alone does not establish n
 end-to-end Cluster Client delivery or full Cluster Native AOT support.
 
 ## Enabling Artery
+
+Moving an existing deployment? Follow [Migrating From DotNetty to Artery](docs/articles/remoting/dotnetty-to-artery.md)
+for configuration, cluster transition, addresses, Hosting, and TLS migration.
 
 Artery is experimental. Don't use it in production - Akka.NET logs that warning itself the
 moment it starts. It's off by default, and needs the `Akka.Remote` package either way, same as

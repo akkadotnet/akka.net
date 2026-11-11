@@ -29,6 +29,13 @@ namespace Akka.Serialization
         public abstract ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system);
 
         /// <summary>
+        /// Additional exact serializer types whose configured names resolve to an existing table alias.
+        /// A native replacement can preserve a public legacy class without changing its inheritance or
+        /// requiring dynamic type loading for copied configuration. This does not match subclasses.
+        /// </summary>
+        public virtual ImmutableDictionary<Type, string> SerializerTypeAliases => ImmutableDictionary<Type, string>.Empty;
+
+        /// <summary>
         /// The legacy row each of this module's V2 rows supersedes, as V2 alias to legacy alias - for example
         /// <c>["reliable-delivery-v2"] = "reliable-delivery"</c>. Both rows must come from <see cref="Create"/>, and the
         /// V2 row ships read-only (empty <see cref="SerializerDetails.UseFor"/>). When the Serialization V2 switch
@@ -56,7 +63,8 @@ namespace Akka.Serialization
         /// <summary>Each V2 row with the legacy row it supersedes, as <see cref="ModuleSerializers.Supersedes"/> declared them.</summary>
         internal List<(SerializerDetails V2, SerializerDetails Legacy)> Takeovers { get; } = new();
 
-        private LoadedModule(ImmutableHashSet<SerializerDetails> details, ImmutableDictionary<string, string> supersedes, string moduleName)
+        private LoadedModule(ImmutableHashSet<SerializerDetails> details, ImmutableDictionary<string, string> supersedes,
+            ImmutableDictionary<Type, string> serializerTypeAliases, string moduleName)
         {
             Details = details;
             foreach (var entry in details)
@@ -65,6 +73,35 @@ namespace Akka.Serialization
                 _serializers[KeyOf(serializerType)] = (entry, serializerType.Assembly.GetName().Name, IsAkka(serializerType));
                 foreach (var type in entry.UseFor)
                     _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
+            }
+
+            foreach (var typeAlias in serializerTypeAliases)
+            {
+                if (!typeof(Serializer).IsAssignableFrom(typeAlias.Key))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares a serializer type alias for [{typeAlias.Key}], which is not a Serializer.");
+
+                SerializerDetails? target = null;
+                foreach (var entry in details)
+                {
+                    if (!string.Equals(entry.Alias, typeAlias.Value, StringComparison.Ordinal))
+                        continue;
+                    if (target is not null)
+                        throw new InvalidOperationException(
+                            $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] to ambiguous alias [{typeAlias.Value}].");
+                    target = entry;
+                }
+                if (target is null)
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] to missing alias [{typeAlias.Value}].");
+
+                var key = KeyOf(typeAlias.Key);
+                var assembly = typeAlias.Key.Assembly.GetName().Name;
+                if (_serializers.TryGetValue(key, out var existing) &&
+                    (!ReferenceEquals(existing.Details, target) || !string.Equals(existing.Assembly, assembly, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] more than once with conflicting targets or assemblies.");
+                _serializers[key] = (target, assembly, IsAkka(typeAlias.Key));
             }
 
             if (supersedes.IsEmpty)
@@ -118,7 +155,8 @@ namespace Akka.Serialization
             try
             {
                 skewError = null;
-                return new LoadedModule(module.Create(system), module.Supersedes, module.GetType().FullName ?? module.GetType().Name);
+                return new LoadedModule(module.Create(system), module.Supersedes, module.SerializerTypeAliases,
+                    module.GetType().FullName ?? module.GetType().Name);
             }
             catch (Exception e) when (ModuleSerializerTable.IsVersionSkew(e))
             {
