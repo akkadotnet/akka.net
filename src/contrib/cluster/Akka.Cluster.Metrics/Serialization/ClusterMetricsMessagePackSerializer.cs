@@ -116,6 +116,9 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
     private static object[] ToWire(MixMetricsSelector mix)
     {
         var selectors = mix.Selectors;
+        // A default array is invalid, unlike an initialized empty selector list.
+        if (selectors.IsDefault)
+            return selectors.Cast<object>().ToArray();
         var wire = new object[selectors.Length];
         for (var i = 0; i < selectors.Length; i++)
             wire[i] = selectors[i];
