@@ -52,7 +52,17 @@ public class MessageContainerSerializerBenchmarks
         Validate(_message, (ActorSelectionMessage)_generatedSystem.Serialization.Deserialize(_legacyBytes, 6, ""));
         Validate(_message, (ActorSelectionMessage)_legacy.FromBinary(_legacyBytes, ""));
         Validate(_message, (ActorSelectionMessage)_generated.FromBinary(_generatedBytes, "a"));
+        ValidateBuffer(_adapter, _legacyBytes);
+        ValidateBuffer(_generated, _generatedBytes);
         Console.WriteLine($"{Shape}: protobuf={_legacyBytes.Length}B MessagePack={_generatedBytes.Length}B");
+    }
+
+    private void ValidateBuffer(SerializerV2 serializer, byte[] expected)
+    {
+        var count = Write(serializer);
+        if (count != _buffer.WrittenCount || !_buffer.WrittenSpan.SequenceEqual(expected))
+            throw new InvalidOperationException("Selection buffer output/count differs from byte-array output.");
+        Validate(_message, (ActorSelectionMessage)serializer.Deserialize(new ReadOnlySequence<byte>(_buffer.WrittenMemory), serializer.Manifest(_message)));
     }
 
     private static void Validate(ActorSelectionMessage expected, ActorSelectionMessage actual)
