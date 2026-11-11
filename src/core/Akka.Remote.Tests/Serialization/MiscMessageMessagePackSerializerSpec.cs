@@ -7,6 +7,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -186,6 +187,70 @@ public sealed class MiscMessageMessagePackSerializerSpec : V2PortSpec
     {
         if (expected is byte[] bytes) Assert.Equal(bytes, Assert.IsType<byte[]>(actual));
         else Assert.Equal(expected, actual);
+    }
+
+    [Theory(DisplayName = "Should_ReturnIndependentArrays_When_MiscellaneousWritesReusePooledStorage")]
+    [InlineData("heartbeat")]
+    [InlineData("identify-bytes")]
+    [InlineData("failure-original-state")]
+    public void Should_ReturnIndependentArrays_When_MiscellaneousWritesReusePooledStorage(string name)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var samples = name == "failure-original-state" ? RichFailures() : _cases;
+        var message = samples.Single(sample => sample.Name == name).Message;
+        var first = serializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var second = serializer.ToBinary(message);
+        _ = serializer.ToBinary(new Status.Success("another message"));
+        second[0] ^= 0xff;
+        var third = serializer.ToBinary(message);
+
+        // Assert
+        Assert.Equal(expected, first);
+        Assert.Equal(expected, third);
+    }
+
+    [Theory(DisplayName = "Should_PreserveControlIdentityAndParserFailures_When_FieldlessMapsAreRead")]
+    [InlineData("PP")]
+    [InlineData("K")]
+    [InlineData("IR")]
+    [InlineData("RWHB")]
+    [InlineData("LS")]
+    public void Should_PreserveControlIdentityAndParserFailures_When_FieldlessMapsAreRead(string manifest)
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        object expected = manifest switch
+        {
+            "PP" => PoisonPill.Instance,
+            "K" => Kill.Instance,
+            "IR" => IntentionalRestart.Instance,
+            "RWHB" => RemoteWatcher.Heartbeat.Instance,
+            "LS" => LocalScope.Instance,
+            _ => throw new ArgumentException("Unknown control manifest.", nameof(manifest))
+        };
+        byte[] canonical = [0x80];
+        byte[] future = [0x81, 99, 0xc0];
+        byte[] truncated = [0x81];
+
+        // Act
+        var fromArray = serializer.FromBinary(canonical, manifest);
+        var fromSequence = serializer.Deserialize(new ReadOnlySequence<byte>(canonical), manifest);
+        var futureArray = serializer.FromBinary(future, manifest);
+        var futureSequence = serializer.Deserialize(new ReadOnlySequence<byte>(future), manifest);
+        Action truncatedArray = () => serializer.FromBinary(truncated, manifest);
+        Action truncatedSequence = () => serializer.Deserialize(new ReadOnlySequence<byte>(truncated), manifest);
+
+        // Assert
+        Assert.Same(expected, fromArray);
+        Assert.Same(expected, fromSequence);
+        Assert.Same(expected, futureArray);
+        Assert.Same(expected, futureSequence);
+        Assert.Throws<EndOfStreamException>(truncatedArray);
+        Assert.Throws<EndOfStreamException>(truncatedSequence);
     }
 
     [Theory(DisplayName = "Should_RetainLocalScopeCodecWithoutAddingADefaultBinding_When_EitherIdReadsIt")]
@@ -376,6 +441,20 @@ public sealed class MiscMessageMessagePackSerializerSpec : V2PortSpec
             Assert.NotNull(late);
             Assert.Equal(12, late.Calls);
             Assert.Equal(12 * 8192, late.Written);
+
+            var previous = Akka.Serialization.Serialization.CurrentTransportInformation;
+            var ambient = ((ExtendedActorSystem)Sys).Provider.SerializationInformation;
+            try
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = ambient;
+                Assert.Throws<System.Runtime.Serialization.SerializationException>(() => serializer.ToBinary(messages[0]));
+                Assert.Same(ambient, Akka.Serialization.Serialization.CurrentTransportInformation);
+                Assert.Equal(13, late.Calls);
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = previous;
+            }
         }
         finally
         {

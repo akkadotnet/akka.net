@@ -56,47 +56,65 @@ internal sealed class MiscMessageMessagePackSerializer : SerializerV2
 
     public override byte[] ToBinary(object obj)
     {
-        var output = new ArrayBufferWriter<byte>();
-        Serialize(obj, output);
+        if (IsFieldless(obj))
+            return [0x80];
+
+        var wire = ToWire(obj);
+        // Private output already stages the complete message until encoding succeeds.
+        using var output = new PooledPayloadWriter();
+        SerializeWire(wire, output, stageOutput: false);
         return output.WrittenSpan.ToArray();
     }
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
-        IMiscMessageWire wire = obj switch
+        if (IsFieldless(obj))
         {
-            Identify v => new IdentifyWire(v.MessageId),
-            ActorIdentity v => new ActorIdentityWire(v.MessageId, Path(v.Subject)),
-            IActorRef v => new ActorRefWire(v is Nobody ? "nobody" : Path(v)),
-            PoisonPill => new PoisonPillWire(),
-            Kill => new KillWire(),
-            IntentionalRestart => new IntentionalRestartWire(),
-            RemoteWatcher.Heartbeat => new HeartbeatWire(),
-            RemoteWatcher.HeartbeatRsp v => new HeartbeatResponseWire(v.AddressUid),
-            LocalScope => new LocalScopeWire(),
-            RemoteScope v => new RemoteScopeWire(ToWire(v.Address)),
-            Config v => new ConfigWire(v.IsEmpty ? "" : v.Root.ToString()),
-            FromConfig v => new FromConfigWire(v.Resizer, Dispatcher(v.RouterDispatcher),
-                v == FromConfig.Instance || (v.Resizer is null && string.IsNullOrEmpty(v.RouterDispatcher))),
-            DefaultResizer v => new DefaultResizerWire(v.LowerBound, v.UpperBound, v.PressureThreshold,
-                v.RampupRate, v.BackoffThreshold, v.BackoffRate, v.MessagesPerResize),
-            RoundRobinPool v => new RoundRobinWire(ToWire(v)),
-            BroadcastPool v => new BroadcastWire(ToWire(v)),
-            RandomPool v => new RandomWire(ToWire(v)),
-            ScatterGatherFirstCompletedPool v => new ScatterGatherWire(ToWire(v), v.Within),
-            TailChoppingPool v => new TailChoppingWire(ToWire(v), v.Within, v.Interval),
-            ConsistentHashingPool v => new ConsistentHashingWire(ToWire(v)),
-            RemoteRouterConfig v => new RemoteRouterWire(v.Local, v.Nodes.Select(ToWire).ToArray()),
-            Status.Failure v => new FailureWire(v.Cause, v.State),
-            Status.Success v => new SuccessWire(v.Status),
-            _ => throw new ArgumentException($"Unsupported miscellaneous message [{obj?.GetType()}].", nameof(obj))
-        };
+            writer.GetSpan(1)[0] = 0x80;
+            writer.Advance(1);
+            return 1;
+        }
+
+        return SerializeWire(ToWire(obj), writer, stageOutput: true);
+    }
+
+    private static IMiscMessageWire ToWire(object obj) => obj switch
+    {
+        Identify v => new IdentifyWire(v.MessageId),
+        ActorIdentity v => new ActorIdentityWire(v.MessageId, Path(v.Subject)),
+        IActorRef v => new ActorRefWire(v is Nobody ? "nobody" : Path(v)),
+        PoisonPill => new PoisonPillWire(),
+        Kill => new KillWire(),
+        IntentionalRestart => new IntentionalRestartWire(),
+        RemoteWatcher.Heartbeat => new HeartbeatWire(),
+        RemoteWatcher.HeartbeatRsp v => new HeartbeatResponseWire(v.AddressUid),
+        LocalScope => new LocalScopeWire(),
+        RemoteScope v => new RemoteScopeWire(ToWire(v.Address)),
+        Config v => new ConfigWire(v.IsEmpty ? "" : v.Root.ToString()),
+        FromConfig v => new FromConfigWire(v.Resizer, Dispatcher(v.RouterDispatcher),
+            v == FromConfig.Instance || (v.Resizer is null && string.IsNullOrEmpty(v.RouterDispatcher))),
+        DefaultResizer v => new DefaultResizerWire(v.LowerBound, v.UpperBound, v.PressureThreshold,
+            v.RampupRate, v.BackoffThreshold, v.BackoffRate, v.MessagesPerResize),
+        RoundRobinPool v => new RoundRobinWire(ToWire(v)),
+        BroadcastPool v => new BroadcastWire(ToWire(v)),
+        RandomPool v => new RandomWire(ToWire(v)),
+        ScatterGatherFirstCompletedPool v => new ScatterGatherWire(ToWire(v), v.Within),
+        TailChoppingPool v => new TailChoppingWire(ToWire(v), v.Within, v.Interval),
+        ConsistentHashingPool v => new ConsistentHashingWire(ToWire(v)),
+        RemoteRouterConfig v => new RemoteRouterWire(v.Local, v.Nodes.Select(ToWire).ToArray()),
+        Status.Failure v => new FailureWire(v.Cause, v.State),
+        Status.Success v => new SuccessWire(v.Status),
+        _ => throw new ArgumentException($"Unsupported miscellaneous message [{obj?.GetType()}].", nameof(obj))
+    };
+
+    private int SerializeWire(IMiscMessageWire wire, IBufferWriter<byte> writer, bool stageOutput)
+    {
         var previous = Akka.Serialization.Serialization.CurrentTransportInformation;
         try
         {
             if (previous is null)
                 Akka.Serialization.Serialization.CurrentTransportInformation = system.Provider.SerializationInformation;
-            if (wire is not (IdentifyWire or ActorIdentityWire or FromConfigWire or RoundRobinWire or BroadcastWire
+            if (!stageOutput || wire is not (IdentifyWire or ActorIdentityWire or FromConfigWire or RoundRobinWire or BroadcastWire
                 or RandomWire or ScatterGatherWire or TailChoppingWire or ConsistentHashingWire or RemoteRouterWire
                 or FailureWire or SuccessWire))
                 return _codec.Serialize(wire, writer);
@@ -114,7 +132,21 @@ internal sealed class MiscMessageMessagePackSerializer : SerializerV2
         }
     }
 
-    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest) => _codec.Deserialize(bytes, manifest) switch
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        if (bytes is [0x80] && ReadControl(manifest) is { } control)
+            return control;
+        return Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
+    }
+
+    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+    {
+        if (bytes.IsSingleSegment && bytes.FirstSpan is [0x80] && ReadControl(manifest) is { } control)
+            return control;
+        return FromWire(_codec.Deserialize(bytes, manifest), manifest);
+    }
+
+    private object FromWire(object wire, string manifest) => wire switch
     {
         IdentifyWire v => new Identify(v.MessageId),
         ActorIdentityWire v => new ActorIdentity(v.MessageId, Resolve(v.Subject)),
@@ -141,6 +173,19 @@ internal sealed class MiscMessageMessagePackSerializer : SerializerV2
         FailureWire v => new Status.Failure(v.Cause, v.State),
         SuccessWire v => new Status.Success(v.State),
         _ => throw new SerializationException($"Unsupported miscellaneous payload for manifest [{manifest}].")
+    };
+
+    private static bool IsFieldless(object obj) => obj is PoisonPill or Kill or IntentionalRestart
+        or RemoteWatcher.Heartbeat or LocalScope;
+
+    private static object? ReadControl(string manifest) => manifest switch
+    {
+        "PP" => PoisonPill.Instance,
+        "K" => Kill.Instance,
+        "IR" => IntentionalRestart.Instance,
+        "RWHB" => RemoteWatcher.Heartbeat.Instance,
+        "LS" => LocalScope.Instance,
+        _ => null
     };
 
     private static string Dispatcher(string? value) => string.IsNullOrEmpty(value) ? Dispatchers.DefaultDispatcherId : value;
