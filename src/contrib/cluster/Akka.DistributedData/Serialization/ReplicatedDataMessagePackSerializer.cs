@@ -55,7 +55,7 @@ internal sealed partial class ReplicatedDataMessagePackSerializer : SerializerV2
 
     public override byte[] ToBinary(object obj)
     {
-        var writer = new ArrayBufferWriter<byte>();
+        using var writer = new PooledPayloadWriter();
         Serialize(obj, writer);
         return writer.WrittenSpan.ToArray();
     }
@@ -80,13 +80,15 @@ internal sealed partial class ReplicatedDataMessagePackSerializer : SerializerV2
                 writer.Write(staged.WrittenSpan);
                 return count;
             }
-            var payload = _codec.ToBinary(wire);
+            using var payload = new PooledPayloadWriter();
+            _codec.Serialize(wire, payload);
             using var output = new MemoryStream();
             using (var gzip = new GZipStream(output, CompressionMode.Compress, leaveOpen: true))
-                gzip.Write(payload);
-            var bytes = output.ToArray();
-            writer.Write(bytes);
-            return bytes.Length;
+                gzip.Write(payload.WrittenSpan);
+            if (!output.TryGetBuffer(out var bytes))
+                throw new SerializationException("The completed replicated-data buffer is unavailable.");
+            writer.Write(bytes.AsSpan());
+            return bytes.Count;
         }
         finally
         {
@@ -107,7 +109,9 @@ internal sealed partial class ReplicatedDataMessagePackSerializer : SerializerV2
         using var gzip = new GZipStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
         gzip.CopyTo(output);
-        var payload = new ReadOnlySequence<byte>(output.ToArray());
+        if (!output.TryGetBuffer(out var decompressed))
+            throw new SerializationException("The decompressed replicated-data buffer is unavailable.");
+        var payload = new ReadOnlySequence<byte>(decompressed.Array!, decompressed.Offset, decompressed.Count);
         RejectDynamicDescriptor(payload, manifest);
         return FromWire(_codec.Deserialize(payload, manifest));
     }
