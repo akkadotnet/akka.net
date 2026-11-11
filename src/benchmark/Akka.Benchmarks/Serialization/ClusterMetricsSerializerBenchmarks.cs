@@ -62,8 +62,18 @@ public class ClusterMetricsSerializerBenchmarks
         _legacyWriter = new SerializerV1Adapter((ExtendedActorSystem)_legacySystem, _legacy);
         _nativeWriter = (SerializerV2)_v2;
         _manifest = Akka.Serialization.Serialization.ManifestFor(_legacy, _message);
-        _legacyBytes = _legacy.ToBinary(_message);
-        _v2Bytes = _v2.ToBinary(_message);
+        Require(Akka.Serialization.Serialization.ManifestFor(_v2, _message) == _manifest, "manifest parity");
+        _legacyBytes = LegacyToBinary();
+        _v2Bytes = V2ToBinary();
+        ValidateMessage(LegacyFromBinary(), "legacy timed reader");
+        ValidateMessage(V2FromBinary(), "V2 timed reader");
+        foreach (var system in new[] { _legacySystem, _v2System })
+        {
+            ValidateMessage(system.Serialization.Deserialize(_legacyBytes, 10, _manifest), "registered legacy reader");
+            ValidateMessage(system.Serialization.Deserialize(_v2Bytes, 50, _manifest), "registered V2 reader");
+        }
+        ValidateWriter(LegacyToWriter(), _legacyBytes, "legacy timed writer");
+        ValidateWriter(V2ToWriter(), _v2Bytes, "V2 timed writer");
         Console.WriteLine($"[metrics-wire] {Kind}: legacy={_legacyBytes.Length} V2={_v2Bytes.Length}");
     }
 
@@ -82,6 +92,84 @@ public class ClusterMetricsSerializerBenchmarks
                 new NodeMetrics.Types.Metric("load", 0.75f, Option<NodeMetrics.Types.EWMA>.None)
             })).ToImmutableHashSet();
         return new MetricsGossipEnvelope(new Address("akka", "metrics", "host1", 2552), new MetricsGossip(nodes), true);
+    }
+
+    private void ValidateWriter(int count, byte[] expected, string contract)
+    {
+        Require(count == _buffer.WrittenCount, $"{contract}: reported byte count");
+        Require(_buffer.WrittenSpan.SequenceEqual(expected), $"{contract}: array/buffer byte parity");
+    }
+
+    private void ValidateMessage(object decoded, string contract)
+    {
+        Require(decoded.GetType() == _message.GetType(), $"{contract}: root runtime type");
+        switch (_message)
+        {
+            case MetricsGossipEnvelope expected:
+                ValidateGossip(expected, (MetricsGossipEnvelope)decoded, contract);
+                break;
+            case AdaptiveLoadBalancingPool expected:
+                var actual = (AdaptiveLoadBalancingPool)decoded;
+                Require(actual.NrOfInstances == expected.NrOfInstances
+                    && actual.RouterDispatcher == expected.RouterDispatcher
+                    && actual.UsePoolDispatcher == expected.UsePoolDispatcher
+                    && actual.Resizer is null
+                    && actual.SupervisorStrategy.Equals(expected.SupervisorStrategy), $"{contract}: pool fields");
+                ValidateSelector(expected.MetricsSelector, actual.MetricsSelector, contract);
+                break;
+            case CpuMetricsSelector:
+                Require(ReferenceEquals(decoded, CpuMetricsSelector.Instance), $"{contract}: CPU singleton");
+                break;
+            default:
+                throw new InvalidOperationException($"No benchmark validator for [{Kind}].");
+        }
+    }
+
+    private static void ValidateSelector(IMetricsSelector expected, IMetricsSelector actual, string contract)
+    {
+        Require(actual.GetType() == expected.GetType(), $"{contract}: selector runtime type");
+        if (expected is MixMetricsSelector expectedMix)
+        {
+            var actualMix = (MixMetricsSelector)actual;
+            Require(actualMix.Selectors.Length == expectedMix.Selectors.Length, $"{contract}: selector count");
+            for (var i = 0; i < expectedMix.Selectors.Length; i++)
+                ValidateSelector(expectedMix.Selectors[i], actualMix.Selectors[i], $"{contract}: selector[{i}]");
+        }
+        else
+        {
+            Require(ReferenceEquals(actual, expected), $"{contract}: selector singleton");
+        }
+    }
+
+    private static void ValidateGossip(MetricsGossipEnvelope expected, MetricsGossipEnvelope actual, string contract)
+    {
+        Require(actual.FromAddress.Equals(expected.FromAddress) && actual.Reply == expected.Reply,
+            $"{contract}: gossip sender/reply");
+        Require(actual.Gossip.Nodes.Count == expected.Gossip.Nodes.Count, $"{contract}: node count");
+        foreach (var expectedNode in expected.Gossip.Nodes)
+        {
+            var actualNode = actual.Gossip.Nodes.Single(node => node.Address.Equals(expectedNode.Address));
+            Require(actualNode.Timestamp == expectedNode.Timestamp, $"{contract}: node timestamp");
+            Require(actualNode.Metrics.Count == expectedNode.Metrics.Count, $"{contract}: metric count");
+            foreach (var expectedMetric in expectedNode.Metrics)
+            {
+                var actualMetric = actualNode.Metrics.Single(metric => metric.Name == expectedMetric.Name);
+                Require(actualMetric.Value.Type == expectedMetric.Value.Type, $"{contract}: metric numeric kind");
+                Require(expectedMetric.Value.Type is AnyNumber.NumberType.Int or AnyNumber.NumberType.Long
+                    ? actualMetric.Value.LongValue == expectedMetric.Value.LongValue
+                    : actualMetric.Value.DoubleValue == expectedMetric.Value.DoubleValue, $"{contract}: metric value");
+                Require(actualMetric.Average.HasValue == expectedMetric.Average.HasValue, $"{contract}: EWMA presence");
+                if (expectedMetric.Average.HasValue)
+                    Require(actualMetric.Average.Value.Value == expectedMetric.Average.Value.Value
+                        && actualMetric.Average.Value.Alpha == expectedMetric.Average.Value.Alpha, $"{contract}: EWMA state");
+            }
+        }
+    }
+
+    private static void Require(bool condition, string contract)
+    {
+        if (!condition)
+            throw new InvalidOperationException($"Metrics benchmark setup failed: {contract}.");
     }
 
     [Benchmark]
