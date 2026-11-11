@@ -43,7 +43,7 @@ internal sealed class StreamRefProtocolMessagePackSerializer : SerializerV2
 
     public override byte[] ToBinary(object obj)
     {
-        var writer = new ArrayBufferWriter<byte>();
+        using var writer = new PooledPayloadWriter();
         Serialize(obj, writer);
         return writer.WrittenSpan.ToArray();
     }

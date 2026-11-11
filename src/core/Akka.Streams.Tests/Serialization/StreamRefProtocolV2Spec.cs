@@ -84,6 +84,25 @@ public sealed class StreamRefProtocolV2Spec : V2PortSpec
     protected override SerializerV2 CreateV2(ExtendedActorSystem system) => new StreamRefProtocolMessagePackSerializer(system);
     protected override IReadOnlyList<V2PortCase> Cases { get; }
 
+    [Fact(DisplayName = "Should_ReturnIndependentBytes_When_StreamRefWritesReusePooledStorage")]
+    public void Should_ReturnIndependentBytes_When_StreamRefWritesReusePooledStorage()
+    {
+        // Arrange
+        var serializer = CreateV2((ExtendedActorSystem)Sys);
+        var message = new SequencedOnNext(0, "payload");
+        var first = serializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var later = serializer.ToBinary(new SequencedOnNext(1, new string('x', 500)));
+        later[0] ^= 0xff;
+        var next = serializer.ToBinary(message);
+
+        // Assert
+        first.Should().Equal(expected);
+        next.Should().Equal(expected);
+    }
+
     [Fact(DisplayName = "Should_ExchangeBothProtocolFormats_When_OnlyOnePeerEnablesV2")]
     public async Task Should_ExchangeBothProtocolFormats_When_OnlyOnePeerEnablesV2()
     {
