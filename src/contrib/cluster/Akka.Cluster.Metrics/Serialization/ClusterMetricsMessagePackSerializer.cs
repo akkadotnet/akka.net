@@ -119,7 +119,7 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
         // A default array is invalid, unlike an initialized empty selector list.
         if (selectors.IsDefault)
             return selectors.Cast<object>().ToArray();
-        var wire = new object[selectors.Length];
+        var wire = selectors.IsEmpty ? Array.Empty<object>() : new object[selectors.Length];
         for (var i = 0; i < selectors.Length; i++)
             wire[i] = selectors[i];
         return wire;
@@ -127,6 +127,8 @@ internal sealed class ClusterMetricsMessagePackSerializer : SerializerV2
 
     private static MixMetricsSelector FromWire(MetricsMixWire mix)
     {
+        if (mix.Selectors.Length == 0)
+            return new MixMetricsSelector(ImmutableArray<CapacityMetricsSelector>.Empty);
         var selectors = ImmutableArray.CreateBuilder<CapacityMetricsSelector>(mix.Selectors.Length);
         foreach (var selector in mix.Selectors)
             selectors.Add((CapacityMetricsSelector)selector);
