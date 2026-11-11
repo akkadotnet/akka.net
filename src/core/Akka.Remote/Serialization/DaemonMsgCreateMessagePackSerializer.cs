@@ -35,6 +35,17 @@ internal sealed class DaemonMsgCreateMessagePackSerializer : SerializerV2
         return obj is DaemonMsgCreate ? "a" : throw UnknownMessage(obj);
     }
 
+    public override byte[] ToBinary(object obj)
+    {
+        if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+            throw UnsupportedDeployment();
+
+        var wire = ToWire(obj);
+        using var output = new PooledPayloadWriter();
+        _codec.Serialize(wire, output);
+        return output.WrittenSpan.ToArray();
+    }
+
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
         if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
@@ -44,9 +55,9 @@ internal sealed class DaemonMsgCreateMessagePackSerializer : SerializerV2
 
     public override int SizeHint(object obj)
     {
-        if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-            throw UnsupportedDeployment();
-        return _codec.SizeHint(ToWire(obj));
+        // Preserve the type/native preflight without constructing a second Props/Deploy graph.
+        _ = Manifest(obj);
+        return UnknownSize;
     }
 
     public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)

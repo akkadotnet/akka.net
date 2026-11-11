@@ -133,6 +133,26 @@ public sealed class DaemonMsgCreateV2Spec : AkkaSpec
         }
     }
 
+    [Fact(DisplayName = "Should_ReturnIndependentArrays_When_DeploymentWritesReusePooledStorage")]
+    public void Should_ReturnIndependentArrays_When_DeploymentWritesReusePooledStorage()
+    {
+        // Arrange
+        var serializer = new DaemonMsgCreateMessagePackSerializer((ExtendedActorSystem)Sys);
+        var message = Corpus.Single(sample => sample.Name == "arguments").Message;
+        var first = serializer.ToBinary(message);
+        var expected = (byte[])first.Clone();
+
+        // Act
+        var second = serializer.ToBinary(message);
+        _ = serializer.ToBinary(Corpus.Single(sample => sample.Name == "two-deploys").Message);
+        second[0] ^= 0xff;
+        var third = serializer.ToBinary(message);
+
+        // Assert
+        first.Should().Equal(expected);
+        third.Should().Equal(expected);
+    }
+
     [Fact(DisplayName = "Should_ExchangeBothFormats_When_PeersSelectOppositeWriters")]
     public async Task Should_ExchangeBothFormats_When_PeersSelectOppositeWriters()
     {
