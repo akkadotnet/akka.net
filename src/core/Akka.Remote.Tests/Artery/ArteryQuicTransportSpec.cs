@@ -312,9 +312,11 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "QUIC coalescing returns all owners when native submission completes or throws synchronously")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_ReturnAllOwners_When_NativeSubmissionIsSynchronous(bool fail)
+        [InlineData("success")]
+        [InlineData("failure")]
+        [InlineData("canceled")]
+        [InlineData("uncanceled-token")]
+        public async Task Should_ReturnAllOwners_When_NativeSubmissionIsSynchronous(string outcome)
         {
             var first = new TrackingOwner(3, 0x13);
             var second = new TrackingOwner(4, 0xB1);
@@ -322,14 +324,31 @@ namespace Akka.Remote.Tests.Artery
                 OwnedSequenceSegment.Create(first), OwnedSequenceSegment.Create(second));
             var expected = input.ToArray();
             var pool = new TrackingPool();
-            var error = new IOException("Controlled synchronous submission failure.");
-            using var stream = new ImmediateWriteStream(fail ? error : null);
+            using var cancellation = new CancellationTokenSource();
+            if (outcome == "canceled")
+                cancellation.Cancel();
+            Exception? error = outcome switch
+            {
+                "failure" => new IOException("Controlled synchronous submission failure."),
+                "canceled" or "uncanceled-token" => new OperationCanceledException("Controlled synchronous cancellation.", cancellation.Token),
+                _ => null
+            };
+            using var stream = new ImmediateWriteStream(error);
             var write = ArteryQuicWriteStage.WriteCoalescedAsync(stream, input, pool, CancellationToken.None);
             try
             {
                 write.IsCompleted.Should().BeTrue();
-                if (fail)
+                if (error is OperationCanceledException)
+                {
+                    write.IsCanceled.Should().BeTrue("synchronous cancellation must preserve async-builder semantics");
+                    var canceled = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write.AsTask());
+                    canceled.CancellationToken.Should().Be(cancellation.Token);
+                }
+                else if (error is not null)
+                {
+                    write.IsFaulted.Should().BeTrue();
                     (await Assert.ThrowsAsync<IOException>(() => write.AsTask())).Should().BeSameAs(error);
+                }
                 else
                 {
                     await write;

@@ -10,6 +10,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,7 +93,9 @@ namespace Akka.Remote.Artery
             }
             catch (Exception ex)
             {
-                return ValueTask.FromException(ex);
+                var completion = AsyncValueTaskMethodBuilder.Create();
+                completion.SetException(ex);
+                return completion.Task;
             }
         }
 
