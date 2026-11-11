@@ -91,6 +91,8 @@ Artery TLS policies authenticate transport peers; they do not authorize cluster 
 
 ## Migrate From DotNetty TLS
 
+For the complete transport change, follow [Migrating From DotNetty to Artery](dotnetty-to-artery.md), including cluster transition, address changes, Hosting, and bind-address limitations.
+
 The [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md#migrating-dotnetty-tls-settings) maps DotNetty certificate, validation, and mTLS settings to Artery and explains the transport/address migration. DotNetty SSL configuration does not enable TLS on Artery; supply a typed TLS profile for every participating node.
 
 This complete node lifecycle loads a PKCS#12 certificate, enables mTLS with system chain trust, and disposes the certificate after remoting stops. It needs the namespaces `System`, `System.Security.Cryptography.X509Certificates`, `Akka.Actor`, `Akka.Actor.Setup`, `Akka.Configuration`, `Akka.IO`, and `Akka.Remote.Artery`. Replace the loopback hostname with an address reachable by the other nodes:
