@@ -135,7 +135,9 @@ namespace Akka.Remote.Artery
         }
 
         // Called only after Artery has published its bound address and inbound context.
-        internal void StartAccepting(Action<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action> accept) =>
+        // The returned task must include downstream processing, including any detached lanes.
+        // Raw source termination alone can precede both dispatch and a downstream failure.
+        internal void StartAccepting(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept) =>
             Track(AcceptConnectionsAsync(accept));
 
         internal Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Done>> Outgoing(EndPoint endpoint, ArteryStreamId role, int ordinaryStream = 0) =>
@@ -187,7 +189,7 @@ namespace Akka.Remote.Artery
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
-        private async Task AcceptConnectionsAsync(Action<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action> accept)
+        private async Task AcceptConnectionsAsync(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
         {
             while (!_stop.IsCancellationRequested)
             {
@@ -214,7 +216,7 @@ namespace Akka.Remote.Artery
         }
 
         private async Task ReceiveConnectionAsync(QuicConnection connection,
-            Action<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action> accept)
+            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
         {
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
             var streams = new List<QuicStream>();
@@ -259,11 +261,14 @@ namespace Akka.Remote.Artery
                             else if (!roles.Add(role))
                                 throw new ArteryFramingException($"Duplicate Artery QUIC channel [{role}].");
                         }
+                        var reachedEof = false;
                         var source = Source.UnfoldResourceAsync<ReadOnlySequence<byte>, (QuicStream Stream, byte[] Buffer)>(
                             () => Task.FromResult((stream, GC.AllocateUninitializedArray<byte>(16 * 1024, pinned: true))),
                             async resource =>
                             {
                                 var count = await resource.Stream.ReadAsync(resource.Buffer, lifetime.Token).ConfigureAwait(false);
+                                if (count == 0)
+                                    reachedEof = true;
                                 if (role == ArteryStreamId.Ordinary && count > 0)
                                     _ioCounters?.Read(count);
                                 // Keep one bounded scratch buffer per reader. Downstream frames can
@@ -273,15 +278,40 @@ namespace Akka.Remote.Artery
                                     : Option<ReadOnlySequence<byte>>.Create(new ReadOnlySequence<byte>(resource.Buffer.AsSpan(0, count).ToArray()));
                             },
                             // The connection is the sole native disposal owner. A cancelled
-                            // reader signals retirement through WatchTermination below.
+                            // reader signals retirement through its processing task below.
                             _ => Task.FromResult(Done.Instance))
                             .Prepend(Source.Single(new ReadOnlySequence<byte>(preamble)))
                             .WatchTermination((_, done) =>
                             {
-                                readers.Add(ObserveReadAsync(done, stream));
+                                // A source failure/cancellation must retire promptly even when
+                                // a downstream serializer or lane consumer is still blocked.
+                                Track(done);
+                                readers.Add(ObserveReadAsync(done));
                                 return NotUsed.Instance;
                             });
-                        accept(source, connection.RemoteEndPoint, () => admitted.TrySetResult(Done.Instance));
+                        var processing = accept(source, connection.RemoteEndPoint, () => admitted.TrySetResult(Done.Instance));
+                        // Processing can outlive native teardown (e.g. a blocked serializer).
+                        // Observe it, but cancel the connection's observer with its lifetime so
+                        // native disposal never waits indefinitely for application code.
+                        Track(processing);
+                        readers.Add(ObserveReadAsync(processing));
+
+                        async Task ObserveReadAsync(Task completion)
+                        {
+                            try
+                            {
+                                await completion.WaitAsync(lifetime.Token).ConfigureAwait(false);
+                                // A healthy FIN may leave sibling channels flushing. A cancelled
+                                // sink that never consumed EOF must instead retire this connection.
+                                if (!reachedEof)
+                                    lifetime.Cancel();
+                            }
+                            catch
+                            {
+                                lifetime.Cancel();
+                                throw;
+                            }
+                        }
                     }
                     catch
                     {
@@ -303,20 +333,6 @@ namespace Akka.Remote.Artery
                     }
                 }
 
-                async Task ObserveReadAsync(Task done, QuicStream stream)
-                {
-                    try
-                    {
-                        await done.ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        // A healthy FIN may arrive while sibling channels are still flushing.
-                        // Cancellation, malformed input or reset instead retires the connection.
-                        if (!stream.ReadsClosed.IsCompletedSuccessfully)
-                            lifetime.Cancel();
-                    }
-                }
             }
             finally
             {

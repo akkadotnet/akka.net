@@ -1004,7 +1004,7 @@ namespace Akka.Remote.Artery
         private void HandleIncomingConnection(Tcp.IncomingConnection connection) =>
             HandleIncomingSource(Source.Empty<ReadOnlySequence<byte>>().Via(connection.Flow), connection.RemoteAddress);
 
-        private void HandleIncomingSource(Source<ReadOnlySequence<byte>, NotUsed> source, EndPoint remoteAddress,
+        private Task HandleIncomingSource(Source<ReadOnlySequence<byte>, NotUsed> source, EndPoint remoteAddress,
             Action? onHandshakeAccepted = null)
         {
             _log.Debug("Accepted inbound Artery {0} channel from [{1}]", _settings.Transport, remoteAddress);
@@ -1033,13 +1033,22 @@ namespace Akka.Remote.Artery
             // never reaches them at all (dispatched directly from the lane), while any (should
             // never happen) control-classified frame on that same connection, and everything on
             // every Control/Large connection, still flows through them completely unchanged.
+            var laneConsumersStopped = _quic is null ? null
+                : new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Action<Task>? reportLaneCompletion = laneConsumersStopped is null ? null : completion =>
+            {
+                if (QuicConnection.IsSupported)
+                    _quic!.Track(completion);
+                laneConsumersStopped.TrySetResult(completion);
+            };
             var processingStage = _settings.InboundLanes > 1
                 ? new ArteryInboundProcessingStage(
                     _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
                     _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
-                    _onInboundLanesInitialized, _testState)
+                    _onInboundLanesInitialized, _testState, reportLaneCompletion)
                 : new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler);
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
+                    onLaneConsumersStopped: reportLaneCompletion);
 
             var decoded = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
@@ -1076,13 +1085,24 @@ namespace Akka.Remote.Artery
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler, onHandshakeAccepted)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
-                .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
+                .ToMaterialized(Sink.ForEach<IInboundEnvelope>(DispatchInbound), Keep.Right);
 
             // Every accepted (inbound) connection is read-only: Artery uses SEPARATE per-direction
             // connections, so any reply (a HandshakeRsp, a heartbeat, ...) goes out over a
             // NEW/reused OUTBOUND connection this system originates back towards the peer -- see
             // the type-level "Connection cardinality" remarks. We never write to this socket.
-            source.RunWith(inboundSink, _materializer!);
+            var processing = source.RunWith(inboundSink, _materializer!);
+            return laneConsumersStopped is null ? processing
+                : WaitForInboundProcessingAsync(processing, laneConsumersStopped.Task);
+        }
+
+        private static async Task WaitForInboundProcessingAsync(Task processing, Task<Task> laneConsumersStopped)
+        {
+            // Fail promptly on a sink error. Lane cleanup is separately tracked by the native
+            // owner, so a blocked consumer cannot hide that error or delay connection retirement.
+            await processing.ConfigureAwait(false);
+            var consumers = await laneConsumersStopped.ConfigureAwait(false);
+            await consumers.ConfigureAwait(false);
         }
 
         private void DispatchInbound(IInboundEnvelope env)

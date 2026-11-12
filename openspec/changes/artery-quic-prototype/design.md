@@ -387,7 +387,7 @@ ownership through settlement. The following work is separate from claiming a fas
    to channel lifetime must pass these cases before performance selection.
 3. **Add an opt-in QUIC multi-node arm.** Extend the existing internal transport selection in
    `src/core/Akka.Remote.TestKit/MultiNodeSpec.cs`, where `AKKA_MNTR_TRANSPORT=artery` currently selects
-   Artery TCP. Proposed value `artery-quic` is not implemented yet. Retain the unset/classic and artery
+   Artery TCP. The explicit `artery-quic` mode is now implemented. Retain the unset/classic and artery
    modes; reject unsupported requested values rather than silently run another transport. Keep
    runner/conductor coordination unchanged; select QUIC for the actor remoting under test.
    Initial `MultiNodeSpec` actor-system creation and `StartNewSystemAsync` must both receive the
@@ -428,3 +428,34 @@ credentials survive asynchronous failed-start cleanup and are released on system
 caller-supplied TLS setup remains caller-owned. Canceled conductor attachment terminates its created
 system before returning failure. These changes preserve the existing default transport and test
 configuration precedence. Peer-consumed shutdown and broader distributed/resource stress remain open.
+
+### Receive Completion Before Peer Progress
+
+The QUIC adapter's inbound callback returns the processing task for the accepted source. Remoting
+materializes the sink's completion and, when ordinary inbound lanes are enabled, waits for all of
+that stream's lane consumers after their writers close. The consumer observer is opt-in for QUIC;
+the default TCP path does not retain a lane-task array. Existing per-frame deserialization failures
+remain isolated drops, rather than acquiring replay semantics.
+
+```mermaid
+flowchart LR
+    Read[Native read source] --> Decode[Shared Artery processing]
+    Decode --> Sink[Inline dispatch and control sink]
+    Decode --> Lanes[Bounded ordinary lane queues]
+    Lanes --> Consumers[Deserialize and dispatch]
+    Sink --> Complete[Receive processing complete]
+    Consumers --> Complete
+    Read -. failure or cancellation .-> Retire[Retire connection generation]
+    Sink -. failure .-> Retire
+```
+
+Source termination and downstream completion are observed separately. A failed or cancelled source
+must retire its connection promptly even if a serializer or lane consumer is blocked. Native
+cleanup cancels those observer waits; underlying processing tasks remain observed and may outlive
+native teardown. Published chunks retain their owned, unpooled storage throughout.
+
+This completion task establishes a local receive boundary. It does not send a receipt to the peer,
+wait for actor business processing, or resolve the shutdown gap by itself. A subsequent peer-progress
+protocol must order its barrier after data on every active stream, include lane dispatch, correlate
+receipts with the current peer and generation, and preserve a bounded authenticated reply path
+during simultaneous shutdown. Missing receipts, reset and timeout cannot count as graceful receipt.

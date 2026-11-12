@@ -42,7 +42,7 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        private static ActorSystemSetup Setup(int lanes, int streams, ArteryTlsSettings tls) => ActorSystemSetup.Create(
+        private static ActorSystemSetup Setup(int lanes, int streams, int inboundLanes, ArteryTlsSettings tls) => ActorSystemSetup.Create(
             BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString($$"""
                 akka.actor.provider = remote
                 akka.loglevel = DEBUG
@@ -52,7 +52,7 @@ namespace Akka.Remote.Tests.Artery
                     canonical.hostname = "127.0.0.1"
                     canonical.port = 0
                     advanced {
-                        inbound-lanes = 1
+                        inbound-lanes = {{inboundLanes}}
                         outbound-lanes = {{lanes}}
                         outbound-message-queue-size = 1024
                         flush-wait-on-shutdown = 10s
@@ -62,18 +62,20 @@ namespace Akka.Remote.Tests.Artery
                 """)), new ArteryTlsSetup(tls));
 
         [Theory(DisplayName = "Independent QUIC streams preserve numbered actor traffic and reliable control across lane groups")]
-        [InlineData(1, 1)]
-        [InlineData(2, 1)]
-        [InlineData(2, 2)]
-        [InlineData(4, 1)]
-        [InlineData(4, 2)]
-        [InlineData(5, 3)]
-        [InlineData(4, 4)]
-        [InlineData(8, 1)]
-        [InlineData(8, 2)]
-        [InlineData(8, 4)]
-        [InlineData(8, 8)]
-        public async Task Should_PreserveOrderAndControl_When_UsingIndependentOrdinaryStreams(int lanes, int streams)
+        [InlineData(1, 1, 1)]
+        [InlineData(2, 1, 1)]
+        [InlineData(2, 2, 1)]
+        [InlineData(4, 1, 1)]
+        [InlineData(4, 2, 1)]
+        [InlineData(5, 3, 1)]
+        [InlineData(4, 4, 1)]
+        [InlineData(8, 1, 1)]
+        [InlineData(8, 2, 1)]
+        [InlineData(8, 4, 1)]
+        [InlineData(8, 8, 1)]
+        [InlineData(8, 1, 4)]
+        [InlineData(8, 8, 4)]
+        public async Task Should_PreserveOrderAndControl_When_UsingIndependentOrdinaryStreams(int lanes, int streams, int inboundLanes)
         {
             RequireTransportSupport("quic");
             using var certificate = CreateCertificate();
@@ -82,8 +84,8 @@ namespace Akka.Remote.Tests.Artery
             ActorSystem? second = null;
             try
             {
-                first = ActorSystem.Create("QuicLanesA", Setup(lanes, streams, tls));
-                second = ActorSystem.Create("QuicLanesB", Setup(lanes, streams, tls));
+                first = ActorSystem.Create("QuicLanesA", Setup(lanes, streams, inboundLanes, tls));
+                second = ActorSystem.Create("QuicLanesB", Setup(lanes, streams, inboundLanes, tls));
                 InitializeLogger(first, "[A] ");
                 InitializeLogger(second, "[B] ");
                 var address = RARP.For(second).Provider.DefaultAddress;

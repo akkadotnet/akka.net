@@ -64,6 +64,20 @@ The prototype SHALL first establish a one-ordinary-stream baseline. A subsequent
 
 An active channel failure/reset in the first prototype SHALL retire its directional connection, cancel sibling channel I/O and fence stale callbacks before replacement. Reconnect SHALL retain existing same-UID system-message reliability and changed-UID quarantine/reset semantics, without promising reliable replay of uncertain ordinary traffic. Shutdown SHALL remain bounded and release transport-owned resources.
 
+Successful receive-processing completion SHALL include the inbound sink and all of that stream's lane consumers. Source cancellation/failure and downstream processing failure SHALL be observed independently, so blocked application work cannot prevent native connection retirement. This local completion boundary SHALL NOT be treated as a peer delivery receipt or actor business-processing completion.
+
+#### Scenario: Downstream processing fails after FIN
+- **WHEN** the native source has consumed a healthy FIN but downstream receive processing fails
+- **THEN** the adapter SHALL retire that connection generation and cancel sibling channel I/O
+
+#### Scenario: Source stops while processing is blocked
+- **WHEN** the source is cancelled or fails while a downstream consumer remains blocked
+- **THEN** native retirement SHALL NOT wait for that consumer, and its eventual completion SHALL remain observed
+
+#### Scenario: Graph stops with queued lane work
+- **WHEN** the inbound graph stops with accepted work remaining in an ordinary lane
+- **THEN** successful consumer completion SHALL remain pending until every lane drains, including after upstream failure or downstream cancellation
+
 #### Scenario: Same-UID reconnect with lost acknowledgement
 - **WHEN** the connection fails with an unacknowledged system message and the peer retains its UID
 - **THEN** shared reliable delivery SHALL retry according to its existing policy and prevent duplicate system-message delivery

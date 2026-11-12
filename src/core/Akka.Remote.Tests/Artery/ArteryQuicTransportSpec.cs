@@ -40,6 +40,108 @@ namespace Akka.Remote.Tests.Artery
     {
         public ArteryQuicTransportSpec(ITestOutputHelper output) : base(output) { }
 
+        [Theory(DisplayName = "QUIC retires a cancelled or failed source even while downstream processing remains blocked")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_RetireConnection_When_SourceStopsBeforeBlockedProcessing(bool fail)
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TrustCertificate(certificate));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var materializer = ActorMaterializer.Create(Sys);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var processing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var stopped = new TaskCompletionSource<Task<Done>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var error = new IOException("Controlled source failure.");
+            try
+            {
+                var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
+                receiver.StartAccepting((source, _, admitted) =>
+                {
+                    Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> reject = _ => throw error;
+                    var input = fail ? source.Select(reject) : source.Take(1);
+                    stopped.TrySetResult(input.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer));
+                    admitted();
+                    return processing.Task;
+                });
+                var channel = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                var write = channel.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token).AsTask();
+                var inputStopped = await stopped.Task.WaitAsync(deadline.Token);
+                if (fail)
+                    (await Assert.ThrowsAsync<IOException>(() => inputStopped.WaitAsync(deadline.Token))).Should().BeSameAs(error);
+                else
+                    await inputStopped.WaitAsync(deadline.Token);
+                processing.Task.IsCompleted.Should().BeFalse("native retirement must not wait for blocked processing");
+                await Assert.ThrowsAsync<QuicException>(() => channel.Stream.WritesClosed.WaitAsync(deadline.Token));
+                // Retirement can race the small write's native completion. Both outcomes are
+                // valid, but a deadline or unrelated failure must still fail this check.
+                var writeError = await Record.ExceptionAsync(() => write.WaitAsync(deadline.Token));
+                if (writeError is not null)
+                    writeError.Should().BeOfType<QuicException>();
+            }
+            finally
+            {
+                processing.TrySetCanceled();
+                using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await sender.ShutdownAsync(shutdown.Token);
+                await receiver.ShutdownAsync(shutdown.Token);
+                materializer.Shutdown();
+            }
+        }
+
+        [Fact(DisplayName = "QUIC retires sibling channels when receive processing fails after a healthy FIN")]
+        public async Task Should_RetireConnection_When_ReceiveProcessingFailsAfterFin()
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TrustCertificate(certificate));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var materializer = ActorMaterializer.Create(Sys);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var error = new IOException("Controlled downstream failure after EOF.");
+            var failed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task Consume(Source<ReadOnlySequence<byte>, NotUsed> source, Action admitted)
+            {
+                var processing = ConsumeAsync(source);
+                _ = processing.ContinueWith(done =>
+                {
+                    if (done.IsFaulted)
+                        failed.TrySetResult(done.Exception!.GetBaseException());
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                admitted();
+                return processing;
+            }
+            async Task ConsumeAsync(Source<ReadOnlySequence<byte>, NotUsed> source)
+            {
+                await source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
+                throw error;
+            }
+            try
+            {
+                var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
+                receiver.StartAccepting((source, _, admitted) => Consume(source, admitted));
+                var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                var ordinary = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token);
+                await ordinary.Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                ordinary.Stream.CompleteWrites();
+                (await failed.Task.WaitAsync(deadline.Token)).Should().BeSameAs(error);
+                await Assert.ThrowsAsync<QuicException>(() => control.Stream.WritesClosed.WaitAsync(deadline.Token));
+            }
+            finally
+            {
+                using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await sender.ShutdownAsync(shutdown.Token);
+                await receiver.ShutdownAsync(shutdown.Token);
+                materializer.Shutdown();
+            }
+        }
+
         [Fact(DisplayName = "QUIC sends FIN when upstream finishes before connection opening completes")]
         public async Task Should_CompleteWrites_When_UpstreamFinishesDuringConnect()
         {
@@ -125,8 +227,10 @@ namespace Akka.Remote.Tests.Artery
                 var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
                 receiver.StartAccepting((source, _, admitted) =>
                 {
-                    received.TrySetResult(source.RunWith(Sink.Seq<ReadOnlySequence<byte>>(), materializer));
+                    var processing = source.RunWith(Sink.Seq<ReadOnlySequence<byte>>(), materializer);
+                    received.TrySetResult(processing);
                     admitted();
+                    return processing;
                 });
                 var preamble = Preamble(ArteryStreamId.Ordinary);
                 await Source.Single(new ReadOnlySequence<byte>(preamble)).Concat(Source.Single(input))
@@ -440,8 +544,10 @@ namespace Akka.Remote.Tests.Artery
                 receiver.StartAccepting((source, _, admitted) =>
                 {
                     // Keep every chunk alive until EOF, rather than consuming/copying each on arrival.
-                    received.TrySetResult(source.RunWith(Sink.Seq<ReadOnlySequence<byte>>(), materializer));
+                    var processing = source.RunWith(Sink.Seq<ReadOnlySequence<byte>>(), materializer);
+                    received.TrySetResult(processing);
                     admitted();
+                    return processing;
                 });
                 var channel = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token);
                 var preamble = Preamble(ArteryStreamId.Ordinary);
@@ -502,7 +608,7 @@ namespace Akka.Remote.Tests.Artery
                     // covered by real actors; here the consumer acknowledges admission explicitly.
                     // The adapter prepends its owned preamble. Retain native data chunks themselves,
                     // without copying on receipt, through reset, reconnect and native teardown.
-                    source.Skip(1).RunWith(Sink.ForEach<ReadOnlySequence<byte>>(chunk =>
+                    var processing = source.Skip(1).RunWith(Sink.ForEach<ReadOnlySequence<byte>>(chunk =>
                     {
                         retained.Enqueue(chunk);
                         var count = Interlocked.Add(ref receivedBytes, checked((int)chunk.Length));
@@ -512,6 +618,7 @@ namespace Akka.Remote.Tests.Artery
                             replacementReceived.TrySetResult(Done.Instance);
                     }), materializer);
                     admitted();
+                    return processing;
                 });
                 var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
                 await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
@@ -575,8 +682,9 @@ namespace Akka.Remote.Tests.Artery
                 var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
                 receiver.StartAccepting((source, _, admitted) =>
                 {
-                    source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
+                    var processing = source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
                     admitted();
+                    return processing;
                 });
                 var authentication = TlsClientSettings.Mutual(certificate, policy)
                     .CreateAuthenticationOptions("127.0.0.1", "127.0.0.1", log);
@@ -614,6 +722,7 @@ namespace Akka.Remote.Tests.Artery
             var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
             var materializer = ActorMaterializer.Create(Sys);
             var blockedAccepted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var blockedConsumer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var healthyReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var controlReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var accepted = 0;
@@ -625,21 +734,22 @@ namespace Akka.Remote.Tests.Artery
                 receiver.StartAccepting((source, _, admitted) =>
                 {
                     var index = Interlocked.Increment(ref accepted);
+                    admitted();
                     if (index == 1)
                     {
                         // Do not materialize this reader: the native receive window must fill.
                         blockedAccepted.TrySetResult();
+                        return blockedConsumer.Task;
                     }
                     else
                     {
-                        source.RunWith(Sink.ForEach<ReadOnlySequence<byte>>(bytes =>
+                        return source.RunWith(Sink.ForEach<ReadOnlySequence<byte>>(bytes =>
                         {
                             var data = bytes.ToArray();
                             if (data.Contains((byte)127)) healthyReceived.TrySetResult();
                             if (data.Contains((byte)126)) controlReceived.TrySetResult();
                         }), materializer);
                     }
-                    admitted();
                 });
                 var blocked = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, 0);
                 await blocked.Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
@@ -667,6 +777,7 @@ namespace Akka.Remote.Tests.Artery
             }
             finally
             {
+                blockedConsumer.TrySetCanceled();
                 using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await sender.ShutdownAsync(shutdown.Token);
                 await receiver.ShutdownAsync(shutdown.Token);
@@ -759,9 +870,10 @@ namespace Akka.Remote.Tests.Artery
                 var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
                 receiver.StartAccepting((source, _, accepted) =>
                 {
-                    source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
+                    var processing = source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
                     accepted();
                     admitted.TrySetResult(Done.Instance);
+                    return processing;
                 });
                 var authentication = TlsClientSettings.Mutual(certificate, policy)
                     .CreateAuthenticationOptions("127.0.0.1", "127.0.0.1", log);

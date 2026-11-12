@@ -29,7 +29,7 @@ not part of this source/specification change.
 - [x] Validate benchmark CLI parsing without starting new benchmark runs.
 - [x] Run Slopwatch, whitespace and strict OpenSpec validation.
 - [x] Independently review source, buffer ownership, privacy exclusions and PR history.
-- [ ] Add a surviving single-lane queued-shutdown assertion; the existing DeathWatch branch removes its only recipient.
+- [x] Keep a surviving single-lane queued-shutdown assertion after the DeathWatch recipient stops; peer consumption remains a separate gap.
 
 ## 4. Parallel-lane performance follow-up
 
@@ -59,6 +59,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Provide validated test credentials/TLS setup for initial, restarted and directly created actor systems; preserve per-spec config precedence.
 - [x] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
 - [x] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
+- [x] Track full QUIC receive processing through sink and lane completion, with independent prompt source-failure retirement and bounded native teardown.
 - [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
