@@ -413,7 +413,7 @@ These figures do not measure native allocation, retained heap size or individual
 transport operations. Leave diagnostics off for primary timing; paced latency
 rejects this flag. Server mode has no measured repetition and emits no PROFILE row.
 
-`compare_transports.py --phase transports` compares DotNetty, Artery.Tcp and
+`Compare-Transports.ps1` (PowerShell 7.2 or later) compares DotNetty, Artery.Tcp and
 Artery TLS TCP sequentially with rotated TCP/TLS order. Each process performs one
 equal-sized warmup and one measurement. It retains individual results and failures,
 checks counts, payload size, rate arithmetic, lane occupancy and delivery proofs,
@@ -423,6 +423,10 @@ source, build, payload and security when interpreting comparisons. A plaintext/T
 comparison measures different security work. The controller records source/binary
 hashes and environment metadata, but does not freeze a build or discover native
 library versions for you. Run build/profiling work outside measurement intervals.
+Use `-Lanes '1,2,4,8'` to select a comma-separated lane sweep. `-Dotnet` selects
+the executable, `-RoundOffset` preserves rotation across additional rounds, and
+`-KeepGoing` retains failures and finishes the matrix while still exiting nonzero.
+`-TimeoutSeconds` bounds and terminates each child process, retaining its partial output.
 
 ### Ordered Delivery Validation
 
@@ -454,11 +458,14 @@ dotnet src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll run \
   --transport artery-tls --payload real --serializer v2 --validate-sequence --oneway \
   --clients 32 --window 10 --msgs 8193 --times 2 \
   --outbound-lanes 8 --inbound-lanes 8 --qsize 1024
+```
 
-python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
-  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
-  --output /tmp/rpp-ordered-comparison --pattern oneway --validate-sequence \
-  --clients 128 --window 10 --messages 30000 --lanes 8 --repetitions 4
+```powershell
+pwsh -NoProfile -File src/benchmark/RemotePingPong/Compare-Transports.ps1 `
+  -Binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll `
+  -Output (Join-Path ([IO.Path]::GetTempPath()) 'rpp-ordered-comparison') `
+  -Pattern oneway -ValidateSequence -Clients 128 -Window 10 -Messages 30000 `
+  -Lanes 8 -Repetitions 4
 ```
 
 The controller requires two distinct phase proofs and exact workload parameters,
@@ -468,11 +475,12 @@ it is not a sufficiently long primary timing run. Use fresh output directories.
 
 Focused checks:
 
-```bash
+```powershell
 dotnet test src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj -c Release
-cd src/benchmark/RemotePingPong
-python3 -m unittest -v test_compare_transports.py
+pwsh -NoProfile -File src/benchmark/RemotePingPong/Test-CompareTransports.ps1
 ```
+
+The controller checks use PowerShell itself and require no additional test module.
 
 ### Scheduled Offered-Load Latency
 
@@ -493,12 +501,12 @@ load generator separately. These percentiles are separate distributions: adding 
 p99 values does not decompose the end-to-end p99. This is application RTT, not a
 packet or network-only latency measurement.
 
-```bash
-python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
-  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
-  --output /tmp/rpp-paced-comparison --pattern ping-pong --validate-sequence \
-  --clients 128 --window 10 --messages 2500 --rtt-interval-ms 2 \
-  --lanes 8 --repetitions 4
+```powershell
+pwsh -NoProfile -File src/benchmark/RemotePingPong/Compare-Transports.ps1 `
+  -Binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll `
+  -Output (Join-Path ([IO.Path]::GetTempPath()) 'rpp-paced-comparison') `
+  -Pattern ping-pong -ValidateSequence -Clients 128 -Window 10 -Messages 2500 `
+  -RttIntervalMs 2 -Lanes 8 -Repetitions 4
 ```
 
 This offers 64,000 RTTs/s, with a nominal five-second schedule per phase. The
