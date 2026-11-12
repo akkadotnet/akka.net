@@ -643,11 +643,13 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "QUIC retires every sibling channel and reconnects when an incoming data stream is reset")]
-        [InlineData(1)]
-        [InlineData(2)]
-        [InlineData(4)]
-        [InlineData(8)]
-        public async Task Should_CloseSiblingChannels_When_DataStreamResets(int streams)
+        [InlineData(1, 1)]
+        [InlineData(2, 1)]
+        [InlineData(4, 1)]
+        [InlineData(8, 1)]
+        [InlineData(1, 3)]
+        [InlineData(8, 3)]
+        public async Task Should_CloseSiblingChannels_When_DataStreamResets(int streams, int resets)
         {
             RequireTransportSupport("quic");
             using var certificate = CreateCertificate();
@@ -657,12 +659,12 @@ namespace Akka.Remote.Tests.Artery
             var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log, ordinaryStreams: streams);
             var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
             var materializer = ActorMaterializer.Create(Sys);
-            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             var retained = new ConcurrentQueue<ReadOnlySequence<byte>>();
             var payload = Enumerable.Range(0, 3 * 16 * 1024 + 29).Select(i => (byte)(i * 31 + i / 251)).ToArray();
-            var replacementPayload = payload.Select(value => (byte)~value).ToArray();
-            var firstReceived = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var replacementReceived = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var payloads = Enumerable.Range(0, resets + 1)
+                .Select(generation => payload.Select(value => (byte)(value + generation * 17)).ToArray()).ToArray();
+            var received = payloads.Select(_ => new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
             var receivedBytes = 0;
             try
             {
@@ -677,54 +679,63 @@ namespace Akka.Remote.Tests.Artery
                     {
                         retained.Enqueue(chunk);
                         var count = Interlocked.Add(ref receivedBytes, checked((int)chunk.Length));
-                        if (count >= payload.Length)
-                            firstReceived.TrySetResult(Done.Instance);
-                        if (count >= payload.Length + replacementPayload.Length)
-                            replacementReceived.TrySetResult(Done.Instance);
+                        for (var generation = 0; generation < received.Length; generation++)
+                            if (count >= (generation + 1) * payload.Length)
+                                received[generation].TrySetResult(Done.Instance);
                     }), materializer);
                     admitted();
                     return processing;
                 });
-                var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
-                await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
-                var ordinary = new ArteryQuicTransport.Channel[streams];
-                for (var i = 0; i < streams; i++)
+                ArteryQuicTransport.Channel? previousControl = null;
+                for (var generation = 0; generation < payloads.Length; generation++)
                 {
-                    ordinary[i] = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
-                    await ordinary[i].Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                    var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                    await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                    if (previousControl is not null)
+                    {
+                        control.Stream.Should().NotBeSameAs(previousControl.Stream);
+                        // Repeated retirement of an old channel must leave its replacement live.
+                        previousControl.Retire();
+                        control.CancellationToken.IsCancellationRequested.Should().BeFalse();
+                    }
+                    var ordinary = new ArteryQuicTransport.Channel[streams];
+                    for (var i = 0; i < streams; i++)
+                    {
+                        ordinary[i] = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
+                        await ordinary[i].Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                    }
+                    await ordinary[0].Stream.WriteAsync(payloads[generation], deadline.Token);
+                    await received[generation].Task.WaitAsync(deadline.Token);
+                    sender.OrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
+                    if (generation == resets)
+                        break;
+                    ordinary[^1].Stream.Abort(QuicAbortDirection.Write, 42);
+                    foreach (var sibling in ordinary.Take(streams - 1).Prepend(control))
+                    {
+                        var closed = async () => await sibling.Stream.WritesClosed.WaitAsync(deadline.Token);
+                        await closed.Should().ThrowAsync<QuicException>();
+                    }
+                    control.Retire();
+                    previousControl = control;
                 }
-                await ordinary[0].Stream.WriteAsync(payload, deadline.Token);
-                await firstReceived.Task.WaitAsync(deadline.Token);
-                ordinary[^1].Stream.Abort(QuicAbortDirection.Write, 42);
-
-                foreach (var sibling in ordinary.Take(streams - 1).Prepend(control))
-                {
-                    var closed = async () => await sibling.Stream.WritesClosed.WaitAsync(deadline.Token);
-                    await closed.Should().ThrowAsync<QuicException>();
-                }
-                control.Retire();
-                var replacement = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
-                await replacement.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
-                replacement.Stream.Should().NotBeSameAs(control.Stream);
-                for (var i = 0; i < streams; i++)
-                {
-                    var channel = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
-                    await channel.Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
-                    if (i == 0)
-                        await channel.Stream.WriteAsync(replacementPayload, deadline.Token);
-                }
-                await replacementReceived.Task.WaitAsync(deadline.Token);
-                sender.OrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
             }
             finally
             {
                 using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await sender.ShutdownAsync(shutdown.Token);
                 await receiver.ShutdownAsync(shutdown.Token);
-                materializer.Shutdown();
+                try
+                {
+                    using var released = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                    await Task.WhenAll(sender.WhenNativeResourcesReleased, receiver.WhenNativeResourcesReleased).WaitAsync(released.Token);
+                }
+                finally
+                {
+                    materializer.Shutdown();
+                }
             }
-            retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(payload.Concat(replacementPayload),
-                "published receive storage must survive reset, a new connection's reads and transport shutdown");
+            retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(payloads.SelectMany(bytes => bytes),
+                "published receive storage must survive repeated resets, replacement reads and final native release");
         }
 
         [Theory(DisplayName = "QUIC rejects duplicate control and excess ordinary channels")]

@@ -424,7 +424,7 @@ multi-node subsets. Existing TCP/classic behavior remains covered throughout. Th
 documents credentials, native prerequisites, child-runtime selection and coverage limits. Initial,
 restarted and migrated extra-system paths use the same TLS-aware factory. Effective transport is
 reported from the actual provider, and explicit classic overrides retain precedence. Factory-owned
-credentials survive asynchronous failed-start cleanup and are released on system termination;
+credentials survive asynchronous failed-start cleanup and are released after native ownership ends;
 caller-supplied TLS setup remains caller-owned. Canceled conductor attachment terminates its created
 system before returning failure. These changes preserve the existing default transport and test
 configuration precedence. Peer-consumed shutdown and broader distributed/resource stress remain open.

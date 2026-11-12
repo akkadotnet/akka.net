@@ -46,8 +46,9 @@ controls; they are not selected production source. The retained baseline is `70a
 - [ ] Reconsider pipes/pumps only against the accepted predecessor with tail-latency, retained-capacity and ownership evidence; preserve stable inbound chunks.
 - [ ] Keep the broader peer-consumed shutdown, ACK/quarantine and resource-stress gaps visible; native send completion is not peer delivery.
 
-The topology control and isolated cancellation trial have executed. The remaining parallel-stage
-optimization sequence remains conditional on evidence and promotion gates. The safety/runner foundation below is
+The topology control and isolated cancellation trial have executed. The cancellation candidate was
+not selected; its conditional one-stream, latency and capacity expansion was not executed. The
+remaining parallel-stage optimization sequence remains conditional on evidence and promotion gates. The safety/runner foundation below is
 implemented separately; it does not demonstrate a performance improvement. Benchmark numbers and
 private machine records remain outside this source/specification change. Transport defaults are unchanged.
 
@@ -62,7 +63,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Track full QUIC receive processing through sink and lane completion, with independent prompt source-failure retirement and bounded native teardown.
 - [x] Separate native-resource release from managed receive completion and retain factory-owned credentials through native cleanup, including failed initialization.
 - [x] Prototype shared per-stream shutdown markers and validated receipts, retaining control replies within the existing deadline.
-- [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
+- [x] Verify shared per-stream peer progress with surviving recipients and explicit incomplete-progress timeout semantics; keep production qualification separate.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
 (one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
@@ -71,13 +72,17 @@ controls detect early certificate disposal, failed-restart leaks and escaped rec
 Retained receive bytes are checked after FIN and after reset/reconnect with distinct replacement
 payloads, then native/materializer shutdown. This is bounded coverage, not whole-suite qualification.
 
-The single-lane live-recipient branch already exists in `ArteryQuicStreamsSpec`; its remaining shutdown
-gap is qualified peer consumption before connection retirement. Do not duplicate the branch or treat native
-write/FIN completion as a delivery acknowledgment. The experimental shared marker/receipt protocol
+The single-lane live-recipient branch in `ArteryQuicStreamsSpec` now requires actual peer progress
+before successful shutdown confirmation. Native write/FIN completion is not a delivery acknowledgment.
+The experimental shared marker/receipt protocol
 now has focused successful-drain, blocked-consumer, identity, framing and tail-ownership checks.
 One/eight-stream simultaneous shutdown checks hold consumers at both peers, require explicit
 incomplete progress after native FIN, and verify retained messages after release. Expired-deadline
 and replaced-stream nonce checks reject false confirmation. These are bounded cases; successful
 simultaneous drain under load, reset/stale-generation stress and native resource/credential deadline
 stress gates remain open. Native-owner and controlled post-termination credential checks are in
-place; prototype implementation is not full qualification.
+place. Native ACK-loss checks now witness retries at both endpoints without a peer UID change,
+alongside the TCP control. Native reset checks retain receive bytes through three reset/reconnect
+cycles with one/eight streams and final native release. These bounded cases do not force every late
+callback race or constitute full qualification. Sequence-aware benchmark goodput and controlled
+offered-load latency remain the next harness work before primary optimization claims.
