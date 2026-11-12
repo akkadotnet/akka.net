@@ -22,6 +22,8 @@ function Invoke-Check([string]$Name, [scriptblock]$Action) {
     Write-Host "PASS: $Name"
 }
 
+function Copy-Fixture($Value) { return ConvertFrom-Json -InputObject (ConvertTo-Json -InputObject $Value -Depth 30 -Compress) -AsHashtable -NoEnumerate }
+
 function New-Proof {
     return @{ version = 1; phaseId = [guid]::NewGuid().ToString(); pattern = 'oneway'; clients = 2; messagesPerClient = 8193;
         countedMessages = 16386; window = 10; ackEvery = 5; finalReceipts = 2; payloadBytes = 352; sequenceBase = 1000000000;
@@ -39,6 +41,16 @@ function New-FixtureOutput {
 
 function Read-Fixture([string]$Text) {
     return Get-ComparisonRows $Text 2 @{ transport = 'dotnetty' } $true 10 8193 'oneway'
+}
+
+function New-RttFixture {
+    $report = @{ phaseId = [guid]::NewGuid().ToString(); clients = 2; messagesPerClient = 3; samples = 6; intervalMs = 2;
+        nominalRttsPerSecond = 1000; actualReleaseRttsPerSecond = 1000; releaseSpanMilliseconds = 4 }
+    foreach ($item in @(@('releaseLateness', @(1, 2, 3, 4)), @('dispatchDelay', @(2, 3, 4, 5)), @('sendToEcho', @(10, 20, 30, 40)), @('scheduledToEcho', @(12, 23, 34, 45)))) {
+        $values = $item[1]
+        $report[$item[0]] = @{ p50Us = $values[0]; p95Us = $values[1]; p99Us = $values[2]; maxUs = $values[3] }
+    }
+    return $report
 }
 
 Invoke-Check 'Complete, distinct phase proofs are retained' {
@@ -87,7 +99,7 @@ Invoke-Check 'Legacy count mode does not require phase proofs' {
 }
 
 Invoke-Check 'Normal commands preserve options, lane budgets and paths containing spaces' {
-    $config = @{ Clients = 2; Window = 10; Messages = 8193; Pattern = 'oneway'; ValidateSequence = $true; QueueBudget = 8192 }
+    $config = @{ Clients = 2; Window = 10; Messages = 8193; Pattern = 'oneway'; ValidateSequence = $true; RttIntervalMs = 0; QueueBudget = 8192 }
     $cell = @{ transport = 'artery-tls'; lanes = 4; binary = '/a directory/benchmark.dll' }
     $command = New-ComparisonCommand $config $cell
     Assert-True ($command[0] -ceq $cell.binary -and $command -contains '--validate-sequence' -and $command -contains '2048')
@@ -102,6 +114,72 @@ Invoke-Check 'Numeric corruption and integer overflow fail' {
         '2,16386.00000000000000000000000001,5001,3277.2,20,20')) {
         Assert-Rejected { Read-Fixture (New-FixtureOutput -Row $badRow) }
     }
+}
+
+Invoke-Check 'Complete consistent RTT reports pass' {
+    $report = New-RttFixture
+    Assert-RttReport $report @{ phaseId = $report.phaseId } 2 3 2
+}
+
+Invoke-Check 'Missing and mismatched RTT fields fail' {
+    $original = New-RttFixture
+    foreach ($key in @($original.Keys)) {
+        $report = Copy-Fixture $original; $report.Remove($key)
+        Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+    }
+    foreach ($key in @('phaseId', 'clients', 'messagesPerClient', 'samples', 'intervalMs', 'nominalRttsPerSecond', 'actualReleaseRttsPerSecond', 'releaseSpanMilliseconds')) {
+        $report = Copy-Fixture $original
+        $report[$key] = if ($key -eq 'phaseId') { [guid]::NewGuid().ToString() } else { $report[$key] + 1 }
+        Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+    }
+}
+
+Invoke-Check 'Nonfinite, negative, unordered and inconsistent quantiles fail' {
+    $original = New-RttFixture
+    foreach ($group in @('releaseLateness', 'dispatchDelay', 'sendToEcho', 'scheduledToEcho')) {
+        foreach ($value in @([double]::NaN, [double]::PositiveInfinity, -1, $true)) {
+            $report = Copy-Fixture $original; $report[$group].p50Us = $value
+            Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+        }
+    }
+    $report = Copy-Fixture $original; $report.scheduledToEcho.p99Us = 22
+    Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+    $report = Copy-Fixture $original; $report.dispatchDelay = @{ p50Us = 0; p95Us = 0; p99Us = 0; maxUs = 0 }
+    Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+}
+
+Invoke-Check 'Nonfinite and false RTT rates and spans fail' {
+    $original = New-RttFixture
+    foreach ($key in @('nominalRttsPerSecond', 'actualReleaseRttsPerSecond', 'releaseSpanMilliseconds')) {
+        foreach ($value in @([double]::NaN, [double]::PositiveInfinity, 0, $true)) {
+            $report = Copy-Fixture $original; $report[$key] = $value
+            Assert-Rejected { Assert-RttReport $report @{ phaseId = $original.phaseId } 2 3 2 }
+        }
+    }
+}
+
+Invoke-Check 'Matched offered-rate gate rejects drift and invalid input' {
+    Assert-True (Test-MatchedOfferRates @(1000, 1020))
+    Assert-True (!(Test-MatchedOfferRates @(1000, 1040)))
+    Assert-True (!(Test-MatchedOfferRates @()))
+    Assert-True (!(Test-MatchedOfferRates @(1000, [double]::NaN)))
+}
+
+Invoke-Check 'The public parser links two RTT reports to the correct phases and interval' {
+    $proofs = @((New-Proof), (New-Proof))
+    $reports = foreach ($proof in $proofs) {
+        $proof.pattern = 'ping-pong'; $proof.rttIntervalMs = 2; $proof.countedMessages = 32772
+        $report = New-RttFixture
+        $report.phaseId = $proof.phaseId; $report.messagesPerClient = 8193; $report.samples = 16386; $report.releaseSpanMilliseconds = 16384
+        $report
+    }
+    $text = New-FixtureOutput -Proofs $proofs -Row '2,32772,10001,3277.2,20,20'
+    foreach ($report in $reports) { $text += "`nRTT " + (ConvertTo-Json -InputObject $report -Depth 30 -Compress) }
+    $rows = Get-ComparisonRows $text 2 @{ transport = 'dotnetty' } $true 10 8193 'ping-pong' 2
+    Assert-True ($rows.Count -eq 2 -and $rows[1].rtt.phaseId -eq $proofs[1].phaseId)
+    Assert-Rejected { Get-ComparisonRows $text.Substring(0, $text.LastIndexOf('RTT ')) 2 @{ transport = 'dotnetty' } $true 10 8193 'ping-pong' 2 }
+    $bad = $text.Replace('"rttIntervalMs":2', '"rttIntervalMs":3')
+    Assert-Rejected { Get-ComparisonRows $bad 2 @{ transport = 'dotnetty' } $true 10 8193 'ping-pong' 2 }
 }
 
 Invoke-Check 'Lane occupancy and error markers reject invalid transport results' {
@@ -127,11 +205,11 @@ Invoke-Check 'Invalid workload settings and existing output are rejected before 
     $directory = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
     $config = @{ Binary = Join-Path $PSScriptRoot 'Compare-Transports.ps1'; Output = $directory; Clients = 2; Window = 10; Messages = 8193;
         Pattern = 'oneway'; Lanes = @(1, 4); QueueBudget = 8192; Repetitions = 2; RoundOffset = 0; MinimumSeconds = 3; TimeoutSeconds = 180;
-        ValidateSequence = $true }
+        ValidateSequence = $true; RttIntervalMs = 0 }
     Assert-ComparisonConfig $config
     foreach ($change in @(@{ Clients = 0 }, @{ Window = 0 }, @{ Messages = 0 }, @{ Repetitions = 0 }, @{ RoundOffset = -1 },
         @{ Lanes = @(1, 1) }, @{ Lanes = @(3) }, @{ QueueBudget = 1 }, @{ TimeoutSeconds = [double]::NaN },
-        @{ MinimumSeconds = [double]::PositiveInfinity }, @{ Messages = 1000001 })) {
+        @{ MinimumSeconds = [double]::PositiveInfinity }, @{ Messages = 1000001 }, @{ RttIntervalMs = 2 })) {
         $invalid = $config.Clone()
         foreach ($key in $change.Keys) { $invalid[$key] = $change[$key] }
         $rejected = $false

@@ -23,6 +23,7 @@ param(
     [double]$MinimumSeconds = 3,
     [double]$TimeoutSeconds = 180,
     [switch]$ValidateSequence,
+    [int]$RttIntervalMs = 0,
     [switch]$KeepGoing
 )
 
@@ -57,6 +58,34 @@ function Assert-ExpectedFields($Actual, [hashtable]$Expected) {
     }
 }
 
+function Assert-RttReport($Report, $Proof, [int]$Clients, [long]$Messages, [int]$Interval) {
+    Assert-ExpectedFields $Report @{ phaseId = $Proof.phaseId; clients = $Clients; messagesPerClient = $Messages; samples = $Clients * $Messages; intervalMs = $Interval }
+    $nominal = $Clients * 1000.0 / $Interval
+    foreach ($key in @('nominalRttsPerSecond', 'actualReleaseRttsPerSecond', 'releaseSpanMilliseconds')) {
+        if ($Report.Keys -cnotcontains $key -or !(Test-FiniteNumber $Report[$key]) -or $Report[$key] -le 0) { Stop-InvalidResult "Invalid paced rate/span: $key" }
+    }
+    if ([math]::Abs($Report.nominalRttsPerSecond / $nominal - 1) -gt 1e-9 -or [math]::Abs($Report.actualReleaseRttsPerSecond / $nominal - 1) -gt 0.05) {
+        Stop-InvalidResult 'Actual offered rate must be within 5% of the fixed nominal schedule.'
+    }
+    $expectedRate = $Clients * ($Messages - 1) * 1000.0 / $Report.releaseSpanMilliseconds
+    if ([math]::Abs($Report.actualReleaseRttsPerSecond / $expectedRate - 1) -gt 1e-9) { Stop-InvalidResult 'Actual offered rate disagrees with release span and count.' }
+    $keys = @('p50Us', 'p95Us', 'p99Us', 'maxUs')
+    foreach ($group in @('releaseLateness', 'dispatchDelay', 'sendToEcho', 'scheduledToEcho')) {
+        if ($Report.Keys -cnotcontains $group -or $Report[$group] -isnot [System.Collections.IDictionary]) { Stop-InvalidResult 'Paced latency distribution missing.' }
+        $previous = 0.0
+        foreach ($key in $keys) {
+            if ($Report[$group].Keys -cnotcontains $key -or !(Test-FiniteNumber $Report[$group][$key]) -or $Report[$group][$key] -lt $previous) {
+                Stop-InvalidResult 'Paced quantiles must be finite, nonnegative and ordered.'
+            }
+            $previous = [double]$Report[$group][$key]
+        }
+    }
+    foreach ($key in $keys) {
+        if ($Report.scheduledToEcho[$key] + 1e-6 -lt [math]::Max($Report.dispatchDelay[$key], $Report.sendToEcho[$key]) -or
+            $Report.dispatchDelay[$key] + 1e-6 -lt $Report.releaseLateness[$key]) { Stop-InvalidResult 'Paced latency components contradict end-to-end latency.' }
+    }
+}
+
 function ConvertFrom-ResultJson([string]$Text) {
     try { return ConvertFrom-Json -InputObject $Text -AsHashtable -NoEnumerate -ErrorAction Stop }
     catch { Stop-InvalidResult 'Malformed result JSON.' }
@@ -64,9 +93,10 @@ function ConvertFrom-ResultJson([string]$Text) {
 
 function Get-ComparisonRows {
     param([string]$Text, [int]$Clients, [hashtable]$Cell, [bool]$ValidateSequence = $false,
-        [int]$Window = 0, [long]$Messages = 0, [string]$Pattern = '')
+        [int]$Window = 0, [long]$Messages = 0, [string]$Pattern = '', [int]$RttIntervalMs = 0)
     $rows = [System.Collections.Generic.List[object]]::new()
     $proofs = [System.Collections.Generic.List[object]]::new()
+    $reports = [System.Collections.Generic.List[object]]::new()
     $culture = [System.Globalization.CultureInfo]::InvariantCulture
     foreach ($line in [regex]::Split($Text, '\r?\n')) {
         if ($line -match "^\s*$Clients,") {
@@ -94,7 +124,7 @@ function Get-ComparisonRows {
             $rows.Add(@{ clients = $values[0]; messages = $values[1]; messages_per_second = $values[2]; milliseconds = [double]$elapsed; start_threads = $values[4]; end_threads = $values[5] })
         }
         if ($line.StartsWith('VALIDATION ', [StringComparison]::Ordinal)) { $proofs.Add((ConvertFrom-ResultJson $line.Substring(11))) }
-        if ($line.StartsWith('RTT ', [StringComparison]::Ordinal)) { Stop-InvalidResult 'Unexpected paced results in an unpaced run.' }
+        if ($line.StartsWith('RTT ', [StringComparison]::Ordinal)) { $reports.Add((ConvertFrom-ResultJson $line.Substring(4))) }
     }
     if ($rows.Count -ne 2) { Stop-InvalidResult 'Expected exactly one warmup and one measurement row.' }
     if (!$Text.Contains('Round-trip check:                  PASSED')) { Stop-InvalidResult 'Serializer round-trip proof missing.' }
@@ -109,6 +139,7 @@ function Get-ComparisonRows {
         $expected = @{ version = 1; pattern = $Pattern; clients = $Clients; messagesPerClient = $Messages; countedMessages = $expectedCount;
             window = $Window; ackEvery = [math]::Max(1, [int][math]::Floor($Window / 2.0)); finalReceipts = $Clients; payloadBytes = 352;
             sequenceBase = 1000000000; preparedPayloads = $Messages; orderedPayloadsAndContent = $true; retries = 0 }
+        if ($RttIntervalMs -ne 0) { $expected.rttIntervalMs = $RttIntervalMs }
         for ($index = 0; $index -lt 2; $index++) {
             $proof = $proofs[$index]
             if ($proof -isnot [System.Collections.IDictionary] -or $proof.Keys -cnotcontains 'phaseId' -or $proof.phaseId -isnot [string]) { Stop-InvalidResult 'Validation phase identifier missing.' }
@@ -118,6 +149,14 @@ function Get-ComparisonRows {
             if ($proof.Keys -cnotcontains 'datasetAllocatedBytes' -or !(Test-IntegerValue $proof.datasetAllocatedBytes) -or $proof.datasetAllocatedBytes -le 0) { Stop-InvalidResult 'Prepared dataset allocation evidence missing.' }
             if ($rows[$index].messages -ne $expectedCount) { Stop-InvalidResult 'Completion count differs from the validated workload.' }
             $rows[$index].validation = $proof
+        }
+    }
+    if ($RttIntervalMs -eq 0 -and $reports.Count -gt 0) { Stop-InvalidResult 'Unexpected paced results in an unpaced run.' }
+    if ($RttIntervalMs -ne 0) {
+        if (!$ValidateSequence -or $reports.Count -ne 2) { Stop-InvalidResult 'Paced results require two ordered validation proofs.' }
+        for ($index = 0; $index -lt 2; $index++) {
+            Assert-RttReport $reports[$index] $rows[$index].validation $Clients $Messages $RttIntervalMs
+            $rows[$index].rtt = $reports[$index]
         }
     }
     if ($Cell.transport -ne 'dotnetty') {
@@ -134,11 +173,18 @@ function Get-ComparisonRows {
     return ,$rows.ToArray()
 }
 
+function Test-MatchedOfferRates([double[]]$Rates) {
+    if ($Rates.Count -eq 0 -or @($Rates | Where-Object { ![double]::IsFinite($_) -or $_ -le 0 }).Count -gt 0) { return $false }
+    $range = $Rates | Measure-Object -Minimum -Maximum
+    return $range.Maximum / $range.Minimum -le 1.03
+}
+
 function New-ComparisonCommand([hashtable]$Config, [hashtable]$Cell) {
     $arguments = @($Cell.binary, 'run', '--transport', $Cell.transport, '--payload', 'real', '--serializer', 'v2',
         '--clients', [string]$Config.Clients, '--window', [string]$Config.Window, '--msgs', [string]$Config.Messages, '--times', '2')
     if ($Config.Pattern -eq 'oneway') { $arguments += '--oneway' }
     if ($Config.ValidateSequence) { $arguments += '--validate-sequence' }
+    if ($Config.RttIntervalMs -ne 0) { $arguments += @('--rtt-interval-ms', [string]$Config.RttIntervalMs) }
     if ($Cell.transport -ne 'dotnetty') { $arguments += @('--inbound-lanes', [string]$Cell.lanes, '--outbound-lanes', [string]$Cell.lanes, '--qsize', [string]($Config.QueueBudget / $Cell.lanes)) }
     return ,$arguments
 }
@@ -190,6 +236,16 @@ function Write-ComparisonSummary([string]$Directory, [object[]]$Records) {
             min_messages_sec = $stats.Minimum; max_messages_sec = $stats.Maximum; stdev_percent = [math]::Round($deviation, 2) }
     })
     if ($throughput.Count -gt 0) { $throughput | Export-Csv -LiteralPath (Join-Path $Directory 'summary.csv') -NoTypeInformation -Encoding utf8NoBOM }
+    $paced = @($valid | Where-Object { $_.measured.Contains('rtt') })
+    $latency = @(foreach ($group in ($paced | Group-Object cell | Sort-Object Name)) {
+        $reports = @($group.Group | ForEach-Object { $_.measured.rtt })
+        $p99 = @($reports | ForEach-Object { $_.scheduledToEcho.p99Us })
+        [pscustomobject][ordered]@{ cell = $group.Name; runs = $reports.Count; median_actual_offered_rtts_sec = Get-Median @($reports.actualReleaseRttsPerSecond);
+            median_run_p50_us = Get-Median @($reports | ForEach-Object { $_.scheduledToEcho.p50Us }); median_run_p99_us = Get-Median $p99;
+            min_run_p99_us = ($p99 | Measure-Object -Minimum).Minimum; max_run_p99_us = ($p99 | Measure-Object -Maximum).Maximum;
+            median_run_release_p99_us = Get-Median @($reports | ForEach-Object { $_.releaseLateness.p99Us }) }
+    })
+    if ($latency.Count -gt 0) { $latency | Export-Csv -LiteralPath (Join-Path $Directory 'rtt-summary.csv') -NoTypeInformation -Encoding utf8NoBOM }
 }
 
 function Invoke-CheckedCommand([string]$FileName, [string[]]$Arguments) {
@@ -205,6 +261,7 @@ function Assert-ComparisonConfig([hashtable]$Config) {
     if (!(Test-FiniteNumber $Config.MinimumSeconds) -or $Config.MinimumSeconds -le 0 -or !(Test-FiniteNumber $Config.TimeoutSeconds) -or $Config.TimeoutSeconds -le 0 -or $Config.TimeoutSeconds * 1000 -gt [int]::MaxValue) { throw [ArgumentException]::new('Invalid measurement or process timeout bounds.') }
     if ([decimal]$Config.Clients * $Config.Messages * 2 -gt [long]::MaxValue) { throw [ArgumentException]::new('Workload count exceeds the supported result range.') }
     if ($Config.ValidateSequence -and $Config.Messages -gt 1000000) { throw [ArgumentException]::new('Validation supports at most 1000000 messages per client.') }
+    if ($Config.RttIntervalMs -ne 0 -and (!$Config.ValidateSequence -or $Config.Pattern -ne 'ping-pong' -or $Config.RttIntervalMs -lt 1 -or $Config.RttIntervalMs -gt 1000 -or $Config.Messages -lt 2 -or $Config.Messages * $Config.Clients -gt 1000000)) { throw [ArgumentException]::new('Paced latency requires validated ping-pong, interval 1–1000 ms, at least two bursts and at most 1000000 samples.') }
     if (!(Test-Path -LiteralPath $Config.Binary -PathType Leaf)) { throw [ArgumentException]::new('Benchmark binary does not exist.') }
     if (Test-Path -LiteralPath $Config.Output) { throw [ArgumentException]::new('Output directory already exists; preserve earlier evidence and choose another path.') }
 }
@@ -229,7 +286,7 @@ function Invoke-TransportComparison([hashtable]$Config) {
         system = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription; machine = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString();
         logical_cpus = [Environment]::ProcessorCount; affinity = $null; started_utc = [DateTime]::UtcNow.ToString('O');
         dotnet_info = Invoke-CheckedCommand $Config.Dotnet @('--info'); cells = $groups;
-        interpretation = 'Loopback throughput only.' + ' One same-sized warmup before every measurement. Native versions and effective endpoint runtime need separate verification.' }
+        interpretation = $(if ($Config.RttIntervalMs) { 'Scheduled offered-load latency; message rate is capped, not maximum throughput.' } else { 'Loopback throughput only.' }) + ' One same-sized warmup before every measurement. Native versions and effective endpoint runtime need separate verification.' }
     # Linux exposes the complete allowed CPU list without narrowing it to Process.ProcessorAffinity's pointer-sized mask.
     if ($IsLinux -and (Test-Path -LiteralPath '/proc/self/status')) { $allowed = Select-String -LiteralPath '/proc/self/status' -Pattern '^Cpus_allowed_list:\s+(.+)$'; if ($allowed) { $manifest.affinity = $allowed.Matches[0].Groups[1].Value } }
     # Do not silently reuse a directory created after parameter validation.
@@ -253,7 +310,7 @@ function Invoke-TransportComparison([hashtable]$Config) {
                     $record.exit = $result.ExitCode
                     if ($result.TimedOut) { $record.status = 'timeout'; throw 'Process timeout.' }
                     if ($result.ExitCode -ne 0) { throw "Benchmark process exited $($result.ExitCode)." }
-                    $rows = Get-ComparisonRows $result.Text $Config.Clients $cell $Config.ValidateSequence $Config.Window $Config.Messages $Config.Pattern
+                    $rows = Get-ComparisonRows $result.Text $Config.Clients $cell $Config.ValidateSequence $Config.Window $Config.Messages $Config.Pattern $Config.RttIntervalMs
                     $expected = $Config.Clients * $Config.Messages * $(if ($Config.Pattern -eq 'oneway') { 1 } else { 2 })
                     if ($rows[1].messages -ne $expected) { Stop-InvalidResult 'Completion count differs from workload.' }
                     $record.warmup = $rows[0]; $record.measured = $rows[1]
@@ -269,6 +326,16 @@ function Invoke-TransportComparison([hashtable]$Config) {
             }
         }
     }
+    if ($Config.RttIntervalMs -ne 0) {
+        $comparisons = foreach ($repetition in (($Config.RoundOffset + 1)..($Config.RoundOffset + $Config.Repetitions))) {
+            $rates = @($records | Where-Object { $_.repetition -eq $repetition -and $_.status -eq 'valid' } | ForEach-Object { $_.measured.rtt.actualReleaseRttsPerSecond })
+            $complete = $rates.Count -eq ($groups | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum
+            $matched = $complete -and (Test-MatchedOfferRates $rates)
+            if (!$matched) { $invalid = $true }
+            @{ repetition = $repetition; complete = $complete; matched = $matched; actual_rates = $rates }
+        }
+        ConvertTo-Json -InputObject @($comparisons) -Depth 20 | Set-Content -LiteralPath (Join-Path $Config.Output 'rtt-rate-comparisons.json') -Encoding utf8NoBOM
+    }
     if ($invalid) { return 1 }
     return 0
 }
@@ -278,7 +345,7 @@ if ($MyInvocation.InvocationName -ne '.') {
         $laneCounts = @($Lanes.Split(',') | ForEach-Object { [int]::Parse($_, [System.Globalization.CultureInfo]::InvariantCulture) })
         $config = @{ Binary = [IO.Path]::GetFullPath($Binary); Output = [IO.Path]::GetFullPath($Output); Pattern = $Pattern.ToLowerInvariant(); Messages = $Messages;
             Clients = $Clients; Window = $Window; Lanes = $laneCounts; QueueBudget = $QueueBudget; Repetitions = $Repetitions; RoundOffset = $RoundOffset;
-            Dotnet = $Dotnet; MinimumSeconds = $MinimumSeconds; TimeoutSeconds = $TimeoutSeconds; ValidateSequence = [bool]$ValidateSequence; KeepGoing = [bool]$KeepGoing }
+            Dotnet = $Dotnet; MinimumSeconds = $MinimumSeconds; TimeoutSeconds = $TimeoutSeconds; ValidateSequence = [bool]$ValidateSequence; RttIntervalMs = $RttIntervalMs; KeepGoing = [bool]$KeepGoing }
         $code = Invoke-TransportComparison $config
         exit $code
     }

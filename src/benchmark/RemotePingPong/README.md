@@ -410,8 +410,8 @@ Schannel-compatible default key storage; other platforms use ephemeral key stora
 `--diagnostics` separately reports process CPU, managed allocation and GC counts.
 Loopback includes both actor systems; split client mode measures only that process.
 These figures do not measure native allocation, retained heap size or individual
-transport operations. Leave diagnostics off for primary timing. Server mode has no
-measured repetition and emits no PROFILE row.
+transport operations. Leave diagnostics off for primary timing; paced latency
+rejects this flag. Server mode has no measured repetition and emits no PROFILE row.
 
 `Compare-Transports.ps1` (PowerShell 7.2 or later) compares DotNetty, Artery.Tcp and
 Artery TLS TCP sequentially with rotated TCP/TLS order. Each process performs one
@@ -481,3 +481,39 @@ pwsh -NoProfile -File src/benchmark/RemotePingPong/Test-CompareTransports.ps1
 ```
 
 The controller checks use PowerShell itself and require no additional test module.
+
+### Scheduled Offered-Load Latency
+
+Add `--rtt-interval-ms N` to validated loopback ping-pong, with explicit `--clients`
+and `--msgs`. Each scheduled burst offers one request per client independently of
+echo completion. Every offer has an absolute monotonic due time. Late offers are
+retained, and per-client credit still bounds messages actually sent. The run fails
+on stalled progress, invalid delivery, cancellation or any client failure, including
+while waiting for final echoes and receipts. It never silently lowers offered load.
+At least two bursts are required; the sample budget is at most 1,000,000 RTTs across
+all clients per repetition. Arrays are prepared before timing.
+
+Each `RTT` JSON record reports all validated samples and nearest-rank p50/p95/p99/max
+in microseconds. Scheduled-to-echo includes generator lateness, actor/credit delay,
+serialization, transport, receiver work and echo validation. Dispatch-to-echo excludes
+time before the sending actor issues the request. Release lateness describes the
+load generator separately. These percentiles are separate distributions: adding their
+p99 values does not decompose the end-to-end p99. This is application RTT, not a
+packet or network-only latency measurement.
+
+```powershell
+pwsh -NoProfile -File src/benchmark/RemotePingPong/Compare-Transports.ps1 `
+  -Binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll `
+  -Output (Join-Path ([IO.Path]::GetTempPath()) 'rpp-paced-comparison') `
+  -Pattern ping-pong -ValidateSequence -Clients 128 -Window 10 -Messages 2500 `
+  -RttIntervalMs 2 -Lanes 8 -Repetitions 4
+```
+
+This offers 64,000 RTTs/s, with a nominal five-second schedule per phase. The
+controller checks complete phase/sample proofs, rate/span arithmetic, finite ordered
+percentiles and latency-component consistency. Actual release rates must be within 5%
+of nominal and within 3% across a comparison round. It retains failed attempts and
+rate mismatches. `rtt-summary.csv` summarizes per-run percentiles; it does not pool
+samples across runs. Message rate in paced mode is capped by offered load and must
+not be presented as maximum throughput. Collect CPU/allocation diagnostics separately;
+combining `--diagnostics` with paced latency is rejected.
