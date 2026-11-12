@@ -19,7 +19,7 @@
 - [ ] Add per-message sequence/duplicate accounting and controlled offered-load latency measurements.
 - [ ] Complete native-resource and isolated two-host/impairment evaluation before those claims.
 
-Benchmark execution is paused. Machine records, benchmark results and private research notes are
+New performance comparisons follow the safety gates below. Machine records, benchmark results and private research notes are
 not part of this source/specification change.
 
 ## 3. Verification
@@ -46,19 +46,27 @@ controls; they are not selected production source. The retained baseline is `70a
 - [ ] Reconsider pipes/pumps only against the accepted predecessor with tail-latency, retained-capacity and ownership evidence; preserve stable inbound chunks.
 - [ ] Keep the broader peer-consumed shutdown, ACK/quarantine and resource-stress gaps visible; native send completion is not peer delivery.
 
-This update contains planning/specification only. Proposed source changes, tests and new performance
-comparisons have not been executed. Benchmark numbers and private machine records remain outside
-this source/specification change. Current default transport and stream counts are unchanged.
+The parallel-stage optimization sequence remains planned. The safety/runner foundation below is
+implemented separately; it does not demonstrate a performance improvement. Benchmark numbers and
+private machine records remain outside this source/specification change. Transport defaults are unchanged.
 
 ## 5. Safety and multi-node readiness
 
 - [x] Record unpooled owned receive storage as a constraint; pooled writes may be released only after their native use settles.
 - [ ] Extend retained-receive checks through later reads, FIN/reset and system shutdown without actor disposal obligations.
-- [ ] Add an explicit opt-in QUIC mode to the existing multi-node transport selection, with invalid-mode rejection and effective-transport reporting.
-- [ ] Provide validated test credentials/TLS setup for initial, restarted and directly created actor systems; preserve per-spec config precedence.
-- [ ] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
-- [ ] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
+- [x] Add an explicit opt-in QUIC mode to the existing multi-node transport selection, with invalid-mode rejection and effective-transport reporting.
+- [x] Provide validated test credentials/TLS setup for initial, restarted and directly created actor systems; preserve per-spec config precedence.
+- [x] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
+- [x] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
 - [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
 
-These are requirements and planned checks. This change does not enable the QUIC runner mode or claim
-new tests passed. See the design's safety punch list for concrete integration boundaries and cases.
+The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
+(one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
+(eight). Credentials, native startup failure and caller-owned setup have focused checks. Known-bad
+controls detect early certificate disposal, failed-restart leaks and escaped receive scratch storage.
+Retained receive bytes are also checked after FIN and native/materializer shutdown; retention through
+reset/reconnect is still a distinct open check. This is bounded coverage, not whole-suite qualification.
+
+The single-lane live-recipient branch already exists in `ArteryQuicStreamsSpec`; its remaining shutdown
+gap is peer consumption before connection retirement. Do not duplicate the branch or treat native
+write/FIN completion as a delivery acknowledgment. No shared drain protocol is introduced here.

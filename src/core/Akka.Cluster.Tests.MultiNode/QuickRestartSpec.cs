@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -91,7 +93,7 @@ namespace Akka.Cluster.Tests.MultiNode
         private async Task JoinAndRestart()
         {
             var totalNumberOfNodes = Roles.Count + 1;
-            ActorSystem restartingSystem = null; // only used on second
+            ActorSystem? restartingSystem = null; // only used on second
             for (var i = 1; i <= _rounds; i++)
             {
                 var round = i; //non-loop variable closure
@@ -99,9 +101,9 @@ namespace Akka.Cluster.Tests.MultiNode
                 await RunOnAsync(async () =>
                 {
                     restartingSystem = restartingSystem == null
-                        ? ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
+                        ? CreateActorSystem(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
                             .WithFallback(Sys.Settings.Config))
-                        : ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
+                        : CreateActorSystem(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
                             .WithFallback(
                                 // Pin the restarted system to the SAME wire address for BOTH transports - under
                                 // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
@@ -151,7 +153,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 EnterBarrier("before-terminate-"+i);
                 await RunOnAsync(async () =>
                 {
-                    await restartingSystem.Terminate().WaitAsync(RemainingOrDefault);
+                    var system = restartingSystem ?? throw new InvalidOperationException("The restarting system has not been created.");
+                    await system.Terminate().WaitAsync(RemainingOrDefault);
                 }, _config.Second);
 
                 // don't wait for it to be removed, new incarnation will join in next round

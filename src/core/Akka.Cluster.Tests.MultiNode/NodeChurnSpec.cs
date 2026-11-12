@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -169,7 +171,7 @@ namespace Akka.Cluster.Tests.MultiNode
             for (var n = 1; n <= Rounds; n++)
             {
                 Log.Info("round-" + n);
-                var systems = Enumerable.Repeat(0,2).Select(_ => ActorSystem.Create(Sys.Name, Sys.Settings.Config)).ToImmutableList();
+                var systems = Enumerable.Repeat(0,2).Select(_ => CreateActorSystem(Sys.Name, Sys.Settings.Config)).ToImmutableList();
 
                 foreach (var s in systems)
                 {

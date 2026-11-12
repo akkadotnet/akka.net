@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -99,7 +101,7 @@ namespace Akka.Remote.Tests.MultiNode
                     .AppendLine("port =" + addr.Port)
                     .AppendLine("}");
 
-                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(sb.ToString())
+                var freshSystem = CreateActorSystem(Sys.Name, ConfigurationFactory.ParseString(sb.ToString())
                     .WithFallback(Sys.Settings.Config));
 
                 var probe = CreateTestProbe(freshSystem);

@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -59,7 +61,12 @@ namespace Akka.Cluster.Tests.MultiNode
         private ImmutableList<Address> seedNodes => ImmutableList.Create(GetAddress(_config.First));
         private Lazy<ActorSystem> secondSystem;
         private Lazy<ActorSystem> restartedSecondSystem;
-        private static UniqueAddress secondUniqueAddress = null;
+        private static UniqueAddress? _secondUniqueAddress;
+        private static UniqueAddress secondUniqueAddress
+        {
+            get => _secondUniqueAddress ?? throw new InvalidOperationException("The second node address has not been transferred yet.");
+            set => _secondUniqueAddress = value;
+        }
 
         public RestartNode3Spec() : this(new RestartNode3SpecConfig())
         {
@@ -68,11 +75,11 @@ namespace Akka.Cluster.Tests.MultiNode
         protected RestartNode3Spec(RestartNode3SpecConfig config) : base(config, typeof(RestartNode3Spec))
         {
             _config = config;
-            secondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
+            secondSystem = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, Sys.Settings.Config));
             // Pin the restarted system to the SAME wire address for BOTH transports - under
             // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
             // system would bind a random artery canonical.port instead.
-            restartedSecondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(
+            restartedSecondSystem = new Lazy<ActorSystem>(() => CreateActorSystem(
                 Sys.Name,
                 ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + secondUniqueAddress.Address.Port
                         + "\nakka.remote.artery.canonical.port=" + secondUniqueAddress.Address.Port)

@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -44,7 +46,7 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private readonly RestartFirstSeedNodeSpecConfig _config;
         private Address _missedSeed;
-        private static volatile Address _seedNode1Address;
+        private static volatile Address? _seedNode1Address;
 
         private Lazy<ActorSystem> seed1System;
         private Lazy<ActorSystem> restartedSeed1System;
@@ -60,7 +62,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             seed1System = new Lazy<ActorSystem>(() =>
             {
-                return ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+                return CreateActorSystem(Sys.Name, Sys.Settings.Config);
             });
 
             restartedSeed1System = new Lazy<ActorSystem>(() =>
@@ -72,7 +74,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     .ParseString("akka.remote.dot-netty.tcp.port=" + GetSeedNodes().First().Port
                         + "\nakka.remote.artery.canonical.port=" + GetSeedNodes().First().Port)
                     .WithFallback(Sys.Settings.Config);
-                return ActorSystem.Create(Sys.Name, localConfig);
+                return CreateActorSystem(Sys.Name, localConfig);
             });
         }
 
@@ -173,7 +175,7 @@ namespace Akka.Cluster.Tests.MultiNode
         private ImmutableList<Address> GetSeedNodes()
         {
             return ImmutableList.Create(
-                _seedNode1Address,
+                _seedNode1Address ?? throw new InvalidOperationException("The seed address has not been transferred yet."),
                 GetAddress(_config.Seed2),
                 GetAddress(_config.Seed3),
                 _missedSeed);

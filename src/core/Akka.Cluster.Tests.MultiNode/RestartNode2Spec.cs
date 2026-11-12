@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -64,11 +66,12 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private Lazy<ActorSystem> seed1System;
         private Lazy<ActorSystem> restartedSeed1System;
-        private static Address seedNode1Address;
+        private static Address? seedNode1Address;
 
         #region SeedNodesProperty
         private ImmutableList<Address> SeedNodes => 
-            ImmutableList.Create(seedNode1Address, GetAddress(_config.Seed2));
+            ImmutableList.Create(seedNode1Address
+                ?? throw new InvalidOperationException("The seed address has not been transferred yet."), GetAddress(_config.Seed2));
         #endregion
 
         #region PublicConstructor
@@ -79,10 +82,11 @@ namespace Akka.Cluster.Tests.MultiNode
         protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(RestartNode2Spec))
         {
             _config = config;
-            seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
+            seed1System = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, Sys.Settings.Config));
             restartedSeed1System = new Lazy<ActorSystem>(
-                () => ActorSystem.Create(Sys.Name, ConfigurationFactory
-                    .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
+                () => CreateActorSystem(Sys.Name, ConfigurationFactory
+                    .ParseString("akka.remote.dot-netty.tcp.port = " + SeedNodes.First().Port
+                        + "\nakka.remote.artery.canonical.port = " + SeedNodes.First().Port)
                     .WithFallback(Sys.Settings.Config)));
         }
         #endregion
@@ -154,6 +158,8 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 RunOn(() =>
                 {
+                    Cluster.Get(restartedSeed1System.Value).SelfAddress.Should().Be(SeedNodes.First(),
+                        "the replacement must rebind the original seed address");
                     Cluster.Get(restartedSeed1System.Value).JoinSeedNodes(SeedNodes);
                     Within(TimeSpan.FromSeconds(30), () =>
                     {

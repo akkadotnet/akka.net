@@ -419,6 +419,12 @@ ownership through settlement. The following work is separate from claiming a fas
 The multi-node arm is a bounded enabling change before expanding distributed qualification. Reuse
 existing remote/cluster specifications and TestConductor fault controls rather than invent a second
 runner. Credential fixture/configuration tests come before native smoke tests, followed by compatible
-multi-node subsets. Existing TCP/classic behavior remains covered throughout. QUIC prerequisite and
-coverage inventory need implementation before a portable QUIC multi-node command can be published;
-there is deliberately no claim that setting the proposed environment value works today.
+multi-node subsets. Existing TCP/classic behavior remains covered throughout. The authenticated opt-in runner foundation is now implemented; the contributor
+[build guide](../../../docs/community/contributing/build-process.md#opt-in-artery-quic-coverage)
+documents credentials, native prerequisites, child-runtime selection and coverage limits. Initial,
+restarted and migrated extra-system paths use the same TLS-aware factory. Effective transport is
+reported from the actual provider, and explicit classic overrides retain precedence. Factory-owned
+credentials survive asynchronous failed-start cleanup and are released on system termination;
+caller-supplied TLS setup remains caller-owned. Canceled conductor attachment terminates its created
+system before returning failure. These changes preserve the existing default transport and test
+configuration precedence. Peer-consumed shutdown and broader distributed/resource stress remain open.

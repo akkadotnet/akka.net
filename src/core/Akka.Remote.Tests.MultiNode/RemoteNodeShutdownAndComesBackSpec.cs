@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Text;
 using System.Threading;
@@ -160,7 +162,7 @@ namespace Akka.Remote.Tests.MultiNode
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}").ToString();
 
-                var freshSystem = ActorSystem.Create(Sys.Name,
+                var freshSystem = CreateActorSystem(Sys.Name,
                     ConfigurationFactory.ParseString(freshConfig)
                     .WithFallback(Sys.Settings.Config));
 
