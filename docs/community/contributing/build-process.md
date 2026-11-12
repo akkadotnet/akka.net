@@ -112,6 +112,10 @@ transport, runtime and stream count. Inspect the role output in the test results
 classic override or native skip is not QUIC coverage. Ensure `dotnet` on `PATH` selects a
 runtime compatible with the test target; the runner starts child processes using that name.
 
+For incremental selection, pass `--sln Akka.slnx` explicitly to `dotnet incrementalist run`;
+the tool's default `*.sln` discovery does not find the repository's solution file. Confirm
+that projects and tests were actually selected before treating a zero exit code as validation.
+
 The compatible starting subset is `RemoteDeliverySpec`, `TransportRestartCleanupSpec`, and
 cluster `QuickRestartSpec`. Broader failure/lifecycle qualification remains incremental.
 `RemoteGatePiercingSpec`, `RemoteNodeRestartGateSpec`, and

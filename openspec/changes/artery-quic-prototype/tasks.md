@@ -38,15 +38,16 @@ supersedes making a pipe rewrite the required next step. Earlier pipe prototypes
 controls; they are not selected production source. The retained baseline is `70a2ed1d6`.
 
 - [x] Reconcile retained source, historical pipe/resource findings and standalone native-worker limits into the existing design.
-- [ ] Establish the contemporary fixed-eight-processing-lane S=1/2/4/8 encrypted control using the existing comparison driver and actual path-count gates.
-- [ ] Move linked cancellation state to channel lifetime in one isolated source change; preserve native ownership and canceled/faulted completion status.
+- [x] Establish the contemporary fixed-eight-processing-lane S=1/2/4/8 encrypted control using the existing comparison driver and actual path-count gates.
+- [x] Isolate channel-lifetime linked cancellation on a research branch, preserving native ownership and canceled/faulted completion status; production promotion remains conditional.
 - [ ] Execute delayed-write cancellation/reset/reconnect and exactly-once release checks, then affected native Artery/API/incremental/Slopwatch gates and independent review.
 - [ ] Compare frozen candidate/control at eight streams with one-stream regression, separate allocation/CPU/write-shape diagnostics, matched paced RTT and leased-capacity gates; retain null results.
 - [ ] Only if evidence selects it, isolate producer batching from native coalescing size; preserve prompt idle/control dispatch and fixed aggregate budgets.
 - [ ] Reconsider pipes/pumps only against the accepted predecessor with tail-latency, retained-capacity and ownership evidence; preserve stable inbound chunks.
 - [ ] Keep the broader peer-consumed shutdown, ACK/quarantine and resource-stress gaps visible; native send completion is not peer delivery.
 
-The parallel-stage optimization sequence remains planned. The safety/runner foundation below is
+The topology control and isolated cancellation trial have executed. The remaining parallel-stage
+optimization sequence remains conditional on evidence and promotion gates. The safety/runner foundation below is
 implemented separately; it does not demonstrate a performance improvement. Benchmark numbers and
 private machine records remain outside this source/specification change. Transport defaults are unchanged.
 
