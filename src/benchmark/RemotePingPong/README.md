@@ -118,6 +118,7 @@ long-lived server does not accumulate idle actors across runs.
 | `--transport dotnetty\|artery-tcp\|artery-tls\|quic` | `dotnetty` | ✓ | ✓ | ✓ | Explicit transport; incompatible with `--artery` unless selecting `artery-tcp` |
 | `--quic-streams S` | `1` | ✓ | ✓ | ✓ | Native ordinary streams, bounded by outbound lanes and 64 |
 | `--diagnostics` | off | ✓ | ✓ | ✓ | Optional process CPU/allocation/GC and ordinary QUIC I/O counters |
+| `--validate-sequence` | off | ✓ | — | — | Ordered real V2 delivery, cumulative credit, phase agreement and final receiver receipts |
 | `--cert PATH` | ephemeral in encrypted `run` | ✓ | ✓ | ✓ | PKCS#12 identity; required in encrypted split modes |
 | `--cert-password-env NAME` | none | ✓ | ✓ | ✓ | Read the PKCS#12 password from this environment variable; never print its value |
 | `--peer-pin THUMBPRINT[,THUMBPRINT]` | own identity in encrypted `run` | ✓ | ✓ | ✓ | Trusted peer pins; required in encrypted split modes |
@@ -263,6 +264,57 @@ ordinary streams and include protocol/credit traffic. A zero I/O counter on anot
 it is not instrumented. Server mode accepts the flag to enable counters but has no measured repetition
 and emits no `PROFILE` row. These counters do not measure native memory or native function CPU.
 Leave diagnostics off for the primary unprofiled throughput comparison.
+
+### Ordered Delivery Validation
+
+For new loopback comparisons, add `--validate-sequence --payload real --serializer v2`.
+Both one-way and ping-pong modes check each pair's payload sequence and full content.
+The sender keeps at most `--window` messages outstanding, uses cumulative delivery
+credit, and fails after ten seconds without progress. It never retries data. A
+parameter agreement precedes timing; an ordered final fence and receiver receipt
+are included in timing. Ping-pong validates every echo as well as forward delivery.
+The fence confirms benchmark actor processing, not completion of arbitrary business work.
+
+The existing payload's sequence field starts at 1,000,000,000, keeping its encoded
+integer width constant. Serialized V2 payloads are 352 bytes in this mode. Immutable
+outer records are prepared before timing and shared across clients; nested content
+is shared without mutation. The per-client message count is bounded to 1,000,000.
+Each `VALIDATION` JSON record reports the prepared count, setup allocation bytes,
+actual serialized payload bytes, agreed settings and final receipt count. Setup
+allocation is not retained heap size or total transport memory. Failures observed
+after the receipt remain latched through actor-system shutdown; final validation
+records are emitted only after shutdown and that check.
+
+These rows use a different protocol and payload encoding from historical count-only
+runs. Keep their source/build identities and summaries separate. The final fence
+delimits data issued by the agreed sender; it cannot guarantee the absence of future
+traffic after the run's actors have stopped. Legacy commands remain available.
+
+```bash
+dotnet src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll run \
+  --transport quic --payload real --serializer v2 --validate-sequence --oneway \
+  --clients 32 --window 10 --msgs 8193 --times 2 \
+  --outbound-lanes 8 --inbound-lanes 1 --quic-streams 8 --qsize 1024
+
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --output /tmp/rpp-ordered-comparison --pattern oneway --validate-sequence \
+  --clients 128 --window 10 --messages 30000 --lanes 8 --repetitions 4
+```
+
+The controller requires two distinct phase proofs and exact workload parameters,
+rejects retries, malformed CSV values, NaN and infinity, and checks throughput arithmetic
+against the harness's integer-millisecond rate calculation. Historical regression
+mode rejects `--validate-sequence`. The short first command exercises correctness;
+it is not a sufficiently long primary timing run. Use fresh output directories.
+
+Focused checks:
+
+```bash
+dotnet test src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj -c Release
+cd src/benchmark/RemotePingPong
+python3 -m unittest -v test_compare_transports.py
+```
 
 ### `--oneway`
 

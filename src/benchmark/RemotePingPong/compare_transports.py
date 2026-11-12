@@ -7,8 +7,10 @@ regression mode uses the unchanged old CLI; transport mode uses the current CLI.
 
 import argparse
 import csv
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -16,6 +18,7 @@ import re
 import statistics
 import subprocess
 import time
+import uuid
 
 
 def git(directory, *args):
@@ -43,7 +46,11 @@ def arguments():
     parser.add_argument("--keep-going", action="store_true", help="Retain invalid attempts and finish the matrix; exit remains nonzero")
     parser.add_argument("--minimum-seconds", type=float, default=3)
     parser.add_argument("--timeout", type=float, default=180)
+    parser.add_argument("--validate-sequence", action="store_true",
+                        help="Use the ordered real V2 protocol and require final delivery proofs (transports phase only)")
     result = parser.parse_args()
+    if result.validate_sequence and (result.phase != "transports" or result.messages > 1_000_000):
+        parser.error("--validate-sequence requires transports phase and at most 1000000 messages per client")
     if min(result.messages, result.clients, result.window, result.repetitions, *result.lanes) <= 0:
         parser.error("message/client/window/repetition/lane counts must be positive")
     if result.queue_budget < max(result.lanes) or result.minimum_seconds <= 0 or result.timeout <= 0:
@@ -123,6 +130,8 @@ def command(args, cell):
               "--clients", str(args.clients), "--window", str(args.window), "--msgs", str(args.messages), "--times", "2"]
     if args.pattern == "oneway":
         result.append("--oneway")
+    if args.validate_sequence:
+        result.append("--validate-sequence")
     if cell["transport"] != "dotnetty":
         # Match total receive paths: S streams each have N/S processing lanes. At S=N
         # each stream uses its inline processor, avoiding accidental N*N consumers.
@@ -134,15 +143,34 @@ def command(args, cell):
     return result
 
 
-def parse_run(output, clients, cell, phase):
+def parse_run(output, clients, cell, phase, validate_sequence=False, window=None, messages=None, pattern=None):
     data = []
     for line in output.splitlines():
         if re.match(rf"^\s*{clients},", line):
-            values = [float(value.strip()) for value in line.split(",")]
+            try:
+                values = [Decimal(value.strip()) for value in line.split(",")]
+            except InvalidOperation as error:
+                raise ValueError("invalid numeric benchmark row") from error
             if len(values) != 6:
                 raise ValueError("unexpected benchmark row")
-            data.append(dict(clients=int(values[0]), messages=int(values[1]), messages_per_second=values[2],
-                             milliseconds=values[3], start_threads=int(values[4]), end_threads=int(values[5])))
+            if any(not value.is_finite() or value <= 0 or value > 2**63 - 1 for value in values):
+                raise ValueError("nonfinite or nonpositive benchmark result")
+            if any(values[index] != values[index].to_integral_value() or values[index] > 2**63 - 1
+                   for index in [0, 1, 2, 4, 5]):
+                raise ValueError("fractional or out-of-range integer benchmark result")
+            # Program uses integer elapsed milliseconds for ceil(messages/sec), but reports
+            # elapsed time rounded to two decimals. Admit only the possible floor-ms values.
+            minimum_ms = math.floor(values[3] - Decimal("0.005"))
+            maximum_ms = math.floor(values[3] + Decimal("0.005"))
+            if minimum_ms < 1:
+                raise ValueError("benchmark duration too short for rate arithmetic")
+            numerator = int(values[1]) * 1000
+            lower_rate = (numerator + maximum_ms - 1) // maximum_ms
+            upper_rate = (numerator + minimum_ms - 1) // minimum_ms
+            if not lower_rate <= values[2] <= upper_rate:
+                raise ValueError("throughput disagrees with message count and elapsed time")
+            data.append(dict(clients=int(values[0]), messages=int(values[1]), messages_per_second=int(values[2]),
+                             milliseconds=float(values[3]), start_threads=int(values[4]), end_threads=int(values[5])))
     if len(data) != 2:
         raise ValueError(f"expected warmup + measurement rows, got {len(data)}")
     if "Round-trip check:                  PASSED" not in output:
@@ -150,8 +178,29 @@ def parse_run(output, clients, cell, phase):
     if "[ERROR]" in output or "SUSPECT" in output or "WARNING:" in output:
         raise ValueError("error, dropped message or application resend invalidates row")
     size = re.search(r"Serialized payload size:\s+(\d+) bytes", output)
-    if size is None or int(size.group(1)) != 348:
+    if size is None or int(size.group(1)) != (352 if validate_sequence else 348):
         raise ValueError("unexpected real V2 payload size")
+    if validate_sequence:
+        proofs = [json.loads(line.removeprefix("VALIDATION ")) for line in output.splitlines()
+                  if line.startswith("VALIDATION ")]
+        if len(proofs) != 2 or any(not isinstance(proof, dict) for proof in proofs) \
+                or proofs[0].get("phaseId") == proofs[1].get("phaseId"):
+            raise ValueError("missing or repeated validation phase")
+        expected_count = clients * messages * (1 if pattern == "oneway" else 2)
+        expected = dict(version=1, pattern=pattern, clients=clients, messagesPerClient=messages,
+                        countedMessages=expected_count, window=window, ackEvery=max(1, window // 2),
+                        finalReceipts=clients, payloadBytes=352, sequenceBase=1_000_000_000,
+                        preparedPayloads=messages, orderedPayloadsAndContent=True, retries=0)
+        for row, proof in zip(data, proofs):
+            if not isinstance(proof.get("phaseId"), str):
+                raise ValueError("validation phase identifier missing")
+            uuid.UUID(proof["phaseId"])
+            if any(type(proof.get(key)) is not type(value) or proof.get(key) != value
+                   for key, value in expected.items()) or row["messages"] != expected_count:
+                raise ValueError("validated workload parameters or final delivery proof differ from controller")
+            if type(proof.get("datasetAllocatedBytes")) is not int or proof["datasetAllocatedBytes"] <= 0:
+                raise ValueError("prepared dataset allocation evidence missing")
+            row["validation"] = proof
     if phase == "transports" and cell["transport"] != "dotnetty":
         for direction in ["send", "reply"]:
             matches = re.findall(rf"Recipient lane occupancy \({direction}\):\s+([0-9,]+)", output)
@@ -229,7 +278,8 @@ def main():
                     record["exit"] = process.returncode
                     if process.returncode:
                         raise ValueError(f"process exited {process.returncode}")
-                    warmup, measured = parse_run(process.stdout, args.clients, cell, args.phase)
+                    warmup, measured = parse_run(process.stdout, args.clients, cell, args.phase,
+                                                args.validate_sequence, args.window, args.messages, args.pattern)
                     expected = args.clients * args.messages * (1 if args.pattern == "oneway" else 2)
                     if measured["messages"] != expected:
                         raise ValueError("completion count differs from workload")

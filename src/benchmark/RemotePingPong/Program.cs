@@ -58,6 +58,9 @@ namespace RemotePingPong
         private static BenchmarkTransport _transport = BenchmarkTransport.Default();
         private static int? _quicStreamsOverride;
         private static bool _diagnostics;
+        private static bool _validateSequence;
+        private static RealPayload.V2.RealBenchmarkMessage[]? _validatedPayloads;
+        private static long _sequenceDatasetAllocatedBytes;
         private static readonly HashSet<ActorSystem> ActorSystems = new();
 
         private static bool SelectTransport(bool artery, string? transport, string? certificatePath,
@@ -447,6 +450,8 @@ namespace RemotePingPong
                 return "hit";
 
             var canonical = RealPayload.RealPayloadFactory.CreateCanonical();
+            if (_validateSequence)
+                canonical = canonical with { SequenceNumber = ValidatedBenchmark.SequenceBase };
             return _serializerArm switch
             {
                 "v2" => canonical,
@@ -623,6 +628,12 @@ namespace RemotePingPong
                               "one-way transport throughput (see OneWaySenderActor/OneWayReceiverActor)."
             };
 
+            var validateSequenceOption = new Option<bool>("--validate-sequence")
+            {
+                Description = "Loopback real V2 only: validate ordered unique payloads, cumulative credit and a final delivery fence. " +
+                              "Uses a prepared immutable sequence dataset; results are distinct from historical count-only runs."
+            };
+
             var windowOption = new Option<int>("--window")
             {
                 Description = "In-flight priming window size per client (i.e. how many messages are sent before " +
@@ -787,6 +798,19 @@ namespace RemotePingPong
             runCommand.Options.Add(timesOption);
             runCommand.Options.Add(payloadOption);
             runCommand.Options.Add(serializerOption);
+            runCommand.Options.Add(validateSequenceOption);
+            runCommand.Validators.Add(result =>
+            {
+                if (!result.GetValue(validateSequenceOption))
+                    return;
+                if (result.GetValue(payloadOption) != "real" || result.GetValue(serializerOption) != "v2")
+                    result.AddError("--validate-sequence requires --payload real --serializer v2.");
+                var count = result.GetValue(msgsOption) ?? repeat;
+                if (count is < 1 or > ValidatedBenchmark.MaximumMessages)
+                    result.AddError($"--validate-sequence requires 1–{ValidatedBenchmark.MaximumMessages} messages per client.");
+                if (result.GetValue(clientsOption) is <= 0 || result.GetValue(timesOption) == 0)
+                    result.AddError("--validate-sequence requires positive client and repetition counts.");
+            });
             AddPayloadSerializerValidation(runCommand);
             AddTransportOptions(runCommand, splitMode: false);
             runCommand.SetAction(parseResult => RunLoopbackAsync(
@@ -803,7 +827,7 @@ namespace RemotePingPong
                 parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(payloadOption)!,
-                parseResult.GetValue(serializerOption)));
+                parseResult.GetValue(serializerOption), parseResult.GetValue(validateSequenceOption)));
 
             var serverHostOption = new Option<string>("--host")
             {
@@ -930,8 +954,9 @@ namespace RemotePingPong
 
         private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
             string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
-            string payload, string? serializer)
+            string payload, string? serializer, bool validateSequence = false)
         {
+            _validateSequence = validateSequence;
             _useArtery = artery;
             _onewayMode = oneway;
             _windowSize = window;
@@ -944,6 +969,13 @@ namespace RemotePingPong
             _payloadMode = payload;
             _serializerArm = serializer;
             _payloadInstance = ResolvePayloadInstance();
+
+            if (_validateSequence)
+            {
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                _validatedPayloads = ValidatedBenchmark.PreparePayloads(_msgsOverride ?? repeat);
+                _sequenceDatasetAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+            }
 
             ResolveQueueSize();
             await Start(times);
@@ -1360,6 +1392,7 @@ namespace RemotePingPong
             var resendCounter = new ResendCounter();
 
             List<Task<long>> tasks = new List<Task<long>>();
+            var validatedOutcomes = new List<ValidatedBenchmark.Outcome>();
             // Holds the system1-side actor that needs the initial "go" nudge for each pair: the
             // BenchmarkActor client in ping-pong mode, or the OneWaySenderActor in one-way mode.
             List<IActorRef> primeTargets = new List<IActorRef>();
@@ -1371,8 +1404,32 @@ namespace RemotePingPong
             List<IActorRef> serverSideActors = new List<IActorRef>();
 
             var canStart = system1.ActorOf(Props.Create(() => new AllStartedActor()), "canStart");
+            var validationPhase = Guid.NewGuid();
 
-            if (_onewayMode)
+            if (_validateSequence)
+            {
+                var payloads = _validatedPayloads ?? throw new InvalidOperationException("Sequence payloads were not prepared.");
+                var serialization = ((ExtendedActorSystem)system1).Serialization;
+                if (serialization.FindSerializerFor(payloads[^1]).ToBinary(payloads[^1]).Length != _realPayloadWireBytes)
+                    throw new InvalidOperationException("Sequence payload encoding width changed within the prepared dataset.");
+                var settings = new ValidatedBenchmark.Agreement(validationPhase, checked((int)numberOfRepeats),
+                    windowSize, Math.Max(1, windowSize / 2), _onewayMode, _realPayloadWireBytes);
+                for (var i = 0; i < numberOfClients; i++)
+                {
+                    var completion = new ValidatedBenchmark.Outcome();
+                    validatedOutcomes.Add(completion);
+                    tasks.Add(completion.Task);
+                    var receiver = system1.ActorOf(Props.Create(() => new ValidatedBenchmark.Receiver(settings))
+                        .WithDeploy(new Deploy(new RemoteScope(system2Address))), "receiver" + i);
+                    var sender = system1.ActorOf(Props.Create(() => new ValidatedBenchmark.SenderActor(
+                        settings, payloads, receiver, completion)), "sender" + i);
+                    primeTargets.Add(sender);
+                    serverSideActors.Add(receiver);
+                    canStart.Tell(receiver);
+                    canStart.Tell(sender);
+                }
+            }
+            else if (_onewayMode)
             {
                 // Credit-based flow control: unbounded fire-and-forget would overflow Artery's
                 // bounded outbound queue (default capacity 3072/association) and silently starve,
@@ -1445,6 +1502,15 @@ namespace RemotePingPong
                 throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
             }
 
+            if (_validateSequence)
+            {
+                using var agreementDeadline = new CancellationTokenSource(ValidatedBenchmark.ProgressTimeout);
+                var agreements = await Task.WhenAll(primeTargets.Select(sender =>
+                    sender.Ask<bool>(new ValidatedBenchmark.Prepare(), agreementDeadline.Token)));
+                if (agreements.Any(agreed => !agreed))
+                    throw new InvalidOperationException("Validated benchmark parameter agreement failed.");
+            }
+
             // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
             // metrics here - but only the very first benchmark
             if(_firstRun){
@@ -1491,7 +1557,7 @@ namespace RemotePingPong
             var ioBefore = _diagnostics ? SnapshotIo(system1) + SnapshotIo(system2) : default;
 
             var sw = Stopwatch.StartNew();
-            if (_onewayMode)
+            if (_onewayMode || _validateSequence)
             {
                 // One trigger per sender: OneWaySenderActor sends its whole windowSize credit
                 // up-front as soon as it sees Messages.Run, then tops back up on each Ack.
@@ -1507,7 +1573,7 @@ namespace RemotePingPong
                 });
             }
             var waiting = Task.WhenAll(tasks);
-            await Task.WhenAll(waiting);
+            var completedCounts = await waiting;
             sw.Stop();
             if (_diagnostics)
             {
@@ -1558,6 +1624,31 @@ namespace RemotePingPong
             ActorSystems.Remove(system1);
             if (system2 is not null)
                 ActorSystems.Remove(system2);
+
+            if (_validateSequence)
+            {
+                validatedOutcomes.ForEach(outcome => outcome.ThrowIfFailed());
+                if (completedCounts.Any(count => count != numberOfRepeats))
+                    throw new InvalidOperationException("Validated completion count differs from the requested workload.");
+                Console.WriteLine("VALIDATION " + System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    version = 1,
+                    phaseId = validationPhase,
+                    pattern = _onewayMode ? "oneway" : "ping-pong",
+                    clients = numberOfClients,
+                    messagesPerClient = numberOfRepeats,
+                    countedMessages = totalMessagesReceived,
+                    window = windowSize,
+                    ackEvery = Math.Max(1, windowSize / 2),
+                    finalReceipts = tasks.Count,
+                    payloadBytes = _realPayloadWireBytes,
+                    sequenceBase = ValidatedBenchmark.SequenceBase,
+                    preparedPayloads = _validatedPayloads!.Length,
+                    datasetAllocatedBytes = _sequenceDatasetAllocatedBytes,
+                    orderedPayloadsAndContent = true,
+                    retries = 0
+                }));
+            }
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
