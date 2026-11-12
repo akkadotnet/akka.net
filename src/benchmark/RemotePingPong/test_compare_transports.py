@@ -82,5 +82,84 @@ class ValidationContractTests(unittest.TestCase):
                 self.parse(self.output().replace("2,16386,5001,3277.2,20,20", bad, 1))
 
 
+class PacedContractTests(unittest.TestCase):
+    def setUp(self):
+        self.proof = dict(phaseId=str(uuid.uuid4()))
+        self.report = dict(phaseId=self.proof["phaseId"], clients=2, messagesPerClient=3, samples=6,
+                           intervalMs=2, nominalRttsPerSecond=1000, actualReleaseRttsPerSecond=1000,
+                           releaseSpanMilliseconds=4)
+        for group, values in [("releaseLateness", [1, 2, 3, 4]), ("dispatchDelay", [2, 3, 4, 5]),
+                              ("sendToEcho", [10, 20, 30, 40]), ("scheduledToEcho", [12, 23, 34, 45])]:
+            self.report[group] = dict(zip(["p50Us", "p95Us", "p99Us", "maxUs"], values))
+
+    def validate(self, report):
+        controller.validate_rtt(report, self.proof, 2, 3, 2)
+
+    def test_complete_consistent_report_passes(self):
+        self.validate(self.report)
+
+    def test_missing_or_wrong_phase_and_parameters_fail(self):
+        for key in self.report:
+            report = copy.deepcopy(self.report)
+            del report[key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.validate(report)
+        for key, value in dict(phaseId=str(uuid.uuid4()), samples=5, clients=3, intervalMs=3,
+                               messagesPerClient=4, nominalRttsPerSecond=900, actualReleaseRttsPerSecond=900,
+                               releaseSpanMilliseconds=3).items():
+            report = copy.deepcopy(self.report)
+            report[key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.validate(report)
+
+    def test_nonfinite_negative_unordered_and_inconsistent_quantiles_fail(self):
+        for group in ["releaseLateness", "dispatchDelay", "sendToEcho", "scheduledToEcho"]:
+            for value in [float("nan"), float("inf"), -1, True]:
+                report = copy.deepcopy(self.report)
+                report[group]["p50Us"] = value
+                with self.subTest(group=group, value=value), self.assertRaises(ValueError):
+                    self.validate(report)
+        report = copy.deepcopy(self.report)
+        report["scheduledToEcho"]["p99Us"] = 22
+        with self.assertRaises(ValueError): self.validate(report)
+        report = copy.deepcopy(self.report)
+        report["dispatchDelay"] = dict(p50Us=0, p95Us=0, p99Us=0, maxUs=0)
+        with self.assertRaises(ValueError): self.validate(report)
+
+    def test_nonfinite_or_false_rate_and_span_fail(self):
+        for key in ["nominalRttsPerSecond", "actualReleaseRttsPerSecond", "releaseSpanMilliseconds"]:
+            for value in [float("nan"), float("inf"), 0, True]:
+                report = copy.deepcopy(self.report)
+                report[key] = value
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    self.validate(report)
+
+    def test_matched_offer_rate_gate_rejects_comparison_drift(self):
+        self.assertTrue(controller.matched_offer_rates([1000, 1020]))
+        self.assertFalse(controller.matched_offer_rates([1000, 1040]))
+        self.assertFalse(controller.matched_offer_rates([]))
+        self.assertFalse(controller.matched_offer_rates([1000, float("nan")]))
+
+    def test_public_parser_requires_interval_and_two_linked_rtt_reports(self):
+        fixture = ValidationContractTests()
+        fixture.setUp()
+        proofs = copy.deepcopy(fixture.proofs)
+        reports = []
+        for proof in proofs:
+            proof.update(pattern="ping-pong", rttIntervalMs=2, countedMessages=32772)
+            report = copy.deepcopy(self.report)
+            report.update(phaseId=proof["phaseId"], messagesPerClient=8193, samples=16386,
+                          releaseSpanMilliseconds=(8193 - 1) * 2)
+            reports.append(report)
+        output = fixture.output(proofs).replace("2,16386,5001,3277.2,20,20", "2,32772,10001,3277.2,20,20")
+        output += "\n" + "\n".join("RTT " + json.dumps(report) for report in reports)
+        args = (2, fixture.cell, "transports", True, 10, 8193, "ping-pong", 2)
+        self.assertEqual(len(controller.parse_run(output, *args)), 2)
+        with self.assertRaises(ValueError):
+            controller.parse_run(output[:output.rfind("RTT ")], *args)
+        with self.assertRaises(ValueError):
+            controller.parse_run(output.replace('"rttIntervalMs": 2', '"rttIntervalMs": 3', 1), *args)
+
+
 if __name__ == "__main__":
     unittest.main()

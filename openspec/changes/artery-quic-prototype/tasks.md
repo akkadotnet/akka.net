@@ -16,7 +16,8 @@
 - [x] Validate actual stream counts, outbound recipient occupancy and configured receive-path budgets.
 - [x] Add sequential warmed comparison tooling that retains invalid attempts and distributions.
 - [x] Add optional process CPU, allocation/GC and ordinary QUIC I/O diagnostic output.
-- [ ] Add per-message sequence/duplicate accounting and controlled offered-load latency measurements.
+- [x] Add opt-in per-message sequence/content validation, cumulative credit and final delivery fences without retries.
+- [x] Add controlled offered-load latency with absolute release deadlines, bounded samples, independent release-lateness reporting and matched-rate gates.
 - [ ] Complete native-resource and isolated two-host/impairment evaluation before those claims.
 
 New performance comparisons follow the safety gates below. Machine records, benchmark results and private research notes are
@@ -84,5 +85,7 @@ stress gates remain open. Native-owner and controlled post-termination credentia
 place. Native ACK-loss checks now witness retries at both endpoints without a peer UID change,
 alongside the TCP control. Native reset checks retain receive bytes through three reset/reconnect
 cycles with one/eight streams and final native release. These bounded cases do not force every late
-callback race or constitute full qualification. Sequence-aware benchmark goodput and controlled
-offered-load latency remain the next harness work before primary optimization claims.
+callback race or constitute full qualification. The benchmark now has sequence-aware goodput and
+controlled offered-load latency, including timeout checks that distinguish scheduled offers from
+actual echo progress. Native-write/stage progress observations and contemporary CPU, memory and
+latency comparisons remain required before selecting another stage optimization.

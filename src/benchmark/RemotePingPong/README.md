@@ -119,6 +119,7 @@ long-lived server does not accumulate idle actors across runs.
 | `--quic-streams S` | `1` | ✓ | ✓ | ✓ | Native ordinary streams, bounded by outbound lanes and 64 |
 | `--diagnostics` | off | ✓ | ✓ | ✓ | Optional process CPU/allocation/GC and ordinary QUIC I/O counters |
 | `--validate-sequence` | off | ✓ | — | — | Ordered real V2 delivery, cumulative credit, phase agreement and final receiver receipts |
+| `--rtt-interval-ms N` | off | ✓ | — | — | Fixed scheduled offers for validated ping-pong; 1–1000 ms, at most 1,000,000 total RTT samples |
 | `--cert PATH` | ephemeral in encrypted `run` | ✓ | ✓ | ✓ | PKCS#12 identity; required in encrypted split modes |
 | `--cert-password-env NAME` | none | ✓ | ✓ | ✓ | Read the PKCS#12 password from this environment variable; never print its value |
 | `--peer-pin THUMBPRINT[,THUMBPRINT]` | own identity in encrypted `run` | ✓ | ✓ | ✓ | Trusted peer pins; required in encrypted split modes |
@@ -315,6 +316,42 @@ dotnet test src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj -c Re
 cd src/benchmark/RemotePingPong
 python3 -m unittest -v test_compare_transports.py
 ```
+
+### Scheduled Offered-Load Latency
+
+Add `--rtt-interval-ms N` to validated loopback ping-pong, with explicit `--clients`
+and `--msgs`. Each scheduled burst offers one request per client independently of
+echo completion. Every offer has an absolute monotonic due time. Late offers are
+retained, and per-client credit still bounds messages actually sent. The run fails
+on stalled progress, invalid delivery, cancellation or any client failure, including
+while waiting for final echoes and receipts. It never silently lowers offered load.
+At least two bursts are required; the sample budget is at most 1,000,000 RTTs across
+all clients per repetition. Arrays are prepared before timing.
+
+Each `RTT` JSON record reports all validated samples and nearest-rank p50/p95/p99/max
+in microseconds. Scheduled-to-echo includes generator lateness, actor/credit delay,
+serialization, transport, receiver work and echo validation. Dispatch-to-echo excludes
+time before the sending actor issues the request. Release lateness describes the
+load generator separately. These percentiles are separate distributions: adding their
+p99 values does not decompose the end-to-end p99. This is application RTT, not a
+packet or network-only latency measurement.
+
+```bash
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --output /tmp/rpp-paced-comparison --pattern ping-pong --validate-sequence \
+  --clients 128 --window 10 --messages 2500 --rtt-interval-ms 2 \
+  --lanes 8 --repetitions 4
+```
+
+This offers 64,000 RTTs/s, with a nominal five-second schedule per phase. The
+controller checks complete phase/sample proofs, rate/span arithmetic, finite ordered
+percentiles and latency-component consistency. Actual release rates must be within 5%
+of nominal and within 3% across a comparison round. It retains failed attempts and
+rate mismatches. `rtt-summary.csv` summarizes per-run percentiles; it does not pool
+samples across runs. Message rate in paced mode is capped by offered load and must
+not be presented as maximum throughput. Collect CPU/allocation diagnostics separately;
+combining `--diagnostics` with paced latency is rejected.
 
 ### `--oneway`
 

@@ -59,6 +59,7 @@ namespace RemotePingPong
         private static int? _quicStreamsOverride;
         private static bool _diagnostics;
         private static bool _validateSequence;
+        private static int? _rttIntervalMs;
         private static RealPayload.V2.RealBenchmarkMessage[]? _validatedPayloads;
         private static long _sequenceDatasetAllocatedBytes;
         private static readonly HashSet<ActorSystem> ActorSystems = new();
@@ -633,6 +634,11 @@ namespace RemotePingPong
                 Description = "Loopback real V2 only: validate ordered unique payloads, cumulative credit and a final delivery fence. " +
                               "Uses a prepared immutable sequence dataset; results are distinct from historical count-only runs."
             };
+            var rttIntervalOption = new Option<int?>("--rtt-interval-ms")
+            {
+                Description = "Fixed scheduled ping-pong burst interval, 1–1000 ms. Requires loopback ordered real V2 validation, " +
+                              "explicit clients/messages and at most 1000000 total round trips."
+            };
 
             var windowOption = new Option<int>("--window")
             {
@@ -799,6 +805,20 @@ namespace RemotePingPong
             runCommand.Options.Add(payloadOption);
             runCommand.Options.Add(serializerOption);
             runCommand.Options.Add(validateSequenceOption);
+            runCommand.Options.Add(rttIntervalOption);
+            runCommand.Validators.Add(result =>
+            {
+                var interval = result.GetValue(rttIntervalOption);
+                if (!interval.HasValue)
+                    return;
+                var clients = result.GetValue(clientsOption);
+                var messages = result.GetValue(msgsOption);
+                if (!result.GetValue(validateSequenceOption) || result.GetValue(onewayOption) || result.GetValue(diagnosticsOption)
+                    || interval is < 1 or > 1000 || clients is null or <= 0 || messages is null or < 2
+                    || messages.Value * (long)clients.Value > PacedBenchmark.MaximumSamples)
+                    result.AddError("--rtt-interval-ms requires validated ping-pong, interval 1–1000, explicit positive clients, " +
+                                    "at least two messages/client and at most 1000000 total RTTs; collect diagnostics separately.");
+            });
             runCommand.Validators.Add(result =>
             {
                 if (!result.GetValue(validateSequenceOption))
@@ -813,7 +833,7 @@ namespace RemotePingPong
             });
             AddPayloadSerializerValidation(runCommand);
             AddTransportOptions(runCommand, splitMode: false);
-            runCommand.SetAction(parseResult => RunLoopbackAsync(
+            runCommand.SetAction((parseResult, cancellationToken) => RunLoopbackAsync(
                 SelectTransport(parseResult.GetValue(arteryOption), parseResult.GetValue(transportOption),
                     parseResult.GetValue(certificateOption), parseResult.GetValue(passwordEnvironmentOption),
                     parseResult.GetValue(peerPinsOption), parseResult.GetValue(quicStreamsOption), splitMode: false, diagnostics: parseResult.GetValue(diagnosticsOption)),
@@ -827,7 +847,8 @@ namespace RemotePingPong
                 parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(payloadOption)!,
-                parseResult.GetValue(serializerOption), parseResult.GetValue(validateSequenceOption)));
+                parseResult.GetValue(serializerOption), parseResult.GetValue(validateSequenceOption),
+                parseResult.GetValue(rttIntervalOption), cancellationToken));
 
             var serverHostOption = new Option<string>("--host")
             {
@@ -954,9 +975,11 @@ namespace RemotePingPong
 
         private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
             string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
-            string payload, string? serializer, bool validateSequence = false)
+            string payload, string? serializer, bool validateSequence = false, int? rttIntervalMs = null,
+            CancellationToken cancellationToken = default)
         {
             _validateSequence = validateSequence;
+            _rttIntervalMs = rttIntervalMs;
             _useArtery = artery;
             _onewayMode = oneway;
             _windowSize = window;
@@ -978,7 +1001,7 @@ namespace RemotePingPong
             }
 
             ResolveQueueSize();
-            await Start(times);
+            await Start(times, cancellationToken);
             return 0;
         }
 
@@ -1055,6 +1078,8 @@ namespace RemotePingPong
             Console.WriteLine("Transport:                         {0}", _transport.DisplayName);
             _transport.PrintSecurity();
             Console.WriteLine("Mode:                              {0}", _onewayMode ? "one-way" : "ping-pong");
+            if (_rttIntervalMs.HasValue)
+                Console.WriteLine("Scheduled RTT interval:            {0} ms (release lateness included in scheduled-to-echo latency)", _rttIntervalMs.Value);
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
             Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
@@ -1169,7 +1194,7 @@ namespace RemotePingPong
 
         const long repeat = 100000L;
 
-        private static async Task Start(uint timesToRun)
+        private static async Task Start(uint timesToRun, CancellationToken cancellationToken = default)
         {
             var effectiveRepeat = _msgsOverride ?? repeat;
             for (var i = 0; i < timesToRun; i++)
@@ -1181,7 +1206,8 @@ namespace RemotePingPong
                     : GetClientSettings();
                 foreach (var throughput in clientSettings)
                 {
-                    var result1 = await Benchmark(throughput, effectiveRepeat, _windowSize, bestThroughput, redCount);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var result1 = await Benchmark(throughput, effectiveRepeat, _windowSize, bestThroughput, redCount, cancellationToken);
                     bestThroughput = result1.Item2;
                     redCount = result1.Item3;
                 }
@@ -1331,7 +1357,8 @@ namespace RemotePingPong
                 : numberOfClients * numberOfRepeats * 2;
         }
 
-        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, int windowSize, long bestThroughput, int redCount)
+        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, int windowSize, long bestThroughput, int redCount,
+            CancellationToken cancellationToken = default)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
             // In split-client mode the local system advertises _myHost (which must be reachable
@@ -1413,10 +1440,10 @@ namespace RemotePingPong
                 if (serialization.FindSerializerFor(payloads[^1]).ToBinary(payloads[^1]).Length != _realPayloadWireBytes)
                     throw new InvalidOperationException("Sequence payload encoding width changed within the prepared dataset.");
                 var settings = new ValidatedBenchmark.Agreement(validationPhase, checked((int)numberOfRepeats),
-                    windowSize, Math.Max(1, windowSize / 2), _onewayMode, _realPayloadWireBytes);
+                    windowSize, Math.Max(1, windowSize / 2), _onewayMode, _realPayloadWireBytes, RttIntervalMs: _rttIntervalMs ?? 0);
                 for (var i = 0; i < numberOfClients; i++)
                 {
-                    var completion = new ValidatedBenchmark.Outcome();
+                    var completion = new ValidatedBenchmark.Outcome(_rttIntervalMs.HasValue ? settings.Messages : 0);
                     validatedOutcomes.Add(completion);
                     tasks.Add(completion.Task);
                     var receiver = system1.ActorOf(Props.Create(() => new ValidatedBenchmark.Receiver(settings))
@@ -1555,9 +1582,20 @@ namespace RemotePingPong
                     ? ((ArteryRemoting)((RemoteActorRefProvider)((ExtendedActorSystem)system).Provider).Transport).QuicIoSnapshot
                     : default;
             var ioBefore = _diagnostics ? SnapshotIo(system1) + SnapshotIo(system2) : default;
+            var actualReleases = _rttIntervalMs.HasValue ? new long[checked((int)numberOfRepeats)] : Array.Empty<long>();
+            var pacedFinished = _rttIntervalMs.HasValue ? Task.WhenAll(tasks) : null;
+            var firstPacedFailure = _rttIntervalMs.HasValue ? Task.WhenAny(validatedOutcomes.Select(outcome => outcome.Failure)).Unwrap() : null;
+            PacedBenchmark.Releases? releases = null;
 
             var sw = Stopwatch.StartNew();
-            if (_onewayMode || _validateSequence)
+            if (_rttIntervalMs.HasValue)
+            {
+                var origin = Stopwatch.GetTimestamp();
+                primeTargets.ForEach(client => client.Tell(new PacedBenchmark.Run(validationPhase, origin)));
+                releases = await PacedBenchmark.ReleaseAsync(primeTargets, validationPhase, origin, actualReleases,
+                    _rttIntervalMs.Value, pacedFinished!, firstPacedFailure!, cancellationToken);
+            }
+            else if (_onewayMode || _validateSequence)
             {
                 // One trigger per sender: OneWaySenderActor sends its whole windowSize credit
                 // up-front as soon as it sees Messages.Run, then tops back up on each Ack.
@@ -1572,8 +1610,10 @@ namespace RemotePingPong
                         c.Tell(_payloadInstance);
                 });
             }
-            var waiting = Task.WhenAll(tasks);
-            var completedCounts = await waiting;
+            var waiting = pacedFinished ?? Task.WhenAll(tasks);
+            var completedCounts = firstPacedFailure is null
+                ? await waiting.WaitAsync(cancellationToken)
+                : await PacedBenchmark.CompleteAsync(waiting, firstPacedFailure, cancellationToken);
             sw.Stop();
             if (_diagnostics)
             {
@@ -1646,8 +1686,13 @@ namespace RemotePingPong
                     preparedPayloads = _validatedPayloads!.Length,
                     datasetAllocatedBytes = _sequenceDatasetAllocatedBytes,
                     orderedPayloadsAndContent = true,
-                    retries = 0
+                    retries = 0,
+                    rttIntervalMs = _rttIntervalMs ?? 0
                 }));
+                if (releases is not null)
+                    Console.WriteLine("RTT " + System.Text.Json.JsonSerializer.Serialize(
+                        PacedBenchmark.Summarize(validationPhase, validatedOutcomes, releases),
+                        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
             }
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
