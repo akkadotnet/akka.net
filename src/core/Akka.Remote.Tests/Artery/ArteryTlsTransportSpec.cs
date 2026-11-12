@@ -9,6 +9,7 @@
 
 using System;
 using System.Linq;
+using System.Net.Quic;
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -33,10 +34,11 @@ namespace Akka.Remote.Tests.Artery
         {
         }
 
-        private static Config ArteryConfig(int port = 0) => ConfigurationFactory.ParseString($$"""
+        private static Config ArteryConfig(int port = 0, string transport = "tcp") => ConfigurationFactory.ParseString($$"""
             akka.loglevel = DEBUG
             akka.actor.provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
             akka.remote.artery.enabled = on
+            akka.remote.artery.transport = {{transport}}
             akka.remote.artery.canonical.hostname = "127.0.0.1"
             akka.remote.artery.canonical.port = {{port}}
             akka.remote.artery.large-message-destinations = ["/user/large"]
@@ -45,7 +47,7 @@ namespace Akka.Remote.Tests.Artery
             akka.remote.artery.advanced.maximum-large-frame-size = 256k
             """);
 
-        private static TlsPeerPolicy TrustCertificate(X509Certificate2 certificate, Action? onValidation = null) =>
+        internal static TlsPeerPolicy TrustCertificate(X509Certificate2 certificate, Action? onValidation = null) =>
             TlsPeerPolicy.CustomTrust((peerCertificate, _, _, _, _) =>
             {
                 onValidation?.Invoke();
@@ -54,9 +56,9 @@ namespace Akka.Remote.Tests.Artery
             }).And(TlsCertificateValidation.ValidateHostname());
 
         private static ActorSystemSetup MutualTlsSetup(X509Certificate2 certificate,
-            TlsPeerPolicy inboundClientPolicy, TlsPeerPolicy outboundServerPolicy, int port = 0) =>
+            TlsPeerPolicy inboundClientPolicy, TlsPeerPolicy outboundServerPolicy, int port = 0, string transport = "tcp") =>
             ActorSystemSetup.Create(
-                BootstrapSetup.Create().WithConfig(ArteryConfig(port)),
+                BootstrapSetup.Create().WithConfig(ArteryConfig(port, transport)),
                 new ArteryTlsSetup(ArteryTlsSettings.Mutual(certificate, inboundClientPolicy, outboundServerPolicy)));
 
         private static string SelectionPath(ActorSystem system, string actorName) =>
@@ -78,9 +80,12 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Mutual TLS protects Artery ordinary, large, and reliable control traffic with multiple lanes")]
-        public async Task Should_UseTlsForEveryArteryChannel()
+        [Theory(DisplayName = "Mutual TLS protects Artery ordinary, large, and reliable control traffic with multiple lanes")]
+        [InlineData("tcp")]
+        [InlineData("quic")]
+        public async Task Should_UseTlsForEveryArteryChannel(string byteTransport)
         {
+            RequireTransportSupport(byteTransport);
             using var certificate = CreateCertificate();
             var inboundValidationsA = 0;
             var outboundValidationsA = 0;
@@ -94,9 +99,9 @@ namespace Akka.Remote.Tests.Artery
             ActorSystem? systemB = null;
             try
             {
-                systemA = ActorSystem.Create("ArteryTlsA", MutualTlsSetup(certificate, inboundPolicyA, outboundPolicyA));
+                systemA = ActorSystem.Create("ArteryTlsA", MutualTlsSetup(certificate, inboundPolicyA, outboundPolicyA, transport: byteTransport));
                 InitializeLogger(systemA, "[A] ");
-                systemB = ActorSystem.Create("ArteryTlsB", MutualTlsSetup(certificate, inboundPolicyB, outboundPolicyB));
+                systemB = ActorSystem.Create("ArteryTlsB", MutualTlsSetup(certificate, inboundPolicyB, outboundPolicyB, transport: byteTransport));
                 InitializeLogger(systemB, "[B] ");
                 var ordinaryOnB = systemB.ActorOf(Props.Create(() => new Echo()), "ordinary");
                 var largeOnB = systemB.ActorOf(Props.Create(() => new LargeReceiver()), "large");
@@ -139,14 +144,24 @@ namespace Akka.Remote.Tests.Artery
                 await terminatedProbe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
 
                 largeOnB.Tell(PoisonPill.Instance);
-                outboundValidationsA.Should().BeGreaterThan(2,
-                    "the shared ordinary socket, control channel, and large channel authenticate the remote server");
-                inboundValidationsB.Should().BeGreaterThan(2,
-                    "the shared ordinary socket, control channel, and large channel authenticate the connecting node");
-                inboundValidationsA.Should().BeGreaterThan(1,
-                    "the reverse ordinary and control channels authenticate inbound peers too");
-                outboundValidationsB.Should().BeGreaterThan(1,
-                    "the reverse ordinary and control channels authenticate outbound peers too");
+                if (byteTransport == "tcp")
+                {
+                    outboundValidationsA.Should().BeGreaterThan(2,
+                        "the shared ordinary socket, control channel, and large channel authenticate the remote server");
+                    inboundValidationsB.Should().BeGreaterThan(2,
+                        "the shared ordinary socket, control channel, and large channel authenticate the connecting node");
+                    inboundValidationsA.Should().BeGreaterThan(1,
+                        "the reverse ordinary and control channels authenticate inbound peers too");
+                    outboundValidationsB.Should().BeGreaterThan(1,
+                        "the reverse ordinary and control channels authenticate outbound peers too");
+                }
+                else
+                {
+                    outboundValidationsA.Should().Be(1, "all three QUIC channels share one authenticated connection");
+                    inboundValidationsB.Should().Be(1);
+                    inboundValidationsA.Should().Be(1, "the peer independently authenticates its reverse connection");
+                    outboundValidationsB.Should().Be(1);
+                }
             }
             finally
             {
@@ -157,9 +172,12 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Artery ServerOnly TLS completes a real actor round-trip without a client certificate")]
-        public async Task Should_UseServerOnlyTls_ForAnonymousInboundClient()
+        [Theory(DisplayName = "Artery ServerOnly TLS completes a real actor round-trip without a client certificate")]
+        [InlineData("tcp")]
+        [InlineData("quic")]
+        public async Task Should_UseServerOnlyTls_ForAnonymousInboundClient(string byteTransport)
         {
+            RequireTransportSupport(byteTransport);
             using var certificate = CreateCertificate("1.3.6.1.5.5.7.3.1");
             var trust = TrustCertificate(certificate);
             ActorSystem? systemA = null;
@@ -167,7 +185,7 @@ namespace Akka.Remote.Tests.Artery
             try
             {
                 ActorSystemSetup ServerOnlySetup() => ActorSystemSetup.Create(
-                    BootstrapSetup.Create().WithConfig(ArteryConfig()),
+                    BootstrapSetup.Create().WithConfig(ArteryConfig(transport: byteTransport)),
                     new ArteryTlsSetup(ArteryTlsSettings.ServerOnly(certificate, trust)));
 
                 systemA = ActorSystem.Create("ArteryTlsServerOnlyA", ServerOnlySetup());
@@ -191,9 +209,12 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Mutual TLS does not create an Artery association when the outbound server certificate is untrusted")]
-        public async Task Should_RejectUntrustedPeerWithoutPlaintextFallback()
+        [Theory(DisplayName = "Mutual TLS does not create an Artery association when the outbound server certificate is untrusted")]
+        [InlineData("tcp")]
+        [InlineData("quic")]
+        public async Task Should_RejectUntrustedPeerWithoutPlaintextFallback(string byteTransport)
         {
+            RequireTransportSupport(byteTransport);
             using var certificateA = CreateCertificate();
             using var certificateB = CreateCertificate();
             using var unrelatedCertificate = CreateCertificate();
@@ -203,8 +224,8 @@ namespace Akka.Remote.Tests.Artery
             ActorSystem? systemB = null;
             try
             {
-                var systemASetup = MutualTlsSetup(certificateA, trustB, TrustCertificate(unrelatedCertificate));
-                var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA);
+                var systemASetup = MutualTlsSetup(certificateA, trustB, TrustCertificate(unrelatedCertificate), transport: byteTransport);
+                var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA, transport: byteTransport);
                 systemA = ActorSystem.Create("ArteryTlsRejectA", systemASetup);
                 InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsRejectB", systemBSetup);
@@ -218,6 +239,7 @@ namespace Akka.Remote.Tests.Artery
                 var transport = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
                 transport.Registry.AssociationFor(RARP.For(systemB).Provider.DefaultAddress)
                     .CurrentState.UniqueRemoteAddress.Should().BeNull("TLS authentication must complete before Artery associates the peer");
+                await VerifyAcceptedPeerAsync(systemB, certificateA, trustB, byteTransport);
             }
             finally
             {
@@ -228,9 +250,12 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Artery mutual TLS rejects a client without a certificate and does not fall back to plaintext")]
-        public async Task Should_RejectMissingClientCertificate()
+        [Theory(DisplayName = "Artery mutual TLS rejects a client without a certificate and does not fall back to plaintext")]
+        [InlineData("tcp")]
+        [InlineData("quic")]
+        public async Task Should_RejectMissingClientCertificate(string byteTransport)
         {
+            RequireTransportSupport(byteTransport);
             using var certificateA = CreateCertificate();
             using var certificateB = CreateCertificate();
             var trustB = TrustCertificate(certificateB);
@@ -240,9 +265,9 @@ namespace Akka.Remote.Tests.Artery
             try
             {
                 var systemASetup = ActorSystemSetup.Create(
-                    BootstrapSetup.Create().WithConfig(ArteryConfig()),
+                    BootstrapSetup.Create().WithConfig(ArteryConfig(transport: byteTransport)),
                     new ArteryTlsSetup(ArteryTlsSettings.ServerOnly(certificateA, trustB)));
-                var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA);
+                var systemBSetup = MutualTlsSetup(certificateB, trustA, trustA, transport: byteTransport);
                 systemA = ActorSystem.Create("ArteryTlsMissingClientA", systemASetup);
                 InitializeLogger(systemA, "[A] ");
                 systemB = ActorSystem.Create("ArteryTlsMissingClientB", systemBSetup);
@@ -256,6 +281,7 @@ namespace Akka.Remote.Tests.Artery
                 var transport = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
                 transport.Registry.AssociationFor(RARP.For(systemB).Provider.DefaultAddress)
                     .CurrentState.UniqueRemoteAddress.Should().BeNull("a client without a certificate must not associate");
+                await VerifyAcceptedPeerAsync(systemB, certificateA, trustB, byteTransport);
             }
             finally
             {
@@ -266,9 +292,12 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Artery reconnects over TLS after a peer restarts and changes incarnation")]
-        public async Task Should_ReconnectWithTls_AfterPeerRestart()
+        [Theory(DisplayName = "Artery reconnects over TLS after a peer restarts and changes incarnation")]
+        [InlineData("tcp")]
+        [InlineData("quic")]
+        public async Task Should_ReconnectWithTls_AfterPeerRestart(string byteTransport)
         {
+            RequireTransportSupport(byteTransport);
             const string peerName = "ArteryTlsRestartB";
             using var certificate = CreateCertificate();
             var trust = TrustCertificate(certificate);
@@ -277,9 +306,9 @@ namespace Akka.Remote.Tests.Artery
             ActorSystem? restartedSystemB = null;
             try
             {
-                systemA = ActorSystem.Create("ArteryTlsRestartA", MutualTlsSetup(certificate, trust, trust));
+                systemA = ActorSystem.Create("ArteryTlsRestartA", MutualTlsSetup(certificate, trust, trust, transport: byteTransport));
                 InitializeLogger(systemA, "[A] ");
-                systemB = ActorSystem.Create(peerName, MutualTlsSetup(certificate, trust, trust));
+                systemB = ActorSystem.Create(peerName, MutualTlsSetup(certificate, trust, trust, transport: byteTransport));
                 InitializeLogger(systemB, "[B] ");
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
                 var port = RARP.For(systemB).Provider.DefaultAddress.Port!.Value;
@@ -296,7 +325,7 @@ namespace Akka.Remote.Tests.Artery
                 systemB = null;
 
                 restartedSystemB = ActorSystem.Create(peerName,
-                    MutualTlsSetup(certificate, trust, trust, port));
+                    MutualTlsSetup(certificate, trust, trust, port, transport: byteTransport));
                 InitializeLogger(restartedSystemB, "[B restarted] ");
                 restartedSystemB.ActorOf(Props.Create(() => new Echo()), "echo");
                 var newUid = AddressUidExtension.Uid(restartedSystemB);
@@ -335,7 +364,83 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        private static X509Certificate2 CreateCertificate(params string[] ekuOids)
+        private async Task VerifyAcceptedPeerAsync(ActorSystem server, X509Certificate2 certificate,
+            TlsPeerPolicy serverPolicy, string byteTransport)
+        {
+            var valid = ActorSystem.Create("ArteryTlsValidPeer", MutualTlsSetup(certificate,
+                serverPolicy, serverPolicy, transport: byteTransport));
+            InitializeLogger(valid, "[valid] ");
+            try
+            {
+                var actor = await valid.ActorSelection(SelectionPath(server, "echo"))
+                    .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                var probe = CreateTestProbe(valid);
+                actor.Tell("accepted-after-rejection", probe.Ref);
+                await probe.ExpectMsgAsync("accepted-after-rejection", TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                await valid.Terminate().AwaitWithTimeout(10.Seconds());
+            }
+        }
+
+        [Theory(DisplayName = "Artery preserves explicit certificate hostname checks for both TLS roles")]
+        [InlineData("tcp", true, "localhost", true)]
+        [InlineData("tcp", true, "wrong.example", false)]
+        [InlineData("tcp", false, "localhost", true)]
+        [InlineData("tcp", false, "wrong.example", false)]
+        [InlineData("quic", true, "localhost", true)]
+        [InlineData("quic", true, "wrong.example", false)]
+        [InlineData("quic", false, "localhost", true)]
+        [InlineData("quic", false, "wrong.example", false)]
+        public async Task Should_ValidateExplicitHostname_When_PolicySpecifiesIt(
+            string byteTransport, bool inbound, string expectedName, bool accepted)
+        {
+            RequireTransportSupport(byteTransport);
+            using var certificate = CreateCertificate();
+            var trusted = TrustCertificate(certificate);
+            var named = trusted.And(TlsCertificateValidation.ValidateHostname(expectedName));
+            var client = ActorSystem.Create("ArteryTlsNamedClient",
+                MutualTlsSetup(certificate, trusted, inbound ? trusted : named, transport: byteTransport));
+            ActorSystem? server = null;
+            InitializeLogger(client, "[client] ");
+            try
+            {
+                server = ActorSystem.Create("ArteryTlsNamedServer",
+                    MutualTlsSetup(certificate, inbound ? named : trusted, trusted, transport: byteTransport));
+                InitializeLogger(server, "[server] ");
+                server.ActorOf(Props.Create(() => new Echo()), "echo");
+                if (accepted)
+                {
+                    var echo = await client.ActorSelection(SelectionPath(server, "echo"))
+                        .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                    var probe = CreateTestProbe(client);
+                    echo.Tell("explicit-name-accepted", probe.Ref);
+                    await probe.ExpectMsgAsync("explicit-name-accepted", TimeSpan.FromSeconds(5));
+                }
+                else
+                {
+                    var resolve = () => client.ActorSelection(SelectionPath(server, "echo"))
+                        .ResolveOne(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+                    await resolve.Should().ThrowAsync<ActorNotFoundException>();
+                }
+            }
+            finally
+            {
+                await client.Terminate().AwaitWithTimeout(10.Seconds());
+                if (server is not null)
+                    await server.Terminate().AwaitWithTimeout(10.Seconds());
+            }
+        }
+
+        internal static void RequireTransportSupport(string byteTransport)
+        {
+            if (byteTransport == "quic")
+                Assert.SkipUnless(QuicConnection.IsSupported && QuicListener.IsSupported,
+                    "Native QUIC tests require supported MsQuic and TLS 1.3. A skip does not establish QUIC correctness.");
+        }
+
+        internal static X509Certificate2 CreateCertificate(params string[] ekuOids)
         {
             using var key = RSA.Create(2048);
             var request = new CertificateRequest("CN=localhost", key, HashAlgorithmName.SHA256,

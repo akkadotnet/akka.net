@@ -5,6 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+// Preserve oblivious annotations on existing overridable APIs for source compatibility.
+// New factory code has full nullable analysis in its separate partial file.
+#nullable enable warnings
+
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -195,7 +199,7 @@ namespace Akka.TestKit
                 }
                 var systemSetup = WithTestEventListenerSetup(config.WithSetup(newBootstrap),
                     configWithDefaultFallback.HasValue ? configWithDefaultFallback.Value : _defaultConfig);
-                system = ActorSystem.Create(actorSystemName ?? "test", systemSetup);
+                system = CreateActorSystem(actorSystemName ?? "test", systemSetup);
             }
             else
             {

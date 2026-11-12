@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Linq;
 using System.Threading;
@@ -60,7 +62,7 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
         _config = config;
     }
 
-    private IActorRef _remoteWatcher;
+    private IActorRef? _remoteWatcher;
 
     private async Task<IActorRef> GetRemoteWatcherAsync()
     {
@@ -289,7 +291,7 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
 
                     
                 // signal to the first node that the fourth node is done
-                var endSystem = ActorSystem.Create("EndSystem", Sys.Settings.Config);
+                var endSystem = CreateActorSystem("EndSystem", Sys.Settings.Config);
                 try
                 {
                     var endProbe = CreateTestProbe(endSystem);

@@ -89,6 +89,26 @@ Artery can also use server-only TLS when clients should authenticate the server 
 
 Artery TLS policies authenticate transport peers; they do not authorize cluster membership or actor access. Configure trust and application-level authorization for those separate decisions. Keep the profile's certificate and private key alive until the actor system and its remoting transport have stopped, then dispose the caller-owned certificate.
 
+## Experimental Artery QUIC
+
+The QUIC prototype reuses the direct `ArteryTlsSetup` profiles above. Select it explicitly on every participating node:
+
+```hocon
+akka.actor.provider = remote
+akka.remote.artery {
+    enabled = on
+    transport = quic
+    canonical.hostname = "127.0.0.1"
+    canonical.port = 25520
+}
+```
+
+Supply the typed TLS setup when creating the actor system; QUIC always requires TLS 1.3 and explicit credentials. The same canonical `akka://` addresses apply. Both endpoints need UDP reachability and native QUIC support (`libmsquic` on Linux). The prototype has no TCP or plaintext fallback and does not support changing transports during a rolling cluster update.
+
+Use a supported serviced runtime/native pair and retain normal certificate validation. Older combinations can fail IP-literal handshakes before certificate validation; see [the upstream compatibility issue](https://github.com/microsoft/msquic/issues/6288).
+
+This prototype carries one control stream, configurable ordinary streams and an optional large-message stream on each outbound peer connection, with limits of 64 accepted and 64 outbound connections per node. `advanced.quic.ordinary-streams` defaults to one and is bounded by the outbound lane count and 64. Lane `i` stays on stream `i % S` within a connection generation. The receiver separately caps ordinary streams with `advanced.quic.maximum-inbound-ordinary-streams` (default eight, maximum 64). Native streams and processing lanes are distinct: receive consumers are created per accepted ordinary stream. Production readiness and a performance advantage have not been established.
+
 ## Migrate From DotNetty TLS
 
 For the complete transport change, follow [Migrating From DotNetty to Artery](dotnetty-to-artery.md), including cluster transition, address changes, Hosting, and bind-address limitations.

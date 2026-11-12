@@ -66,6 +66,25 @@ namespace Akka.Remote.Tests.Artery
             defaultAddress.Protocol.Should().Be("akka.tcp");
         }
 
+        [Theory(DisplayName = "QUIC rejects invalid stream limits and more streams than outbound lanes")]
+        [InlineData(0, 8, 8)]
+        [InlineData(65, 8, 8)]
+        [InlineData(1, 0, 8)]
+        [InlineData(1, 65, 8)]
+        [InlineData(8, 8, 4)]
+        public void Should_RejectStreamLimits_When_ConfigIsInvalid(int streams, int inboundLimit, int lanes)
+        {
+            var defaults = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.artery");
+            var config = ConfigurationFactory.ParseString($$"""
+                transport = quic
+                advanced.outbound-lanes = {{lanes}}
+                advanced.quic.ordinary-streams = {{streams}}
+                advanced.quic.maximum-inbound-ordinary-streams = {{inboundLimit}}
+                """).WithFallback(defaults);
+            var create = () => new ArterySettings(config);
+            create.Should().Throw<ConfigurationException>();
+        }
+
         [Fact(DisplayName = "Should_ParseArterySettingsDefaults_When_ConfigNotOverridden")]
         public void Should_ParseArterySettingsDefaults_When_ConfigNotOverridden()
         {
@@ -83,6 +102,9 @@ namespace Akka.Remote.Tests.Artery
             settings.InboundLanes.Should().Be(1);
             settings.InboundLaneBufferSize.Should().Be(4096);
             settings.OutboundLanes.Should().Be(1);
+            settings.QuicOrdinaryStreams.Should().Be(1);
+            settings.QuicIoStatisticsEnabled.Should().BeFalse();
+            settings.QuicMaximumInboundOrdinaryStreams.Should().Be(8);
             settings.HandshakeTimeout.Should().Be(20.Seconds());
             settings.HandshakeRetryInterval.Should().Be(1.Seconds());
             settings.InjectHandshakeInterval.Should().Be(1.Seconds());

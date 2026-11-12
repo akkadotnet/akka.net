@@ -80,6 +80,58 @@ dotnet test -c Release --framework net8.0 --filter "Category=MultiNodeTest"
 dotnet test -c Release --filter "FullyQualifiedName~ClusterSpec"
 ```
 
+#### Opt-in Artery QUIC Coverage
+
+The multi-node runner defaults to classic remoting. `AKKA_MNTR_TRANSPORT=artery` selects
+Artery TCP; `artery-quic` selects the experimental authenticated QUIC transport. Unknown
+values fail configuration. Explicit per-spec transport overrides retain precedence.
+
+For QUIC, supply a test PFX with a private key and SANs matching the test hosts, plus
+comma-separated certificate thumbprint pins for the permitted peers:
+
+```bash
+export AKKA_MNTR_QUIC_CERTIFICATE="/path/to/test-identity.pfx"
+export AKKA_MNTR_QUIC_PEER_PINS="TEST_CERTIFICATE_THUMBPRINT"
+# Set AKKA_MNTR_QUIC_CERTIFICATE_PASSWORD if the PFX requires it.
+AKKA_MNTR_TRANSPORT=artery-quic AKKA_MNTR_QUIC_STREAMS=8 \
+  dotnet test src/core/Akka.Remote.Tests.MultiNode/Akka.Remote.Tests.MultiNode.csproj \
+  -c Release --filter 'FullyQualifiedName~RemoteDeliverySpec'
+```
+
+Use disposable test credentials supplied outside the repository. This mode reuses the
+Akka.IO certificate loader and peer policies, requires pinned mutual authentication and
+outbound hostname validation, and fails if native QUIC support is unavailable. It does not
+change machine trust stores. Initial systems, `StartNewSystemAsync`, and the protected
+`CreateActorSystem` helper share credential setup. Additional systems created directly with
+`ActorSystem.Create` must supply their own typed TLS setup. Factory-owned certificates live
+through actor-system termination and until the native QUIC resources using them have finished
+cleanup; caller-supplied setup remains caller-owned.
+
+On Windows, the factory imports PFX credentials with `DefaultKeySet` for native TLS compatibility,
+without requesting `PersistKeySet`. Other platforms use `EphemeralKeySet`. The factory retains
+the certificate through system termination and any native cleanup continuing after the flush
+deadline. Failed startup closes native admission and retains credentials until existing native
+owners finish. Managed receive processing is observed separately, so a blocked serializer does
+not retain credentials after native cleanup. Caller-supplied certificates are not reimported or
+modified.
+
+`AKKA_MNTR_QUIC_STREAMS` accepts 1–64 (default 1) and configures matching ordinary stream
+admission and outbound lanes. Each role emits `[MULTINODE-TRANSPORT]` JSON with its **actual**
+transport, runtime and stream count. Inspect the role output in the test results: a passing
+classic override or native skip is not QUIC coverage. Ensure `dotnet` on `PATH` selects a
+runtime compatible with the test target; the runner starts child processes using that name.
+
+For incremental selection, pass `--sln Akka.slnx` explicitly to `dotnet incrementalist run`;
+the tool's default `*.sln` discovery does not find the repository's solution file. Confirm
+that projects and tests were actually selected before treating a zero exit code as validation.
+
+The compatible starting subset is `RemoteDeliverySpec`, `TransportRestartCleanupSpec`, and
+cluster `QuickRestartSpec`. Broader failure/lifecycle qualification remains incremental.
+`RemoteGatePiercingSpec`, `RemoteNodeRestartGateSpec`, and
+`RemoteNodeShutdownAndComesBackSpec` explicitly pin classic remoting. Artery test mode supports
+blackhole/heal; rate throttling and forced disassociation remain classic-only operations.
+QUIC mode does not make the entire multi-node suite compatible or production-qualified.
+
 ### Performance Tests
 
 ```bash

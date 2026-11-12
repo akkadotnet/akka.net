@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 
+#nullable enable
+
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -129,7 +131,7 @@ namespace Akka.Remote.Tests.MultiNode
                 // The artery keys are necessary. MultiNodeSpec adds a config tier that sets
                 // artery.canonical.port to 0. Without an explicit port here, that tier wins, the
                 // new system binds a random port, and `first` cannot reach it.
-                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
+                var freshSystem = CreateActorSystem(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
                     akka.remote.dot-netty.tcp.port = {addr.Port}
                     akka.remote.artery.canonical.hostname = {addr.Host}

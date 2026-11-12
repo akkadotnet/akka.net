@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -45,8 +47,9 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         readonly RestartNodeSpecConfig _config;
 
-        volatile UniqueAddress _secondUniqueAddress;
-        public UniqueAddress SecondUniqueAddress { get { return _secondUniqueAddress; } }
+        volatile UniqueAddress? _secondUniqueAddress;
+        public UniqueAddress SecondUniqueAddress => _secondUniqueAddress
+            ?? throw new InvalidOperationException("The second node address has not been transferred yet.");
 
         ImmutableList<Address> SeedNodes => ImmutableList.Create(GetAddress(_config.First), SecondUniqueAddress.Address,
             GetAddress(_config.Third));
@@ -60,12 +63,12 @@ namespace Akka.Cluster.Tests.MultiNode
         protected RestartNodeSpec(RestartNodeSpecConfig config) : base(config, typeof(RestartNodeSpec))
         {
             _config = config;
-            _secondSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
+            _secondSystem = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, Sys.Settings.Config));
             // Pin the restarted system to the SAME wire address for BOTH transports - under
             // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
             // system would bind a random artery canonical.port instead.
-            _secondRestartedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + _secondUniqueAddress.Address.Port
-                    + "\nakka.remote.artery.canonical.port=" + _secondUniqueAddress.Address.Port)
+            _secondRestartedSystem = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + SecondUniqueAddress.Address.Port
+                    + "\nakka.remote.artery.canonical.port=" + SecondUniqueAddress.Address.Port)
                 .WithFallback(Sys.Settings.Config)));
         }
 

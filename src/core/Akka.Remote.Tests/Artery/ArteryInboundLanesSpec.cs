@@ -51,6 +51,251 @@ namespace Akka.Remote.Tests.Artery
         {
         }
 
+        [Theory(DisplayName = "QUIC peers confirm simultaneous shutdown after draining queued traffic in both directions")]
+        [InlineData(1, false)]
+        [InlineData(8, false)]
+        [InlineData(1, true)]
+        [InlineData(8, true)]
+        public async Task Should_ConfirmPeerProgress_When_BothPeersDrainQueuedLanes(int streams, bool staggered)
+        {
+            ArteryTlsTransportSpec.RequireTransportSupport("quic");
+            using var certificate = ArteryTlsTransportSpec.CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, ArteryTlsTransportSpec.TrustCertificate(certificate));
+            var config = ConfigurationFactory.ParseString($$"""
+                akka.remote.artery.transport = quic
+                akka.remote.artery.advanced {
+                    outbound-lanes = 8
+                    quic.ordinary-streams = {{streams}}
+                    flush-wait-on-shutdown = 10s
+                }
+                """).WithFallback(GatedConfig(8 / streams, 4));
+            ActorSystem? first = null;
+            ActorSystem? second = null;
+            var firstGate = Guid.NewGuid().ToString("N");
+            var secondGate = Guid.NewGuid().ToString("N");
+            var bypassGate = Guid.NewGuid().ToString("N");
+            try
+            {
+                // One blocked path per direction is sufficient to retain receipt debt. Avoid
+                // occupying a worker for every lane on machines with a small thread pool.
+                GateBlockingSerializer.OpenGate(bypassGate);
+                var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), new ArteryTlsSetup(tls));
+                first = ActorSystem.Create("SimultaneousDrainA", setup);
+                second = ActorSystem.Create("SimultaneousDrainB", setup);
+                InitializeLogger(first, "[A] ");
+                InitializeLogger(second, "[B] ");
+                var firstTransport = (ArteryRemoting)RARP.For(first).Provider.Transport;
+                var secondTransport = (ArteryRemoting)RARP.For(second).Provider.Transport;
+                var forward = await FindRecipients(first, second);
+                var reverse = await FindRecipients(second, first);
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                await Task.WhenAll(firstTransport.QuicOrdinaryStreamsReadyAsync(deadline.Token),
+                    secondTransport.QuicOrdinaryStreamsReadyAsync(deadline.Token));
+                firstTransport.QuicOrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
+                secondTransport.QuicOrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
+                var firstMarkers = new DrainObserver(streams);
+                var secondMarkers = new DrainObserver(streams);
+                firstTransport.SubscribeControl(firstMarkers);
+                secondTransport.SubscribeControl(secondMarkers);
+
+                const int messages = 256;
+                for (var sequence = 0; sequence < messages; sequence++)
+                {
+                    foreach (var (lane, recipient) in forward)
+                        recipient.Remote.Tell(new GatedInt(lane == 0 ? firstGate : bypassGate, sequence), ActorRefs.NoSender);
+                    foreach (var (lane, recipient) in reverse)
+                        recipient.Remote.Tell(new GatedInt(lane == 0 ? secondGate : bypassGate, sequence), ActorRefs.NoSender);
+                }
+                await AwaitAssertAsync(() =>
+                {
+                    GateBlockingSerializer.HasEntered(firstGate).Should().BeTrue();
+                    GateBlockingSerializer.HasEntered(secondGate).Should().BeTrue();
+                }, TimeSpan.FromSeconds(5));
+
+                var firstShutdown = firstTransport.Shutdown();
+                var secondShutdown = secondTransport.Shutdown();
+                firstShutdown.IsCompleted.Should().BeFalse("the peer still has blocked accepted traffic");
+                secondShutdown.IsCompleted.Should().BeFalse("the peer still has blocked accepted traffic");
+                firstTransport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
+                secondTransport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
+                GateBlockingSerializer.OpenGate(firstGate);
+                if (staggered)
+                {
+                    await AwaitAssertAsync(() => firstTransport.QuicShutdownPeerProgress.Should().BeTrue(),
+                        TimeSpan.FromSeconds(5));
+                    firstShutdown.IsCompleted.Should().BeFalse("our receipts do not settle the peer's accepted data");
+                    firstTransport.WhenQuicNativeResourcesReleased.IsCompleted.Should().BeFalse();
+                    secondShutdown.IsCompleted.Should().BeFalse();
+                    secondTransport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
+                }
+                GateBlockingSerializer.OpenGate(secondGate);
+
+                (await firstTransport.QuicShutdownDataWritesSettled.WaitAsync(deadline.Token)).Should().BeTrue();
+                (await secondTransport.QuicShutdownDataWritesSettled.WaitAsync(deadline.Token)).Should().BeTrue();
+                await Task.WhenAll(firstShutdown, secondShutdown).WaitAsync(deadline.Token);
+                firstTransport.QuicShutdownPeerProgress.Should().BeTrue();
+                secondTransport.QuicShutdownPeerProgress.Should().BeTrue();
+                firstTransport.QuicShutdownReceiptsOutstanding.Should().Be(0);
+                secondTransport.QuicShutdownReceiptsOutstanding.Should().Be(0);
+                await Task.WhenAll(firstMarkers.AllMarkers.Task, secondMarkers.AllMarkers.Task).WaitAsync(deadline.Token);
+                await Task.WhenAll(firstTransport.WhenQuicNativeResourcesReleased,
+                    secondTransport.WhenQuicNativeResourcesReleased).WaitAsync(deadline.Token);
+                await Task.WhenAll(forward.Values.Concat(reverse.Values).Select(async recipient =>
+                {
+                    for (var sequence = 0; sequence < messages; sequence++)
+                        await recipient.Delivered.ExpectMsgAsync(sequence, TimeSpan.FromSeconds(5));
+                    await recipient.Delivered.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                }));
+            }
+            finally
+            {
+                GateBlockingSerializer.OpenGate(firstGate);
+                GateBlockingSerializer.OpenGate(secondGate);
+                await Task.WhenAll(new[] { first, second }.Where(system => system is not null)
+                    .Select(system => system!.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(15))));
+            }
+        }
+
+        private async Task<Dictionary<int, (IActorRef Remote, TestProbe Delivered)>> FindRecipients(
+            ActorSystem sending, ActorSystem receiving)
+        {
+            var recipients = new Dictionary<int, (IActorRef Remote, TestProbe Delivered)>();
+            for (var i = 0; i < 256 && recipients.Count < 8; i++)
+            {
+                var delivered = CreateTestProbe(receiving);
+                var name = $"simultaneous-{i}";
+                receiving.ActorOf(Props.Create(() => new GatedReceiver(delivered.Ref)), name);
+                var remote = await sending.ActorSelection(RemotePath(receiving, name))
+                    .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                recipients.TryAdd(Association.SelectLane(remote.Path.Uid, 8), (remote, delivered));
+            }
+            recipients.Should().HaveCount(8, "each outbound processing lane must carry real queued traffic");
+            return recipients;
+        }
+
+        [Theory(DisplayName = "QUIC shutdown reports missing peer progress when a real lane remains blocked after native FIN")]
+        [InlineData(1, false)]
+        [InlineData(8, false)]
+        [InlineData(1, true)]
+        [InlineData(8, true)]
+        public async Task Should_ReportIncompletePeerProgress_When_NativeFinPrecedesLaneDispatch(int streams, bool simultaneous)
+        {
+            ArteryTlsTransportSpec.RequireTransportSupport("quic");
+            using var certificate = ArteryTlsTransportSpec.CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, ArteryTlsTransportSpec.TrustCertificate(certificate));
+            var config = ConfigurationFactory.ParseString($$"""
+                akka.remote.artery.transport = quic
+                akka.remote.artery.advanced {
+                    outbound-lanes = 8
+                    quic.ordinary-streams = {{streams}}
+                    flush-wait-on-shutdown = {{(simultaneous ? "2s" : "300ms")}}
+                }
+                """).WithFallback(GatedConfig(4, 4));
+            ActorSystem? sender = null;
+            ActorSystem? receiver = null;
+            var gateKey = Guid.NewGuid().ToString("N");
+            var reverseGateKey = Guid.NewGuid().ToString("N");
+            try
+            {
+                var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), new ArteryTlsSetup(tls));
+                sender = ActorSystem.Create("DrainSender", setup);
+                receiver = ActorSystem.Create("DrainReceiver", setup);
+                InitializeLogger(sender, "[sender] ");
+                InitializeLogger(receiver, "[receiver] ");
+                var delivered = CreateTestProbe(receiver);
+                receiver.ActorOf(Props.Create(() => new GatedReceiver(delivered.Ref)), "gated");
+                var remote = await sender.ActorSelection($"{RARP.For(receiver).Provider.DefaultAddress}/user/gated")
+                    .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                var transport = (ArteryRemoting)RARP.For(sender).Provider.Transport;
+                var reverseTransport = (ArteryRemoting)RARP.For(receiver).Provider.Transport;
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await transport.QuicOrdinaryStreamsReadyAsync(deadline.Token);
+                var observed = new DrainObserver(streams);
+                reverseTransport.SubscribeControl(observed);
+                TestProbe? reverseDelivered = null;
+                DrainObserver? reverseObserved = null;
+                if (simultaneous)
+                {
+                    reverseDelivered = CreateTestProbe(sender);
+                    sender.ActorOf(Props.Create(() => new GatedReceiver(reverseDelivered.Ref)), "gated");
+                    var reverseRemote = await receiver.ActorSelection($"{RARP.For(sender).Provider.DefaultAddress}/user/gated")
+                        .ResolveOne(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+                    await reverseTransport.QuicOrdinaryStreamsReadyAsync(deadline.Token);
+                    reverseObserved = new DrainObserver(streams);
+                    transport.SubscribeControl(reverseObserved);
+                    for (var value = 0; value < 3; value++)
+                        reverseRemote.Tell(new GatedInt(reverseGateKey, value));
+                    await AwaitAssertAsync(() => GateBlockingSerializer.HasEntered(reverseGateKey).Should().BeTrue(),
+                        TimeSpan.FromSeconds(5));
+                }
+                for (var value = 0; value < 3; value++)
+                    remote.Tell(new GatedInt(gateKey, value));
+                await AwaitAssertAsync(() => GateBlockingSerializer.HasEntered(gateKey).Should().BeTrue(),
+                    TimeSpan.FromSeconds(5));
+                var shutdown = transport.Shutdown();
+                var reverseShutdown = simultaneous ? reverseTransport.Shutdown() : Task.CompletedTask;
+                (await transport.QuicShutdownDataWritesSettled.WaitAsync(deadline.Token)).Should().BeTrue(
+                    "native data/FIN completion must be witnessed independently of the blocked lane");
+                if (simultaneous)
+                {
+                    (await reverseTransport.QuicShutdownDataWritesSettled.WaitAsync(deadline.Token)).Should().BeTrue();
+                    await reverseObserved!.AllMarkers.Task.WaitAsync(deadline.Token);
+                }
+                await observed.AllMarkers.Task.WaitAsync(deadline.Token);
+                await Task.WhenAll(shutdown, reverseShutdown).AwaitWithTimeout(TimeSpan.FromSeconds(5));
+                transport.QuicShutdownPeerProgress.Should().BeFalse();
+                transport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
+                if (simultaneous)
+                {
+                    reverseTransport.QuicShutdownPeerProgress.Should().BeFalse();
+                    reverseTransport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
+                }
+                using var nativeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await transport.WhenQuicNativeResourcesReleased.WaitAsync(nativeDeadline.Token);
+                if (simultaneous)
+                    await reverseTransport.WhenQuicNativeResourcesReleased.WaitAsync(nativeDeadline.Token);
+                GateBlockingSerializer.OpenGate(gateKey);
+                GateBlockingSerializer.OpenGate(reverseGateKey);
+                for (var value = 0; value < 3; value++)
+                {
+                    await delivered.ExpectMsgAsync(value, TimeSpan.FromSeconds(5));
+                    if (simultaneous)
+                        await reverseDelivered!.ExpectMsgAsync(value, TimeSpan.FromSeconds(5));
+                }
+                await delivered.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                if (simultaneous)
+                {
+                    await reverseDelivered!.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                    reverseTransport.QuicShutdownPeerProgress.Should().BeFalse("late dispatch cannot revise a bounded shutdown outcome");
+                }
+                transport.QuicShutdownPeerProgress.Should().BeFalse("late dispatch cannot revise a bounded shutdown outcome");
+            }
+            finally
+            {
+                GateBlockingSerializer.OpenGate(gateKey);
+                GateBlockingSerializer.OpenGate(reverseGateKey);
+                await Task.WhenAll(new[] { sender, receiver }.Where(system => system is not null)
+                    .Select(system => system!.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(15))));
+            }
+        }
+
+        private sealed class GatedReceiver : ReceiveActor
+        {
+            public GatedReceiver(IActorRef target) => Receive<GatedInt>(message => target.Tell(message.Value));
+        }
+
+        private sealed class DrainObserver(int streams) : IControlMessageSubscriber
+        {
+            private readonly ConcurrentDictionary<long, byte> _seen = new();
+            internal TaskCompletionSource<Done> AllMarkers { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            public void ControlMessageReceived(long originUid, object message)
+            {
+                if (message is ArteryDrainRequest { StreamId: (byte)ArteryStreamId.Ordinary } request &&
+                    _seen.TryAdd(request.Id, 0) && _seen.Count == streams)
+                    AllMarkers.TrySetResult(Done.Instance);
+            }
+        }
+
         // Generous outbound-message-queue-size headroom (well above the production default of
         // 3072): several tests below fire a concurrent multi-recipient burst through ONE
         // association's SINGLE shared outbound queue purely to prove per-recipient ORDER on the

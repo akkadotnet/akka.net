@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
@@ -46,18 +48,19 @@ namespace Akka.Cluster.Tests.MultiNode
         private Lazy<ActorSystem> _seedSystem;
         private Lazy<ActorSystem> _unavailableSeedSystem;
 
-        volatile UniqueAddress _seedUniqueAddress;
-        public UniqueAddress SeedUniqueAddress => _seedUniqueAddress;
+        volatile UniqueAddress? _seedUniqueAddress;
+        public UniqueAddress SeedUniqueAddress => _seedUniqueAddress
+            ?? throw new InvalidOperationException("The seed address has not been transferred yet.");
 
-        private Address _verifiedLeader;
+        private Address? _verifiedLeader;
 
         public JoinWithOfflineSeedNodeSpec() : this(new JoinWithOfflineSeedNodeConfig()) { }
 
         protected JoinWithOfflineSeedNodeSpec(JoinWithOfflineSeedNodeConfig config) : base(config, typeof(JoinWithOfflineSeedNodeSpec))
         {
             _config = config;
-            _seedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
-            _unavailableSeedSystem = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
+            _seedSystem = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, Sys.Settings.Config));
+            _unavailableSeedSystem = new Lazy<ActorSystem>(() => CreateActorSystem(Sys.Name, Sys.Settings.Config));
         }
 
         protected override void AfterTermination()

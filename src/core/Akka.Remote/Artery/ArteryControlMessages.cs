@@ -39,6 +39,21 @@ namespace Akka.Remote.Artery
     [AkkaSerializable(Manifest = ArteryControlMessageSerializer.HeartbeatRspManifest, AllowEmpty = true)]
     internal sealed record ArteryHeartbeatRsp : IArteryControlMessage;
 
+    /// <summary>Progress marker for one materialized stream of a terminating peer.</summary>
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.DrainRequestManifest)]
+    internal sealed record ArteryDrainRequest(
+        [property: AkkaField(1)] UniqueAddress From,
+        [property: AkkaField(2)] long ToUid,
+        [property: AkkaField(3)] long Id,
+        [property: AkkaField(4)] byte StreamId) : IArteryControlMessage;
+
+    /// <summary>Peer transport progress; does not acknowledge actor business processing.</summary>
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.DrainAckManifest)]
+    internal sealed record ArteryDrainAck(
+        [property: AkkaField(1)] UniqueAddress From,
+        [property: AkkaField(2)] long ToUid,
+        [property: AkkaField(3)] long Id) : IArteryControlMessage;
+
     /// <summary>
     /// INTERNAL API.
     ///

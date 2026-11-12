@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -33,6 +35,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Remote")]
 [assembly: InternalsVisibleTo("Akka.Serialization.V2")]
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit")]
+[assembly: InternalsVisibleTo("Akka.Remote.TestKit.Xunit2")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit.Tests")]

@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -764,14 +766,14 @@ internal class MeasureDurationUntilDown : ReceiveActor
 public class StressSpec : MultiNodeClusterSpec
 {
     public StressSpecConfig.Settings Settings { get; }
-    public TestProbe IdentifyProbe;
+    public TestProbe? IdentifyProbe;
 
     protected override TimeSpan ShutdownTimeout => Dilated(TimeSpan.FromSeconds(30));
 
     public int Step = 0;
     public int NbrUsedRoles = 0;
 
-    public override void MuteLog(ActorSystem sys = null)
+    public override void MuteLog(ActorSystem? sys = null)
     {
         sys ??= Sys;
         base.MuteLog(sys);
@@ -864,7 +866,7 @@ public class StressSpec : MultiNodeClusterSpec
     /// </summary>
     public async Task<Option<IActorRef>> ClusterResultAggregatorAsync()
     {
-        IActorRef aggregatorRef = null;
+        IActorRef? aggregatorRef = null;
         await AwaitAssertAsync(async () =>
         {
             var probe = CreateTestProbe();
@@ -872,7 +874,7 @@ public class StressSpec : MultiNodeClusterSpec
                 .Tell(new Identify(Step), probe.Ref);
             aggregatorRef = (await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(3))).Subject;
         }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
-        return Option<IActorRef>.Create(aggregatorRef);
+        return aggregatorRef is null ? Option<IActorRef>.None : Option<IActorRef>.Create(aggregatorRef);
     }
 
     public async Task CreateResultAggregatorAsync(string title, int expectedResults, bool includeInHistory)
@@ -1324,7 +1326,7 @@ public class StressSpec : MultiNodeClusterSpec
                         if (previousAs.HasValue)
                             await ShutdownAsync(previousAs.Value);
 
-                        var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+                        var sys = CreateActorSystem(Sys.Name, Sys.Settings.Config);
                         MuteLog(sys);
                         await Cluster.Get(sys).JoinSeedNodesAsync(SeedNodes.Select(GetAddress));
                         nextAs = Option<ActorSystem>.Create(sys);

@@ -179,6 +179,12 @@ namespace Akka.Remote.Artery
         /// <see langword="null"/> (the default, and the only value when test-mode is off) disables
         /// the lane-path blackhole check entirely.
         /// </param>
+        /// <param name="onLaneConsumersStopped">
+        /// Optional per-materialization completion observer. Called on stage stop with a task
+        /// that settles after its lane consumers drain. Sink success and natural input EOF must
+        /// be checked separately; this task alone is not a successful-delivery acknowledgment.
+        /// Null preserves the existing untracked lane path.
+        /// </param>
         public ArteryInboundProcessingStage(
             int maxFrameLength,
             int maxLargeFrameLength,
@@ -189,7 +195,8 @@ namespace Akka.Remote.Artery
             IInboundContext? inboundContext = null,
             Action<object, string?, string>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
-            SharedTestState? testState = null)
+            SharedTestState? testState = null,
+            Action<Task, bool>? onLaneConsumersStopped = null)
         {
             if (inboundLanes < 1)
                 throw new ArgumentOutOfRangeException(nameof(inboundLanes), inboundLanes, "Must be >= 1.");
@@ -207,6 +214,7 @@ namespace Akka.Remote.Artery
             DispatchOrdinary = dispatchOrdinary;
             OnLanesInitialized = onLanesInitialized;
             TestState = testState;
+            OnLaneConsumersStopped = onLaneConsumersStopped;
 
             // Resolved ONCE per accepted connection (this stage is materialized per-connection),
             // never on the per-frame hot path -- and only when lanes are actually enabled, since
@@ -240,6 +248,8 @@ namespace Akka.Remote.Artery
 
             Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
+
+        private Action<Task, bool>? OnLaneConsumersStopped { get; }
 
         public int MaxFrameLength { get; }
 
@@ -366,6 +376,8 @@ namespace Akka.Remote.Artery
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
             private bool _preambleParsed;
+            private ArteryStreamId _streamId;
+            private bool _inputCompleted;
 
             /// <summary>
             /// Deliberately NOT constructed until <see cref="TryConsumePreamble"/> has parsed the
@@ -392,6 +404,7 @@ namespace Akka.Remote.Artery
 
             /// <summary>One bounded channel per lane; created once, lazily, by <see cref="InitLanes"/>.</summary>
             private Channel<LaneWorkItem>[]? _lanes;
+            private Task<bool>[]? _laneConsumers;
 
             /// <summary>Captured once (interpreter thread, at lane init) so lane consumer loops never touch the stage's lazily-initialized <c>Log</c> from a background thread.</summary>
             private ILoggingAdapter? _laneLog;
@@ -463,7 +476,7 @@ namespace Akka.Remote.Artery
                 }
                 else if (IsClosed(_stage.In) && !_writeInFlight)
                 {
-                    CompleteStage();
+                    CompleteInputStage();
                 }
                 // !_writeInFlight guards this exactly like DeliverOrPull's matching guard: while
                 // parked on lane backpressure, do NOT request more input from the connection, even
@@ -479,14 +492,36 @@ namespace Akka.Remote.Artery
 
             public void OnUpstreamFinish()
             {
+                _inputCompleted = true;
                 if (_pending.Count == 0 && !_writeInFlight)
-                    CompleteStage();
+                    CompleteInputStage();
 
                 // else: swallow the termination and let OnPull (non-lane path) / OnLaneWriteAvailable
                 // (lane path) drain the remainder, completing once both are empty/clear.
             }
 
             public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            private void CompleteInputStage()
+            {
+                // Receipt observation is opt-in for QUIC. Do not call an incomplete preamble
+                // or frame a successful input boundary merely because upstream reached EOF.
+                if (_stage.OnLaneConsumersStopped is not null &&
+                    (!_preambleParsed || _frameParser!.HasBufferedBytes))
+                {
+                    FailStage(new ArteryFramingException("Artery input ended within a preamble or frame."));
+                    return;
+                }
+                CompleteStage();
+            }
+
+            private void ValidateDrainRole(object payload)
+            {
+                if (payload is ArteryDrainRequest drain && drain.StreamId != (byte)_streamId)
+                    throw new ArteryFramingException("Artery shutdown marker does not match its stream preamble.");
+                if (payload is ArteryDrainAck && _streamId != ArteryStreamId.Control)
+                    throw new ArteryFramingException("Artery shutdown receipts require the control stream.");
+            }
 
             public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
@@ -508,6 +543,16 @@ namespace Akka.Remote.Artery
                     foreach (var lane in _lanes)
                         lane.Writer.TryComplete();
                 }
+                _stage.OnLaneConsumersStopped?.Invoke(_laneConsumers is null
+                    ? Task.CompletedTask : WaitForLaneConsumersAsync(_laneConsumers), _inputCompleted);
+            }
+
+            private static async Task WaitForLaneConsumersAsync(Task<bool>[] consumers)
+            {
+                var results = await Task.WhenAll(consumers).ConfigureAwait(false);
+                foreach (var completed in results)
+                    if (!completed)
+                        throw new InvalidOperationException("An inbound Artery lane consumer stopped before draining.");
             }
 
             /// <summary>
@@ -536,6 +581,7 @@ namespace Akka.Remote.Artery
                 }
 
                 ArteryConnectionHeader.TryParse(new ReadOnlySequence<byte>(_preambleBuffer), out var streamId, out _);
+                _streamId = streamId;
 
                 if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control && streamId != ArteryStreamId.Large)
                 {
@@ -597,7 +643,7 @@ namespace Akka.Remote.Artery
                     {
                         element = DecodeFrame(frameBody);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not ArteryFramingException)
                     {
                         Log.Warning(ex, "Transient error decoding an inbound Artery frame; connection remains live.");
                         continue;
@@ -621,7 +667,10 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
+                {
+                    ValidateDrainRole(payload);
                     return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                }
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
@@ -670,6 +719,7 @@ namespace Akka.Remote.Artery
                 var laneCount = _stage.InboundLanes;
                 _laneLog = Log;
                 var lanes = new Channel<LaneWorkItem>[laneCount];
+                var consumers = _stage.OnLaneConsumersStopped is null ? null : new Task<bool>[laneCount];
 
                 for (var i = 0; i < laneCount; i++)
                 {
@@ -686,10 +736,13 @@ namespace Akka.Remote.Artery
                     var log = _laneLog;
                     var serialization = _stage.Serialization;
                     var dispatch = _stage.DispatchOrdinary!;
-                    _ = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log));
+                    var consumer = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log));
+                    if (consumers is not null)
+                        consumers[i] = consumer;
                 }
 
                 _lanes = lanes;
+                _laneConsumers = consumers;
 
                 // Test-observability only (see ArteryTransportSetup.OnInboundLanesInitialized) --
                 // null (the production default) does nothing.
@@ -709,7 +762,7 @@ namespace Akka.Remote.Artery
             /// <c>[ThreadStatic]</c>) correct here even though different loop iterations may
             /// legitimately resume on different pool threads.
             /// </summary>
-            private static async Task RunLaneConsumer(
+            private static async Task<bool> RunLaneConsumer(
                 ChannelReader<LaneWorkItem> reader,
                 Akka.Serialization.Serialization serialization,
                 Action<object, string?, string> dispatch,
@@ -733,6 +786,7 @@ namespace Akka.Remote.Artery
                                     "Transient error deserializing/dispatching an inbound Artery lane message " +
                                     "(serializer id [{0}], manifest [{1}]); connection remains live.",
                                     item.SerializerId, item.Manifest);
+                                continue; // Per-frame failure is a drop; keep draining this lane.
                             }
                         }
                     }
@@ -740,7 +794,9 @@ namespace Akka.Remote.Artery
                 catch (Exception ex)
                 {
                     log.Warning(ex, "Inbound Artery lane consumer loop terminated unexpectedly.");
+                    return false;
                 }
+                return true;
             }
 
             private void DrainReadyFramesLaneMode()
@@ -755,7 +811,7 @@ namespace Akka.Remote.Artery
                     {
                         handled = ProcessFrameLaneMode(frameBody);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not ArteryFramingException)
                     {
                         Log.Warning(ex, "Transient error decoding an inbound Artery frame; connection remains live.");
                         continue;
@@ -792,6 +848,7 @@ namespace Akka.Remote.Artery
                     // non-lane path does and push it through the ordinary Out pipeline so
                     // InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound still see it.
                     var controlPayload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                    ValidateDrainRole(controlPayload);
                     _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest));
                     return true;
                 }
@@ -1028,7 +1085,7 @@ namespace Akka.Remote.Artery
                 DeliverOrPull();
 
                 if (_pending.Count == 0 && !_writeInFlight && IsClosed(_stage.In))
-                    CompleteStage();
+                    CompleteInputStage();
             }
 
             #endregion

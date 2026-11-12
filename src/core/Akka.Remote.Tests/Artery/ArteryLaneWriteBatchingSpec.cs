@@ -10,6 +10,7 @@
 using System;
 using System.Buffers;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Remote.Artery;
@@ -160,6 +161,49 @@ namespace Akka.Remote.Tests.Artery
             multiSegmentFrame.DisposeOwnedSegments();
             ownerA.DisposeCount.Should().Be(1);
             ownerB.DisposeCount.Should().Be(1);
+        }
+
+        [Fact(DisplayName = "The next write batch drains in order when upstream completes during backpressure")]
+        public async Task Should_DrainAccumulatedBatch_When_UpstreamCompletesWithoutDemand()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var publisher = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
+            var subscriber = this.CreateSubscriberProbe<ReadOnlySequence<byte>>();
+            var first = EncodeStageStyleFrame(Pattern(10, seed: 1));
+            var second = EncodeStageStyleFrame(Pattern(13, seed: 70));
+            var third = EncodeStageStyleFrame(Pattern(17, seed: 140));
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try
+            {
+                Source.FromPublisher(publisher)
+                    .Via(Flow.FromGraph(new LaneWriteBatchStage(16 * 1024)))
+                    .To(Sink.FromSubscriber(subscriber))
+                    .Run(materializer);
+                var subscription = await subscriber.ExpectSubscriptionAsync(deadline.Token);
+                subscription.Request(1);
+                await publisher.SendNextAsync(first.Frame, deadline.Token);
+                var initial = await subscriber.ExpectNextAsync(deadline.Token);
+                initial.ToArray().Should().Equal(Pattern(10, seed: 1));
+                initial.DisposeOwnedSegments();
+
+                await publisher.SendNextAsync(second.Frame, deadline.Token);
+                await publisher.SendNextAsync(third.Frame, deadline.Token);
+                await publisher.SendCompleteAsync(deadline.Token);
+                subscription.Request(1);
+                var drained = await subscriber.ExpectNextAsync(deadline.Token);
+                drained.ToArray().Should().Equal(Pattern(13, seed: 70).Concat(Pattern(17, seed: 140)));
+                second.Owner.DisposeCount.Should().Be(0);
+                third.Owner.DisposeCount.Should().Be(0);
+                drained.DisposeOwnedSegments();
+                await subscriber.ExpectCompleteAsync(deadline.Token);
+                first.Owner.DisposeCount.Should().Be(1);
+                second.Owner.DisposeCount.Should().Be(1);
+                third.Owner.DisposeCount.Should().Be(1);
+            }
+            finally
+            {
+                materializer.Shutdown();
+            }
         }
 
         [Fact(DisplayName = "Should_DisposeRetainedBatch_When_DownstreamCancels")]
