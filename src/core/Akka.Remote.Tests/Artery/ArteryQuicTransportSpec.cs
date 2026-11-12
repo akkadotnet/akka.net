@@ -92,6 +92,117 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Theory(DisplayName = "Late receive processing failure from a retired QUIC connection leaves its replacement live")]
+        [InlineData(1)]
+        [InlineData(8)]
+        public async Task Should_PreserveReplacement_When_RetiredReceiveProcessingFails(int streams)
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TrustCertificate(certificate));
+            Sys.EventStream.SetLogLevel(LogLevel.DebugLevel);
+            var observed = CreateTestProbe();
+            Sys.EventStream.Subscribe(observed.Ref, typeof(Debug));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log, ordinaryStreams: streams);
+            var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var materializer = ActorMaterializer.Create(Sys);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var oldProcessing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var oldSource = new TaskCompletionSource<Task<Done>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var replacementAdmitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var consumers = new ConcurrentBag<(ConcurrentQueue<ReadOnlySequence<byte>> Chunks, Task Done)>();
+            var first = Enumerable.Range(0, 32771).Select(i => (byte)(i * 31 + i / 251)).ToArray();
+            var second = Enumerable.Range(0, 16403).Select(i => (byte)(i * 17 + 59)).ToArray();
+            var accepted = 0;
+            var received = 0;
+            var error = new IOException("Controlled old-generation processing failure.");
+            try
+            {
+                var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
+                receiver.StartAccepting((source, _, admitted) =>
+                {
+                    if (Interlocked.Increment(ref accepted) == 1)
+                    {
+                        oldSource.TrySetResult(source.Take(1).RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer));
+                        admitted();
+                        return oldProcessing.Task;
+                    }
+                    var chunks = new ConcurrentQueue<ReadOnlySequence<byte>>();
+                    var processing = source.Skip(1).RunWith(Sink.ForEach<ReadOnlySequence<byte>>(chunk =>
+                    {
+                        // Keep the actual published chunks through the late fault, further reads and teardown.
+                        chunks.Enqueue(chunk);
+                        if (Interlocked.Add(ref received, checked((int)chunk.Length)) >= streams * first.Length)
+                            firstReceived.TrySetResult();
+                    }), materializer);
+                    consumers.Add((chunks, processing));
+                    if (consumers.Count == streams + 1)
+                        replacementAdmitted.TrySetResult();
+                    admitted();
+                    return processing;
+                });
+                var oldControl = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                var oldWrite = oldControl.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token).AsTask();
+                await (await oldSource.Task.WaitAsync(deadline.Token)).WaitAsync(deadline.Token);
+                await Assert.ThrowsAsync<QuicException>(() => oldControl.Stream.WritesClosed.WaitAsync(deadline.Token));
+                var writeError = await Record.ExceptionAsync(() => oldWrite.WaitAsync(deadline.Token));
+                if (writeError is not null)
+                    writeError.Should().BeOfType<QuicException>();
+                oldProcessing.Task.IsCompleted.Should().BeFalse();
+                oldControl.Retire();
+
+                var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                control.Stream.Should().NotBeSameAs(oldControl.Stream);
+                await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                var ordinary = new ArteryQuicTransport.Channel[streams];
+                for (var i = 0; i < streams; i++)
+                {
+                    ordinary[i] = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
+                    await ordinary[i].Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                    await ordinary[i].Stream.WriteAsync(first, deadline.Token);
+                }
+                await firstReceived.Task.WaitAsync(deadline.Token);
+                await replacementAdmitted.Task.WaitAsync(deadline.Token);
+                oldProcessing.Task.IsCompleted.Should().BeFalse("the old failure must occur after replacement traffic is received");
+                oldProcessing.SetException(error);
+                // Witness Track observing the old fault, rather than merely completing its input task.
+                await observed.FishForMessageAsync(message => message is Debug debug &&
+                    debug.Message.ToString() == $"Artery QUIC I/O ended: {error.Message}",
+                    TimeSpan.FromSeconds(10), cancellationToken: deadline.Token);
+                control.CancellationToken.IsCancellationRequested.Should().BeFalse();
+                foreach (var channel in ordinary)
+                {
+                    await channel.Stream.WriteAsync(second, deadline.Token);
+                    channel.Stream.CompleteWrites();
+                }
+                control.Stream.CompleteWrites();
+                await Task.WhenAll(consumers.Select(consumer => consumer.Done)).WaitAsync(deadline.Token);
+                sender.OrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
+            }
+            finally
+            {
+                oldProcessing.TrySetCanceled();
+                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                try
+                {
+                    await sender.ShutdownAsync(cleanup.Token);
+                    await receiver.ShutdownAsync(cleanup.Token);
+                    await Task.WhenAll(sender.WhenNativeResourcesReleased, receiver.WhenNativeResourcesReleased).WaitAsync(cleanup.Token);
+                }
+                finally
+                {
+                    materializer.Shutdown();
+                    Sys.EventStream.Unsubscribe(observed.Ref);
+                }
+            }
+            consumers.Should().HaveCount(streams + 1);
+            consumers.Count(consumer => consumer.Chunks.IsEmpty).Should().Be(1, "CONTROL carried only its preamble");
+            foreach (var consumer in consumers.Where(consumer => !consumer.Chunks.IsEmpty))
+                consumer.Chunks.SelectMany(chunk => chunk.ToArray()).Should().Equal(first.Concat(second));
+        }
+
         [Fact(DisplayName = "QUIC retires sibling channels when receive processing fails after a healthy FIN")]
         public async Task Should_RetireConnection_When_ReceiveProcessingFailsAfterFin()
         {

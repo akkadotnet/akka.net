@@ -66,6 +66,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Prototype shared per-stream shutdown markers and validated receipts, retaining control replies within the existing deadline.
 - [x] Verify shared per-stream peer progress with surviving recipients and explicit incomplete-progress timeout semantics; keep production qualification separate.
 - [x] Verify announced-peer data/control drain ordering during symmetric and staggered simultaneous shutdown, including native-lifetime sensitivity and unchanged blocked-consumer outcomes.
+- [x] Force a retired connection's managed processing failure after replacement traffic begins, retaining receive bytes through subsequent reads and native cleanup with one/eight streams.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
 (one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
@@ -89,8 +90,11 @@ the original deadline. These are bounded cases; broader simultaneous-load, reset
 and native resource/credential deadline stress gates remain open. Native-owner and controlled post-termination credential checks are in
 place. Native ACK-loss checks now witness retries at both endpoints without a peer UID change,
 alongside the TCP control. Native reset checks retain receive bytes through three reset/reconnect
-cycles with one/eight streams and final native release. These bounded cases do not force every late
-callback race or constitute full qualification. The benchmark now has sequence-aware goodput and
+cycles with one/eight streams and final native release. A separate one/eight-stream check holds old
+receive processing past source cancellation and native connection failure, establishes replacement
+traffic, then faults the old task and witnesses its observation before sending further replacement
+traffic. It retains actual received chunks through the fault and final native release. These bounded
+cases do not force every late native callback race or constitute full qualification. The benchmark now has sequence-aware goodput and
 controlled offered-load latency, including timeout checks that distinguish scheduled offers from
 actual echo progress. Native-write/stage progress observations and contemporary CPU, memory and
 latency comparisons remain required before selecting another stage optimization.
