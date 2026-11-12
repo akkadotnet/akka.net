@@ -392,6 +392,7 @@ namespace Akka.TestKit
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ChildActorOfAsync(Akka.Actor.Props props, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ChildActorOfAsync(Akka.Actor.Props props, string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> ChildActorOfAsync(Akka.Actor.Props props, string name, Akka.Actor.SupervisorStrategy supervisorStrategy, System.Threading.CancellationToken cancellationToken = default) { }
+        protected virtual Akka.Actor.ActorSystem CreateActorSystem(string name, Akka.Actor.Setup.ActorSystemSetup setup) { }
         public Akka.TestKit.EventFilterFactory CreateEventFilter(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.IActorRef CreateTestActor(string name) { }
         public Akka.TestKit.TestBarrier CreateTestBarrier(int count) { }
