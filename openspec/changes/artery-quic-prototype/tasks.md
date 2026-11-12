@@ -53,7 +53,7 @@ private machine records remain outside this source/specification change. Transpo
 ## 5. Safety and multi-node readiness
 
 - [x] Record unpooled owned receive storage as a constraint; pooled writes may be released only after their native use settles.
-- [ ] Extend retained-receive checks through later reads, FIN/reset and system shutdown without actor disposal obligations.
+- [x] Extend retained-receive checks through later reads, FIN/reset and system shutdown without actor disposal obligations.
 - [x] Add an explicit opt-in QUIC mode to the existing multi-node transport selection, with invalid-mode rejection and effective-transport reporting.
 - [x] Provide validated test credentials/TLS setup for initial, restarted and directly created actor systems; preserve per-spec config precedence.
 - [x] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
@@ -64,8 +64,8 @@ The runner foundation now covers authenticated delivery (one/eight streams), can
 (one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
 (eight). Credentials, native startup failure and caller-owned setup have focused checks. Known-bad
 controls detect early certificate disposal, failed-restart leaks and escaped receive scratch storage.
-Retained receive bytes are also checked after FIN and native/materializer shutdown; retention through
-reset/reconnect is still a distinct open check. This is bounded coverage, not whole-suite qualification.
+Retained receive bytes are checked after FIN and after reset/reconnect with distinct replacement
+payloads, then native/materializer shutdown. This is bounded coverage, not whole-suite qualification.
 
 The single-lane live-recipient branch already exists in `ArteryQuicStreamsSpec`; its remaining shutdown
 gap is peer consumption before connection retirement. Do not duplicate the branch or treat native

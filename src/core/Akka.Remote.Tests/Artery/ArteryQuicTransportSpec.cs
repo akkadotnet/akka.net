@@ -8,6 +8,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -486,6 +487,12 @@ namespace Akka.Remote.Tests.Artery
             var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
             var materializer = ActorMaterializer.Create(Sys);
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var retained = new ConcurrentQueue<ReadOnlySequence<byte>>();
+            var payload = Enumerable.Range(0, 3 * 16 * 1024 + 29).Select(i => (byte)(i * 31 + i / 251)).ToArray();
+            var replacementPayload = payload.Select(value => (byte)~value).ToArray();
+            var firstReceived = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var replacementReceived = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var receivedBytes = 0;
             try
             {
                 var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
@@ -493,7 +500,17 @@ namespace Akka.Remote.Tests.Artery
                 {
                     // This test isolates native channel retirement. Protocol admission itself is
                     // covered by real actors; here the consumer acknowledges admission explicitly.
-                    source.RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), materializer);
+                    // The adapter prepends its owned preamble. Retain native data chunks themselves,
+                    // without copying on receipt, through reset, reconnect and native teardown.
+                    source.Skip(1).RunWith(Sink.ForEach<ReadOnlySequence<byte>>(chunk =>
+                    {
+                        retained.Enqueue(chunk);
+                        var count = Interlocked.Add(ref receivedBytes, checked((int)chunk.Length));
+                        if (count >= payload.Length)
+                            firstReceived.TrySetResult(Done.Instance);
+                        if (count >= payload.Length + replacementPayload.Length)
+                            replacementReceived.TrySetResult(Done.Instance);
+                    }), materializer);
                     admitted();
                 });
                 var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
@@ -504,6 +521,8 @@ namespace Akka.Remote.Tests.Artery
                     ordinary[i] = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
                     await ordinary[i].Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
                 }
+                await ordinary[0].Stream.WriteAsync(payload, deadline.Token);
+                await firstReceived.Task.WaitAsync(deadline.Token);
                 ordinary[^1].Stream.Abort(QuicAbortDirection.Write, 42);
 
                 foreach (var sibling in ordinary.Take(streams - 1).Prepend(control))
@@ -519,7 +538,10 @@ namespace Akka.Remote.Tests.Artery
                 {
                     var channel = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
                     await channel.Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                    if (i == 0)
+                        await channel.Stream.WriteAsync(replacementPayload, deadline.Token);
                 }
+                await replacementReceived.Task.WaitAsync(deadline.Token);
                 sender.OrdinaryStreamCounts().Values.Should().ContainSingle().Which.Should().Be(streams);
             }
             finally
@@ -529,6 +551,8 @@ namespace Akka.Remote.Tests.Artery
                 await receiver.ShutdownAsync(shutdown.Token);
                 materializer.Shutdown();
             }
+            retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(payload.Concat(replacementPayload),
+                "published receive storage must survive reset, a new connection's reads and transport shutdown");
         }
 
         [Theory(DisplayName = "QUIC rejects duplicate control and excess ordinary channels")]
