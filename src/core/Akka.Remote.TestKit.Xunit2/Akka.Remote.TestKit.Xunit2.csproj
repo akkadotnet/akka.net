@@ -58,6 +58,9 @@
     <Compile Include="..\Akka.Remote.TestKit\MsgEncoder.cs">
       <Link>MsgEncoder.cs</Link>
     </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MultiNodeTransport.cs">
+      <Link>MultiNodeTransport.cs</Link>
+    </Compile>
     <Compile Include="..\Akka.Remote.TestKit\MultiNodeSpec.cs">
       <Link>MultiNodeSpec.cs</Link>
     </Compile>

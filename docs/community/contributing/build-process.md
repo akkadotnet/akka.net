@@ -80,7 +80,7 @@ dotnet test -c Release --framework net8.0 --filter "Category=MultiNodeTest"
 dotnet test -c Release --filter "FullyQualifiedName~ClusterSpec"
 ```
 
-#### Opt-in Artery QUIC coverage
+#### Opt-in Artery QUIC Coverage
 
 The multi-node runner defaults to classic remoting. `AKKA_MNTR_TRANSPORT=artery` selects
 Artery TCP; `artery-quic` selects the experimental authenticated QUIC transport. Unknown
