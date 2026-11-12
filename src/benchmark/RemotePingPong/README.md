@@ -394,3 +394,118 @@ default-shaped runs comparable to old ones.
 Actors: `BenchmarkActor` + `EchoActor` (ping-pong), `OneWaySenderActor` + `OneWayReceiverActor`
 (one-way), `AllStartedActor` (the `Identify` readiness handshake that confirms every remote actor is
 reachable before timing starts), `DropCounterActor` (queue-overflow visibility).
+
+### Authenticated TCP and validated comparisons
+
+`--transport dotnetty|artery-tcp|artery-tls` selects the transport for both peers.
+DotNetty remains the default; `--artery` remains an alias for plaintext Artery.Tcp.
+The TLS arm uses existing Akka.IO policies: TLS 1.3, mutual authentication, pinned
+peer trust and hostname validation. Loopback generates a temporary process-owned
+identity. Encrypted split server/client modes require `--cert identity.pfx` and
+`--peer-pin THUMBPRINT` on both processes; `--cert-password-env NAME` reads a password
+without printing it. Keep private identities outside the repository. Benchmark-owned
+credentials remain alive until every actor system has stopped. Windows uses
+Schannel-compatible default key storage; other platforms use ephemeral key storage.
+
+`--diagnostics` separately reports process CPU, managed allocation and GC counts.
+Loopback includes both actor systems; split client mode measures only that process.
+These figures do not measure native allocation, retained heap size or individual
+transport operations. Leave diagnostics off for primary timing; paced latency
+rejects this flag. Server mode has no measured repetition and emits no PROFILE row.
+
+`compare_transports.py --phase transports` compares DotNetty, Artery.Tcp and
+Artery TLS TCP sequentially with rotated TCP/TLS order. Each process performs one
+equal-sized warmup and one measurement. It retains individual results and failures,
+checks counts, payload size, rate arithmetic, lane occupancy and delivery proofs,
+and rejects short measurements. TCP/TLS use the same processing-lane and queue
+budgets. A lane is a processing path, not an independent TCP socket. Match runtime,
+source, build, payload and security when interpreting comparisons. A plaintext/TLS
+comparison measures different security work. The controller records source/binary
+hashes and environment metadata, but does not freeze a build or discover native
+library versions for you. Run build/profiling work outside measurement intervals.
+
+### Ordered Delivery Validation
+
+For new loopback comparisons, add `--validate-sequence --payload real --serializer v2`.
+Both one-way and ping-pong modes check each pair's payload sequence and full content.
+The sender keeps at most `--window` messages outstanding, uses cumulative delivery
+credit, and fails after ten seconds without progress. It never retries data. A
+parameter agreement precedes timing; an ordered final fence and receiver receipt
+are included in timing. Ping-pong validates every echo as well as forward delivery.
+The fence confirms benchmark actor processing, not completion of arbitrary business work.
+
+The existing payload's sequence field starts at 1,000,000,000, keeping its encoded
+integer width constant. Serialized V2 payloads are 352 bytes in this mode. Immutable
+outer records are prepared before timing and shared across clients; nested content
+is shared without mutation. The per-client message count is bounded to 1,000,000.
+Each `VALIDATION` JSON record reports the prepared count, setup allocation bytes,
+actual serialized payload bytes, agreed settings and final receipt count. Setup
+allocation is not retained heap size or total transport memory. Failures observed
+after the receipt remain latched through actor-system shutdown; final validation
+records are emitted only after shutdown and that check.
+
+These rows use a different protocol and payload encoding from historical count-only
+runs. Keep their source/build identities and summaries separate. The final fence
+delimits data issued by the agreed sender; it cannot guarantee the absence of future
+traffic after the run's actors have stopped. Legacy commands remain available.
+
+```bash
+dotnet src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll run \
+  --transport artery-tls --payload real --serializer v2 --validate-sequence --oneway \
+  --clients 32 --window 10 --msgs 8193 --times 2 \
+  --outbound-lanes 8 --inbound-lanes 8 --qsize 1024
+
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --output /tmp/rpp-ordered-comparison --pattern oneway --validate-sequence \
+  --clients 128 --window 10 --messages 30000 --lanes 8 --repetitions 4
+```
+
+The controller requires two distinct phase proofs and exact workload parameters,
+rejects retries, malformed CSV values, NaN and infinity, and checks throughput arithmetic
+against the harness's integer-millisecond rate calculation. The short first command exercises correctness;
+it is not a sufficiently long primary timing run. Use fresh output directories.
+
+Focused checks:
+
+```bash
+dotnet test src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj -c Release
+cd src/benchmark/RemotePingPong
+python3 -m unittest -v test_compare_transports.py
+```
+
+### Scheduled Offered-Load Latency
+
+Add `--rtt-interval-ms N` to validated loopback ping-pong, with explicit `--clients`
+and `--msgs`. Each scheduled burst offers one request per client independently of
+echo completion. Every offer has an absolute monotonic due time. Late offers are
+retained, and per-client credit still bounds messages actually sent. The run fails
+on stalled progress, invalid delivery, cancellation or any client failure, including
+while waiting for final echoes and receipts. It never silently lowers offered load.
+At least two bursts are required; the sample budget is at most 1,000,000 RTTs across
+all clients per repetition. Arrays are prepared before timing.
+
+Each `RTT` JSON record reports all validated samples and nearest-rank p50/p95/p99/max
+in microseconds. Scheduled-to-echo includes generator lateness, actor/credit delay,
+serialization, transport, receiver work and echo validation. Dispatch-to-echo excludes
+time before the sending actor issues the request. Release lateness describes the
+load generator separately. These percentiles are separate distributions: adding their
+p99 values does not decompose the end-to-end p99. This is application RTT, not a
+packet or network-only latency measurement.
+
+```bash
+python3 src/benchmark/RemotePingPong/compare_transports.py --phase transports \
+  --binary src/benchmark/RemotePingPong/bin/Release/net10.0/RemotePingPong.dll \
+  --output /tmp/rpp-paced-comparison --pattern ping-pong --validate-sequence \
+  --clients 128 --window 10 --messages 2500 --rtt-interval-ms 2 \
+  --lanes 8 --repetitions 4
+```
+
+This offers 64,000 RTTs/s, with a nominal five-second schedule per phase. The
+controller checks complete phase/sample proofs, rate/span arithmetic, finite ordered
+percentiles and latency-component consistency. Actual release rates must be within 5%
+of nominal and within 3% across a comparison round. It retains failed attempts and
+rate mismatches. `rtt-summary.csv` summarizes per-run percentiles; it does not pool
+samples across runs. Message rate in paced mode is capped by offered load and must
+not be presented as maximum throughput. Collect CPU/allocation diagnostics separately;
+combining `--diagnostics` with paced latency is rejected.

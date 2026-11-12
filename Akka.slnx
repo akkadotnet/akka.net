@@ -18,6 +18,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj" />
     <Project Path="src/benchmark/RemotePingPong/RemotePingPong.csproj" />
     <Project Path="src/benchmark/SerializationBenchmarks/SerializationBenchmarks.csproj" />
     <Project Path="src/benchmark/SpawnBenchmark/SpawnBenchmark.csproj" />
