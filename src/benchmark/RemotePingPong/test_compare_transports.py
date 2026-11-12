@@ -159,6 +159,17 @@ class PacedContractTests(unittest.TestCase):
             controller.parse_run(output[:output.rfind("RTT ")], *args)
         with self.assertRaises(ValueError):
             controller.parse_run(output.replace('"rttIntervalMs": 2', '"rttIntervalMs": 3', 1), *args)
+        quic = dict(transport="quic", lanes=1, streams=1)
+        quic_output = output + "\n" + "\n".join([
+            "Recipient lane occupancy (send): 2", "Recipient lane occupancy (reply): 2",
+            "QUIC ordinary streams open: 1 (per-stream inbound lanes 1; receive paths 1)",
+            "QUIC reply ordinary streams open: 1"] * 2)
+        quic_args = (2, quic, "transports", True, 10, 8193, "ping-pong", 2)
+        self.assertEqual(len(controller.parse_run(quic_output, *quic_args)), 2)
+        with self.assertRaises(ValueError):
+            controller.parse_run(quic_output.replace("QUIC reply ordinary streams open: 1", ""), *quic_args)
+        with self.assertRaises(ValueError):
+            controller.parse_run(quic_output.replace("QUIC reply ordinary streams open: 1", "QUIC reply ordinary streams open: 2", 1), *quic_args)
 
 
 if __name__ == "__main__":

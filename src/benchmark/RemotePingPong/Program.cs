@@ -1566,6 +1566,15 @@ namespace RemotePingPong
                 var configuredStreams = _quicStreamsOverride ?? 1;
                 if (actualStreams != configuredStreams)
                     throw new InvalidOperationException($"Expected {configuredStreams} ordinary QUIC streams, observed {actualStreams}.");
+                if (system2 is not null)
+                {
+                    var replyRemoting = (ArteryRemoting)((RemoteActorRefProvider)((ExtendedActorSystem)system2).Provider).Transport;
+                    await replyRemoting.QuicOrdinaryStreamsReadyAsync(readyDeadline.Token);
+                    var replyStreams = replyRemoting.QuicOrdinaryStreamCounts().Values.Sum();
+                    if (replyStreams != configuredStreams)
+                        throw new InvalidOperationException($"Expected {configuredStreams} reply ordinary QUIC streams, observed {replyStreams}.");
+                    Console.WriteLine("QUIC reply ordinary streams open:  {0}", replyStreams);
+                }
                 Console.WriteLine("QUIC ordinary streams open:        {0} (configured {1}; per-stream inbound lanes {2}; receive paths {3})",
                     actualStreams, configuredStreams, _inboundLanesOverride ?? 1, actualStreams * (_inboundLanesOverride ?? 1));
             }

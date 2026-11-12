@@ -236,6 +236,10 @@ def parse_run(output, clients, cell, phase, validate_sequence=False, window=None
             opened = re.findall(r"QUIC ordinary streams open:\s+(\d+)", output)
             if opened != [str(cell["streams"])] * 2:
                 raise ValueError("actual native ordinary stream count differs from configured count")
+            if rtt_interval_ms is not None:
+                reply_opened = re.findall(r"QUIC reply ordinary streams open:\s+(\d+)", output)
+                if reply_opened != [str(cell["streams"])] * 2:
+                    raise ValueError("actual reply native stream readiness missing before paced timing")
             budgets = re.findall(r"per-stream inbound lanes (\d+); receive paths (\d+)", output)
             expected = (str(cell["lanes"] // cell["streams"]), str(cell["lanes"]))
             if budgets != [expected] * 2:
