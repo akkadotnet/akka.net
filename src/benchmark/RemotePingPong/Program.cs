@@ -53,8 +53,8 @@ namespace RemotePingPong
         // both ActorSystems bind. Default is the classic DotNetty TCP transport (the historical
         // baseline); "--artery" points the exact same benchmark at Artery.Tcp so the two produce
         // directly comparable msgs/sec numbers over an otherwise-identical workload.
-        private static bool _useArtery;
         private static BenchmarkTransport _transport = BenchmarkTransport.Default();
+        private static bool UseArtery => _transport.IsArtery;
         private static bool _diagnostics;
         private static bool _validateSequence;
         private static int? _rttIntervalMs;
@@ -62,13 +62,12 @@ namespace RemotePingPong
         private static long _sequenceDatasetAllocatedBytes;
         private static readonly HashSet<ActorSystem> ActorSystems = new();
 
-        private static bool SelectTransport(bool artery, string? transport, string? certificatePath,
+        private static BenchmarkTransport SelectTransport(bool artery, string? transport, string? certificatePath,
             string? passwordEnvironmentVariable, string? peerPins, bool splitMode, bool diagnostics = false)
         {
             _diagnostics = diagnostics;
-            _transport = BenchmarkTransport.Create(transport ?? (artery ? "artery-tcp" : "dotnetty"),
+            return BenchmarkTransport.Create(transport ?? (artery ? "artery-tcp" : "dotnetty"),
                 splitMode, certificatePath, passwordEnvironmentVariable, peerPins);
-            return _transport.IsArtery;
         }
 
         private static ActorSystem CreateBenchmarkActorSystem(string name, string host, int port)
@@ -181,10 +180,9 @@ namespace RemotePingPong
         // exercise a real network. When neither is used ("run", the default), the benchmark
         // behaves exactly as before - both ActorSystems in this one process over loopback,
         // byte-for-byte identical config. Split mode supports either transport, selected by the
-        // exact same "--artery" option as single-process mode (see _useArtery) - neither
-        // subcommand forces a transport on its own. (Dispatch between run/server/client is now
-        // handled directly by which subcommand's action runs - see BuildRootCommand() - so unlike
-        // the old positional parser there is no standalone "_serverMode" flag to check.)
+        // exact same "--artery" option as single-process mode (see UseArtery) - neither
+        // subcommand forces a transport on its own. Subcommand actions handle dispatch;
+        // _serverMode only controls the lifecycle marker printed after server cleanup.
         private static bool _clientMode;
         private static bool _serverMode;
 
@@ -226,10 +224,10 @@ namespace RemotePingPong
         // (RemoteSettings.AkkaScheme + TcpTransport's SchemeIdentifier, joined by
         // SchemeAugmenter). Split-client mode has to build the server's Address by hand (see
         // Benchmark()) since there's no local Provider.DefaultAddress to read it from, so this
-        // has to track _useArtery exactly, or RemoteScope deployment can't resolve the
+        // has to track UseArtery exactly, or RemoteScope deployment can't resolve the
         // association at all. Single-process mode never needs this - it always reads the scheme
         // straight off the real Provider.DefaultAddress.
-        private static string SplitServerScheme => _useArtery ? "akka" : "akka.tcp";
+        private static string SplitServerScheme => UseArtery ? "akka" : "akka.tcp";
 
         /// <summary>
         /// Auto-detects the local IP the OS would use to reach <paramref name="serverHost"/>: the
@@ -258,11 +256,11 @@ namespace RemotePingPong
         /// </summary>
         private static void ResolveQueueSize()
         {
-            if (!_useArtery)
+            if (!UseArtery)
             {
                 // --qsize/auto-raise tune akka.remote.artery.advanced.outbound-message-queue-size,
                 // which DotNetty's transport never reads - CreateActorSystemConfig() only writes
-                // that HOCON key when _useArtery is true. Leave _effectiveQueueSize/
+                // that HOCON key when UseArtery is true. Leave _effectiveQueueSize/
                 // _queueSizeAutoRaiseReason both null (never even computed) for a DotNetty run, so
                 // there's nothing to auto-raise; an explicit --qsize override is instead surfaced as
                 // a one-line "ignored" notice in the run header - see PrintSysInfo/PrintServerInfo.
@@ -297,7 +295,7 @@ namespace RemotePingPong
               remote.log-remote-lifecycle-events = off
             }");
 
-            var transportConfig = _useArtery
+            var transportConfig = UseArtery
                 ? ConfigurationFactory.ParseString($@"
                 akka.remote.artery {{
                   enabled = on
@@ -325,7 +323,7 @@ namespace RemotePingPong
             // auto-raise logic actually resolved an override - see ResolveQueueSize(). Leaving
             // _effectiveQueueSize null means no HOCON key is added here at all, so default-config
             // runs keep an identical config to pre-qsize behavior.
-            if (_useArtery && _effectiveQueueSize.HasValue)
+            if (UseArtery && _effectiveQueueSize.HasValue)
             {
                 var queueSizeConfig = ConfigurationFactory.ParseString($@"
                 akka.remote.artery.advanced {{
@@ -338,7 +336,7 @@ namespace RemotePingPong
             // they're actually going to be read (Artery mode) AND the caller passed an explicit
             // --inbound-lanes/--outbound-lanes. Left unset, no HOCON key is added at all and
             // Remote.conf's defaults apply untouched.
-            if (_useArtery && _inboundLanesOverride.HasValue)
+            if (UseArtery && _inboundLanesOverride.HasValue)
             {
                 var inboundLanesConfig = ConfigurationFactory.ParseString($@"
                 akka.remote.artery.advanced {{
@@ -347,7 +345,7 @@ namespace RemotePingPong
                 config = inboundLanesConfig.WithFallback(config);
             }
 
-            if (_useArtery && _outboundLanesOverride.HasValue)
+            if (UseArtery && _outboundLanesOverride.HasValue)
             {
                 var outboundLanesConfig = ConfigurationFactory.ParseString($@"
                 akka.remote.artery.advanced {{
@@ -936,20 +934,20 @@ namespace RemotePingPong
             // Bare invocation (no subcommand) preserves the historical default behavior byte-for-byte: the
             // same single-process loopback benchmark "run" performs with every option left at its default.
             rootCommand.SetAction(_ => RunLoopbackAsync(
-                artery: false, oneway: false, window: 50, clients: null, iobuf: null, msgs: null, qsize: null,
+                transport: BenchmarkTransport.Default(), oneway: false, window: 50, clients: null, iobuf: null, msgs: null, qsize: null,
                 inboundLanes: null, outboundLanes: null, times: 1u, payload: "toy", serializer: null));
 
             return rootCommand;
         }
 
-        private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
+        private static async Task<int> RunLoopbackAsync(BenchmarkTransport transport, bool oneway, int window, int? clients,
             string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
             string payload, string? serializer, bool validateSequence = false, int? rttIntervalMs = null,
             CancellationToken cancellationToken = default)
         {
             _validateSequence = validateSequence;
             _rttIntervalMs = rttIntervalMs;
-            _useArtery = artery;
+            _transport = transport;
             _onewayMode = oneway;
             _windowSize = window;
             _pinnedClients = clients;
@@ -974,11 +972,11 @@ namespace RemotePingPong
             return 0;
         }
 
-        private static async Task<int> RunServerModeAsync(bool artery, bool oneway, int window, int? clients,
+        private static async Task<int> RunServerModeAsync(BenchmarkTransport transport, bool oneway, int window, int? clients,
             string? iobuf, int? qsize, int? inboundLanes, int? outboundLanes, string host, int port,
             string payload, string? serializer)
         {
-            _useArtery = artery;
+            _transport = transport;
             _onewayMode = oneway;
             _windowSize = window;
             _pinnedClients = clients;
@@ -997,11 +995,11 @@ namespace RemotePingPong
             return 0;
         }
 
-        private static async Task<int> RunClientModeAsync(bool artery, bool oneway, int window, int? clients,
+        private static async Task<int> RunClientModeAsync(BenchmarkTransport transport, bool oneway, int window, int? clients,
             string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
             string host, int port, string? myHost, string payload, string? serializer)
         {
-            _useArtery = artery;
+            _transport = transport;
             _onewayMode = oneway;
             _windowSize = window;
             _pinnedClients = clients;
@@ -1068,7 +1066,7 @@ namespace RemotePingPong
             {
                 Console.WriteLine("IO buffer size (akka.io.tcp):      {0}", _ioBufSize);
             }
-            if (_useArtery)
+            if (UseArtery)
             {
                 // Always print the effective value - default (untouched), explicit --qsize
                 // override, or auto-raised - so a run's queue capacity is never ambiguous from
@@ -1188,7 +1186,7 @@ namespace RemotePingPong
 
         /// <summary>
         /// Split-mode server: a deliberately dumb, long-lived remote host - Artery or DotNetty,
-        /// whichever _useArtery selected (same "--artery" option rule as single-process mode; see
+        /// whichever UseArtery selected (same "--artery" option rule as single-process mode; see
         /// CreateActorSystemConfig()). It creates NO benchmark actors of its own - every
         /// echo/receiver actor is RemoteScope-deployed onto it by the client, via the exact same
         /// deployments single-process mode makes against its in-process system2 (see Benchmark()).
@@ -1268,7 +1266,7 @@ namespace RemotePingPong
             {
                 Console.WriteLine("Pinned client count:               {0}", _pinnedClients.Value);
             }
-            if (_useArtery)
+            if (UseArtery)
             {
                 Console.WriteLine("Outbound queue size (artery):      {0}{1}", _effectiveQueueSize ?? DefaultOutboundQueueCapacity,
                     _qSizeOverride.HasValue ? " (explicit --qsize)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
@@ -1513,7 +1511,7 @@ namespace RemotePingPong
                 PrintSysInfo(numberOfRepeats);
             }
 
-            if (_useArtery)
+            if (UseArtery)
             {
                 var lanes = _outboundLanesOverride ?? 1;
                 var sendRecipients = serverSideActors.GroupBy(actor => Association.SelectLane(actor.Path.Uid, lanes))

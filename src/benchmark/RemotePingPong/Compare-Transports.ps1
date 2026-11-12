@@ -230,11 +230,10 @@ function Write-ComparisonSummary([string]$Directory, [object[]]$Records) {
     $valid = @($Records | Where-Object status -EQ 'valid')
     $throughput = @(foreach ($group in ($valid | Group-Object cell | Sort-Object Name)) {
         $values = @($group.Group | ForEach-Object { [double]$_.measured.messages_per_second })
-        $mean = ($values | Measure-Object -Average).Average
-        $deviation = 0.0
-        if ($values.Count -gt 1) { $squared = ($values | ForEach-Object { ($_ - $mean) * ($_ - $mean) } | Measure-Object -Sum).Sum; $deviation = [math]::Sqrt($squared / ($values.Count - 1)) / $mean * 100 }
+        $stats = $values | Measure-Object -AllStats
+        $deviation = if ($values.Count -gt 1) { $stats.StandardDeviation / $stats.Average * 100 } else { 0.0 }
         [pscustomobject][ordered]@{ cell = $group.Name; samples = $values.Count; median_messages_sec = [math]::Round((Get-Median $values));
-            min_messages_sec = ($values | Measure-Object -Minimum).Minimum; max_messages_sec = ($values | Measure-Object -Maximum).Maximum; stdev_percent = [math]::Round($deviation, 2) }
+            min_messages_sec = $stats.Minimum; max_messages_sec = $stats.Maximum; stdev_percent = [math]::Round($deviation, 2) }
     })
     if ($throughput.Count -gt 0) { $throughput | Export-Csv -LiteralPath (Join-Path $Directory 'summary.csv') -NoTypeInformation -Encoding utf8NoBOM }
     $paced = @($valid | Where-Object { $_.measured.Contains('rtt') })

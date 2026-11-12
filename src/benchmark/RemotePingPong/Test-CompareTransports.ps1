@@ -236,6 +236,13 @@ Invoke-Check 'Summaries use per-run values and exclude failed attempts' {
         Write-ComparisonSummary $directory $records
         $row = @(Import-Csv -LiteralPath (Join-Path $directory 'summary.csv'))
         Assert-True ($row.Count -eq 1 -and $row[0].samples -eq '2' -and $row[0].median_messages_sec -eq '200')
+        Assert-True ($row[0].min_messages_sec -eq '100' -and $row[0].max_messages_sec -eq '300' -and $row[0].stdev_percent -eq '70.71')
+        foreach ($case in @(@{ values = @(100); deviation = '0' }, @{ values = @(100, 200, 300); deviation = '50' })) {
+            $points = @($case.values | ForEach-Object { @{ cell = 'control'; status = 'valid'; measured = @{ messages_per_second = $_ } } })
+            Write-ComparisonSummary $directory $points
+            $row = @(Import-Csv -LiteralPath (Join-Path $directory 'summary.csv'))
+            Assert-True ($row.Count -eq 1 -and $row[0].samples -eq [string]$case.values.Count -and $row[0].stdev_percent -eq $case.deviation)
+        }
         Write-ComparisonSummary $directory @(@{ cell = 'failure'; status = 'timeout' })
     }
     finally { [IO.Directory]::Delete($directory, $true) }
