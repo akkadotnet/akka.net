@@ -569,3 +569,36 @@ Connections announced after selection and streams admitted after a phase's final
 remain outside this bounded guarantee. Unannounced peers do not add shutdown waits. Failures and
 expiry continue bounded cleanup with incomplete-incoming diagnostics. Local outgoing peer-progress
 receipt status remains distinct from reverse cleanup; neither promises actor business completion.
+
+### Direct receive completion experiment
+
+The research candidate replaces `UnfoldResourceAsync` on the QUIC input with a small pull-driven
+source stage. Each materialization owns one private 16 KiB scratch array and caches its success and
+failure callbacks. An immediately successful `ReadAsync` result is consumed in the interpreter;
+a pending result is awaited once before posting the cached callback. Only one read is outstanding.
+
+```mermaid
+flowchart LR
+    Demand[Downstream demand] --> Read[ReadAsync into private scratch]
+    Read --> Ready{Already successful?}
+    Ready -->|yes| Consume[Consume ValueTask once]
+    Ready -->|no| Await[Await ValueTask once]
+    Await --> Callback[Cached stage callback]
+    Consume --> Publish[Copy actual bytes to owned unpooled storage]
+    Callback --> Publish
+    Publish --> Framing[Shared framing and lane processing]
+    Framing --> Actors[Actor-visible messages may outlive the connection]
+```
+
+Zero bytes signal natural EOF. Exceptions and lifetime cancellation fail the stage without claiming
+EOF. A deferred operation keeps its scratch storage alive through native completion even after
+stage cancellation. The connection retains sole ownership of native disposal and still observes
+managed framing, sink and lane completion independently of native teardown. There is no receive
+pump, extra queue, prefetch policy or actor-visible buffer lease.
+
+The experiment has passed focused native and selected multi-node delivery, cleanup and cluster
+restart checks at one and eight streams. Throughput and managed allocation results justify retaining
+the candidate for review, but paced tail-latency comparisons remain mixed. Keep it on the research
+branch pending a resolved promotion decision; do not treat throughput alone as a latency guarantee.
+Contiguous outbound encoding/batching remains deferred: this receive experiment does not establish
+that another copy, producer batch or native coalescing change would improve the remaining path.
