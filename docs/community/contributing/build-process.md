@@ -106,7 +106,7 @@ change machine trust stores. Initial systems, `StartNewSystemAsync`, and the pro
 `ActorSystem.Create` must supply their own typed TLS setup. Factory-owned certificates live
 until their actor system terminates; caller-supplied setup remains caller-owned.
 
-On Windows, the factory imports PFX credentials with `DefaultKeySet` for Schannel compatibility,
+On Windows, the factory imports PFX credentials with `DefaultKeySet` for native TLS compatibility,
 without requesting `PersistKeySet`. Other platforms use `EphemeralKeySet`. The factory retains
 the certificate through system termination to preserve its private-key lifetime during native
 cleanup. Caller-supplied certificates are not reimported or modified.
