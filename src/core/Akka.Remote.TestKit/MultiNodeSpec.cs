@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -42,22 +44,6 @@ public abstract class MultiNodeConfig
     private ImmutableDictionary<RoleName, ImmutableList<string>> _deployments = ImmutableDictionary.Create<RoleName, ImmutableList<string>>();
     private ImmutableList<string> _allDeploy = ImmutableList.Create<string>();
     private bool _testTransport = false;
-
-    /// <summary>
-    /// Opt-in switch (not a public API) that lets the whole multi-node test run be
-    /// re-pointed at the Artery TCP remoting transport instead of classic DotNetty, without
-    /// touching individual specs. Set the <c>AKKA_MNTR_TRANSPORT</c> environment variable to
-    /// <c>artery</c> (case-insensitive) before invoking `dotnet test` on a `*.Tests.MultiNode`
-    /// project. Unset (the default) is byte-for-byte identical to today's DotNetty-only
-    /// behavior. This is deliberately internal-only plumbing -- it layers in as the lowest
-    /// non-default config tier, so any spec (or its <see cref="CommonConfig"/>/per-role
-    /// <see cref="NodeConfig(IEnumerable{RoleName}, IEnumerable{Config})"/>) that explicitly
-    /// sets `akka.remote.artery.*` keys of its own still wins.
-    /// </summary>
-    private static readonly bool UseArteryTransport = string.Equals(
-        Environment.GetEnvironmentVariable("AKKA_MNTR_TRANSPORT"),
-        "artery",
-        StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Register a common base config for all test participants, if so desired.
@@ -174,18 +160,8 @@ public abstract class MultiNodeConfig
                     akka.remote.artery.advanced.test-mode = on")
                 : ConfigurationFactory.Empty;
 
-            // AKKA_MNTR_TRANSPORT=artery: layer in Artery's canonical host/port (mirroring
-            // MultiNodeSpec.NodeConfig's classic dot-netty.tcp block below) as a fallback tier
-            // below CommonConfig/per-role NodeConfig but above BaseConfig, so specs are never
-            // silently overridden. See `UseArteryTransport` above for the full rationale.
-            var arteryConfig = UseArteryTransport
-                ? ConfigurationFactory.ParseString(string.Format(
-                    @"akka.remote.artery {{
-                        enabled = on
-                        canonical.hostname = ""{0}""
-                        canonical.port = {1}
-                    }}", MultiNodeSpec.SelfName, MultiNodeSpec.SelfPort))
-                : ConfigurationFactory.Empty;
+            // Keep the transport fallback below explicit per-spec and per-role configuration.
+            var arteryConfig = MultiNodeTransport.Defaults(MultiNodeSpec.SelfName, MultiNodeSpec.SelfPort);
 
             var builder = ImmutableList.CreateBuilder<Config>();
             if (_nodeConf.TryGetValue(Myself, out var nodeConfig))
@@ -246,7 +222,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         }
     }
 
-    private static string _multiNodeHost;
+    private static string? _multiNodeHost;
 
     /// <summary>
     /// Name (or IP address; must be resolvable)
@@ -299,7 +275,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         }
     }
 
-    private static string _serverName;
+    private static string? _serverName;
     /// <summary>
     /// Name (or IP address; must be resolvable using InetAddress.getByName)
     /// of the host that the server node is running on.
@@ -431,7 +407,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
     private readonly Address _myAddress;
 
     protected MultiNodeSpec(MultiNodeConfig config, Type type) :
-        this(config.Myself, ActorSystem.Create(type.Name, config.Config), config.Roles, config.Deployments)
+        this(config.Myself, MultiNodeTransport.CreateSystem(type.Name, config.Config), config.Roles, config.Deployments)
     {
     }
 
@@ -453,13 +429,24 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
     {
     }
 
+    /// <inheritdoc />
+    protected override ActorSystem CreateActorSystem(string name, ActorSystemSetup setup) =>
+        MultiNodeTransport.CreateSystem(name, setup);
+
+    /// <summary>Creates another actor system using this multi-node run's transport and TLS fixture.</summary>
+    /// <param name="name">The actor system name.</param>
+    /// <param name="config">The effective configuration, including explicit spec overrides.</param>
+    /// <returns>The started actor system; the caller must terminate it.</returns>
+    protected ActorSystem CreateActorSystem(string name, Config config) =>
+        CreateActorSystem(name, ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config)));
+
     private MultiNodeSpec(
         RoleName myself,
-        ActorSystem system,
-        ActorSystemSetup setup,
+        ActorSystem? system,
+        ActorSystemSetup? setup,
         ImmutableList<RoleName> roles,
         Func<RoleName, ImmutableList<string>> deployments)
-        : base(new XunitAssertions(), system, setup, null, null)
+        : base(new XunitAssertions(), system, setup ?? ActorSystemSetup.Empty, null, null)
     {
         Myself = myself;
         _log = Logging.GetLogger(Sys, this);
@@ -476,7 +463,8 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
         _controllerAddr = node;
 
-        AttachConductor(new TestConductor(Sys));
+        TestConductor = new TestConductor(Sys);
+        AttachConductor(TestConductor);
 
         _replacements = Roles.ToImmutableDictionary(r => r, r => new Replacement("@" + r.Name + "@", r, this));
 
@@ -635,7 +623,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         return new RootActorPath(address);
     }
 
-    public void MuteDeadLetters(ActorSystem system = null, params Type[] messageClasses)
+    public void MuteDeadLetters(ActorSystem? system = null, params Type[] messageClasses)
     {
         if (system == null) system = Sys;
         if (!system.Log.IsDebugEnabled)
@@ -772,10 +760,26 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
                 .ParseString(sb.ToString())
                 .WithFallback(Sys.Settings.Config);
 
-        var system = ActorSystem.Create(Sys.Name, config);
-        InjectDeployments(system, Myself);
-        await AttachConductorAsync(new TestConductor(system), cancellationToken);
-        return system;
+        var system = CreateActorSystem(Sys.Name, config);
+        try
+        {
+            InjectDeployments(system, Myself);
+            await AttachConductorAsync(new TestConductor(system), cancellationToken);
+            return system;
+        }
+        catch (Exception initializationFailure)
+        {
+            try
+            {
+                await system.Terminate().WaitAsync(ShutdownTimeout).ConfigureAwait(false);
+            }
+            catch (Exception cleanupFailure)
+            {
+                throw new AggregateException("Restarted multi-node system failed to initialize and terminate.",
+                    initializationFailure, cleanupFailure);
+            }
+            throw;
+        }
     }
         
     public void Dispose()

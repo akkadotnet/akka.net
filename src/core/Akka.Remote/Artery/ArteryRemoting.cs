@@ -113,6 +113,8 @@ namespace Akka.Remote.Artery
         /// </summary>
         internal AssociationRegistry Registry => _registry;
 
+        internal bool UsesQuicTransport => _quic is not null;
+
         internal ArteryQuicIoSnapshot QuicIoSnapshot =>
             _quic is not null && QuicConnection.IsSupported ? _quic.IoSnapshot : default;
 

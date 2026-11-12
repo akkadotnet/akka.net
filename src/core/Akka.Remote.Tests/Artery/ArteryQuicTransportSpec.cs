@@ -431,6 +431,8 @@ namespace Akka.Remote.Tests.Artery
             var materializer = ActorMaterializer.Create(Sys);
             var received = new TaskCompletionSource<Task<IImmutableList<ReadOnlySequence<byte>>>>(TaskCreationOptions.RunContinuationsAsynchronously);
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            IImmutableList<ReadOnlySequence<byte>> retained = ImmutableList<ReadOnlySequence<byte>>.Empty;
+            byte[] expected = Array.Empty<byte>();
             try
             {
                 var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
@@ -451,6 +453,8 @@ namespace Akka.Remote.Tests.Artery
                 var chunks = await (await received.Task.WaitAsync(deadline.Token)).WaitAsync(deadline.Token);
                 chunks.Count.Should().BeGreaterOrEqualTo(5, "the payload exceeds three native read buffers, plus its preamble");
                 chunks.SelectMany(chunk => chunk.ToArray()).Should().Equal(preamble.Concat(payload));
+                retained = chunks;
+                expected = preamble.Concat(payload).ToArray();
                 var io = receiver.IoSnapshot;
                 io.ReadBytes.Should().Be(payload.Length);
                 io.ReadOperations.Should().Be(chunks.Count - 1);
@@ -462,6 +466,8 @@ namespace Akka.Remote.Tests.Artery
                 await receiver.ShutdownAsync(shutdown.Token);
                 materializer.Shutdown();
             }
+            // Actors/parsers can retain these arrays beyond the transport and stream lifetime.
+            retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(expected);
         }
 
         [Theory(DisplayName = "QUIC retires every sibling channel and reconnects when an incoming data stream is reset")]
