@@ -71,7 +71,7 @@ namespace RemotePingPong
                 : Environment.GetEnvironmentVariable(passwordEnvironmentVariable)
                     ?? throw new ArgumentException($"Certificate password environment variable [{passwordEnvironmentVariable}] is not set.");
             var certificate = certificatePath is null ? CreateLoopbackCertificate()
-                : TlsCertificateLoader.LoadPkcs12FromFile(certificatePath, password, X509KeyStorageFlags.EphemeralKeySet);
+                : TlsCertificateLoader.LoadPkcs12FromFile(certificatePath, password, CertificateKeyStorage);
             try
             {
                 // Pins establish trust; normal outbound hostname validation is an additional check.
@@ -95,6 +95,12 @@ namespace RemotePingPong
         internal ActorSystemSetup Setup(Config config) => _tls is null
             ? ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config))
             : ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), new ArteryTlsSetup(_tls));
+
+        // Schannel cannot use an ephemeral imported private key for server authentication.
+        // Retain ephemeral key storage on platforms whose TLS implementation supports it.
+        private static X509KeyStorageFlags CertificateKeyStorage => OperatingSystem.IsWindows()
+            ? X509KeyStorageFlags.DefaultKeySet
+            : X509KeyStorageFlags.EphemeralKeySet;
 
         internal void PrintSecurity()
         {
@@ -126,7 +132,7 @@ namespace RemotePingPong
             var bytes = generated.Export(X509ContentType.Pkcs12);
             try
             {
-                return TlsCertificateLoader.LoadPkcs12(bytes, null, X509KeyStorageFlags.EphemeralKeySet);
+                return TlsCertificateLoader.LoadPkcs12(bytes, null, CertificateKeyStorage);
             }
             finally
             {

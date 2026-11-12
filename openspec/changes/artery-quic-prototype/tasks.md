@@ -105,3 +105,15 @@ credit. Caller cancellation, the configured open timeout and expired-deadline sh
 pending ordinary open and release native ownership. Replacement CONTROL traffic and FIN must
 still work where admission remains open; a stopped transport rejects new opens. This is stream-count
 credit, not an application byte window or a transport receive-window measurement.
+
+## 6. Receive-path follow-up
+
+- [x] Use Schannel-compatible private-key storage for generated and supplied benchmark identities on Windows, retaining ephemeral imports elsewhere and bidirectional TLS credential checks.
+- [ ] Isolate a QUIC receive stage with cached callbacks and direct `ValueTask` consumption; retain owned unpooled published chunks, pull backpressure, observed late completions and distinct EOF/cancellation outcomes.
+- [ ] Verify immediate/deferred reads, exactly-once completion consumption, retained bytes, failure, downstream cancellation and native generation cleanup before performance measurements.
+- [ ] Compare frozen candidate/control with matched validated ping-pong and one-way workloads, then appropriate CPU/allocation, latency and capacity gates if the candidate merits promotion.
+- [ ] Consider contiguous outbound encoding/batching only after the receive experiment supplies a reason for that separate change.
+
+Use the existing authenticated opt-in QUIC multi-node runner for focused iteration checks. Broader
+native multi-node coverage is a promotion gate; this follow-up does not add two mandatory long-running
+QUIC CI jobs. Hosted default multi-node jobs remain distinct from explicit native QUIC evidence.
