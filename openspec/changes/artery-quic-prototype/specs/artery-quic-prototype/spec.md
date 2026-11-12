@@ -106,6 +106,15 @@ Experimental QUIC shutdown SHALL preregister a marker for each active materializ
 - **WHEN** both peers shut down with queued work
 - **THEN** each side SHALL obtain actual validated receipts or report bounded incomplete progress, without treating local FIN or cancellation as receipt
 
+#### Scenario: Announced peer still requires reverse progress
+- **WHEN** local outgoing progress has been confirmed but a selected accepted connection's current peer has announced shutdown and its admitted data processing remains pending
+- **THEN** control reply admission SHALL remain available until that processing completes or the existing flush deadline expires
+
+#### Scenario: Final controls during concurrent drain
+- **WHEN** accepted data processing and admission of required replies for a selected announced peer finish within the flush deadline
+- **THEN** local control writers SHALL complete and flush before awaiting that peer's control processing and natural EOF, with native teardown bounded by the same deadline
+- **AND** task settlement without natural input completion or required reply admission SHALL NOT count as successful incoming drain
+
 ### Requirement: Equivalent and reproducible comparison
 
 The experiment SHALL compare plaintext TCP, TLS TCP and QUIC using the same integrated Artery workload and protocol settings, with equivalent authentication for the encrypted arms. It SHALL record delivered goodput, latency distributions, control progress, CPU, managed/native memory and invalidating drops/duplicates/application resends. Real-network conclusions SHALL use separate processes on separate hosts and documented configurations.

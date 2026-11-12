@@ -531,7 +531,8 @@ namespace Akka.Remote.Artery
             SubscribeControl(this);
 
             if (_quic is not null && QuicConnection.IsSupported)
-                _quic.StartAccepting(HandleIncomingSource);
+                _quic.StartAccepting((source, endpoint, accepted, incoming) =>
+                    HandleIncomingSource(source, endpoint, accepted, incoming));
             _log.Info("Artery {0} remoting started; listening on [{1}]", _settings.Transport.ToUpperInvariant(), address);
         }
 
@@ -629,17 +630,34 @@ namespace Akka.Remote.Artery
             // (akka.remote.flush-wait-on-shutdown); this is Artery's equivalent, same default.
             // The wait is bounded and never unbounded: see FlushOutboundStreamsAsync.
             // One deadline bounds this wait and the socket-close wait after the kill switch.
+            var peerDrains = Array.Empty<ArteryQuicInboundDrain>();
+            var incomingDataDrained = true;
             if (_shutdownDrain is not null)
             {
                 if (flushDeadline is not null)
+                {
                     Volatile.Write(ref _shutdownPeerProgress,
                         await FlushPeerProgressAsync(associations, drainTargets, flushDeadline.Token) ? 1 : -1);
+                    if (_shutdownPeerProgress == 1 && _quic is not null && QuicConnection.IsSupported)
+                    {
+                        peerDrains = _quic.AnnouncedIncomingDrains(IsCurrentDrainPeer);
+                        // A peer may still need our data receipts after we have received all of
+                        // ours. Keep control admission open until its accepted data processing ends.
+                        incomingDataDrained = await FlushIncomingPeerAsync(peerDrains, false, flushDeadline.Token);
+                    }
+                }
                 _shutdownDrain.Close();
                 foreach (var association in associations)
                     association.CompleteControlOutbound();
             }
             if (flushDeadline is not null)
+            {
                 await FlushOutboundStreamsAsync(associations, flushDeadline.Token);
+                // Both draining peers now finish their control writers. Consume the peer's final
+                // control records and EOF before native teardown can discard an unread receipt.
+                if (incomingDataDrained)
+                    await FlushIncomingPeerAsync(peerDrains, true, flushDeadline.Token);
+            }
 
             // STEP 3 -- account for everything the flush did not get out, publishing a Dropped per
             // element. This runs whether the flush completed or timed out: the streams are torn
@@ -1038,7 +1056,7 @@ namespace Akka.Remote.Artery
             HandleIncomingSource(Source.Empty<ReadOnlySequence<byte>>().Via(connection.Flow), connection.RemoteAddress);
 
         private Task HandleIncomingSource(Source<ReadOnlySequence<byte>, NotUsed> source, EndPoint remoteAddress,
-            Action? onHandshakeAccepted = null)
+            Action? onHandshakeAccepted = null, ArteryQuicInboundDrain.Stream? incomingDrain = null)
         {
             _log.Debug("Accepted inbound Artery {0} channel from [{1}]", _settings.Transport, remoteAddress);
 
@@ -1125,7 +1143,11 @@ namespace Akka.Remote.Artery
                             !IsCurrentDrainPeer(request.From))
                             throw new ArteryFramingException("Artery shutdown marker does not match its admitted peer.");
                         if (request.StreamId == (byte)ArteryStreamId.Control)
-                            ReplyToDrain(request);
+                        {
+                            incomingDrain?.AnnouncePeerShutdown(request.From);
+                            if (!ReplyToDrain(request))
+                                incomingDrain?.RejectReply();
+                        }
                         else if (dataDrain is not null)
                             throw new ArteryFramingException("Duplicate Artery shutdown marker on one data stream.");
                         else
@@ -1152,8 +1174,9 @@ namespace Akka.Remote.Artery
             async Task CompleteInboundDrainAsync()
             {
                 var inputCompleted = await WaitForInboundProcessingAsync(processing, laneConsumersStopped!.Task).ConfigureAwait(false);
-                if (inputCompleted && !_inboundStopping && dataDrain is { } request)
-                    ReplyToDrain(request);
+                var replyAdmitted = dataDrain is not { } request ||
+                    inputCompleted && !_inboundStopping && ReplyToDrain(request);
+                incomingDrain?.Complete(inputCompleted, replyAdmitted);
             }
         }
 
@@ -1168,19 +1191,40 @@ namespace Akka.Remote.Artery
             return consumers.InputCompleted;
         }
 
+        private async Task<bool> FlushIncomingPeerAsync(ArteryQuicInboundDrain[] peers, bool control,
+            CancellationToken cancellationToken)
+        {
+            if (peers.Length == 0)
+                return true;
+            try
+            {
+                var pending = new List<Task>(peers.Length);
+                foreach (var peer in peers)
+                    pending.Add(peer.WaitAsync(control, cancellationToken));
+                await Task.WhenAll(pending).ConfigureAwait(false);
+                return true;
+            }
+            catch (Exception error)
+            {
+                _log.Info("Artery peer incoming {0} shutdown progress is incomplete; bounded teardown continues: {1}",
+                    control ? "control" : "data", error.Message);
+                return false;
+            }
+        }
+
         private bool IsCurrentDrainPeer(UniqueAddress peer) =>
             _registry.TryGetByUid(peer.Uid) is { } association &&
             association.CurrentState.UniqueRemoteAddress is { } current && current.Equals(peer) &&
             !association.IsQuarantined(peer.Uid);
 
-        private void ReplyToDrain(ArteryDrainRequest request)
+        private bool ReplyToDrain(ArteryDrainRequest request)
         {
             if (_inboundStopping || !IsCurrentDrainPeer(request.From))
-                return;
+                return false;
             var association = _registry.TryGetByUid(request.From.Uid)!;
             // Only this authenticated response can bypass user-send shutdown admission. Reuse
             // an existing control writer; do not materialize another stream or dial another peer.
-            if (association.IsControlOutboundMaterialized && !association.IsControlShutDown)
+            return association.IsControlOutboundMaterialized && !association.IsControlShutDown &&
                 association.TryEnqueueControl(new OutboundEnvelope(
                     new ArteryDrainAck(_localUniqueAddress, request.From.Uid, request.Id), null, null));
         }

@@ -506,7 +506,9 @@ freeze active streams and expected receipts
 complete ordinary and large queues
 queue control markers while keeping control replies open
 await data writers, then validated receipts, within the existing deadline
-complete control queues and stop inbound/native transport
+drain accepted data processing for peers that announced concurrent shutdown
+complete and flush control queues
+consume those peers' final control records and EOF before inbound/native teardown
 ```
 
 The data-stream stage appends its marker after all earlier encoded bytes. The control marker goes
@@ -543,5 +545,27 @@ semantics. It does not confirm actor mailbox drainage or business processing, an
 Earlier prototype peers do not recognize the new control messages. Ordinary framing remains
 unchanged, but their absent receipts cause bounded incomplete-progress shutdown. Upgrade both
 ends to exercise confirmation. This is a prototype implementation with focused checks; simultaneous
-termination, reset/late-completion stress, native resource/credential lifetime after an expired
+termination beyond the bounded announced-peer cases, reset/late-completion stress, native resource/credential lifetime after an expired
 deadline, and the broader qualification gates remain required before production qualification.
+
+### Announced peer drain during simultaneous shutdown
+
+Receiving all local receipts does not mean the peer has received its own receipts. For accepted
+QUIC connections whose current peers have announced shutdown, retain control reply admission until
+their data processing finishes. Then complete and flush local control writers before awaiting those
+peers' control input completion. Each peer closes its own control writer before awaiting peer-control
+EOF; the same flush deadline bounds each phase.
+
+Each native connection has a separate processing group. Stream slots are registered before reading
+their preambles, and their processing promises exist before materialization can call back. The group
+includes admissions still awaiting role classification and streams registered while a wait proceeds.
+Successful processing requires natural input completion and admission of required replies, including
+detached lane completion. A settled task, cancelled sink or rejected control reply is insufficient.
+The group owns neither native resources nor published receive storage.
+
+The selected peer announcements must match current UID/address state. Existing data-marker identity
+checks remain unchanged; the group does not introduce whole-connection payload identity binding.
+Connections announced after selection and streams admitted after a phase's final locked boundary
+remain outside this bounded guarantee. Unannounced peers do not add shutdown waits. Failures and
+expiry continue bounded cleanup with incomplete-incoming diagnostics. Local outgoing peer-progress
+receipt status remains distinct from reverse cleanup; neither promises actor business completion.

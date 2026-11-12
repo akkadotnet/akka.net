@@ -65,6 +65,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Separate native-resource release from managed receive completion and retain factory-owned credentials through native cleanup, including failed initialization.
 - [x] Prototype shared per-stream shutdown markers and validated receipts, retaining control replies within the existing deadline.
 - [x] Verify shared per-stream peer progress with surviving recipients and explicit incomplete-progress timeout semantics; keep production qualification separate.
+- [x] Verify announced-peer data/control drain ordering during symmetric and staggered simultaneous shutdown, including native-lifetime sensitivity and unchanged blocked-consumer outcomes.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
 (one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
@@ -79,9 +80,13 @@ The experimental shared marker/receipt protocol
 now has focused successful-drain, blocked-consumer, identity, framing and tail-ownership checks.
 One/eight-stream simultaneous shutdown checks hold consumers at both peers, require explicit
 incomplete progress after native FIN, and verify retained messages after release. Expired-deadline
-and replaced-stream nonce checks reject false confirmation. These are bounded cases; successful
-simultaneous drain under load, reset/stale-generation stress and native resource/credential deadline
-stress gates remain open. Native-owner and controlled post-termination credential checks are in
+and replaced-stream nonce checks reject false confirmation. Successful symmetric and staggered
+Q1/Q8 cases enqueue traffic on all eight outbound lanes while retaining a blocked path in each
+direction. They distinguish
+own receipts from reverse processing and require both delivery and native cleanup. The announced-peer
+refinement preserves data reply admission and consumes final controls before native teardown within
+the original deadline. These are bounded cases; broader simultaneous-load, reset/stale-generation
+and native resource/credential deadline stress gates remain open. Native-owner and controlled post-termination credential checks are in
 place. Native ACK-loss checks now witness retries at both endpoints without a peer UID change,
 alongside the TCP control. Native reset checks retain receive bytes through three reset/reconnect
 cycles with one/eight streams and final native release. These bounded cases do not force every late

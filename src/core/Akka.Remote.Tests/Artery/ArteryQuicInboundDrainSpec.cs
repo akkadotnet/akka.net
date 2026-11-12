@@ -86,27 +86,33 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Peer drain observes connection cancellation and the original shutdown deadline")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_CancelPendingProcessing_When_ConnectionOrDeadlineStops(bool connectionStops)
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public async Task Should_CancelPendingProcessing_When_ConnectionOrDeadlineStops(bool connectionStops, bool alreadyComplete)
         {
             using var connectionStop = new CancellationTokenSource();
             using var deadline = new CancellationTokenSource();
             var connection = new ArteryQuicInboundDrain(connectionStop.Token);
             var stream = connection.Register();
-            _ = stream.Admit(ArteryStreamId.Ordinary, () => new TaskCompletionSource().Task);
-            var draining = connection.WaitAsync(false, deadline.Token);
+            _ = stream.Admit(ArteryStreamId.Ordinary, () => alreadyComplete ? Task.CompletedTask : new TaskCompletionSource().Task);
+            stream.Complete(alreadyComplete, alreadyComplete);
+            var draining = alreadyComplete ? null : connection.WaitAsync(false, deadline.Token);
             (connectionStops ? connectionStop : deadline).Cancel();
+            draining ??= connection.WaitAsync(false, deadline.Token);
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => draining);
         }
 
-        [Fact(DisplayName = "Peer drain preserves a processing failure instead of confirming task settlement")]
-        public async Task Should_FailDrain_When_DataProcessingFaults()
+        [Theory(DisplayName = "Peer drain preserves an ordinary or large processing failure instead of confirming task settlement")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_FailDrain_When_DataProcessingFaults(bool large)
         {
             var connection = new ArteryQuicInboundDrain(CancellationToken.None);
             var stream = connection.Register();
             var error = new IOException("Controlled inbound failure.");
-            _ = stream.Admit(ArteryStreamId.Ordinary, () => Task.FromException(error));
+            _ = stream.Admit(large ? ArteryStreamId.Large : ArteryStreamId.Ordinary, () => Task.FromException(error));
             Assert.Same(error, await Assert.ThrowsAsync<IOException>(() => connection.WaitAsync(false, CancellationToken.None)));
         }
 

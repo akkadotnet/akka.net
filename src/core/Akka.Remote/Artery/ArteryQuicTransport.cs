@@ -49,6 +49,7 @@ namespace Akka.Remote.Artery
         private readonly CancellationTokenSource _stop = new();
         private readonly ConcurrentDictionary<EndPoint, Peer> _outbound = new();
         private readonly ConcurrentDictionary<long, Task> _work = new();
+        private readonly ConcurrentDictionary<ArteryQuicInboundDrain, byte> _incomingDrains = new();
         private readonly SemaphoreSlim _incomingSlots = new(MaxConnections);
         private readonly object _outboundGate = new();
         private readonly ArteryQuicResourceLifetime _nativeLifetime;
@@ -162,6 +163,9 @@ namespace Akka.Remote.Artery
         // The returned task must include downstream processing, including any detached lanes.
         // Raw source termination alone can precede both dispatch and a downstream failure.
         internal void StartAccepting(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
+            => StartAccepting((source, endpoint, admitted, _) => accept(source, endpoint, admitted));
+
+        internal void StartAccepting(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, ArteryQuicInboundDrain.Stream, Task> accept)
         {
             lock (_outboundGate)
             {
@@ -170,6 +174,9 @@ namespace Akka.Remote.Artery
                 Track(AcceptConnectionsAsync(listener, accept, _nativeLifetime.Acquire()));
             }
         }
+
+        internal ArteryQuicInboundDrain[] AnnouncedIncomingDrains(Func<UniqueAddress, bool> isCurrentPeer) =>
+            _incomingDrains.Keys.Where(incoming => incoming.Peer is { } peer && isCurrentPeer(peer)).ToArray();
 
         internal Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Done>> Outgoing(EndPoint endpoint, ArteryStreamId role, int ordinaryStream = 0) =>
             Flow.FromGraph(new ArteryQuicWriteStage(this, endpoint, role, ordinaryStream));
@@ -221,7 +228,7 @@ namespace Akka.Remote.Artery
         }
 
         private async Task AcceptConnectionsAsync(QuicListener listener,
-            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept,
+            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, ArteryQuicInboundDrain.Stream, Task> accept,
             ArteryQuicResourceLifetime.Owner nativeOwner)
         {
             using (nativeOwner)
@@ -252,11 +259,13 @@ namespace Akka.Remote.Artery
         }
 
         private async Task ReceiveConnectionAsync(QuicConnection connection,
-            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept,
+            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, ArteryQuicInboundDrain.Stream, Task> accept,
             ArteryQuicResourceLifetime.Owner nativeOwner)
         {
             using var nativeOwnership = nativeOwner;
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+            var incomingDrain = new ArteryQuicInboundDrain(lifetime.Token);
+            _incomingDrains.TryAdd(incomingDrain, 0);
             var streams = new List<QuicStream>();
             var roles = new HashSet<ArteryStreamId>();
             var ordinaryStreams = 0;
@@ -282,6 +291,7 @@ namespace Akka.Remote.Artery
 
                 async Task AdmitAsync(QuicStream stream)
                 {
+                    var incoming = incomingDrain.Register();
                     try
                     {
                         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
@@ -327,7 +337,8 @@ namespace Akka.Remote.Artery
                                 readers.Add(ObserveReadAsync(done));
                                 return NotUsed.Instance;
                             });
-                        var processing = accept(source, connection.RemoteEndPoint, () => admitted.TrySetResult(Done.Instance));
+                        var processing = incoming.Admit(role, () =>
+                            accept(source, connection.RemoteEndPoint, () => admitted.TrySetResult(Done.Instance), incoming));
                         // Processing can outlive native teardown (e.g. a blocked serializer).
                         // Observe it, but cancel the connection's observer with its lifetime so
                         // native disposal never waits indefinitely for application code.
@@ -353,6 +364,7 @@ namespace Akka.Remote.Artery
                     }
                     catch
                     {
+                        incoming.CancelAdmission();
                         lifetime.Cancel();
                         throw;
                     }
@@ -391,6 +403,7 @@ namespace Akka.Remote.Artery
                     }
                     finally
                     {
+                        _incomingDrains.TryRemove(incomingDrain, out _);
                         _incomingSlots.Release();
                     }
                 }
