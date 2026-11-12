@@ -151,6 +151,8 @@ namespace Akka.Remote.Tests.Artery
                     foreach (var lane in received.Keys)
                         drainRecipients[lane].Tell(sequence, ActorRefs.NoSender);
                 await remoting.Shutdown().AwaitWithTimeout(TimeSpan.FromSeconds(5));
+                remoting.QuicShutdownPeerProgress.Should().BeTrue("local FIN alone is not peer progress");
+                remoting.QuicShutdownReceiptsOutstanding.Should().Be(0);
                 await Task.WhenAll(received.Values.Select(async probe =>
                 {
                     for (var sequence = 0; sequence < messages; sequence++)

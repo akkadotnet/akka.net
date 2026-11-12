@@ -15,6 +15,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Net.Quic;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -309,10 +310,11 @@ namespace Akka.Remote.Artery
                 new Inet.SO.PipeBufferSize(settings.TcpPipeBufferSize));
 
         private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Done>>
-            CreateOutgoingConnection(EndPoint remoteEndpoint, ArteryStreamId streamId, int ordinaryStream = 0)
+            CreateOutgoingConnection(EndPoint remoteEndpoint, ArteryStreamId streamId, Association association, int ordinaryStream = 0)
         {
             if (_quic is not null && QuicConnection.IsSupported)
-                return _quic.Outgoing(remoteEndpoint, streamId, ordinaryStream);
+                return Flow.FromGraph(new ArteryShutdownStage(_shutdownDrain!, association, streamId, EncodeDrainRequest))
+                    .ViaMaterialized(_quic.Outgoing(remoteEndpoint, streamId, ordinaryStream), Keep.Right);
 
             var connection = _tlsSettings is null
                 ? _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false)
@@ -327,6 +329,18 @@ namespace Akka.Remote.Artery
 
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
         private ArteryTlsSettings? _tlsSettings;
+        private ArteryShutdownDrain? _shutdownDrain;
+        private volatile bool _inboundStopping;
+        private int _shutdownPeerProgress;
+
+        internal bool? QuicShutdownPeerProgress => Volatile.Read(ref _shutdownPeerProgress) switch
+        {
+            1 => true,
+            -1 => false,
+            _ => null
+        };
+        internal Task<bool> QuicShutdownDataWritesSettled => _shutdownDrain?.DataWritesSettled.Task ?? Task.FromResult(false);
+        internal int QuicShutdownReceiptsOutstanding => _shutdownDrain?.Outstanding ?? 0;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
@@ -411,6 +425,7 @@ namespace Akka.Remote.Artery
                     throw new PlatformNotSupportedException("Artery QUIC requires native MsQuic and TLS 1.3 support.");
                 _quic = new ArteryQuicTransport(_tlsSettings, _settings.HandshakeTimeout, _log,
                     _settings.QuicOrdinaryStreams, _settings.QuicMaximumInboundOrdinaryStreams, _settings.QuicIoStatisticsEnabled);
+                _shutdownDrain = new ArteryShutdownDrain();
             }
             _materializer = CreateSystemMaterializer();
             _tcp = _quic is null ? System.TcpStream() : null;
@@ -583,6 +598,11 @@ namespace Akka.Remote.Artery
             // shutdown can still register a new association, so re-reading the registry per pass
             // would let one slip through with a completed channel and no drain.
             var associations = new List<Association>(_registry.AllAssociations);
+            var flushWait = _settings.FlushWaitOnShutdown;
+            using var flushDeadline = flushWait > TimeSpan.Zero ? new CancellationTokenSource(flushWait) : null;
+            var drainTargets = _shutdownDrain is not null && flushDeadline is not null
+                ? _shutdownDrain.Begin(_localUniqueAddress, IsCurrentDrainPeer)
+                : Array.Empty<ArteryShutdownDrain.Target>();
 
             // STEP 1 -- stop accepting new sends. Completing a channel does not discard what it
             // already holds; it tells the consuming stream "no more will arrive", which is what
@@ -591,7 +611,8 @@ namespace Akka.Remote.Artery
             foreach (var association in associations)
             {
                 association.CompleteOutbound();
-                association.CompleteControlOutbound();
+                if (_shutdownDrain is null)
+                    association.CompleteControlOutbound();
                 association.CompleteLargeOutbound();
             }
 
@@ -604,8 +625,15 @@ namespace Akka.Remote.Artery
             // (akka.remote.flush-wait-on-shutdown); this is Artery's equivalent, same default.
             // The wait is bounded and never unbounded: see FlushOutboundStreamsAsync.
             // One deadline bounds this wait and the socket-close wait after the kill switch.
-            var flushWait = _settings.FlushWaitOnShutdown;
-            using var flushDeadline = flushWait > TimeSpan.Zero ? new CancellationTokenSource(flushWait) : null;
+            if (_shutdownDrain is not null)
+            {
+                if (flushDeadline is not null)
+                    Volatile.Write(ref _shutdownPeerProgress,
+                        await FlushPeerProgressAsync(associations, drainTargets, flushDeadline.Token) ? 1 : -1);
+                _shutdownDrain.Close();
+                foreach (var association in associations)
+                    association.CompleteControlOutbound();
+            }
             if (flushDeadline is not null)
                 await FlushOutboundStreamsAsync(associations, flushDeadline.Token);
 
@@ -675,6 +703,7 @@ namespace Akka.Remote.Artery
             // Tear every remaining stream down via the shared kill switch first (every inbound and
             // outbound graph is woven through it) -- the graceful path, mirroring Pekko's
             // transportKillSwitch abort.
+            _inboundStopping = true;
             _killSwitch.Shutdown();
 
             // Unbind: stops the TcpListener, which stops its still-open accepted-connection
@@ -1034,12 +1063,12 @@ namespace Akka.Remote.Artery
             // never happen) control-classified frame on that same connection, and everything on
             // every Control/Large connection, still flows through them completely unchanged.
             var laneConsumersStopped = _quic is null ? null
-                : new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Action<Task>? reportLaneCompletion = laneConsumersStopped is null ? null : completion =>
+                : new TaskCompletionSource<(Task Consumers, bool InputCompleted)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Action<Task, bool>? reportLaneCompletion = laneConsumersStopped is null ? null : (completion, inputCompleted) =>
             {
                 if (QuicConnection.IsSupported)
                     _quic!.Track(completion);
-                laneConsumersStopped.TrySetResult(completion);
+                laneConsumersStopped.TrySetResult((completion, inputCompleted));
             };
             var processingStage = _settings.InboundLanes > 1
                 ? new ArteryInboundProcessingStage(
@@ -1081,11 +1110,32 @@ namespace Akka.Remote.Artery
             //
             // Ordinary, control and large connections all use this one sink, so one instance is
             // sufficient.
+            ArteryDrainRequest? dataDrain = null;
+            Action<IInboundEnvelope> dispatch = DispatchInbound;
+            if (_quic is not null)
+                dispatch = envelope =>
+                {
+                    if (envelope.IsControl && envelope.Message is ArteryDrainRequest request)
+                    {
+                        if (request.From.Uid != envelope.OriginUid || request.ToUid != _localUniqueAddress.Uid ||
+                            !IsCurrentDrainPeer(request.From))
+                            throw new ArteryFramingException("Artery shutdown marker does not match its admitted peer.");
+                        if (request.StreamId == (byte)ArteryStreamId.Control)
+                            ReplyToDrain(request);
+                        else if (dataDrain is not null)
+                            throw new ArteryFramingException("Duplicate Artery shutdown marker on one data stream.");
+                        else
+                            dataDrain = request;
+                        NotifyControlSubscribers(envelope.OriginUid, request);
+                    }
+                    else
+                        DispatchInbound(envelope);
+                };
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler, onHandshakeAccepted)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
-                .ToMaterialized(Sink.ForEach<IInboundEnvelope>(DispatchInbound), Keep.Right);
+                .ToMaterialized(Sink.ForEach(dispatch), Keep.Right);
 
             // Every accepted (inbound) connection is read-only: Artery uses SEPARATE per-direction
             // connections, so any reply (a HandshakeRsp, a heartbeat, ...) goes out over a
@@ -1093,16 +1143,92 @@ namespace Akka.Remote.Artery
             // the type-level "Connection cardinality" remarks. We never write to this socket.
             var processing = source.RunWith(inboundSink, _materializer!);
             return laneConsumersStopped is null ? processing
-                : WaitForInboundProcessingAsync(processing, laneConsumersStopped.Task);
+                : CompleteInboundDrainAsync();
+
+            async Task CompleteInboundDrainAsync()
+            {
+                var inputCompleted = await WaitForInboundProcessingAsync(processing, laneConsumersStopped!.Task).ConfigureAwait(false);
+                if (inputCompleted && !_inboundStopping && dataDrain is { } request)
+                    ReplyToDrain(request);
+            }
         }
 
-        private static async Task WaitForInboundProcessingAsync(Task processing, Task<Task> laneConsumersStopped)
+        private static async Task<bool> WaitForInboundProcessingAsync(Task processing,
+            Task<(Task Consumers, bool InputCompleted)> laneConsumersStopped)
         {
             // Fail promptly on a sink error. Lane cleanup is separately tracked by the native
             // owner, so a blocked consumer cannot hide that error or delay connection retirement.
             await processing.ConfigureAwait(false);
             var consumers = await laneConsumersStopped.ConfigureAwait(false);
-            await consumers.ConfigureAwait(false);
+            await consumers.Consumers.ConfigureAwait(false);
+            return consumers.InputCompleted;
+        }
+
+        private bool IsCurrentDrainPeer(UniqueAddress peer) =>
+            _registry.TryGetByUid(peer.Uid) is { } association &&
+            association.CurrentState.UniqueRemoteAddress is { } current && current.Equals(peer) &&
+            !association.IsQuarantined(peer.Uid);
+
+        private void ReplyToDrain(ArteryDrainRequest request)
+        {
+            if (_inboundStopping || !IsCurrentDrainPeer(request.From))
+                return;
+            var association = _registry.TryGetByUid(request.From.Uid)!;
+            // Only this authenticated response can bypass user-send shutdown admission. Reuse
+            // an existing control writer; do not materialize another stream or dial another peer.
+            if (association.IsControlOutboundMaterialized && !association.IsControlShutDown)
+                association.TryEnqueueControl(new OutboundEnvelope(
+                    new ArteryDrainAck(_localUniqueAddress, request.From.Uid, request.Id), null, null));
+        }
+
+        private ReadOnlySequence<byte> EncodeDrainRequest(ArteryDrainRequest request)
+        {
+            using var writer = ArteryEnvelopeCodec.Encode(System.Serialization, _localUniqueAddress.Uid,
+                null, null, request, _encodeBufferPool);
+            return OwnedSequenceSegment.Create(writer.Detach());
+        }
+
+        private async Task<bool> FlushPeerProgressAsync(List<Association> associations,
+            IReadOnlyList<ArteryShutdownDrain.Target> targets, CancellationToken cancellationToken)
+        {
+            try
+            {
+                foreach (var target in targets)
+                    if (target.Role == ArteryStreamId.Control)
+                        await target.Association.EnqueueShutdownControlAsync(
+                            new OutboundEnvelope(target.Request!, null, null), cancellationToken).ConfigureAwait(false);
+
+                var dataWrites = new List<Task>();
+                foreach (var association in associations)
+                    association.CollectOutboundStreamCompletions(dataWrites, includeControl: false);
+                var settled = new List<Task>();
+                foreach (var writing in dataWrites)
+                    settled.Add(SettledAsync(writing));
+                await Task.WhenAll(settled).WaitAsync(cancellationToken).ConfigureAwait(false);
+                var writesSucceeded = true;
+                foreach (var writing in dataWrites)
+                    writesSucceeded &= writing.IsCompletedSuccessfully;
+                _shutdownDrain!.DataWritesSettled.TrySetResult(writesSucceeded);
+                if (!writesSucceeded || _shutdownDrain.Unconfirmable > 0)
+                {
+                    _shutdownDrain.Close();
+                    _log.Info("Artery shutdown has failed writes or {0} unconfirmable active streams; peer progress is not confirmed.",
+                        _shutdownDrain.Unconfirmable);
+                    return false;
+                }
+                await _shutdownDrain!.WaitForReceiptsAsync(cancellationToken).ConfigureAwait(false);
+                _log.Debug("Artery received peer progress acknowledgments for {0} shutdown stream markers.", targets.Count);
+                return true;
+            }
+            catch (Exception exception) when (exception is OperationCanceledException or ChannelClosedException)
+            {
+                var outstanding = _shutdownDrain!.Outstanding;
+                _shutdownDrain.DataWritesSettled.TrySetResult(false);
+                _shutdownDrain.Close();
+                _log.Info("Artery peer shutdown progress is incomplete: {0} stream receipts outstanding; stopping within the flush deadline.",
+                    outstanding);
+                return false;
+            }
         }
 
         private void DispatchInbound(IInboundEnvelope env)
@@ -1412,6 +1538,9 @@ namespace Akka.Remote.Artery
         {
             switch (message)
             {
+                case ArteryDrainAck acknowledgement:
+                    _shutdownDrain?.Acknowledge(originUid, acknowledgement);
+                    break;
                 case ArteryQuarantined quarantined when quarantined.QuarantinedUid == _localUniqueAddress.Uid:
                     // Only act when the notification is about THIS system's CURRENT incarnation --
                     // a notification about a stale/superseded uid must not be acted on (design.md's
@@ -1976,7 +2105,7 @@ namespace Akka.Remote.Artery
                     Func<Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed>> createConnection =
                         () => Flow.Create<ReadOnlySequence<byte>>()
                             .Prepend(Source.Single(BuildPreamble(ArteryStreamId.Ordinary)))
-                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, ArteryStreamId.Ordinary, stream), Keep.Right)
+                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, ArteryStreamId.Ordinary, association, stream), Keep.Right)
                             .MapMaterializedValue(connectionTask =>
                             {
                                 // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2416,11 +2545,15 @@ namespace Akka.Remote.Artery
                     // halfClose: false on every outbound connection: upstream completion then
                     // sends Tcp.Close, which drains and closes, instead of ConfirmedClose (#8629).
                     Task connectionTask;
-                    ((terminationWatch, connectionTask), _) = preambleAndFrames
+                    Task<Done> writerFinished;
+                    ((terminationWatch, connectionTask), writerFinished) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId), Keep.Both)
+                        .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId, association), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
+
+                    if (_quic is not null)
+                        terminationWatch = Task.WhenAll(terminationWatch, writerFinished);
 
                     connectionTask.ContinueWith(ct =>
                     {
@@ -2463,7 +2596,7 @@ namespace Akka.Remote.Artery
                     Func<Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed>> createConnection =
                         () => Flow.Create<ReadOnlySequence<byte>>()
                             .Prepend(Source.Single(BuildPreamble(streamId)))
-                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId), Keep.Right)
+                            .ViaMaterialized(CreateOutgoingConnection(remoteEndpoint, streamId, association), Keep.Right)
                             .MapMaterializedValue(connectionTask =>
                             {
                                 // Runs at EVERY (re-)materialization of the socket flow -- including
@@ -2497,7 +2630,7 @@ namespace Akka.Remote.Artery
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
-                    if (batchOrdinaryQuic)
+                    if (_quic is not null)
                         terminationWatch = Task.WhenAll(terminationWatch, writerFinished);
 
                     if (isLargeStream)

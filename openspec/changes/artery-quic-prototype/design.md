@@ -454,8 +454,67 @@ must retire its connection promptly even if a serializer or lane consumer is blo
 cleanup cancels those observer waits; underlying processing tasks remain observed and may outlive
 native teardown. Published chunks retain their owned, unpooled storage throughout.
 
-This completion task establishes a local receive boundary. It does not send a receipt to the peer,
+By itself, this completion task establishes a local receive boundary. It does not send a receipt to the peer,
 wait for actor business processing, or resolve the shutdown gap by itself. A subsequent peer-progress
 protocol must order its barrier after data on every active stream, include lane dispatch, correlate
 receipts with the current peer and generation, and preserve a bounded authenticated reply path
 during simultaneous shutdown. Missing receipts, reset and timeout cannot count as graceful receipt.
+
+### Experimental Shutdown Receipts
+
+The next safety slice uses shared Artery control messages for peer progress. It is activated only
+for QUIC; TCP keeps its current shutdown behavior. The native streams remain unidirectional and
+use the existing ALPN and envelope framing. The new serializer manifests are `DR` (request) and
+`DRA` (acknowledgment), using the existing Artery control serializer.
+
+Each materialized outbound stream registers an independent nonce. Before completing any queues,
+shutdown freezes that set and binds its expected receipts to the current peer UID. A local writer
+stopping cannot remove its receipt debt. An active stream without a confirmable current identity
+makes peer progress incomplete; an empty receipt set cannot hide such a stream.
+
+The sequence is, schematically:
+
+```text
+freeze active streams and expected receipts
+complete ordinary and large queues
+queue control markers while keeping control replies open
+await data writers, then validated receipts, within the existing deadline
+complete control queues and stop inbound/native transport
+```
+
+The data-stream stage appends its marker after all earlier encoded bytes. The control marker goes
+through its own existing FIFO queue. Only validated shutdown responses bypass stopped user-send
+admission; they reuse an existing control writer and never dial another peer.
+
+```mermaid
+sequenceDiagram
+    participant S as Sender
+    participant Q as Outbound stream
+    participant R as Peer processing
+    participant L as Peer lane consumers
+    S->>Q: Complete data queue
+    Q->>R: Earlier data, marker, FIN
+    R->>L: Drain accepted ordinary work
+    L-->>R: Consumers finished
+    R-->>S: Validated receipt over existing control stream
+    S->>S: Stop control and native transport
+```
+
+An ordinary/large receipt requires a successful sink, all lane consumers, complete input framing,
+and observed input completion. The inbound-stop guard prevents a transport kill switch from
+minting a receipt. A control receipt follows inline processing of its earlier controls without
+waiting for that still-open control stream to end. Requests must match their stream preamble;
+receipts must arrive on control. Origin, destination UID, address, nonce and current incarnation
+are checked. Unknown, duplicated, late or replaced-peer receipts cannot confirm another stream.
+
+The same `flush-wait-on-shutdown` deadline bounds writers, receipts and teardown. Failed writes,
+missing receipts, unconfirmable identities or timeout report incomplete progress and allow bounded
+shutdown. Simultaneous shutdown may time out and must not claim a receipt that never arrived.
+The result confirms transport processing past the selected markers under existing at-most-once
+semantics. It does not confirm actor mailbox drainage or business processing, and adds no replay.
+
+Earlier prototype peers do not recognize the new control messages. Ordinary framing remains
+unchanged, but their absent receipts cause bounded incomplete-progress shutdown. Upgrade both
+ends to exercise confirmation. This is a prototype implementation with focused checks; simultaneous
+termination, reset/late-completion stress, native resource/credential lifetime after an expired
+deadline, and the broader qualification gates remain required before production qualification.

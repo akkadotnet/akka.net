@@ -635,11 +635,11 @@ namespace Akka.Remote.Artery
         /// that has never been materialized contributes nothing -- there is no writer to wait for,
         /// and whatever sits in its channel is accounted by the shutdown drain.
         /// </summary>
-        public void CollectOutboundStreamCompletions(List<Task> destination)
+        public void CollectOutboundStreamCompletions(List<Task> destination, bool includeControl = true)
         {
             if (_outboundStreamCompletion is { } outbound)
                 destination.Add(outbound);
-            if (_controlStreamCompletion is { } control)
+            if (includeControl && _controlStreamCompletion is { } control)
                 destination.Add(control);
             if (_largeStreamCompletion is { } large)
                 destination.Add(large);
@@ -875,6 +875,9 @@ namespace Akka.Remote.Artery
                 _quarantineNotifications.GetValue(element, _ => new QuarantineNotificationDeadline(_monotonicClock() + _quarantineNotificationTimeout));
             return _controlChannel.Writer.TryWrite(element);
         }
+
+        internal ValueTask EnqueueShutdownControlAsync(IOutboundEnvelope element, CancellationToken cancellationToken) =>
+            _controlChannel.Writer.WriteAsync(element, cancellationToken);
 
         /// <summary>
         /// Quarantine notices are one-time best-effort events, not regenerating housekeeping.

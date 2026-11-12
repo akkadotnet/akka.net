@@ -86,6 +86,26 @@ Successful receive-processing completion SHALL include the inbound sink and all 
 - **WHEN** an old connect/read/write completion arrives after cancellation or connection replacement
 - **THEN** it SHALL NOT admit old traffic, retire the replacement or retain transport-owned buffers
 
+### Requirement: Bounded peer progress during QUIC shutdown
+
+Experimental QUIC shutdown SHALL preregister a marker for each active materialized stream with a known current peer, append data markers after preceding data, and preserve an existing authenticated control reply path within the configured flush deadline. Successful confirmation SHALL require validated peer receipts and successful local data writers. Unknown active identities, failure or deadline expiry SHALL report incomplete progress. Receipt state SHALL be scoped to peer UID and stream materialization; no new association or dial SHALL be created to obtain a receipt. TCP shutdown defaults SHALL remain unchanged.
+
+#### Scenario: Data marker reaches a blocked lane
+- **WHEN** native data and FIN complete but a preceding message is still held in an inbound consumer
+- **THEN** the peer SHALL NOT acknowledge that data marker until the sink and all accepted lane work have completed
+
+#### Scenario: Missing or invalid receipt
+- **WHEN** a receipt is absent, has the wrong nonce or identity, belongs to a replaced incarnation, or arrives after closure
+- **THEN** it SHALL NOT confirm another stream and shutdown SHALL remain bounded
+
+#### Scenario: Incomplete input or wrong stream role
+- **WHEN** a marker has a role inconsistent with its preamble or data input ends within a frame
+- **THEN** receive processing SHALL fail rather than issue a successful data receipt
+
+#### Scenario: Simultaneous shutdown
+- **WHEN** both peers shut down with queued work
+- **THEN** each side SHALL obtain actual validated receipts or report bounded incomplete progress, without treating local FIN or cancellation as receipt
+
 ### Requirement: Equivalent and reproducible comparison
 
 The experiment SHALL compare plaintext TCP, TLS TCP and QUIC using the same integrated Artery workload and protocol settings, with equivalent authentication for the encrypted arms. It SHALL record delivered goodput, latency distributions, control progress, CPU, managed/native memory and invalidating drops/duplicates/application resends. Real-network conclusions SHALL use separate processes on separate hosts and documented configurations.

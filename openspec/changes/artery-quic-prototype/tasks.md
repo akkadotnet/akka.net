@@ -60,6 +60,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
 - [x] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
 - [x] Track full QUIC receive processing through sink and lane completion, with independent prompt source-failure retirement and bounded native teardown.
+- [x] Prototype shared per-stream shutdown markers and validated receipts, retaining control replies within the existing deadline.
 - [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
@@ -70,5 +71,11 @@ Retained receive bytes are checked after FIN and after reset/reconnect with dist
 payloads, then native/materializer shutdown. This is bounded coverage, not whole-suite qualification.
 
 The single-lane live-recipient branch already exists in `ArteryQuicStreamsSpec`; its remaining shutdown
-gap is peer consumption before connection retirement. Do not duplicate the branch or treat native
-write/FIN completion as a delivery acknowledgment. No shared drain protocol is introduced here.
+gap is qualified peer consumption before connection retirement. Do not duplicate the branch or treat native
+write/FIN completion as a delivery acknowledgment. The experimental shared marker/receipt protocol
+now has focused successful-drain, blocked-consumer, identity, framing and tail-ownership checks.
+One/eight-stream simultaneous shutdown checks hold consumers at both peers, require explicit
+incomplete progress after native FIN, and verify retained messages after release. Expired-deadline
+and replaced-stream nonce checks reject false confirmation. These are bounded cases; successful
+simultaneous drain under load, reset/stale-generation stress and native resource/credential deadline
+gates remain open. Prototype implementation is not full qualification.

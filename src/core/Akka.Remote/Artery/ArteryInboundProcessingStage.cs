@@ -196,7 +196,7 @@ namespace Akka.Remote.Artery
             Action<object, string?, string>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
             SharedTestState? testState = null,
-            Action<Task>? onLaneConsumersStopped = null)
+            Action<Task, bool>? onLaneConsumersStopped = null)
         {
             if (inboundLanes < 1)
                 throw new ArgumentOutOfRangeException(nameof(inboundLanes), inboundLanes, "Must be >= 1.");
@@ -249,7 +249,7 @@ namespace Akka.Remote.Artery
             Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
 
-        private Action<Task>? OnLaneConsumersStopped { get; }
+        private Action<Task, bool>? OnLaneConsumersStopped { get; }
 
         public int MaxFrameLength { get; }
 
@@ -376,6 +376,8 @@ namespace Akka.Remote.Artery
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
             private bool _preambleParsed;
+            private ArteryStreamId _streamId;
+            private bool _inputCompleted;
 
             /// <summary>
             /// Deliberately NOT constructed until <see cref="TryConsumePreamble"/> has parsed the
@@ -474,7 +476,7 @@ namespace Akka.Remote.Artery
                 }
                 else if (IsClosed(_stage.In) && !_writeInFlight)
                 {
-                    CompleteStage();
+                    CompleteInputStage();
                 }
                 // !_writeInFlight guards this exactly like DeliverOrPull's matching guard: while
                 // parked on lane backpressure, do NOT request more input from the connection, even
@@ -490,14 +492,36 @@ namespace Akka.Remote.Artery
 
             public void OnUpstreamFinish()
             {
+                _inputCompleted = true;
                 if (_pending.Count == 0 && !_writeInFlight)
-                    CompleteStage();
+                    CompleteInputStage();
 
                 // else: swallow the termination and let OnPull (non-lane path) / OnLaneWriteAvailable
                 // (lane path) drain the remainder, completing once both are empty/clear.
             }
 
             public void OnUpstreamFailure(Exception e) => FailStage(e);
+
+            private void CompleteInputStage()
+            {
+                // Receipt observation is opt-in for QUIC. Do not call an incomplete preamble
+                // or frame a successful input boundary merely because upstream reached EOF.
+                if (_stage.OnLaneConsumersStopped is not null &&
+                    (!_preambleParsed || _frameParser!.HasBufferedBytes))
+                {
+                    FailStage(new ArteryFramingException("Artery input ended within a preamble or frame."));
+                    return;
+                }
+                CompleteStage();
+            }
+
+            private void ValidateDrainRole(object payload)
+            {
+                if (payload is ArteryDrainRequest drain && drain.StreamId != (byte)_streamId)
+                    throw new ArteryFramingException("Artery shutdown marker does not match its stream preamble.");
+                if (payload is ArteryDrainAck && _streamId != ArteryStreamId.Control)
+                    throw new ArteryFramingException("Artery shutdown receipts require the control stream.");
+            }
 
             public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
@@ -520,7 +544,7 @@ namespace Akka.Remote.Artery
                         lane.Writer.TryComplete();
                 }
                 _stage.OnLaneConsumersStopped?.Invoke(_laneConsumers is null
-                    ? Task.CompletedTask : WaitForLaneConsumersAsync(_laneConsumers));
+                    ? Task.CompletedTask : WaitForLaneConsumersAsync(_laneConsumers), _inputCompleted);
             }
 
             private static async Task WaitForLaneConsumersAsync(Task<bool>[] consumers)
@@ -557,6 +581,7 @@ namespace Akka.Remote.Artery
                 }
 
                 ArteryConnectionHeader.TryParse(new ReadOnlySequence<byte>(_preambleBuffer), out var streamId, out _);
+                _streamId = streamId;
 
                 if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control && streamId != ArteryStreamId.Large)
                 {
@@ -618,7 +643,7 @@ namespace Akka.Remote.Artery
                     {
                         element = DecodeFrame(frameBody);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not ArteryFramingException)
                     {
                         Log.Warning(ex, "Transient error decoding an inbound Artery frame; connection remains live.");
                         continue;
@@ -642,7 +667,10 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
+                {
+                    ValidateDrainRole(payload);
                     return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                }
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
@@ -783,7 +811,7 @@ namespace Akka.Remote.Artery
                     {
                         handled = ProcessFrameLaneMode(frameBody);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not ArteryFramingException)
                     {
                         Log.Warning(ex, "Transient error decoding an inbound Artery frame; connection remains live.");
                         continue;
@@ -820,6 +848,7 @@ namespace Akka.Remote.Artery
                     // non-lane path does and push it through the ordinary Out pipeline so
                     // InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound still see it.
                     var controlPayload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                    ValidateDrainRole(controlPayload);
                     _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest));
                     return true;
                 }
@@ -1056,7 +1085,7 @@ namespace Akka.Remote.Artery
                 DeliverOrPull();
 
                 if (_pending.Count == 0 && !_writeInFlight && IsClosed(_stage.In))
-                    CompleteStage();
+                    CompleteInputStage();
             }
 
             #endregion

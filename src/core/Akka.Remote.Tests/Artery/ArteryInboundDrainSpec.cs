@@ -27,6 +27,65 @@ namespace Akka.Remote.Tests.Artery
     {
         public ArteryInboundDrainSpec(ITestOutputHelper output) : base(output) { }
 
+        [Theory(DisplayName = "Inbound shutdown processing rejects markers for another stream role")]
+        [InlineData(1, 1)]
+        [InlineData(4, 1)]
+        [InlineData(1, 3)]
+        [InlineData(4, 3)]
+        public async Task Should_RejectDrainMarker_When_RoleDoesNotMatchPreamble(int lanes, int markerRole)
+        {
+            await AssertInvalidInputAsync(lanes, markerRole, Array.Empty<byte>());
+        }
+
+        [Theory(DisplayName = "Inbound shutdown processing rejects receipts on an ordinary stream")]
+        [InlineData(1)]
+        [InlineData(4)]
+        public async Task Should_RejectDrainReceipt_When_ItArrivesOnDataStream(int lanes)
+        {
+            await AssertInvalidInputAsync(lanes, (int)ArteryStreamId.Ordinary, Array.Empty<byte>(), acknowledgement: true);
+        }
+
+        [Theory(DisplayName = "Inbound shutdown processing rejects truncated input after a valid data marker")]
+        [InlineData(1, false)]
+        [InlineData(4, false)]
+        [InlineData(1, true)]
+        [InlineData(4, true)]
+        public async Task Should_RejectTruncatedInput_When_DataMarkerWasDecoded(int lanes, bool body)
+        {
+            await AssertInvalidInputAsync(lanes, (int)ArteryStreamId.Ordinary,
+                body ? new byte[] { 8, 0, 0, 0, 1, 2 } : new byte[] { 8, 0 });
+        }
+
+        private async Task AssertInvalidInputAsync(int lanes, int markerRole, byte[] tail, bool acknowledgement = false)
+        {
+            var peer = new UniqueAddress(new Address("akka", "peer", "127.0.0.1", 4321), 42);
+            var context = new AssociationRegistryInboundContext(new AssociationRegistry(),
+                new UniqueAddress(new Address("akka", "local", "127.0.0.1", 1234), 1), (_, _) => { });
+            context.CompleteHandshake(peer);
+            var stopped = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var stage = new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
+                inboundLanes: lanes, inboundLaneBufferSize: 4, inboundContext: context,
+                dispatchOrdinary: (_, _, _) => throw new InvalidOperationException("No ordinary message expected."),
+                onLaneConsumersStopped: (completion, _) => stopped.TrySetResult(completion));
+            object message = acknowledgement ? new ArteryDrainAck(peer, 1, 7)
+                : new ArteryDrainRequest(peer, 1, 7, (byte)markerRole);
+            using var encoded = ArteryEnvelopeCodec.Encode(Sys.Serialization, peer.Uid, null, null, message);
+            var input = Preamble(ArteryStreamId.Ordinary).ToArray().Concat(encoded.WrittenSpan.ToArray()).Concat(tail).ToArray();
+            var materializer = ActorMaterializer.Create(Sys);
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try
+            {
+                var processing = Source.Single(new ReadOnlySequence<byte>(input)).Via(stage)
+                    .RunWith(Sink.Ignore<IInboundEnvelope>(), materializer);
+                await Assert.ThrowsAsync<ArteryFramingException>(() => processing.WaitAsync(deadline.Token));
+                await (await stopped.Task.WaitAsync(deadline.Token)).WaitAsync(deadline.Token);
+            }
+            finally
+            {
+                materializer.Shutdown();
+            }
+        }
+
         [Theory(DisplayName = "Inbound consumer completion waits for accepted lane work on every graph termination path")]
         [InlineData("finish")]
         [InlineData("failure")]
@@ -73,7 +132,7 @@ namespace Akka.Remote.Tests.Artery
                     delivered.Enqueue((recipient, value));
                     if (recipient == healthy && value == count - 1)
                         healthyDone.TrySetResult(Done.Instance);
-                }, onLaneConsumersStopped: completion => stopped.TrySetResult(completion));
+                }, onLaneConsumersStopped: (completion, _) => stopped.TrySetResult(completion));
             var ((queue, killSwitch), graph) = Source.Queue<ReadOnlySequence<byte>>(32, OverflowStrategy.Backpressure)
                 .Via(stage)
                 .ViaMaterialized(KillSwitches.Single<IInboundEnvelope>(), Keep.Both)
@@ -143,7 +202,7 @@ namespace Akka.Remote.Tests.Artery
             var stage = new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
                 inboundLanes: lanes, inboundLaneBufferSize: 16, inboundContext: context,
                 dispatchOrdinary: (_, _, _) => throw new InvalidOperationException("No lane dispatch expected."),
-                onLaneConsumersStopped: completion => stopped.TrySetResult(completion));
+                onLaneConsumersStopped: (completion, _) => stopped.TrySetResult(completion));
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             var materializer = ActorMaterializer.Create(Sys);
             try

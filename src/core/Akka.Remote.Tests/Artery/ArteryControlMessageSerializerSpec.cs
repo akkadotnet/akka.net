@@ -62,6 +62,27 @@ namespace Akka.Remote.Tests.Artery
 
         public async ValueTask DisposeAsync() => await _system.Terminate();
 
+        [Theory(DisplayName = "Artery shutdown markers preserve peer identity, nonce and stream role")]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        public void Should_RoundTripDrainRequest_When_EncodingEachStreamRole(int role)
+        {
+            var peer = new UniqueAddress(new Address("akka", "peer", "127.0.0.1", 2552), -42);
+            var request = new ArteryDrainRequest(peer, 17, 91, (byte)role);
+            RoundTrip(request).Should().Be(request);
+            _serializer.SizeHint(request).Should().Be(_serializer.ToBinary(request).Length);
+        }
+
+        [Fact(DisplayName = "Artery shutdown receipts preserve peer identity, destination and nonce")]
+        public void Should_RoundTripDrainAck_When_EncodingPeerProgress()
+        {
+            var peer = new UniqueAddress(new Address("akka", "peer", "127.0.0.1", 2552), 42);
+            var acknowledgement = new ArteryDrainAck(peer, -17, 91);
+            RoundTrip(acknowledgement).Should().Be(acknowledgement);
+            _serializer.SizeHint(acknowledgement).Should().Be(_serializer.ToBinary(acknowledgement).Length);
+        }
+
         [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip HandshakeReq")]
         public void Should_round_trip_HandshakeReq()
         {
