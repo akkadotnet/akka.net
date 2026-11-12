@@ -572,7 +572,7 @@ receipt status remains distinct from reverse cleanup; neither promises actor bus
 
 ### Direct receive completion experiment
 
-The research candidate replaces `UnfoldResourceAsync` on the QUIC input with a small pull-driven
+The receive source replaces `UnfoldResourceAsync` on the QUIC input with a small pull-driven
 source stage. Each materialization owns one private 16 KiB scratch array and caches its success and
 failure callbacks. An immediately successful `ReadAsync` result is consumed in the interpreter;
 a pending result is awaited once before posting the cached callback. Only one read is outstanding.
@@ -597,8 +597,9 @@ managed framing, sink and lane completion independently of native teardown. Ther
 pump, extra queue, prefetch policy or actor-visible buffer lease.
 
 The experiment has passed focused native and selected multi-node delivery, cleanup and cluster
-restart checks at one and eight streams. Throughput and managed allocation results justify retaining
-the candidate for review, but paced tail-latency comparisons remain mixed. Keep it on the research
-branch pending a resolved promotion decision; do not treat throughput alone as a latency guarantee.
+restart checks at one and eight streams. Throughput and managed allocation results justify including
+the improvement in the draft PR, with the mixed paced tail-latency comparisons disclosed. A separate
+investigation will distinguish generator, GC and scheduling effects from receive-path latency.
+The latency question remains open; throughput alone is not a latency guarantee.
 Contiguous outbound encoding/batching remains deferred: this receive experiment does not establish
 that another copy, producer batch or native coalescing change would improve the remaining path.

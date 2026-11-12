@@ -111,7 +111,7 @@ credit, not an application byte window or a transport receive-window measurement
 - [x] Use Schannel-compatible private-key storage for generated and supplied benchmark identities on Windows, retaining ephemeral imports elsewhere and bidirectional TLS credential checks.
 - [x] Isolate a QUIC receive stage with cached callbacks and direct `ValueTask` consumption; retain owned unpooled published chunks, pull backpressure, observed late completions and distinct EOF/cancellation outcomes.
 - [x] Verify immediate/deferred reads, exactly-once completion consumption, retained bytes, failure, downstream cancellation and native generation cleanup before performance measurements.
-- [x] Compare frozen candidate/control with matched validated ping-pong and one-way workloads, then appropriate CPU/allocation, latency and capacity gates; retain the candidate on the research branch while paced tail-latency evidence remains inconclusive.
+- [x] Compare frozen candidate/control with matched validated ping-pong and one-way workloads, then appropriate CPU/allocation, latency and capacity gates; include the receive improvement in the draft PR with its mixed paced tail-latency results documented and attribution still open.
 - [x] Evaluate whether the receive experiment justifies contiguous outbound encoding/batching; defer it because the remaining measurements do not select that separate change.
 
 Use the existing authenticated opt-in QUIC multi-node runner for focused iteration checks. Broader
