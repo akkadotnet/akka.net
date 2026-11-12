@@ -84,6 +84,14 @@ add `Wire` when the bytes on the wire change.
 
 ### Not breaking, for the record
 
+* **Proposed, Artery inbound EOF validation:** natural EOF after a partial connection
+  preamble, frame length or frame body now fails that connection with a framing error
+  instead of silently completing it. Empty connections and complete frame boundaries
+  still close cleanly; cancellation and upstream failure keep their existing semantics.
+  Send complete frames before closing a peer; this does not add message replay or a
+  delivery guarantee. Artery is new in v1.6, so this changes unreleased behavior only.
+
+
 * **Proposed #8857, `Akka.Remote` / Artery (behavior):** a failed stream with no
   queued traffic or unacknowledged system messages becomes dormant instead of retrying a
   departed peer forever. Channels and reliable delivery state stay intact; normal sends and
