@@ -106,6 +106,11 @@ change machine trust stores. Initial systems, `StartNewSystemAsync`, and the pro
 `ActorSystem.Create` must supply their own typed TLS setup. Factory-owned certificates live
 until their actor system terminates; caller-supplied setup remains caller-owned.
 
+On Windows, the factory imports PFX credentials with `DefaultKeySet` for Schannel compatibility,
+without requesting `PersistKeySet`. Other platforms use `EphemeralKeySet`. The factory retains
+the certificate through system termination to preserve its private-key lifetime during native
+cleanup. Caller-supplied certificates are not reimported or modified.
+
 `AKKA_MNTR_QUIC_STREAMS` accepts 1–64 (default 1) and configures matching ordinary stream
 admission and outbound lanes. Each role emits `[MULTINODE-TRANSPORT]` JSON with its **actual**
 transport, runtime and stream count. Inspect the role output in the test results: a passing

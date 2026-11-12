@@ -95,7 +95,11 @@ internal static class MultiNodeTransport
                     var pins = Required(environment, PinsVariable).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
                     var inbound = TlsPeerPolicy.PinnedCertificates(pins);
                     var outbound = inbound.And(TlsCertificateValidation.ValidateHostname());
-                    certificate = TlsCertificateLoader.LoadPkcs12FromFile(path, environment(PasswordVariable), X509KeyStorageFlags.EphemeralKeySet);
+                    // Schannel cannot authenticate with EphemeralKeySet. DefaultKeySet uses
+                    // the normal temporary Windows key container; do not request PersistKeySet.
+                    var keyStorage = OperatingSystem.IsWindows()
+                        ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
+                    certificate = TlsCertificateLoader.LoadPkcs12FromFile(path, environment(PasswordVariable), keyStorage);
                     setup = setup.WithSetup(new ArteryTlsSetup(ArteryTlsSettings.Mutual(certificate, inbound, outbound)));
                 }
                 if (!QuicConnection.IsSupported)
