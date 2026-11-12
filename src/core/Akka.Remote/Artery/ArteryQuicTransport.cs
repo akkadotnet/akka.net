@@ -310,24 +310,8 @@ namespace Akka.Remote.Artery
                                 throw new ArteryFramingException($"Duplicate Artery QUIC channel [{role}].");
                         }
                         var reachedEof = false;
-                        var source = Source.UnfoldResourceAsync<ReadOnlySequence<byte>, (QuicStream Stream, byte[] Buffer)>(
-                            () => Task.FromResult((stream, GC.AllocateUninitializedArray<byte>(16 * 1024, pinned: true))),
-                            async resource =>
-                            {
-                                var count = await resource.Stream.ReadAsync(resource.Buffer, lifetime.Token).ConfigureAwait(false);
-                                if (count == 0)
-                                    reachedEof = true;
-                                if (role == ArteryStreamId.Ordinary && count > 0)
-                                    _ioCounters?.Read(count);
-                                // Keep one bounded scratch buffer per reader. Downstream frames can
-                                // retain chunks across reads, so publish a separately owned array of
-                                // only the received bytes; the scratch never escapes or returns to a pool.
-                                return count == 0 ? Option<ReadOnlySequence<byte>>.None
-                                    : Option<ReadOnlySequence<byte>>.Create(new ReadOnlySequence<byte>(resource.Buffer.AsSpan(0, count).ToArray()));
-                            },
-                            // The connection is the sole native disposal owner. A cancelled
-                            // reader signals retirement through its processing task below.
-                            _ => Task.FromResult(Done.Instance))
+                        var source = Source.FromGraph(new ArteryQuicReadStage(stream, lifetime.Token,
+                                role == ArteryStreamId.Ordinary ? _ioCounters : null, () => reachedEof = true))
                             .Prepend(Source.Single(new ReadOnlySequence<byte>(preamble)))
                             .WatchTermination((_, done) =>
                             {
