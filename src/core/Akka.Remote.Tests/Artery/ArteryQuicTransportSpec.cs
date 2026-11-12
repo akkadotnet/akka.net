@@ -1008,6 +1008,150 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Theory(DisplayName = "QUIC retires a native stream-credit wait without leaking ownership or poisoning replacement traffic")]
+        [InlineData("caller")]
+        [InlineData("timeout")]
+        [InlineData("shutdown")]
+        public async Task Should_RetirePendingStreamOpen_When_NativeCreditIsUnavailable(string stop)
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TlsPeerPolicy.PinnedCertificates(certificate.Thumbprint))
+                .WithHandshakeTimeout(TimeSpan.FromSeconds(3));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            ArteryQuicTransport? replacementSender = null;
+            Task<QuicConnection>? accepting = null;
+            Task<QuicConnection>? nextAccepting = null;
+            Task<ArteryQuicTransport.Channel>? opening = null;
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            using var caller = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
+            await using var listener = await QuicListener.ListenAsync(new QuicListenerOptions
+            {
+                ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0),
+                ApplicationProtocols = [ArteryQuicTransport.ApplicationProtocol],
+                ConnectionOptionsCallback = (_, _, _) =>
+                {
+                    var authentication = tls.ServerSettings.CreateAuthenticationOptions("stream-credit-test", log);
+                    authentication.ApplicationProtocols = [ArteryQuicTransport.ApplicationProtocol];
+                    authentication.EnabledSslProtocols = SslProtocols.Tls13;
+                    return ValueTask.FromResult(new QuicServerConnectionOptions
+                    {
+                        ServerAuthenticationOptions = authentication,
+                        DefaultCloseErrorCode = 1,
+                        DefaultStreamErrorCode = 1,
+                        MaxInboundBidirectionalStreams = 0,
+                        MaxInboundUnidirectionalStreams = 1
+                    });
+                }
+            }, deadline.Token);
+            try
+            {
+                accepting = listener.AcceptConnectionAsync(deadline.Token).AsTask();
+                var control = await sender.OpenAsync(listener.LocalEndPoint, ArteryStreamId.Control, deadline.Token);
+                var connection = await accepting.WaitAsync(deadline.Token);
+                await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                await using var input = await connection.AcceptInboundStreamAsync(deadline.Token);
+                var preamble = new byte[ArteryConnectionHeader.Length];
+                await input.ReadExactlyAsync(preamble, deadline.Token);
+                preamble.Should().Equal(Preamble(ArteryStreamId.Control));
+                // The only advertised native stream is still open. With the connection already
+                // established, this call reaches the serialized native open and waits for credit.
+                opening = sender.OpenAsync(listener.LocalEndPoint, ArteryStreamId.Ordinary, caller.Token);
+                opening.IsCompleted.Should().BeFalse();
+                if (stop == "caller")
+                    caller.Cancel();
+                else if (stop == "shutdown")
+                    await sender.ShutdownAsync(new CancellationToken(canceled: true));
+                var failure = await Record.ExceptionAsync(() => opening.WaitAsync(deadline.Token));
+                deadline.IsCancellationRequested.Should().BeFalse("the outer test deadline must not masquerade as native-open cancellation");
+                if (stop == "shutdown")
+                    failure.Should().Match<Exception>(error => error is OperationCanceledException || error is QuicException);
+                else
+                    failure.Should().BeAssignableTo<OperationCanceledException>();
+                if (stop == "timeout")
+                    caller.IsCancellationRequested.Should().BeFalse("the configured open timeout must cancel independently of the caller");
+                control.CancellationToken.IsCancellationRequested.Should().BeTrue();
+                await Assert.ThrowsAsync<QuicException>(() => input.ReadAsync(new byte[1], deadline.Token).AsTask());
+
+                if (stop == "shutdown")
+                {
+                    await sender.WhenNativeResourcesReleased.WaitAsync(deadline.Token);
+                    await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                        sender.OpenAsync(listener.LocalEndPoint, ArteryStreamId.Control, deadline.Token));
+                    replacementSender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+                }
+                var active = replacementSender ?? sender;
+                nextAccepting = listener.AcceptConnectionAsync(deadline.Token).AsTask();
+                var next = await active.OpenAsync(listener.LocalEndPoint, ArteryStreamId.Control, deadline.Token);
+                next.Stream.Should().NotBeSameAs(control.Stream);
+                var nextConnection = await nextAccepting.WaitAsync(deadline.Token);
+                await next.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                await using var nextInput = await nextConnection.AcceptInboundStreamAsync(deadline.Token);
+                await nextInput.ReadExactlyAsync(preamble, deadline.Token);
+                preamble.Should().Equal(Preamble(ArteryStreamId.Control));
+                var expected = new byte[] { 7, 19, 53, 101, 239 };
+                await next.Stream.WriteAsync(expected, deadline.Token);
+                next.Stream.CompleteWrites();
+                var actual = new byte[expected.Length];
+                await nextInput.ReadExactlyAsync(actual, deadline.Token);
+                actual.Should().Equal(expected);
+                (await nextInput.ReadAsync(new byte[1], deadline.Token)).Should().Be(0);
+                next.CancellationToken.IsCancellationRequested.Should().BeFalse();
+            }
+            finally
+            {
+                deadline.Cancel();
+                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                try
+                {
+                    await sender.ShutdownAsync(cleanup.Token);
+                    if (replacementSender is not null)
+                        await replacementSender.ShutdownAsync(cleanup.Token);
+                }
+                finally
+                {
+                    // An outbound failure can precede awaiting an accept result. Every raw
+                    // accepted connection and pending open still needs an observation owner.
+                    await Task.WhenAll(DisposeAcceptedAsync(accepting), DisposeAcceptedAsync(nextAccepting), ObserveOpeningAsync());
+                }
+                await sender.WhenNativeResourcesReleased.WaitAsync(cleanup.Token);
+                if (replacementSender is not null)
+                    await replacementSender.WhenNativeResourcesReleased.WaitAsync(cleanup.Token);
+
+                async Task DisposeAcceptedAsync(Task<QuicConnection>? accepted)
+                {
+                    if (accepted is null)
+                        return;
+                    await Record.ExceptionAsync(() => accepted.WaitAsync(cleanup.Token));
+                    accepted.IsCompleted.Should().BeTrue("cleanup must settle the original accept, not just its deadline wait");
+                    if (accepted.IsCompletedSuccessfully)
+                    {
+                        // WaitAsync cancellation can race successful acceptance. Observe the
+                        // original task so that its connection cannot escape disposal.
+                        await (await accepted).DisposeAsync();
+                    }
+                    else
+                    {
+                        var failure = await Record.ExceptionAsync(() => accepted);
+                        failure.Should().Match<Exception>(error => error is OperationCanceledException ||
+                            error is QuicException || error is AuthenticationException);
+                    }
+                }
+
+                async Task ObserveOpeningAsync()
+                {
+                    if (opening is null)
+                        return;
+                    await Record.ExceptionAsync(() => opening.WaitAsync(cleanup.Token));
+                    opening.IsCompleted.Should().BeTrue("cleanup must observe the native open itself, not just its wait deadline");
+                    var failure = await Record.ExceptionAsync(() => opening);
+                    if (failure is not null)
+                        failure.Should().Match<Exception>(error => error is OperationCanceledException || error is QuicException);
+                }
+            }
+        }
+
         [Fact(DisplayName = "QUIC cancellation interrupts a dial to an unresponsive UDP endpoint")]
         public async Task Should_CancelPendingDial_When_CallerCancels()
         {

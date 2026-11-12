@@ -67,6 +67,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Verify shared per-stream peer progress with surviving recipients and explicit incomplete-progress timeout semantics; keep production qualification separate.
 - [x] Verify announced-peer data/control drain ordering during symmetric and staggered simultaneous shutdown, including native-lifetime sensitivity and unchanged blocked-consumer outcomes.
 - [x] Force a retired connection's managed processing failure after replacement traffic begins, retaining receive bytes through subsequent reads and native cleanup with one/eight streams.
+- [x] Verify caller cancellation, configured timeout and expired-deadline shutdown during native stream-credit admission, including replacement traffic and final native-owner release.
 
 The runner foundation now covers authenticated delivery (one/eight streams), canceled restart cleanup
 (one/eight/classic), repeated cluster restart (one/eight), same-address seed rebind and quarantine
@@ -98,3 +99,9 @@ cases do not force every late native callback race or constitute full qualificat
 controlled offered-load latency, including timeout checks that distinguish scheduled offers from
 actual echo progress. Native-write/stage progress observations and contemporary CPU, memory and
 latency comparisons remain required before selecting another stage optimization.
+
+A separate native admission check keeps CONTROL open while the peer withholds further stream
+credit. Caller cancellation, the configured open timeout and expired-deadline shutdown retire the
+pending ordinary open and release native ownership. Replacement CONTROL traffic and FIN must
+still work where admission remains open; a stopped transport rejects new opens. This is stream-count
+credit, not an application byte window or a transport receive-window measurement.
