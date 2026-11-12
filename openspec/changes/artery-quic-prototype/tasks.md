@@ -60,6 +60,7 @@ private machine records remain outside this source/specification change. Transpo
 - [x] Verify configuration/identity negatives and native prerequisites, then run bounded compatible remote/cluster subsets with one and multiple ordinary streams.
 - [x] Inventory classic-only/rate-throttle specs and report them separately; do not count skips, fallbacks or pinned classic roles as QUIC coverage.
 - [x] Track full QUIC receive processing through sink and lane completion, with independent prompt source-failure retirement and bounded native teardown.
+- [x] Separate native-resource release from managed receive completion and retain factory-owned credentials through native cleanup, including failed initialization.
 - [x] Prototype shared per-stream shutdown markers and validated receipts, retaining control replies within the existing deadline.
 - [ ] Close the known peer-consumed shutdown gap with a surviving-recipient check and explicit protocol/timeout semantics before production qualification.
 
@@ -78,4 +79,5 @@ One/eight-stream simultaneous shutdown checks hold consumers at both peers, requ
 incomplete progress after native FIN, and verify retained messages after release. Expired-deadline
 and replaced-stream nonce checks reject false confirmation. These are bounded cases; successful
 simultaneous drain under load, reset/stale-generation stress and native resource/credential deadline
-gates remain open. Prototype implementation is not full qualification.
+stress gates remain open. Native-owner and controlled post-termination credential checks are in
+place; prototype implementation is not full qualification.

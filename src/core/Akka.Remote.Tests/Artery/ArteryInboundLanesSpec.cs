@@ -128,6 +128,10 @@ namespace Akka.Remote.Tests.Artery
                     reverseTransport.QuicShutdownPeerProgress.Should().BeFalse();
                     reverseTransport.QuicShutdownReceiptsOutstanding.Should().BeGreaterThan(0);
                 }
+                using var nativeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await transport.WhenQuicNativeResourcesReleased.WaitAsync(nativeDeadline.Token);
+                if (simultaneous)
+                    await reverseTransport.WhenQuicNativeResourcesReleased.WaitAsync(nativeDeadline.Token);
                 GateBlockingSerializer.OpenGate(gateKey);
                 GateBlockingSerializer.OpenGate(reverseGateKey);
                 for (var value = 0; value < 3; value++)

@@ -11,6 +11,7 @@ using System.Net.Quic;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
@@ -101,6 +102,7 @@ internal static class MultiNodeTransport
                         ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
                     certificate = TlsCertificateLoader.LoadPkcs12FromFile(path, environment(PasswordVariable), keyStorage);
                     setup = setup.WithSetup(new ArteryTlsSetup(ArteryTlsSettings.Mutual(certificate, inbound, outbound)));
+                    setup = setup.WithSetup(new ArteryQuicResourceSetup(new ArteryQuicResourceLifetime()));
                 }
                 if (!QuicConnection.IsSupported)
                     throw new PlatformNotSupportedException("QUIC multi-node testing requires native QUIC support.");
@@ -112,9 +114,29 @@ internal static class MultiNodeTransport
                 // Start can throw after initiating asynchronous native teardown. Transfer ownership
                 // before Start so the certificate survives that failure path too.
                 var owned = new ActorSystemImpl(name, config, setup);
-                owned.RegisterOnTermination(certificate.Dispose);
+                // Register the resource boundary before Start. Provider initialization can fail
+                // before a transport exists, so termination must not dereference that provider.
+                var resources = setup.Get<ArteryQuicResourceSetup>().Value.Lifetime;
+                var ownedCertificate = certificate;
+                var disposal = new Lazy<Task>(() => DisposeAfterNativeReleaseAsync(ownedCertificate, resources.WhenReleased));
+                void ReleaseCertificate()
+                {
+                    resources.Stop();
+                    _ = disposal.Value;
+                }
+                owned.RegisterOnTermination(ReleaseCertificate);
                 certificate = null;
-                owned.Start();
+                try
+                {
+                    owned.Start();
+                }
+                catch
+                {
+                    // Very early provider failure can prevent ActorSystem's own termination
+                    // callback from running. Stop native admission and release once it is safe.
+                    ReleaseCertificate();
+                    throw;
+                }
                 system = owned;
             }
             else
@@ -147,4 +169,10 @@ internal static class MultiNodeTransport
         environment(name) is { } value && !string.IsNullOrWhiteSpace(value)
             ? value
             : throw new ConfigurationException($"{name} is required for QUIC multi-node actor systems.");
+
+    internal static async Task DisposeAfterNativeReleaseAsync(X509Certificate2 certificate, Task nativeReleased)
+    {
+        await nativeReleased.ConfigureAwait(false);
+        certificate.Dispose();
+    }
 }

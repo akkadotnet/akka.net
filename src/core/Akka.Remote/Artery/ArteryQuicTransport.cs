@@ -51,11 +51,14 @@ namespace Akka.Remote.Artery
         private readonly ConcurrentDictionary<long, Task> _work = new();
         private readonly SemaphoreSlim _incomingSlots = new(MaxConnections);
         private readonly object _outboundGate = new();
+        private readonly ArteryQuicResourceLifetime _nativeLifetime;
         private QuicListener? _listener;
+        private ArteryQuicResourceLifetime.Owner? _listenerOwner;
         private long _workId;
 
         internal ArteryQuicTransport(ArteryTlsSettings? tls, TimeSpan handshakeTimeout, ILoggingAdapter log,
-            int ordinaryStreams = 1, int maximumInboundOrdinaryStreams = 8, bool enableIoStatistics = false)
+            int ordinaryStreams = 1, int maximumInboundOrdinaryStreams = 8, bool enableIoStatistics = false,
+            ArteryQuicResourceLifetime? nativeLifetime = null)
         {
             if (tls is null)
                 throw new ConfigurationException("Artery QUIC requires explicit ArteryTlsSetup credentials and peer policy.");
@@ -73,9 +76,11 @@ namespace Akka.Remote.Artery
             _tls = tls;
             _handshakeTimeout = handshakeTimeout;
             _log = log;
+            _nativeLifetime = nativeLifetime ?? new ArteryQuicResourceLifetime();
         }
 
         internal ArteryQuicIoSnapshot IoSnapshot => _ioCounters?.Snapshot ?? default;
+        internal Task WhenNativeResourcesReleased => _nativeLifetime.WhenReleased;
 
         internal void RecordWrite(ArteryStreamId role, int bytes)
         {
@@ -85,60 +90,86 @@ namespace Akka.Remote.Artery
 
         internal async Task<EndPoint> BindAsync(string hostname, int port, CancellationToken cancellationToken)
         {
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stop.Token);
-            var addresses = await Dns.GetHostAddressesAsync(hostname, linked.Token).ConfigureAwait(false);
-            var address = addresses.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                ?? addresses.First();
-            var listener = await QuicListener.ListenAsync(new QuicListenerOptions
+            ArteryQuicResourceLifetime.Owner? nativeOwner = AcquireNativeOwner();
+            try
             {
-                ListenEndPoint = new IPEndPoint(address, port),
-                ListenBacklog = MaxConnections,
-                ApplicationProtocols = new List<SslApplicationProtocol> { ApplicationProtocol },
-                ConnectionOptionsCallback = (connection, _, _) =>
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stop.Token);
+                var addresses = await Dns.GetHostAddressesAsync(hostname, linked.Token).ConfigureAwait(false);
+                var address = addresses.FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    ?? addresses.First();
+                var listener = await QuicListener.ListenAsync(new QuicListenerOptions
                 {
-                    var authentication = _tls.ServerSettings.CreateAuthenticationOptions(connection.RemoteEndPoint.ToString(), _log);
-                    authentication.ApplicationProtocols = new List<SslApplicationProtocol> { ApplicationProtocol };
-                    authentication.EnabledSslProtocols = SslProtocols.Tls13;
-                    var validate = authentication.RemoteCertificateValidationCallback;
-                    if (validate is not null)
+                    ListenEndPoint = new IPEndPoint(address, port),
+                    ListenBacklog = MaxConnections,
+                    ApplicationProtocols = new List<SslApplicationProtocol> { ApplicationProtocol },
+                    ConnectionOptionsCallback = (connection, _, _) =>
                     {
-                        // QuicConnection compares CLIENT certificates against the client's SNI
-                        // (the SERVER name). SslStream correctly has no implicit client-name
-                        // target. Normalize only that QUIC artifact to preserve server-role TLS
-                        // policy semantics. Explicit ValidateHostname(expectedName) still checks
-                        // the certificate directly; outbound name errors are never normalized.
-                        authentication.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
-                            validate(sender, certificate, chain, errors & ~SslPolicyErrors.RemoteCertificateNameMismatch);
+                        var authentication = _tls.ServerSettings.CreateAuthenticationOptions(connection.RemoteEndPoint.ToString(), _log);
+                        authentication.ApplicationProtocols = new List<SslApplicationProtocol> { ApplicationProtocol };
+                        authentication.EnabledSslProtocols = SslProtocols.Tls13;
+                        var validate = authentication.RemoteCertificateValidationCallback;
+                        if (validate is not null)
+                        {
+                            // QuicConnection compares CLIENT certificates against the client's SNI
+                            // (the SERVER name). SslStream correctly has no implicit client-name
+                            // target. Normalize only that QUIC artifact to preserve server-role TLS
+                            // policy semantics. Explicit ValidateHostname(expectedName) still checks
+                            // the certificate directly; outbound name errors are never normalized.
+                            authentication.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
+                                validate(sender, certificate, chain, errors & ~SslPolicyErrors.RemoteCertificateNameMismatch);
+                        }
+                        return ValueTask.FromResult(new QuicServerConnectionOptions
+                        {
+                            ServerAuthenticationOptions = authentication,
+                            DefaultCloseErrorCode = ErrorCode,
+                            DefaultStreamErrorCode = ErrorCode,
+                            HandshakeTimeout = _tls.HandshakeTimeout,
+                            IdleTimeout = TimeSpan.FromMinutes(1),
+                            MaxInboundBidirectionalStreams = 0,
+                            MaxInboundUnidirectionalStreams = _maximumIncomingStreams
+                        });
                     }
-                    return ValueTask.FromResult(new QuicServerConnectionOptions
+                }, linked.Token).ConfigureAwait(false);
+                lock (_outboundGate)
+                {
+                    if (!_stop.IsCancellationRequested)
                     {
-                        ServerAuthenticationOptions = authentication,
-                        DefaultCloseErrorCode = ErrorCode,
-                        DefaultStreamErrorCode = ErrorCode,
-                        HandshakeTimeout = _tls.HandshakeTimeout,
-                        IdleTimeout = TimeSpan.FromMinutes(1),
-                        MaxInboundBidirectionalStreams = 0,
-                        MaxInboundUnidirectionalStreams = _maximumIncomingStreams
-                    });
+                        _listener = listener;
+                        _listenerOwner = nativeOwner;
+                        nativeOwner = null;
+                        return listener.LocalEndPoint;
+                    }
                 }
-            }, linked.Token).ConfigureAwait(false);
+                await listener.DisposeAsync().ConfigureAwait(false);
+                throw new OperationCanceledException(_stop.Token);
+            }
+            finally
+            {
+                nativeOwner?.Dispose();
+            }
+        }
+
+        private ArteryQuicResourceLifetime.Owner AcquireNativeOwner()
+        {
             lock (_outboundGate)
             {
-                if (!_stop.IsCancellationRequested)
-                {
-                    _listener = listener;
-                    return listener.LocalEndPoint;
-                }
+                _stop.Token.ThrowIfCancellationRequested();
+                return _nativeLifetime.Acquire();
             }
-            await listener.DisposeAsync().ConfigureAwait(false);
-            throw new OperationCanceledException(_stop.Token);
         }
 
         // Called only after Artery has published its bound address and inbound context.
         // The returned task must include downstream processing, including any detached lanes.
         // Raw source termination alone can precede both dispatch and a downstream failure.
-        internal void StartAccepting(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept) =>
-            Track(AcceptConnectionsAsync(accept));
+        internal void StartAccepting(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
+        {
+            lock (_outboundGate)
+            {
+                _stop.Token.ThrowIfCancellationRequested();
+                var listener = _listener ?? throw new InvalidOperationException("Artery QUIC must bind before accepting.");
+                Track(AcceptConnectionsAsync(listener, accept, _nativeLifetime.Acquire()));
+            }
+        }
 
         internal Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Done>> Outgoing(EndPoint endpoint, ArteryStreamId role, int ordinaryStream = 0) =>
             Flow.FromGraph(new ArteryQuicWriteStage(this, endpoint, role, ordinaryStream));
@@ -189,35 +220,42 @@ namespace Akka.Remote.Artery
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
-        private async Task AcceptConnectionsAsync(Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
+        private async Task AcceptConnectionsAsync(QuicListener listener,
+            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept,
+            ArteryQuicResourceLifetime.Owner nativeOwner)
         {
-            while (!_stop.IsCancellationRequested)
+            using (nativeOwner)
             {
-                await _incomingSlots.WaitAsync(_stop.Token).ConfigureAwait(false);
-                QuicConnection connection;
-                try
+                while (!_stop.IsCancellationRequested)
                 {
-                    connection = await _listener!.AcceptConnectionAsync(_stop.Token).ConfigureAwait(false);
+                    await _incomingSlots.WaitAsync(_stop.Token).ConfigureAwait(false);
+                    QuicConnection connection;
+                    try
+                    {
+                        connection = await listener.AcceptConnectionAsync(_stop.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (!_stop.IsCancellationRequested &&
+                        ex is AuthenticationException or QuicException)
+                    {
+                        _incomingSlots.Release();
+                        _log.Debug("Artery QUIC rejected incoming connection: {0}", ex.Message);
+                        continue;
+                    }
+                    catch
+                    {
+                        _incomingSlots.Release();
+                        throw;
+                    }
+                    Track(ReceiveConnectionAsync(connection, accept, nativeOwner.Fork()));
                 }
-                catch (Exception ex) when (!_stop.IsCancellationRequested &&
-                    ex is AuthenticationException or QuicException)
-                {
-                    _incomingSlots.Release();
-                    _log.Debug("Artery QUIC rejected incoming connection: {0}", ex.Message);
-                    continue;
-                }
-                catch
-                {
-                    _incomingSlots.Release();
-                    throw;
-                }
-                Track(ReceiveConnectionAsync(connection, accept));
             }
         }
 
         private async Task ReceiveConnectionAsync(QuicConnection connection,
-            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept)
+            Func<Source<ReadOnlySequence<byte>, NotUsed>, EndPoint, Action, Task> accept,
+            ArteryQuicResourceLifetime.Owner nativeOwner)
         {
+            using var nativeOwnership = nativeOwner;
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
             var streams = new List<QuicStream>();
             var roles = new HashSet<ArteryStreamId>();
@@ -380,17 +418,22 @@ namespace Akka.Remote.Artery
         internal async Task ShutdownAsync(CancellationToken cancellationToken)
         {
             QuicListener? listener;
+            ArteryQuicResourceLifetime.Owner? listenerOwner;
             Peer[] peers;
             lock (_outboundGate)
             {
                 _stop.Cancel();
                 listener = _listener;
+                _listener = null;
+                listenerOwner = _listenerOwner;
+                _listenerOwner = null;
                 peers = _outbound.Values.ToArray();
+                _nativeLifetime.Stop();
             }
             foreach (var peer in peers)
                 peer.Retire();
             if (listener is not null)
-                Track(listener.DisposeAsync().AsTask());
+                Track(DisposeListenerAsync(listener, listenerOwner!));
             // The same deadline used for Artery's flush also bounds native teardown. Cleanup
             // remains tracked if the deadline expires, rather than abandoning unobserved tasks.
             while (!_work.IsEmpty)
@@ -412,6 +455,12 @@ namespace Akka.Remote.Artery
             }
         }
 
+        private static async Task DisposeListenerAsync(QuicListener listener, ArteryQuicResourceLifetime.Owner owner)
+        {
+            using (owner)
+                await listener.DisposeAsync().ConfigureAwait(false);
+        }
+
         internal sealed class Channel(Peer peer, QuicStream stream)
         {
             internal QuicStream Stream { get; } = stream;
@@ -425,6 +474,7 @@ namespace Akka.Remote.Artery
             private readonly EndPoint _endpoint;
             private readonly CancellationTokenSource _lifetime;
             private readonly CancellationToken _token;
+            private readonly ArteryQuicResourceLifetime.Owner _nativeOwner;
             private readonly Task<QuicConnection> _connection;
             private readonly SemaphoreSlim _opening = new(1);
             private readonly HashSet<(ArteryStreamId Role, int Stream)> _opened = new();
@@ -440,6 +490,15 @@ namespace Akka.Remote.Artery
                 _endpoint = endpoint;
                 _lifetime = CancellationTokenSource.CreateLinkedTokenSource(owner._stop.Token);
                 _token = _lifetime.Token;
+                try
+                {
+                    _nativeOwner = owner._nativeLifetime.Acquire();
+                }
+                catch
+                {
+                    _lifetime.Dispose();
+                    throw;
+                }
                 _connection = ConnectAsync();
             }
 
@@ -553,6 +612,7 @@ namespace Akka.Remote.Artery
                 finally
                 {
                     _lifetime.Dispose();
+                    _nativeOwner.Dispose();
                 }
             }
         }

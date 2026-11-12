@@ -577,6 +577,71 @@ namespace Akka.Remote.Tests.Artery
             retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(expected);
         }
 
+        [Theory(DisplayName = "Native QUIC release completes after bounded shutdown independently of blocked managed processing")]
+        [InlineData(1)]
+        [InlineData(8)]
+        public async Task Should_ReleaseNativeOwners_When_ManagedProcessingOutlivesTheShutdownDeadline(int streams)
+        {
+            RequireTransportSupport("quic");
+            using var certificate = CreateCertificate();
+            var tls = ArteryTlsSettings.Mutual(certificate, TrustCertificate(certificate));
+            var log = Logging.GetLogger(Sys, GetType());
+            var sender = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log, ordinaryStreams: streams);
+            var receiver = new ArteryQuicTransport(tls, TimeSpan.FromSeconds(10), log);
+            var materializer = ActorMaterializer.Create(Sys);
+            var blockedConsumer = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var retained = new ConcurrentQueue<ReadOnlySequence<byte>>();
+            var payload = Enumerable.Range(0, 65537).Select(i => (byte)(i * 31 + i / 251)).ToArray();
+            var total = 0;
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            try
+            {
+                var endpoint = await receiver.BindAsync("127.0.0.1", 0, deadline.Token);
+                receiver.WhenNativeResourcesReleased.IsCompleted.Should().BeFalse();
+                receiver.StartAccepting((source, _, admitted) =>
+                {
+                    var processing = source.Skip(1).RunWith(Sink.ForEach<ReadOnlySequence<byte>>(chunk =>
+                    {
+                        retained.Enqueue(chunk);
+                        if (Interlocked.Add(ref total, checked((int)chunk.Length)) == payload.Length)
+                            received.TrySetResult();
+                    }), materializer);
+                    admitted();
+                    return Task.WhenAll(processing, blockedConsumer.Task);
+                });
+                var control = await sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token);
+                await control.Stream.WriteAsync(Preamble(ArteryStreamId.Control), deadline.Token);
+                for (var i = 0; i < streams; i++)
+                {
+                    var channel = await sender.OpenAsync(endpoint, ArteryStreamId.Ordinary, deadline.Token, i);
+                    await channel.Stream.WriteAsync(Preamble(ArteryStreamId.Ordinary), deadline.Token);
+                    if (i == 0)
+                        await channel.Stream.WriteAsync(payload, deadline.Token);
+                    channel.Stream.CompleteWrites();
+                }
+                await received.Task.WaitAsync(deadline.Token);
+                sender.WhenNativeResourcesReleased.IsCompleted.Should().BeFalse();
+                await receiver.ShutdownAsync(new CancellationToken(canceled: true));
+                await receiver.WhenNativeResourcesReleased.WaitAsync(deadline.Token);
+                blockedConsumer.Task.IsCompleted.Should().BeFalse("native release must not wait for managed serializer or actor work");
+                await sender.ShutdownAsync(new CancellationToken(canceled: true));
+                await sender.WhenNativeResourcesReleased.WaitAsync(deadline.Token);
+                retained.SelectMany(chunk => chunk.ToArray()).Should().Equal(payload);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                    sender.OpenAsync(endpoint, ArteryStreamId.Control, deadline.Token));
+            }
+            finally
+            {
+                blockedConsumer.TrySetResult();
+                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await sender.ShutdownAsync(cleanup.Token);
+                await receiver.ShutdownAsync(cleanup.Token);
+                await Task.WhenAll(sender.WhenNativeResourcesReleased, receiver.WhenNativeResourcesReleased).WaitAsync(cleanup.Token);
+                materializer.Shutdown();
+            }
+        }
+
         [Theory(DisplayName = "QUIC retires every sibling channel and reconnects when an incoming data stream is reset")]
         [InlineData(1)]
         [InlineData(2)]

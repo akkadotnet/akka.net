@@ -104,12 +104,16 @@ outbound hostname validation, and fails if native QUIC support is unavailable. I
 change machine trust stores. Initial systems, `StartNewSystemAsync`, and the protected
 `CreateActorSystem` helper share credential setup. Additional systems created directly with
 `ActorSystem.Create` must supply their own typed TLS setup. Factory-owned certificates live
-until their actor system terminates; caller-supplied setup remains caller-owned.
+through actor-system termination and until the native QUIC resources using them have finished
+cleanup; caller-supplied setup remains caller-owned.
 
 On Windows, the factory imports PFX credentials with `DefaultKeySet` for native TLS compatibility,
 without requesting `PersistKeySet`. Other platforms use `EphemeralKeySet`. The factory retains
-the certificate through system termination to preserve its private-key lifetime during native
-cleanup. Caller-supplied certificates are not reimported or modified.
+the certificate through system termination and any native cleanup continuing after the flush
+deadline. Failed startup closes native admission and retains credentials until existing native
+owners finish. Managed receive processing is observed separately, so a blocked serializer does
+not retain credentials after native cleanup. Caller-supplied certificates are not reimported or
+modified.
 
 `AKKA_MNTR_QUIC_STREAMS` accepts 1–64 (default 1) and configures matching ordinary stream
 admission and outbound lanes. Each role emits `[MULTINODE-TRANSPORT]` JSON with its **actual**

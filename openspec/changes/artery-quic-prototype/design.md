@@ -460,6 +460,33 @@ protocol must order its barrier after data on every active stream, include lane 
 receipts with the current peer and generation, and preserve a bounded authenticated reply path
 during simultaneous shutdown. Missing receipts, reset and timeout cannot count as graceful receipt.
 
+### Native Credential Lifetime
+
+The multi-node factory creates an internal native-resource lifetime before starting a system
+whose credentials it owns. The native transport shares that lifetime. Binding owns a scope
+before resolving or creating the listener; publication transfers ownership to the listener.
+The accept loop and every accepted connection retain separate scopes. An accept already in
+progress may transfer its live scope to a connection during stop, without a zero-owner gap.
+Each outbound peer owns its connection and streams from before dialing through final disposal.
+These scopes are per native resource, not per read or write.
+
+Shutdown closes new native admission. Its existing flush deadline still bounds the caller's
+wait, while the native-release task completes only after the final native owner has finished.
+Managed sink and lane-consumer tasks remain separately observed; they can outlive native release
+while retaining their own unpooled published bytes.
+
+Factory certificate disposal requires system termination and native release. Failed startup
+also closes admission and schedules the same single disposal operation, because very early
+provider failure may prevent normal system termination from completing. This path does not
+look up a partially initialized provider. Caller-owned TLS credentials retain caller ownership.
+
+Focused checks include a controlled extra native listener enrolled in the factory lifetime.
+It survives system termination and authenticates using the retained factory certificate, then
+releases ownership before certificate disposal. This is a lifecycle fault injection, not an
+observation of a naturally stalled native library. Native adapter and blocked actor-consumer
+checks independently cover native release without waiting for managed processing. Broader
+reset, late-callback and resource stress remain qualification work.
+
 ### Experimental Shutdown Receipts
 
 The next safety slice uses shared Artery control messages for peer progress. It is activated only

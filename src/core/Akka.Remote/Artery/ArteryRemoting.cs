@@ -341,6 +341,8 @@ namespace Akka.Remote.Artery
         };
         internal Task<bool> QuicShutdownDataWritesSettled => _shutdownDrain?.DataWritesSettled.Task ?? Task.FromResult(false);
         internal int QuicShutdownReceiptsOutstanding => _shutdownDrain?.Outstanding ?? 0;
+        internal Task WhenQuicNativeResourcesReleased => _quic is not null && QuicConnection.IsSupported
+            ? _quic.WhenNativeResourcesReleased : Task.CompletedTask;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
@@ -423,8 +425,10 @@ namespace Akka.Remote.Artery
             {
                 if (!QuicConnection.IsSupported || !QuicListener.IsSupported)
                     throw new PlatformNotSupportedException("Artery QUIC requires native MsQuic and TLS 1.3 support.");
+                var resources = System.Settings.Setup.Get<ArteryQuicResourceSetup>();
                 _quic = new ArteryQuicTransport(_tlsSettings, _settings.HandshakeTimeout, _log,
-                    _settings.QuicOrdinaryStreams, _settings.QuicMaximumInboundOrdinaryStreams, _settings.QuicIoStatisticsEnabled);
+                    _settings.QuicOrdinaryStreams, _settings.QuicMaximumInboundOrdinaryStreams, _settings.QuicIoStatisticsEnabled,
+                    resources.HasValue ? resources.Value.Lifetime : null);
                 _shutdownDrain = new ArteryShutdownDrain();
             }
             _materializer = CreateSystemMaterializer();
