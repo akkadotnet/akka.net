@@ -12,7 +12,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -566,27 +565,36 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         /// <summary>
-        /// Validates the outbound server certificate using the hostname result supplied by <see cref="SslStream"/>.
-        /// The expected hostname is established when the outbound TLS connection is authenticated.
-        /// This helper does not infer or validate a hostname for inbound client certificates.
+        /// Without an explicit hostname, validates the outbound server certificate using the hostname result
+        /// supplied by <see cref="SslStream"/>. When <paramref name="expectedHostname"/> is supplied, compares
+        /// that name directly against the certificate CN/SAN and rejects the certificate if it does not match.
+        /// This helper does not infer a hostname for inbound client certificates.
         /// </summary>
-        /// <param name="expectedHostname">Optional hostname used in validation-failure diagnostics. It does not override the outbound connection target supplied to <see cref="SslStream"/>.</param>
+        /// <remarks>
+        /// The direct comparison follows the rules of <c>X509Certificate2.MatchesHostname</c>:
+        /// <list type="bullet">
+        /// <item>An IP address must equal an <c>iPAddress</c> entry of the Subject Alternative Name (SAN) extension.</item>
+        /// <item>A DNS name must equal a <c>dNSName</c> SAN entry, ignoring case and one trailing dot, or match a
+        /// wildcard entry. A wildcard (<c>*.example.com</c>) stands for the leftmost label only.</item>
+        /// <item>The subject common name (CN) is consulted only when the certificate has no SAN entry of the
+        /// wanted kind, and wildcards are not honored there.</item>
+        /// <item>Non-ASCII names are not converted to their IDNA (punycode) form; pass the form the certificate uses.</item>
+        /// </list>
+        /// The certificate is also rejected when <paramref name="expectedHostname"/> is not a valid DNS name or
+        /// IP address, or when the certificate's names cannot be decoded.
+        /// <para>
+        /// A rejected certificate fails the TLS handshake. On an outbound connection a failed handshake shuts
+        /// the <see cref="ActorSystem"/> down.
+        /// </para>
+        /// </remarks>
+        /// <param name="expectedHostname">Optional DNS name or IP address to compare directly against the certificate.</param>
         /// <param name="log">Optional logger for validation failures.</param>
         public static CertificateValidationCallback ValidateHostname(
             string? expectedHostname = null,
             ILoggingAdapter? log = null)
         {
-            var warnedAboutExpectedHostname = 0;
             return (cert, chain, peer, errors, nonClosureLog) =>
             {
-                if (expectedHostname is not null && Interlocked.Exchange(ref warnedAboutExpectedHostname, 1) == 0)
-                {
-                    (log ?? nonClosureLog).Warning(
-                        "Akka.NET v1.5 does not enforce the explicit expected hostname [{0}]. " +
-                        "The value is used for diagnostics only; upgrade to Akka.NET v1.6 or later to enforce it.",
-                        expectedHostname);
-                }
-
                 if (cert == null)
                 {
                     (log ?? nonClosureLog).Error(
@@ -595,15 +603,38 @@ namespace Akka.Remote.Transport.DotNetty
                     return false;
                 }
 
-                var hostname = expectedHostname ?? peer;
+                if (expectedHostname == null)
+                {
+                    if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0) return true;
+                    var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+                    (log ?? nonClosureLog).Error(
+                        "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
+                        peer, peer, cn);
+                    return false;
+                }
 
-                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0) return true;
-                var cn = cert.GetNameInfo(X509NameType.DnsName, false);
-                (log ?? nonClosureLog).Error(
-                    "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
-                    peer, hostname, cn);
-                return false;
+                try
+                {
+                    if (CertificateHostnameMatcher.MatchesHostname(cert, expectedHostname))
+                        return true;
 
+                    var name = cert.GetNameInfo(X509NameType.DnsName, false);
+                    (log ?? nonClosureLog).Error(
+                        "Hostname validation failed for {0}: expected '{1}', certificate name is '{2}'",
+                        peer, expectedHostname, name);
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    // An invalid expected hostname (ArgumentException) or a certificate whose names cannot be
+                    // decoded (CryptographicException). Reject rather than let the exception escape into the
+                    // TLS handshake.
+                    (log ?? nonClosureLog).Error(
+                        ex,
+                        "Hostname validation failed for {0}: unable to validate expected hostname '{1}'",
+                        peer, expectedHostname);
+                    return false;
+                }
             };
         }
 

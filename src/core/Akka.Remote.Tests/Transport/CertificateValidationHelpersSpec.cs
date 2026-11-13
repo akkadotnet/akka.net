@@ -7,6 +7,7 @@
 
 using System;
 using System.Net.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Event;
@@ -22,6 +23,7 @@ namespace Akka.Remote.Tests.Transport
     public class CertificateValidationHelpersSpec : AkkaSpec
     {
         private const string ValidCertPath = "Resources/akka-validcert.pfx";
+        private const string ClientCertPath = "Resources/akka-client-cert.pfx";
         private const string Password = "password";
         private readonly ILoggingAdapter _log;
 
@@ -142,16 +144,169 @@ namespace Akka.Remote.Tests.Transport
 
         #region ValidateHostname Tests
 
-        [Fact(DisplayName = "ValidateHostname should warn once when an explicit expected hostname is not enforced")]
-        public async Task ValidateHostname_should_warn_once_when_explicit_expected_hostname_is_not_enforced()
+        [Fact(DisplayName = "ValidateHostname should compare an explicitly supplied expected hostname")]
+        public async Task ValidateHostname_should_compare_explicit_expected_hostname()
         {
-            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var matchingValidator = CertificateValidation.ValidateHostname("AkkaTestClient");
+            var rejectingValidator = CertificateValidation.ValidateHostname("unrelated.invalid");
+
+            Assert.True(matchingValidator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+            await EventFilter.Error(contains: "expected 'unrelated.invalid'").ExpectOneAsync(() =>
+            {
+                Assert.False(rejectingValidator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should reject a certificate that does not match the expected hostname even when SslStream reports no errors")]
+        public async Task ValidateHostname_should_reject_mismatched_certificate_when_SslStream_reports_no_errors()
+        {
+            // This is the inbound case: SslStream has no target host for a client certificate, so it never
+            // sets RemoteCertificateNameMismatch. Up to v1.5.74 the validator accepted any certificate here.
+            using var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var validator = CertificateValidation.ValidateHostname("expected.example");
 
-            await EventFilter.Warning(contains: "does not enforce the explicit expected hostname").ExpectOneAsync(() =>
+            await EventFilter.Error(contains: "expected 'expected.example'").ExpectAsync(2, () =>
             {
-                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
-                Assert.True(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                Assert.False(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                Assert.False(validator(cert, null, "actual.example", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should not warn that the expected hostname is unenforced")]
+        public async Task ValidateHostname_should_not_warn_that_expected_hostname_is_unenforced()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("AkkaTestClient");
+
+            await EventFilter.Warning().ExpectAsync(0, () =>
+            {
+                Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should accept a matching expected hostname even when SslStream reports a name mismatch")]
+        public void ValidateHostname_should_accept_matching_expected_hostname_when_SslStream_reports_name_mismatch()
+        {
+            // The explicit name replaces the SslStream verdict, as it does on dev. A node dialed by IP
+            // address whose certificate carries the expected DNS name must be accepted.
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("AkkaTestClient");
+
+            Assert.True(validator(cert, null, "127.0.0.1", SslPolicyErrors.RemoteCertificateNameMismatch, _log));
+        }
+
+        [Fact(DisplayName = "ValidateHostname should match any DNS subject alternative name")]
+        public void ValidateHostname_should_match_any_DNS_subject_alternative_name()
+        {
+            using var key = RSA.Create(2048);
+            var request = new CertificateRequest("CN=client.internal", key, HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1);
+            var subjectAlternativeNames = new SubjectAlternativeNameBuilder();
+            subjectAlternativeNames.AddDnsName("first.internal");
+            subjectAlternativeNames.AddDnsName("second.internal");
+            request.CertificateExtensions.Add(subjectAlternativeNames.Build());
+            using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1),
+                DateTimeOffset.UtcNow.AddMinutes(5));
+            var validator = CertificateValidation.ValidateHostname("second.internal");
+
+            Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+        }
+
+        [Theory(DisplayName = "ValidateHostname should accept certificates that match the expected hostname")]
+        [InlineData("CN=unrelated", "dns:node-1.cluster.local", "node-1.cluster.local")]
+        [InlineData("CN=unrelated", "dns:node-1.cluster.local", "NODE-1.Cluster.Local")]
+        [InlineData("CN=unrelated", "dns:node-1.cluster.local", "node-1.cluster.local.")]
+        [InlineData("CN=unrelated", "dns:*.cluster.local", "node-1.cluster.local")]
+        [InlineData("CN=unrelated", "dns:a.internal,dns:b.internal,ip:10.0.0.1", "b.internal")]
+        [InlineData("CN=unrelated", "ip:10.0.0.1", "10.0.0.1")]
+        [InlineData("CN=unrelated", "ip:2001:db8::1", "2001:db8::1")]
+        [InlineData("CN=node-1, O=Akka", "", "node-1")]
+        [InlineData("CN=node-1, O=Akka", "", "NODE-1")]
+        public void ValidateHostname_should_accept_certificates_that_match_expected_hostname(
+            string subject, string subjectAlternativeNames, string expectedHostname)
+        {
+            using var cert = HostnameTestCertificates.Create(subject, subjectAlternativeNames);
+            var validator = CertificateValidation.ValidateHostname(expectedHostname);
+
+            Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+        }
+
+        [Theory(DisplayName = "ValidateHostname should reject certificates that do not match the expected hostname")]
+        [InlineData("CN=unrelated", "dns:node-1.cluster.local", "node-2.cluster.local")]
+        [InlineData("CN=unrelated", "dns:*.cluster.local", "cluster.local")]
+        [InlineData("CN=unrelated", "dns:*.cluster.local", "a.b.cluster.local")]
+        [InlineData("CN=node-1", "dns:other.internal", "node-1")]
+        [InlineData("CN=unrelated", "ip:10.0.0.1", "10.0.0.2")]
+        [InlineData("CN=*.cluster.local", "", "node-1.cluster.local")]
+        public async Task ValidateHostname_should_reject_certificates_that_do_not_match_expected_hostname(
+            string subject, string subjectAlternativeNames, string expectedHostname)
+        {
+            using var cert = HostnameTestCertificates.Create(subject, subjectAlternativeNames);
+            var validator = CertificateValidation.ValidateHostname(expectedHostname);
+
+            await EventFilter.Error(contains: $"expected '{expectedHostname}'").ExpectOneAsync(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname without an expected hostname should use SslStream policy errors")]
+        public async Task ValidateHostname_without_expected_hostname_should_use_policy_errors()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname();
+
+            Assert.True(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+            await EventFilter.Error(contains: "Hostname validation failed").ExpectOneAsync(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer",
+                    SslPolicyErrors.RemoteCertificateNameMismatch, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should reject null certificate")]
+        public async Task ValidateHostname_should_reject_null_certificate()
+        {
+            var withExpectedHostname = CertificateValidation.ValidateHostname("AkkaTestClient");
+            var withoutExpectedHostname = CertificateValidation.ValidateHostname();
+
+            await EventFilter.Error(contains: "certificate is null").ExpectAsync(2, () =>
+            {
+                Assert.False(withExpectedHostname(null, null, "test-peer", SslPolicyErrors.None, _log));
+                Assert.False(withoutExpectedHostname(null, null, "test-peer", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should reject an invalid explicit hostname")]
+        public async Task ValidateHostname_should_reject_invalid_explicit_hostname()
+        {
+            using var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            var validator = CertificateValidation.ValidateHostname("not a valid hostname!");
+
+            await EventFilter.Error(contains: "unable to validate expected hostname").ExpectOneAsync(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ValidateHostname should reject a certificate that can no longer be read")]
+        public async Task ValidateHostname_should_reject_certificate_that_can_no_longer_be_read()
+        {
+            var cert = CertificateHelper.LoadPkcs12(ClientCertPath, Password);
+            cert.Dispose();
+            var validator = CertificateValidation.ValidateHostname("AkkaTestClient");
+
+            await EventFilter.Error(contains: "unable to validate expected hostname").ExpectOneAsync(() =>
+            {
+                Assert.False(validator(cert, null, "test-peer", SslPolicyErrors.None, _log));
                 return Task.CompletedTask;
             });
         }
