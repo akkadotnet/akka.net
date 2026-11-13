@@ -1,0 +1,18 @@
+# Trim/AOT warning baseline for the .NET MAUI Native AOT canary (src/aot/Akka.Maui.AOT.App).
+#
+# Same format and checker as the plain-core canary's baseline
+# (src/aot/Akka.AOT.App/aot-warnings.baseline.txt) - see that file for the key format and how
+# added/gone entries are handled.
+#
+# Scope: src/core/,src/contrib/ - every Akka.NET assembly this app reaches. Unlike the other
+# canaries' baselines, this one is not split by area, because what it measures is different: this is
+# an UNROOTED publish of a real MAUI app, so ILC only analyses the Akka code a MAUI app actually
+# reaches through Akka.Hosting.Maui, under MAUI's trimming feature switches. The rule it enforces is
+# "a MAUI app that uses Akka.Hosting gets zero trim/AOT warnings from Akka.NET".
+#
+# Warnings from MAUI and the platform runtime (Mono.Android, Java.Interop, Microsoft.MacCatalyst)
+# carry no source location in this repo and are never compared; the checker reports their count.
+#
+# Empty: an unrooted MAUI publish (Mac Catalyst in CI; Android checked locally while building this
+# canary) reached no Akka.NET warning sites. A new entry here means a MAUI app now trips over Akka
+# reflection that the trimmer cannot see - fix the site rather than baselining it if at all possible.
