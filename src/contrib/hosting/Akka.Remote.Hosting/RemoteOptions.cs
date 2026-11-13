@@ -109,14 +109,25 @@ namespace Akka.Remote.Hosting
 
             // SSL configuration strategy:
             // 1. If X509Certificate object is provided -> Use DotNettySslSetup (takes precedence over HOCON)
-            // 2. If X509Certificate is null but SSL settings configured -> Use HOCON configuration only
+            // 2. If X509Certificate is null but CustomValidator is set -> Load the certificate named by
+            //    CertificateOptions (file or thumbprint) and use DotNettySslSetup, because HOCON cannot carry a delegate
+            // 3. If X509Certificate is null and there is no CustomValidator -> Use HOCON configuration only
             //
             // Important: DotNettySslSetup ALWAYS takes precedence when present, causing HOCON SSL settings
             // to be completely ignored. We must not emit both to avoid confusion.
             // See: https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Transport/DotNetty/DotNettyTransportSettings.cs#L163-L164
 
-            if (EnableSsl is false || Ssl.X509Certificate == null)
+            if (EnableSsl is false)
                 return;
+
+            var certificate = Ssl.X509Certificate;
+            if (certificate == null)
+            {
+                if (EnableSsl is not true || Ssl.CustomValidator == null)
+                    return;
+
+                certificate = Ssl.CertificateOptions.Load(Ssl.SuppressValidation ?? false);
+            }
 
             var suppressValidation = Ssl.SuppressValidation ?? false;
             var requireMutualAuth = Ssl.RequireMutualAuthentication ?? true; // Default to true as per v1.5.52
@@ -126,17 +137,17 @@ namespace Akka.Remote.Hosting
             if (Ssl.CustomValidator != null)
             {
                 // Use the 5-parameter constructor with custom validator (v1.5.55+)
-                builder.AddSetup(new DotNettySslSetup(Ssl.X509Certificate, suppressValidation, requireMutualAuth, validateHostname, Ssl.CustomValidator));
+                builder.AddSetup(new DotNettySslSetup(certificate, suppressValidation, requireMutualAuth, validateHostname, Ssl.CustomValidator));
             }
             else if (Ssl.RequireMutualAuthentication.HasValue || Ssl.ValidateCertificateHostname.HasValue)
             {
                 // Use the 4-parameter constructor (v1.5.52/v1.5.53+)
-                builder.AddSetup(new DotNettySslSetup(Ssl.X509Certificate, suppressValidation, requireMutualAuth, validateHostname));
+                builder.AddSetup(new DotNettySslSetup(certificate, suppressValidation, requireMutualAuth, validateHostname));
             }
             else
             {
                 // Use legacy 2-parameter constructor for backward compatibility when new settings are not specified
-                builder.AddSetup(new DotNettySslSetup(Ssl.X509Certificate, suppressValidation));
+                builder.AddSetup(new DotNettySslSetup(certificate, suppressValidation));
             }
         }
     
@@ -201,7 +212,7 @@ namespace Akka.Remote.Hosting
                     // When DotNettySslSetup is present, it takes precedence and HOCON SSL settings are ignored
                     // See: https://github.com/akkadotnet/akka.net/issues/7914 and the warning at
                     // https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Transport/DotNetty/DotNettyTransportSettings.cs#L163-L164
-                    if (Ssl.X509Certificate == null)
+                    if (Ssl.X509Certificate == null && Ssl.CustomValidator == null)
                     {
                         Ssl.Build(tcpSb);
                     }
@@ -320,6 +331,50 @@ namespace Akka.Remote.Hosting
         public string? StoreName { get; set; }
         public string? StoreLocation { get; set; }
         
+        /// <summary>
+        /// Loads the certificate these options name, for use with a <see cref="DotNettySslSetup"/>.
+        /// Mirrors how Akka.Remote loads it from HOCON: a thumbprint wins over a file when
+        /// <see cref="UseThumbprintOverFile"/> is set; the store name defaults to "" and the store
+        /// location to "current-user"; the file is loaded with the default key storage flags.
+        /// </summary>
+        internal X509Certificate2 Load(bool suppressValidation)
+        {
+            if (UseThumbprintOverFile is true)
+            {
+                if (string.IsNullOrWhiteSpace(Thumbprint))
+                    throw NoCertificate();
+
+                var location = StoreLocation switch
+                {
+                    null or "" or "current-user" => System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser,
+                    "local-machine" => System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine,
+                    _ => throw new ArgumentException(
+                        $"Unrecognized store location [{StoreLocation}]. Available values: local-machine | current-user")
+                };
+
+                using var store = new X509Store(StoreName ?? string.Empty, location);
+                store.Open(OpenFlags.ReadOnly);
+
+                var found = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, !suppressValidation);
+                if (found.Count == 0)
+                    throw new ArgumentException(
+                        "Could not find Valid certificate for thumbprint (set by `SslCertificateOptions.Thumbprint`). " +
+                        "Also check `SslCertificateOptions.StoreName` and `SslCertificateOptions.StoreLocation`");
+
+                return found[0];
+            }
+
+            if (string.IsNullOrEmpty(Path))
+                throw NoCertificate();
+
+            return new X509Certificate2(Path, Password ?? string.Empty, X509KeyStorageFlags.DefaultKeySet);
+        }
+
+        private static ConfigurationException NoCertificate()
+            => new("SslOptions.CustomValidator needs the certificate to be set through the options " +
+                   "(X509Certificate, or CertificateOptions with a Path or a Thumbprint), " +
+                   "because it would otherwise be ignored.");
+
         internal void Build(StringBuilder builder)
         {
             var sb = new StringBuilder();
