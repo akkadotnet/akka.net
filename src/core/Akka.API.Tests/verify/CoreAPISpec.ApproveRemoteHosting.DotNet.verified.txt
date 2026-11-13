@@ -49,6 +49,7 @@ namespace Akka.Remote.Hosting
     public sealed class SslCertificateOptions
     {
         public SslCertificateOptions() { }
+        public string CommonName { get; set; }
         public string Password { get; set; }
         public string Path { get; set; }
         public string StoreLocation { get; set; }
@@ -62,6 +63,7 @@ namespace Akka.Remote.Hosting
         public SslOptions() { }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.Remote.Hosting.SslCertificateOptions CertificateOptions { get; set; }
+        public Akka.IO.TlsCertificateSource CertificateSource { get; set; }
         public Akka.Remote.Transport.DotNetty.CertificateValidationCallback CustomValidator { get; set; }
         public System.Nullable<bool> RequireMutualAuthentication { get; set; }
         public System.Nullable<bool> SuppressValidation { get; set; }

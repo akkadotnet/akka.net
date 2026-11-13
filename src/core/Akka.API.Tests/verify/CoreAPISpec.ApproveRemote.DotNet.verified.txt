@@ -894,5 +894,6 @@ namespace Akka.Remote.Transport.DotNetty
         public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
         public bool ValidateCertificateHostname { get; }
+        public static Akka.Remote.Transport.DotNetty.DotNettySslSetup FromSource(Akka.IO.TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Remote.Transport.DotNetty.CertificateValidationCallback customValidator) { }
     }
 }
