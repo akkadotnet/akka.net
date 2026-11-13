@@ -10,5 +10,7 @@
   href: deathwatch.md
 - name: Network Security
   href: security.md
+- name: Rotating TLS Certificates
+  href: certificate-rotation.md
 - name: Performance Optimization
   href: performance.md
