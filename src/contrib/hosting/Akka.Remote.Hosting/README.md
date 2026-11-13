@@ -88,3 +88,5 @@ await host.RunAsync();
 ```
 
 Available `CertificateValidation` methods: `ValidateChain()`, `ValidateHostname()`, `PinnedCertificate()`, `ValidateSubject()`, `ValidateIssuer()`, and `Combine()`.
+
+`CustomValidator` also applies when the certificate is set through `options.Ssl.CertificateOptions` with a file `Path` or a `Thumbprint`. Hosting loads that certificate itself and passes it to `DotNettySslSetup`. If `CustomValidator` is set but the options name no certificate, `WithRemoting` throws a `ConfigurationException`.
