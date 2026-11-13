@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(NetStandardLibVersion);net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Akka.Reminders.Sqlite</PackageId>
+    <Description>SQLite storage implementation for Akka.Reminders.</Description>
+    <PackageTags>$(AkkaPackageTags);reminders;sql;sqlite</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Akka.Event" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\Sqlite-Create.sql" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+    <Compile Remove="$(NuGetPackageRoot)polyfill/1.28.0/contentFiles/cs/netstandard2.0/Polyfill/Nullability/**" />
+  </ItemGroup>
+
+</Project>
