@@ -321,7 +321,7 @@ builder.WithRemoting(options =>
 
 For certificate files, point `Path` at the folder that holds them. If you set `X509Certificate` on `SslOptions` today, remove it and use `CertificateOptions` as above, or set `CertificateSource`.
 
-A `CustomValidator` keeps working when you use a `CertificateSource`, a `CommonName` or a folder `Path`. It is still not applied when you configure a thumbprint or a single file through the options.
+A `CustomValidator` keeps working when you use a `CertificateSource`, a `CommonName` or a folder `Path`. It also applies to a thumbprint or a single file in the options, but those load once and do not rotate.
 
 ### HOCON With a Thumbprint
 
