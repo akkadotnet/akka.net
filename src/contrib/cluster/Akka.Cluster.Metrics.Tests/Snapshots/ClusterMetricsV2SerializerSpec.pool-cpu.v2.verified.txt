@@ -1,0 +1,9 @@
+﻿case: pool-cpu
+message-type: AdaptiveLoadBalancingPool
+manifest: b
+serializer-id: 50
+byte-count: 46
+
+0000  84 01 83 01 0a 02 a1 64  03 c4 00 02 03 03 bd 61  |.......d.......a|
+0010  6b 6b 61 2e 61 63 74 6f  72 2e 64 65 66 61 75 6c  |kka.actor.defaul|
+0020  74 2d 64 69 73 70 61 74  63 68 65 72 04 c2        |t-dispatcher..|

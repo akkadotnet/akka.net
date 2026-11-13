@@ -38,6 +38,7 @@
     <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" ReferenceOutputAssembly="true" PrivateAssets="all" />
     <ProjectReference Include="..\..\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
   </ItemGroup>
 
 </Project>

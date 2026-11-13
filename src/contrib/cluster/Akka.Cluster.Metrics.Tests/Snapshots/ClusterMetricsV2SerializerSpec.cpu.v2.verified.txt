@@ -1,0 +1,7 @@
+﻿case: cpu
+message-type: CpuMetricsSelector
+manifest: d
+serializer-id: 50
+byte-count: 1
+
+0000  80                                                |.|

@@ -1,0 +1,7 @@
+﻿case: mix-empty
+message-type: MixMetricsSelector
+manifest: c
+serializer-id: 50
+byte-count: 3
+
+0000  81 01 90                                          |...|

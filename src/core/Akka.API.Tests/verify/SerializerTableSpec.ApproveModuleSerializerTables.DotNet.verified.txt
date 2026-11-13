@@ -11,6 +11,7 @@ module Akka.Cluster.Metrics
     Akka.Cluster.Metrics.MemoryMetricsSelector, Akka.Cluster.Metrics
     Akka.Cluster.Metrics.MixMetricsSelector, Akka.Cluster.Metrics
     Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope, Akka.Cluster.Metrics
+  akka-cluster-metrics-v2: Akka.Cluster.Metrics.Serialization.ClusterMetricsMessagePackSerializer, Akka.Cluster.Metrics (id 50) supersedes akka-cluster-metrics
 module Akka.Cluster.Sharding
   akka-sharding: Akka.Cluster.Sharding.Serialization.ClusterShardingMessageSerializer, Akka.Cluster.Sharding (id 13)
     Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding

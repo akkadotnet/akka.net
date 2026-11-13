@@ -17,6 +17,9 @@ namespace Akka.Cluster.Metrics.Serialization
     /// </summary>
     internal sealed class MetricsSerializers : ModuleSerializers
     {
+        public override ImmutableDictionary<string, string> Supersedes { get; } =
+            ImmutableDictionary<string, string>.Empty.Add("akka-cluster-metrics-v2", "akka-cluster-metrics");
+
         public override ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system) => ImmutableHashSet.Create(
             SerializerDetails.Create("akka-cluster-metrics", new ClusterMetricsMessageSerializer(system),
                 ImmutableHashSet.Create(
@@ -24,7 +27,9 @@ namespace Akka.Cluster.Metrics.Serialization
                     typeof(AdaptiveLoadBalancingPool),
                     typeof(MixMetricsSelector),
                     typeof(CpuMetricsSelector),
-                    typeof(MemoryMetricsSelector)))
+                    typeof(MemoryMetricsSelector))),
+            SerializerDetails.Create("akka-cluster-metrics-v2", new ClusterMetricsMessagePackSerializer(system),
+                ImmutableHashSet<System.Type>.Empty)
         );
     }
 }

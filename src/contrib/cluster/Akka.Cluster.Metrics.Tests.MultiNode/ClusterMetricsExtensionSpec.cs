@@ -5,10 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -65,6 +68,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             CommonConfig = EnableMetricsExtension
                 .WithFallback(DebugConfig(on: false))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
+            NodeConfig(new[] { Node1, Node3, Node5 },
+                new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = on") });
+            NodeConfig(new[] { Node2, Node4 },
+                new[] { ConfigurationFactory.ParseString("akka.actor.serialization-v2 = off") });
         }
     }
 
@@ -86,6 +93,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         [MultiNodeFact]
         public async Task ClusterMetrics_Should_work_when_enabled()
         {
+            var writerId = new[] { _config.Node1, _config.Node3, _config.Node5 }.Contains(Myself) ? 50 : 10;
+            Sys.Serialization.FindSerializerFor(new MetricsGossipEnvelope(
+                new Address("akka", Sys.Name, "127.0.0.1", 2552), MetricsGossip.Empty, true))
+                .Identifier.Should().Be(writerId);
             await Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring();
             await Should_reflect_the_correct_number_or_node_metrics_in_cluster_view();
         }

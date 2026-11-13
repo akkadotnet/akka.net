@@ -1,0 +1,7 @@
+﻿case: pool-cpu
+message-type: AdaptiveLoadBalancingPool
+manifest: b
+serializer-id: 10
+byte-count: 9
+
+0000  0a 05 08 0a 12 01 64 10  03                       |......d..|
