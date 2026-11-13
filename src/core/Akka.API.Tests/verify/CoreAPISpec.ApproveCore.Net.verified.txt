@@ -4305,6 +4305,14 @@ namespace Akka.IO
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class TlsCertificateSource
+    {
+        public static Akka.IO.TlsCertificateSource FromCallback(System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2> getCertificate) { }
+        public static Akka.IO.TlsCertificateSource FromFolder(string path, [System.Runtime.CompilerServices.NullableAttribute(2)] string password) { }
+        public static Akka.IO.TlsCertificateSource FromFolder(string path, [System.Runtime.CompilerServices.NullableAttribute(2)] string password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
+        public static Akka.IO.TlsCertificateSource FromStore(string commonName, string storeName, System.Security.Cryptography.X509Certificates.StoreLocation storeLocation) { }
+    }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
         public static readonly Akka.IO.Udp Instance;
