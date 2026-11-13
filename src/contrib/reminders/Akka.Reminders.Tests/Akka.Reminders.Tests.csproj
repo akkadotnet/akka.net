@@ -3,6 +3,7 @@
   <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <!-- net8.0 selects the netstandard2.0 libraries and their compatibility shims. -->
     <TargetFrameworks>net8.0;$(NetTestVersion)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
