@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,23 +44,13 @@ namespace Akka.Hosting.TestKit
                 if (_host is null)
                     throw new XunitException("Test has not been initialized yet");
 
-                // Ensure implicit sender is set on current thread when accessing Host
-                EnsureImplicitSender();
                 return _host;
             }
         }
 
         public ActorRegistry ActorRegistry => Host.Services.GetRequiredService<ActorRegistry>();
 
-        /// <summary>
-        /// Ensures the implicit sender is set on the current thread.
-        /// Called automatically when accessing Host or Sys.
-        /// </summary>
-        private void EnsureImplicitSender()
-        {
-            if (this is not INoImplicitSender && InternalCurrentActorCellKeeper.Current == null && TestActor != null)
-                InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)TestActor).Underlying;
-        }
+        private IActorRef? _ambientTestActor;
 
         public TimeSpan StartupTimeout { get; }
         public string ActorSystemName { get; }
@@ -117,30 +109,8 @@ namespace Akka.Hosting.TestKit
                 // This ensures TestProbe is available for any actors that depend on IRequiredActor<TestProbe>
                 builder.StartActors((actorSystem, actorRegistry) =>
                 {
-                    // base.InitializeTest -> Akka.TestKit.TestKitBase.InitializeTest unconditionally calls
-                    // SynchronizationContext.SetSynchronizationContext(new ActorCellKeepingSynchronizationContext(...)).
-                    // This delegate runs on a host-startup thread inside _host.StartAsync(); SetSynchronizationContext
-                    // is per-thread and is NOT unwound by await, and nothing here scrubs it. Left unbracketed, that
-                    // SynchronizationContext leaks onto pool threads, escapes InitializeAsyncCore, and is captured by
-                    // xUnit v3's CreateTestClassInstance -> [AkkaCleanAmbientContext].Before, which then pins the
-                    // next sequentially-run test's continuations onto this (disposed) test's ActorCell.
-                    // This delegate is synchronous, so same-thread save/restore fully contains the mutation. The
-                    // correct per-test SynchronizationContext is installed later by [AkkaCleanAmbientContext].Before.
-                    var savedContext = SynchronizationContext.Current;
-                    try
-                    {
-                        // Initialize TestActor here to ensure it's available before user actors start
-                        base.InitializeTest(actorSystem, (ActorSystemSetup)null!, null, null);
-                        actorRegistry.Register<TestProbe>(GetOrCreateRegisteredTestProbe(actorSystem));
-
-                        // Set implicit sender on initialization thread
-                        if (this is not INoImplicitSender)
-                            InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)TestActor).Underlying;
-                    }
-                    finally
-                    {
-                        SynchronizationContext.SetSynchronizationContext(savedContext);
-                    }
+                    InitializeHostedTestActor(actorSystem);
+                    actorRegistry.Register<TestProbe>(GetOrCreateRegisteredTestProbe(actorSystem));
                 });
 
                 // User configuration comes AFTER TestProbe registration
@@ -231,6 +201,22 @@ namespace Akka.Hosting.TestKit
             }
         }
 
+        private void InitializeHostedTestActor(ActorSystem system)
+        {
+            var savedContext = SynchronizationContext.Current;
+            var savedCell = InternalCurrentActorCellKeeper.Current;
+            try
+            {
+                base.InitializeTest(system, (ActorSystemSetup)null!, null, null);
+                Volatile.Write(ref _ambientTestActor, this is INoImplicitSender ? null : TestActor);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(savedContext);
+                InternalCurrentActorCellKeeper.Current = savedCell;
+            }
+        }
+
         /// <summary>
         /// Verifies that the <see cref="TestKitBase.TestActor"/> survived host startup, and re-creates it
         /// if it did not.
@@ -259,17 +245,7 @@ namespace Akka.Hosting.TestKit
                     "TestActor [{0}] did not survive host startup; re-creating it (attempt {1}/{2}).",
                     TestActor.Path, attempt + 1, maxAttempts);
 
-                // base.InitializeTest installs an ActorCellKeepingSynchronizationContext on the current
-                // thread; bracket it the same way the original call site does so it cannot leak.
-                var savedContext = SynchronizationContext.Current;
-                try
-                {
-                    base.InitializeTest(Sys, (ActorSystemSetup)null!, null, null);
-                }
-                finally
-                {
-                    SynchronizationContext.SetSynchronizationContext(savedContext);
-                }
+                InitializeHostedTestActor(Sys);
 
                 await RetargetRegisteredTestProbeAsync(Sys);
                 ActorRegistry.Register<TestProbe>(GetOrCreateRegisteredTestProbe(Sys), overwrite: true);
@@ -307,15 +283,7 @@ namespace Akka.Hosting.TestKit
 
         internal async Task ForceReinitializeTestActorAsync()
         {
-            var savedContext = SynchronizationContext.Current;
-            try
-            {
-                base.InitializeTest(Sys, (ActorSystemSetup)null!, null, null);
-            }
-            finally
-            {
-                SynchronizationContext.SetSynchronizationContext(savedContext);
-            }
+            InitializeHostedTestActor(Sys);
 
             await RetargetRegisteredTestProbeAsync(Sys);
             ActorRegistry.Register<TestProbe>(GetOrCreateRegisteredTestProbe(Sys), overwrite: true);
@@ -366,13 +334,12 @@ namespace Akka.Hosting.TestKit
         }
 
         /// <summary>
-        /// Override Sys property to ensure implicit sender is set when accessing the actor system
+        /// Gets the hosted actor system.
         /// </summary>
         public new ActorSystem Sys
         {
             get
             {
-                EnsureImplicitSender();
                 return base.Sys;
             }
         }
