@@ -215,6 +215,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             Self = self;
             _shortCircuitTarget = shortCircuitTarget;
+            Interpreter.StageActorShell = shortCircuitTarget is ActorGraphInterpreter ? this : null;
 
             for (int i = 0; i < _inputs.Length; i++)
             {
@@ -298,6 +299,10 @@ namespace Akka.Streams.Implementation.Fusing
                 case ActorGraphInterpreter.AsyncInput asyncInput:
                     return RunAsyncInput(asyncInput, eventLimit);
 
+                case ActorGraphInterpreter.StageActorInput actorInput:
+                    return RunStageActorInput(actorInput.Logic, actorInput.Sender, actorInput.Message,
+                        actorInput.Handler, eventLimit);
+
                 case ActorGraphInterpreter.OnError onError:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
                     _inputs[onError.Id].OnError(onError.Cause);
@@ -342,6 +347,25 @@ namespace Akka.Streams.Implementation.Fusing
         private int RunAsyncInput(ActorGraphInterpreter.AsyncInput input, int eventLimit)
         {
             Interpreter.RunAsyncInput(input.Logic, input.Event, input.Promise, input.Handler);
+            return AfterAsyncInput(eventLimit);
+        }
+
+        internal int ReceiveStageActorInput(GraphStageLogic logic, IActorRef sender, object message,
+            Action<(IActorRef, object)> handler, int eventLimit)
+        {
+            _resumeScheduled = false;
+            return _waitingForShutdown ? eventLimit : RunStageActorInput(logic, sender, message, handler, eventLimit);
+        }
+
+        private int RunStageActorInput(GraphStageLogic logic, IActorRef sender, object message,
+            Action<(IActorRef, object)> handler, int eventLimit)
+        {
+            Interpreter.RunAsyncInputCore(logic, (sender, message), GraphStageLogic.NoPromise, handler);
+            return AfterAsyncInput(eventLimit);
+        }
+
+        private int AfterAsyncInput(int eventLimit)
+        {
             if (eventLimit == 1 && _interpreter.IsSuspended)
             {
                 // Preserve flush-on-park when an async callback uses the last event in this batch.
@@ -350,6 +374,17 @@ namespace Akka.Streams.Implementation.Fusing
                 return 0;
             }
             return RunBatch(eventLimit - 1);
+        }
+
+        internal void DispatchStageActorInput(GraphStageLogic logic, IActorRef sender, object message,
+            Action<(IActorRef, object)> handler)
+        {
+            var currentInterpreter = CurrentInterpreterOrNull;
+            if (currentInterpreter != null && Equals(currentInterpreter.Context, Self) &&
+                _shortCircuitTarget is ActorGraphInterpreter owner)
+                owner.EnqueueStageActorToShortCircuit(this, logic, sender, message, handler);
+            else
+                Self.Tell(new ActorGraphInterpreter.StageActorInput(this, logic, sender, message, handler));
         }
 
         /**
@@ -808,6 +843,26 @@ namespace Akka.Streams.Implementation.Fusing
             /// The interpreter shell associated with this boundary event.
             /// </summary>
             public GraphInterpreterShell Shell { get; }
+        }
+
+        // The sender and message share one actor envelope instead of boxing a tuple inside AsyncInput.
+        internal sealed class StageActorInput : IBoundaryEvent
+        {
+            public GraphInterpreterShell Shell { get; }
+            public readonly GraphStageLogic Logic;
+            public readonly IActorRef Sender;
+            public readonly object Message;
+            public readonly Action<(IActorRef, object)> Handler;
+
+            public StageActorInput(GraphInterpreterShell shell, GraphStageLogic logic, IActorRef sender,
+                object message, Action<(IActorRef, object)> handler)
+            {
+                Shell = shell;
+                Logic = logic;
+                Sender = sender;
+                Message = message;
+                Handler = handler;
+            }
         }
 
         /// <summary>
@@ -1605,23 +1660,58 @@ namespace Akka.Streams.Implementation.Fusing
 
 #nullable enable
         // One FIFO retains the ordering of async inputs, resumes, and shell registrations.
-        // A non-null async shell marks the inline AsyncInput; default/null controls stay ignorable.
+        // Sharing the reference fields keeps all three event kinds in one FIFO without boxing.
+        private enum ShortCircuitEventKind : byte
+        {
+            Boundary,
+            AsyncInput,
+            StageActorInput
+        }
+
         private readonly struct ShortCircuitEvent
         {
+            public readonly ShortCircuitEventKind Kind;
             public readonly object? Boundary;
-            public readonly AsyncInput AsyncInput;
+            public readonly GraphInterpreterShell? Shell;
+            public readonly GraphStageLogic? Logic;
+            private readonly Delegate? _handler;
+            private readonly object? _promiseOrSender;
 
             public ShortCircuitEvent(object boundary)
             {
+                Kind = ShortCircuitEventKind.Boundary;
                 Boundary = boundary;
-                AsyncInput = default;
+                Shell = null;
+                Logic = null;
+                _handler = null;
+                _promiseOrSender = null;
             }
 
             public ShortCircuitEvent(AsyncInput input)
             {
-                Boundary = null;
-                AsyncInput = input;
+                Kind = ShortCircuitEventKind.AsyncInput;
+                Boundary = input.Event;
+                Shell = input.Shell;
+                Logic = input.Logic;
+                _handler = input.Handler;
+                _promiseOrSender = input.Promise;
             }
+
+            public ShortCircuitEvent(GraphInterpreterShell shell, GraphStageLogic logic, IActorRef sender,
+                object message, Action<(IActorRef, object)> handler)
+            {
+                Kind = ShortCircuitEventKind.StageActorInput;
+                Boundary = message;
+                Shell = shell;
+                Logic = logic;
+                _handler = handler;
+                _promiseOrSender = sender;
+            }
+
+            public AsyncInput AsyncInput => new(Shell!, Logic!, Boundary!,
+                (TaskCompletionSource<Done>)_promiseOrSender!, (Action<object>)_handler!);
+            public IActorRef Sender => (IActorRef)_promiseOrSender!;
+            public Action<(IActorRef, object)> StageActorHandler => (Action<(IActorRef, object)>)_handler!;
         }
 #nullable restore
 
@@ -1658,6 +1748,15 @@ namespace Akka.Streams.Implementation.Fusing
                 _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
 
             _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(input));
+        }
+
+        internal void EnqueueStageActorToShortCircuit(GraphInterpreterShell shell, GraphStageLogic logic,
+            IActorRef sender, object message, Action<(IActorRef, object)> handler)
+        {
+            if (_shortCircuitBuffer == null)
+                _shortCircuitBuffer = new Queue<ShortCircuitEvent>();
+
+            _shortCircuitBuffer.Enqueue(new ShortCircuitEvent(shell, logic, sender, message, handler));
         }
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
@@ -1736,8 +1835,10 @@ namespace Akka.Streams.Implementation.Fusing
             while (_shortCircuitBuffer.Count != 0 && _currentLimit > 0 && _activeInterpreters.Count != 0)
             {
                 var element = _shortCircuitBuffer.Dequeue();
-                if (element.AsyncInput.Shell != null)
+                if (element.Kind == ShortCircuitEventKind.AsyncInput)
                     ProcessAsyncInput(element.AsyncInput);
+                else if (element.Kind == ShortCircuitEventKind.StageActorInput)
+                    ProcessStageActorInput(element);
                 else if (element.Boundary is IBoundaryEvent boundary)
                     ProcessEvent(boundary);
                 else if (element.Boundary is ShellRegistered)
@@ -1790,6 +1891,24 @@ namespace Akka.Streams.Implementation.Fusing
                 _activeInterpreters.Remove(shell);
                 if (_activeInterpreters.Count == 0 && _newShells.Count == 0)
                     Context.Stop(Self);
+            }
+        }
+
+        private void ProcessStageActorInput(ShortCircuitEvent input)
+        {
+            var shell = input.Shell;
+            if (!shell.IsTerminated && (shell.IsInitialized || TryInit(shell)))
+            {
+                try
+                {
+                    _currentLimit = shell.ReceiveStageActorInput(input.Logic, input.Sender, input.Boundary,
+                        input.StageActorHandler, _currentLimit);
+                }
+                catch (Exception ex)
+                {
+                    shell.TryAbort(ex);
+                }
+                AfterShellEvent(shell);
             }
         }
 
