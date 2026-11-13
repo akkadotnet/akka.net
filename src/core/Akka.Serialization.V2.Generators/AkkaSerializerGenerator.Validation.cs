@@ -144,7 +144,7 @@ public sealed partial class AkkaSerializerGenerator
         if (!ValidateProtocolType(serializer, diagnostics))
             return new SerializerGate(false, diagnostics.ToImmutable());
 
-        if (!ValidateFormatters(serializer, diagnostics))
+        if (!ValidateFormatters(serializer.Formatters, serializer.ClassName, new LocationKey(serializer.Key, string.Empty), isSerializer: true, diagnostics))
             return new SerializerGate(false, diagnostics.ToImmutable());
 
         if (!ValidateClosedGenericRegistrations(serializer, diagnostics))
@@ -173,7 +173,7 @@ public sealed partial class AkkaSerializerGenerator
         var effectiveFacts = facts ?? CompilationFacts.Empty;
         var resolved = ResolveSerializerMessages(serializer, messages, schemas, effectiveFacts);
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, schemas, effectiveFacts, diagnostics);
+        ValidateResolved(serializer, resolved, effectiveFacts, diagnostics);
         return diagnostics.ToImmutable();
     }
 
@@ -208,9 +208,9 @@ public sealed partial class AkkaSerializerGenerator
     /// protocol -- the "registration has no effect" condition AKKASG034 used to guard can no longer
     /// occur.
     /// </summary>
-    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, MetadataSchemaTable metadataSchemas, CompilationFacts facts, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
+    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, CompilationFacts facts, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, facts.UnionHierarchies, diagnostics);
+        ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, resolved.AccessibilityFailuresByType, facts.UnionHierarchies, diagnostics);
     }
 
     /// <summary>
@@ -418,51 +418,72 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private static bool ValidateFormatters(SerializerInfo serializer, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
+    private static bool ValidateFormatters(
+        ImmutableArray<FormatterInfo> formatters,
+        string ownerName,
+        LocationKey ownerLocation,
+        bool isSerializer,
+        ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        if (serializer.Formatters.IsDefaultOrEmpty)
+        if (formatters.IsDefaultOrEmpty)
             return true;
 
-        var isValid = true;
-        foreach (var formatter in serializer.Formatters)
-        {
-            // Every formatter diagnostic reports at ITS OWN [AkkaSerializerFormatter<TTarget,
-            // TFormatter>] attribute application, not the serializer's main attribute -- see
-            // FormatterLocationMember in AkkaSerializerGenerator.Locations.cs.
-            var at = new LocationKey(serializer.Key, FormatterLocationMember(formatter.TargetTypeFullName));
+        var scope = isSerializer ? $"serializer '{ownerName}'" : $"message '{ownerName}'";
+        LocationKey RegistrationLocation(string target) => isSerializer
+            ? new LocationKey(ownerLocation.Owner, FormatterLocationMember(target))
+            : ownerLocation;
 
+        var isValid = true;
+        foreach (var formatter in formatters)
+        {
+            var at = RegistrationLocation(formatter.TargetTypeFullName);
             if (!formatter.IsTargetSupported)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterTargetNotSupported, at, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterTargetNotSupported, at, ToDisplayName(formatter.TargetTypeFullName), scope));
                 isValid = false;
                 continue;
             }
 
             if (formatter.IsAbstract)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidFormatterType, at, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidFormatterType, at, ToDisplayName(formatter.FormatterTypeFullName), scope, ToDisplayName(formatter.TargetTypeFullName)));
                 isValid = false;
                 continue;
             }
 
             if (formatter.CtorKind == FormatterCtorKind.None)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterConstructorNotUsable, at, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterConstructorNotUsable, at, ToDisplayName(formatter.FormatterTypeFullName), scope));
                 isValid = false;
             }
         }
 
-        foreach (var duplicate in serializer.Formatters
+        foreach (var duplicate in formatters
                      .Where(formatter => formatter.IsTargetSupported)
-                     .GroupBy(formatter => formatter.TargetTypeFullName, StringComparer.Ordinal)
+                     .GroupBy(formatter => formatter.TargetTypeKey)
                      .Where(group => group.Count() > 1))
         {
-            var at = new LocationKey(serializer.Key, FormatterLocationMember(duplicate.Key));
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFormatterRegistration, at, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            var target = duplicate.Key.DisplayName;
+            var at = RegistrationLocation(target);
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFormatterRegistration, at, scope, ToDisplayName(target)));
             isValid = false;
         }
 
         return isValid;
+    }
+
+    private static FormatterInfo? FindInaccessibleFormatter(TypeMapping mapping)
+    {
+        if (mapping.Formatter is { IsAccessible: false } formatter)
+            return formatter;
+
+        foreach (var argument in mapping.TypeArguments)
+        {
+            if (FindInaccessibleFormatter(argument) is { } inaccessible)
+                return inaccessible;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -770,6 +791,28 @@ public sealed partial class AkkaSerializerGenerator
             // ConstructorParameterNotCovered, DuplicateFieldIndex below) redirect to that
             // construction's own registration attribute -- see MessageTypeLocationKey's doc comment.
             var messageAt = MessageTypeLocationKey(serializer, message);
+            var formatterAt = message.ForeignAssemblyName.Length == 0
+                ? messageAt
+                : new LocationKey(serializer.Key, string.Empty);
+            if (!ValidateFormatters(message.Formatters, ToDisplayName(message.FullyQualifiedName), formatterAt, isSerializer: false, diagnostics))
+                isValid = false;
+
+            foreach (var field in message.Fields)
+            {
+                var inaccessible = field.Formatter is { IsAccessible: false } formatter
+                    ? formatter
+                    : FindInaccessibleFormatter(field.Mapping);
+                if (inaccessible == null)
+                    continue;
+
+                var at = message.ForeignAssemblyName.Length == 0 && !message.IsTopLevelUnion
+                    ? new LocationKey(message.Key, field.Name)
+                    : formatterAt;
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterTypeNotAccessible, at,
+                    ToDisplayName(inaccessible.FormatterTypeFullName), ToDisplayName(inaccessible.TargetTypeFullName),
+                    ToDisplayName(message.FullyQualifiedName), serializer.ClassName));
+                isValid = false;
+            }
 
             var shapeDiagnostics = ValidateMessageShape(message.Key, messageAt,
                 message.Fields.Select(field => field.Index), message.AllowEmpty,

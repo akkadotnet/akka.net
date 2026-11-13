@@ -4806,6 +4806,20 @@ namespace Akka.Streams.Implementation.Stages
 }
 namespace Akka.Streams.Serialization
 {
+    public sealed class SinkRefFormatter<T> : Akka.Serialization.V2.IAkkaMessagePackFormatter<Akka.Streams.ISinkRef<T>>
+    {
+        public SinkRefFormatter(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Streams.ISinkRef<T> Read(ref MessagePack.MessagePackReader reader) { }
+        public int SizeOf(Akka.Streams.ISinkRef<T> value) { }
+        public void Write(ref MessagePack.MessagePackWriter writer, Akka.Streams.ISinkRef<T> value) { }
+    }
+    public sealed class SourceRefFormatter<T> : Akka.Serialization.V2.IAkkaMessagePackFormatter<Akka.Streams.ISourceRef<T>>
+    {
+        public SourceRefFormatter(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Streams.ISourceRef<T> Read(ref MessagePack.MessagePackReader reader) { }
+        public int SizeOf(Akka.Streams.ISourceRef<T> value) { }
+        public void Write(ref MessagePack.MessagePackWriter writer, Akka.Streams.ISourceRef<T> value) { }
+    }
     public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }

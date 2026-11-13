@@ -93,7 +93,8 @@ public sealed partial class AkkaSerializerGenerator
             {
                 // A union field whose static type is not a named type has a default key with a null
                 // MetadataName; there is no hierarchy to walk for it.
-                if (field.Mapping.Kind != FieldKind.Union || !field.UnionMembers.IsEmpty || string.IsNullOrEmpty(field.Mapping.Key.MetadataName))
+                if (field.Mapping.Kind != FieldKind.Union || !field.UnionMembers.IsEmpty ||
+                    string.IsNullOrEmpty(field.Mapping.Key.MetadataName) || FindFormatter(field.Mapping, message.Formatters) != null)
                     continue;
 
                 discovered.Add(field.Mapping.Key);
@@ -154,7 +155,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             foreach (var field in message.Fields)
             {
-                foreach (var nested in EnumerateNestedValueMappings(field.Mapping))
+                foreach (var nested in EnumerateNestedValueMappings(field.Mapping, message.Formatters))
                 {
                     if (unsealed.Contains(nested.Key))
                         used.Add(nested.Key);
@@ -191,14 +192,17 @@ public sealed partial class AkkaSerializerGenerator
     /// depth. Each one is written as that class's own fields, so a subclass value in any of these
     /// positions would lose its own fields (AKKASG052).
     /// </summary>
-    internal static IEnumerable<TypeMapping> EnumerateNestedValueMappings(TypeMapping mapping)
+    internal static IEnumerable<TypeMapping> EnumerateNestedValueMappings(TypeMapping mapping, ImmutableArray<FormatterInfo> messageFormatters = default)
     {
+        if (FindFormatter(mapping, messageFormatters) != null)
+            yield break;
+
         if (mapping.Kind == FieldKind.Object && !mapping.IsValueType)
             yield return mapping;
 
         foreach (var argument in mapping.TypeArguments)
         {
-            foreach (var nested in EnumerateNestedValueMappings(argument))
+            foreach (var nested in EnumerateNestedValueMappings(argument, messageFormatters))
                 yield return nested;
         }
     }

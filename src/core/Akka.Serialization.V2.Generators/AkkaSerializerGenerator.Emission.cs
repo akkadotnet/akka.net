@@ -38,8 +38,10 @@ internal readonly struct ResolvedSerializerMessages
     public ResolvedSerializerMessages(
         ImmutableArray<AkkaSerializerGenerator.MessageInfo> topLevelMessages,
         ImmutableArray<AkkaSerializerGenerator.MessageInfo> reachableMessages,
-        ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.MessageInfo> resolvedMessagesByType)
+        ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.MessageInfo> resolvedMessagesByType,
+        ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.AccessibilityFailure> accessibilityFailuresByType)
     {
+        AccessibilityFailuresByType = accessibilityFailuresByType;
         TopLevelMessages = topLevelMessages;
         ReachableMessages = reachableMessages;
         ResolvedMessagesByType = resolvedMessagesByType;
@@ -48,6 +50,7 @@ internal readonly struct ResolvedSerializerMessages
     public ImmutableArray<AkkaSerializerGenerator.MessageInfo> TopLevelMessages { get; }
     public ImmutableArray<AkkaSerializerGenerator.MessageInfo> ReachableMessages { get; }
     public ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.MessageInfo> ResolvedMessagesByType { get; }
+    public ImmutableDictionary<AkkaSerializerGenerator.TypeKey, AkkaSerializerGenerator.AccessibilityFailure> AccessibilityFailuresByType { get; }
 }
 
 public sealed partial class AkkaSerializerGenerator
@@ -263,7 +266,7 @@ public sealed partial class AkkaSerializerGenerator
 
         var resolved = ResolveSerializerMessages(serializer, declaredMessages, metadataSchemas, facts);
         var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, metadataSchemas, facts, validationDiagnostics);
+        ValidateResolved(serializer, resolved, facts, validationDiagnostics);
 
         var topLevelMessages = BuildClosedSet(resolved.TopLevelMessages);
         var usedFormatters = CollectUsedFormatters(resolved.ReachableMessages);
@@ -331,7 +334,7 @@ public sealed partial class AkkaSerializerGenerator
             return ImmutableDictionary<TypeKey, MessageInfo>.Empty;
 
         var schemasByKey = serializer.ClosedGenericSchemas.ToImmutableDictionary(message => message.Key);
-        return ResolveMessages(schemasByKey, serializer.Formatters, protocolTypeFullName: string.Empty, allMessagesForProtocolScan: ImmutableArray<MessageInfo>.Empty);
+        return ResolveMessages(schemasByKey, BuildFormatterLookup(serializer.Formatters), protocolTypeFullName: string.Empty, allMessagesForProtocolScan: ImmutableArray<MessageInfo>.Empty);
     }
 
     /// <summary>
@@ -452,11 +455,15 @@ public sealed partial class AkkaSerializerGenerator
             ? allMessages.ToImmutableDictionary(message => message.Key)
             : MergeWithMetadataSchemas(allMessages, metadataSchemas.SchemasByType);
 
-        // ResolveMessages scans `allMessages` for a closed set ONLY if it actually needs to
-        // reclassify a protocol-interface field (Decision 18) or a discovered-mode union field
-        // (Decision 21) -- lazily, so a serializer with neither (the overwhelming common case)
-        // never pays for that scan at all.
-        var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters, serializer.ProtocolTypeFullName, allMessages);
+        var formattersByTarget = BuildFormatterLookup(serializer.Formatters);
+        var accessibilityFailures = metadataSchemas.AccessibilityFailuresByType;
+        if (!accessibilityFailures.IsEmpty && !metadataSchemas.SchemasByType.IsEmpty)
+        {
+            (allMessagesByType, accessibilityFailures) = PropagateNestedFailures(allMessagesByType, metadataSchemas, formattersByTarget);
+            allMessages = allMessages.Where(message => allMessagesByType.ContainsKey(message.Key)).ToImmutableArray();
+        }
+
+        var resolvedMessagesByType = ResolveMessages(allMessagesByType, formattersByTarget, serializer.ProtocolTypeFullName, allMessages);
 
         // Decision 18's adoption rule: a registration on the serializer -- hand-written or
         // ManifestPrefix-expanded -- makes its construction a top-level message unconditionally,
@@ -480,7 +487,7 @@ public sealed partial class AkkaSerializerGenerator
             .ToImmutableArray();
         var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
-        return new ResolvedSerializerMessages(topLevelMessages, reachableMessages, resolvedMessagesByType);
+        return new ResolvedSerializerMessages(topLevelMessages, reachableMessages, resolvedMessagesByType, accessibilityFailures);
     }
 
     /// <summary>
@@ -533,6 +540,14 @@ public sealed partial class AkkaSerializerGenerator
         return builder.ToImmutable();
     }
 
+    private static Dictionary<TypeKey, FormatterInfo> BuildFormatterLookup(ImmutableArray<FormatterInfo> formatters)
+    {
+        var formattersByTarget = new Dictionary<TypeKey, FormatterInfo>();
+        foreach (var formatter in formatters)
+            formattersByTarget[formatter.TargetTypeKey] = formatter;
+        return formattersByTarget;
+    }
+
     /// <summary>
     /// Resolves formatter overrides (unchanged); reclassifies a field whose static type is EXACTLY
     /// <paramref name="protocolTypeFullName"/> from <see cref="FieldKind.Unsupported"/> to a union
@@ -551,14 +566,10 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private static ImmutableDictionary<TypeKey, MessageInfo> ResolveMessages(
         ImmutableDictionary<TypeKey, MessageInfo> allMessagesByType,
-        ImmutableArray<FormatterInfo> formatters,
+        Dictionary<TypeKey, FormatterInfo> formattersByTarget,
         string protocolTypeFullName,
         ImmutableArray<MessageInfo> allMessagesForProtocolScan)
     {
-        var formattersByTarget = new Dictionary<TypeKey, FormatterInfo>();
-        foreach (var formatter in formatters)
-            formattersByTarget[formatter.TargetTypeKey] = formatter;
-
         // Built lazily, per distinct closed-set key, on the FIRST field that actually needs it: the
         // overwhelming common case has no field typed as a closed-set key at all, so most
         // compilations never scan for one, let alone allocate one. One cache serves both the
@@ -604,12 +615,12 @@ public sealed partial class AkkaSerializerGenerator
                 if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
                     return true;
 
-                if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
-                    field.Mapping.TypeFullName.Length > 0 &&
-                    formattersByTarget.ContainsKey(field.Mapping.Key))
+                if (FindFormatter(field.Mapping, message.Formatters, formattersByTarget) != null)
                     return true;
 
-                if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                if ((formattersByTarget.Count > 0 || !message.Formatters.IsEmpty)
+                    && IsCollectionKind(field.Mapping.Kind)
+                    && CollectionNeedsFormatter(field.Mapping, message.Formatters, formattersByTarget))
                     return true;
             }
 
@@ -631,19 +642,15 @@ public sealed partial class AkkaSerializerGenerator
             var resolvedFields = ImmutableArray.CreateBuilder<FieldInfo>(message.Fields.Length);
             foreach (var field in message.Fields)
             {
-                if (field.Mapping.Kind == FieldKind.Unsupported &&
+                if (FindFormatter(field.Mapping, message.Formatters, formattersByTarget) is { } formatter)
+                {
+                    resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, formatter.TargetTypeKey), formatter));
+                }
+                else if (field.Mapping.Kind == FieldKind.Unsupported &&
                     protocolTypeFullName.Length > 0 &&
                     string.Equals(field.TypeFullName, protocolTypeFullName, StringComparison.Ordinal))
                 {
                     resolvedFields.Add(field.WithUnion(GetClosedSetMembers(protocolTypeFullName)));
-                }
-                else if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
-                    field.Mapping.TypeFullName.Length > 0 &&
-                    formattersByTarget.TryGetValue(field.Mapping.Key, out var formatter))
-                {
-                    // Ahead of union discovery: a formatter registered for an interface or abstract
-                    // base claims every field of that type, exactly as it does for any other type.
-                    resolvedFields.Add(field.WithFormatter(new TypeMapping(FieldKind.Formatted, field.Mapping.Key), formatter));
                 }
                 else if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
                 {
@@ -658,13 +665,13 @@ public sealed partial class AkkaSerializerGenerator
                     var isProtocol = protocolTypeFullName.Length > 0 && string.Equals(closedSetKey, protocolTypeFullName, StringComparison.Ordinal);
                     resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey), isDiscovered: !isProtocol));
                 }
-                else if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, formattersByTarget))
+                else if (IsCollectionKind(field.Mapping.Kind) && CollectionNeedsFormatter(field.Mapping, message.Formatters, formattersByTarget))
                 {
                     // A formatter serves a collection's element, dictionary key, and dictionary value
                     // exactly as it serves a field: the position changes where the formatter is called,
                     // never what it writes, so the wire form is the array/map the collection already
                     // is, with each element exactly what the formatter writes at field position.
-                    resolvedFields.Add(field.WithMapping(ResolveCollectionFormatters(field.Mapping, formattersByTarget)));
+                    resolvedFields.Add(field.WithMapping(ResolveCollectionFormatters(field.Mapping, message.Formatters, formattersByTarget)));
                 }
                 else
                 {
@@ -678,28 +685,42 @@ public sealed partial class AkkaSerializerGenerator
         return builder?.ToImmutable() ?? allMessagesByType;
     }
 
-    /// <summary>
-    /// Whether a registered formatter can serve this mapping when it sits in an element, key, or value
-    /// position -- the same rule <see cref="ResolveMessages"/> applies at field position: the mapping
-    /// names a type (<see cref="TypeMapping.TypeFullName"/>), and is not the object-typed envelope
-    /// boundary, which no formatter may claim.
-    /// </summary>
-    private static bool CanBeFormatted(TypeMapping mapping)
-        => mapping.Kind != FieldKind.EnvelopePayload && mapping.TypeFullName.Length > 0;
+    private static FormatterInfo? FindFormatter(TypeMapping mapping,
+        ImmutableArray<FormatterInfo> messageFormatters,
+        Dictionary<TypeKey, FormatterInfo>? serializerFormatters = null)
+    {
+        if (mapping.Kind == FieldKind.EnvelopePayload || mapping.FormatterTarget.MetadataName == null)
+            return null;
+
+        if (serializerFormatters != null && serializerFormatters.TryGetValue(mapping.FormatterTarget, out var registered))
+            return registered;
+
+        if (messageFormatters.IsDefaultOrEmpty)
+            return null;
+
+        foreach (var formatter in messageFormatters)
+        {
+            if (formatter.TargetTypeKey.Equals(mapping.FormatterTarget))
+                return formatter;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Whether any element, dictionary key, or dictionary value anywhere inside this collection mapping
     /// (including nested collections) has a registered formatter. Cheap and allocation-free: it lets
     /// <see cref="ResolveMessages"/> skip every collection field in the common no-formatter case.
     /// </summary>
-    private static bool CollectionNeedsFormatter(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    private static bool CollectionNeedsFormatter(TypeMapping collection,
+        ImmutableArray<FormatterInfo> messageFormatters, Dictionary<TypeKey, FormatterInfo> serializerFormatters)
     {
         foreach (var child in collection.TypeArguments)
         {
-            if (CanBeFormatted(child) && formattersByTarget.ContainsKey(child.Key))
+            if (FindFormatter(child, messageFormatters, serializerFormatters) != null)
                 return true;
 
-            if (IsCollectionKind(child.Kind) && CollectionNeedsFormatter(child, formattersByTarget))
+            if (IsCollectionKind(child.Kind) && CollectionNeedsFormatter(child, messageFormatters, serializerFormatters))
                 return true;
         }
 
@@ -713,16 +734,17 @@ public sealed partial class AkkaSerializerGenerator
     /// read temporaries and the nil handling depend on them) and takes its value-type-ness from the
     /// formatter's target, mirroring <see cref="FormatterInfo.IsTargetValueType"/> at field position.
     /// </summary>
-    private static TypeMapping ResolveCollectionFormatters(TypeMapping collection, Dictionary<TypeKey, FormatterInfo> formattersByTarget)
+    private static TypeMapping ResolveCollectionFormatters(TypeMapping collection,
+        ImmutableArray<FormatterInfo> messageFormatters, Dictionary<TypeKey, FormatterInfo> serializerFormatters)
     {
         var resolved = ImmutableArray.CreateBuilder<TypeMapping>(collection.TypeArguments.Length);
         foreach (var child in collection.TypeArguments)
         {
-            if (CanBeFormatted(child) && formattersByTarget.TryGetValue(child.Key, out var formatter))
+            if (FindFormatter(child, messageFormatters, serializerFormatters) is { } formatter)
             {
                 resolved.Add(new TypeMapping(
                     FieldKind.Formatted,
-                    child.Key,
+                    formatter.TargetTypeKey,
                     isValueType: formatter.IsTargetValueType,
                     declaredTypeName: child.DeclaredTypeName,
                     isNullable: child.IsNullable,
@@ -730,7 +752,7 @@ public sealed partial class AkkaSerializerGenerator
             }
             else if (IsCollectionKind(child.Kind))
             {
-                resolved.Add(ResolveCollectionFormatters(child, formattersByTarget));
+                resolved.Add(ResolveCollectionFormatters(child, messageFormatters, serializerFormatters));
             }
             else
             {
@@ -834,13 +856,13 @@ public sealed partial class AkkaSerializerGenerator
 
     private static ImmutableArray<FormatterInfo> CollectUsedFormatters(ImmutableArray<MessageInfo> reachableMessages)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<(TypeKey Target, TypeKey Formatter)>();
         var used = ImmutableArray.CreateBuilder<FormatterInfo>();
         foreach (var message in reachableMessages)
         {
             foreach (var field in message.Fields)
             {
-                if (field.Mapping.Kind == FieldKind.Formatted && field.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
+                if (field.Mapping.Kind == FieldKind.Formatted && field.Formatter is { } formatter && seen.Add((formatter.TargetTypeKey, formatter.FormatterTypeKey)))
                     used.Add(formatter);
 
                 if (IsCollectionKind(field.Mapping.Kind))
@@ -851,14 +873,18 @@ public sealed partial class AkkaSerializerGenerator
         if (used.Count == 0)
             return ImmutableArray<FormatterInfo>.Empty;
 
-        return used.ToImmutable().Sort((a, b) => string.CompareOrdinal(a.TargetTypeFullName, b.TargetTypeFullName));
+        return used.ToImmutable().Sort(static (a, b) =>
+        {
+            var target = string.CompareOrdinal(a.TargetTypeFullName, b.TargetTypeFullName);
+            return target != 0 ? target : string.CompareOrdinal(a.FormatterTypeFullName, b.FormatterTypeFullName);
+        });
     }
 
-    private static void CollectCollectionFormatters(TypeMapping collection, HashSet<string> seen, ImmutableArray<FormatterInfo>.Builder used)
+    private static void CollectCollectionFormatters(TypeMapping collection, HashSet<(TypeKey Target, TypeKey Formatter)> seen, ImmutableArray<FormatterInfo>.Builder used)
     {
         foreach (var child in collection.TypeArguments)
         {
-            if (child.Kind == FieldKind.Formatted && child.Formatter is { } formatter && seen.Add(formatter.TargetTypeFullName))
+            if (child.Kind == FieldKind.Formatted && child.Formatter is { } formatter && seen.Add((formatter.TargetTypeKey, formatter.FormatterTypeKey)))
                 used.Add(formatter);
             else if (IsCollectionKind(child.Kind))
                 CollectCollectionFormatters(child, seen, used);
@@ -2928,13 +2954,18 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
     {
-        return "_akkaFormatter_" + SanitizeNonGenericFormatterTypeName(formatter.TargetTypeFullName);
+        if (!formatter.IsMessageDefault && formatter.TargetTypeKey.TypeArguments.IsEmpty)
+            return "_akkaFormatter_" + SanitizeNonGenericFormatterTypeName(formatter.TargetTypeFullName);
+
+        return "_akkaScopedFormatter_" + GetTypeIdentitySuffix(formatter.TargetTypeKey) +
+            "_" + GetTypeIdentitySuffix(formatter.FormatterTypeKey);
     }
 
     private static string SanitizeNonGenericFormatterTypeName(string typeFullName)
     {
         return typeFullName
             .Replace("global::", string.Empty)
+            .Replace("@", string.Empty)
             .Replace("_", "__")
             .Replace(".", "_")
             .Replace("+", "_");
@@ -2947,15 +2978,19 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetGeneratedMethodName(TypeKey key)
     {
+        return FoldTypeName(key.DisplayName) + "_" + GetTypeIdentitySuffix(key);
+    }
+
+    private static string GetTypeIdentitySuffix(TypeKey key)
+    {
         var identity = new StringBuilder();
         AppendIdentity(key, identity);
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(identity.ToString()));
-        var name = new StringBuilder(FoldTypeName(key.DisplayName));
-        name.Append('_');
+        var suffix = new StringBuilder(16);
         for (var i = 0; i < 8; i++)
-            name.Append(hash[i].ToString("x2", CultureInfo.InvariantCulture));
-        return name.ToString();
+            suffix.Append(hash[i].ToString("x2", CultureInfo.InvariantCulture));
+        return suffix.ToString();
     }
 
     private static void AppendIdentity(TypeKey key, StringBuilder builder)

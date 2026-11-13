@@ -200,3 +200,24 @@ public sealed class AkkaSerializerFormatterAttribute<TTarget, TFormatter> : Attr
     where TFormatter : IAkkaMessagePackFormatter<TTarget>
 {
 }
+
+/// <summary>
+/// Declares a default hand-written formatter for fields of an <see cref="AkkaSerializableAttribute"/>
+/// message, including collection elements, keys, and values.
+/// </summary>
+/// <remarks>
+/// The generated serializer uses an exact-type <see cref="AkkaSerializerFormatterAttribute{TTarget,TFormatter}"/>
+/// registration first. Each nested message uses its own defaults. An <c>object</c> field or
+/// collection value or element keeps its envelope encoding.
+/// </remarks>
+/// <typeparam name="TTarget">The exact field or collection position type handled by the formatter.</typeparam>
+/// <typeparam name="TFormatter">
+/// A concrete <see cref="IAkkaMessagePackFormatter{T}"/> for <typeparamref name="TTarget"/>.
+/// The generated serializer prefers a public constructor taking an
+/// <see cref="Akka.Actor.ExtendedActorSystem"/> and otherwise requires a public parameterless constructor.
+/// </typeparam>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true, Inherited = false)]
+public sealed class AkkaMessageFormatterAttribute<TTarget, TFormatter> : Attribute
+    where TFormatter : IAkkaMessagePackFormatter<TTarget>
+{
+}

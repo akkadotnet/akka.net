@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
