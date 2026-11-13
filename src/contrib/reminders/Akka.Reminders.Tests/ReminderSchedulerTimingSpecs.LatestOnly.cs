@@ -1,4 +1,5 @@
 using Akka.Actor;
+using Akka.Reminders.Sharding;
 using Akka.Reminders.Storage;
 using Akka.TestKit;
 
@@ -208,5 +209,173 @@ public partial class ReminderSchedulerTimingSpecs
 
         Assert.Contains("zero", keys);
         Assert.Contains("normal", keys);
+    }
+
+    // Issue #8965. A series every 2 s with MaxSlippage 5 s: an older slot (due +1 s, a retry) and the newest
+    // slot (due +5 s, a retry) wait together. The fetch hands them to one pass, in When order.
+    private sealed record SeededSeries(IActorRef Scheduler, ReminderEntity Entity, ReminderKey Key, DateTimeOffset T0,
+        TestProbe Region, List<string> Conflicts);
+
+    private static ReminderSettings SeededSeriesSettings(int chunkSize) => new()
+    {
+        MaxSlippage = TimeSpan.FromSeconds(5),
+        AckTimeout = TimeSpan.FromSeconds(30),
+        RetryBackoffBase = TimeSpan.FromSeconds(0.1),
+        MaxRetryBackoff = TimeSpan.FromMinutes(10),
+        MaxDeliveryAttempts = 10,
+        StorageTimeout = TimeSpan.FromSeconds(30),
+        DeliveryCommitChunkSize = chunkSize
+    };
+
+    private async Task<SeededSeries> StartSeededSeriesAsync(string name, int chunkSize, double olderWhen, double newestWhen,
+        int missingResolves, int missingFrom = int.MaxValue, int missingTo = int.MaxValue)
+    {
+        var (entity, key, t0) = (new ReminderEntity(name + "-region", "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromSeconds(2);
+        ScheduledReminder Row(double due, double when) => new(entity, key, t0.AddSeconds(when), "payload", interval, AttemptCount: 1,
+            DeliveryDeadlineUtc: t0.AddSeconds(due + 2), OccurrenceDueTimeUtc: t0.AddSeconds(due));
+
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([Row(1, olderWhen), Row(5, newestWhen)], Ct);
+
+        // A commit may not write, move or send a row that it also ends.
+        var conflicts = new List<string>();
+        var storage = new FailableReminderStorage(inner)
+        {
+            OnCommit = batch =>
+            {
+                var ended = batch.ActiveCompletions.Select(c => c.DueTimeUtc).ToHashSet();
+                lock (conflicts)
+                    conflicts.AddRange(batch.PendingUpserts.Select(r => r.DueTimeUtc)
+                        .Concat(batch.PendingInserts.Select(r => r.DueTimeUtc))
+                        .Concat(batch.AwaitingAckReminders.Select(a => a.DueTimeUtc))
+                        .Where(ended.Contains).Select(due => due.ToString("O")));
+            }
+        };
+
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, missingResolves, missingFrom, missingTo);
+        var settings = SeededSeriesSettings(chunkSize);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, storage, Sys.Scheduler)), name);
+        await StatusAsync(scheduler, entity, key, t0.AddSeconds(1)); // the scheduler has loaded the seeded rows
+        return new SeededSeries(scheduler, entity, key, t0, region, conflicts);
+    }
+
+    private async Task AssertOnlyTheNewestSlotWasSentAsync(SeededSeries series)
+    {
+        // The first fetch is due at the retry time of the first row, 0.5 s.
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(series.T0.AddSeconds(5), await NextDeliveryAsync(series.Region));
+
+        // Later retry times of the older row pass. None of them may send it.
+        for (var i = 0; i < 4; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.5));
+            await series.Region.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Ct);
+        }
+
+        Assert.Empty(series.Conflicts);
+        Assert.Equal(ReminderCompletionStatus.Expired, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(1)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.AwaitingAck, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(5)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.Pending, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(7)))?.CompletionStatus);
+    }
+
+    // The newest slot is first in the fetched snapshot. Sent in one chunk, it ends the older slot even though
+    // that slot is the second slot back; with chunk size 1 the older row comes up in a later chunk.
+    [Theory(DisplayName = "Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheNewestIsFirstInThePass (#8965)")]
+    [InlineData(100)]
+    [InlineData(1)]
+    public async Task Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheNewestIsFirstInThePass(int chunkSize)
+    {
+        var series = await StartSeededSeriesAsync("newest-first-" + chunkSize, chunkSize, olderWhen: 0.6, newestWhen: 0.5, missingResolves: 0);
+        await AssertOnlyTheNewestSlotWasSentAsync(series);
+    }
+
+    // The region is missing for the older row, which is first in the pass, and back for the newest one. The
+    // older row is put back as a retry in the same commit that ends it, or in the commit before it.
+    [Theory(DisplayName = "Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheRegionReturnsBetweenTwoRowsOfOnePass (#8965)")]
+    [InlineData(100)]
+    [InlineData(1)]
+    public async Task Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheRegionReturnsBetweenTwoRowsOfOnePass(int chunkSize)
+    {
+        var series = await StartSeededSeriesAsync("flap-" + chunkSize, chunkSize, olderWhen: 0.5, newestWhen: 0.6, missingResolves: 1);
+        await AssertOnlyTheNewestSlotWasSentAsync(series);
+    }
+
+    // The region is up for the older row and gone again for the newest one. The older slot is sent first, in
+    // order, and the newest is put back as a retry. When the region is back, the newest goes out and ends the
+    // older one, which must not be sent again.
+    [Fact(DisplayName = "Should_SendTheOlderSlotBeforeTheNewest_When_TheRegionGoesAwayBetweenTwoRowsOfOnePass (#8965)")]
+    public async Task Should_SendTheOlderSlotBeforeTheNewest_When_TheRegionGoesAwayBetweenTwoRowsOfOnePass()
+    {
+        // Lookup 1 is the older row and lookup 2 the newest one, which finds no region. Later lookups find it.
+        var series = await StartSeededSeriesAsync("flap-away", 1, olderWhen: 0.5, newestWhen: 0.6, missingResolves: 0, missingFrom: 2, missingTo: 3);
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(series.T0.AddSeconds(1), await NextDeliveryAsync(series.Region)); // older first: in order
+
+        var sent = new List<double> { 1 };
+        for (var i = 0; i < 12; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.25));
+            await Task.Delay(30, Ct);
+            while (series.Region.HasMessages)
+                sent.Add((await series.Region.ExpectMsgAsync<ReminderEnvelope<string>>(ReplyTimeout, cancellationToken: Ct)).DueTimeUtc.Subtract(series.T0).TotalSeconds);
+        }
+
+        Assert.Empty(series.Conflicts);
+        Assert.Contains(5d, sent);
+        Assert.Equal(sent.OrderBy(due => due), sent); // never an older slot after a newer one
+        Assert.Single(sent, due => due == 1); // and the older slot only once
+    }
+
+    // A stale row later in the pass rolls forward onto the oldest slot that is still live. The newest slot,
+    // sent earlier in the pass, has ended that slot, so it must not come back as a Pending row.
+    [Fact(DisplayName = "Should_NotWriteAnEndedSlotAgain_When_AStaleRowLaterInThePassRollsForwardOntoIt (#8965)")]
+    public async Task Should_NotWriteAnEndedSlotAgain_When_AStaleRowLaterInThePassRollsForwardOntoIt()
+    {
+        var (entity, key, t0) = (new ReminderEntity("roll-region", "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromSeconds(2);
+        ScheduledReminder Row(double due, double when, double deadline) => new(entity, key, t0.AddSeconds(when), "payload", interval, AttemptCount: 1,
+            DeliveryDeadlineUtc: t0.AddSeconds(deadline), OccurrenceDueTimeUtc: t0.AddSeconds(due));
+
+        // The newest slot (due +5 s) comes first. The stale slot (due -7 s, deadline -5 s) comes second and is
+        // past its deadline, so it rolls forward onto the slot due -1 s, the oldest one still live at +0.5 s.
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([Row(5, 0.5, 7), Row(-7, 1.0, -5)], Ct);
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, 0);
+        var settings = SeededSeriesSettings(chunkSize: 1);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, inner, Sys.Scheduler)), "roll-forward-onto-ended");
+        await StatusAsync(scheduler, entity, key, t0);
+
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(t0.AddSeconds(5), await NextDeliveryAsync(region));
+        for (var i = 0; i < 4; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.5));
+            await region.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Ct);
+        }
+
+        Assert.NotEqual(ReminderCompletionStatus.Pending, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(-1)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.AwaitingAck, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(5)))?.CompletionStatus);
+    }
+
+    /// <summary>
+    /// Answers the first <c>missingResolves</c> lookups with "no shard region", then every lookup with the probe,
+    /// except lookups <c>missingFrom</c> up to <c>missingTo</c> (exclusive), which are missing too.
+    /// </summary>
+    private sealed class FlappingShardRegionResolver(IActorRef region, int missingResolves, int missingFrom = int.MaxValue, int missingTo = int.MaxValue)
+        : IShardRegionResolver
+    {
+        private int _lookups;
+
+        public IActorRef? TryResolve(ReminderEntity entity)
+        {
+            var lookup = Interlocked.Increment(ref _lookups);
+            return lookup <= missingResolves || (lookup >= missingFrom && lookup < missingTo) ? null : region;
+        }
+
+        public void DeliverReminder(ReminderEntity entity, ReminderEnvelope envelope, IActorRef? sender = null)
+            => region.Tell(envelope, sender ?? ActorRefs.NoSender);
     }
 }

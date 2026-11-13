@@ -22,10 +22,12 @@ Recurring reminders are modeled as a stream of occurrences.
 - The next occurrence is the earliest slot whose deadline has not passed. Missed slots are skipped, not replayed.
 - Each occurrence starts with a new retry budget.
 - Each occurrence has its own absolute UTC deadline.
-- By default, a recurring occurrence expires when the next occurrence is delivered or becomes due, whichever is first. There is at most one live occurrence per recurring reminder: when the next one is sent early (inside `MaxSlippage`) while the previous one is still unacked, the previous one is marked `Expired` in the same commit.
+- By default, a recurring occurrence expires when a later occurrence is delivered or the next one becomes due, whichever is first. There is at most one live occurrence per recurring reminder: when an occurrence is sent early (inside `MaxSlippage`), every older occurrence that can still be live is marked `Expired` in the same commit. That includes an older occurrence that is waiting for a retry, not only one that is unacked.
+- When the interval is shorter than `MaxSlippage`, more than one older occurrence can be live. An occurrence sent `earliness` before its due time ends the occurrences `n` intervals back, for `n` up to `ceil(earliness / interval)`. The scheduler computes those due times from the interval. It does not read them from storage. A key with no active row is left alone.
 - A first attempt writes its successor with the existing overwrite semantics. Explicit re-registration replaces active work and can reopen matching occurrence identities, including a cancelled successor left by the prior registration.
 - A retry inserts its successor only if absent inside the same atomic mutation commit. Existing Pending, AwaitingAck and terminal occurrences keep their state and retry budget; retries never reset a successor. No per-occurrence status lookup is required.
-- Superseding an older occurrence is an active-only completion in that commit: absent or terminal rows are unchanged.
+- Superseding an older occurrence is an active-only completion in that commit: absent or terminal rows are unchanged. The commit does not also write, move or send a row it supersedes.
+- A pass remembers every occurrence it superseded. It never sends, retries or writes that occurrence again, whichever fetched batch or commit chunk the occurrence falls in. That includes the slot that a stale row would roll forward onto.
 - If `MaxDeliveryWindow` is configured, the effective deadline is `min(due + window, next due)`.
 - A late ack for an old occurrence is a harmless `NotFound` because the ack is matched by `DueTimeUtc`.
 
@@ -351,7 +353,7 @@ The design goal is to keep those duplicates bounded and occurrence-specific.
 
 ### Recurring reminders are latest-only, not catch-up
 
-If an old recurring occurrence is still unacked when the next occurrence is delivered or becomes due, the old one expires instead of building an unbounded replay backlog. A late ack or nack for it is a `NotFound`.
+If an old recurring occurrence is still unacked, or waiting for a retry, when a later occurrence is delivered or the next one becomes due, the old one expires instead of building an unbounded replay backlog. A late ack or nack for it is a `NotFound`.
 
 Successor creation and supersession are batched conditional mutations, with no extra per-occurrence read.
 
