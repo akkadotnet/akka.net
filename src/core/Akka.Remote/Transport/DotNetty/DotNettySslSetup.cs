@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor.Setup;
+using Akka.IO;
 
 namespace Akka.Remote.Transport.DotNetty;
 
@@ -72,17 +74,63 @@ public sealed class DotNettySslSetup : Setup
     /// <param name="customValidator">Custom certificate validation callback (overrides config-based validation when provided)</param>
     public DotNettySslSetup(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
     {
-        Certificate = certificate;
+        _certificate = certificate;
         SuppressValidation = suppressValidation;
         RequireMutualAuthentication = requireMutualAuthentication;
         ValidateCertificateHostname = validateCertificateHostname;
         CustomValidator = customValidator;
     }
 
+    private DotNettySslSetup(TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
+    {
+        _source = source;
+        SuppressValidation = suppressValidation;
+        RequireMutualAuthentication = requireMutualAuthentication;
+        ValidateCertificateHostname = validateCertificateHostname;
+        CustomValidator = customValidator;
+    }
+
+    private readonly X509Certificate2? _certificate;
+    private readonly TlsCertificateSource? _source;
+
+    /// <summary>
+    /// Creates a setup whose certificate comes from a <see cref="TlsCertificateSource"/>. The node asks the
+    /// source each time it builds a TLS connection, so a certificate added to the source is used by new
+    /// connections without a restart. The other arguments mean what they mean on the full constructor.
+    /// A source only uses a certificate that is allowed for the job: with
+    /// <paramref name="requireMutualAuthentication"/> true, both server and client authentication. The
+    /// constructors that take a certificate do not check this.
+    /// </summary>
+    /// <param name="source">Supplies the certificate the node presents.</param>
+    /// <param name="suppressValidation">When true, suppresses certificate chain validation (use only for development/testing)</param>
+    /// <param name="requireMutualAuthentication">When true, requires mutual TLS authentication (both client and server present certificates)</param>
+    /// <param name="validateCertificateHostname">When true, enables outbound hostname validation (server certificate CN/SAN must match target hostname)</param>
+    /// <param name="customValidator">Custom certificate validation callback (overrides config-based validation when provided)</param>
+    public static DotNettySslSetup FromSource(
+        TlsCertificateSource source,
+        bool suppressValidation,
+        bool requireMutualAuthentication,
+        bool validateCertificateHostname,
+        CertificateValidationCallback? customValidator)
+    {
+        if (source is null)
+            throw new ArgumentNullException(nameof(source));
+
+        return new DotNettySslSetup(source, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator);
+    }
+
     /// <summary>
     /// X509 certificate used to establish Secure Socket Layer (SSL) between two remote endpoints.
+    /// For a setup made with <see cref="FromSource"/>, this is the source's current pick: a certificate that allows
+    /// both client and server authentication when mutual TLS is on, or one that allows server authentication when it is off.
+    /// Reading it throws <see cref="InvalidOperationException"/> when the source has no usable certificate, or has
+    /// none yet because its look-up is still running: reading never waits for a look-up, and starts one when it is due.
+    /// The caller must not dispose the certificate it returns: the node may still use it for connections.
     /// </summary>
-    public X509Certificate2 Certificate { get; }
+    public X509Certificate2 Certificate => _source is null
+        ? _certificate!
+        : _source.GetCertificateWithoutLogging(
+            RequireMutualAuthentication ? TlsCertificateRole.ClientAndServer : TlsCertificateRole.Server);
 
     /// <summary>
     /// Flag used to suppress certificate validation - use true only when on dev machine or for testing.
@@ -113,5 +161,7 @@ public sealed class DotNettySslSetup : Setup
     /// </summary>
     public CertificateValidationCallback? CustomValidator { get; }
 
-    internal SslSettings Settings => new SslSettings(Certificate, SuppressValidation, RequireMutualAuthentication, ValidateCertificateHostname, CustomValidator);
+    internal SslSettings Settings => _source is null
+        ? new SslSettings(_certificate!, SuppressValidation, RequireMutualAuthentication, ValidateCertificateHostname, CustomValidator)
+        : SslSettings.FromSource(_source, SuppressValidation, RequireMutualAuthentication, ValidateCertificateHostname, CustomValidator);
 }

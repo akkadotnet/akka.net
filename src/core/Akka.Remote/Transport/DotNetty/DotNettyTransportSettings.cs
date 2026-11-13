@@ -8,11 +8,13 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -20,6 +22,8 @@ using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 using ByteOrder = DotNetty.Buffers.ByteOrder;
+using TlsCertificateRole = Akka.IO.TlsCertificateRole;
+using TlsCertificateSource = Akka.IO.TlsCertificateSource;
 
 #nullable enable
 namespace Akka.Remote.Transport.DotNetty
@@ -158,8 +162,9 @@ namespace Akka.Remote.Transport.DotNetty
                 // Only warn if HOCON has explicit certificate configuration
                 var hasCertPath = sslConfig.HasPath("certificate.path") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.path"));
                 var hasCertThumbprint = sslConfig.HasPath("certificate.thumbprint") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.thumbprint"));
+                var hasCertCommonName = sslConfig.HasPath("certificate.common-name") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.common-name"));
 
-                if (hasCertPath || hasCertThumbprint)
+                if (hasCertPath || hasCertThumbprint || hasCertCommonName)
                 {
                     var log = Logging.GetLogger(system, typeof(DotNettyTransportSettings));
                     log.Warning("Both DotNettySslSetup and HOCON SSL configuration are present. " +
@@ -295,8 +300,42 @@ namespace Akka.Remote.Transport.DotNetty
             var requireMutualAuth = config.GetBoolean("require-mutual-authentication", true);
             var validateCertificateHostname = config.GetBoolean("validate-certificate-hostname", false);
 
-            if (config.GetBoolean("certificate.use-thumprint-over-file")
-                || config.GetBoolean("certificate.use-thumbprint-over-file"))
+            // A common name or a folder gives a source that picks the certificate again for each connection.
+            var commonName = config.GetString("certificate.common-name", "");
+            if (!string.IsNullOrWhiteSpace(commonName))
+            {
+                var storeName = config.GetString("certificate.store-name", "");
+                return FromSource(
+                    TlsCertificateSource.FromStore(
+                        commonName,
+                        string.IsNullOrWhiteSpace(storeName) ? "My" : storeName,
+                        ParseStoreLocationName(config.GetString("certificate.store-location"))),
+                    config.GetBoolean("suppress-validation"),
+                    requireMutualAuth,
+                    validateCertificateHostname,
+                    customValidator: null);
+            }
+
+            var useThumbprint = config.GetBoolean("certificate.use-thumprint-over-file")
+                                || config.GetBoolean("certificate.use-thumbprint-over-file");
+            var certificateFolder = config.GetString("certificate.path");
+            if (!useThumbprint && !string.IsNullOrEmpty(certificateFolder) && Directory.Exists(certificateFolder))
+            {
+                var folderPassword = config.GetString("certificate.password");
+                var folderFlags = config.GetStringList("certificate.flags", new string[] { })
+                    .Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
+                return FromSource(
+                    TlsCertificateSource.FromFolder(
+                        certificateFolder,
+                        string.IsNullOrEmpty(folderPassword) ? null : folderPassword,
+                        folderFlags),
+                    config.GetBoolean("suppress-validation"),
+                    requireMutualAuth,
+                    validateCertificateHostname,
+                    customValidator: null);
+            }
+
+            if (useThumbprint)
             {
                 var thumbprint = config.GetString("certificate.thumbprint")
                                  ?? config.GetString("certificate.thumpbrint");
@@ -352,8 +391,48 @@ namespace Akka.Remote.Transport.DotNetty
 
         /// <summary>
         /// X509 certificate used to establish Secure Socket Layer (SSL) between two remote endpoints.
+        /// For settings built from a certificate source, reading it throws when the source has no usable certificate
+        /// (<see cref="InvalidOperationException"/> for a folder or a store, which also has none yet while its look-up is
+        /// still running; a callback source rethrows what the callback threw). Reading never waits for a look-up, and
+        /// starts one when it is due.
         /// </summary>
-        public readonly X509Certificate2? Certificate;
+        public X509Certificate2? Certificate => _source is null
+            ? _certificate
+            : _source.GetCertificateWithoutLogging(SourceRole);
+
+        // Under mutual TLS one certificate serves both directions, so it must allow client and server use.
+        // Without mutual TLS a node only ever presents a server certificate.
+        private TlsCertificateRole SourceRole => RequireMutualAuthentication
+            ? TlsCertificateRole.ClientAndServer
+            : TlsCertificateRole.Server;
+
+        private readonly X509Certificate2? _certificate;
+        private readonly TlsCertificateSource? _source;
+
+        /// <summary>
+        /// Creates settings whose certificate comes from a source, which the transport asks for each connection.
+        /// </summary>
+        public static SslSettings FromSource(TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
+            => new SslSettings(source, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator);
+
+        /// <summary>
+        /// The certificate to present on a channel. For a fixed certificate this is <see cref="Certificate"/>;
+        /// for a source it is the source's pick, which is logged when it changes.
+        /// Throws <see cref="InvalidOperationException"/> when a source has no usable certificate.
+        /// </summary>
+        public X509Certificate2? GetCertificate(ILoggingAdapter log)
+            => _source is null ? _certificate : _source.GetCertificate(SourceRole, log);
+
+        // Internal seam for tests: the source this node asks, or null for a fixed certificate. A spec uses it to
+        // reach the source that HOCON built.
+        internal TlsCertificateSource? Source => _source;
+
+        // True when the transport should ask the source by itself, once a minute: a folder or a store source, which
+        // looks in the background. False for a fixed certificate and for a callback.
+        internal bool NeedsPolling => _source is { LooksUp: true };
+
+        // What the transport's timer runs: starts a look-up of the source when one is due and logs what it found.
+        internal void PollSource(ILoggingAdapter log) => _source?.Poll(SourceRole, log);
 
         /// <summary>
         /// Flag used to suppress certificate validation - use true only, when on dev machine or for testing.
@@ -383,7 +462,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         private SslSettings()
         {
-            Certificate = null;
+            _certificate = null;
             SuppressValidation = false;
             RequireMutualAuthentication = false;
             ValidateCertificateHostname = false;
@@ -413,7 +492,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
-            Certificate = certificate;
+            _certificate = certificate;
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
@@ -425,10 +504,63 @@ namespace Akka.Remote.Transport.DotNetty
         /// Should be called before starting the server to ensure proper TLS configuration.
         /// </summary>
         /// <exception cref="ConfigurationException">
-        /// Thrown when certificate lacks private key or application cannot access it.
+        /// Thrown when certificate lacks private key or application cannot access it. For settings built from a
+        /// certificate source, thrown when the source has no usable certificate, or has none yet because its look-up is
+        /// still running: the check never waits for a look-up, and starts one when it is due.
         /// </exception>
-        public void ValidateCertificate()
+        public void ValidateCertificate() => ValidateCertificate(null);
+
+        /// <summary>
+        /// The startup check: like <see cref="ValidateCertificate()"/>, but the check of a certificate source waits
+        /// for the source's first look-up, until 30 seconds after it started, without blocking a thread. It logs the
+        /// first pick through <paramref name="log"/>, records it as the previous pick and leaves it for the next 10
+        /// seconds of look-ups to reuse.
+        /// </summary>
+        internal async Task ValidateCertificateAsync(ILoggingAdapter log)
         {
+            if (_source is null)
+            {
+                ValidateCertificate(log);
+                return;
+            }
+
+            // Whatever the source throws (it may be a callback that throws anything) stops the node at startup.
+            try
+            {
+                await _source.GetCertificateAsync(SourceRole, log).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is ConfigurationException) && !TlsCertificateSource.IsFatal(ex))
+            {
+                throw new ConfigurationException(ex.Message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Like <see cref="ValidateCertificate()"/>. With a <paramref name="log"/> the check of a certificate source
+        /// takes the same path as a connection does: it logs the pick and never waits for a look-up, so it fails
+        /// while the source's first look-up runs.
+        /// </summary>
+        internal void ValidateCertificate(ILoggingAdapter? log)
+        {
+            if (_source is not null)
+            {
+                // Ask the source once, for the role this node will use. Whatever the source throws (it may be a
+                // callback that throws anything) stops the node at startup with its message.
+                try
+                {
+                    if (log is not null)
+                        _source.GetCertificate(SourceRole, log);
+                    else
+                        _source.GetCertificateWithoutLogging(SourceRole);
+                }
+                catch (Exception ex) when (!(ex is ConfigurationException) && !TlsCertificateSource.IsFatal(ex))
+                {
+                    throw new ConfigurationException(ex.Message, ex);
+                }
+
+                return;
+            }
+
             if (Certificate == null)
                 return; // No SSL configured
 
@@ -466,6 +598,15 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
+        private SslSettings(TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
+        {
+            _source = source ?? throw new ArgumentNullException(nameof(source));
+            SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
+        }
+
         private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
             : this(certificateThumbprint, storeName, storeLocation, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
         {
@@ -483,7 +624,7 @@ namespace Akka.Remote.Transport.DotNetty
                     "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumbprint`. Also check `akka.remote.dot-netty.tcp.ssl.certificate.store-name` and `akka.remote.dot-netty.tcp.ssl.certificate.store-location`)");
             }
 
-            Certificate = find[0];
+            _certificate = find[0];
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
@@ -501,9 +642,9 @@ namespace Akka.Remote.Transport.DotNetty
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
 #if NET10_0_OR_GREATER
-            Certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, certificatePassword, flags);
+            _certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, certificatePassword, flags);
 #else
-            Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
+            _certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
 #endif
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
