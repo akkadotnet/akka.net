@@ -251,6 +251,25 @@ conflict at compile time (for example, two serializers binding the same protocol
 
 Full details: [Source-Generated MessagePack Serialization](docs/articles/serialization/source-generated-serialization.md).
 
+### Native snapshot-envelope serialization
+
+The built-in snapshot envelope now uses the native buffer serialization contract while
+retaining the same protobuf bytes, id 8, alias and manifests. Existing local and external
+snapshot stores can read their records without a rewrite. This is independent of the global
+`akka.actor.serialization-v2` opt-in for new MessagePack wire formats.
+
+The serializer returned for `Snapshot` by the module table has a new internal concrete type.
+Use `Serializer` or `SerializerV2` contracts when retrieving it instead of casting it to
+`PersistenceSnapshotSerializer`. The public legacy class and its inheritance remain intact,
+including direct construction and custom subclass ids. Copied configuration naming that
+legacy class resolves statically to the native implementation, including with dynamic type
+loading disabled.
+
+The native envelope can write to `IBufferWriter<byte>` and read segmented sequences. Plugins
+that continue to exchange `byte[]` retain that boundary. Inner snapshot data still requires an
+independently registered serializer, and this change does not establish Native AOT support
+for every persistence plugin or arbitrary snapshot payload.
+
 ## Enabling Artery
 
 Moving an existing deployment? Follow [Migrating From DotNetty to Artery](docs/articles/remoting/dotnetty-to-artery.md)

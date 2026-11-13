@@ -1,0 +1,10 @@
+case: string
+message-type: Snapshot
+manifest: Akka.Persistence.Serialization.Snapshot, Akka.Persistence
+serializer-id: 8
+byte-count: 51
+
+0000  08 11 12 08 73 6e 61 70  73 68 6f 74 1a 25 53 79  |....snapshot.%Sy|
+0010  73 74 65 6d 2e 53 74 72  69 6e 67 2c 20 53 79 73  |stem.String, Sys|
+0020  74 65 6d 2e 50 72 69 76  61 74 65 2e 43 6f 72 65  |tem.Private.Core|
+0030  4c 69 62                                          |Lib|
