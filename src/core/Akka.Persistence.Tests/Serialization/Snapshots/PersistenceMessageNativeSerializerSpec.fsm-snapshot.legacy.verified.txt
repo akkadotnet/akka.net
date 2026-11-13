@@ -1,0 +1,10 @@
+case: fsm-snapshot
+message-type: PersistentFSMSnapshot<String>
+manifest: Akka.Persistence.Fsm.PersistentFSM+PersistentFSMSnapshot`1[[System.String, System.Private.CoreLib]], Akka.Persistence
+serializer-id: 7
+byte-count: 58
+
+0000  0a 05 73 74 61 74 65 12  2f 08 11 12 04 64 61 74  |..state./....dat|
+0010  61 1a 25 53 79 73 74 65  6d 2e 53 74 72 69 6e 67  |a.%System.String|
+0020  2c 20 53 79 73 74 65 6d  2e 50 72 69 76 61 74 65  |, System.Private|
+0030  2e 43 6f 72 65 4c 69 62  18 7b                    |.CoreLib.{|

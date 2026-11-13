@@ -1,0 +1,7 @@
+case: delivery-empty
+message-type: AtLeastOnceDeliverySnapshot
+manifest: Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence
+serializer-id: 7
+byte-count: 0
+
+(zero-byte payload)

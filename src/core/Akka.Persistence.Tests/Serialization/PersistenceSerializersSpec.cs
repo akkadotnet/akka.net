@@ -79,7 +79,7 @@ namespace Akka.Persistence.Tests.Serialization
                 var serialization = ModuleSerializerSpecs.BuildDefault(system, dynamicTypeLoading: false);
 
                 serialization.FindSerializerForType(typeof(Akka.Persistence.Serialization.Snapshot)).Should().BeOfType<ByteArraySerializer>();
-                serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<PersistenceMessageSerializer>();
+                serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<NativePersistenceMessageSerializer>();
             });
         }
 
@@ -93,10 +93,10 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var serialization = await ModuleSerializerSpecs.AssertBuildsWithoutWarning(Sys, EventFilter);
 
-            serialization.GetSerializerById(7).Should().BeOfType<PersistenceMessageSerializer>();
+            serialization.GetSerializerById(7).Should().BeOfType<NativePersistenceMessageSerializer>();
             serialization.GetSerializerById(8).Should().BeOfType<PersistenceSnapshotSerializer>();
 
-            serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<PersistenceMessageSerializer>();
+            serialization.FindSerializerForType(typeof(AtLeastOnceDeliverySnapshot)).Should().BeOfType<NativePersistenceMessageSerializer>();
             serialization.FindSerializerForType(typeof(Akka.Persistence.Serialization.Snapshot)).Should().BeOfType<PersistenceSnapshotSerializer>();
         }
 
@@ -112,7 +112,7 @@ namespace Akka.Persistence.Tests.Serialization
             try
             {
                 var serialization = ((ExtendedActorSystem)system).Serialization;
-                serialization.GetSerializerById(7).Should().BeOfType<PersistenceMessageSerializer>();
+                serialization.GetSerializerById(7).Should().BeOfType<NativePersistenceMessageSerializer>();
                 serialization.GetSerializerById(8).Should().BeOfType<PersistenceSnapshotSerializer>();
             }
             finally

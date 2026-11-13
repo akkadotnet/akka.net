@@ -29,7 +29,7 @@ module Akka.DistributedData
   akka-replicated-data: Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData (id 11)
     Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData
 module Akka.Persistence
-  akka-persistence-message: Akka.Persistence.Serialization.PersistenceMessageSerializer, Akka.Persistence (id 7)
+  akka-persistence-message: Akka.Persistence.Serialization.NativePersistenceMessageSerializer, Akka.Persistence (id 7)
     Akka.Persistence.Serialization.IMessage, Akka.Persistence
   akka-persistence-snapshot: Akka.Persistence.Serialization.PersistenceSnapshotSerializer, Akka.Persistence (id 8)
     Akka.Persistence.Serialization.Snapshot, Akka.Persistence

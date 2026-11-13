@@ -1,0 +1,7 @@
+case: persistent-empty
+message-type: Persistent
+manifest: Akka.Persistence.Persistent, Akka.Persistence
+serializer-id: 7
+byte-count: 4
+
+0000  0a 02 08 04                                       |....|

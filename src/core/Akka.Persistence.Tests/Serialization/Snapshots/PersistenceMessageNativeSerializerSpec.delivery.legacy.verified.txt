@@ -1,0 +1,14 @@
+case: delivery
+message-type: AtLeastOnceDeliverySnapshot
+manifest: Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence
+serializer-id: 7
+byte-count: 124
+
+0000  08 ff ff ff ff ff ff ff  ff 7f 12 70 08 17 12 37  |...........p...7|
+0010  61 6b 6b 61 2e 74 63 70  3a 2f 2f 64 65 6c 69 76  |akka.tcp://deliv|
+0020  65 72 79 2d 66 69 78 74  75 72 65 40 31 32 37 2e  |ery-fixture@127.|
+0030  30 2e 30 2e 31 3a 32 35  35 32 2f 75 73 65 72 2f  |0.0.1:2552/user/|
+0040  73 65 72 76 69 63 65 1a  33 08 11 12 08 64 65 6c  |service.3....del|
+0050  69 76 65 72 79 1a 25 53  79 73 74 65 6d 2e 53 74  |ivery.%System.St|
+0060  72 69 6e 67 2c 20 53 79  73 74 65 6d 2e 50 72 69  |ring, System.Pri|
+0070  76 61 74 65 2e 43 6f 72  65 4c 69 62              |vate.CoreLib|

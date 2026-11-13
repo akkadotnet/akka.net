@@ -1,0 +1,8 @@
+case: persistent-null-negative
+message-type: Persistent
+manifest: Akka.Persistence.Persistent, Akka.Persistence
+serializer-id: 7
+byte-count: 23
+
+0000  0a 00 10 ff ff ff ff ff  ff ff ff ff 01 1a 08 6e  |...............n|
+0010  65 67 61 74 69 76 65                              |egative|
