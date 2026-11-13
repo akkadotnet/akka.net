@@ -3,7 +3,8 @@
   <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <!-- Exercise migrations against both the netstandard2.0 and modern providers. -->
+    <TargetFrameworks>net8.0;$(NetTestVersion)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -16,12 +17,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)" />
     <PackageReference Include="Testcontainers.MsSql" Version="4.15.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
-    <PackageReference Include="Npgsql" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Use the providers' transitive driver versions so migrations test the shipped dependencies. -->
     <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
     <ProjectReference Include="..\Akka.Reminders.PostgreSql\Akka.Reminders.PostgreSql.csproj" />
     <ProjectReference Include="..\Akka.Reminders.SqlServer\Akka.Reminders.SqlServer.csproj" />

@@ -8,6 +8,7 @@ parameters:
   outputDirectory: ''
   timeoutInMinutes: 120
   run_if: true
+  additionalRuntimeVersion: ''
 
 jobs:
   - job: ${{ parameters.name }}
@@ -29,6 +30,14 @@ jobs:
           useGlobalJson: true
           installationPath: '$(Agent.TempDirectory)/dotnet'
           performMultiLevelLookup: false
+      - ${{ if ne(parameters.additionalRuntimeVersion, '') }}:
+        - task: UseDotNet@2
+          displayName: 'Use additional .NET runtime'
+          inputs:
+            packageType: 'runtime'
+            version: '${{ parameters.additionalRuntimeVersion }}'
+            installationPath: '$(Agent.TempDirectory)/dotnet'
+            performMultiLevelLookup: false
       
       # Set the Incrementalist base branch based on PR target branch
       - pwsh: |

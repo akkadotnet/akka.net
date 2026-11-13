@@ -3,7 +3,8 @@
   <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <!-- net8.0 selects the netstandard2.0 libraries and their compatibility shims. -->
+    <TargetFrameworks>net8.0;$(NetTestVersion)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>

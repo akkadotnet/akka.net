@@ -109,7 +109,9 @@ jobs:
       name: "net_tests_reminders_linux"
       displayName: ".NET Unit Tests (Reminders, Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/remindersOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type full"
+      additionalRuntimeVersion: '8.0.x'
+      # Run both test targets: net8.0 selects netstandard2.0, net10.0 selects the modern libraries.
+      command: "dotnet incrementalist run --config .incrementalist/remindersOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type full"
       outputDirectory: "TestResults"
       artifactName: "net_tests_reminders_linux-$(Build.BuildId)"
       timeoutInMinutes: 60
