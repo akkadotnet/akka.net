@@ -387,15 +387,27 @@ Accept only certificates with specific subject names:
 | Method | Purpose |
 |--------|---------|
 | `ValidateChain()` | CA chain validation with full error details |
-| `ValidateHostname()` | Uses the outbound hostname-validation result supplied by `SslStream` |
+| `ValidateHostname()` | Uses the outbound `SslStream` result, or performs a direct CN/SAN comparison when an expected hostname is supplied |
 | `PinnedCertificate()` | Certificate pinning by thumbprint whitelist |
 | `ValidateSubject()` | Subject DN pattern matching (e.g., CN, O, OU) |
 | `ValidateIssuer()` | Issuer DN pattern matching |
 | `Combine()` | Compose multiple validators (AND logic) |
 | `ChainPlusThen()` | Chain validation + custom business logic |
 
-> [!WARNING]
-> In Akka.NET v1.5, passing an explicit `expectedHostname` to `ValidateHostname(expectedHostname)` does not compare that value with the certificate CN or SAN. The value is used only in failure diagnostics; `SslStream` still validates an outbound certificate against the connection target. Upgrade to Akka.NET v1.6 or later when the custom validator must enforce an explicit hostname.
+#### Explicit Expected Hostname
+
+`ValidateHostname(expectedHostname)` compares `expectedHostname` with the peer certificate and rejects the certificate if they do not match. It works on both sides of a connection, so a node can use it to require a given name in the certificates of inbound clients. The comparison follows the rules of .NET's `X509Certificate2.MatchesHostname`:
+
+* An IP address must equal an `iPAddress` entry in the certificate's Subject Alternative Name (SAN) extension.
+* A DNS name must equal a `dNSName` SAN entry. Case is ignored, and so is one trailing dot.
+* A wildcard entry such as `*.example.com` matches exactly one label in the leftmost position: `node1.example.com`, but not `example.com` or `a.b.example.com`.
+* The subject CN is used only when the certificate has no SAN entry of the wanted kind (DNS name or IP address). Wildcards are not honored in the CN.
+* Non-ASCII names are not converted to punycode. Pass the form the certificate carries.
+* An `expectedHostname` that is not a valid DNS name or IP address rejects every certificate.
+* A certificate whose SAN extension holds a malformed entry of any kind is rejected, even when another entry matches.
+
+> [!IMPORTANT]
+> Akka.NET v1.5.74 and earlier did not enforce `expectedHostname`. They logged a warning and fell back to the `SslStream` result, which meant every inbound client certificate passed. Before you upgrade, check that every peer certificate matches the name you pass. A rejected certificate fails the TLS handshake, and a failed handshake on an outbound connection shuts the dialing `ActorSystem` down through `CoordinatedShutdown` with exit code 79.
 
 ### Custom Validator Precedence
 
