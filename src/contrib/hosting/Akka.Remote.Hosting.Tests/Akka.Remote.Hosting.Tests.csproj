@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Mints the short-lived test certificates for the TlsCertificateSource specs. -->
+    <Compile Include="..\..\..\core\Akka.Tests\IO\TlsTestCertificates.cs" Link="TlsTestCertificates.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Resources\akka-validcert.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
