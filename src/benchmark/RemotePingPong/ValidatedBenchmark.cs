@@ -7,6 +7,7 @@
 #nullable enable
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace RemotePingPong
         internal static readonly TimeSpan ProgressTimeout = TimeSpan.FromSeconds(10);
 
         internal sealed record Agreement(Guid RunId, int Messages, int Window, int AckEvery, bool OneWay,
-            int PayloadBytes, int Version = 1);
+            int PayloadBytes, int Version = 1, int RttIntervalMs = 0);
         internal sealed record Prepare;
         internal sealed record Ready(Agreement Settings);
         internal sealed record Credit(Guid RunId, int Received);
@@ -35,12 +36,17 @@ namespace RemotePingPong
         internal sealed class Outcome
         {
             private readonly TaskCompletionSource<long> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly TaskCompletionSource<Exception> _failureSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
             private Exception? _failure;
+            internal Outcome(int latencySamples = 0) => Samples = new PacedBenchmark.Sample[latencySamples];
             internal Task<long> Task => _completion.Task;
+            internal Task<Exception> Failure => _failureSignal.Task;
+            internal PacedBenchmark.Sample[] Samples { get; }
             internal void Succeed(long count) => _completion.TrySetResult(count);
             internal void Fail(Exception exception)
             {
                 Interlocked.CompareExchange(ref _failure, exception, null);
+                _failureSignal.TrySetResult(exception);
                 _completion.TrySetException(exception);
             }
             internal void ThrowIfFailed()
@@ -81,6 +87,8 @@ namespace RemotePingPong
                     || settings.AckEvery > settings.Window || settings.PayloadBytes < 1 || settings.Version != 1)
                     throw new ArgumentException("Invalid validated benchmark agreement.", nameof(settings));
                 _settings = settings;
+                if (settings.RttIntervalMs is < 0 or > 1000 || (settings.RttIntervalMs > 0 && (settings.OneWay || settings.Messages < 2)))
+                    throw new ArgumentException("Paced delivery requires ping-pong and a valid interval.", nameof(settings));
             }
 
             protected override void OnReceive(object message)
@@ -150,6 +158,9 @@ namespace RemotePingPong
             private bool _failed;
             private int _sent;
             private int _acknowledged;
+            private int _released;
+            private long _origin;
+            private readonly long[] _dispatched;
 
             public SenderActor(Agreement settings, RealBenchmarkMessage[] payloads, IActorRef receiver,
                 Outcome completion)
@@ -160,6 +171,9 @@ namespace RemotePingPong
                 _payloads = payloads;
                 _receiver = receiver;
                 _completion = completion;
+                _dispatched = settings.RttIntervalMs > 0 ? new long[Math.Min(settings.Window, settings.Messages)] : Array.Empty<long>();
+                if (settings.RttIntervalMs > 0 && completion.Samples.Length != settings.Messages)
+                    throw new ArgumentException("Paced delivery requires a sample for every echo.", nameof(completion));
             }
 
             protected override void OnReceive(object message)
@@ -185,9 +199,20 @@ namespace RemotePingPong
                         _preparing.Tell(true);
                         _preparing = null;
                         return;
-                    case Messages.Run when _ready && !_running:
+                    case Messages.Run when _ready && !_running && _settings.RttIntervalMs == 0:
                         _running = true;
                         Context.SetReceiveTimeout(ProgressTimeout);
+                        SendAvailable();
+                        return;
+                    case PacedBenchmark.Run run when _ready && !_running && _settings.RttIntervalMs > 0
+                        && run.RunId == _settings.RunId && run.Origin > 0:
+                        _origin = run.Origin;
+                        _running = true;
+                        Context.SetReceiveTimeout(ProgressTimeout);
+                        return;
+                    case PacedBenchmark.Release release when _running && _settings.RttIntervalMs > 0
+                        && release.RunId == _settings.RunId && release.Index == _released && _released < _settings.Messages:
+                        _released++;
                         SendAvailable();
                         return;
                     case Failed failed when Sender.Equals(_receiver):
@@ -212,6 +237,12 @@ namespace RemotePingPong
                         break;
                     case RealBenchmarkMessage echo when !_settings.OneWay && _acknowledged < _sent
                         && echo.Equals(_payloads[_acknowledged]):
+                        if (_settings.RttIntervalMs > 0)
+                        {
+                            var scheduled = checked(_origin + PacedBenchmark.IntervalTicks(_settings.RttIntervalMs) * (_acknowledged + 1L));
+                            _completion.Samples[_acknowledged] = new PacedBenchmark.Sample(
+                                _dispatched[_acknowledged % _dispatched.Length] - scheduled, Stopwatch.GetTimestamp() - scheduled);
+                        }
                         _acknowledged++;
                         SendAvailable();
                         break;
@@ -228,8 +259,11 @@ namespace RemotePingPong
 
             private void SendAvailable()
             {
-                while (_sent < _settings.Messages && _sent - _acknowledged < _settings.Window)
+                var available = _settings.RttIntervalMs > 0 ? _released : _settings.Messages;
+                while (_sent < available && _sent - _acknowledged < _settings.Window)
                 {
+                    if (_settings.RttIntervalMs > 0)
+                        _dispatched[_sent % _dispatched.Length] = Stopwatch.GetTimestamp();
                     _receiver.Tell(_payloads[_sent++]);
                 }
                 if (!_fenced && _sent == _settings.Messages && (_settings.OneWay || _acknowledged == _settings.Messages))
