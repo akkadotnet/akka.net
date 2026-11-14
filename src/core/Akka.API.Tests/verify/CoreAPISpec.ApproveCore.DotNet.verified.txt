@@ -4185,6 +4185,13 @@ namespace Akka.IO
         public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12(byte[] data, string? password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
         public static System.Security.Cryptography.X509Certificates.X509Certificate2 LoadPkcs12FromFile(string path, string? password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
     }
+    public sealed class TlsCertificateSource
+    {
+        public static Akka.IO.TlsCertificateSource FromCallback(System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2> getCertificate) { }
+        public static Akka.IO.TlsCertificateSource FromFolder(string path, string? password) { }
+        public static Akka.IO.TlsCertificateSource FromFolder(string path, string? password, System.Security.Cryptography.X509Certificates.X509KeyStorageFlags keyStorageFlags) { }
+        public static Akka.IO.TlsCertificateSource FromStore(string commonName, string storeName, System.Security.Cryptography.X509Certificates.StoreLocation storeLocation) { }
+    }
     public static class TlsCertificateValidation
     {
         public static Akka.IO.TlsCertificateValidationCallback ChainPlusThen(System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2?, System.Security.Cryptography.X509Certificates.X509Chain?, string, bool> customCheck, Akka.Event.ILoggingAdapter? log = null) { }
