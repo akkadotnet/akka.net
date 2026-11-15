@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Data;
 using Akka.Actor;
 using Akka.Reminders.PostgreSql.Configuration;
@@ -9,7 +11,7 @@ namespace Akka.Reminders.PostgreSql;
 /// <summary>
 /// PostgreSQL implementation of <see cref="IReminderStorage"/>.
 /// </summary>
-public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStorage
+public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly PostgreSqlReminderStorageSettings _settings;
     private readonly ISqlDialect _dialect;
@@ -195,6 +197,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
         var unreadable = new List<CompletedReminder>();
         var skipped = 0;
+        var reachedRetryBackoff = false;
         UnreadablePayloadException? firstSkipped = null;
         var seen = new HashSet<(ReminderEntity, ReminderKey, DateTimeOffset)>();
 
@@ -220,7 +223,15 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
                 try
                 {
-                    reminders.Add(ReadReminderFromReader(reader));
+                    var reminder = ReadReminderFromReader(reader);
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && reminder.AttemptCount > 0 && reminder.When > now)
+                    {
+                        // Stop at this prefix boundary so the next-overview offset still points at
+                        // the first remaining row. Read-ahead must never consume this retry's backoff.
+                        reachedRetryBackoff = true;
+                        break;
+                    }
+                    reminders.Add(reminder);
                     if (reminders.Count >= maxCount.Value)
                         break;
                 }
@@ -242,7 +253,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
                 }
             }
 
-            if (reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
+            if (reachedRetryBackoff || reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
                 break;
         }
 
@@ -901,6 +912,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         _dialect.AddParameter(command, $"@Manifest{index}", manifest ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@Payload{index}", payload);
         _dialect.AddParameter(command, $"@AttemptCount{index}", reminder.AttemptCount);
+        _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
         _dialect.AddParameter(command, $"@LastFailureReason{index}", reminder.LastFailureReason ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@MaxDeliveryWindowTicks{index}", reminder.MaxDeliveryWindow?.Ticks ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@DeliveryDeadlineUtc{index}", reminder.DeliveryDeadlineUtc.HasValue ? TruncateToMicroseconds(reminder.DeliveryDeadlineUtc.Value) : (object)DBNull.Value);
@@ -977,7 +989,8 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             lastFailureReason,
             maxDeliveryWindow,
             deliveryDeadlineUtc,
-            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)));
+            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)))
+        { RetryPolicy = (ReminderRetryPolicy)reader.GetInt32(reader.GetOrdinal("retry_policy")) };
     }
 
     private sealed class UnreadablePayloadException(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,

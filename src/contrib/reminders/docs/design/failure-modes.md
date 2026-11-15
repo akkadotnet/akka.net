@@ -12,7 +12,7 @@ Akka.Reminders uses **at-least-once delivery with explicit acknowledgement**.
 - Consumers MUST be idempotent.
 - Each occurrence is identified by `(ReminderEntity, ReminderKey, DueTimeUtc)`.
 - The envelope exposes a non-null `Deadline` value object. Unbounded reminders use `ReminderDeadline.Infinite`.
-- Retries for each occurrence are bounded by `MaxDeliveryAttempts` and the occurrence deadline.
+- Retries use `MaxDeliveryAttempts` by default and always respect the occurrence deadline. One-off reminders can opt into `ReminderRetryPolicy.UntilAcknowledged`, bypassing the attempt limit while retaining deadlines and explicit cancellation.
 
 ### Latest-only recurring reminders
 
@@ -392,3 +392,19 @@ return an error before persistence, and previously stored recurring rows are not
 Upgrade a custom provider before starting the scheduler against a store containing recurring reminders. Existing
 recurring rows on an unsupported provider cannot be committed or delivered, and can block later one-off work in
 that store; accepting a new one-off schedule does not remove this compatibility requirement.
+
+### One-off retry-until-acknowledged policy
+
+The policy is durable occurrence metadata. It applies uniformly to missing regions, ack timeouts,
+and negative acknowledgements through `TryCreateRetryReminder`. Deadline checks run before retrying,
+even for this policy. Envelope deadlines still describe the next ack timeout while another retry
+fits inside the occurrence window. Counts saturate instead of overflowing, and backoff arithmetic
+stops doubling at the configured cap.
+
+Normal completed-row pruning does not inspect due time and never removes active work. `When` is the
+next retry time, so original occurrence age does not impose priority on every subsequent retry.
+A poisoned opted-in reminder requires repair or cancellation; the scheduler never abandons it solely
+because of repeated failures. No additional reconciliation or versioned scheduling guarantee is added.
+
+See the module README for schema upgrades, custom-provider capability requirements, and reader-first
+deployment of policy manifests. Keep all potential scheduler hosts upgraded while opted-in rows exist.

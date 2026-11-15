@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Security.Cryptography;
 using Akka.Actor;
 using Akka.Cluster.Hosting;
@@ -367,8 +369,8 @@ public abstract class GoldenDatabaseReadSpecs : Akka.Hosting.TestKit.TestKit
         problems.Should().BeEmpty();
     }
 
-    [Fact(DisplayName = "Should_AcceptSchemaAsIsAndKeepEveryRow_When_StorageInitializes")]
-    public async Task Should_AcceptSchemaAsIsAndKeepEveryRow_When_StorageInitializes()
+    [Fact(DisplayName = "Should_AddRetryPolicyWithBoundedDefaultsAndKeepEveryRow_When_StorageInitializes")]
+    public async Task Should_AddRetryPolicyWithBoundedDefaultsAndKeepEveryRow_When_StorageInitializes()
     {
         var ct = TestContext.Current.CancellationToken;
         using var db = GoldenTempDatabase.Create(_provider);
@@ -378,13 +380,20 @@ public abstract class GoldenDatabaseReadSpecs : Akka.Hosting.TestKit.TestKit
 
         schemaBefore.Columns.Should().Equal(ExpectedColumns, "1.5.73 wrote this schema");
 
-        // Any storage call runs CREATE TABLE/INDEX IF NOT EXISTS (AutoInitialize defaults to on).
+        // Auto-initialization adds the retry-policy column to the released schema.
         var storage = OpenStorage(db);
         await storage.GetRemindersOverviewAsync(DateTimeOffset.UtcNow, ct);
         await storage.ExpireRemindersAsync(DateTimeOffset.UtcNow, ct);
 
         var schemaAfter = await ReadSchemaAsync(db.ConnectionString, ct);
-        schemaAfter.Columns.Should().Equal(schemaBefore.Columns, "the current build adds no column to a 1.5.73 file");
+        schemaAfter.Columns.Should().Equal(schemaBefore.Columns.Append("retry_policy"), "only the retry-policy column is added");
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(db.ConnectionString))
+        {
+            await connection.OpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM scheduled_reminders WHERE retry_policy <> 0 OR retry_policy IS NULL";
+            Convert.ToInt64(await command.ExecuteScalarAsync(ct)).Should().Be(0, "all existing rows keep the configured attempt limit");
+        }
         schemaAfter.Indexes.Should().BeEquivalentTo(schemaBefore.Indexes, "no index is added, dropped or renamed");
 
         var after = (await GoldenRawRows.ReadAsync(db.ConnectionString, ct)).Select(Snapshot).ToList();

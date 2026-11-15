@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Data;
 using System.Data.Common;
 using Npgsql;
@@ -29,6 +31,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
                 manifest VARCHAR(500) NULL,
                 payload BYTEA NOT NULL,
                 attempt_count INTEGER NOT NULL DEFAULT 0,
+                retry_policy INTEGER NOT NULL DEFAULT 0,
                 last_failure_reason TEXT NULL,
                 max_delivery_window_ticks BIGINT NULL,
                 delivery_deadline_utc TIMESTAMP WITH TIME ZONE NULL,
@@ -40,6 +43,8 @@ internal sealed class PostgreSqlDialect : ISqlDialect
 
                 CONSTRAINT pk_{tableName} PRIMARY KEY (shard_region_name, entity_id, reminder_key, due_time_utc)
             );
+
+            ALTER TABLE {fullTableName} ADD COLUMN IF NOT EXISTS retry_policy INTEGER NOT NULL DEFAULT 0;
 
             CREATE INDEX IF NOT EXISTS ix_{tableName}_due_reminders
             ON {fullTableName} (when_utc, shard_region_name, entity_id)
@@ -60,7 +65,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
         var fullTableName = $"\"{schemaName}\".\"{tableName}\"";
         var values = string.Join(",\n                ",
             Enumerable.Range(0, count).Select(i =>
-                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, @LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i}, FALSE, NULL, 'Pending', NULL, NULL)"));
+                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, @RetryPolicy{i}, @LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i}, FALSE, NULL, 'Pending', NULL, NULL)"));
 
         var onConflict = insertIfAbsent ? "DO NOTHING" : """
             DO UPDATE SET
@@ -70,6 +75,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
                 manifest = EXCLUDED.manifest,
                 payload = EXCLUDED.payload,
                 attempt_count = EXCLUDED.attempt_count,
+                retry_policy = EXCLUDED.retry_policy,
                 last_failure_reason = EXCLUDED.last_failure_reason,
                 max_delivery_window_ticks = EXCLUDED.max_delivery_window_ticks,
                 delivery_deadline_utc = EXCLUDED.delivery_deadline_utc,
@@ -83,7 +89,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
         return $"""
             INSERT INTO {fullTableName}
                 (shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                 serializer_id, manifest, payload, attempt_count, last_failure_reason,
+                 serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
                  max_delivery_window_ticks, delivery_deadline_utc,
                  is_completed, completed_at_utc, completion_status, delivered_at_utc, ack_deadline_utc)
             VALUES
@@ -102,7 +108,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE is_completed = FALSE
@@ -237,7 +243,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE shard_region_name = @ShardRegionName
@@ -283,7 +289,7 @@ internal sealed class PostgreSqlDialect : ISqlDialect
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE completion_status = 'AwaitingAck'

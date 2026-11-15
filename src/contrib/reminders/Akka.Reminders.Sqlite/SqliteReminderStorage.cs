@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Data;
 using System.Globalization;
 using Akka.Actor;
@@ -10,7 +12,7 @@ namespace Akka.Reminders.Sqlite;
 /// <summary>
 /// SQLite implementation of <see cref="IReminderStorage"/>.
 /// </summary>
-public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
+public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly SqliteReminderStorageSettings _settings;
     private readonly ISqlDialect _dialect;
@@ -193,6 +195,7 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
 
         var unreadable = new List<CompletedReminder>();
         var skipped = 0;
+        var reachedRetryBackoff = false;
         UnreadablePayloadException? firstSkipped = null;
         var seen = new HashSet<(ReminderEntity, ReminderKey, DateTimeOffset)>();
 
@@ -218,7 +221,15 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
 
                 try
                 {
-                    reminders.Add(ReadReminderFromReader(reader));
+                    var reminder = ReadReminderFromReader(reader);
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && reminder.AttemptCount > 0 && reminder.When > now)
+                    {
+                        // Stop at this prefix boundary so the next-overview offset still points at
+                        // the first remaining row. Read-ahead must never consume this retry's backoff.
+                        reachedRetryBackoff = true;
+                        break;
+                    }
+                    reminders.Add(reminder);
                     if (reminders.Count >= maxCount.Value)
                         break;
                 }
@@ -240,7 +251,7 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
                 }
             }
 
-            if (reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
+            if (reachedRetryBackoff || reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
                 break;
         }
 
@@ -821,6 +832,21 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
                 command.CommandText = _dialect.GetCreateTableSql(_settings.TableName);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 await command.ExecuteNonQueryAsync(cancellationToken);
+                await using var transaction = ((Microsoft.Data.Sqlite.SqliteConnection)connection).BeginTransaction(deferred: false);
+                command.Transaction = transaction;
+                command.CommandText = $"PRAGMA table_info(\"{_settings.TableName}\");";
+                var hasRetryPolicy = false;
+                await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                        hasRetryPolicy |= reader.GetString(1).Equals("retry_policy", StringComparison.OrdinalIgnoreCase);
+                }
+                if (!hasRetryPolicy)
+                {
+                    command.CommandText = $"ALTER TABLE \"{_settings.TableName}\" ADD COLUMN retry_policy INTEGER NOT NULL DEFAULT 0;";
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                await transaction.CommitAsync(cancellationToken);
             }, cancellationToken).Wait(cancellationToken);
 
             _initialized = true;
@@ -843,6 +869,7 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
         _dialect.AddParameter(command, $"@Manifest{index}", manifest ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@Payload{index}", payload);
         _dialect.AddParameter(command, $"@AttemptCount{index}", reminder.AttemptCount);
+        _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
         _dialect.AddParameter(command, $"@LastFailureReason{index}", reminder.LastFailureReason ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@MaxDeliveryWindowTicks{index}", reminder.MaxDeliveryWindow?.Ticks ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@DeliveryDeadlineUtc{index}", reminder.DeliveryDeadlineUtc?.UtcDateTime ?? (object)DBNull.Value);
@@ -1016,7 +1043,8 @@ public sealed class SqliteReminderStorage : IConditionalReminderMutationStorage
             lastFailureReason,
             maxDeliveryWindow,
             deliveryDeadlineUtc,
-            dueTimeUtc);
+            dueTimeUtc)
+        { RetryPolicy = (ReminderRetryPolicy)Convert.ToInt32(reader.GetValue(reader.GetOrdinal("retry_policy")), CultureInfo.InvariantCulture) };
     }
 
     private sealed class UnreadablePayloadException(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,

@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Collections.Concurrent;
 
 namespace Akka.Reminders.Storage;
@@ -9,7 +11,7 @@ namespace Akka.Reminders.Storage;
 /// Thread-safe implementation using concurrent collections. Suitable for testing and single-node scenarios.
 /// Not suitable for distributed scenarios as state is not shared across nodes.
 /// </remarks>
-public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorage
+public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly object _sync = new();
     private readonly ConcurrentDictionary<(ReminderEntity Entity, ReminderKey Key, DateTimeOffset DueTimeUtc), ScheduledReminder> _pendingReminders = new();
@@ -340,7 +342,8 @@ public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorag
         CancellationToken ct = default)
     {
         var dueReminders = _pendingReminders.Values
-            .Where(r => IsActivePending(r, now) && r.When <= untilDeadline)
+            .Where(r => IsActivePending(r, now) && r.When <= untilDeadline
+                        && (r.RetryPolicy != ReminderRetryPolicy.UntilAcknowledged || r.AttemptCount == 0 || r.When <= now))
             .OrderBy(r => r.When)
             .Take(maxCount.Value)
             .ToList();

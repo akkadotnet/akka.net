@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Text;
 using Akka.Actor;
 using Akka.Reminders.Storage;
@@ -112,6 +114,8 @@ namespace Akka.Reminders.Serialization;
 /// └──────────────────────────────────────────────────────────────┘
 /// </code>
 ///
+/// <para>Manifests "sr2", "rsd2", and "rfe2" carry retry policies. Each schedule or stored-reminder
+/// field block adds an Int32 policy after its payload. Default-policy messages keep the legacy layouts.</para>
 /// <para>
 /// Deserialization of <see cref="ReminderEnvelope"/> reconstructs the strongly-typed
 /// <see cref="ReminderEnvelope{T}"/> for the runtime type of the deserialized inner message.
@@ -125,6 +129,9 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
     private const string ReminderAckManifest = "ra";
     private const string ReminderAckResponseManifest = "rar";
     private const string ScheduleReminderManifest = "sr";
+    private const string ScheduleReminderPolicyManifest = "sr2";
+    private const string ReminderScheduledPolicyManifest = "rsd2";
+    private const string RemindersForEntityPolicyManifest = "rfe2";
     private const string ReminderScheduledManifest = "rsd";
     private const string RemindersForEntityManifest = "rfe";
     private const string ReminderNackManifest = "rn";
@@ -161,9 +168,9 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         ReminderEnvelope => ReminderEnvelopeManifest,
         ReminderProtocol.ReminderAck => ReminderAckManifest,
         ReminderProtocol.ReminderAckResponse => ReminderAckResponseManifest,
-        ReminderProtocol.ScheduleReminder => ScheduleReminderManifest,
-        ReminderProtocol.ReminderScheduled => ReminderScheduledManifest,
-        ReminderProtocol.RemindersForEntity => RemindersForEntityManifest,
+        ReminderProtocol.ScheduleReminder cmd => cmd.RetryPolicy == 0 ? ScheduleReminderManifest : ScheduleReminderPolicyManifest,
+        ReminderProtocol.ReminderScheduled response => response.OriginalCommand.RetryPolicy == 0 ? ReminderScheduledManifest : ReminderScheduledPolicyManifest,
+        ReminderProtocol.RemindersForEntity response => response.Reminders.All(r => r.RetryPolicy == 0) ? RemindersForEntityManifest : RemindersForEntityPolicyManifest,
         ReminderProtocol.ReminderNack => ReminderNackManifest,
         ReminderProtocol.ReminderNackResponse => ReminderNackResponseManifest,
         ReminderProtocol.GetReminderOccurrenceStatus => GetReminderOccurrenceStatusManifest,
@@ -202,8 +209,11 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         ReminderAckManifest => DeserializeReminderAck(bytes),
         ReminderAckResponseManifest => DeserializeReminderAckResponse(bytes),
         ScheduleReminderManifest => DeserializeScheduleReminder(bytes),
+        ScheduleReminderPolicyManifest => DeserializeScheduleReminder(bytes, true),
         ReminderScheduledManifest => DeserializeReminderScheduled(bytes),
+        ReminderScheduledPolicyManifest => DeserializeReminderScheduled(bytes, true),
         RemindersForEntityManifest => DeserializeRemindersForEntity(bytes),
+        RemindersForEntityPolicyManifest => DeserializeRemindersForEntity(bytes, true),
         ReminderNackManifest => DeserializeReminderNack(bytes),
         ReminderNackResponseManifest => DeserializeReminderNackResponse(bytes),
         GetReminderOccurrenceStatusManifest => DeserializeGetReminderOccurrenceStatus(bytes),
@@ -608,18 +618,18 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
-        WriteScheduleReminderFields(writer, cmd);
+        WriteScheduleReminderFields(writer, cmd, cmd.RetryPolicy != 0);
 
         writer.Flush();
         return stream.ToArray();
     }
 
-    private ReminderProtocol.ScheduleReminder DeserializeScheduleReminder(byte[] bytes)
+    private ReminderProtocol.ScheduleReminder DeserializeScheduleReminder(byte[] bytes, bool includePolicy = false)
     {
         using var stream = new MemoryStream(bytes);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
 
-        return ReadScheduleReminderFields(reader);
+        return ReadScheduleReminderFields(reader, includePolicy);
     }
 
     private byte[] SerializeReminderScheduled(ReminderProtocol.ReminderScheduled scheduled)
@@ -628,7 +638,7 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
         // Write the ScheduleReminder fields inline
-        WriteScheduleReminderFields(writer, scheduled.OriginalCommand);
+        WriteScheduleReminderFields(writer, scheduled.OriginalCommand, scheduled.OriginalCommand.RetryPolicy != 0);
 
         // Write ReminderScheduled-specific fields
         writer.Write((int)scheduled.ResponseCode);
@@ -638,12 +648,12 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         return stream.ToArray();
     }
 
-    private ReminderProtocol.ReminderScheduled DeserializeReminderScheduled(byte[] bytes)
+    private ReminderProtocol.ReminderScheduled DeserializeReminderScheduled(byte[] bytes, bool includePolicy = false)
     {
         using var stream = new MemoryStream(bytes);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
 
-        var originalCommand = ReadScheduleReminderFields(reader);
+        var originalCommand = ReadScheduleReminderFields(reader, includePolicy);
 
         var responseCode = (ReminderScheduleResponseCode)reader.ReadInt32();
         var message = reader.ReadString();
@@ -669,16 +679,17 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
 
         // Write reminder list
         writer.Write(reminders.Reminders.Count);
+        var includePolicy = reminders.Reminders.Any(r => r.RetryPolicy != 0);
         foreach (var reminder in reminders.Reminders)
         {
-            WriteScheduledReminderFields(writer, reminder);
+            WriteScheduledReminderFields(writer, reminder, includePolicy);
         }
 
         writer.Flush();
         return stream.ToArray();
     }
 
-    private ReminderProtocol.RemindersForEntity DeserializeRemindersForEntity(byte[] bytes)
+    private ReminderProtocol.RemindersForEntity DeserializeRemindersForEntity(byte[] bytes, bool includePolicy = false)
     {
         using var stream = new MemoryStream(bytes);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
@@ -694,7 +705,7 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         var list = new List<ScheduledReminder>(count);
         for (var i = 0; i < count; i++)
         {
-            list.Add(ReadScheduledReminderFields(reader, entity));
+            list.Add(ReadScheduledReminderFields(reader, entity, includePolicy));
         }
 
         return new ReminderProtocol.RemindersForEntity(
@@ -707,7 +718,7 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
     /// <summary>
     /// Writes ScheduleReminder fields to the writer (shared between ScheduleReminder and ReminderScheduled).
     /// </summary>
-    private void WriteScheduleReminderFields(BinaryWriter writer, ReminderProtocol.ScheduleReminder cmd)
+    private void WriteScheduleReminderFields(BinaryWriter writer, ReminderProtocol.ScheduleReminder cmd, bool includePolicy)
     {
         writer.Write(cmd.Entity.ShardRegionName);
         writer.Write(cmd.Entity.EntityId);
@@ -733,12 +744,14 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         writer.Write(innerManifest);
         writer.Write(innerBytes.Length);
         writer.Write(innerBytes);
+        if (includePolicy)
+            writer.Write((int)cmd.RetryPolicy);
     }
 
     /// <summary>
     /// Reads ScheduleReminder fields from the reader (shared between ScheduleReminder and ReminderScheduled).
     /// </summary>
-    private ReminderProtocol.ScheduleReminder ReadScheduleReminderFields(BinaryReader reader)
+    private ReminderProtocol.ScheduleReminder ReadScheduleReminderFields(BinaryReader reader, bool includePolicy)
     {
         var shardRegionName = reader.ReadString();
         var entityId = reader.ReadString();
@@ -772,13 +785,13 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
             when,
             innerMessage,
             repeatInterval,
-            maxDeliveryWindow);
+            maxDeliveryWindow) { RetryPolicy = includePolicy ? (ReminderRetryPolicy)reader.ReadInt32() : default };
     }
 
     /// <summary>
     /// Writes a single ScheduledReminder's fields to the writer (used in RemindersForEntity).
     /// </summary>
-    private void WriteScheduledReminderFields(BinaryWriter writer, ScheduledReminder reminder)
+    private void WriteScheduledReminderFields(BinaryWriter writer, ScheduledReminder reminder, bool includePolicy)
     {
         writer.Write(reminder.Key.Name);
         writer.Write(reminder.When.UtcTicks);
@@ -821,12 +834,14 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
         writer.Write(innerManifest);
         writer.Write(innerBytes.Length);
         writer.Write(innerBytes);
+        if (includePolicy)
+            writer.Write((int)reminder.RetryPolicy);
     }
 
     /// <summary>
     /// Reads a single ScheduledReminder's fields from the reader (used in RemindersForEntity).
     /// </summary>
-    private ScheduledReminder ReadScheduledReminderFields(BinaryReader reader, ReminderEntity entity)
+    private ScheduledReminder ReadScheduledReminderFields(BinaryReader reader, ReminderEntity entity, bool includePolicy)
     {
         var keyName = reader.ReadString();
         var key = new ReminderKey(keyName);
@@ -878,6 +893,6 @@ public sealed class ReminderSerializer : SerializerWithStringManifest
             lastFailureReason,
             maxDeliveryWindow,
             deliveryDeadlineUtc,
-            occurrenceDueTimeUtc);
+            occurrenceDueTimeUtc) { RetryPolicy = includePolicy ? (ReminderRetryPolicy)reader.ReadInt32() : default };
     }
 }

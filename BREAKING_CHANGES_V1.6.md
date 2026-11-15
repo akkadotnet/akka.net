@@ -40,6 +40,7 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | This PR | `Akka.Reminders` SQL providers | Behavior | SQL storage now requires a `RetryPolicy` (SQL Server) or `retry_policy` (PostgreSQL/SQLite) column, including reads of existing reminders. Existing rows retain the configured attempt limit. | With `AutoInitialize = true` the column is added at initialization; otherwise apply the additive column migration in the Reminders README before upgrading. Upgrade every potential scheduler host before enabling `UntilAcknowledged`. |
 | Proposed | [#8856](https://github.com/akkadotnet/akka.net/issues/8856) | `Akka.Serialization.V2` | Source | AKKASG047 now warns when a type declares `[AkkaField]` properties without `[AkkaSerializable]`, including public and nested payload types. Builds that treat warnings as errors now reject these ignored annotations. | Add `[AkkaSerializable]` to opt into generated serialization, remove unused annotations when a custom formatter handles the type, or suppress AKKASG047. |
 | Merged | link | `Akka.Xyz` | Behavior | one-line summary | what users must do |
 

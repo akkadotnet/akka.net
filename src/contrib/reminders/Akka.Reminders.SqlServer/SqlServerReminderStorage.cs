@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Data;
 using System.Data.Common;
 using Akka.Actor;
@@ -10,7 +12,7 @@ namespace Akka.Reminders.SqlServer;
 /// <summary>
 /// SQL Server implementation of <see cref="IReminderStorage"/>.
 /// </summary>
-public sealed class SqlServerReminderStorage : IConditionalReminderMutationStorage
+public sealed class SqlServerReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly SqlServerReminderStorageSettings _settings;
     private readonly ISqlDialect _dialect;
@@ -188,6 +190,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
 
         var unreadable = new List<CompletedReminder>();
         var skipped = 0;
+        var reachedRetryBackoff = false;
         UnreadablePayloadException? firstSkipped = null;
         var seen = new HashSet<(ReminderEntity, ReminderKey, DateTimeOffset)>();
 
@@ -213,7 +216,15 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
 
                 try
                 {
-                    reminders.Add(ReadReminderFromReader(reader));
+                    var reminder = ReadReminderFromReader(reader);
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && reminder.AttemptCount > 0 && reminder.When > now)
+                    {
+                        // Stop at this prefix boundary so the next-overview offset still points at
+                        // the first remaining row. Read-ahead must never consume this retry's backoff.
+                        reachedRetryBackoff = true;
+                        break;
+                    }
+                    reminders.Add(reminder);
                     if (reminders.Count >= maxCount.Value)
                         break;
                 }
@@ -235,7 +246,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
                 }
             }
 
-            if (reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
+            if (reachedRetryBackoff || reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
                 break;
         }
 
@@ -798,6 +809,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         _dialect.AddParameter(command, $"@Manifest{index}", manifest ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@Payload{index}", payload);
         _dialect.AddParameter(command, $"@AttemptCount{index}", reminder.AttemptCount);
+        _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
         _dialect.AddParameter(command, $"@LastFailureReason{index}", reminder.LastFailureReason ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@MaxDeliveryWindowTicks{index}", reminder.MaxDeliveryWindow?.Ticks ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@DeliveryDeadlineUtc{index}", reminder.DeliveryDeadlineUtc?.UtcDateTime ?? (object)DBNull.Value);
@@ -960,7 +972,8 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
             lastFailureReason,
             maxDeliveryWindow,
             deliveryDeadlineUtc,
-            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)));
+            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)))
+        { RetryPolicy = (ReminderRetryPolicy)reader.GetInt32(reader.GetOrdinal("RetryPolicy")) };
     }
 
     private sealed class UnreadablePayloadException(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,
