@@ -131,7 +131,15 @@ namespace Akka.Remote.Artery
             public void OnPull()
             {
                 if (_hasBatch)
+                {
                     PushBatch();
+
+                    // Keep filling the next batch while the write that just took this one is still
+                    // in flight. Without this, a batch that hit the cap with a frame parked in
+                    // _pending leaves upstream un-pulled for the whole duration of that write, so
+                    // the following batches carry a single frame each.
+                    PullIfNeeded();
+                }
                 else if (_upstreamFinished)
                     CompleteStage();
                 else
