@@ -360,6 +360,47 @@ public partial class ReminderSchedulerTimingSpecs
         Assert.Equal(ReminderCompletionStatus.AwaitingAck, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(5)))?.CompletionStatus);
     }
 
+    // The interval is far below MaxSlippage, so one early send would end thousands of older slots (millions for
+    // a one-tick interval). The scheduler ends at most 256 per send, so one commit stays small.
+    [Theory(DisplayName = "Should_EndAtMostTheCapOfOlderOccurrences_When_AVeryShortIntervalIsSentEarly (#8965)")]
+    [InlineData(TimeSpan.TicksPerMillisecond)]
+    [InlineData(1)]
+    public async Task Should_EndAtMostTheCapOfOlderOccurrences_When_AVeryShortIntervalIsSentEarly(long intervalTicks)
+    {
+        var (entity, key, t0) = (new ReminderEntity("cap-region-" + intervalTicks, "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromTicks(intervalTicks);
+
+        // One row, due 5 s out (the edge of MaxSlippage) and waiting for a retry at +0.5 s: it goes out 4.5 s early.
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([new ScheduledReminder(entity, key, t0.AddSeconds(0.5), "payload", interval,
+            AttemptCount: 1, DeliveryDeadlineUtc: t0.AddSeconds(5).Add(interval), OccurrenceDueTimeUtc: t0.AddSeconds(5))], Ct);
+
+        var ended = new List<int>();
+        var storage = new FailableReminderStorage(inner)
+        {
+            OnCommit = batch =>
+            {
+                lock (ended)
+                    ended.Add(batch.ActiveCompletions.Count(c => c.Entity == entity && c.Key == key));
+            }
+        };
+
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, 0);
+        var settings = SeededSeriesSettings(chunkSize: 100);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, storage, Sys.Scheduler)), "cap-" + intervalTicks);
+        await StatusAsync(scheduler, entity, key, t0);
+
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(t0.AddSeconds(5), await NextDeliveryAsync(region));
+
+        lock (ended)
+        {
+            Assert.NotEmpty(ended);
+            Assert.InRange(ended.Max(), 1, 256);
+        }
+    }
+
     /// <summary>
     /// Answers the first <c>missingResolves</c> lookups with "no shard region", then every lookup with the probe,
     /// except lookups <c>missingFrom</c> up to <c>missingTo</c> (exclusive), which are missing too.

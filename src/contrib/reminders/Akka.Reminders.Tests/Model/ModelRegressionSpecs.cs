@@ -98,6 +98,19 @@ public sealed class ModelRegressionSpecs
         new SetRegion(1, true),
         new Tick(1000));
 
+    // A 1 ms interval puts about 4,500 slots inside MaxSlippage. The scheduler ends at most 256 older ones per
+    // send, and the pass must still finish quickly and keep every rule. The series is cancelled at the end:
+    // the final heal runs 30 s of virtual time, which a live 1 ms series would fill with 30,000 sends.
+    [Fact(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_TheIntervalIsOneMillisecond")]
+    public Task OnlyTheNewestOccurrenceIsSentWithAOneMillisecondInterval() => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, 1000, 100, 256),
+        new ScheduleRecurring(2, 1, 1000, 1, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000),
+        new Cancel(2, 1));
+
     // The commit that sends the newest slot fails, lands and reports failure, or times out. Nothing older may
     // go out before it or after it, and the series must keep running. A commit that did not land leaves every
     // row as it was; one that landed leaves the newest awaiting its ack and the older ones expired.
