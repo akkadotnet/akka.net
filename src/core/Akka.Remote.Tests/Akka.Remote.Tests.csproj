@@ -18,6 +18,11 @@
          Akka.Streams (see Akka.Remote.csproj). -->
     <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
 
+    <!-- The TLS certificate fixtures (folder of PKCS#12 files, folder of PEM files, store, callback) are shared with the
+         TlsCertificateSource specs in Akka.Tests, so the rotation specs here run on the same four kinds without a copy. -->
+    <Compile Include="..\Akka.Tests\IO\TlsCertificateSourceFixtures.cs" Link="Transport\TlsCertificateSourceFixtures.cs" />
+    <Compile Include="..\Akka.Tests\IO\TlsTestCertificates.cs" Link="Transport\TlsTestCertificates.cs" />
+
     <None Include="Resources\akka-validcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
