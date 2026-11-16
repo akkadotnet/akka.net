@@ -49,6 +49,174 @@ public sealed class ModelRegressionSpecs
         new ScheduleRecurring(0, 0, 0, 1000, null),
         new Tick(3000));
 
+    // #8965: with the interval far below MaxSlippage and the region missing, every slot in the window is
+    // written back as its own retry row. Older rows back off longer, so the fetch returns the newest first.
+    // When the region returns, the pass sends the newest slot and must end every older live one; it used to
+    // end only the slot before it and then send an older row too.
+    [Fact(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_ShardRegionReturnsWithSeveralSlotsPending")]
+    public Task OnlyTheNewestOccurrenceIsSentWhenTheRegionReturnsWithSeveralSlotsPending() => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, 1000, 100, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000));
+
+    // The two sends of #8965 need not share a commit, so the outcome must not depend on how the pass is
+    // cut into fetches (MaxBatch) and commits (Chunk). Chunk 1 and 2 split the sends of one pass.
+    [Theory(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_ThePassIsCutIntoSmallBatchesAndChunks")]
+    [InlineData(1000, 1)]
+    [InlineData(1000, 2)]
+    [InlineData(1, 100)]
+    [InlineData(2, 100)]
+    [InlineData(3, 100)]
+    [InlineData(1, 1)]
+    [InlineData(2, 1)]
+    [InlineData(3, 2)]
+    public Task OnlyTheNewestOccurrenceIsSentForEveryBatchAndChunkSize(int maxBatch, int chunk) => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, maxBatch, chunk, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000));
+
+    // The interval is a tenth of MaxSlippage, so ten slots wait as retry rows at once and one send must end
+    // all of the older live ones, not only the slot before it. The short window moves each slot's deadline
+    // to 100 ms after its due time.
+    [Theory(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_TheIntervalIsFarBelowMaxSlippage")]
+    [InlineData(1000, 100, null)]
+    [InlineData(1000, 1, null)]
+    [InlineData(1, 100, null)]
+    [InlineData(1000, 100, 100)]
+    [InlineData(1000, 1, 100)]
+    public Task OnlyTheNewestOccurrenceIsSentWithTenSlotsPending(int maxBatch, int chunk, int? window) => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, maxBatch, chunk, 256),
+        new ScheduleRecurring(2, 1, 1000, 500, window),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000));
+
+    // The commit that sends the newest slot fails, lands and reports failure, or times out. Nothing older may
+    // go out before it or after it, and the series must keep running. A commit that did not land leaves every
+    // row as it was; one that landed leaves the newest awaiting its ack and the older ones expired.
+    [Theory(DisplayName = "Should_NeverSendAnOlderOccurrence_When_TheCommitThatSendsTheNewestOneFails")]
+    [InlineData(FaultKind.Fail, 1000, 100)]
+    [InlineData(FaultKind.Fail, 1000, 1)]
+    [InlineData(FaultKind.AppliedThenFail, 1000, 100)]
+    [InlineData(FaultKind.AppliedThenFail, 1000, 1)]
+    [InlineData(FaultKind.AppliedThenFail, 1, 100)]
+    [InlineData(FaultKind.Timeout, 1000, 100)]
+    [InlineData(FaultKind.Timeout, 1000, 1)]
+    public Task NoOlderOccurrenceIsSentWhenTheNewestCommitFails(FaultKind kind, int maxBatch, int chunk) => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, maxBatch, chunk, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new InjectFault(StorageCall.Commit, kind, 1, 0, false),
+        new Tick(10000));
+
+    // Two commits in a row fail, so the write circuit stays open while the pass probes with one row.
+    [Fact(DisplayName = "Should_NeverSendAnOlderOccurrence_When_SeveralCommitsFailBeforeTheNewestOneIsSent")]
+    public Task NoOlderOccurrenceIsSentWhileTheWriteCircuitIsOpen() => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, 1000, 100, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new InjectFault(StorageCall.Commit, FaultKind.Fail, 2, 0, false),
+        new InjectFault(StorageCall.Commit, FaultKind.AppliedThenFail, 1, 0, false),
+        new Tick(10000));
+
+    // The recipient answers the older occurrences before the pass that sends the newest one. An acked
+    // older slot is terminal and stays acked; a nacked one is a Pending retry that the send must end.
+    [Theory(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_OlderOccurrencesWereAnsweredBeforeTheRegionReturned")]
+    [InlineData(Recipient.Ack)]
+    [InlineData(Recipient.Nack)]
+    public Task OnlyTheNewestOccurrenceIsSentAfterOlderOnesWereAnswered(Recipient answer) => RunStrictAsync(
+        new ModelSettings(5000, 30000, 100, 600000, 10, 1000, 1, 256),
+        new SetRecipient(2, answer),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new Tick(1050),
+        new SetRegion(1, false),
+        new Tick(5000),
+        new SetRegion(1, true),
+        new Tick(2000));
+
+    // The recipient stays silent. Its late answers for older occurrences arrive before the region returns
+    // (the ack may still work) and again after the pass that sent the newest one (it must be NotFound).
+    [Fact(DisplayName = "Should_RejectALateAck_When_ANewerOccurrenceWasSentAfterTheRegionReturned")]
+    public Task LateAcksAreRejectedAfterTheNewestOccurrenceIsSent() => RunStrictAsync(
+        new ModelSettings(5000, 30000, 100, 600000, 10, 1000, 1, 256),
+        new SetRecipient(2, Recipient.Ignore),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new Tick(1050),
+        new AckOutstanding(2),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000),
+        new AckOutstanding(2),
+        new Tick(3000));
+
+    // The region goes away and comes back several times while slots pile up and are sent.
+    [Theory(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_TheRegionFlapsWhileSlotsArePending")]
+    [InlineData(100)]
+    [InlineData(1)]
+    public Task OnlyTheNewestOccurrenceIsSentWhileTheRegionFlaps(int chunk) => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, 1000, chunk, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(10),
+        new SetRegion(1, false),
+        new Tick(400),
+        new SetRegion(1, true),
+        new Tick(1000),
+        new SetRegion(1, false),
+        new Tick(2500),
+        new SetRegion(1, true),
+        new Tick(3000));
+
+    // One attempt leaves a missing region no retry: each slot ends Failed on its own. Two attempts leave
+    // one. A backoff at or above the interval pushes a slot's retry past its own deadline.
+    [Theory(DisplayName = "Should_DeliverOnlyTheNewestOccurrence_When_AttemptsAndBackoffVary")]
+    [InlineData(1, 100)]
+    [InlineData(2, 100)]
+    [InlineData(2, 1000)]
+    [InlineData(3, 2000)]
+    [InlineData(10, 2000)]
+    [InlineData(10, 5000)]
+    public Task OnlyTheNewestOccurrenceIsSentForEveryAttemptAndBackoff(int attempts, int backoff) => RunStrictAsync(
+        new ModelSettings(5000, 500, backoff, 600000, attempts, 1000, 1, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000));
+
+    // Controls from #8965. Neither fails on the old scheduler: MaxSlippage is shorter than the interval, so
+    // only one slot is ever pending; or the region never goes down, so each slot is sent on its own.
+    [Fact(DisplayName = "Should_DeliverEverySlot_When_MaxSlippageIsShorterThanTheInterval")]
+    public Task ControlSlippageShorterThanTheInterval() => RunStrictAsync(
+        new ModelSettings(1000, 500, 100, 600000, 10, 1000, 100, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new SetRegion(1, false),
+        new Tick(1300),
+        new SetRegion(1, true),
+        new Tick(1000));
+
+    [Fact(DisplayName = "Should_DeliverEverySlot_When_TheRegionNeverGoesDown")]
+    public Task ControlRegionNeverDown() => RunStrictAsync(
+        new ModelSettings(5000, 500, 100, 600000, 10, 1000, 100, 256),
+        new ScheduleRecurring(2, 1, 1000, 2000, null),
+        new Tick(1300),
+        new Tick(1000),
+        new Tick(8000));
+
     // Captured from the previous generator before changing its composition. Keep the concrete input:
     // seeds are tied to a generator's shape, but this superseded-ack counterexample must still be checked.
     [Fact(DisplayName = "Should_RejectTheSupersededAck_When_APastAnchorAndItsEarlySuccessorAreDeliveredTogether")]
