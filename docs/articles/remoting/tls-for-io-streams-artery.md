@@ -89,6 +89,8 @@ Artery can also use server-only TLS when clients should authenticate the server 
 
 Artery TLS policies authenticate transport peers; they do not authorize cluster membership or actor access. Configure trust and application-level authorization for those separate decisions. Keep the profile's certificate and private key alive until the actor system and its remoting transport have stopped, then dispose the caller-owned certificate.
 
+To renew a certificate without a restart, build the profile from a `TlsCertificateSource` instead of a certificate, with `ArteryTlsSettings.Mutual(source, peerPolicy)` or `ArteryTlsSettings.ServerOnly(source, outboundServerPolicy)`. Each new connection asks the source for the current certificate. See [Rotating TLS Certificates](certificate-rotation.md#artery).
+
 ## Migrate From DotNetty TLS
 
 For the complete transport change, follow [Migrating From DotNetty to Artery](dotnetty-to-artery.md), including cluster transition, address changes, Hosting, and bind-address limitations.

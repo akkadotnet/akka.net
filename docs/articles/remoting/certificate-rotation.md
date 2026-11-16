@@ -8,7 +8,7 @@ title: Rotating TLS Certificates
 **New in Akka.NET v1.6:** A node can pick up a renewed TLS certificate while it runs. You install the new certificate, and connections the node builds a few seconds later use it. You do not restart the node or edit its config.
 
 > [!NOTE]
-> In Akka.NET v1.6, certificate rotation applies to the DotNetty transport. The settings and APIs in this article configure that transport.
+> In Akka.NET v1.6, both the DotNetty transport and Artery can rotate certificates. They use the same certificate source and behave the same way. Most of this article shows the DotNetty settings. For Artery, see [Artery](#artery).
 
 This article builds on [Network Security](xref:network-security). Read that first if TLS is new to you.
 
@@ -151,6 +151,27 @@ To get the certificate from your own code, such as a secrets service, use `TlsCe
 > [!WARNING]
 > Keep the folder, or the common name, for this node's certificates only. The node does not check who issued a certificate it finds. If a self-signed certificate with the same common name sits in the store, or another certificate that qualifies sits in the folder, the node picks it whenever it was issued most recently. A certificate authority (CA) certificate with its private key usually has a key usage that allows only signing certificates, so the node rejects it and warns. Do not rely on that: a CA certificate with no key usage field qualifies. See [Allowed for the Job](#allowed-for-the-job). The log line that reports each pick names the certificate, so a wrong pick shows there. See [Check That It Worked](#check-that-it-worked).
 
+### Artery
+
+Artery has no TLS settings in HOCON. You give it an `ArteryTlsSettings` profile in code or through Akka.Hosting. See [TLS for Akka.IO, Akka.Streams, and Artery](tls-for-io-streams-artery.md). To rotate, build the profile from a certificate source instead of a certificate:
+
+* `ArteryTlsSettings.Mutual(source, peerPolicy)` turns on mutual TLS. The node presents one certificate in both directions, so the source picks only a certificate that allows both client and server authentication. An overload takes separate inbound and outbound policies.
+* `ArteryTlsSettings.ServerOnly(source, outboundServerPolicy)` is for nodes that present no client certificate. The source then needs a certificate that allows server authentication only.
+
+The peer policy works as it does with a fixed certificate. Rotation changes only the certificate the node presents, not which peers it trusts.
+
+**In code**, put the profile in an `ArteryTlsSetup`:
+
+[!code-csharp[ArteryTlsRotationCode](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsRotationCode)]
+
+**With Akka.Hosting**, set `Tls` in `WithArteryRemoting`:
+
+[!code-csharp[ArteryTlsRotationHosting](../../../src/core/Akka.Docs.Tests/Networking/ArteryTlsExamples.cs?name=arteryTlsRotationHosting)]
+
+A profile holds either a certificate or a source, so you cannot set both.
+
+The rest of this article applies to Artery too: how the node picks its certificate, the look-up every 10 seconds, the check once a minute, the wait at startup, the fallback to the last good certificate, and the log lines. Artery differs in two ways. It has no HOCON `path` or `common-name` keys. And a node that fails a TLS handshake it started does not shut down: that connection fails, and the node stays up.
+
 ## How a Node Picks Its Certificate
 
 When the node builds a connection, it asks the source for a certificate. A folder or a store source answers from its last look-up, and reads the folder or the store at most once every 10 seconds, in the background. A callback is called every time. On each look-up, the node:
@@ -259,9 +280,9 @@ A folder may hold PKCS#12 files and PEM files together.
 You never overwrite anything. To undo a rotation, remove the new certificate. After the next look-up, new connections go back to the old one.
 
 > [!WARNING]
-> A node that dials a peer and fails the TLS handshake runs `CoordinatedShutdown` with exit code 79. If a node does not trust your new certificate, that node shuts down the first time it dials a node that presents it. Settle trust first.
+> On the DotNetty transport, a node that dials a peer and fails the TLS handshake runs `CoordinatedShutdown` with exit code 79. If a node does not trust your new certificate, that node shuts down the first time it dials a node that presents it. On Artery, the node stays up, but it cannot reach that peer. Settle trust first.
 
-You can stage a renewal with a start date in the future. The node ignores the certificate until that time. The first look-up after that time picks it, within about a minute, and sooner when a connection asks. Machines whose clocks differ by a few seconds can disagree for a moment about whether the certificate is valid yet, and a node that rejects a peer's certificate while dialing it shuts down. This is one more reason to make every node trust the new certificate first, and to keep the clocks of your machines in sync.
+You can stage a renewal with a start date in the future. The node ignores the certificate until that time. The first look-up after that time picks it, within about a minute, and sooner when a connection asks. Machines whose clocks differ by a few seconds can disagree for a moment about whether the certificate is valid yet, and a node that rejects a peer's certificate while dialing it cannot reach that peer (on DotNetty, it shuts down). This is one more reason to make every node trust the new certificate first, and to keep the clocks of your machines in sync.
 
 ## Changing an Existing Setup
 
@@ -627,7 +648,7 @@ After startup, a node that finds no usable certificate keeps using its last cert
 Cannot build a TLS connection to [akka.tcp://MySystem@10.0.0.5:4053]: No certificate in folder '/etc/akka/tls' can be used as a client and server. Rejected: 2531C78C51E5041D02564697A88AF8BC7A7CE3E3 (subject 'CN=akka-node.contoso.com', expires 2027-03-01 12:00:00Z) in file 'node.pfx': it expired at 2027-03-01 12:00:00Z.
 ```
 
-For a connection the node accepts, it reads `Cannot build a TLS connection for the incoming connection from [...]:` and then the cause. The cause carries the same details as the startup failure, with the same job text. A peer that dials this node sees its TLS handshake fail, and a node that fails a handshake it started shuts down with exit code 79 (see below). Add a usable certificate.
+For a connection the node accepts, it reads `Cannot build a TLS connection for the incoming connection from [...]:` and then the cause. The cause carries the same details as the startup failure, with the same job text. A peer that dials this node sees its TLS handshake fail, and on the DotNetty transport a node that fails a handshake it started shuts down with exit code 79 (see below). Add a usable certificate.
 
 A connection never waits for a look-up. When the node has no pick, or its pick has expired or was disposed, the connection fails at once with the reason the last look-up gave, and the node starts a look-up if none is running. A connection that finds the last look-up more than 10 seconds old starts a new one, and still fails with the reason of the last one. That reason stays the same from one look-up to the next while its cause lasts. If the last look-up picked a certificate that has since expired or was disposed, the cause reads `The TLS certificate <certificate> is no longer in date or was disposed, and no other was found.`, where `<certificate>` is the thumbprint, subject and expiry date. Connections built after a look-up that finds the certificate you added use it.
 
@@ -657,7 +678,7 @@ The warning repeats at most every 5 minutes. For a store, it has no sentence abo
 
 ### A Node Shut Down With Exit Code 79
 
-The node dialed a peer, and the TLS handshake failed. The node logs `TLS handshake failed on channel`, then runs `CoordinatedShutdown` with exit code 79, and logs `Exiting with [ExitCode:79]`. The process exits only if `akka.coordinated-shutdown.exit-clr = on`. Then, with the default `terminate-actor-system = on`, it exits with code 0, or with 79 if the actor system takes longer than the `actor-system-terminate` phase timeout to stop. Make this node trust the peer's certificate, then start it again. See [Network Security](xref:network-security#a-node-shuts-down-with-exit-code-79).
+This applies to the DotNetty transport. The node dialed a peer, and the TLS handshake failed. The node logs `TLS handshake failed on channel`, then runs `CoordinatedShutdown` with exit code 79, and logs `Exiting with [ExitCode:79]`. The process exits only if `akka.coordinated-shutdown.exit-clr = on`. Then, with the default `terminate-actor-system = on`, it exits with code 0, or with 79 if the actor system takes longer than the `actor-system-terminate` phase timeout to stop. Make this node trust the peer's certificate, then start it again. See [Network Security](xref:network-security#a-node-shuts-down-with-exit-code-79).
 
 ### Private Key Access on Windows
 
