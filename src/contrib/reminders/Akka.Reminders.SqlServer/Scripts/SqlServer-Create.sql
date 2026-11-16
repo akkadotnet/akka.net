@@ -7,6 +7,8 @@
 --   3. Execute this script against your SQL Server database
 --
 -- Note: This script is idempotent - it will only create objects if they don't already exist.
+-- For existing tables, use the retry-policy upgrade procedure:
+-- https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/reminders/docs/migrations/retry-policy/README.md
 
 -- Variables (modify as needed)
 DECLARE @SchemaName NVARCHAR(255) = 'reminders';
@@ -44,6 +46,7 @@ BEGIN
         Manifest NVARCHAR(500) NULL,
         Payload VARBINARY(MAX) NOT NULL,
         AttemptCount INT NOT NULL DEFAULT 0,
+        RetryPolicy INT NOT NULL DEFAULT 0,
         LastFailureReason NVARCHAR(MAX) NULL,
         MaxDeliveryWindowTicks BIGINT NULL,
         DeliveryDeadlineUtc DATETIME2 NULL,

@@ -6,6 +6,8 @@
 --   2. Execute this script against your SQLite database
 --
 -- Note: This script is idempotent - it will only create objects if they don't already exist.
+-- For existing tables, use the retry-policy upgrade procedure:
+-- https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/reminders/docs/migrations/retry-policy/README.md
 
 CREATE TABLE IF NOT EXISTS scheduled_reminders (
     shard_region_name TEXT NOT NULL,
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS scheduled_reminders (
     manifest TEXT NULL,
     payload BLOB NOT NULL,
     attempt_count INTEGER NOT NULL DEFAULT 0,
+    retry_policy INTEGER NOT NULL DEFAULT 0,
     last_failure_reason TEXT NULL,
     max_delivery_window_ticks INTEGER NULL,
     delivery_deadline_utc TEXT NULL,

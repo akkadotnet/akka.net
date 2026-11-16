@@ -20,14 +20,17 @@ namespace Akka.Reminders.Tests.Storage;
 
 public sealed class ReminderRetryPolicyUpgradeSpecs
 {
-    [Theory(DisplayName = "Should_UpgradeExistingSchemaWithoutChangingOldPolicy_When_ProviderInitializes")]
-    [InlineData("sqlserver", true)]
-    [InlineData("postgres", true)]
-    [InlineData("sqlite", true)]
-    [InlineData("sqlserver", false)]
-    [InlineData("postgres", false)]
-    [InlineData("sqlite", false)]
-    public async Task Should_UpgradeExistingSchemaWithoutChangingOldPolicy_When_ProviderInitializes(string provider, bool autoInitialize)
+    [Theory(DisplayName = "Should_PreserveRetryPolicies_When_CreatingOrUpgradingSchema")]
+    [InlineData("sqlserver", true, false)]
+    [InlineData("postgres", true, false)]
+    [InlineData("sqlite", true, false)]
+    [InlineData("sqlserver", false, false)]
+    [InlineData("postgres", false, false)]
+    [InlineData("sqlite", false, false)]
+    [InlineData("sqlserver", false, true)]
+    [InlineData("postgres", false, true)]
+    [InlineData("sqlite", false, true)]
+    public async Task Should_PreserveRetryPolicies_When_CreatingOrUpgradingSchema(string provider, bool autoInitialize, bool freshSchema)
     {
         var ct = TestContext.Current.CancellationToken;
         var system = ActorSystem.Create("retry-policy-upgrade");
@@ -65,30 +68,53 @@ public sealed class ReminderRetryPolicyUpgradeSpecs
                 "postgres" => new Npgsql.NpgsqlConnection(connectionString),
                 _ => new Microsoft.Data.Sqlite.SqliteConnection(connectionString)
             };
-            var entity = new ReminderEntity("upgrade", "e1");
-            var old = new ScheduledReminder(entity, new ReminderKey("old"), DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).AddHours(1), "old");
-            Assert.Equal(ReminderScheduleResponseCode.Success, (await OpenStorage().ScheduleReminderAsync(old, ct)).ResponseCode);
-            await using (var connection = Connect())
+            if (freshSchema)
             {
+                var assembly = provider switch
+                {
+                    "sqlserver" => typeof(SqlServerReminderStorage).Assembly,
+                    "postgres" => typeof(PostgreSqlReminderStorage).Assembly,
+                    _ => typeof(SqliteReminderStorage).Assembly
+                };
+                var resource = Assert.Single(assembly.GetManifestResourceNames(), name => name.EndsWith("-Create.sql", StringComparison.Ordinal));
+                using var stream = assembly.GetManifestResourceStream(resource);
+                Assert.NotNull(stream);
+                using var reader = new StreamReader(stream);
+                var creationSql = await reader.ReadToEndAsync(ct);
+                await using var connection = Connect();
                 await connection.OpenAsync(ct);
                 await using var command = connection.CreateCommand();
-                // Remove only the new column to reproduce the schema shipped before this feature.
-                command.CommandText = provider switch
-                {
-                    "sqlserver" => """
-                        DECLARE @constraint sysname;
-                        SELECT @constraint = dc.name FROM sys.default_constraints dc
-                        JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
-                        WHERE dc.parent_object_id = OBJECT_ID('reminders.scheduled_reminders') AND c.name = 'RetryPolicy';
-                        EXEC('ALTER TABLE reminders.scheduled_reminders DROP CONSTRAINT [' + @constraint + ']');
-                        ALTER TABLE reminders.scheduled_reminders DROP COLUMN RetryPolicy;
-                        """,
-                    "postgres" => "ALTER TABLE reminders.scheduled_reminders DROP COLUMN retry_policy;",
-                    _ => "ALTER TABLE scheduled_reminders DROP COLUMN retry_policy;"
-                };
+                command.CommandText = creationSql;
                 await command.ExecuteNonQueryAsync(ct);
+                await command.ExecuteNonQueryAsync(ct); // Fresh-install scripts remain safe to repeat.
             }
-            if (!autoInitialize)
+            var entity = new ReminderEntity("upgrade", "e1");
+            var old = new ScheduledReminder(entity, new ReminderKey("old"), DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds()).AddHours(1), "old");
+            Assert.Equal(ReminderScheduleResponseCode.Success, (await OpenStorage(initialize: !freshSchema).ScheduleReminderAsync(old, ct)).ResponseCode);
+            if (!freshSchema)
+            {
+                await using (var connection = Connect())
+                {
+                    await connection.OpenAsync(ct);
+                    await using var command = connection.CreateCommand();
+                    // Remove only the new column to reproduce the schema shipped before this feature.
+                    command.CommandText = provider switch
+                    {
+                        "sqlserver" => """
+                            DECLARE @constraint sysname;
+                            SELECT @constraint = dc.name FROM sys.default_constraints dc
+                            JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                            WHERE dc.parent_object_id = OBJECT_ID('reminders.scheduled_reminders') AND c.name = 'RetryPolicy';
+                            EXEC('ALTER TABLE reminders.scheduled_reminders DROP CONSTRAINT [' + @constraint + ']');
+                            ALTER TABLE reminders.scheduled_reminders DROP COLUMN RetryPolicy;
+                            """,
+                        "postgres" => "ALTER TABLE reminders.scheduled_reminders DROP COLUMN retry_policy;",
+                        _ => "ALTER TABLE scheduled_reminders DROP COLUMN retry_policy;"
+                    };
+                    await command.ExecuteNonQueryAsync(ct);
+                }
+            }
+            if (!autoInitialize && !freshSchema)
             {
                 var warnings = new TestProbe(system, new XunitAssertions());
                 system.EventStream.Subscribe(warnings.Ref, typeof(Warning));
