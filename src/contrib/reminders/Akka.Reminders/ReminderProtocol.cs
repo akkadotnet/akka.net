@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
@@ -257,13 +259,16 @@ public static class ReminderProtocol
         TimeSpan? RepeatInterval = null,
         TimeSpan? MaxDeliveryWindow = null) : IReminderCommand, IReminderWireMessage
     {
+        /// <summary>Delivery retry policy; the configured attempt limit is used by default.</summary>
+        public ReminderRetryPolicy RetryPolicy { get; init; }
+
         public ScheduledReminder ToScheduledReminder() => new(
             Entity,
             Key,
             When,
             Message,
             RepeatInterval,
-            MaxDeliveryWindow: MaxDeliveryWindow);
+            MaxDeliveryWindow: MaxDeliveryWindow) { RetryPolicy = RetryPolicy };
     }
 
     public sealed record CancelReminder(ReminderEntity Entity, ReminderKey Key) : IReminderCommand, IReminderWireMessage;
@@ -424,6 +429,9 @@ public sealed record ScheduledReminder(
     DateTimeOffset? DeliveryDeadlineUtc = null,
     DateTimeOffset? OccurrenceDueTimeUtc = null)
 {
+    /// <summary>Delivery retry policy, persisted with the occurrence.</summary>
+    public ReminderRetryPolicy RetryPolicy { get; init; }
+
     /// <summary>
     /// The original due time for this occurrence in UTC.
     /// </summary>
@@ -441,5 +449,5 @@ public sealed record ScheduledReminder(
      /// Useful for retry scenarios where you need to resubmit the original command.
      /// </summary>
     public ReminderProtocol.ScheduleReminder ToScheduleReminder()
-        => new(Entity, Key, DueTimeUtc, Message, RepeatInterval, MaxDeliveryWindow);
+        => new(Entity, Key, DueTimeUtc, Message, RepeatInterval, MaxDeliveryWindow) { RetryPolicy = RetryPolicy };
 }

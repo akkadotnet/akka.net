@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +49,8 @@ public sealed record ReminderSettings
 
     /// <summary>
     /// Maximum number of delivery attempts before a reminder is marked as permanently failed.
-    /// Applies to both infrastructure failures (shard region not found) and ack timeouts.
+    /// Applies to infrastructure failures, ack timeouts, and nacks unless a one-off reminder
+    /// opts into <see cref="ReminderRetryPolicy.UntilAcknowledged"/>.
     /// </summary>
     public int MaxDeliveryAttempts { get; init; } = 10;
 
@@ -55,7 +58,8 @@ public sealed record ReminderSettings
     /// Default delivery window applied to every scheduled occurrence when a schedule call does
     /// not pass its own <c>maxDeliveryWindow</c>. An occurrence whose due time plus this window
     /// has passed is expired rather than delivered. When null (the default), occurrences carry no
-    /// deadline and are retried until <see cref="MaxDeliveryAttempts"/> is exhausted.
+    /// deadline. They retry until <see cref="MaxDeliveryAttempts"/> is exhausted unless their
+    /// retry policy is <see cref="ReminderRetryPolicy.UntilAcknowledged"/>.
     /// </summary>
     public TimeSpan? DefaultMaxDeliveryWindow { get; init; }
 
@@ -625,6 +629,27 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
                 {
                     using var cts = new CancellationTokenSource(Settings.StorageTimeout);
                     var reminder = CreateScheduledReminder(scheduleSingle);
+                    if (!Enum.IsDefined(typeof(ReminderRetryPolicy), reminder.RetryPolicy)
+                        || (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && reminder.RepeatInterval.HasValue))
+                    {
+                        replyTo.Tell(new ReminderProtocol.ReminderScheduled(scheduleSingle,
+                            ReminderScheduleResponseCode.Error, "Unsupported retry policy for this reminder."), ActorRefs.NoSender);
+                        return;
+                    }
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged
+                        && (Settings.RetryBackoffBase <= TimeSpan.Zero || Settings.MaxRetryBackoff <= TimeSpan.Zero))
+                    {
+                        replyTo.Tell(new ReminderProtocol.ReminderScheduled(scheduleSingle,
+                            ReminderScheduleResponseCode.Error, "UntilAcknowledged requires positive retry backoff settings."), ActorRefs.NoSender);
+                        return;
+                    }
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && Storage is not IReminderRetryPolicyStorage)
+                    {
+                        replyTo.Tell(new ReminderProtocol.ReminderScheduled(scheduleSingle,
+                            ReminderScheduleResponseCode.Error,
+                            "Retry policies require storage implementing IReminderRetryPolicyStorage."), ActorRefs.NoSender);
+                        return;
+                    }
                     if (reminder.RepeatInterval.HasValue && Storage is not IConditionalReminderMutationStorage)
                     {
                         replyTo.Tell(new ReminderProtocol.ReminderScheduled(scheduleSingle,
@@ -1049,7 +1074,8 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         DateTimeOffset ackDeadline)
     {
         // Will there be another attempt after this one?
-        var hasMoreAttempts = reminder.AttemptCount + 1 < Settings.MaxDeliveryAttempts;
+        var hasMoreAttempts = reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged
+                              || NextAttemptCount(reminder) < Settings.MaxDeliveryAttempts;
 
         if (hasMoreAttempts)
         {
@@ -1057,10 +1083,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
             // If the occurrence has no deadline, there's always room for another attempt.
             if (reminder.DeliveryDeadlineUtc.HasValue)
             {
-                var nextBackoff = TimeSpan.FromSeconds(
-                    Math.Min(
-                        Settings.RetryBackoffBase.TotalSeconds * Math.Pow(2, reminder.AttemptCount),
-                        Settings.MaxRetryBackoff.TotalSeconds));
+                var nextBackoff = RetryBackoff(reminder);
                 var nextRetryAt = ackDeadline.Add(nextBackoff);
 
                 if (nextRetryAt >= reminder.DeliveryDeadlineUtc.Value)
@@ -1094,7 +1117,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
                 dueTimeUtc,
                 scheduleReminder.RepeatInterval,
                 maxDeliveryWindow),
-            OccurrenceDueTimeUtc: dueTimeUtc);
+            OccurrenceDueTimeUtc: dueTimeUtc) { RetryPolicy = scheduleReminder.RetryPolicy };
     }
 
     /// <summary>
@@ -1190,16 +1213,14 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         }
 
         // Used all attempts.
-        if (reminder.AttemptCount + 1 >= Settings.MaxDeliveryAttempts)
+        if (reminder.RetryPolicy != ReminderRetryPolicy.UntilAcknowledged
+            && NextAttemptCount(reminder) >= Settings.MaxDeliveryAttempts)
         {
             terminalStatus = ReminderCompletionStatus.Failed;
             return false;
         }
 
-        var backoff = TimeSpan.FromSeconds(
-            Math.Min(
-                Settings.RetryBackoffBase.TotalSeconds * Math.Pow(2, reminder.AttemptCount),
-                Settings.MaxRetryBackoff.TotalSeconds));
+        var backoff = RetryBackoff(reminder);
         var retryAt = now.Add(backoff);
 
         // Backoff would land after the deadline — expire instead of scheduling a doomed retry.
@@ -1214,7 +1235,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         retryReminder = reminder with
         {
             When = retryAt,
-            AttemptCount = reminder.AttemptCount + 1,
+            AttemptCount = NextAttemptCount(reminder),
             LastFailureReason = failureReason,
             OccurrenceDueTimeUtc = reminder.DueTimeUtc
         };
@@ -1222,10 +1243,24 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         return true;
     }
 
+    private static int NextAttemptCount(ScheduledReminder reminder)
+        => reminder.AttemptCount == int.MaxValue ? int.MaxValue : reminder.AttemptCount + 1;
+
+    private TimeSpan RetryBackoff(ScheduledReminder reminder)
+    {
+        // Double only until the cap. This avoids overflow/NaN after indefinitely many attempts.
+        var delay = Settings.RetryBackoffBase;
+        for (var i = 0; i < reminder.AttemptCount && delay > TimeSpan.Zero && delay < Settings.MaxRetryBackoff; i++)
+            delay = delay.Ticks >= Settings.MaxRetryBackoff.Ticks - delay.Ticks
+                ? Settings.MaxRetryBackoff
+                : TimeSpan.FromTicks(delay.Ticks * 2);
+        return delay > Settings.MaxRetryBackoff ? Settings.MaxRetryBackoff : delay;
+    }
+
     private static ScheduledReminder CreateTerminalAttempt(ScheduledReminder reminder, string failureReason)
         => reminder with
         {
-            AttemptCount = reminder.AttemptCount + 1,
+            AttemptCount = NextAttemptCount(reminder),
             LastFailureReason = failureReason
         };
 
@@ -1462,7 +1497,8 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
                     {
                         var failureReason = $"ShardRegion [{reminder.Entity.ShardRegionName}] not found";
                         _log.Warning("Reminder {0} could not be resolved to a ShardRegion. Attempt {1} of {2}",
-                            reminder, reminder.AttemptCount + 1, Settings.MaxDeliveryAttempts);
+                            reminder, NextAttemptCount(reminder),
+                            reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged ? "unlimited" : Settings.MaxDeliveryAttempts.ToString());
 
                         if (TryCreateRetryReminder(
                                 reminder,

@@ -1,3 +1,5 @@
+#nullable enable
+
 using Akka.Actor;
 using Akka.Reminders.PostgreSql;
 using Akka.Reminders.PostgreSql.Configuration;
@@ -100,6 +102,13 @@ VALUES
         // Run migration
         await ExecuteSqlAsync(connStr, MigrationSql);
 
+        using var migrationTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var policySql = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "RetryPolicyMigrations", "postgresql.sql"), migrationTimeout.Token);
+        await ExecuteSqlAsync(connStr, policySql, migrationTimeout.Token);
+        // Public SQL Server/PostgreSQL scripts must remain safe to repeat.
+        await ExecuteSqlAsync(connStr, policySql, migrationTimeout.Token);
+
         // Mark the seed row as completed so it doesn't interfere with API tests
         // (its payload isn't valid Akka serialization — it exists only to test the migration backfill)
         await ExecuteSqlAsync(connStr,
@@ -124,26 +133,33 @@ VALUES
         }
     }
 
-    [Fact]
+    [Fact(DisplayName = "Should_PreserveDueTimeAndUseBoundedPolicy_When_MigratingExistingRows")]
     public async Task MigratedData_ShouldHaveDueTimeEqualToWhenUtc()
     {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
         // Verify via raw SQL — the seed row's payload isn't a valid Akka serialized message,
         // so we can't read it through the storage API. We only need to check the column values.
         await using var conn = new Npgsql.NpgsqlConnection(_container!.GetConnectionString());
-        await conn.OpenAsync();
+        await conn.OpenAsync(ct);
         await using var cmd = new Npgsql.NpgsqlCommand(
-            "SELECT when_utc, due_time_utc FROM reminders.scheduled_reminders WHERE reminder_key = 'seed-reminder'",
+            "SELECT when_utc, due_time_utc, retry_policy FROM reminders.scheduled_reminders WHERE reminder_key = 'seed-reminder'",
             conn);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        Assert.True(await reader.ReadAsync());
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        Assert.True(await reader.ReadAsync(ct));
         var whenUtc = reader.GetDateTime(0);
         var dueTimeUtc = reader.GetDateTime(1);
         Assert.Equal(whenUtc, dueTimeUtc);
+        Assert.Equal((int)ReminderRetryPolicy.UseConfiguredAttemptLimit, reader.GetInt32(2));
     }
 
-    [Fact]
-    public async Task MigratedSchema_ShouldSupportSchedulingNewReminders()
+    [Theory(DisplayName = "Should_PreserveRetryPolicy_When_SchedulingOnManuallyMigratedSchema")]
+    [InlineData(ReminderRetryPolicy.UseConfiguredAttemptLimit)]
+    [InlineData(ReminderRetryPolicy.UntilAcknowledged)]
+    public async Task MigratedSchema_ShouldSupportSchedulingNewReminders(ReminderRetryPolicy retryPolicy)
     {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
         var entity = new ReminderEntity("test-region", "entity-new");
         var key = new ReminderKey("new-reminder");
         var dueTime = DateTimeOffset.UtcNow.AddMinutes(30);
@@ -156,13 +172,20 @@ VALUES
             RepeatInterval: null,
             MaxDeliveryWindow: null,
             DeliveryDeadlineUtc: null,
-            OccurrenceDueTimeUtc: dueTime);
+            OccurrenceDueTimeUtc: dueTime) { RetryPolicy = retryPolicy };
 
-        var result = await _storage!.ScheduleReminderAsync(reminder, default);
+        var result = await _storage!.ScheduleReminderAsync(reminder, ct);
         Assert.Equal(ReminderScheduleResponseCode.Success, result.ResponseCode);
+        Assert.Equal(retryPolicy, result.OriginalCommand.RetryPolicy);
+        // Reapplying the public script must preserve opted-in values as well as bounded rows.
+        var policySql = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "RetryPolicyMigrations", "postgresql.sql"), ct);
+        await ExecuteSqlAsync(_container!.GetConnectionString(), policySql, ct);
 
-        var fetched = await _storage.GetRemindersForEntityAsync(entity, ct: default);
-        Assert.Contains(fetched, r => r.Key == key);
+        var fetched = await _storage.GetRemindersForEntityAsync(entity, ct: ct);
+        var stored = Assert.Single(fetched);
+        Assert.Equal(key, stored.Key);
+        Assert.Equal(retryPolicy, stored.RetryPolicy);
     }
 
     [Fact]
@@ -221,11 +244,11 @@ VALUES
         Assert.True(overview.TotalPendingReminders >= 1);
     }
 
-    private static async Task ExecuteSqlAsync(string connectionString, string sql)
+    private static async Task ExecuteSqlAsync(string connectionString, string sql, CancellationToken ct = default)
     {
         await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
         await using var command = new NpgsqlCommand(sql, connection);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(ct);
     }
 }

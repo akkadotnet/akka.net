@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Data;
 using System.Data.Common;
 using Akka.Actor;
@@ -10,14 +12,21 @@ namespace Akka.Reminders.SqlServer;
 /// <summary>
 /// SQL Server implementation of <see cref="IReminderStorage"/>.
 /// </summary>
-public sealed class SqlServerReminderStorage : IConditionalReminderMutationStorage
+public sealed class SqlServerReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly SqlServerReminderStorageSettings _settings;
     private readonly ISqlDialect _dialect;
     private readonly Akka.Serialization.Serialization _serialization;
     private readonly ILoggingAdapter _log;
-    private readonly object _initLock = new();
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _hasRetryPolicyColumn;
     private volatile bool _initialized;
+
+    private const string RetryPolicyUpgradeInstructions =
+        "The reminder retry-policy column is missing. Existing reminders use the configured attempt limit; " +
+        "UntilAcknowledged requires a schema upgrade. With AutoInitialize disabled, run the SQL script for your " +
+        "database and restart the provider. Procedure: " +
+        "https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/reminders/docs/migrations/retry-policy/README.md";
 
     private const int MaxUpsertedRemindersPerStatement = 120;
     private const int MaxRemindersPerStatusUpdate = 300;
@@ -37,6 +46,9 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
+        if (!_hasRetryPolicyColumn && reminder.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit)
+            return new ReminderProtocol.ReminderScheduled(reminder.ToScheduleReminder(),
+                ReminderScheduleResponseCode.Error, RetryPolicyUpgradeInstructions);
 
         try
         {
@@ -90,6 +102,9 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         await EnsureInitializedAsync(cancellationToken);
         if (mutationBatch.IsEmpty)
             return true;
+        if (!_hasRetryPolicyColumn && mutationBatch.PendingUpserts.Concat(mutationBatch.PendingInserts)
+                .Any(r => r.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit))
+            return false;
 
         await using var connection = await CreateConnectionAsync(cancellationToken);
         await connection.OpenAsync(cancellationToken);
@@ -147,6 +162,8 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         var remindersList = reminders.ToList();
         if (remindersList.Count == 0)
             return true;
+        if (!_hasRetryPolicyColumn && remindersList.Any(r => r.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit))
+            return false;
 
         try
         {
@@ -154,7 +171,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
             {
                 var chunk = remindersList.Skip(offset).Take(MaxUpsertedRemindersPerStatement).ToList();
                 await using var command = CreateCommand(connection, transaction);
-                command.CommandText = _dialect.GetBatchUpsertRemindersSql(_settings.SchemaName, _settings.TableName, chunk.Count, insertIfAbsent);
+                command.CommandText = _dialect.GetBatchUpsertRemindersSql(_settings.SchemaName, _settings.TableName, chunk.Count, insertIfAbsent, _hasRetryPolicyColumn);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
 
                 for (var i = 0; i < chunk.Count; i++)
@@ -188,6 +205,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
 
         var unreadable = new List<CompletedReminder>();
         var skipped = 0;
+        var reachedRetryBackoff = false;
         UnreadablePayloadException? firstSkipped = null;
         var seen = new HashSet<(ReminderEntity, ReminderKey, DateTimeOffset)>();
 
@@ -199,7 +217,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
             var unusable = skipped + unreadable.Count;
             var rows = 0;
             await using var command = connection.CreateCommand();
-            command.CommandText = _dialect.GetSelectDueRemindersSql(_settings.SchemaName, _settings.TableName, limit);
+            command.CommandText = _dialect.GetSelectDueRemindersSql(_settings.SchemaName, _settings.TableName, limit, _hasRetryPolicyColumn);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@UntilDeadline", untilDeadline.UtcDateTime);
             _dialect.AddParameter(command, "@Now", now.UtcDateTime);
@@ -213,7 +231,15 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
 
                 try
                 {
-                    reminders.Add(ReadReminderFromReader(reader));
+                    var reminder = ReadReminderFromReader(reader);
+                    if (reminder.RetryPolicy == ReminderRetryPolicy.UntilAcknowledged && reminder.AttemptCount > 0 && reminder.When > now)
+                    {
+                        // Stop at this prefix boundary so the next-overview offset still points at
+                        // the first remaining row. Read-ahead must never consume this retry's backoff.
+                        reachedRetryBackoff = true;
+                        break;
+                    }
+                    reminders.Add(reminder);
                     if (reminders.Count >= maxCount.Value)
                         break;
                 }
@@ -235,7 +261,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
                 }
             }
 
-            if (reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
+            if (reachedRetryBackoff || reminders.Count >= maxCount.Value || skipped + unreadable.Count == unusable || rows < limit)
                 break;
         }
 
@@ -411,7 +437,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
             var cancelledKeys = new HashSet<ReminderKey>();
             await using (var selectCommand = connection.CreateCommand())
             {
-                selectCommand.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
+                selectCommand.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName, _hasRetryPolicyColumn);
                 selectCommand.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 _dialect.AddParameter(selectCommand, "@ShardRegionName", entity.ShardRegionName);
                 _dialect.AddParameter(selectCommand, "@EntityId", entity.EntityId);
@@ -450,7 +476,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         await using var connection = await CreateConnectionAsync(cancellationToken);
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
+        command.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName, _hasRetryPolicyColumn);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@ShardRegionName", entity.ShardRegionName);
         _dialect.AddParameter(command, "@EntityId", entity.EntityId);
@@ -500,7 +526,7 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         await using var connection = await CreateConnectionAsync(cancellationToken);
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = _dialect.GetTimedOutAckRemindersSql(_settings.SchemaName, _settings.TableName, maxCount.Value);
+        command.CommandText = _dialect.GetTimedOutAckRemindersSql(_settings.SchemaName, _settings.TableName, maxCount.Value, _hasRetryPolicyColumn);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@Now", now.UtcDateTime);
 
@@ -758,30 +784,38 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
                 $"{nameof(SqlServerReminderStorageSettings)}.{nameof(SqlServerReminderStorageSettings.ConnectionFactory)} returned null.");
     }
 
-    private Task EnsureInitializedAsync(CancellationToken cancellationToken)
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {
-        if (_initialized || !_settings.AutoInitialize)
-            return Task.CompletedTask;
+        if (_initialized)
+            return;
 
-        lock (_initLock)
+        await _initLock.WaitAsync(cancellationToken);
+        try
         {
             if (_initialized)
-                return Task.CompletedTask;
+                return;
 
-            Task.Run(async () =>
+            await using var connection = await CreateConnectionAsync(cancellationToken);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
+            if (_settings.AutoInitialize)
             {
-                await using var connection = await CreateConnectionAsync(cancellationToken);
-                await connection.OpenAsync(cancellationToken);
-                await using var command = connection.CreateCommand();
                 command.CommandText = _dialect.GetCreateTableSql(_settings.SchemaName, _settings.TableName);
-                command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 await command.ExecuteNonQueryAsync(cancellationToken);
-            }, cancellationToken).Wait(cancellationToken);
-
+            }
+            command.CommandText = "SELECT COL_LENGTH(@TableName, 'RetryPolicy');";
+            _dialect.AddParameter(command, "@TableName", $"[{_settings.SchemaName}].[{_settings.TableName}]");
+            var columnLength = await command.ExecuteScalarAsync(cancellationToken);
+            _hasRetryPolicyColumn = columnLength is not null and not DBNull;
+            if (!_hasRetryPolicyColumn)
+                _log.Warning(RetryPolicyUpgradeInstructions);
             _initialized = true;
         }
-
-        return Task.CompletedTask;
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     private void BindReminderParameters(System.Data.Common.DbCommand command, int index, ScheduledReminder reminder)
@@ -798,6 +832,8 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
         _dialect.AddParameter(command, $"@Manifest{index}", manifest ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@Payload{index}", payload);
         _dialect.AddParameter(command, $"@AttemptCount{index}", reminder.AttemptCount);
+        if (_hasRetryPolicyColumn)
+            _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
         _dialect.AddParameter(command, $"@LastFailureReason{index}", reminder.LastFailureReason ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@MaxDeliveryWindowTicks{index}", reminder.MaxDeliveryWindow?.Ticks ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@DeliveryDeadlineUtc{index}", reminder.DeliveryDeadlineUtc?.UtcDateTime ?? (object)DBNull.Value);
@@ -960,7 +996,8 @@ public sealed class SqlServerReminderStorage : IConditionalReminderMutationStora
             lastFailureReason,
             maxDeliveryWindow,
             deliveryDeadlineUtc,
-            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)));
+            new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)))
+        { RetryPolicy = _hasRetryPolicyColumn ? (ReminderRetryPolicy)reader.GetInt32(reader.GetOrdinal("RetryPolicy")) : default };
     }
 
     private sealed class UnreadablePayloadException(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,
