@@ -1,3 +1,38 @@
+#### 1.5.75 November 16th, 2026 ####
+
+Akka.NET v1.5.75 brings TLS certificate rotation to the DotNetty transport, ports Akka.Reminders to the 1.5 line, and fixes two Akka.Persistence ordering bugs plus two TLS validation gaps.
+
+**Akka.Remote / TLS**
+* [Rotate DotNetty TLS certificates without a restart](https://github.com/akkadotnet/akka.net/pull/8960) - A node can now pick up a renewed TLS certificate with no restart. Set `akka.remote.dot-netty.tcp.ssl.certificate.common-name` to find the certificate in a store by name, or point `ssl.certificate.path` at a folder of certificate files, and place the renewed certificate beside the old one. In code, use `DotNettySslSetup.FromSource` with `TlsCertificateSource`, or `SslOptions.CertificateSource` in Akka.Hosting. Existing TLS setups are unchanged.
+* [Add `TlsCertificateSource` for TLS certificate rotation](https://github.com/akkadotnet/akka.net/pull/8959) - The new `Akka.IO.TlsCertificateSource` resolves a certificate from a store common name, a thumbprint, a single file, or a folder of files, and re-checks it once a minute. A certificate that cannot be used is judged again at the next look-up, so granting access to a private key later is picked up. The source never disposes a certificate it has published. PEM files need the `net6.0` target; the `netstandard2.0` build skips them and logs why.
+* [Security fix: `CertificateValidation.ValidateHostname(expectedHostname)` now enforces the expected hostname](https://github.com/akkadotnet/akka.net/pull/8958) - In v1.5.74 and earlier this validator logged a warning and did not compare `expectedHostname` with the certificate, so a node that used it to check inbound client certificates accepted every client certificate. It now rejects any certificate that does not match the name, by the rules of .NET's `X509Certificate2.MatchesHostname`. **Behavior change:** a certificate that does not match now fails the TLS handshake, and on the dialing side that shuts the `ActorSystem` down with exit code 79. `ValidateHostname()` without an argument is unchanged.
+* [Security fix: `SslOptions.CustomValidator` in Akka.Remote.Hosting now applies when the certificate is set by file path or thumbprint](https://github.com/akkadotnet/akka.net/pull/8963) - In earlier versions the validator only ran when `SslOptions.X509Certificate` was set, and was otherwise ignored without a warning. **Behavior change:** the validator now runs, so a peer it rejects fails the TLS handshake. A `CustomValidator` with no certificate in the options now fails at startup with a `ConfigurationException`, and the certificate loads when `WithRemoting` runs rather than when the `ActorSystem` starts.
+* [Log an unexpected failure of the once-a-minute TLS certificate check](https://github.com/akkadotnet/akka.net/pull/8972) - The check's catch block swallowed any unexpected exception without a trace. The source already logs every failure it expects, so anything reaching this catch is a bug, and it now logs a warning. The node keeps its current certificate, as before.
+
+**Akka.Reminders**
+* [Port Akka.Reminders to v1.5](https://github.com/akkadotnet/akka.net/pull/8952) - Akka.Reminders now ships on the 1.5 line, dual-targeted at `netstandard2.0` and `net10.0`. This is a port rather than a backport: the module is new to 1.5, so the whole thing was re-targeted onto the branch. `netstandard2.0` covers .NET Framework 4.8 through .NET 10 with no gap and matches what Akka.NET v1.5 itself ships. Package IDs keep the `Akka.Reminders*` names. AOT is not supported on Akka.NET 1.5, so the module carries no AOT annotations here.
+* [End every older live occurrence when a newer one is sent](https://github.com/akkadotnet/akka.net/pull/8971) - A recurring reminder could deliver an older occurrence after a newer one when its interval was well below `MaxSlippage` and its shard region was missing for a while and then came back. The recipient got the newer occurrence and then the older one, and both acknowledgements succeeded. When the newest occurrence of a series moves to `AwaitingAck`, every older live occurrence of that series now expires in the same storage commit. Fixes [#8965](https://github.com/akkadotnet/akka.net/issues/8965).
+* [Cap the older occurrences one send ends at 256](https://github.com/akkadotnet/akka.net/pull/8975) - The fix above expires `ceil(earliness / interval)` older occurrences per early send with no upper bound, and Reminders accepts any interval above zero. A 1 ms interval put about 5,000 expiries in one commit, and a sub-millisecond interval could put millions into the scheduler's memory. The cap is 256 per send, nearest first. No interval of about 20 ms or more at the default 5 s `MaxSlippage` can reach it.
+
+**Akka.Persistence**
+* [Do not run the `PersistAll` completion callback when the journal rejects the batch](https://github.com/akkadotnet/akka.net/pull/8950) - The completion callback of a `PersistAll` or `PersistAllAsync` call ran even when the journal rejected the batch, so an actor could act on a write that never happened. The defect was present since 1.5.57. Fixes [#8948](https://github.com/akkadotnet/akka.net/issues/8948).
+* [Run stashed commands in order when an async persist handler completes asynchronously](https://github.com/akkadotnet/akka.net/pull/8943) - A persistent actor ran stashed commands out of order when an async `Persist` handler, or the async completion of `PersistAll`, did not complete synchronously: two calls unstashed in the same turn. These overloads first shipped in 1.5.57. Fixes [#8942](https://github.com/akkadotnet/akka.net/issues/8942).
+
+**Docs**
+* [TLS certificate rotation article](https://github.com/akkadotnet/akka.net/pull/8961) - New article covering how a node picks its certificate and when a renewed one is used, how to rotate, changing an existing setup, trust by CA and name, loading from Azure Key Vault, rotating with a rolling restart, and troubleshooting. It leads with Akka.Hosting, then HOCON, then code. `security.md` now says which certificate options can rotate without a restart, and no longer claims that revocation is checked, which the DotNetty transport does not do.
+* [Correct the `CustomValidator` note in the rotation article](https://github.com/akkadotnet/akka.net/pull/8970) - The article said a `CustomValidator` is not applied to a thumbprint or a single file set through the Akka.Hosting options. Since [#8963](https://github.com/akkadotnet/akka.net/pull/8963) it is.
+
+**Build and tests**
+* [Skip the simultaneous-disassociate graceful-close spec on .NET Framework](https://github.com/akkadotnet/akka.net/pull/8900) - On net48 the tests load Akka.Remote's `netstandard2.0` build, where `HalfClose` falls back to a full close. When both sides disassociate at once, one side can close while the other's frames are still unread and its kernel sends an RST, so the spec failed intermittently. The two sibling "no reset" tests in the class already skip on .NET Framework for the same reason. This changes no product code.
+
+1 contributor since release 1.5.74
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 13 | 40157 | 552 | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.75, [click here](https://github.com/akkadotnet/akka.net/milestone/158?closed=1).
+
 #### 1.5.74 November 5th, 2026 ####
 
 Akka.NET v1.5.74 backports a batch of Akka.Streams, Cluster.Sharding, Cluster.Tools, Persistence and Hosting bug fixes from `dev`, plus a large set of de-flaked tests. It also moves NuGet publishing to GitHub Actions.

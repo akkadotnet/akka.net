@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.74</VersionPrefix>
+    <VersionPrefix>1.5.75</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -57,54 +57,38 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.74 backports a batch of Akka.Streams, Cluster.Sharding, Cluster.Tools, Persistence and Hosting bug fixes from `dev`, plus a large set of de-flaked tests. It also moves NuGet publishing to GitHub Actions.
+    <PackageReleaseNotes>Akka.NET v1.5.75 brings TLS certificate rotation to the DotNetty transport, ports Akka.Reminders to the 1.5 line, and fixes two Akka.Persistence ordering bugs plus two TLS validation gaps.
 
-**Akka.Streams**
-* [Ignore `Dispose()` on the ActorSystem's shared default materializer](https://github.com/akkadotnet/akka.net/pull/8886) - `system.Materializer()` and `ActorMaterializer.Create(system)` with no custom settings return one materializer that the `ActorSystem` owns. Disposing it, for example in a `using` block, through a scoped DI registration, or in an actor's `PostStop`, shut it down for every caller until the system restarted. `Dispose()` on that shared instance is now ignored. The `ActorSystem` still shuts it down on termination, and an explicit `Shutdown()` still stops it. Materializers created with custom settings or on an `IActorContext` behave as before.
-* [Fix `Flow.Setup` input forwarding](https://github.com/akkadotnet/akka.net/pull/8839) - `Flow.Setup` grabbed upstream elements but never pushed them into the flow it built, so they were lost.
-* [Fix inherited attributes in deferred stream operators](https://github.com/akkadotnet/akka.net/pull/8842) - `LazyFlow`, `LazySink` and `Source.FromTaskSource` now materialize their inner graph with the attributes of the enclosing graph, so dispatcher, supervision and other attributes apply to it.
-* [Honor `StreamRefAttributes` on `SourceRef`](https://github.com/akkadotnet/akka.net/pull/8879) - The `FinalTerminationSignalDeadline`, `BufferCapacity` and `DemandRedeliveryInterval` attributes now take effect on a `SourceRef`. Before, only `SubscriptionTimeout` did. Fixes [#8878](https://github.com/akkadotnet/akka.net/issues/8878).
-* [Read `final-termination-signal-deadline` from HOCON](https://github.com/akkadotnet/akka.net/pull/7834) - `StreamRefSettings.FinalTerminationSignalDeadline` was never loaded from configuration and was always zero.
-* [Stage correctness fixes](https://github.com/akkadotnet/akka.net/pull/8876):
-  * `UnfoldFlow` no longer hangs on its initial seed ([#7867](https://github.com/akkadotnet/akka.net/pull/7867), [#7906](https://github.com/akkadotnet/akka.net/pull/7906)).
-  * `KeepAlive` (`IdleInject`) no longer injects over an element that upstream already has ready, and its idle deadline starts at the first pull instead of at materialization ([#7863](https://github.com/akkadotnet/akka.net/pull/7863), [#7881](https://github.com/akkadotnet/akka.net/pull/7881)).
-  * `MergePrioritized` keeps the configured priority ratios ([#7872](https://github.com/akkadotnet/akka.net/pull/7872)).
-  * `RestartWithBackoff` sets its reset deadline before starting the inner graph, so a synchronous completion doesn't see a stale deadline ([#7861](https://github.com/akkadotnet/akka.net/pull/7861)).
-  * `Source.Lazily` fails its materialized task with the factory's exception instead of a misleading "stopped without completing" error ([#8843](https://github.com/akkadotnet/akka.net/pull/8843)).
-  * `PartitionHub` consumers report the real failure when a hub callback task is cancelled, instead of failing with a null exception ([#8064](https://github.com/akkadotnet/akka.net/pull/8064)).
-  * The outgoing TCP stage completes cleanly when upstream finishes before the connection is established, instead of logging a `NullReferenceException` ([#8628](https://github.com/akkadotnet/akka.net/pull/8628)).
+**Akka.Remote / TLS**
+* [Rotate DotNetty TLS certificates without a restart](https://github.com/akkadotnet/akka.net/pull/8960) - A node can now pick up a renewed TLS certificate with no restart. Set `akka.remote.dot-netty.tcp.ssl.certificate.common-name` to find the certificate in a store by name, or point `ssl.certificate.path` at a folder of certificate files, and place the renewed certificate beside the old one. In code, use `DotNettySslSetup.FromSource` with `TlsCertificateSource`, or `SslOptions.CertificateSource` in Akka.Hosting. Existing TLS setups are unchanged.
+* [Add `TlsCertificateSource` for TLS certificate rotation](https://github.com/akkadotnet/akka.net/pull/8959) - The new `Akka.IO.TlsCertificateSource` resolves a certificate from a store common name, a thumbprint, a single file, or a folder of files, and re-checks it once a minute. A certificate that cannot be used is judged again at the next look-up, so granting access to a private key later is picked up. The source never disposes a certificate it has published. PEM files need the `net6.0` target; the `netstandard2.0` build skips them and logs why.
+* [Security fix: `CertificateValidation.ValidateHostname(expectedHostname)` now enforces the expected hostname](https://github.com/akkadotnet/akka.net/pull/8958) - In v1.5.74 and earlier this validator logged a warning and did not compare `expectedHostname` with the certificate, so a node that used it to check inbound client certificates accepted every client certificate. It now rejects any certificate that does not match the name, by the rules of .NET's `X509Certificate2.MatchesHostname`. **Behavior change:** a certificate that does not match now fails the TLS handshake, and on the dialing side that shuts the `ActorSystem` down with exit code 79. `ValidateHostname()` without an argument is unchanged.
+* [Security fix: `SslOptions.CustomValidator` in Akka.Remote.Hosting now applies when the certificate is set by file path or thumbprint](https://github.com/akkadotnet/akka.net/pull/8963) - In earlier versions the validator only ran when `SslOptions.X509Certificate` was set, and was otherwise ignored without a warning. **Behavior change:** the validator now runs, so a peer it rejects fails the TLS handshake. A `CustomValidator` with no certificate in the options now fails at startup with a `ConfigurationException`, and the certificate loads when `WithRemoting` runs rather than when the `ActorSystem` starts.
+* [Log an unexpected failure of the once-a-minute TLS certificate check](https://github.com/akkadotnet/akka.net/pull/8972) - The check's catch block swallowed any unexpected exception without a trace. The source already logs every failure it expects, so anything reaching this catch is a bug, and it now logs a warning. The node keeps its current certificate, as before.
 
-**Akka.Cluster.Sharding**
-* [Defer `ShardingProducerController` cleanup until the delivery child terminates](https://github.com/akkadotnet/akka.net/pull/8869) - A message that arrived while an idle entity's `ProducerController` was stopping tried to create a new child with the same name, threw `InvalidActorNameException` and restarted the controller. Messages for that entity are now buffered until the old child has terminated. Fixes [#8850](https://github.com/akkadotnet/akka.net/issues/8850).
-* [Preserve owner termination during shard handoff](https://github.com/akkadotnet/akka.net/pull/8865) - When the region that owned a shard terminated mid-rebalance, the handoff kept sending `HandOff` to the dead region and stalled until `handoff-timeout`. It now remembers the termination and finishes the handoff.
-
-**Akka.Cluster.Tools**
-* [Handle a failed lease release when `ClusterSingletonManager` leaves Oldest](https://github.com/akkadotnet/akka.net/pull/8065) - A faulted `Lease.Release()` became an unhandled `Status.Failure`, so nobody saw that the release failed. It is now handled and logged.
+**Akka.Reminders**
+* [Port Akka.Reminders to v1.5](https://github.com/akkadotnet/akka.net/pull/8952) - Akka.Reminders now ships on the 1.5 line, dual-targeted at `netstandard2.0` and `net10.0`. This is a port rather than a backport: the module is new to 1.5, so the whole thing was re-targeted onto the branch. `netstandard2.0` covers .NET Framework 4.8 through .NET 10 with no gap and matches what Akka.NET v1.5 itself ships. Package IDs keep the `Akka.Reminders*` names. AOT is not supported on Akka.NET 1.5, so the module carries no AOT annotations here.
+* [End every older live occurrence when a newer one is sent](https://github.com/akkadotnet/akka.net/pull/8971) - A recurring reminder could deliver an older occurrence after a newer one when its interval was well below `MaxSlippage` and its shard region was missing for a while and then came back. The recipient got the newer occurrence and then the older one, and both acknowledgements succeeded. When the newest occurrence of a series moves to `AwaitingAck`, every older live occurrence of that series now expires in the same storage commit. Fixes [#8965](https://github.com/akkadotnet/akka.net/issues/8965).
+* [Cap the older occurrences one send ends at 256](https://github.com/akkadotnet/akka.net/pull/8975) - The fix above expires `ceil(earliness / interval)` older occurrences per early send with no upper bound, and Reminders accepts any interval above zero. A 1 ms interval put about 5,000 expiries in one commit, and a sub-millisecond interval could put millions into the scheduler's memory. The cap is 256 per send, nearest first. No interval of about 20 ms or more at the default 5 s `MaxSlippage` can reach it.
 
 **Akka.Persistence**
-* [Fix race condition in `ReceivePersistentActor` async handlers](https://github.com/akkadotnet/akka.net/pull/7873) - The `RunTask` continuation could run on the thread pool and touch actor state off the actor thread. It now runs synchronously, as intended.
+* [Do not run the `PersistAll` completion callback when the journal rejects the batch](https://github.com/akkadotnet/akka.net/pull/8950) - The completion callback of a `PersistAll` or `PersistAllAsync` call ran even when the journal rejected the batch, so an actor could act on a write that never happened. The defect was present since 1.5.57. Fixes [#8948](https://github.com/akkadotnet/akka.net/issues/8948).
+* [Run stashed commands in order when an async persist handler completes asynchronously](https://github.com/akkadotnet/akka.net/pull/8943) - A persistent actor ran stashed commands out of order when an async `Persist` handler, or the async completion of `PersistAll`, did not complete synchronously: two calls unstashed in the same turn. These overloads first shipped in 1.5.57. Fixes [#8942](https://github.com/akkadotnet/akka.net/issues/8942).
 
-**Akka**
-* [Fix `ByteString.CopyTo(Span/Memory)` throwing "Destination is too short"](https://github.com/akkadotnet/akka.net/pull/8845) - The `Span&lt;byte&gt;` and `Memory&lt;byte&gt;` overloads threw whenever a copy stopped partway through a segment, including when the destination was sized exactly to `count`. Fixes [#8469](https://github.com/akkadotnet/akka.net/issues/8469).
-* [Add `Match` extension methods for `Option&lt;T&gt;`](https://github.com/akkadotnet/akka.net/pull/8774) - New `Match` overloads in `Akka.Util.Extensions` take a function or action for the `Some` and `None` cases.
-
-**Akka.Hosting**
-* [MAUI detection no longer throws under InvariantGlobalization](https://github.com/akkadotnet/akka.net/pull/8783) - `AddAkka` threw `CultureNotFoundException` at startup when `InvariantGlobalization` was on and a satellite assembly, such as one from Microsoft.Data.SqlClient, was loaded.
+**Docs**
+* [TLS certificate rotation article](https://github.com/akkadotnet/akka.net/pull/8961) - New article covering how a node picks its certificate and when a renewed one is used, how to rotate, changing an existing setup, trust by CA and name, loading from Azure Key Vault, rotating with a rolling restart, and troubleshooting. It leads with Akka.Hosting, then HOCON, then code. `security.md` now says which certificate options can rotate without a restart, and no longer claims that revocation is checked, which the DotNetty transport does not do.
+* [Correct the `CustomValidator` note in the rotation article](https://github.com/akkadotnet/akka.net/pull/8970) - The article said a `CustomValidator` is not applied to a thumbprint or a single file set through the Akka.Hosting options. Since [#8963](https://github.com/akkadotnet/akka.net/pull/8963) it is.
 
 **Build and tests**
-* [Publish to NuGet via GitHub Actions trusted publishing](https://github.com/akkadotnet/akka.net/pull/8893) - Release packages are now pushed from GitHub Actions using NuGet trusted publishing (OIDC) instead of from Azure DevOps with a long-lived API key. Package contents are unchanged.
-* De-flaked Remote, Hosting, core, Streams, Persistence, DI, Cluster.Sharding, Cluster.Tools, DistributedData and multi-node specs ([#8881](https://github.com/akkadotnet/akka.net/pull/8881), [#8882](https://github.com/akkadotnet/akka.net/pull/8882), [#8883](https://github.com/akkadotnet/akka.net/pull/8883), [#8884](https://github.com/akkadotnet/akka.net/pull/8884)). These change tests only.
+* [Skip the simultaneous-disassociate graceful-close spec on .NET Framework](https://github.com/akkadotnet/akka.net/pull/8900) - On net48 the tests load Akka.Remote's `netstandard2.0` build, where `HalfClose` falls back to a full close. When both sides disassociate at once, one side can close while the other's frames are still unread and its kernel sends an RST, so the spec failed intermittently. The two sibling "no reset" tests in the class already skip on .NET Framework for the same reason. This changes no product code.
 
-4 contributors since release 1.5.73
+1 contributor since release 1.5.74
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 65 | 3030 | 1265 | Aaron Stannard |
-| 4 | 229 | 87 | Gregorius Soedharmo |
-| 3 | 317 | 12 | Ariel Fischer |
-| 2 | 48 | 9 | Matt Kotsenas |
+| 13 | 40157 | 552 | Aaron Stannard |
 
-To see the full set of changes in Akka.NET v1.5.74, [click here](https://github.com/akkadotnet/akka.net/milestone/157?closed=1).</PackageReleaseNotes>
+To see the full set of changes in Akka.NET v1.5.75, [click here](https://github.com/akkadotnet/akka.net/milestone/158?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
