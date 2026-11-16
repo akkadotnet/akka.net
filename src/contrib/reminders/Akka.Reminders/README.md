@@ -538,7 +538,7 @@ Task<ReminderScheduled> ScheduleRecurringReminderAsync(
 ```
 
 Schedules a recurring reminder that fires repeatedly at the specified interval. Recurring reminders are
-latest-only: each occurrence expires when the next occurrence is delivered or becomes due, or sooner if `maxDeliveryWindow`
+latest-only: each occurrence expires when a later occurrence is delivered or the next one becomes due, or sooner if `maxDeliveryWindow`
 produces an earlier deadline.
 
 #### Cancel Reminder
@@ -856,7 +856,7 @@ To test this behavior on the JIT before you publish, turn the switch off in your
 6. Message wrapped in `ReminderEnvelope<T>` and delivered to the target shard region via `Tell`
 7. Recipient calls `IReminderClient.AckAsync(envelope)` to confirm receipt for that specific `DueTimeUtc`
 8. If ack times out: delivery retried with exponential backoff while the occurrence remains before deadline
-9. Recurring reminders are latest-only; older occurrences expire when the next occurrence is delivered or becomes due
+9. Recurring reminders are latest-only; older occurrences expire when a later occurrence is delivered or the next one becomes due
 10. Completed/cancelled/expired reminders are pruned periodically based on PruneInterval setting
 
 ### Reliability Features

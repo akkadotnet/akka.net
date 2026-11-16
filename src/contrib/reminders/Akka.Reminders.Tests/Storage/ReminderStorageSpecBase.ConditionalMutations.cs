@@ -104,4 +104,41 @@ public abstract partial class ReminderStorageSpecBase
         Assert.Equal(ReminderCompletionStatus.Pending,
             (await Storage.GetReminderOccurrenceStatusAsync(entity, previous.Key, now, ct))?.CompletionStatus);
     }
+
+    // #8965: the scheduler sends the newest slot of a series and, in the same commit, ends every older slot
+    // that may still be live. Their keys come from the interval, not from storage, so some name rows that
+    // are already acked or were never written.
+    [Fact]
+    public async Task CommitReminderMutations_ShouldEndSeveralOlderSlotsOfOneSeries_WhileMovingTheNewestToAwaitingAck()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var now = WholeSecondNow();
+        var entity = CreateTestEntity("series-slots");
+        var key = new ReminderKey("series");
+        var interval = TimeSpan.FromSeconds(2);
+        ScheduledReminder Slot(int n) => new(entity, key, now.AddSeconds(2 * n), "payload", interval,
+            DeliveryDeadlineUtc: now.AddSeconds(2 * n + 2), OccurrenceDueTimeUtc: now.AddSeconds(2 * n));
+        async Task<ReminderCompletionStatus?> StatusAsync(int n)
+            => (await Storage!.GetReminderOccurrenceStatusAsync(entity, key, Slot(n).DueTimeUtc, ct))?.CompletionStatus;
+
+        // Slot 1 is a Pending retry, 2 awaits its ack, 3 was acked, 4 was never written, 5 is the newest.
+        await Storage!.UpsertReminderOccurrencesAsync([Slot(1), Slot(2), Slot(3), Slot(5)], ct);
+        Assert.True(await Storage.MarkRemindersAsAwaitingAckAsync(
+            new[] { 2, 3 }.Select(n => new AwaitingAckReminder(entity, key, Slot(n).DueTimeUtc, now, now.AddSeconds(30))), ct));
+        Assert.True((await Storage.AcknowledgeReminderAsync(entity, key, Slot(3).DueTimeUtc, now, ct)).Success);
+
+        var batch = new ReminderMutationBatch([], [], [new AwaitingAckReminder(entity, key, Slot(5).DueTimeUtc, now, now.AddSeconds(30))])
+        {
+            PendingInserts = [Slot(6)],
+            ActiveCompletions = [.. new[] { 4, 3, 2, 1 }.Select(n => new CompletedReminder(entity, key, Slot(n).DueTimeUtc, now, ReminderCompletionStatus.Expired))]
+        };
+        Assert.True(await Storage.CommitReminderMutationsAsync(batch, ct));
+
+        Assert.Equal(ReminderCompletionStatus.Expired, await StatusAsync(1));
+        Assert.Equal(ReminderCompletionStatus.Expired, await StatusAsync(2));
+        Assert.Equal(ReminderCompletionStatus.Delivered, await StatusAsync(3));
+        Assert.Null(await StatusAsync(4));
+        Assert.Equal(ReminderCompletionStatus.AwaitingAck, await StatusAsync(5));
+        Assert.Equal(ReminderCompletionStatus.Pending, await StatusAsync(6));
+    }
 }
