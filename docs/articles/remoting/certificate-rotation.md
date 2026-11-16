@@ -170,7 +170,7 @@ The peer policy works as it does with a fixed certificate. Rotation changes only
 
 A profile holds either a certificate or a source, so you cannot set both.
 
-The rest of this article applies to Artery too: how the node picks its certificate, the look-up every 10 seconds, the check once a minute, the wait at startup, the fallback to the last good certificate, and the log lines. Artery differs in two ways. It has no HOCON `path` or `common-name` keys. And a node that fails a TLS handshake it started does not shut down: that connection fails, and the node stays up.
+The rest of this article applies to Artery too: how the node picks its certificate, the look-up every 10 seconds, the check once a minute, the wait at startup, and the fallback to the last good certificate. The log lines have the same text, with two differences. Artery names the peer by its socket endpoint, such as `[[::ffff:10.0.0.7]:52814]`, not by an `akka.tcp://` address. And the log source is an Akka.IO connection actor, such as `/system/IO-TCP/...`, not the transport. See [A Node Logs "Cannot Build a TLS Connection"](#a-node-logs-cannot-build-a-tls-connection). Artery differs in two more ways. It has no HOCON `path` or `common-name` keys. And a node that fails a TLS handshake it started does not shut down: that connection fails, and the node stays up.
 
 ## How a Node Picks Its Certificate
 
@@ -647,6 +647,14 @@ After startup, a node that finds no usable certificate keeps using its last cert
 ```text
 Cannot build a TLS connection to [akka.tcp://MySystem@10.0.0.5:4053]: No certificate in folder '/etc/akka/tls' can be used as a client and server. Rejected: 2531C78C51E5041D02564697A88AF8BC7A7CE3E3 (subject 'CN=akka-node.contoso.com', expires 2027-03-01 12:00:00Z) in file 'node.pfx': it expired at 2027-03-01 12:00:00Z.
 ```
+
+On Artery, the text is the same, but the peer is a socket endpoint and the log source is the Akka.IO connection actor. An inbound failure reads like this, with the cause as above:
+
+```text
+[ERROR][akka://MySystem@10.0.0.5:4053/system/IO-TCP/tcp-listener-0/$a] Cannot build a TLS connection for the incoming connection from [[::ffff:10.0.0.7]:52814]: No certificate in folder '/etc/akka/tls' can be used as a client and server. ...
+```
+
+Akka.IO also writes `Could not initialize TCP transport for [...]` for that connection, at Debug level only, so the error above is the one line you see at Warning level and above.
 
 For a connection the node accepts, it reads `Cannot build a TLS connection for the incoming connection from [...]:` and then the cause. The cause carries the same details as the startup failure, with the same job text. A peer that dials this node sees its TLS handshake fail, and on the DotNetty transport a node that fails a handshake it started shuts down with exit code 79 (see below). Add a usable certificate.
 
