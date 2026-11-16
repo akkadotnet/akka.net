@@ -172,6 +172,11 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
     private DateTimeOffset? _fetchRetryNotBefore;
 
     /// <summary>
+    /// The most older occurrences one early send ends. It bounds the keys a very short interval puts in one commit.
+    /// </summary>
+    private const int MaxSupersededPerSend = 256;
+
+    /// <summary>
     /// In-memory buffer for incoming acks. Acks are NOT written to storage immediately —
     /// they accumulate here and are flushed in batches via FlushBufferedAcksAsync.
     /// Keyed by occurrence identity so duplicate acks for the same occurrence are
@@ -1178,6 +1183,10 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
     /// interval after it is due, so the slot <c>n</c> steps back is still open while
     /// <c>n * interval &lt; earliness + interval</c>. That is <c>ceil(earliness / interval)</c> slots, at most
     /// <c>MaxSlippage / interval + 1</c>. Sent on time or late, nothing older is live.
+    /// It yields at most <see cref="MaxSupersededPerSend"/> (256) due times, so one send never puts more than that in a
+    /// commit. For a recurring reminder whose interval is shorter than <c>MaxSlippage / 256</c> (under about 20 ms at the
+    /// default 5 s), an older occurrence more than 256 intervals back can still be sent after a newer one during a
+    /// shard region outage.
     /// </summary>
     /// <remarks>
     /// Every active row of a series sits on this grid. A slot is only written as <c>due + k * interval</c> from
@@ -1194,7 +1203,7 @@ internal sealed class ReminderScheduler : UntypedActor, IWithTimers, IWithStash
         if (earliness <= 0)
             yield break;
 
-        var slots = (earliness - 1) / interval.Ticks + 1;
+        var slots = Math.Min((earliness - 1) / interval.Ticks + 1, MaxSupersededPerSend);
         var due = reminder.DueTimeUtc;
         for (long slot = 0; slot < slots && due.UtcTicks > interval.Ticks; slot++)
         {
