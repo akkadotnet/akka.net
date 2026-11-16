@@ -355,7 +355,8 @@ namespace Akka.Remote.Transport.DotNetty
             }
             catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
             {
-                // The source logs what it found itself; a connection logs why it cannot be built.
+                // The source logs what it expects itself, so this is unexpected.
+                Log.Warning(ex, "The TLS certificate check that runs once a minute failed. The node keeps its current certificate and checks again in a minute.");
             }
         }
 
