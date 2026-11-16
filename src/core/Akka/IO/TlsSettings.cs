@@ -110,6 +110,13 @@ namespace Akka.IO
             return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, value, _certificateProvider);
         }
 
+        /// <summary>Internal: returns a copy whose certificate comes from <paramref name="certificateProvider"/>.</summary>
+        internal TlsClientSettings WithCertificateProvider(TlsCertificateProvider certificateProvider)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, TargetHost, certificateProvider);
+        }
+
         internal SslClientAuthenticationOptions CreateAuthenticationOptions(string targetHost, string remotePeer,
             ILoggingAdapter log)
         {
@@ -213,6 +220,13 @@ namespace Akka.IO
         public TlsServerSettings WithProtocols(SslProtocols value) =>
             new(_certificate, ClientValidation, HandshakeTimeout, value, _certificateProvider);
 
+        /// <summary>Internal: returns a copy whose certificate comes from <paramref name="certificateProvider"/>.</summary>
+        internal TlsServerSettings WithCertificateProvider(TlsCertificateProvider certificateProvider)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(null, ClientValidation, HandshakeTimeout, Protocols, certificateProvider);
+        }
+
         internal SslServerAuthenticationOptions CreateAuthenticationOptions(string remotePeer, ILoggingAdapter log)
         {
             ArgumentNullException.ThrowIfNull(remotePeer);
@@ -261,6 +275,37 @@ namespace Akka.IO
     /// <param name="log">The logger of the connection.</param>
     internal delegate X509Certificate2 TlsCertificateProvider(TlsConnectionDirection direction, string remotePeer,
         ILoggingAdapter log);
+
+    /// <summary>
+    /// Internal: marks a certificate provider failure that the provider already reported (logged), so Akka.IO does
+    /// not log it again at Warning for every connection. The mark rides on the exception the provider rethrows, so
+    /// the connection still fails with that exception.
+    /// </summary>
+    internal static class TlsCertificateProviderFailure
+    {
+        private const string ReportedKey = "Akka.IO.TlsCertificateProviderFailure.Reported";
+
+        /// <summary>Marks <paramref name="exception"/> as already reported by the certificate provider.</summary>
+        internal static void MarkReported(Exception exception)
+        {
+            // A custom exception may have read-only data. It then logs as any other failure does.
+            if (!exception.Data.IsReadOnly)
+                exception.Data[ReportedKey] = true;
+        }
+
+        /// <summary>True when <paramref name="exception"/>, or an exception it wraps, was marked by the provider.</summary>
+        internal static bool IsReported(Exception? exception)
+        {
+            for (var depth = 0; exception is not null && depth < 8; depth++)
+            {
+                if (exception.Data.Contains(ReportedKey))
+                    return true;
+                exception = exception.InnerException;
+            }
+
+            return false;
+        }
+    }
 
     internal static class TlsSettingsValidation
     {

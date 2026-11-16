@@ -315,8 +315,8 @@ namespace Akka.Remote.Tests.Artery
             var client = StartHostnameClient();
             await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(client, server, timeout: TimeSpan.FromSeconds(5)));
             client.Seen.Should().Contain(wrongName.Thumbprint, "the client was shown the new certificate and rejected it");
-            server.Actors.WhenTerminated.IsCompleted.Should().BeFalse("a failed handshake of a peer does not shut the server down");
-            client.Actors.WhenTerminated.IsCompleted.Should().BeFalse("unlike DotNetty, Artery does not shut down a node whose handshake failed");
+            AssertStaysUp(server, "a failed handshake of a peer does not shut the server down");
+            AssertStaysUp(client, "unlike DotNetty, Artery does not shut down a node whose handshake failed");
         }
 
         [Theory(DisplayName = "Should_Connect_On_A_New_Connection_When_The_Source_Rotates_To_A_Newer_Certificate_With_The_Right_Name")]
@@ -404,8 +404,8 @@ namespace Akka.Remote.Tests.Artery
             await Assert.ThrowsAnyAsync<Exception>(async () => await warnings.FishForMessageAsync<Warning>(
                 w => w.Message.ToString()!.Contains("keeps using the previous certificate"), TimeSpan.FromSeconds(1)));
 
-            node.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
-            peer.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
+            AssertStaysUp(node);
+            AssertStaysUp(peer);
         }
 
         [Theory(DisplayName = "Should_Fail_That_Connection_And_Stay_Up_When_The_Only_Certificate_Has_Expired")]
@@ -437,9 +437,9 @@ namespace Akka.Remote.Tests.Artery
                 e => e.Message.ToString()!.Contains("incoming connection"), TimeSpan.FromSeconds(5));
             inboundError.Cause.Should().BeAssignableTo<InvalidOperationException>();
 
-            node.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
-            peer.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
-            outboundPeer.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
+            AssertStaysUp(node);
+            AssertStaysUp(peer);
+            AssertStaysUp(outboundPeer);
 
             // The clock is right again, the certificate is in date again, and the node serves again, with no restart:
             // once a look-up has run, as a connection does not wait for one.
@@ -456,6 +456,8 @@ namespace Akka.Remote.Tests.Artery
             var node = StartSourceNode(fixture);
             var errors = CreateTestProbe();
             node.Actors.EventStream.Subscribe(errors, typeof(Error));
+            var warnings = CreateTestProbe();
+            node.Actors.EventStream.Subscribe(warnings, typeof(Warning));
             fixture.Source.UtcNow = () => DateTime.UtcNow.AddHours(2); // the only certificate has expired
             await fixture.RefreshAsync(); // and a look-up has found nothing else
 
@@ -468,7 +470,42 @@ namespace Akka.Remote.Tests.Artery
             first.Message.ToString().Should().StartWith("Cannot build a TLS connection for the incoming connection from [");
             await Assert.ThrowsAnyAsync<Exception>(async () => await errors.FishForMessageAsync<Error>(
                 e => e.Message.ToString()!.Contains("incoming connection"), TimeSpan.FromSeconds(2)));
-            node.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
+
+            // The certificate source already said why, so Akka.IO does not repeat it at Warning for each connection.
+            var ioWarnings = (await warnings
+                    .ReceiveWhileAsync<Warning>(_ => true, max: TimeSpan.FromSeconds(3), idle: TimeSpan.FromSeconds(1))
+                    .ToListAsync())
+                .Where(w => w.Message.ToString()!.Contains("Could not initialize TCP transport"))
+                .ToList();
+            ioWarnings.Should().BeEmpty("the failure was already reported by the certificate source");
+            AssertStaysUp(node);
+        }
+
+        [Fact(DisplayName = "Should_Log_The_No_Certificate_Error_For_Each_Node_When_Two_Nodes_Share_One_Settings_Object")]
+        public async Task Should_log_the_no_certificate_error_for_each_node_when_two_nodes_share_one_settings_object()
+        {
+            var fixture = Open("pkcs12-folder");
+            fixture.Add(Leaf(fixture, 60));
+            var shared = ArteryTlsSettings.Mutual(fixture.Source, TlsPeerPolicy.CustomTrust((c, _, _, _, _) => c is not null && _ca.Trusts(c)));
+            var first = StartNode(_ => shared);
+            var second = StartNode(_ => shared);
+            var firstErrors = CreateTestProbe();
+            first.Actors.EventStream.Subscribe(firstErrors, typeof(Error));
+            var secondErrors = CreateTestProbe();
+            second.Actors.EventStream.Subscribe(secondErrors, typeof(Error));
+            fixture.Source.UtcNow = () => DateTime.UtcNow.AddHours(2); // the only certificate has expired
+            await fixture.RefreshAsync(); // and a look-up has found nothing else
+
+            // One node's limiter must not hide the other node's error.
+            await ConnectAndExpectCloseAsync(first);
+            await ConnectAndExpectCloseAsync(second);
+
+            foreach (var errors in new[] { firstErrors, secondErrors })
+            {
+                var error = await errors.FishForMessageAsync<Error>(
+                    e => e.Message.ToString()!.Contains("incoming connection"), TimeSpan.FromSeconds(5));
+                error.Message.ToString().Should().StartWith("Cannot build a TLS connection for the incoming connection from [");
+            }
         }
 
         // ---- the once-a-minute poll ----
@@ -563,7 +600,7 @@ namespace Akka.Remote.Tests.Artery
             await source.LastRefresh;
             source.ScanCount.Should().Be(2);
             scheduler.Advance(TimeSpan.FromMinutes(1)); // and it keeps running
-            node.Actors.WhenTerminated.IsCompleted.Should().BeFalse();
+            AssertStaysUp(node);
         }
 
         [Fact(DisplayName = "Should_Not_Poll_The_Source_When_The_Bind_Fails")]
@@ -616,6 +653,14 @@ namespace Akka.Remote.Tests.Artery
             await tcp.ConnectAsync("127.0.0.1", RARP.For(node.Actors).Provider.DefaultAddress.Port!.Value);
             var read = Record.ExceptionAsync(() => tcp.GetStream().ReadAsync(new byte[1], 0, 1)).AsTask();
             (await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5)))).Should().BeSameAs(read, "the node must close it at once");
+        }
+
+        // A node that stays up has not terminated and has not started a coordinated shutdown either: a shutdown that
+        // has started but not finished would still leave WhenTerminated incomplete.
+        private static void AssertStaysUp(Node node, string because = "")
+        {
+            CoordinatedShutdown.Get(node.Actors).ShutdownReason.Should().BeNull(because);
+            node.Actors.WhenTerminated.IsCompleted.Should().BeFalse(because);
         }
 
         private SourceFixture Open(string kind)

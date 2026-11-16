@@ -162,6 +162,24 @@ namespace Akka.Remote.Artery
         public ArteryTlsSettings WithProtocols(SslProtocols value) =>
             new(_clientSettings.WithProtocols(value), _serverSettings.WithProtocols(value), _certificateSource);
 
+        /// <summary>
+        /// INTERNAL API. A copy for one Artery transport. It keeps the same <see cref="TlsCertificateSource"/>, which
+        /// holds the picks and look-ups, and gets its own error limiter, so two nodes that share one settings object
+        /// do not hide each other's errors. A fixed-certificate profile has no limiter and returns itself.
+        /// </summary>
+        internal ArteryTlsSettings ForTransport()
+        {
+            if (_certificateSource is null)
+                return this;
+
+            var source = new ArteryCertificateSource(_certificateSource.Source, _certificateSource.Role);
+            // Only a mutual profile presents a certificate when it opens a connection.
+            var client = _certificateSource.Role == TlsCertificateRole.ClientAndServer
+                ? _clientSettings.WithCertificateProvider(source.Present)
+                : _clientSettings;
+            return new ArteryTlsSettings(client, _serverSettings.WithCertificateProvider(source.Present), source);
+        }
+
         internal TlsClientSettings ClientSettings => _clientSettings;
 
         internal TlsServerSettings ServerSettings => _serverSettings;
@@ -232,6 +250,9 @@ namespace Akka.Remote.Artery
                         remotePeer, ex.Message);
                 }
 
+                // Akka.IO fails the connection with this exception. Say it was reported, so Akka.IO does not log it
+                // again at Warning for every connection.
+                TlsCertificateProviderFailure.MarkReported(ex);
                 throw;
             }
         }

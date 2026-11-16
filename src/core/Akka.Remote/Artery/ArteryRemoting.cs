@@ -388,7 +388,8 @@ namespace Akka.Remote.Artery
             _materializer = CreateSystemMaterializer();
             _tcp = System.TcpStream();
             var tlsSetup = System.Settings.Setup.Get<ArteryTlsSetup>();
-            _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings : null;
+            // Each transport gets its own error limiter; two nodes that share one settings object share the source only.
+            _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings.ForTransport() : null;
 
             // A certificate source may need its first look-up before the node can present a certificate. Check it
             // before binding, as the DotNetty transport does, so a node with nothing to present never listens. The

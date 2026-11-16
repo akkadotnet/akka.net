@@ -19,6 +19,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.IO;
 using Akka.TestKit;
 using FluentAssertions;
@@ -416,6 +417,57 @@ namespace Akka.Tests.IO
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }
 
+        [Fact(DisplayName = "Should_Log_A_Warning_When_A_Fixed_Certificate_Handshake_Fails")]
+        public async Task Should_log_a_warning_when_a_fixed_certificate_handshake_fails()
+        {
+            using var serverCertificate = CreateCertificate("localhost", server: true);
+            using var clientCertificate = CreateCertificate("rejected-client", server: false);
+            var logs = CreateTestProbe();
+            Sys.EventStream.Subscribe(logs.Ref, typeof(LogEvent));
+            var listenerHandler = CreateTestProbe();
+            listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
+            {
+                Tls = TlsServerSettings.Mutual(serverCertificate, TlsPeerPolicy.CustomTrust((_, _, _, _, _) => false))
+            });
+            var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
+            var listenerActor = listenerHandler.LastSender;
+
+            await AttemptHandshakeAsync((IPEndPoint)bound.LocalAddress, clientCertificate);
+
+            var log = await FishInitializationFailureAsync(logs);
+            log.LogLevel().Should().Be(LogLevel.WarningLevel, "a fixed certificate has no provider that reported the failure");
+            listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
+            await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
+        }
+
+        [Theory(DisplayName = "Should_Log_A_Certificate_Provider_Failure_At_Debug_Only_When_The_Provider_Already_Reported_It")]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Should_log_a_certificate_provider_failure_at_debug_only_when_the_provider_already_reported_it(bool reported)
+        {
+            using var clientCertificate = CreateCertificate("client", server: false);
+            var failure = new InvalidOperationException("no certificate to present");
+            if (reported)
+                TlsCertificateProviderFailure.MarkReported(failure);
+            var logs = CreateTestProbe();
+            Sys.EventStream.Subscribe(logs.Ref, typeof(LogEvent));
+            var listenerHandler = CreateTestProbe();
+            listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
+            {
+                Tls = TlsServerSettings.FromProvider((_, _, _) => throw failure, clientValidation: null)
+            });
+            var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
+            var listenerActor = listenerHandler.LastSender;
+
+            await AttemptHandshakeAsync((IPEndPoint)bound.LocalAddress, clientCertificate);
+
+            var log = await FishInitializationFailureAsync(logs);
+            log.LogLevel().Should().Be(reported ? LogLevel.DebugLevel : LogLevel.WarningLevel);
+            log.Cause.Should().BeSameAs(failure, "the connection fails with the provider's exception either way");
+            listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
+            await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
+        }
+
         [Fact(DisplayName = "Should_Time_Out_A_Stalled_Handshake_While_A_Later_Connection_Authenticates")]
         public async Task Should_time_out_a_stalled_handshake_while_a_later_connection_authenticates()
         {
@@ -593,6 +645,26 @@ namespace Akka.Tests.IO
             await ExpectTerminatedAsync(connection, TestTimeout);
             (await peerTask.WaitAsync(TestTimeout)).Should().Be(0);
         }
+
+        private static async Task AttemptHandshakeAsync(IPEndPoint endpoint, X509Certificate2 clientCertificate)
+        {
+            using var client = new TcpClient();
+            using var cancellation = new CancellationTokenSource(TestTimeout);
+            await client.ConnectAsync(endpoint.Address, endpoint.Port, cancellation.Token);
+            using var tls = new SslStream(client.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
+            // The node rejects the handshake, which is the case under test: the client sees it fail or see the close.
+            var failure = await Record.ExceptionAsync(async () =>
+            {
+                await tls.AuthenticateAsClientAsync(CreateClientOptions(clientCertificate), cancellation.Token);
+                await ObserveTlsPeerCloseAsync(tls, TimeSpan.FromSeconds(3));
+            });
+            if (failure is not null)
+                failure.Should().Match<Exception>(e => e is AuthenticationException || e is IOException);
+        }
+
+        private static async Task<LogEvent> FishInitializationFailureAsync(Akka.TestKit.TestProbe logs) =>
+            await logs.FishForMessageAsync<LogEvent>(
+                e => e.Message.ToString()!.Contains("Could not initialize TCP transport"), TestTimeout);
 
         private static async Task RunRawTlsServerAsync(
             TcpListener listener,
