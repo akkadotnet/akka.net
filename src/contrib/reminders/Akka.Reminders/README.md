@@ -663,6 +663,68 @@ ReceiveAsync<ReminderEnvelope<DoSomething>>(async envelope =>
 Because duplicates are possible whenever an ack is lost or times out, **consumers must be idempotent**.
 For recurring reminders, dedupe by `(ReminderEntity, ReminderKey, DueTimeUtc)`.
 
+### One-off reminders that must keep retrying
+
+Opt in per reminder when delivery failures must not exhaust the attempt budget:
+
+```csharp
+var scheduled = await client.ScheduleSingleReminderAsync(
+    new ReminderKey("pending-work"),
+    dueAt,
+    new ProcessPendingWork(workId),
+    retryPolicy: ReminderRetryPolicy.UntilAcknowledged,
+    ct: cancellationToken);
+
+if (scheduled.ResponseCode != ReminderScheduleResponseCode.Success)
+{
+    // Acceptance is unknown on timeout/storage error; retry scheduling according to application policy.
+    throw new InvalidOperationException(scheduled.Message);
+}
+```
+
+The existing overload retains `MaxDeliveryAttempts`. `UntilAcknowledged` is supported for one-off
+reminders and keeps retrying missing-region failures, acknowledgement timeouts, and negative
+acknowledgements with the configured exponential backoff and cap. The policy survives scheduler
+restarts and singleton handoff. Consumers must remain idempotent.
+
+**Delivery windows still apply.** Passing `maxDeliveryWindow: null` inherits
+`DefaultMaxDeliveryWindow`. For indefinite retries, leave both unset. Explicit cancellation or
+replacement also ends the old registration. Recurring reminders retain their existing per-occurrence
+budget and latest-only deadlines.
+
+The original `DueTimeUtc` remains fixed, while `When` moves to the next retry time. An old occurrence
+does not block newer deliveries while waiting for an acknowledgement. Attempt counts saturate at
+`Int32.MaxValue`; backoff remains capped. Permanently broken work can therefore remain active
+indefinitely and consume retry capacity until repaired or cancelled.
+
+Pruning only deletes completed rows, using their completion time. Active `Pending` and `AwaitingAck`
+rows survive pruning regardless of their original due time. Completion includes intentional
+cancellation and expiry as well as acknowledgement. The default completed-row retention is 12 days.
+
+#### Upgrade before enabling the policy
+
+Upgrade every node that can host the reminder scheduler, and nodes receiving schedule responses or
+reminder listings, before using this policy. Default-policy messages keep their existing manifests
+and wire layouts. Opted-in schedules, responses, and listings use `sr2`, `rsd2`, and `rfe2` respectively;
+older readers reject these manifests. An older scheduler must not take over while opted-in rows
+exist: it does not understand their policy and can exhaust their attempts.
+
+Built-in SQL providers add an integer retry-policy column, defaulting existing rows to zero
+(`UseConfiguredAttemptLimit`). With `AutoInitialize = true`, the provider adds it automatically.
+With initialization disabled, an older schema continues to support the existing bounded behavior;
+the provider logs a warning with an upgrade link. An explicit `UntilAcknowledged` request returns
+an error until the column exists, so it cannot silently receive a bounded guarantee.
+
+For manually managed databases, follow the [upgrade procedure and standalone SQL scripts](../docs/migrations/retry-policy/README.md).
+Recreate the provider after applying the script: schema capability is cached per instance.
+
+Custom storage providers must preserve `ScheduledReminder.RetryPolicy` through scheduling, mutation
+commits and every occurrence read, respect retry times even inside read-ahead slippage, and implement `IReminderRetryPolicyStorage`. Unsupported providers
+reject the policy before scheduling. Forwarding providers must preserve the field and capability.
+Custom clients can implement `IReminderRetryPolicyClient`; the extension overload rejects unsupported
+clients instead of silently falling back to a bounded budget. Existing client and storage interfaces
+retain their required members.
+
 ### Response Codes
 
 **ReminderScheduleResponseCode:**

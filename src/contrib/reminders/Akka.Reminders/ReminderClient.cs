@@ -1,3 +1,5 @@
+#nullable enable
+
 using Akka.Actor;
 using Akka.Util;
 
@@ -7,7 +9,7 @@ namespace Akka.Reminders;
 /// Concrete implementation of <see cref="IReminderClient"/> that communicates with
 /// the reminder scheduler singleton via a ClusterSingletonProxy.
 /// </summary>
-internal sealed class ReminderClient : IReminderClient
+internal sealed class ReminderClient : IReminderRetryPolicyClient
 {
     private readonly IActorRef _schedulerProxy;
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(5);
@@ -30,10 +32,21 @@ internal sealed class ReminderClient : IReminderClient
     public ReminderEntity Entity { get; }
 
     /// <inheritdoc />
+    public Task<ReminderProtocol.ReminderScheduled> ScheduleSingleReminderAsync(
+        ReminderKey key,
+        DateTimeOffset when,
+        object message,
+        TimeSpan? maxDeliveryWindow = null,
+        CancellationToken ct = default)
+        => ScheduleSingleReminderAsync(key, when, message,
+            ReminderRetryPolicy.UseConfiguredAttemptLimit, maxDeliveryWindow, ct);
+
+    /// <inheritdoc />
     public async Task<ReminderProtocol.ReminderScheduled> ScheduleSingleReminderAsync(
         ReminderKey key,
         DateTimeOffset when,
         object message,
+        ReminderRetryPolicy retryPolicy,
         TimeSpan? maxDeliveryWindow = null,
         CancellationToken ct = default)
     {
@@ -43,7 +56,7 @@ internal sealed class ReminderClient : IReminderClient
             when,
             message,
             RepeatInterval: null,
-            MaxDeliveryWindow: maxDeliveryWindow);
+            MaxDeliveryWindow: maxDeliveryWindow) { RetryPolicy = retryPolicy };
 
         try
         {

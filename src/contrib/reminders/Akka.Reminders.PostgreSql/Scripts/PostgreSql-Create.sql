@@ -7,6 +7,8 @@
 --   3. Execute this script against your PostgreSQL database
 --
 -- Note: This script is idempotent - it will only create objects if they don't already exist.
+-- For existing tables, use the retry-policy upgrade procedure:
+-- https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/reminders/docs/migrations/retry-policy/README.md
 
 -- Create schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS reminders;
@@ -23,6 +25,7 @@ CREATE TABLE IF NOT EXISTS reminders.scheduled_reminders (
     manifest VARCHAR(500) NULL,
     payload BYTEA NOT NULL,
     attempt_count INTEGER NOT NULL DEFAULT 0,
+    retry_policy INTEGER NOT NULL DEFAULT 0,
     last_failure_reason TEXT NULL,
     max_delivery_window_ticks BIGINT NULL,
     delivery_deadline_utc TIMESTAMP WITH TIME ZONE NULL,

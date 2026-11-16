@@ -49,4 +49,10 @@
     <None Include="Fixtures\golden-1.5.73\*.db" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\docs\migrations\retry-policy\*.sql"
+          Link="RetryPolicyMigrations\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

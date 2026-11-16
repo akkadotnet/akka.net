@@ -1,3 +1,5 @@
+#nullable enable
+
 using Akka.Actor;
 using Akka.Reminders.PostgreSql;
 using Akka.Reminders.Sql.Configuration;
@@ -10,7 +12,7 @@ namespace Akka.Reminders.Sql;
 /// <summary>
 /// Compatibility wrapper for SQL storage providers.
 /// </summary>
-public sealed class SqlReminderStorage : IConditionalReminderMutationStorage
+public sealed class SqlReminderStorage : IConditionalReminderMutationStorage, IReminderRetryPolicyStorage
 {
     private readonly IReminderStorage _storage;
 

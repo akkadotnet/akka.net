@@ -1,3 +1,5 @@
+#nullable enable
+
 using Akka.Hosting;
 using Akka.Hosting.TestKit;
 using Akka.Reminders.Serialization;
@@ -14,7 +16,7 @@ namespace Akka.Reminders.Tests.Serialization;
 /// use a small <see cref="AssertAndReturn{T}"/> helper that verifies the correct serializer
 /// is resolved and the message survives a ToBinary → FromBinary cycle.
 /// </summary>
-public class ReminderSerializerSpecs : Akka.Hosting.TestKit.TestKit
+public partial class ReminderSerializerSpecs : Akka.Hosting.TestKit.TestKit
 {
     public ReminderSerializerSpecs(ITestOutputHelper output)
         : base(output: output)
