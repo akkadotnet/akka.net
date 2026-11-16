@@ -29,6 +29,7 @@ using Akka.Util;
 using Inet = Akka.IO.Inet;
 using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
 using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
+using TlsCertificateSource = Akka.IO.TlsCertificateSource;
 
 namespace Akka.Remote.Artery
 {
@@ -304,6 +305,12 @@ namespace Akka.Remote.Artery
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
         private ArteryTlsSettings? _tlsSettings;
 
+        // A certificate source is asked when a connection is built, and by this timer once a minute, so a node that
+        // builds no connection still looks for a renewed certificate and logs the change. Fixed, with no config key,
+        // the same as the DotNetty transport's.
+        internal static readonly TimeSpan CertificateSourcePollInterval = TimeSpan.FromMinutes(1);
+        private ICancelable? _certificateSourcePoll;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
         /// </summary>
@@ -382,6 +389,13 @@ namespace Akka.Remote.Artery
             _tcp = System.TcpStream();
             var tlsSetup = System.Settings.Setup.Get<ArteryTlsSetup>();
             _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings : null;
+
+            // A certificate source may need its first look-up before the node can present a certificate. Check it
+            // before binding, as the DotNetty transport does, so a node with nothing to present never listens. The
+            // check waits at most 30 seconds after the look-up started; it throws a ConfigurationException when
+            // nothing is usable. Blocking here is forced by the synchronous Start contract (see the bind wait below).
+            _tlsSettings?.CertificateSource?.CheckAtStartupAsync(_log).GetAwaiter().GetResult();
+
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
             // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
             // than ArrayPool<byte>.Shared (which is what a null value resolves to downstream). Shared is
@@ -446,6 +460,12 @@ namespace Akka.Remote.Artery
                     $"within {Provider.RemoteSettings.StartupTimeout}.");
 
             _binding = bindingTask.GetAwaiter().GetResult();
+
+            // Scheduled only once the bind worked, so a failed bind leaves nothing to cancel; Shutdown cancels it.
+            if (_tlsSettings?.CertificateSource is { NeedsPolling: true })
+                _certificateSourcePoll = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
+                    CertificateSourcePollInterval, CertificateSourcePollInterval, PollCertificateSource);
+
             var boundPort = ((IPEndPoint)_binding.Value.LocalAddress).Port;
             var address = new Address("akka", System.Name, _settings.CanonicalHostname, boundPort);
 
@@ -525,6 +545,20 @@ namespace Akka.Remote.Artery
                 flowNames: EnumerableActorName.Create("remote"));
         }
 
+        // Runs on the scheduler: it must never throw.
+        private void PollCertificateSource()
+        {
+            try
+            {
+                _tlsSettings?.CertificateSource?.Poll(_log);
+            }
+            catch (Exception ex) when (!TlsCertificateSource.IsFatal(ex))
+            {
+                // The source logs what it expects itself, so this is unexpected.
+                _log.Warning(ex, "The TLS certificate check that runs once a minute failed. The node keeps its current certificate and checks again in a minute.");
+            }
+        }
+
         /// <inheritdoc/>
         public override async Task Shutdown()
         {
@@ -532,6 +566,7 @@ namespace Akka.Remote.Artery
             // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
             // late system message racing termination can no longer trigger a materialization.
             _isShutdown = true;
+            _certificateSourcePoll?.Cancel();
             _log.Info("Shutting down Artery TCP remoting on [{0}]", _defaultAddress);
 
             // Snapshot the associations ONCE: the flush below awaits between the complete pass and

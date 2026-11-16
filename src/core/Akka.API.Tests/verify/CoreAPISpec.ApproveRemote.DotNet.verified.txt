@@ -409,8 +409,11 @@ namespace Akka.Remote.Artery
         public System.Security.Authentication.SslProtocols Protocols { get; }
         public Akka.Remote.Artery.ArteryTlsSettings WithHandshakeTimeout(System.TimeSpan value) { }
         public Akka.Remote.Artery.ArteryTlsSettings WithProtocols(System.Security.Authentication.SslProtocols value) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy peerPolicy) { }
         public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy peerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy inboundClientPolicy, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
         public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy inboundClientPolicy, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings ServerOnly(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
         public static Akka.Remote.Artery.ArteryTlsSettings ServerOnly(System.Security.Cryptography.X509Certificates.X509Certificate2 serverCertificate, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
     }
     public sealed class ArteryTlsSetup : Akka.Actor.Setup.Setup
