@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -182,6 +184,14 @@ public sealed record AckResult(
 /// <see cref="ReminderMutationBatch.ActiveCompletions"/>. Required for recurring reminder processing.
 /// </summary>
 public interface IConditionalReminderMutationStorage : IReminderStorage;
+
+/// <summary>
+/// Declares that the provider durably preserves <see cref="ScheduledReminder.RetryPolicy"/>
+/// through scheduling, retry mutations, and reads. Due-reminder fetches must not return an opted-in
+/// retry before its <see cref="ScheduledReminder.When"/>, even inside read-ahead slippage.
+/// Forwarding providers must preserve this capability.
+/// </summary>
+public interface IReminderRetryPolicyStorage : IReminderStorage;
 
 /// <summary>Storage implementation for reminders.</summary>
 public interface IReminderStorage
