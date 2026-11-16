@@ -18,6 +18,12 @@ namespace Akka.Remote.Hosting
         public int? Port { get; set; }
 
         /// <summary>The optional node-level TLS profile shared by all Artery TCP channels.</summary>
+        /// <remarks>
+        /// To rotate certificates without a restart, build the profile from a <see cref="Akka.IO.TlsCertificateSource"/>
+        /// with <see cref="Akka.Remote.Artery.ArteryTlsSettings.Mutual(Akka.IO.TlsCertificateSource, Akka.IO.TlsPeerPolicy)"/>
+        /// or <see cref="Akka.Remote.Artery.ArteryTlsSettings.ServerOnly(Akka.IO.TlsCertificateSource, Akka.IO.TlsPeerPolicy)"/>.
+        /// A profile holds either a fixed certificate or a source, never both.
+        /// </remarks>
         public Akka.Remote.Artery.ArteryTlsSettings? Tls { get; set; }
     }
 }
