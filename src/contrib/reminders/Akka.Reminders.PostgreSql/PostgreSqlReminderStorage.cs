@@ -17,8 +17,15 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
     private readonly ISqlDialect _dialect;
     private readonly Akka.Serialization.Serialization _serialization;
     private readonly ILoggingAdapter _log;
-    private readonly object _initLock = new();
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _hasRetryPolicyColumn;
     private volatile bool _initialized;
+
+    private const string RetryPolicyUpgradeInstructions =
+        "The reminder retry-policy column is missing. Existing reminders use the configured attempt limit; " +
+        "UntilAcknowledged requires a schema upgrade. With AutoInitialize disabled, run the SQL script for your " +
+        "database and restart the provider. Procedure: " +
+        "https://github.com/akkadotnet/akka.net/blob/dev/src/contrib/reminders/docs/migrations/retry-policy/README.md";
 
     private const int MaxUpsertedRemindersPerStatement = 120;
     private const int MaxRemindersPerStatusUpdate = 300;
@@ -44,6 +51,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
+        if (!_hasRetryPolicyColumn && reminder.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit)
+            return new ReminderProtocol.ReminderScheduled(reminder.ToScheduleReminder(),
+                ReminderScheduleResponseCode.Error, RetryPolicyUpgradeInstructions);
 
         var adjustedReminder = NormalizeReminder(reminder);
 
@@ -99,6 +109,9 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await EnsureInitializedAsync(cancellationToken);
         if (mutationBatch.IsEmpty)
             return true;
+        if (!_hasRetryPolicyColumn && mutationBatch.PendingUpserts.Concat(mutationBatch.PendingInserts)
+                .Any(r => r.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit))
+            return false;
 
         await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
@@ -161,6 +174,8 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         var remindersList = reminders.ToList();
         if (remindersList.Count == 0)
             return true;
+        if (!_hasRetryPolicyColumn && remindersList.Any(r => r.RetryPolicy != ReminderRetryPolicy.UseConfiguredAttemptLimit))
+            return false;
 
         try
         {
@@ -168,7 +183,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             {
                 var chunk = remindersList.Skip(offset).Take(MaxUpsertedRemindersPerStatement).ToList();
                 await using var command = CreateCommand(connection, transaction);
-                command.CommandText = _dialect.GetBatchUpsertRemindersSql(_settings.SchemaName, _settings.TableName, chunk.Count, insertIfAbsent);
+                command.CommandText = _dialect.GetBatchUpsertRemindersSql(_settings.SchemaName, _settings.TableName, chunk.Count, insertIfAbsent, _hasRetryPolicyColumn);
                 command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
 
                 for (var i = 0; i < chunk.Count; i++)
@@ -209,7 +224,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             var unusable = skipped + unreadable.Count;
             var rows = 0;
             await using var command = connection.CreateCommand();
-            command.CommandText = _dialect.GetSelectDueRemindersSql(_settings.SchemaName, _settings.TableName, limit);
+            command.CommandText = _dialect.GetSelectDueRemindersSql(_settings.SchemaName, _settings.TableName, limit, _hasRetryPolicyColumn);
             command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
             _dialect.AddParameter(command, "@UntilDeadline", TruncateToMicroseconds(untilDeadline));
             _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
@@ -424,7 +439,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
 
             await using (var selectCommand = connection.CreateCommand())
             {
-                selectCommand.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
+                selectCommand.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName, _hasRetryPolicyColumn);
                 selectCommand.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 _dialect.AddParameter(selectCommand, "@ShardRegionName", entity.ShardRegionName);
                 _dialect.AddParameter(selectCommand, "@EntityId", entity.EntityId);
@@ -462,7 +477,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName);
+        command.CommandText = _dialect.GetFetchRemindersSql(_settings.SchemaName, _settings.TableName, _hasRetryPolicyColumn);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@ShardRegionName", entity.ShardRegionName);
         _dialect.AddParameter(command, "@EntityId", entity.EntityId);
@@ -511,7 +526,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = _dialect.GetTimedOutAckRemindersSql(_settings.SchemaName, _settings.TableName, maxCount.Value);
+        command.CommandText = _dialect.GetTimedOutAckRemindersSql(_settings.SchemaName, _settings.TableName, maxCount.Value, _hasRetryPolicyColumn);
         command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
         _dialect.AddParameter(command, "@Now", TruncateToMicroseconds(now));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -657,30 +672,42 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
     }
 
-    private Task EnsureInitializedAsync(CancellationToken cancellationToken)
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {
-        if (_initialized || !_settings.AutoInitialize)
-            return Task.CompletedTask;
+        if (_initialized)
+            return;
 
-        lock (_initLock)
+        await _initLock.WaitAsync(cancellationToken);
+        try
         {
             if (_initialized)
-                return Task.CompletedTask;
+                return;
 
-            Task.Run(async () =>
+            await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
+            if (_settings.AutoInitialize)
             {
-                await using var connection = _dialect.CreateConnection(_settings.ConnectionString);
-                await connection.OpenAsync(cancellationToken);
-                await using var command = connection.CreateCommand();
                 command.CommandText = _dialect.GetCreateTableSql(_settings.SchemaName, _settings.TableName);
-                command.CommandTimeout = (int)_settings.CommandTimeout.TotalSeconds;
                 await command.ExecuteNonQueryAsync(cancellationToken);
-            }, cancellationToken).Wait(cancellationToken);
-
+            }
+            command.CommandText = """
+                SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = 'retry_policy');
+                """;
+            _dialect.AddParameter(command, "@SchemaName", _settings.SchemaName);
+            _dialect.AddParameter(command, "@TableName", _settings.TableName);
+            _hasRetryPolicyColumn = (bool)(await command.ExecuteScalarAsync(cancellationToken)
+                ?? throw new InvalidOperationException("The reminder schema probe returned no result."));
+            if (!_hasRetryPolicyColumn)
+                _log.Warning(RetryPolicyUpgradeInstructions);
             _initialized = true;
         }
-
-        return Task.CompletedTask;
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     private ScheduledReminder NormalizeReminder(ScheduledReminder reminder)
@@ -912,7 +939,8 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
         _dialect.AddParameter(command, $"@Manifest{index}", manifest ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@Payload{index}", payload);
         _dialect.AddParameter(command, $"@AttemptCount{index}", reminder.AttemptCount);
-        _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
+        if (_hasRetryPolicyColumn)
+            _dialect.AddParameter(command, $"@RetryPolicy{index}", (int)reminder.RetryPolicy);
         _dialect.AddParameter(command, $"@LastFailureReason{index}", reminder.LastFailureReason ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@MaxDeliveryWindowTicks{index}", reminder.MaxDeliveryWindow?.Ticks ?? (object)DBNull.Value);
         _dialect.AddParameter(command, $"@DeliveryDeadlineUtc{index}", reminder.DeliveryDeadlineUtc.HasValue ? TruncateToMicroseconds(reminder.DeliveryDeadlineUtc.Value) : (object)DBNull.Value);
@@ -990,7 +1018,7 @@ public sealed class PostgreSqlReminderStorage : IConditionalReminderMutationStor
             maxDeliveryWindow,
             deliveryDeadlineUtc,
             new DateTimeOffset(DateTime.SpecifyKind(dueTimeUtc, DateTimeKind.Utc)))
-        { RetryPolicy = (ReminderRetryPolicy)reader.GetInt32(reader.GetOrdinal("retry_policy")) };
+        { RetryPolicy = _hasRetryPolicyColumn ? (ReminderRetryPolicy)reader.GetInt32(reader.GetOrdinal("retry_policy")) : default };
     }
 
     private sealed class UnreadablePayloadException(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,

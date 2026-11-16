@@ -55,14 +55,15 @@ internal sealed class SqliteDialect : ISqlDialect
             """;
     }
 
-    public string GetBatchUpsertRemindersSql(string tableName, int count, bool insertIfAbsent = false)
+    public string GetBatchUpsertRemindersSql(string tableName, int count, bool insertIfAbsent = false, bool includeRetryPolicy = true)
     {
         var fullTableName = $"\"{tableName}\"";
+        var retryPolicyColumn = includeRetryPolicy ? "retry_policy, " : "";
         var values = string.Join(",\n                ",
             Enumerable.Range(0, count).Select(i =>
-                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, @RetryPolicy{i}, @LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i}, 0, NULL, 'Pending', NULL, NULL)"));
+                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, {(includeRetryPolicy ? $"@RetryPolicy{i}, " : "")}@LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i}, 0, NULL, 'Pending', NULL, NULL)"));
 
-        var onConflict = insertIfAbsent ? "DO NOTHING" : """
+        var onConflict = insertIfAbsent ? "DO NOTHING" : $"""
             DO UPDATE SET
                 when_utc = excluded.when_utc,
                 repeat_interval_ticks = excluded.repeat_interval_ticks,
@@ -70,7 +71,7 @@ internal sealed class SqliteDialect : ISqlDialect
                 manifest = excluded.manifest,
                 payload = excluded.payload,
                 attempt_count = excluded.attempt_count,
-                retry_policy = excluded.retry_policy,
+                {(includeRetryPolicy ? "retry_policy = excluded.retry_policy," : "")}
                 last_failure_reason = excluded.last_failure_reason,
                 max_delivery_window_ticks = excluded.max_delivery_window_ticks,
                 delivery_deadline_utc = excluded.delivery_deadline_utc,
@@ -84,7 +85,7 @@ internal sealed class SqliteDialect : ISqlDialect
         return $"""
             INSERT INTO {fullTableName}
                 (shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                 serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
+                 serializer_id, manifest, payload, attempt_count, {retryPolicyColumn}last_failure_reason,
                  max_delivery_window_ticks, delivery_deadline_utc,
                  is_completed, completed_at_utc, completion_status, delivered_at_utc, ack_deadline_utc)
             VALUES
@@ -94,16 +95,17 @@ internal sealed class SqliteDialect : ISqlDialect
             """;
     }
 
-    public string GetSelectDueRemindersSql(string tableName, int maxCount)
+    public string GetSelectDueRemindersSql(string tableName, int maxCount, bool includeRetryPolicy = true)
     {
         if (maxCount < 1)
             throw new ArgumentOutOfRangeException(nameof(maxCount), "maxCount must be greater than or equal to 1.");
 
         var fullTableName = $"\"{tableName}\"";
+        var retryPolicyColumn = includeRetryPolicy ? "retry_policy, " : "";
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, {retryPolicyColumn}last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE is_completed = 0
@@ -226,13 +228,14 @@ internal sealed class SqliteDialect : ISqlDialect
             """;
     }
 
-    public string GetFetchRemindersSql(string tableName)
+    public string GetFetchRemindersSql(string tableName, bool includeRetryPolicy = true)
     {
         var fullTableName = $"\"{tableName}\"";
+        var retryPolicyColumn = includeRetryPolicy ? "retry_policy, " : "";
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, {retryPolicyColumn}last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE shard_region_name = @ShardRegionName
@@ -275,16 +278,17 @@ internal sealed class SqliteDialect : ISqlDialect
             """;
     }
 
-    public string GetTimedOutAckRemindersSql(string tableName, int maxCount)
+    public string GetTimedOutAckRemindersSql(string tableName, int maxCount, bool includeRetryPolicy = true)
     {
         if (maxCount < 1)
             throw new ArgumentOutOfRangeException(nameof(maxCount), "maxCount must be greater than or equal to 1.");
 
         var fullTableName = $"\"{tableName}\"";
+        var retryPolicyColumn = includeRetryPolicy ? "retry_policy, " : "";
 
         return $"""
             SELECT shard_region_name, entity_id, reminder_key, when_utc, due_time_utc, repeat_interval_ticks,
-                   serializer_id, manifest, payload, attempt_count, retry_policy, last_failure_reason,
+                   serializer_id, manifest, payload, attempt_count, {retryPolicyColumn}last_failure_reason,
                    max_delivery_window_ticks, delivery_deadline_utc
             FROM {fullTableName}
             WHERE completion_status = 'AwaitingAck'

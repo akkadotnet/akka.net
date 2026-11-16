@@ -68,14 +68,15 @@ internal sealed class SqlServerDialect : ISqlDialect
             """;
     }
 
-    public string GetBatchUpsertRemindersSql(string schemaName, string tableName, int count, bool insertIfAbsent = false)
+    public string GetBatchUpsertRemindersSql(string schemaName, string tableName, int count, bool insertIfAbsent = false, bool includeRetryPolicy = true)
     {
         var fullTableName = $"[{schemaName}].[{tableName}]";
+        var retryPolicyColumn = includeRetryPolicy ? "RetryPolicy, " : "";
         var values = string.Join(",\n                ",
             Enumerable.Range(0, count).Select(i =>
-                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, @RetryPolicy{i}, @LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i})"));
+                $"(@ShardRegionName{i}, @EntityId{i}, @ReminderKey{i}, @WhenUtc{i}, @DueTimeUtc{i}, @RepeatIntervalTicks{i}, @SerializerId{i}, @Manifest{i}, @Payload{i}, @AttemptCount{i}, {(includeRetryPolicy ? $"@RetryPolicy{i}, " : "")}@LastFailureReason{i}, @MaxDeliveryWindowTicks{i}, @DeliveryDeadlineUtc{i})"));
 
-        var whenMatched = insertIfAbsent ? "" : """
+        var whenMatched = insertIfAbsent ? "" : $"""
             WHEN MATCHED THEN
                 UPDATE SET
                     WhenUtc = source.WhenUtc,
@@ -84,7 +85,7 @@ internal sealed class SqlServerDialect : ISqlDialect
                     Manifest = source.Manifest,
                     Payload = source.Payload,
                     AttemptCount = source.AttemptCount,
-                    RetryPolicy = source.RetryPolicy,
+                    {(includeRetryPolicy ? "RetryPolicy = source.RetryPolicy," : "")}
                     LastFailureReason = source.LastFailureReason,
                     MaxDeliveryWindowTicks = source.MaxDeliveryWindowTicks,
                     DeliveryDeadlineUtc = source.DeliveryDeadlineUtc,
@@ -100,7 +101,7 @@ internal sealed class SqlServerDialect : ISqlDialect
             USING (VALUES
                 {values}
             ) AS source(ShardRegionName, EntityId, ReminderKey, WhenUtc, DueTimeUtc, RepeatIntervalTicks,
-                        SerializerId, Manifest, Payload, AttemptCount, RetryPolicy, LastFailureReason,
+                        SerializerId, Manifest, Payload, AttemptCount, {retryPolicyColumn}LastFailureReason,
                         MaxDeliveryWindowTicks, DeliveryDeadlineUtc)
             ON target.ShardRegionName = source.ShardRegionName
                AND target.EntityId = source.EntityId
@@ -109,26 +110,27 @@ internal sealed class SqlServerDialect : ISqlDialect
             {whenMatched}
             WHEN NOT MATCHED THEN
                 INSERT (ShardRegionName, EntityId, ReminderKey, WhenUtc, DueTimeUtc, RepeatIntervalTicks,
-                        SerializerId, Manifest, Payload, AttemptCount, RetryPolicy, LastFailureReason,
+                        SerializerId, Manifest, Payload, AttemptCount, {retryPolicyColumn}LastFailureReason,
                         MaxDeliveryWindowTicks, DeliveryDeadlineUtc,
                         IsCompleted, CompletedAtUtc, CompletionStatus, DeliveredAtUtc, AckDeadlineUtc)
                 VALUES (source.ShardRegionName, source.EntityId, source.ReminderKey, source.WhenUtc, source.DueTimeUtc,
                         source.RepeatIntervalTicks, source.SerializerId, source.Manifest, source.Payload,
-                        source.AttemptCount, source.RetryPolicy, source.LastFailureReason, source.MaxDeliveryWindowTicks,
+                        source.AttemptCount, {(includeRetryPolicy ? "source.RetryPolicy, " : "")}source.LastFailureReason, source.MaxDeliveryWindowTicks,
                         source.DeliveryDeadlineUtc, 0, NULL, 'Pending', NULL, NULL);
             """;
     }
 
-    public string GetSelectDueRemindersSql(string schemaName, string tableName, int maxCount)
+    public string GetSelectDueRemindersSql(string schemaName, string tableName, int maxCount, bool includeRetryPolicy = true)
     {
         if (maxCount < 1)
             throw new ArgumentOutOfRangeException(nameof(maxCount), "maxCount must be greater than or equal to 1.");
 
         var fullTableName = $"[{schemaName}].[{tableName}]";
+        var retryPolicyColumn = includeRetryPolicy ? "RetryPolicy, " : "";
 
         return $"""
             SELECT TOP ({maxCount}) ShardRegionName, EntityId, ReminderKey, WhenUtc, DueTimeUtc, RepeatIntervalTicks,
-                   SerializerId, Manifest, Payload, AttemptCount, RetryPolicy, LastFailureReason,
+                   SerializerId, Manifest, Payload, AttemptCount, {retryPolicyColumn}LastFailureReason,
                    MaxDeliveryWindowTicks, DeliveryDeadlineUtc
             FROM {fullTableName}
             WHERE IsCompleted = 0
@@ -256,13 +258,14 @@ internal sealed class SqlServerDialect : ISqlDialect
             """;
     }
 
-    public string GetFetchRemindersSql(string schemaName, string tableName)
+    public string GetFetchRemindersSql(string schemaName, string tableName, bool includeRetryPolicy = true)
     {
         var fullTableName = $"[{schemaName}].[{tableName}]";
+        var retryPolicyColumn = includeRetryPolicy ? "RetryPolicy, " : "";
 
         return $"""
             SELECT ShardRegionName, EntityId, ReminderKey, WhenUtc, DueTimeUtc, RepeatIntervalTicks,
-                   SerializerId, Manifest, Payload, AttemptCount, RetryPolicy, LastFailureReason,
+                   SerializerId, Manifest, Payload, AttemptCount, {retryPolicyColumn}LastFailureReason,
                    MaxDeliveryWindowTicks, DeliveryDeadlineUtc
             FROM {fullTableName}
             WHERE ShardRegionName = @ShardRegionName
@@ -299,16 +302,17 @@ internal sealed class SqlServerDialect : ISqlDialect
             """;
     }
 
-    public string GetTimedOutAckRemindersSql(string schemaName, string tableName, int maxCount)
+    public string GetTimedOutAckRemindersSql(string schemaName, string tableName, int maxCount, bool includeRetryPolicy = true)
     {
         if (maxCount < 1)
             throw new ArgumentOutOfRangeException(nameof(maxCount), "maxCount must be greater than or equal to 1.");
 
         var fullTableName = $"[{schemaName}].[{tableName}]";
+        var retryPolicyColumn = includeRetryPolicy ? "RetryPolicy, " : "";
 
         return $"""
             SELECT TOP ({maxCount}) ShardRegionName, EntityId, ReminderKey, WhenUtc, DueTimeUtc, RepeatIntervalTicks,
-                   SerializerId, Manifest, Payload, AttemptCount, RetryPolicy, LastFailureReason,
+                   SerializerId, Manifest, Payload, AttemptCount, {retryPolicyColumn}LastFailureReason,
                    MaxDeliveryWindowTicks, DeliveryDeadlineUtc
             FROM {fullTableName}
             WHERE CompletionStatus = 'AwaitingAck'

@@ -710,18 +710,13 @@ older readers reject these manifests. An older scheduler must not take over whil
 exist: it does not understand their policy and can exhaust their attempts.
 
 Built-in SQL providers add an integer retry-policy column, defaulting existing rows to zero
-(`UseConfiguredAttemptLimit`). With `AutoInitialize = true`, the column is added when the provider
-first initializes. With initialization disabled, apply the matching statement before starting the
-upgraded provider (substitute your configured schema/table names):
+(`UseConfiguredAttemptLimit`). With `AutoInitialize = true`, the provider adds it automatically.
+With initialization disabled, an older schema continues to support the existing bounded behavior;
+the provider logs a warning with an upgrade link. An explicit `UntilAcknowledged` request returns
+an error until the column exists, so it cannot silently receive a bounded guarantee.
 
-```sql
--- SQL Server
-ALTER TABLE [reminders].[scheduled_reminders] ADD RetryPolicy INT NOT NULL DEFAULT 0;
--- PostgreSQL
-ALTER TABLE reminders.scheduled_reminders ADD COLUMN retry_policy INTEGER NOT NULL DEFAULT 0;
--- SQLite
-ALTER TABLE scheduled_reminders ADD COLUMN retry_policy INTEGER NOT NULL DEFAULT 0;
-```
+For manually managed databases, follow the [upgrade procedure and standalone SQL scripts](../docs/migrations/retry-policy/README.md).
+Recreate the provider after applying the script: schema capability is cached per instance.
 
 Custom storage providers must preserve `ScheduledReminder.RetryPolicy` through scheduling, mutation
 commits and every occurrence read, respect retry times even inside read-ahead slippage, and implement `IReminderRetryPolicyStorage`. Unsupported providers
