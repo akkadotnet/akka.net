@@ -9,10 +9,13 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Remote.Artery;
+using Akka.Serialization;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -185,6 +188,131 @@ namespace Akka.Remote.Tests.Artery
                 () => owner.DisposeCount.Should().Be(1),
                 TimeSpan.FromSeconds(3),
                 TimeSpan.FromMilliseconds(20));
+        }
+
+        [Fact(DisplayName = "Should_preserve_bytes_and_transfer_owners_When_appending_consolidated_frames")]
+        public void Should_preserve_bytes_and_transfer_owners_When_appending_consolidated_frames()
+        {
+            var pool = new PoisonTrackingPool();
+            var first = CompactFrame(pool, Pattern(17, 1));
+            var second = CompactFrame(pool, Pattern(31, 2));
+            var (third, thirdOwner) = EncodeStageStyleFrame(Pattern(5, 3));
+            var batch = ArteryRemoting.AppendFrameToBatch(first.Slice(2, 11), second.Slice(3, 23));
+            var head = batch.Start.GetObject();
+            batch = ArteryRemoting.AppendFrameToBatch(batch, third);
+            Assert.Same(head, batch.Start.GetObject());
+            first.DisposeOwnedSegments();
+            second.DisposeOwnedSegments();
+            third.DisposeOwnedSegments();
+            Assert.Equal(0, pool.Returns);
+            Assert.Equal(0, thirdOwner.DisposeCount);
+            Assert.Equal(Pattern(17, 1).Skip(2).Take(11).Concat(Pattern(31, 2).Skip(3).Take(23)).Concat(Pattern(5, 3)), batch.ToArray());
+            batch.DisposeOwnedSegments();
+            batch.DisposeOwnedSegments();
+            Assert.Equal(2, pool.Returns);
+            Assert.Equal(1, thirdOwner.DisposeCount);
+        }
+
+        [Fact(DisplayName = "Should_return_partially_transferred_owners_When_normalized_lane_append_fails")]
+        public void Should_return_partially_transferred_owners_When_normalized_lane_append_fails()
+        {
+            var pool = new PoisonTrackingPool();
+            var seed = CompactFrame(pool, Pattern(9, 1));
+            var frame = CompactFrame(pool, Pattern(7, 2));
+            var owner = Assert.IsAssignableFrom<IOwnedSequenceSegment>(frame.Start.GetObject()).DetachOwner()!;
+            var head = new OwnedSequenceSegment(owner.Memory, owner);
+            var spent = head.Append(new byte[] { 5 }, new TrackingOwner(new byte[] { 5 }));
+            spent.DisposeOwner(); // force failure only AFTER the first link has transferred
+            var invalid = new ReadOnlySequence<byte>(head, 0, spent, 1);
+
+            Assert.Throws<InvalidOperationException>(() => ArteryRemoting.AppendFrameToBatch(seed, invalid));
+            invalid.DisposeOwnedSegments();
+            seed.DisposeOwnedSegments();
+            frame.DisposeOwnedSegments();
+            Assert.Equal(2, pool.Returns);
+        }
+
+        [Theory(DisplayName = "Should_return_consolidated_frames_When_retained_lane_batch_is_cancelled_or_failed")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_return_consolidated_frames_When_retained_lane_batch_is_cancelled_or_failed(bool fail)
+        {
+            var pool = new PoisonTrackingPool();
+            var publisher = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
+            var subscriber = this.CreateSubscriberProbe<ReadOnlySequence<byte>>();
+            Source.FromPublisher(publisher)
+                .Via(Flow.FromGraph(new LaneWriteBatchStage(16 * 1024)))
+                .WithAttributes(Attributes.CreateInputBuffer(1, 1))
+                .To(Sink.FromSubscriber(subscriber))
+                .Run(ActorMaterializer.Create(Sys));
+            await subscriber.EnsureSubscriptionAsync();
+            // PublisherProbe waits for demand. A third send proves the first two were consumed
+            // and normalized even though downstream has never requested the retained batch.
+            await publisher.SendNextAsync(CompactFrame(pool, Pattern(9, 1)));
+            await publisher.SendNextAsync(CompactFrame(pool, Pattern(7, 2)));
+            await publisher.SendNextAsync(CompactFrame(pool, Pattern(5, 3)));
+            await publisher.ExpectRequestAsync();
+            Assert.Equal(0, pool.Returns);
+            if (fail)
+                await publisher.SendErrorAsync(new InvalidOperationException("upstream failed"));
+            else
+                await subscriber.CancelAsync();
+            await AwaitAssertAsync(() => Assert.Equal(3, pool.Returns), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(20));
+        }
+
+        [Fact(DisplayName = "Should_preserve_borrowed_preamble_and_return_consolidated_rents_When_TCP_coalesces_frames")]
+        public async Task Should_preserve_borrowed_preamble_and_return_consolidated_rents_When_TCP_coalesces_frames()
+        {
+            var pool = new PoisonTrackingPool();
+            var preamble = Pattern(16, 71);
+            var payloads = Enumerable.Range(0, 40).Select(i => Pattern(101, (byte)i)).ToArray();
+            var frames = new[] { new ReadOnlySequence<byte>(preamble) }
+                .Concat(payloads.Select(payload => CompactFrame(pool, payload))).ToArray();
+            var expected = preamble.Concat(payloads.SelectMany(payload => payload)).ToArray();
+            using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var completion = Source.From(frames)
+                .Via(Sys.TcpStream().OutgoingConnection((IPEndPoint)listener.LocalEndpoint))
+                .RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), ActorMaterializer.Create(Sys));
+            using (var socket = await listener.AcceptTcpClientAsync().WaitAsync(TimeSpan.FromSeconds(5)))
+            {
+                var actual = new byte[expected.Length];
+                await socket.GetStream().ReadExactlyAsync(actual).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Equal(expected, actual);
+            }
+            await completion.WaitAsync(TimeSpan.FromSeconds(5));
+            await AwaitAssertAsync(() => Assert.Equal(payloads.Length, pool.Returns), TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(20));
+            foreach (var frame in frames)
+                frame.DisposeOwnedSegments();
+            Assert.Equal(payloads.Length, pool.Returns);
+            Assert.Equal(Pattern(16, 71), preamble);
+        }
+
+        private static ReadOnlySequence<byte> CompactFrame(ArrayPool<byte> pool, byte[] bytes)
+        {
+            using var writer = new PooledPayloadWriter(pool: pool);
+            bytes.CopyTo(writer.GetSpan(bytes.Length));
+            writer.Advance(bytes.Length);
+            return writer.DetachOwnedSequence();
+        }
+
+        private sealed class PoisonTrackingPool : ArrayPool<byte>
+        {
+            private readonly ConcurrentDictionary<byte[], byte> _outstanding = new();
+            private int _returns;
+            public int Returns => System.Threading.Volatile.Read(ref _returns);
+            public override byte[] Rent(int minimumLength)
+            {
+                var array = new byte[minimumLength];
+                Assert.True(_outstanding.TryAdd(array, 0));
+                return array;
+            }
+            public override void Return(byte[] array, bool clearArray = false)
+            {
+                Assert.True(_outstanding.TryRemove(array, out _), "Array was returned twice or to the wrong pool.");
+                Array.Fill(array, (byte)0xDE);
+                System.Threading.Interlocked.Increment(ref _returns);
+            }
         }
 
         /// <summary>

@@ -9,6 +9,7 @@
 
 using System;
 using System.Buffers;
+using Akka.IO;
 
 namespace Akka.Serialization
 {
@@ -239,6 +240,19 @@ namespace Akka.Serialization
             _buffer = null;
             _detached = true;
             return owner;
+        }
+
+        /// <summary>
+        /// Transfers the current rent directly into an ownership-carrying sequence. Unlike the
+        /// public owner-only handoff, the segment is also its own detachable memory owner.
+        /// </summary>
+        internal ReadOnlySequence<byte> DetachOwnedSequence()
+        {
+            ThrowIfSpent();
+            var sequence = PooledSequenceSegment.Create(_pool, _buffer!, _written);
+            _buffer = null;
+            _detached = true;
+            return sequence;
         }
 
         /// <summary>
