@@ -650,9 +650,15 @@ namespace Akka.Remote.Tests.Artery
         private static async Task ConnectAndExpectCloseAsync(Node node)
         {
             using var tcp = new TcpClient();
-            await tcp.ConnectAsync("127.0.0.1", RARP.For(node.Actors).Provider.DefaultAddress.Port!.Value);
-            var read = Record.ExceptionAsync(() => tcp.GetStream().ReadAsync(new byte[1], 0, 1)).AsTask();
-            (await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5)))).Should().BeSameAs(read, "the node must close it at once");
+            var port = RARP.For(node.Actors).Provider.DefaultAddress.Port!.Value;
+            // The node rejects the connection and closes it at once. Depending on timing the client sees the close on
+            // its first read, or has its connect reset; either is the expected close.
+            var closed = Record.ExceptionAsync(async () =>
+            {
+                await tcp.ConnectAsync("127.0.0.1", port);
+                await tcp.GetStream().ReadAsync(new byte[1], 0, 1);
+            }).AsTask();
+            (await Task.WhenAny(closed, Task.Delay(TimeSpan.FromSeconds(5)))).Should().BeSameAs(closed, "the node must close it at once");
         }
 
         // A node that stays up has not terminated and has not started a coordinated shutdown either: a shutdown that
