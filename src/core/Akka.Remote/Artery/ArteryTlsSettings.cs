@@ -210,9 +210,8 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArteryCertificateSource
     {
-        // When the source has nothing usable, every connection fails the same way. Say so at most once a minute for
-        // each direction and cause, so one cause never hides another.
-        private readonly TlsLogLimiter _certificateErrors = new TlsLogLimiter(TimeSpan.FromMinutes(1));
+        // This transport's own error limiter: one per transport, so one node never hides another's errors.
+        private readonly TlsCertificateRotation _rotation = new TlsCertificateRotation();
 
         public ArteryCertificateSource(TlsCertificateSource source, TlsCertificateRole role)
         {
@@ -240,15 +239,9 @@ namespace Akka.Remote.Artery
             {
                 // Akka.IO fails this connection with the exception, so say why here, as DotNetty does.
                 if (direction == TlsConnectionDirection.Outbound)
-                {
-                    if (ShouldLogCertificateError("outbound", ex, log))
-                        log.Error(ex, "Cannot build a TLS connection to [{0}]: {1}", remotePeer, ex.Message);
-                }
-                else if (ShouldLogCertificateError("inbound", ex, log))
-                {
-                    log.Error(ex, "Cannot build a TLS connection for the incoming connection from [{0}]: {1}",
-                        remotePeer, ex.Message);
-                }
+                    _rotation.ReportOutboundFailure(ex, remotePeer, log);
+                else
+                    _rotation.ReportInboundFailure(ex, remotePeer, log);
 
                 // Akka.IO fails the connection with this exception. Its type says the failure was reported, so Akka.IO
                 // does not log it again at Warning for every connection. It wraps the original, with the same message.
@@ -256,37 +249,12 @@ namespace Akka.Remote.Artery
             }
         }
 
-        // The startup check: waits for the source's first look-up, until 30 seconds after it started, without
-        // blocking a thread. Whatever the source throws (it may be a callback that throws anything) stops the node.
-        public async Task CheckAtStartupAsync(ILoggingAdapter log)
-        {
-            try
-            {
-                await Source.GetCertificateAsync(Role, log).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (!(ex is ConfigurationException) && !TlsCertificateSource.IsFatal(ex))
-            {
-                throw new ConfigurationException(ex.Message, ex);
-            }
-        }
+        // The startup check: waits for the source's first look-up without blocking a thread. Whatever the source
+        // throws stops the node.
+        public Task CheckAtStartupAsync(ILoggingAdapter log) => TlsCertificateRotation.CheckAtStartupAsync(Source, Role, log);
 
         // What the transport's timer runs: starts a look-up of the source when one is due and logs what it found.
-        public void Poll(ILoggingAdapter log) => Source.Poll(Role, log);
-
-        // True when this direction and cause was not logged in the last minute. Past 100 causes in a minute, a new
-        // one is not logged; one line says so instead, at most once a minute. The cause is the message when the
-        // certificate source wrote it (or the kind of failure, where the message holds something that differs
-        // between calls), and otherwise the exception type: a callback's message may differ on every call.
-        private bool ShouldLogCertificateError(string direction, Exception exception, ILoggingAdapter log)
-        {
-            var cause = TlsCertificateSource.OwnFailureKey(exception) is { } key
-                ? "message|" + key
-                : "type|" + exception.GetType().FullName;
-            var verdict = _certificateErrors.Admit(direction + "|" + cause, DateTime.UtcNow);
-            if (verdict == TlsLogLimiter.Verdict.LogSummary)
-                log.Error("Some \"Cannot build a TLS connection\" errors were not logged: more than 100 different causes came within a minute.");
-            return verdict == TlsLogLimiter.Verdict.Log;
-        }
+        public void Poll(ILoggingAdapter log) => TlsCertificateRotation.Poll(() => Source.Poll(Role, log), log);
     }
 
     /// <summary>Actor-system setup that enables TLS for all Artery TCP channels.</summary>

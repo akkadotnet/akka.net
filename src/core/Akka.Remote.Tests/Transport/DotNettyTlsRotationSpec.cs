@@ -675,6 +675,39 @@ namespace Akka.Remote.Tests.Transport
             await Assert.ThrowsAnyAsync<Exception>(() => NextErrorAsync("the second cause"));
         }
 
+        [Fact(DisplayName = "Should_Log_The_Exact_Error_Text_When_A_Connection_In_Either_Direction_Has_No_Certificate")]
+        public async Task Should_log_the_exact_error_text_when_a_connection_in_either_direction_has_no_certificate()
+        {
+            var leaf = _ca.Issue("callback-node", -240, 60, Both);
+            _certificates.Add(leaf);
+            var failing = 0;
+            var source = TlsCertificateSource.FromCallback(() => Volatile.Read(ref failing) == 1
+                ? throw new InvalidOperationException("the callback failed")
+                : leaf);
+            var node = StartNode("", validator => DotNettySslSetup.FromSource(source, suppressValidation: false,
+                requireMutualAuthentication: true, validateCertificateHostname: false, validator));
+            var errors = CreateTestProbe();
+            node.Actors.EventStream.Subscribe(errors, typeof(Error));
+            var peer = StartFixedNode();
+            source.UtcNow = () => DateTime.UtcNow.AddHours(2); // the last pick is out of date: nothing to fall back to
+            Volatile.Write(ref failing, 1);
+
+            await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(node, peer, timeout: TimeSpan.FromSeconds(3)));
+            var outbound = await errors.FishForMessageAsync<Error>(
+                e => e.Message.ToString()!.Contains("Cannot build a TLS connection to"), TimeSpan.FromSeconds(5));
+            outbound.Message.ToString().Should().MatchRegex(
+                @"^Cannot build a TLS connection to \[[^ ]+:" + RARP.For(peer.Actors).Provider.DefaultAddress.Port +
+                @"\]: the callback failed$");
+            outbound.Cause.Should().BeOfType<InvalidOperationException>();
+
+            await ConnectAndExpectCloseAsync(node);
+            var inbound = await errors.FishForMessageAsync<Error>(
+                e => e.Message.ToString()!.Contains("incoming connection"), TimeSpan.FromSeconds(5));
+            inbound.Message.ToString().Should().MatchRegex(
+                @"^Cannot build a TLS connection for the incoming connection from \[[^ ]+\]: the callback failed$");
+            inbound.Cause.Should().BeOfType<InvalidOperationException>();
+        }
+
         // ---- review round 5 ----
 
         [Fact(DisplayName = "Should_Log_A_Real_Cause_When_A_Callback_Fails_With_A_Different_Text_On_Every_Call")]

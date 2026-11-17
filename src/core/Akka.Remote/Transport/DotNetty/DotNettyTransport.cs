@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using TlsLogLimiter = Akka.IO.TlsLogLimiter;
+using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
@@ -135,13 +135,10 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly TimeSpan _flushWait;
         private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
 
-        // When the certificate source has nothing usable, every connection fails the same way. Say so at most once a
-        // minute for each direction and cause, so one cause never hides another.
-        private readonly TlsLogLimiter _certificateErrors = new TlsLogLimiter(TimeSpan.FromMinutes(1));
+        // This transport's own error limiter for connections that have no certificate to present: one per transport.
+        private readonly TlsCertificateRotation _certificateRotation = new TlsCertificateRotation();
 
-        // A certificate source is asked when a connection is built, and by this timer once a minute, so a node that
-        // builds no connection still looks for a renewed certificate and logs the change. Fixed, with no config key.
-        internal static readonly TimeSpan CertificateSourcePollInterval = TimeSpan.FromMinutes(1);
+        // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the Artery transport.
         private ICancelable? _certificateSourcePoll;
 
         internal static readonly FieldInfo? SocketField =
@@ -232,7 +229,7 @@ namespace Akka.Remote.Transport.DotNetty
                 // Scheduled only once the bind worked, so Shutdown below and on the failure path cancels it
                 if (Settings.EnableSsl && Settings.Ssl.NeedsPolling)
                     _certificateSourcePoll = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
-                        CertificateSourcePollInterval, CertificateSourcePollInterval, PollCertificateSource);
+                        TlsCertificateRotation.PollInterval, TlsCertificateRotation.PollInterval, PollCertificateSource);
 
                 var addr = MapSocketToAddress(
                     socketAddress: (IPEndPoint)newServerChannel.LocalAddress,
@@ -340,19 +337,8 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        // Runs on the scheduler: it must never throw.
-        private void PollCertificateSource()
-        {
-            try
-            {
-                Settings.Ssl.PollSource(Log);
-            }
-            catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
-            {
-                // The source logs what it expects itself, so this is unexpected.
-                Log.Warning(ex, "The TLS certificate check that runs once a minute failed. The node keeps its current certificate and checks again in a minute.");
-            }
-        }
+        // Runs on the scheduler: it must never throw. Poll logs, and does not rethrow, what the source throws.
+        private void PollCertificateSource() => TlsCertificateRotation.Poll(() => Settings.Ssl.PollSource(Log), Log);
 
         public override async Task<bool> Shutdown()
         {
@@ -496,8 +482,7 @@ namespace Akka.Remote.Transport.DotNetty
                     {
                         // DotNetty closes the channel and drops this exception, so say why here. This is not a
                         // handshake failure: the connection attempt fails and the ActorSystem stays up.
-                        if (ShouldLogCertificateError("outbound", ex))
-                            Log.Error(ex, "Cannot build a TLS connection to [{0}]: {1}", remoteAddress, ex.Message);
+                        _certificateRotation.ReportOutboundFailure(ex, remoteAddress, Log);
                         throw;
                     }
 
@@ -532,21 +517,6 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        // True when this direction and cause was not logged in the last minute. Past 100 causes in a minute, a new
-        // one is not logged; one line says so instead, at most once a minute. The cause is the message when the
-        // certificate source wrote it (or the kind of failure, where the message holds something that differs
-        // between calls), and otherwise the exception type: a callback's message may differ on every call, and would fill the limiter.
-        private bool ShouldLogCertificateError(string direction, Exception exception)
-        {
-            var cause = Akka.IO.TlsCertificateSource.OwnFailureKey(exception) is { } key
-                ? "message|" + key
-                : "type|" + exception.GetType().FullName;
-            var verdict = _certificateErrors.Admit(direction + "|" + cause, DateTime.UtcNow);
-            if (verdict == TlsLogLimiter.Verdict.LogSummary)
-                Log.Error("Some \"Cannot build a TLS connection\" errors were not logged: more than 100 different causes came within a minute.");
-            return verdict == TlsLogLimiter.Verdict.Log;
-        }
-
         private void SetServerPipeline(IChannel channel)
         {
             if (Settings.EnableSsl)
@@ -562,9 +532,7 @@ namespace Akka.Remote.Transport.DotNetty
                 catch (Exception ex)
                 {
                     // DotNetty closes the channel and drops this exception, so say why here.
-                    if (ShouldLogCertificateError("inbound", ex))
-                        Log.Error(ex, "Cannot build a TLS connection for the incoming connection from [{0}]: {1}",
-                            channel.RemoteAddress?.ToString() ?? "unknown", ex.Message);
+                    _certificateRotation.ReportInboundFailure(ex, channel.RemoteAddress?.ToString() ?? "unknown", Log);
                     throw;
                 }
 
