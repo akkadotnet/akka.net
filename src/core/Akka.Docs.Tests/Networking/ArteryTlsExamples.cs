@@ -69,6 +69,34 @@ namespace DocsExamples.Networking.Artery
         }
         #endregion
 
+        #region arteryTlsRotationCode
+        public static ActorSystemSetup CreateRotatingTlsSetup(Config arteryConfig)
+        {
+            // The node asks the folder for its certificate each time it builds a connection.
+            var source = TlsCertificateSource.FromFolder("/etc/akka/tls", password: null);
+            var tls = ArteryTlsSettings.Mutual(source, TlsPeerPolicy.SystemTrust());
+
+            return ActorSystemSetup.Create(
+                BootstrapSetup.Create().WithConfig(arteryConfig),
+                new ArteryTlsSetup(tls));
+        }
+        #endregion
+
+        #region arteryTlsRotationHosting
+        public static AkkaConfigurationBuilder ConfigureRotatingArteryTls(AkkaConfigurationBuilder builder)
+        {
+            var source = TlsCertificateSource.FromStore(
+                "akka-node.contoso.com", "My", StoreLocation.LocalMachine);
+
+            return builder.WithArteryRemoting(options =>
+            {
+                options.HostName = "node.example.net";
+                options.Port = 25520;
+                options.Tls = ArteryTlsSettings.Mutual(source, TlsPeerPolicy.SystemTrust());
+            });
+        }
+        #endregion
+
         #region arteryTlsHosting
         public static AkkaConfigurationBuilder ConfigureArteryTls(
             AkkaConfigurationBuilder builder,

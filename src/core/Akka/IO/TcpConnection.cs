@@ -467,7 +467,13 @@ namespace Akka.IO
         /// <summary>Handles a transport initialization failure in the owning actor.</summary>
         protected virtual void OnTransportInitializationFailed(Exception cause)
         {
-            Log.Warning(cause, "Could not initialize TCP transport for [{0}]", Socket.RemoteEndPoint);
+            // A certificate provider that already logged why it failed marks the exception, so one cause does not
+            // log a Warning for every connection. Nothing is lost: the line is still written, at Debug.
+            if (TlsCertificateProviderFailure.IsReported(cause))
+                Log.Debug(cause, "Could not initialize TCP transport for [{0}]; the certificate provider already reported why",
+                    Socket.RemoteEndPoint);
+            else
+                Log.Warning(cause, "Could not initialize TCP transport for [{0}]", Socket.RemoteEndPoint);
             Context.Stop(Self);
         }
 

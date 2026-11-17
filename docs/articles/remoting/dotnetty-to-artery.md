@@ -144,6 +144,7 @@ certificate and validates its peers' server certificates on outgoing connections
 | Certificate file, password, and key-storage flags | `TlsCertificateLoader.LoadPkcs12FromFile(...)`; pass its result to the profile factory. Byte-array loading is also available. |
 | Certificate thumbprint, store name, and store location | `TlsCertificateLoader.LoadFromStore(...)`; select `validOnly` independently of peer validation. |
 | An existing `X509Certificate2` | Pass the caller-owned certificate directly to `Mutual(...)` or `ServerOnly(...)`. |
+| Certificate rotation: `certificate.common-name`, a folder `path`, `DotNettySslSetup.FromSource`, or `Ssl.CertificateSource` | Pass the same `TlsCertificateSource` to `Mutual(...)` or `ServerOnly(...)`. See [Rotating TLS Certificates](certificate-rotation.md#artery). |
 | `require-mutual-authentication = on` / `off` | `Mutual(...)` / `ServerOnly(...)`. |
 | `suppress-validation = off` | `TlsPeerPolicy.SystemTrust()` for operating-system certificate-chain trust. |
 | `suppress-validation = on` | Choose explicit pins with `PinnedCertificates(...)` or a complete custom trust callback. |

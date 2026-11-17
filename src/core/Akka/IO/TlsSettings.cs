@@ -39,12 +39,17 @@ namespace Akka.IO
     /// </summary>
     public sealed class TlsClientSettings
     {
+        // Asked for the certificate each time a connection is built, in place of a fixed one. Null for a fixed certificate.
+        private readonly TlsCertificateProvider? _certificateProvider;
+
         private TlsClientSettings(X509Certificate2? certificate, TlsPeerPolicy serverValidation,
-            TimeSpan handshakeTimeout, SslProtocols protocols, string? targetHost)
+            TimeSpan handshakeTimeout, SslProtocols protocols, string? targetHost,
+            TlsCertificateProvider? certificateProvider = null)
         {
             if (certificate is not null)
                 TlsSettingsValidation.ValidateCertificate(certificate, nameof(certificate));
             Certificate = certificate;
+            _certificateProvider = certificateProvider;
             ServerValidation = serverValidation ?? throw new ArgumentNullException(nameof(serverValidation));
             TlsSettingsValidation.ValidateTimeout(handshakeTimeout);
             HandshakeTimeout = handshakeTimeout;
@@ -78,19 +83,38 @@ namespace Akka.IO
             return new(clientCertificate, serverValidation, TimeSpan.FromSeconds(10), SslProtocols.None, null);
         }
 
+        /// <summary>
+        /// Internal: outgoing settings for mutual TLS whose client certificate comes from
+        /// <paramref name="certificateProvider"/>, which is asked each time a connection is built.
+        /// <see cref="Certificate"/> is null for these settings.
+        /// </summary>
+        internal static TlsClientSettings Mutual(TlsCertificateProvider certificateProvider,
+            TlsPeerPolicy serverValidation)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(null, serverValidation, TimeSpan.FromSeconds(10), SslProtocols.None, null, certificateProvider);
+        }
+
         /// <summary>Returns a copy with a different handshake timeout.</summary>
         public TlsClientSettings WithHandshakeTimeout(TimeSpan value) =>
-            new(Certificate, ServerValidation, value, Protocols, TargetHost);
+            new(Certificate, ServerValidation, value, Protocols, TargetHost, _certificateProvider);
 
         /// <summary>Returns a copy with different TLS protocols.</summary>
         public TlsClientSettings WithProtocols(SslProtocols value) =>
-            new(Certificate, ServerValidation, HandshakeTimeout, value, TargetHost);
+            new(Certificate, ServerValidation, HandshakeTimeout, value, TargetHost, _certificateProvider);
 
         /// <summary>Returns a copy with a different SNI and certificate-validation target.</summary>
         public TlsClientSettings WithTargetHost(string value)
         {
             ArgumentNullException.ThrowIfNull(value);
-            return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, value);
+            return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, value, _certificateProvider);
+        }
+
+        /// <summary>Internal: returns a copy whose certificate comes from <paramref name="certificateProvider"/>.</summary>
+        internal TlsClientSettings WithCertificateProvider(TlsCertificateProvider certificateProvider)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(Certificate, ServerValidation, HandshakeTimeout, Protocols, TargetHost, certificateProvider);
         }
 
         internal SslClientAuthenticationOptions CreateAuthenticationOptions(string targetHost, string remotePeer,
@@ -100,15 +124,18 @@ namespace Akka.IO
             ArgumentNullException.ThrowIfNull(remotePeer);
             ArgumentNullException.ThrowIfNull(log);
             TlsSettingsValidation.ValidateTimeout(HandshakeTimeout);
-            if (Certificate is not null)
-                TlsSettingsValidation.ValidateCertificate(Certificate, nameof(Certificate));
+            var presented = Certificate;
+            if (_certificateProvider is not null)
+                presented = _certificateProvider(TlsConnectionDirection.Outbound, remotePeer, log); // once per connection
+            else if (presented is not null)
+                TlsSettingsValidation.ValidateCertificate(presented, nameof(Certificate));
 
             return new SslClientAuthenticationOptions
             {
                 TargetHost = TargetHost ?? targetHost,
                 EnabledSslProtocols = Protocols,
-                ClientCertificates = Certificate is null ? null : new X509CertificateCollection { Certificate },
-                LocalCertificateSelectionCallback = Certificate is null ? null : (_, _, _, _, _) => Certificate,
+                ClientCertificates = presented is null ? null : new X509CertificateCollection { presented },
+                LocalCertificateSelectionCallback = presented is null ? null : (_, _, _, _, _) => presented,
                 RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
                     TlsSettingsValidation.ValidatePeer(ServerValidation, certificate, chain, remotePeer, errors, log)
             };
@@ -127,12 +154,21 @@ namespace Akka.IO
     /// </summary>
     public sealed class TlsServerSettings
     {
-        private TlsServerSettings(X509Certificate2 certificate, TlsPeerPolicy? clientValidation,
-            TimeSpan handshakeTimeout, SslProtocols protocols)
+        // A fixed certificate, or null when the provider is asked for one each time a connection is built.
+        private readonly X509Certificate2? _certificate;
+        private readonly TlsCertificateProvider? _certificateProvider;
+
+        private TlsServerSettings(X509Certificate2? certificate, TlsPeerPolicy? clientValidation,
+            TimeSpan handshakeTimeout, SslProtocols protocols, TlsCertificateProvider? certificateProvider = null)
         {
-            ArgumentNullException.ThrowIfNull(certificate);
-            TlsSettingsValidation.ValidateCertificate(certificate, nameof(certificate));
-            Certificate = certificate;
+            if (certificateProvider is null)
+            {
+                ArgumentNullException.ThrowIfNull(certificate);
+                TlsSettingsValidation.ValidateCertificate(certificate, nameof(certificate));
+            }
+
+            _certificate = certificate;
+            _certificateProvider = certificateProvider;
             ClientValidation = clientValidation;
             TlsSettingsValidation.ValidateTimeout(handshakeTimeout);
             HandshakeTimeout = handshakeTimeout;
@@ -140,7 +176,8 @@ namespace Akka.IO
         }
 
         /// <summary>Gets the caller-owned certificate presented to clients.</summary>
-        public X509Certificate2 Certificate { get; }
+        public X509Certificate2 Certificate => _certificate ?? throw new InvalidOperationException(
+            "These TLS settings ask for a certificate each time a connection is built, so they hold no fixed certificate.");
 
         /// <summary>Gets the policy used to validate client certificates, or <c>null</c> for anonymous clients.</summary>
         public TlsPeerPolicy? ClientValidation { get; }
@@ -160,30 +197,113 @@ namespace Akka.IO
             new(serverCertificate, clientValidation ?? throw new ArgumentNullException(nameof(clientValidation)),
                 TimeSpan.FromSeconds(10), SslProtocols.None);
 
+        /// <summary>
+        /// Internal: incoming settings whose server certificate comes from <paramref name="certificateProvider"/>,
+        /// which is asked each time a connection is built. A null <paramref name="clientValidation"/> permits clients
+        /// without certificates. <see cref="Certificate"/> throws for these settings.
+        /// </summary>
+        internal static TlsServerSettings FromProvider(TlsCertificateProvider certificateProvider,
+            TlsPeerPolicy? clientValidation)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(null, clientValidation, TimeSpan.FromSeconds(10), SslProtocols.None, certificateProvider);
+        }
+
+        // True when the certificate comes from a provider, which is asked per connection, not from a fixed certificate.
+        internal bool HasCertificateProvider => _certificateProvider is not null;
+
         /// <summary>Returns a copy with a different handshake timeout.</summary>
         public TlsServerSettings WithHandshakeTimeout(TimeSpan value) =>
-            new(Certificate, ClientValidation, value, Protocols);
+            new(_certificate, ClientValidation, value, Protocols, _certificateProvider);
 
         /// <summary>Returns a copy with different TLS protocols.</summary>
         public TlsServerSettings WithProtocols(SslProtocols value) =>
-            new(Certificate, ClientValidation, HandshakeTimeout, value);
+            new(_certificate, ClientValidation, HandshakeTimeout, value, _certificateProvider);
+
+        /// <summary>Internal: returns a copy whose certificate comes from <paramref name="certificateProvider"/>.</summary>
+        internal TlsServerSettings WithCertificateProvider(TlsCertificateProvider certificateProvider)
+        {
+            ArgumentNullException.ThrowIfNull(certificateProvider);
+            return new(null, ClientValidation, HandshakeTimeout, Protocols, certificateProvider);
+        }
 
         internal SslServerAuthenticationOptions CreateAuthenticationOptions(string remotePeer, ILoggingAdapter log)
         {
             ArgumentNullException.ThrowIfNull(remotePeer);
             ArgumentNullException.ThrowIfNull(log);
             TlsSettingsValidation.ValidateTimeout(HandshakeTimeout);
-            TlsSettingsValidation.ValidateCertificate(Certificate, nameof(Certificate));
+            X509Certificate2 presented;
+            if (_certificateProvider is not null)
+            {
+                presented = _certificateProvider(TlsConnectionDirection.Inbound, remotePeer, log); // once per connection
+            }
+            else
+            {
+                presented = _certificate!;
+                TlsSettingsValidation.ValidateCertificate(presented, nameof(Certificate));
+            }
 
             return new SslServerAuthenticationOptions
             {
-                ServerCertificate = Certificate,
+                ServerCertificate = presented,
                 ClientCertificateRequired = ClientValidation is not null,
                 EnabledSslProtocols = Protocols,
                 RemoteCertificateValidationCallback = ClientValidation is null ? null :
                     (_, certificate, chain, errors) =>
                         TlsSettingsValidation.ValidatePeer(ClientValidation, certificate, chain, remotePeer, errors, log)
             };
+        }
+    }
+
+    /// <summary>Internal: which side of a TLS connection this node is on.</summary>
+    internal enum TlsConnectionDirection
+    {
+        /// <summary>This node accepted the connection.</summary>
+        Inbound,
+
+        /// <summary>This node opened the connection.</summary>
+        Outbound
+    }
+
+    /// <summary>
+    /// Internal: returns the certificate this node presents on one new TLS connection. Called once per connection,
+    /// when the connection's authentication options are built. Throws when there is no certificate to present, which
+    /// fails that connection only.
+    /// </summary>
+    /// <param name="direction">Whether this node accepted or opened the connection.</param>
+    /// <param name="remotePeer">The remote peer, for log lines.</param>
+    /// <param name="log">The logger of the connection.</param>
+    internal delegate X509Certificate2 TlsCertificateProvider(TlsConnectionDirection direction, string remotePeer,
+        ILoggingAdapter log);
+
+    /// <summary>
+    /// Internal: marks a certificate provider failure that the provider already reported (logged), so Akka.IO does
+    /// not log it again at Warning for every connection. The mark rides on the exception the provider rethrows, so
+    /// the connection still fails with that exception.
+    /// </summary>
+    internal static class TlsCertificateProviderFailure
+    {
+        private const string ReportedKey = "Akka.IO.TlsCertificateProviderFailure.Reported";
+
+        /// <summary>Marks <paramref name="exception"/> as already reported by the certificate provider.</summary>
+        internal static void MarkReported(Exception exception)
+        {
+            // A custom exception may have read-only data. It then logs as any other failure does.
+            if (!exception.Data.IsReadOnly)
+                exception.Data[ReportedKey] = true;
+        }
+
+        /// <summary>True when <paramref name="exception"/>, or an exception it wraps, was marked by the provider.</summary>
+        internal static bool IsReported(Exception? exception)
+        {
+            for (var depth = 0; exception is not null && depth < 8; depth++)
+            {
+                if (exception.Data.Contains(ReportedKey))
+                    return true;
+                exception = exception.InnerException;
+            }
+
+            return false;
         }
     }
 

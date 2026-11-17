@@ -65,9 +65,9 @@ namespace Akka.IO
     /// built after that look-up finishes. A connection never waits for a look-up: one with nothing to present fails
     /// at once, and starts a look-up if none is running. Only the startup check waits for the first look-up, for at
     /// most 30 seconds after it started, without blocking a thread. A look-up that runs longer is left to finish;
-    /// until it does, the node keeps its certificates and warns. The DotNetty transport also asks a folder or store
-    /// source once a minute by itself, so a node that builds no connection still looks, and logs a change of pick
-    /// within about a minute. The callback source is called on every connection.
+    /// until it does, the node keeps its certificates and warns. The DotNetty and Artery transports also ask a folder
+    /// or store source once a minute by themselves, so a node that builds no connection still looks, and logs a change
+    /// of pick within about a minute. The callback source is called on every connection.
     /// </para>
     /// <para>
     /// If a look-up finds no usable certificate (the folder is gone, the store cannot be opened, every candidate is

@@ -316,8 +316,11 @@ namespace Akka.IO
             try
             {
                 // Fail the bind command immediately for invalid TLS settings instead of starting a
-                // listener that would reject every accepted socket later.
-                _bind.Tls?.CreateAuthenticationOptions(_bind.LocalAddress.ToString()!, _log);
+                // listener that would reject every accepted socket later. Settings that ask a provider for
+                // the certificate are left out: the provider is asked per connection, and its owner checks
+                // it before binding.
+                if (_bind.Tls is { HasCertificateProvider: false } tls)
+                    tls.CreateAuthenticationOptions(_bind.LocalAddress.ToString()!, _log);
 
                 _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
                 {

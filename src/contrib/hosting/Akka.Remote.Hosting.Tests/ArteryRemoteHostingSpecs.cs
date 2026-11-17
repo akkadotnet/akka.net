@@ -9,14 +9,18 @@
 using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Hosting;
 using Akka.IO;
 using Akka.Remote.Artery;
 using Akka.Remote.Hosting;
+using Akka.Tests.IO;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Akka.Remote.Hosting.Tests
@@ -126,6 +130,86 @@ namespace Akka.Remote.Hosting.Tests
             var setup = builder.Setups.Should().ContainSingle(item => item is ArteryTlsSetup)
                 .Which.Should().BeOfType<ArteryTlsSetup>().Subject;
             setup.Settings.Should().BeSameAs(hostedProfile);
+        }
+
+        [Fact(DisplayName = "Should_RegisterTheSourceBackedProfile_When_ArteryTlsIsBuiltFromACertificateSource")]
+        public void Should_RegisterTheSourceBackedProfile_When_ArteryTlsIsBuiltFromACertificateSource()
+        {
+            using var directCertificate = CreateCertificate();
+            var directSetup = new ArteryTlsSetup(ArteryTlsSettings.ServerOnly(directCertificate, AcceptAllPolicy()));
+            var source = TlsCertificateSource.FromFolder("/etc/akka/tls", password: null);
+            var hostedProfile = ArteryTlsSettings.Mutual(source, AcceptAllPolicy());
+            var builder = CreateBuilder();
+            builder.AddSetup(directSetup);
+
+            builder.WithArteryRemoting(options => options.Tls = hostedProfile);
+
+            // One profile per node: the source-backed one replaces the direct setup, as a fixed one does.
+            var setup = builder.Setups.Should().ContainSingle(item => item is ArteryTlsSetup)
+                .Which.Should().BeOfType<ArteryTlsSetup>().Subject;
+            setup.Settings.Should().BeSameAs(hostedProfile);
+        }
+
+        [Fact(DisplayName = "Should_ExchangeMessage_When_TwoHostedArterySystemsUseACertificateSourceWithMutualTls")]
+        public async Task Should_ExchangeMessage_When_TwoHostedArterySystemsUseACertificateSourceWithMutualTls()
+        {
+            using var certificate = TlsTestCertificates.Create("artery-hosting-source", -60, 60, true,
+                TlsTestCertificates.ServerAuth, TlsTestCertificates.ClientAuth);
+            var thumbprint = certificate.Thumbprint;
+            var calls = 0;
+            var source = TlsCertificateSource.FromCallback(() =>
+            {
+                Interlocked.Increment(ref calls);
+                return certificate;
+            });
+
+            // The certificate is self-signed, so the policy accepts exactly this one.
+            var policy = TlsPeerPolicy.CustomTrust((peer, _, _, _, _) => peer?.Thumbprint == thumbprint);
+
+            IHost CreateHost(string name, Action<AkkaConfigurationBuilder>? more = null) =>
+                new HostBuilder().ConfigureServices(services =>
+                {
+                    services.AddAkka(name, (builder, _) =>
+                    {
+                        builder.WithArteryRemoting(options =>
+                        {
+                            options.HostName = "127.0.0.1";
+                            options.Port = 0;
+                            options.Tls = ArteryTlsSettings.Mutual(source, policy);
+                        });
+                        more?.Invoke(builder);
+                    });
+                }).Build();
+
+            using var server = CreateHost("artery-tls-server", b => b.WithActors((system, _, _) =>
+                system.ActorOf(Props.Create(() => new EchoActor()), "echo")));
+            using var client = CreateHost("artery-tls-client");
+
+            await server.StartAsync();
+            await client.StartAsync();
+            var atStart = Volatile.Read(ref calls);
+            atStart.Should().Be(2, "each node checks its source once at startup");
+
+            var serverSystem = (ExtendedActorSystem)server.Services.GetRequiredService<ActorSystem>();
+            var clientSystem = client.Services.GetRequiredService<ActorSystem>();
+            var address = serverSystem.Provider.DefaultAddress;
+
+            var echo = await clientSystem.ActorSelection($"{address}/user/echo")
+                .Ask<string>("ping", TimeSpan.FromSeconds(20));
+
+            echo.Should().Be("echo:ping");
+            Volatile.Read(ref calls).Should().BeGreaterThan(atStart, "each new connection asks the source");
+
+            await server.StopAsync();
+            await client.StopAsync();
+        }
+
+        private sealed class EchoActor : ReceiveActor
+        {
+            public EchoActor()
+            {
+                Receive<string>(s => Sender.Tell("echo:" + s));
+            }
         }
 
         private static AkkaConfigurationBuilder CreateBuilder() =>
