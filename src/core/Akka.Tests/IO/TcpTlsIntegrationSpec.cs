@@ -650,16 +650,17 @@ namespace Akka.Tests.IO
         {
             using var client = new TcpClient();
             using var cancellation = new CancellationTokenSource(TestTimeout);
-            await client.ConnectAsync(endpoint.Address, endpoint.Port, cancellation.Token);
-            using var tls = new SslStream(client.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
-            // The node rejects the handshake, which is the case under test: the client sees it fail or see the close.
+            // The node rejects the connection, which is the case under test. Depending on timing the client sees the
+            // handshake fail, sees the close, or has its connect reset; any of these is the expected rejection.
             var failure = await Record.ExceptionAsync(async () =>
             {
+                await client.ConnectAsync(endpoint.Address, endpoint.Port, cancellation.Token);
+                using var tls = new SslStream(client.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
                 await tls.AuthenticateAsClientAsync(CreateClientOptions(clientCertificate), cancellation.Token);
                 await ObserveTlsPeerCloseAsync(tls, TimeSpan.FromSeconds(3));
             });
             if (failure is not null)
-                failure.Should().Match<Exception>(e => e is AuthenticationException || e is IOException);
+                failure.Should().Match<Exception>(e => e is AuthenticationException || e is IOException || e is SocketException);
         }
 
         private static async Task<LogEvent> FishInitializationFailureAsync(Akka.TestKit.TestProbe logs) =>
