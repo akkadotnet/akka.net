@@ -250,10 +250,9 @@ namespace Akka.Remote.Artery
                         remotePeer, ex.Message);
                 }
 
-                // Akka.IO fails the connection with this exception. Say it was reported, so Akka.IO does not log it
-                // again at Warning for every connection.
-                TlsCertificateProviderFailure.MarkReported(ex);
-                throw;
+                // Akka.IO fails the connection with this exception. Its type says the failure was reported, so Akka.IO
+                // does not log it again at Warning for every connection. It wraps the original, with the same message.
+                throw new TlsCertificateUnavailableException(ex);
             }
         }
 

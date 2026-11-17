@@ -121,6 +121,32 @@ namespace Akka.Remote.Tests.Artery
             client.LocalCertificateSelectionCallback.Should().BeNull();
         }
 
+        [Fact(DisplayName = "Should_Log_The_Exact_Error_And_Throw_The_Original_Failure_Wrapped_When_The_Source_Has_No_Certificate")]
+        public void Should_log_the_exact_error_and_throw_the_original_failure_wrapped_when_the_source_has_no_certificate()
+        {
+            var failure = new InvalidOperationException("the callback failed");
+            var source = TlsCertificateSource.FromCallback(() => throw failure);
+            var settings = ArteryTlsSettings.Mutual(source, TlsPeerPolicy.CustomTrust((_, _, _, _, _) => true));
+            var log = new RecordingLog();
+
+            var outbound = Assert.Throws<TlsCertificateUnavailableException>(
+                () => settings.CertificateSource!.Present(TlsConnectionDirection.Outbound, "peer:1", log));
+            var inbound = Assert.Throws<TlsCertificateUnavailableException>(
+                () => settings.CertificateSource!.Present(TlsConnectionDirection.Inbound, "peer:2", log));
+
+            // Akka.IO fails the connection with the wrapper: the same message, and the original inside it, unchanged.
+            foreach (var thrown in new[] { outbound, inbound })
+            {
+                thrown.Message.Should().Be("the callback failed");
+                thrown.InnerException.Should().BeSameAs(failure);
+            }
+
+            failure.Data.Count.Should().Be(0, "the callback's own exception is not changed");
+            log.Errors.Should().Equal(
+                "Cannot build a TLS connection to [peer:1]: the callback failed",
+                "Cannot build a TLS connection for the incoming connection from [peer:2]: the callback failed");
+        }
+
         [Fact(DisplayName = "Should_Keep_The_Source_When_The_Handshake_Timeout_Or_Protocols_Change")]
         public async Task Should_keep_the_source_when_the_handshake_timeout_or_protocols_change()
         {
