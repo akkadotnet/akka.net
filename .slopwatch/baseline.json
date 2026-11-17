@@ -1,755 +1,1088 @@
 {
-  "version": 1,
-  "createdAt": "2026-03-30T17:14:57.3127037+00:00",
-  "updatedAt": "2026-03-30T17:14:57.3150802+00:00",
-  "description": "Initial baseline created by 'slopwatch init' on 2026-03-30 17:14:57 UTC",
+  "version": 2,
+  "createdAt": "2026-11-17T13:42:20.1117541+00:00",
+  "updatedAt": "2026-11-17T13:42:20.113588+00:00",
+  "description": "Initial baseline created by 'slopwatch init' on 2026-11-17 13:42:20 UTC",
   "entries": [
     {
-      "hash": "51a77db094a515e7",
+      "hash": "7bae1129cd5698c3",
       "ruleId": "SW005",
       "filePath": "Directory.Build.props",
       "lineNumber": 16,
-      "codeSnippet": "<NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>",
-      "message": "Adding warnings to NoWarn: CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051",
-      "baselinedAt": "2026-03-30T17:14:57.314837+00:00"
+      "codeSnippet": "<NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051;SYSLIB0050;SYSLIB0051;CS0672;CA2022</NoWarn>",
+      "message": "Adding warnings to NoWarn: CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051;SYSLIB0050;SYSLIB0051;CS0672;CA2022",
+      "baselinedAt": "2026-11-17T13:42:20.1128397+00:00"
     },
     {
-      "hash": "573cc6dd28e7382e",
-      "ruleId": "SW002",
-      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
-      "lineNumber": 12,
-      "codeSnippet": "#pragma warning disable 1998 //async method lacks an await",
-      "message": "#pragma warning disable for warnings 1998 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3148943+00:00"
-    },
-    {
-      "hash": "5c346f8d07ea6c1d",
-      "ruleId": "SW002",
-      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
-      "lineNumber": 13,
-      "codeSnippet": "#pragma warning disable AK1003 // ReceiveAsync lacks an await",
-      "message": "#pragma warning disable for warnings AK1003 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.314898+00:00"
-    },
-    {
-      "hash": "f61b8f3283ee0922",
-      "ruleId": "SW003",
-      "filePath": "src/contrib/cluster/Akka.Cluster.Metrics/Collectors/DefaultCollector.cs",
-      "lineNumber": 89,
-      "codeSnippet": "catch (Exception)\r\n                {\r\n                    // MaxWorkingSet may throw on some platforms (e.g., Linux/Mono)\r\n                    // Ignore and continue without this metric\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149057+00:00"
-    },
-    {
-      "hash": "dfaea02bf2c86baf",
+      "hash": "683b971926757b7a",
       "ruleId": "SW003",
       "filePath": "src/contrib/cluster/Akka.Cluster.Sharding/Shard.cs",
       "lineNumber": 1072,
-      "codeSnippet": "catch\r\n            {\r\n                // no-op, we're shutting down anyway.\r\n            }",
+      "codeSnippet": "catch\n            {\n                // no-op, we're shutting down anyway.\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149112+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.112907+00:00"
     },
     {
-      "hash": "1ea9daaa12cb519b",
-      "ruleId": "SW003",
-      "filePath": "src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/MultiNodeClusterShardingSpec.cs",
-      "lineNumber": 198,
-      "codeSnippet": "catch (Exception)\r\n            {\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149137+00:00"
-    },
-    {
-      "hash": "c277e2108b358daa",
+      "hash": "99a40c3fc3423b9c",
       "ruleId": "SW003",
       "filePath": "src/contrib/cluster/Akka.Cluster.Tools/Singleton/ClusterSingleton.cs",
       "lineNumber": 74,
-      "codeSnippet": "catch (InvalidActorNameException ex) when (ex.Message.EndsWith(\"is not unique!\"))\r\n                {\r\n                    // This is fine. We just wanted to make sure it is running and it already is\r\n                }",
+      "codeSnippet": "catch (InvalidActorNameException ex) when (ex.Message.EndsWith(\"is not unique!\"))\n                {\n                    // This is fine. We just wanted to make sure it is running and it already is\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149167+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129136+00:00"
     },
     {
-      "hash": "845a9df7b790d887",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/ActorCell.DefaultMessages.cs",
-      "lineNumber": 390,
-      "codeSnippet": "catch\r\n            {\r\n                //TODO: Hmmm?\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149197+00:00"
-    },
-    {
-      "hash": "4178214ea8948200",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/ActorCell.FaultHandling.cs",
-      "lineNumber": 475,
-      "codeSnippet": "catch\r\n            {\r\n                //TODO: Hmmm?\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149217+00:00"
-    },
-    {
-      "hash": "ce7efe5072243fc9",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/ActorRef.cs",
-      "lineNumber": 79,
-      "codeSnippet": "catch\r\n            {\r\n                // we don't do error handling for this - we do not care\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149251+00:00"
-    },
-    {
-      "hash": "bd149108a88e3e51",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/ActorRef.cs",
-      "lineNumber": 1182,
-      "codeSnippet": "catch (Exception) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149268+00:00"
-    },
-    {
-      "hash": "c5f9337f769c1e9d",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/SupervisorStrategy.cs",
-      "lineNumber": 179,
-      "codeSnippet": "catch (Exception)\r\n            {\r\n                // swallow any exceptions\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149296+00:00"
-    },
-    {
-      "hash": "e19886191172e32e",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/Internal/ActorSystemImpl.cs",
-      "lineNumber": 239,
-      "codeSnippet": "catch\r\n                    {\r\n                        // ignored\r\n                    }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149316+00:00"
-    },
-    {
-      "hash": "d6fa4922660bdbd4",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
-      "lineNumber": 522,
-      "codeSnippet": "catch (SchedulerException)\r\n                    {\r\n                        // ignore, this is from terminated actors\r\n                    }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149396+00:00"
-    },
-    {
-      "hash": "0b95a01799e7e19c",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
-      "lineNumber": 782,
-      "codeSnippet": "catch\r\n                                {\r\n                                    // suppress any errors thrown during logging\r\n                                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149415+00:00"
-    },
-    {
-      "hash": "63ddf742f71dea2d",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Dispatch/ChannelSchedulerExtension.cs",
-      "lineNumber": 324,
-      "codeSnippet": "catch\r\n            {\r\n                //ignore error\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149439+00:00"
-    },
-    {
-      "hash": "8f246a0e213ae0d5",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/Dispatch/Dispatchers.cs",
-      "lineNumber": 167,
-      "codeSnippet": "catch\r\n            {\r\n                // suppress exceptions\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149462+00:00"
-    },
-    {
-      "hash": "136828c217cc3915",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/IO/Tcp.cs",
-      "lineNumber": 898,
-      "codeSnippet": "catch (Exception) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149483+00:00"
-    },
-    {
-      "hash": "412124630e61d3c7",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/IO/TcpConnection.cs",
-      "lineNumber": 741,
-      "codeSnippet": "catch\r\n            {\r\n                /* ignore */\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149505+00:00"
-    },
-    {
-      "hash": "0c7c28bc324a7a7b",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka/IO/TcpOutgoingConnection.cs",
-      "lineNumber": 68,
-      "codeSnippet": "catch (InvalidOperationException)\r\n                {\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149537+00:00"
-    },
-    {
-      "hash": "30b2a94386c0da0f",
+      "hash": "12ce2d17b04033f4",
       "ruleId": "SW002",
-      "filePath": "src/core/Akka.Cluster.Tests/MemberOrderingModelBasedTests.cs",
-      "lineNumber": 20,
+      "filePath": "src/contrib/cluster/Akka.DistributedData.Tests/Bugfix8219MergeFuzzingSpec.cs",
+      "lineNumber": 13,
       "codeSnippet": "#pragma warning disable xUnit1028",
       "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3149564+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129188+00:00"
     },
     {
-      "hash": "5a60d012890f5d94",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs",
-      "lineNumber": 14,
-      "codeSnippet": "#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. ",
-      "message": "#pragma warning disable for warnings CS0414 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3149585+00:00"
-    },
-    {
-      "hash": "9d0193b3ead7f0de",
+      "hash": "c335f984284ea06d",
       "ruleId": "SW003",
-      "filePath": "src/core/Akka.MultiNode.RemoteHost/RemoteHost.cs",
-      "lineNumber": 50,
-      "codeSnippet": "catch{}",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/MultiNodeClusterShardingSpec.cs",
+      "lineNumber": 198,
+      "codeSnippet": "catch (Exception)\n            {\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149601+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129299+00:00"
     },
     {
-      "hash": "dc281fe084e8fc9a",
-      "ruleId": "SW001",
-      "filePath": "src/core/Akka.MultiNode.SampleMultiNodeTests/IgnoredXunitTest.cs",
-      "lineNumber": 9,
-      "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
-      "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
-      "baselinedAt": "2026-03-30T17:14:57.3149617+00:00"
-    },
-    {
-      "hash": "3f7e6de7190ea9ee",
-      "ruleId": "SW001",
-      "filePath": "src/core/Akka.MultiNode.SampleMultiNodeTests.Xunit2/IgnoredXunitTest.cs",
-      "lineNumber": 9,
-      "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
-      "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
-      "baselinedAt": "2026-03-30T17:14:57.3149633+00:00"
-    },
-    {
-      "hash": "c128afaabd09216e",
+      "hash": "5e30a010e4bb2690",
       "ruleId": "SW003",
-      "filePath": "src/core/Akka.MultiNode.TestAdapter/Configuration/OptionsReader.cs",
-      "lineNumber": 36,
-      "codeSnippet": "catch\r\n            { }",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Metrics/Collectors/DefaultCollector.cs",
+      "lineNumber": 89,
+      "codeSnippet": "catch (Exception)\n                {\n                    // MaxWorkingSet may throw on some platforms (e.g., Linux/Mono)\n                    // Ignore and continue without this metric\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149653+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129359+00:00"
     },
     {
-      "hash": "161c46d53af3a81f",
+      "hash": "574685796f39a20a",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit/TestKit.Shared.cs",
+      "lineNumber": 248,
+      "codeSnippet": "Task.Delay(StartupTimeout, CancellationToken.None)",
+      "message": "Test uses Task.Delay(StartupTimeout) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129411+00:00"
+    },
+    {
+      "hash": "47b7df1578749ff8",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit/TestKit.Shared.cs",
+      "lineNumber": 437,
+      "codeSnippet": "Task.Delay(Timeout.Infinite, cts.Token)",
+      "message": "Test uses Task.Delay(Timeout.Infinite) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129463+00:00"
+    },
+    {
+      "hash": "1c34f43ff626e592",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit.Tests/TestActorRecoveryRegistrySpec.cs",
+      "lineNumber": 107,
+      "codeSnippet": "Task.Delay(50)",
+      "message": "Test uses Task.Delay(50) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129518+00:00"
+    },
+    {
+      "hash": "4546f703fa9e7843",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit.Tests/TestActorStartupDeadlockSpec.cs",
+      "lineNumber": 85,
+      "codeSnippet": "Task.Delay(startTimeout)",
+      "message": "Test uses Task.Delay(startTimeout) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129585+00:00"
+    },
+    {
+      "hash": "3e2ccbf081426f86",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit.Tests/TestActorStartupDeadlockSpec.cs",
+      "lineNumber": 113,
+      "codeSnippet": "Task.Delay(expectTimeout)",
+      "message": "Test uses Task.Delay(expectTimeout) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.112966+00:00"
+    },
+    {
+      "hash": "bffe125fd0ca9c77",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit.Tests/TestActorStartupDeadlockSpec.cs",
+      "lineNumber": 126,
+      "codeSnippet": "Task.Delay(stopTimeout)",
+      "message": "Test uses Task.Delay(stopTimeout) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129722+00:00"
+    },
+    {
+      "hash": "1521aac35b7f6317",
+      "ruleId": "SW004",
+      "filePath": "src/contrib/hosting/Akka.Hosting.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
+      "lineNumber": 166,
+      "codeSnippet": "Task.Delay(400)",
+      "message": "Test uses Task.Delay(400) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1129776+00:00"
+    },
+    {
+      "hash": "a12fbfd3c6786091",
       "ruleId": "SW003",
-      "filePath": "src/core/Akka.MultiNode.TestAdapter/Configuration/OptionsReader.cs",
-      "lineNumber": 80,
-      "codeSnippet": "catch { }",
+      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
+      "lineNumber": 110,
+      "codeSnippet": "catch { /* ignore */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149673+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129832+00:00"
     },
     {
-      "hash": "efd03e5f2d3f8292",
+      "hash": "d93da4d07d1e05bd",
       "ruleId": "SW003",
-      "filePath": "src/core/Akka.MultiNode.TestAdapter/NodeRunner/Executor.cs",
-      "lineNumber": 249,
-      "codeSnippet": "catch { /* well... at least we have tried */ }",
+      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
+      "lineNumber": 194,
+      "codeSnippet": "catch\n                {\n                    // Connection might be closed by server, that's expected\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149731+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129878+00:00"
     },
     {
-      "hash": "015763b4024443fa",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.MultiNode.TestAdapter.Xunit2/NodeRunner/Executor.cs",
-      "lineNumber": 179,
-      "codeSnippet": "catch { /* well... at least we have tried */ }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149753+00:00"
-    },
-    {
-      "hash": "68261c2dc0a451fa",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
-      "lineNumber": 97,
-      "codeSnippet": "catch (OperationCanceledException)\r\n            {\r\n                // no-op\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149776+00:00"
-    },
-    {
-      "hash": "0a2630229d63ab46",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
-      "lineNumber": 101,
-      "codeSnippet": "catch (TimeoutException)\r\n            {\r\n                // no-op\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149796+00:00"
-    },
-    {
-      "hash": "13dbfd621fcd7591",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
-      "lineNumber": 127,
-      "codeSnippet": "catch (OperationCanceledException)\r\n                {\r\n                    // no-op\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149815+00:00"
-    },
-    {
-      "hash": "61fd6e63e6d74c52",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
-      "lineNumber": 131,
-      "codeSnippet": "catch (TimeoutException)\r\n                {\r\n                    // no-op\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149832+00:00"
-    },
-    {
-      "hash": "3ebe4f00788a15eb",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
-      "lineNumber": 98,
-      "codeSnippet": "catch (OperationCanceledException)\r\n                {\r\n                    // no-op\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149854+00:00"
-    },
-    {
-      "hash": "0dc21eb186747457",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
-      "lineNumber": 102,
-      "codeSnippet": "catch (TimeoutException)\r\n                {\r\n                    // no-op\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149872+00:00"
-    },
-    {
-      "hash": "13f21bca41231e30",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.Tests/PersistenceSpec.cs",
-      "lineNumber": 121,
-      "codeSnippet": "catch (IOException) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149889+00:00"
-    },
-    {
-      "hash": "daf1343e8543ba73",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.Tests/ReceivePersistentActorAsyncAwaitSpec.cs",
-      "lineNumber": 615,
-      "codeSnippet": "catch (Exception)\r\n                    {\r\n                    }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149912+00:00"
-    },
-    {
-      "hash": "1bf7bf24c01f18dc",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Persistence.Tests/SnapshotDirectoryFailureSpec.cs",
-      "lineNumber": 66,
-      "codeSnippet": "catch { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3149931+00:00"
-    },
-    {
-      "hash": "3a24c8bc72c2bdfe",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Remote/Endpoint.cs",
-      "lineNumber": 7,
-      "codeSnippet": "#pragma warning disable AK1004",
-      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.314995+00:00"
-    },
-    {
-      "hash": "032823f713deea61",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Remote/EndpointManager.cs",
-      "lineNumber": 7,
-      "codeSnippet": "#pragma warning disable AK1004",
-      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3149964+00:00"
-    },
-    {
-      "hash": "8e6754b39cbbbef5",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Remote/RemoteWatcher.cs",
-      "lineNumber": 7,
-      "codeSnippet": "#pragma warning disable AK1004",
-      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.314998+00:00"
-    },
-    {
-      "hash": "3f30d9efd91f5ae6",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Remote/Transport/DotNetty/DotNettyTransport.cs",
-      "lineNumber": 234,
-      "codeSnippet": "catch\r\n                {\r\n                    // ignore errors occurring during shutdown\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150002+00:00"
-    },
-    {
-      "hash": "6d6dfc7c835742e6",
+      "hash": "5e1f1678d3b5cb6c",
       "ruleId": "SW003",
       "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyCertificateValidationSpec.cs",
-      "lineNumber": 101,
+      "lineNumber": 108,
       "codeSnippet": "catch { /* ignore */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.315002+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.112993+00:00"
     },
     {
-      "hash": "dc73244806271cf5",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
-      "lineNumber": 103,
-      "codeSnippet": "catch { /* ignore */ }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150034+00:00"
-    },
-    {
-      "hash": "28b142cc54b1eaf9",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
-      "lineNumber": 187,
-      "codeSnippet": "catch\r\n                {\r\n                    // Connection might be closed by server, that's expected\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150054+00:00"
-    },
-    {
-      "hash": "7ddd220c868e2611",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Streams/StreamRefs.cs",
-      "lineNumber": 16,
-      "codeSnippet": "#pragma warning disable 628",
-      "message": "#pragma warning disable for warnings 628 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3150071+00:00"
-    },
-    {
-      "hash": "26b2f4088086abac",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams/Dsl/Hub.cs",
-      "lineNumber": 731,
-      "codeSnippet": "catch\r\n                                    {\r\n                                        // no-op\r\n                                    }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150096+00:00"
-    },
-    {
-      "hash": "2b5b2f6cdd1a6ff8",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams/Implementation/ActorPublisher.cs",
-      "lineNumber": 269,
-      "codeSnippet": "catch (Exception exception)\r\n                when (exception is ISpecViolation)\r\n            {\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150116+00:00"
-    },
-    {
-      "hash": "5ad3e20bef0c50f0",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams/Implementation/CompletedPublishers.cs",
-      "lineNumber": 40,
-      "codeSnippet": "catch (Exception e)\r\n                when (e is ISpecViolation)\r\n            {\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150142+00:00"
-    },
-    {
-      "hash": "055953950152623a",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams/Implementation/Fusing/ActorGraphInterpreter.cs",
-      "lineNumber": 357,
-      "codeSnippet": "catch (Exception) { /* swallow? */ }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.315021+00:00"
-    },
-    {
-      "hash": "c94c0f36e7b14586",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Streams/Implementation/Fusing/GraphStages.cs",
-      "lineNumber": 532,
-      "codeSnippet": "SuppressMessage(\"ReSharper\", \"MethodSupportsCancellation\")",
-      "message": "SuppressMessage attribute suppressing ReSharper:MethodSupportsCancellation",
-      "baselinedAt": "2026-03-30T17:14:57.3150229+00:00"
-    },
-    {
-      "hash": "6c216acbb6961bb6",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Streams/Implementation/IO/FilePublisher.cs",
-      "lineNumber": 19,
-      "codeSnippet": "#pragma warning disable 1587",
-      "message": "#pragma warning disable for warnings 1587 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3150248+00:00"
-    },
-    {
-      "hash": "2367574532adc0be",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowRecoverWithSpec.cs",
-      "lineNumber": 291,
-      "codeSnippet": "catch (AggregateException) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150266+00:00"
-    },
-    {
-      "hash": "150b8b26fb03a8b3",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncSpec.cs",
-      "lineNumber": 34,
-      "codeSnippet": "#pragma warning disable 162",
-      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3150282+00:00"
-    },
-    {
-      "hash": "fcb317c47a611f54",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncUnorderedSpec.cs",
-      "lineNumber": 29,
-      "codeSnippet": "#pragma warning disable 162",
-      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3150302+00:00"
-    },
-    {
-      "hash": "3624807874bb4d89",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySinkSpec.cs",
-      "lineNumber": 205,
-      "codeSnippet": "catch (AggregateException) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150318+00:00"
-    },
-    {
-      "hash": "af2a82b4dcd11067",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySourceSpec.cs",
-      "lineNumber": 208,
-      "codeSnippet": "catch (AggregateException) { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150333+00:00"
-    },
-    {
-      "hash": "59f8995ddd6c2ef9",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams.Tests/Dsl/StreamRefsSpec.cs",
-      "lineNumber": 549,
-      "codeSnippet": "catch\r\n            {\r\n                // Expected: at least one should fail\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150356+00:00"
-    },
-    {
-      "hash": "7400d07d2a8a42a0",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Streams.Tests/Implementation/Fusing/KeepGoingStageSpec.cs",
-      "lineNumber": 304,
-      "codeSnippet": "catch { }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150374+00:00"
-    },
-    {
-      "hash": "a609db5f57106cbd",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitAssert.cs",
-      "lineNumber": 75,
-      "codeSnippet": "Task.Delay(t, cancellationToken)",
-      "message": "Test uses Task.Delay(t) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150389+00:00"
-    },
-    {
-      "hash": "d5c9710b9beb8ed9",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitConditions.cs",
-      "lineNumber": 314,
-      "codeSnippet": "Task.Delay(sleepDuration, cancellationToken)",
-      "message": "Test uses Task.Delay(sleepDuration) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150415+00:00"
-    },
-    {
-      "hash": "84080843d9d3bd4e",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit/TestKitBase_Receive.cs",
-      "lineNumber": 426,
-      "codeSnippet": "Task.Delay(maxDuration, cancellationToken)",
-      "message": "Test uses Task.Delay(maxDuration) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150434+00:00"
-    },
-    {
-      "hash": "5923f4149699d248",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit/TestKitBase_Within.cs",
-      "lineNumber": 309,
-      "codeSnippet": "Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token)",
-      "message": "Test uses Task.Delay(max + TimeSpan.FromMilliseconds(200)) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150449+00:00"
-    },
-    {
-      "hash": "ec95e3aaf5589b04",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.TestKit/EventFilter/TestEventListener.cs",
-      "lineNumber": 128,
-      "codeSnippet": "catch\r\n            {\r\n            }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150467+00:00"
-    },
-    {
-      "hash": "a9d628c17aff3ff6",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
-      "lineNumber": 63,
-      "codeSnippet": "Task.Delay(100)",
-      "message": "Test uses Task.Delay(100) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150483+00:00"
-    },
-    {
-      "hash": "54434ed7e0a9b021",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
-      "lineNumber": 130,
-      "codeSnippet": "Task.Delay(TimeSpan.FromSeconds(1))",
-      "message": "Test uses Task.Delay(TimeSpan.FromSeconds(1)) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150497+00:00"
-    },
-    {
-      "hash": "2965783b3d651c63",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.TestKit.Tests/TestEventListenerTests/AllTestForEventFilterBase.cs",
-      "lineNumber": 236,
-      "codeSnippet": "#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed",
-      "message": "#pragma warning disable for warnings CS4014 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.315052+00:00"
-    },
-    {
-      "hash": "4322712ce7ce9c41",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
-      "lineNumber": 154,
-      "codeSnippet": "Task.Delay(halfMax)",
-      "message": "Test uses Task.Delay(halfMax) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150535+00:00"
-    },
-    {
-      "hash": "c419aab74e2bc6b8",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
-      "lineNumber": 158,
-      "codeSnippet": "Task.Delay(doubleMax)",
-      "message": "Test uses Task.Delay(doubleMax) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150556+00:00"
-    },
-    {
-      "hash": "c92171bee5deb8c7",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
-      "lineNumber": 96,
-      "codeSnippet": "catch (System.Threading.Tasks.TaskCanceledException)\r\n                {\r\n                    // This is expected if the test completes in time\r\n                }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150582+00:00"
-    },
-    {
-      "hash": "adf89ad86f045ca3",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
-      "lineNumber": 92,
-      "codeSnippet": "Task.Delay(shortTimeout.Add(300.Milliseconds()), timerCts.Token)",
-      "message": "Test uses Task.Delay(shortTimeout.Add(300.Milliseconds())) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150594+00:00"
-    },
-    {
-      "hash": "1a628586626eddde",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Tests/Actor/RemotePathParsingSpec.cs",
-      "lineNumber": 18,
-      "codeSnippet": "#pragma warning disable xUnit1028",
-      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.315061+00:00"
-    },
-    {
-      "hash": "0b85d5bcb03a7024",
-      "ruleId": "SW004",
-      "filePath": "src/core/Akka.Tests/Actor/Scheduler/TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs",
-      "lineNumber": 293,
-      "codeSnippet": "Task.Delay(200)",
-      "message": "Test uses Task.Delay(200) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150627+00:00"
-    },
-    {
-      "hash": "83f4deffa6900e17",
-      "ruleId": "SW001",
-      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
-      "lineNumber": 748,
-      "codeSnippet": "Fact(Skip = \"we currently do not make any distinction between quoted and unquoted strings once parsed\")",
-      "message": "Test method 'Can_assign_quoted_null_string_to_field' is disabled: we currently do not make any distinction between quoted and unquoted strings once parsed",
-      "baselinedAt": "2026-03-30T17:14:57.3150645+00:00"
-    },
-    {
-      "hash": "c14f9352e155f981",
-      "ruleId": "SW001",
-      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
-      "lineNumber": 836,
-      "codeSnippet": "Fact(Skip = \"Not allowed according to current HOCON spec\")",
-      "message": "Test method 'Can_parse_unquoted_ipv6' is disabled: Not allowed according to current HOCON spec",
-      "baselinedAt": "2026-03-30T17:14:57.3150661+00:00"
-    },
-    {
-      "hash": "87a59931dbccfe59",
-      "ruleId": "SW001",
-      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
-      "lineNumber": 883,
-      "codeSnippet": "Fact(Skip = \"not working yet\")",
-      "message": "Test method 'Can_substitute_with_concated_string' is disabled: not working yet",
-      "baselinedAt": "2026-03-30T17:14:57.3150673+00:00"
-    },
-    {
-      "hash": "50fb53e8b912daf7",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Tests/Dispatch/AsyncAwaitSpec.cs",
-      "lineNumber": 407,
-      "codeSnippet": "catch (Exception)\r\n                    {\r\n                    }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150692+00:00"
-    },
-    {
-      "hash": "642c86e03d34588a",
-      "ruleId": "SW003",
-      "filePath": "src/core/Akka.Tests/Util/ResultSpec.cs",
-      "lineNumber": 167,
-      "codeSnippet": "catch\r\n        {\r\n            // no-op\r\n        }",
-      "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-30T17:14:57.3150711+00:00"
-    },
-    {
-      "hash": "f4cc61a6d1e94d1f",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Tests/Util/StableListPriorityQueueSpec.cs",
-      "lineNumber": 16,
-      "codeSnippet": "#pragma warning disable xUnit1028",
-      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-30T17:14:57.3150742+00:00"
-    },
-    {
-      "hash": "50cf9910b71e3945",
-      "ruleId": "SW002",
-      "filePath": "src/core/Akka.Tests/Util/TokenBucketSpec.cs",
-      "lineNumber": 221,
-      "codeSnippet": "SuppressMessage(\"ReSharper\", \"ConditionIsAlwaysTrueOrFalse\")",
-      "message": "SuppressMessage attribute suppressing ReSharper:ConditionIsAlwaysTrueOrFalse",
-      "baselinedAt": "2026-03-30T17:14:57.3150758+00:00"
-    },
-    {
-      "hash": "e17f013523d0b47f",
+      "hash": "56c4be65bd501630",
       "ruleId": "SW004",
       "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
       "lineNumber": 61,
       "codeSnippet": "Thread.Sleep(40)",
       "message": "Test uses Thread.Sleep(40) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150776+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1129983+00:00"
     },
     {
-      "hash": "069247e6789d6acc",
+      "hash": "a15db1f4dd7c8420",
       "ruleId": "SW004",
       "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
       "lineNumber": 77,
       "codeSnippet": "Task.Delay(RunTime).Wait()",
       "message": "Test uses Task.Delay(?) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150789+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1130033+00:00"
     },
     {
-      "hash": "ca00c698db9401b2",
+      "hash": "21e3aaa8e88bd8f6",
       "ruleId": "SW004",
       "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
       "lineNumber": 77,
       "codeSnippet": "Task.Delay(RunTime)",
       "message": "Test uses Task.Delay(RunTime) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-30T17:14:57.3150801+00:00"
+      "baselinedAt": "2026-11-17T13:42:20.1130086+00:00"
+    },
+    {
+      "hash": "688b084b1c56aee8",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.RemoteHost/RemoteHost.cs",
+      "lineNumber": 50,
+      "codeSnippet": "catch{}",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130148+00:00"
+    },
+    {
+      "hash": "0573f53703e6b3cc",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/ReceivePersistentActorAsyncAwaitSpec.cs",
+      "lineNumber": 615,
+      "codeSnippet": "catch (Exception)\n                    {\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130207+00:00"
+    },
+    {
+      "hash": "1394bb4099a84c96",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/PersistenceSpec.cs",
+      "lineNumber": 127,
+      "codeSnippet": "catch (IOException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130256+00:00"
+    },
+    {
+      "hash": "e64657985a613992",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/SnapshotDirectoryFailureSpec.cs",
+      "lineNumber": 66,
+      "codeSnippet": "catch { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130303+00:00"
+    },
+    {
+      "hash": "f500d67c572ef066",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 748,
+      "codeSnippet": "Fact(Skip = \"we currently do not make any distinction between quoted and unquoted strings once parsed\")",
+      "message": "Test method 'Can_assign_quoted_null_string_to_field' is disabled: we currently do not make any distinction between quoted and unquoted strings once parsed",
+      "baselinedAt": "2026-11-17T13:42:20.1130356+00:00"
+    },
+    {
+      "hash": "3f6aeaf6ea12e27a",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 836,
+      "codeSnippet": "Fact(Skip = \"Not allowed according to current HOCON spec\")",
+      "message": "Test method 'Can_parse_unquoted_ipv6' is disabled: Not allowed according to current HOCON spec",
+      "baselinedAt": "2026-11-17T13:42:20.1130397+00:00"
+    },
+    {
+      "hash": "7ef8a0f9f4c41f44",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 883,
+      "codeSnippet": "Fact(Skip = \"not working yet\")",
+      "message": "Test method 'Can_substitute_with_concated_string' is disabled: not working yet",
+      "baselinedAt": "2026-11-17T13:42:20.1130444+00:00"
+    },
+    {
+      "hash": "8536e5f226944165",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Tests/Dispatch/AsyncAwaitSpec.cs",
+      "lineNumber": 407,
+      "codeSnippet": "catch (Exception)\n                    {\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130496+00:00"
+    },
+    {
+      "hash": "44f3a7d09396c365",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Actor/RemotePathParsingSpec.cs",
+      "lineNumber": 18,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.113061+00:00"
+    },
+    {
+      "hash": "4fac295173933065",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.Tests/Actor/Scheduler/TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs",
+      "lineNumber": 289,
+      "codeSnippet": "Task.Delay(200)",
+      "message": "Test uses Task.Delay(200) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.113067+00:00"
+    },
+    {
+      "hash": "0dfaf46cf803f94e",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Util/TokenBucketSpec.cs",
+      "lineNumber": 221,
+      "codeSnippet": "SuppressMessage(\"ReSharper\", \"ConditionIsAlwaysTrueOrFalse\")",
+      "message": "SuppressMessage attribute suppressing ReSharper:ConditionIsAlwaysTrueOrFalse",
+      "baselinedAt": "2026-11-17T13:42:20.113075+00:00"
+    },
+    {
+      "hash": "b11b783296a44bc7",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Util/StableListPriorityQueueSpec.cs",
+      "lineNumber": 16,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1130796+00:00"
+    },
+    {
+      "hash": "a9cdc7da8e2339d4",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Tests/Util/ResultSpec.cs",
+      "lineNumber": 167,
+      "codeSnippet": "catch\n        {\n            // no-op\n        }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130843+00:00"
+    },
+    {
+      "hash": "6a20b70e0cbd8b4d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Tests/Util/ResultSpec.cs",
+      "lineNumber": 195,
+      "codeSnippet": "catch \n        {\n            // no-op\n        }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1130901+00:00"
+    },
+    {
+      "hash": "49809ed5506341bd",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
+      "lineNumber": 63,
+      "codeSnippet": "Task.Delay(100)",
+      "message": "Test uses Task.Delay(100) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1130962+00:00"
+    },
+    {
+      "hash": "5b7f863b87a16e39",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
+      "lineNumber": 130,
+      "codeSnippet": "Task.Delay(TimeSpan.FromSeconds(1))",
+      "message": "Test uses Task.Delay(TimeSpan.FromSeconds(1)) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1131023+00:00"
+    },
+    {
+      "hash": "530a9f7077460d37",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.TestKit.Tests/TestEventListenerTests/AllTestForEventFilterBase.cs",
+      "lineNumber": 236,
+      "codeSnippet": "#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed",
+      "message": "#pragma warning disable for warnings CS4014 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1131092+00:00"
+    },
+    {
+      "hash": "8aa66a44d759ad00",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
+      "lineNumber": 156,
+      "codeSnippet": "Task.Delay(400)",
+      "message": "Test uses Task.Delay(400) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1131146+00:00"
+    },
+    {
+      "hash": "94f56fa2d6add997",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
+      "lineNumber": 96,
+      "codeSnippet": "catch (System.Threading.Tasks.TaskCanceledException)\n                {\n                    // This is expected if the test completes in time\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131209+00:00"
+    },
+    {
+      "hash": "c23fef2b14ebbb27",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
+      "lineNumber": 92,
+      "codeSnippet": "Task.Delay(shortTimeout.Add(300.Milliseconds()), timerCts.Token)",
+      "message": "Test uses Task.Delay(shortTimeout.Add(300.Milliseconds())) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.113127+00:00"
+    },
+    {
+      "hash": "f1daa459cd21e933",
+      "ruleId": "SW005",
+      "filePath": "src/core/Akka.Serialization.V2.Generators/Akka.Serialization.V2.Generators.csproj",
+      "lineNumber": 11,
+      "codeSnippet": "<NoWarn>$(NoWarn);RS2008</NoWarn>",
+      "message": "Adding warnings to NoWarn: RS2008",
+      "baselinedAt": "2026-11-17T13:42:20.1131311+00:00"
+    },
+    {
+      "hash": "f8fcf7e10ea6b5cd",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/StreamRefs.cs",
+      "lineNumber": 16,
+      "codeSnippet": "#pragma warning disable 628",
+      "message": "#pragma warning disable for warnings 628 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1131348+00:00"
+    },
+    {
+      "hash": "0cd2205e04476183",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/CompletedPublishers.cs",
+      "lineNumber": 40,
+      "codeSnippet": "catch (Exception e)\n                when (e is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131401+00:00"
+    },
+    {
+      "hash": "f544cdcdbd471fd1",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/CompletedPublishers.cs",
+      "lineNumber": 92,
+      "codeSnippet": "catch (Exception e)\n                when (e is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131445+00:00"
+    },
+    {
+      "hash": "7e6f7806bab381d1",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/CompletedPublishers.cs",
+      "lineNumber": 270,
+      "codeSnippet": "catch (Exception e)\n                when (e is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131494+00:00"
+    },
+    {
+      "hash": "45f822512924ba9d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/ActorPublisher.cs",
+      "lineNumber": 269,
+      "codeSnippet": "catch (Exception exception)\n                when (exception is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131544+00:00"
+    },
+    {
+      "hash": "020113476f1c0810",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/Implementation/IO/FilePublisher.cs",
+      "lineNumber": 19,
+      "codeSnippet": "#pragma warning disable 1587",
+      "message": "#pragma warning disable for warnings 1587 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1131594+00:00"
+    },
+    {
+      "hash": "b89fd4be3292a3b1",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/GraphStages.cs",
+      "lineNumber": 534,
+      "codeSnippet": "SuppressMessage(\"ReSharper\", \"MethodSupportsCancellation\")",
+      "message": "SuppressMessage attribute suppressing ReSharper:MethodSupportsCancellation",
+      "baselinedAt": "2026-11-17T13:42:20.1131648+00:00"
+    },
+    {
+      "hash": "f2065ee93f38bb42",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/ActorGraphInterpreter.cs",
+      "lineNumber": 363,
+      "codeSnippet": "catch (Exception) { /* swallow? */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131701+00:00"
+    },
+    {
+      "hash": "4e05dce723c1f35f",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Dsl/Hub.cs",
+      "lineNumber": 744,
+      "codeSnippet": "catch\n                                    {\n                                        // no-op\n                                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131757+00:00"
+    },
+    {
+      "hash": "6e0cb1150a4d9fd1",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.MultiNode.SampleMultiNodeTests/IgnoredXunitTest.cs",
+      "lineNumber": 9,
+      "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
+      "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
+      "baselinedAt": "2026-11-17T13:42:20.1131808+00:00"
+    },
+    {
+      "hash": "020c5cf0d6f104d0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.TestAdapter.Xunit2/NodeRunner/Executor.cs",
+      "lineNumber": 179,
+      "codeSnippet": "catch { /* well... at least we have tried */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1131854+00:00"
+    },
+    {
+      "hash": "f42be16762dc3200",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/RemoteWatcher.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1131896+00:00"
+    },
+    {
+      "hash": "5e56c2bc89b5e46d",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/EndpointManager.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.113194+00:00"
+    },
+    {
+      "hash": "e3a493e0ba0fb00e",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/Endpoint.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1131983+00:00"
+    },
+    {
+      "hash": "d9be00f2bb6a3fa0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote/Transport/DotNetty/DotNettyTransport.cs",
+      "lineNumber": 246,
+      "codeSnippet": "catch\n                {\n                    // ignore errors occurring during shutdown\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1132039+00:00"
+    },
+    {
+      "hash": "a4e6e1005dd8319d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Implementation/Fusing/KeepGoingStageSpec.cs",
+      "lineNumber": 304,
+      "codeSnippet": "catch { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1132093+00:00"
+    },
+    {
+      "hash": "f4ccacea8677c8c0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowRecoverWithSpec.cs",
+      "lineNumber": 291,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1132149+00:00"
+    },
+    {
+      "hash": "97c757e286defd4a",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 315,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#1of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@C9E44652F09B81DEFC518C77BF44D5D96087DC39ECCD96CFBF703978C3C3806C: builder.Invoking(\n                        b => ((dynamic)b).From(Source.From(new[] { 1, 2, 3 })).Via(((dynamic)zip).Left).To(wrongOut))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 1 of 2",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132255+00:00"
+    },
+    {
+      "hash": "8734f2a06d6eb933",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 315,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#1of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@5CF0AEA53DBA96F20587C172C6983CE43F0ECF5C3102A52ED1222962A22A6692: builder.Invoking(\n                        b => ((dynamic)b).From(Source.From(new[] { 1, 2, 3 })).Via(((dynamic)zip).Left).To(wrongOut))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 2 of 2",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.113245+00:00"
+    },
+    {
+      "hash": "0bddddfc723e53b4",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 319,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#2of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@C9E44652F09B81DEFC518C77BF44D5D96087DC39ECCD96CFBF703978C3C3806C: builder.Invoking(\n                        b => ((dynamic)b).From(Source.From(new[] { \"a\", \"b\", \"c\" })).To(((dynamic)zip).Left))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 1 of 2",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132571+00:00"
+    },
+    {
+      "hash": "25c21e1628553970",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 319,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#2of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@5CF0AEA53DBA96F20587C172C6983CE43F0ECF5C3102A52ED1222962A22A6692: builder.Invoking(\n                        b => ((dynamic)b).From(Source.From(new[] { \"a\", \"b\", \"c\" })).To(((dynamic)zip).Left))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 2 of 2",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132673+00:00"
+    },
+    {
+      "hash": "d7229434b5308d10",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 323,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#3of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@C9E44652F09B81DEFC518C77BF44D5D96087DC39ECCD96CFBF703978C3C3806C: builder.Invoking(\n                        b => ((dynamic)b).From(Source.From(new[] { \"a\", \"b\", \"c\" })).To(zip.Out))\n                        .Should().Throw<RuntimeBinderException>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132779+00:00"
+    },
+    {
+      "hash": "6f9b772e73b641df",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 327,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#4of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@C9E44652F09B81DEFC518C77BF44D5D96087DC39ECCD96CFBF703978C3C3806C: builder.Invoking(\n                        b => ((dynamic)b).From(((dynamic)zip).Left).To(((dynamic)zip).Right))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 1 of 3",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132852+00:00"
+    },
+    {
+      "hash": "6a1023cbb741a8d4",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 327,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#4of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@5CF0AEA53DBA96F20587C172C6983CE43F0ECF5C3102A52ED1222962A22A6692: builder.Invoking(\n                        b => ((dynamic)b).From(((dynamic)zip).Left).To(((dynamic)zip).Right))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 2 of 3",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1132931+00:00"
+    },
+    {
+      "hash": "f1980db93bc62ed4",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 327,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#4of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@5CF0AEA53DBA96F20587C172C6983CE43F0ECF5C3102A52ED1222962A22A6692: builder.Invoking(\n                        b => ((dynamic)b).From(((dynamic)zip).Left).To(((dynamic)zip).Right))\n                        .Should().Throw<RuntimeBinderException>();\n// dynamic occurrence 3 of 3",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133022+00:00"
+    },
+    {
+      "hash": "df8958827bff0137",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/GraphDslCompileSpec.cs",
+      "lineNumber": 337,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/64:ClassDeclaration public class GraphDslCompileSpec : AkkaSpec { }/91:MethodDeclaration public void A_Graph_should_distinguish_between_input_and_output_ports ( )/10:Block#1of1/30:LocalDeclarationStatement#1of1/24:VariableDeclaration#1of1/23:VariableDeclarator#1of1/22:EqualsValueClause#1of1/34:ParenthesizedLambdaExpression#1of1/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#5of5@2576145213B2BBEF661FC73C3A9EFD79DBA499C8A9E51C7FA3C1A85D2E88FEA6/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@C9E44652F09B81DEFC518C77BF44D5D96087DC39ECCD96CFBF703978C3C3806C: builder.Invoking(\n                        b => ((dynamic)b).From(source).Via(unzip.In).To(whatever))\n                        .Should().Throw<RuntimeBinderException>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133099+00:00"
+    },
+    {
+      "hash": "327648843a3cfe68",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncUnorderedSpec.cs",
+      "lineNumber": 29,
+      "codeSnippet": "#pragma warning disable 162",
+      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1133244+00:00"
+    },
+    {
+      "hash": "8e0810154021bff1",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncSpec.cs",
+      "lineNumber": 34,
+      "codeSnippet": "#pragma warning disable 162",
+      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1133289+00:00"
+    },
+    {
+      "hash": "902fa1da436b015f",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 35,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/53:MethodDeclaration public void Flow_should_not_run ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@BA6C4DCB1BAF1879E86378B5A312452AB1CFDC2B68ED8157F96DEC29F1DDDB0C/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic open = Flow.Create<int>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133342+00:00"
+    },
+    {
+      "hash": "55991d88805abd81",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 51,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/57:MethodDeclaration public void Flow_should_append_Flow ( )/10:Block#1of1/95:LocalDeclarationStatement#3of6@BF9FAE1CA5089FF15BCA31307BC973B331D1F69855B03EE0B0A16F84A1E6AD29/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic open3 = open1.Via(open2);",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133385+00:00"
+    },
+    {
+      "hash": "438734af72b296be",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 55,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/57:MethodDeclaration public void Flow_should_append_Flow ( )/10:Block#1of1/95:LocalDeclarationStatement#5of6@BF9FAE1CA5089FF15BCA31307BC973B331D1F69855B03EE0B0A16F84A1E6AD29/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic closedSource = IntSeq.Via(open3);",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133435+00:00"
+    },
+    {
+      "hash": "4620b598a096343a",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 59,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/57:MethodDeclaration public void Flow_should_append_Flow ( )/10:Block#1of1/95:LocalDeclarationStatement#6of6@BF9FAE1CA5089FF15BCA31307BC973B331D1F69855B03EE0B0A16F84A1E6AD29/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic closedSink = open3.To(Sink.AsPublisher<int>(false));",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133478+00:00"
+    },
+    {
+      "hash": "92fc4de608c08851",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 72,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/57:MethodDeclaration public void Flow_should_append_Sink ( )/10:Block#1of1/95:LocalDeclarationStatement#3of4@D8E1374A282F39F957B63386D82CF87F390B290CBD18B785B821B0D4B8E286E4/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic appended = open.To(closedSink);",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133526+00:00"
+    },
+    {
+      "hash": "2fd7eb43f93e4866",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 85,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/59:MethodDeclaration public void Flow_should_append_Source ( )/10:Block#1of1/95:LocalDeclarationStatement#3of4@66AA2D99D289C59994CCE3EA2765587605C6797612382835920A6BF6FF59EEFB/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic closedSource2 = closedSource.Via(open);",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133568+00:00"
+    },
+    {
+      "hash": "8faf8388f8f0a5fd",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 103,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/61:MethodDeclaration public void Sink_should_not_accept_Sink ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@9F9D6E7962F879CB96F06CBDFE3F0345B7E990B0C90FBAA0D73A207450EEC2E3/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic openSink = OpenSink;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133615+00:00"
+    },
+    {
+      "hash": "e4f3fa1bc45af5b3",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 111,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/53:MethodDeclaration public void Sink_should_not_run ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@9D107D39A1B4A7C2D6A011A691F18145478CCD4185EE58A7A8D1624BFD097EBF/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic openSink = OpenSink;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133658+00:00"
+    },
+    {
+      "hash": "5d47d58f6f2801ab",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 125,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/73:MethodDeclaration public void Source_should_not_be_accepted_by_Source ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@CB185DF2F76A42A10CDA3409E14350380CB5487671ACFE8300197CD5C085D023/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic openSource = OpenSource;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133703+00:00"
+    },
+    {
+      "hash": "59b6c57e57f99ac5",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 133,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/55:MethodDeclaration public void Source_should_not_run ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@F852A4B658A9659617564FBE26D5DE5383C376E44D2DFFFB7F5BB9FF9B195F80/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic openSource = OpenSource;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133749+00:00"
+    },
+    {
+      "hash": "8ef7c940332e44f1",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 151,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/80:MethodDeclaration public void RunnableGraph_should_not_be_accepted_by_Source ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@EF2E48B3B16E41415A6685EC0E2883060D9A6CA4BB8B269D0D6BEECDC5698A5B/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic intSeq = IntSeq;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133791+00:00"
+    },
+    {
+      "hash": "935edcfe4731c00b",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowCompileSpec.cs",
+      "lineNumber": 159,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/60:ClassDeclaration public class FlowCompileSpec : AkkaSpec { }/72:MethodDeclaration public void RunnableGraph_should_not_accepted_Sink ( )/10:Block#1of1/95:LocalDeclarationStatement#1of2@9672A97B7F0EAF99DB2B84F4477453A048EDB6D15C8870ABE132886F9213A741/24:VariableDeclaration#1of1/19:IdentifierName#1of1: dynamic closed = Closed;",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1133837+00:00"
+    },
+    {
+      "hash": "593c37c6a7457d9f",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySourceSpec.cs",
+      "lineNumber": 208,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1133886+00:00"
+    },
+    {
+      "hash": "1f80e3bc74d64929",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySinkSpec.cs",
+      "lineNumber": 206,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1133939+00:00"
+    },
+    {
+      "hash": "018d492e28421c98",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/StreamRefsSpec.cs",
+      "lineNumber": 574,
+      "codeSnippet": "catch\n            {\n                // Expected: at least one should fail\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1133989+00:00"
+    },
+    {
+      "hash": "252d2da11c72d85d",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/ReverseArrowSpec.cs",
+      "lineNumber": 90,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/61:ClassDeclaration public class ReverseArrowSpec : AkkaSpec { }/91:MethodDeclaration public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_Outlets ( )/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#1of2@7FFCC35DFC8F926EB152B851CDE1A1DBF171B140487F293942E6E9349AE40A8D/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@AE7462C108C8D4BAFE97D5E691B753E8CD526A60AC9B5AA0055C2CB06F9CF754: b.Invoking(builder => ((dynamic) builder).To(o).From(Source))\n                        .Should().Throw<RuntimeBinderException>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1134054+00:00"
+    },
+    {
+      "hash": "9b2d01a97c9dab31",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/ReverseArrowSpec.cs",
+      "lineNumber": 104,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/61:ClassDeclaration public class ReverseArrowSpec : AkkaSpec { }/95:MethodDeclaration public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_SourceShape ( )/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/10:Block#1of1/89:ExpressionStatement#1of2@7FFCC35DFC8F926EB152B851CDE1A1DBF171B140487F293942E6E9349AE40A8D/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@AE7462C108C8D4BAFE97D5E691B753E8CD526A60AC9B5AA0055C2CB06F9CF754: b.Invoking(builder => ((dynamic) builder).To(o).From(Source))\n                        .Should().Throw<RuntimeBinderException>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1134116+00:00"
+    },
+    {
+      "hash": "350ae6ff83925000",
+      "ruleId": "SW021",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/ReverseArrowSpec.cs",
+      "lineNumber": 115,
+      "codeSnippet": "20:CompilationUnit#1of1/63:NamespaceDeclaration namespace Akka . Streams . Tests . Dsl { }/61:ClassDeclaration public class ReverseArrowSpec : AkkaSpec { }/90:MethodDeclaration public void Reverse_Arrows_in_the_GraphDsl_must_not_work_from_Source ( )/10:Block#1of1/24:ExpressionStatement#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/17:ArgumentList#1of1/13:Argument#1of1/27:SimpleLambdaExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/25:InvocationExpression#1of1/33:SimpleMemberAccessExpression#1of1/28:ParenthesizedExpression#1of1/19:CastExpression#1of1/84:IdentifierName#1of2@AE7462C108C8D4BAFE97D5E691B753E8CD526A60AC9B5AA0055C2CB06F9CF754: b.Invoking(builder => ((dynamic) builder).To(Source).From(Source)).Should().Throw<RuntimeBinderException>();",
+      "message": "Use of 'dynamic' bypasses compile-time type checking",
+      "baselinedAt": "2026-11-17T13:42:20.1134174+00:00"
+    },
+    {
+      "hash": "d08d5226b3b782bb",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/Tcp.cs",
+      "lineNumber": 921,
+      "codeSnippet": "catch (Exception) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134224+00:00"
+    },
+    {
+      "hash": "06de3eb57dfd4fff",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpOutgoingConnection.cs",
+      "lineNumber": 103,
+      "codeSnippet": "catch (InvalidOperationException)\n                {\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134271+00:00"
+    },
+    {
+      "hash": "932b7df4427c4339",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Dispatch/Dispatchers.cs",
+      "lineNumber": 169,
+      "codeSnippet": "catch\n            {\n                // suppress exceptions\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134326+00:00"
+    },
+    {
+      "hash": "339829ccaca325bf",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Dispatch/ChannelSchedulerExtension.cs",
+      "lineNumber": 324,
+      "codeSnippet": "catch\n            {\n                //ignore error\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.113437+00:00"
+    },
+    {
+      "hash": "fef58441df7f3ae0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorRef.cs",
+      "lineNumber": 79,
+      "codeSnippet": "catch\n            {\n                // we don't do error handling for this - we do not care\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134436+00:00"
+    },
+    {
+      "hash": "46ab34214600ba5e",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorRef.cs",
+      "lineNumber": 1182,
+      "codeSnippet": "catch (Exception) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134485+00:00"
+    },
+    {
+      "hash": "a1d7d49d97a27abb",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorCell.FaultHandling.cs",
+      "lineNumber": 476,
+      "codeSnippet": "catch\n            {\n                //TODO: Hmmm?\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134531+00:00"
+    },
+    {
+      "hash": "ddf9373d9fb9c044",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorCell.DefaultMessages.cs",
+      "lineNumber": 391,
+      "codeSnippet": "catch\n            {\n                //TODO: Hmmm?\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134574+00:00"
+    },
+    {
+      "hash": "8b852b0be031459a",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/SupervisorStrategy.cs",
+      "lineNumber": 180,
+      "codeSnippet": "catch (Exception)\n            {\n                // swallow any exceptions\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134625+00:00"
+    },
+    {
+      "hash": "c64323897856248d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 495,
+      "codeSnippet": "catch (SchedulerException)\n                    {\n                        // ignore, this is from terminated actors\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134681+00:00"
+    },
+    {
+      "hash": "eafe7ce6ad6a83fd",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 755,
+      "codeSnippet": "catch\n                                {\n                                    // suppress any errors thrown during logging\n                                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134735+00:00"
+    },
+    {
+      "hash": "921a1cbef0450f21",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Internal/ActorSystemImpl.cs",
+      "lineNumber": 240,
+      "codeSnippet": "catch\n                    {\n                        // ignored\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134787+00:00"
+    },
+    {
+      "hash": "d721c9681e466c05",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Internal/ActorSystemImpl.cs",
+      "lineNumber": 607,
+      "codeSnippet": "catch\n                {\n                    // ignored\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1134833+00:00"
+    },
+    {
+      "hash": "3eb2938cc4b41d2f",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_Receive.cs",
+      "lineNumber": 426,
+      "codeSnippet": "Task.Delay(maxDuration, cancellationToken)",
+      "message": "Test uses Task.Delay(maxDuration) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.113489+00:00"
+    },
+    {
+      "hash": "69a78cb5d11a7a33",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitConditions.cs",
+      "lineNumber": 306,
+      "codeSnippet": "Task.Delay(sleepDuration, cancellationToken)",
+      "message": "Test uses Task.Delay(sleepDuration) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.113494+00:00"
+    },
+    {
+      "hash": "d085e9a06f92ac96",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitAssert.cs",
+      "lineNumber": 75,
+      "codeSnippet": "Task.Delay(t, cancellationToken)",
+      "message": "Test uses Task.Delay(t) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1134997+00:00"
+    },
+    {
+      "hash": "0f6f5374a72231fc",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitAssert.cs",
+      "lineNumber": 123,
+      "codeSnippet": "Task.Delay(t, cancellationToken)",
+      "message": "Test uses Task.Delay(t) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1135043+00:00"
+    },
+    {
+      "hash": "9f109434f793755a",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_Within.cs",
+      "lineNumber": 310,
+      "codeSnippet": "Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token)",
+      "message": "Test uses Task.Delay(max + TimeSpan.FromMilliseconds(200)) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-11-17T13:42:20.1135102+00:00"
+    },
+    {
+      "hash": "5d1a660c30f7f0c0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.TestKit/EventFilter/TestEventListener.cs",
+      "lineNumber": 128,
+      "codeSnippet": "catch\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135148+00:00"
+    },
+    {
+      "hash": "4325f0d58ecb0a52",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
+      "lineNumber": 97,
+      "codeSnippet": "catch (OperationCanceledException)\n            {\n                // no-op\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135204+00:00"
+    },
+    {
+      "hash": "ca3e52c07c85bada",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
+      "lineNumber": 101,
+      "codeSnippet": "catch (TimeoutException)\n            {\n                // no-op\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135251+00:00"
+    },
+    {
+      "hash": "368c191a3356452e",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
+      "lineNumber": 98,
+      "codeSnippet": "catch (OperationCanceledException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135313+00:00"
+    },
+    {
+      "hash": "972327c8a57419b3",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
+      "lineNumber": 102,
+      "codeSnippet": "catch (TimeoutException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135365+00:00"
+    },
+    {
+      "hash": "fc4cb1d62e5f2313",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
+      "lineNumber": 127,
+      "codeSnippet": "catch (OperationCanceledException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135422+00:00"
+    },
+    {
+      "hash": "07b68ba56de92ebb",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
+      "lineNumber": 131,
+      "codeSnippet": "catch (TimeoutException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135474+00:00"
+    },
+    {
+      "hash": "8ff4a42b2ed61390",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.TestAdapter/Configuration/OptionsReader.cs",
+      "lineNumber": 36,
+      "codeSnippet": "catch\n            { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135519+00:00"
+    },
+    {
+      "hash": "d0e18eb091e109e4",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.TestAdapter/Configuration/OptionsReader.cs",
+      "lineNumber": 80,
+      "codeSnippet": "catch { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135562+00:00"
+    },
+    {
+      "hash": "72694ea9e37098e6",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.TestAdapter/NodeRunner/Executor.cs",
+      "lineNumber": 249,
+      "codeSnippet": "catch { /* well... at least we have tried */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-11-17T13:42:20.1135616+00:00"
+    },
+    {
+      "hash": "709a8c51aac12efd",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Cluster.Tests/MemberOrderingModelBasedTests.cs",
+      "lineNumber": 20,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.113566+00:00"
+    },
+    {
+      "hash": "86e6cccfecec6992",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.MultiNode.SampleMultiNodeTests.Xunit2/IgnoredXunitTest.cs",
+      "lineNumber": 9,
+      "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
+      "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
+      "baselinedAt": "2026-11-17T13:42:20.1135713+00:00"
+    },
+    {
+      "hash": "cef12625047b48ea",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs",
+      "lineNumber": 14,
+      "codeSnippet": "#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. ",
+      "message": "#pragma warning disable for warnings CS0414 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1135756+00:00"
+    },
+    {
+      "hash": "7816ae47749b5ebe",
+      "ruleId": "SW005",
+      "filePath": "src/core/Akka.Serialization.V2.Tests/Akka.Serialization.V2.Tests.csproj",
+      "lineNumber": 12,
+      "codeSnippet": "<NoWarn>$(NoWarn);AKKASG025</NoWarn>",
+      "message": "Adding warnings to NoWarn: AKKASG025",
+      "baselinedAt": "2026-11-17T13:42:20.1135794+00:00"
+    },
+    {
+      "hash": "4872cb72c9465e55",
+      "ruleId": "SW002",
+      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
+      "lineNumber": 12,
+      "codeSnippet": "#pragma warning disable 1998 //async method lacks an await",
+      "message": "#pragma warning disable for warnings 1998 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.113584+00:00"
+    },
+    {
+      "hash": "24c4ebf150a0dbd0",
+      "ruleId": "SW002",
+      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
+      "lineNumber": 13,
+      "codeSnippet": "#pragma warning disable AK1003 // ReceiveAsync lacks an await",
+      "message": "#pragma warning disable for warnings AK1003 without matching restore in same scope",
+      "baselinedAt": "2026-11-17T13:42:20.1135879+00:00"
     }
   ]
 }
