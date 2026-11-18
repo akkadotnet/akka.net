@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.6.0-beta7</VersionPrefix>
+    <VersionPrefix>1.6.0-beta8</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -66,47 +66,59 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET 1.6.0-beta7 adds opt-in TLS to Akka.IO TCP, Akka.Streams TCP and Artery remoting, fixes two Akka.Persistence ordering bugs, and ships a DotNetty-to-Artery migration guide. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
+    <PackageReleaseNotes>Akka.NET 1.6.0-beta8 adds TLS certificate rotation without a restart, brings Akka.Reminders into the repository, and fixes a PersistAll completion bug plus two recurring-reminder ordering bugs. Read the [v1.6 getting started guide](https://github.com/akkadotnet/akka.net/blob/dev/GETTING_STARTED_V1.6.md) for the full upgrade path.
 
 **Akka.IO / TLS**
 
-* TCP now supports opt-in TLS. Pass `TlsClientSettings` to `Tcp.Connect` or `TlsServerSettings` to `Tcp.Bind` and the connection is encrypted and authenticated before any bytes flow. Server-only TLS authenticates the server; mutual TLS has both peers present and validate a certificate. A command without `Tls` uses plaintext TCP exactly as before, and Akka.IO never falls back to plaintext when a configured handshake fails. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771))
-* Peer trust is an explicit policy: `TlsPeerPolicy.SystemTrust()` uses the OS chain, `PinnedCertificates(...)` trusts a leaf thumbprint, and `CustomTrust(callback)` hands the decision to your code. Compose extra checks with `.And(...)` - `TlsCertificateValidation.ValidateHostname()`, `ValidateSubject(...)`, `ValidateIssuer(...)` - to narrow an already-trusted peer. `SystemTrust()` ignores only a name-mismatch error and does not check a host name by itself, so add `ValidateHostname()` when DNS identity matters. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771))
-* New public types: `TlsClientSettings` and `TlsServerSettings` (immutable, with `ServerOnly`/`Mutual` factories, `WithHandshakeTimeout` and `WithProtocols`), `TlsPeerPolicy`, `TlsCertificateValidation` and the `TlsCertificateValidationCallback` delegate. Certificates stay caller-owned and must outlive the actor system. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771))
-* An outgoing `Tcp.Connected` is sent only after the handshake succeeds, and a failed or timed-out handshake (10s default, `WithHandshakeTimeout`) arrives as the existing `Tcp.CommandFailed`. An incoming connection reaches its handler only after its handshake succeeds; the listener stays available for other clients. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771))
-* `TlsCertificateLoader` loads PKCS#12 certificates from a file or byte array, or finds one in an X.509 store. It requires an accessible RSA or ECDSA private key and returns a caller-owned certificate - keep it alive until the actor system and every transport using it have stopped. ([#8787](https://github.com/akkadotnet/akka.net/pull/8787))
-* **Migration:** `ITransportConnection` implementors must add `InitializeAsync(CancellationToken)` and `Start()`, and `TcpTransportConnection` constructors no longer start pumps automatically. This affects only the v1.6 beta API; v1.5 is unchanged. See the [v1.6 breaking-change ledger](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md). ([#8771](https://github.com/akkadotnet/akka.net/pull/8771))
+* `TlsCertificateSource` picks the certificate a node presents from a folder, a certificate store by common name, or a callback, and picks up a renewed certificate without a restart. A folder or store source is re-checked once a minute; the timer is cancelled on shutdown. Startup waits for the first look-up, and a source with nothing usable throws `ConfigurationException` so the node never binds. A connection that cannot get a certificate fails alone and the node stays up. ([#8966](https://github.com/akkadotnet/akka.net/pull/8966), relates to [#7663](https://github.com/akkadotnet/akka.net/issues/7663))
+* Certificate errors are logged at most once a minute per cause, so one bad certificate does not log a Warning for every connection. DotNetty and Artery now share `Akka.IO.TlsCertificateRotation` for that limiter, the startup check and the poll interval, but each transport keeps its own instance so one transport never hides another's errors. ([#8982](https://github.com/akkadotnet/akka.net/pull/8982))
+* On Artery's provider path, a failed certificate look-up now surfaces as an internal `TlsCertificateUnavailableException` that wraps the original cause, instead of writing a flag into the caller's own exception object. The only visible difference is one more `---&gt;` level in the stack trace of Akka.Streams' "Restarting graph due to failure." warning. Fixed-certificate TLS and DotNetty are unaffected. ([#8982](https://github.com/akkadotnet/akka.net/pull/8982))
 
-**Akka.Streams**
+**Akka.Remote / DotNetty**
 
-* `Tcp.BindTls`, `Tcp.BindAndHandleTls` and `Tcp.OutgoingConnectionTls` add TLS listeners and outgoing connections, using the same `TlsClientSettings`/`TlsServerSettings` as Akka.IO. `BindAndHandleTls` completes when the listener is ready, and an outgoing graph's materialized value completes after authentication. Existing plaintext `Bind`, `BindAndHandle` and `OutgoingConnection` keep their current behavior, and TLS does not change back-pressure or half-close semantics. ([#8788](https://github.com/akkadotnet/akka.net/pull/8788), addresses [#2750](https://github.com/akkadotnet/akka.net/issues/2750))
-* A failed TCP command now surfaces its original exception as the `InnerException` of the `StreamTcpException` instead of dropping it, so a TLS handshake failure reports why it failed. ([#8788](https://github.com/akkadotnet/akka.net/pull/8788))
+* DotNetty TLS certificates now rotate without a restart. `DotNettySslSetup.FromSource`, the HOCON keys `certificate.common-name` and `certificate.path` (a folder), `SslOptions.CertificateSource` and `SslCertificateOptions.CommonName` wire a `TlsCertificateSource` into the transport and Akka.Hosting. Artery TLS does not use certificate sources yet. ([#8967](https://github.com/akkadotnet/akka.net/pull/8967))
+* **Behavior change:** `SslOptions.CustomValidator` now runs when the certificate comes from `SslOptions.CertificateOptions` (a file `Path` or a `Thumbprint`). It used to run only with `SslOptions.X509Certificate`; with the other two it was silently ignored, so a security check you configured never ran. A validator that was ignored can now fail a TLS handshake, and on the dialing side a failed handshake shuts the `ActorSystem` down. With `EnableSsl = true`, a `CustomValidator` and no certificate in the options, `WithRemoting` now throws `ConfigurationException`. The certificate also loads when `WithRemoting` runs rather than when the `ActorSystem` starts, so a missing file or thumbprint fails earlier. See the [v1.6 breaking-change ledger](https://github.com/akkadotnet/akka.net/blob/dev/BREAKING_CHANGES_V1.6.md). ([#8964](https://github.com/akkadotnet/akka.net/pull/8964))
 
-**Akka.Remote / Artery (experimental)**
+**Akka.Reminders (new module)**
 
-* Artery can now run over TLS. Add one `ArteryTlsSetup` carrying an immutable `ArteryTlsSettings` profile to the actor-system setup and Artery uses TLS for inbound connections and every outbound channel - control, ordinary and large-message traffic. Without it, Artery stays on plaintext TCP, and a failed handshake closes the connection rather than retrying as plaintext. Profiles and validation callbacks are configured in code; there is no Artery TLS HOCON schema. ([#8791](https://github.com/akkadotnet/akka.net/pull/8791), refs [#4436](https://github.com/akkadotnet/akka.net/issues/4436))
-* **Deployment note:** TLS is all-or-nothing per transport. A TLS-enabled Artery node cannot associate with a plaintext Artery node, and a TLS-enabled Akka.IO listener will not accept plaintext clients. Configure every participating node the same way. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771), [#8791](https://github.com/akkadotnet/akka.net/pull/8791))
-* Akka.Hosting's `WithArteryRemoting` exposes the same profile. It enables Artery, allows explicit bind host and port overrides, preserves an already selected Cluster, Remote or custom actor-ref provider, and adds or replaces the typed TLS setup when `Tls` is set. ([#8791](https://github.com/akkadotnet/akka.net/pull/8791))
+* Akka.Reminders now ships from this repository as `Akka.Reminders` and its storage packages, replacing the standalone `Aaron.Akka.Reminders` packages. It provides durable, re-entrant reminders for Akka.Cluster.Sharding with SQL Server, PostgreSQL, SQLite and in-memory storage, a cluster-singleton scheduler, and Akka.Hosting integration. **Migration:** the package ID changed, so update your `PackageReference` and namespaces. ([#8946](https://github.com/akkadotnet/akka.net/pull/8946))
+* Opt-in retry-until-acknowledged delivery: a reminder can require an explicit acknowledgement before it counts as delivered, with exponential backoff between attempts. The policy is persisted in all four storage backends, and existing signatures and default-policy wire layouts are unchanged. Opted-in schedules, responses and listings use versioned manifests, so **upgrade every potential scheduler host and policy-message reader before enabling the feature** - older schedulers must not take over while opted-in rows exist. Manual migration scripts for each provider live in `src/contrib/reminders/docs/migrations/retry-policy/`, and every provider and potential scheduler host must be recreated after migrating because schema capabilities are cached. ([#8973](https://github.com/akkadotnet/akka.net/pull/8973))
+* An early send of a recurring reminder now ends every older live occurrence atomically with the newer delivery, suppresses those rows for the rest of the fetch pass, and prevents a stale row from writing them back as Pending. Previously only the previous occurrence was ended, so a series with an interval below `MaxSlippage` could deliver stale occurrences after a newer one during a shard-region outage. ([#8971](https://github.com/akkadotnet/akka.net/pull/8971), [#8976](https://github.com/akkadotnet/akka.net/pull/8976), fixes [#8965](https://github.com/akkadotnet/akka.net/issues/8965))
+* That cleanup is capped at 256 older occurrences per send, nearest first. A 1 ms interval would otherwise put thousands of expiries in one commit, and a sub-millisecond interval could put millions into the scheduler's memory. Below roughly a 20 ms interval at the default 5 s `MaxSlippage`, an older occurrence more than 256 intervals back can still be delivered after a newer one during a shard-region outage. ([#8975](https://github.com/akkadotnet/akka.net/pull/8975), [#8976](https://github.com/akkadotnet/akka.net/pull/8976))
 
 **Akka.Persistence**
 
-* Stashed commands now run in send order when an async `Persist`/`PersistAll` handler, or the async `onCompleteAsync` callback of `PersistAll`, completes asynchronously. Two unstashes used to fire for the same invocation in the same turn, and because each `Unstash()` puts the oldest stashed command at the front of the mailbox, the second overtook the first. The same double unstash hit `PersistAsync`, `PersistAllAsync` and `DeferAsync` with async handlers. Synchronous handlers behave as before. ([#8941](https://github.com/akkadotnet/akka.net/pull/8941), fixes [#8942](https://github.com/akkadotnet/akka.net/issues/8942))
-* `Desequenced` is now exempt from serialization verification. With `akka.actor.serialize-messages = on`, every journal write reply was round-tripped through the `System.Object` JSON fallback before reaching the persistent actor, so the persist callback received a JSON copy of the event instead of the instance that was persisted. For a C# 15 union event that copy arrived with `Value == null`, so the handler saw an empty event. ([#8912](https://github.com/akkadotnet/akka.net/pull/8912), fixes [#8910](https://github.com/akkadotnet/akka.net/issues/8910))
+* The `PersistAll` completion callback no longer runs when the journal rejects the batch. `OnPersistRejected` fired for each event and then the completion callback ran anyway, so a handler saw a completion for a batch that was never persisted. This affected all eight `PersistAll`/`PersistAllAsync` overloads. Journal write failures are unchanged: the actor stops before the completion's message is processed. ([#8949](https://github.com/akkadotnet/akka.net/pull/8949), fixes [#8948](https://github.com/akkadotnet/akka.net/issues/8948))
+
+**Akka.Remote / Artery**
+
+* Artery's inbound stage now reports a framing error when a peer closes after a partial connection preamble, frame length or frame body, instead of silently completing the connection. Empty connections and complete frame boundaries still close cleanly, and cancellation and upstream failure keep their existing semantics. Artery is new in v1.6, so this changes unreleased behavior only. ([#8956](https://github.com/akkadotnet/akka.net/pull/8956))
+
+**Serialization**
+
+* Native module replacements can preserve legacy serializer type names through an optional type-alias map, so a ported serializer keeps reading data written under the original assembly-qualified name. Each declared name resolves to an existing module row using the declared type's assembly simple name and the existing strict name-matching rules; subclasses are not matched. Missing or ambiguous aliases, non-serializer types and conflicting registrations are rejected. No serializer rows, ids or configuration switches are added. ([#8920](https://github.com/akkadotnet/akka.net/pull/8920))
+
+**Akka.Hosting**
+
+* `Akka.Hosting`, `Akka.Cluster.Hosting`, `Akka.Remote.Hosting`, `Akka.Persistence.Hosting` and `Akka.Persistence.Embedded.Hosting` now ship their own module READMEs on nuget.org instead of the generic Akka.NET one. Relative links were rewritten to absolute GitHub permalinks because nuget.org cannot resolve relative paths. ([#8945](https://github.com/akkadotnet/akka.net/pull/8945))
 
 **Docs**
 
-* New [TLS for Akka.IO, Akka.Streams, and Artery](https://github.com/akkadotnet/akka.net/blob/dev/docs/articles/remoting/tls-for-io-streams-artery.md) guide covers server-only and mutual TLS, trust policies, certificate lifetime, and the Streams and Artery APIs. ([#8771](https://github.com/akkadotnet/akka.net/pull/8771), [#8787](https://github.com/akkadotnet/akka.net/pull/8787), [#8788](https://github.com/akkadotnet/akka.net/pull/8788), [#8791](https://github.com/akkadotnet/akka.net/pull/8791))
-* New [Migrating From DotNetty to Artery](https://github.com/akkadotnet/akka.net/blob/dev/docs/articles/remoting/dotnetty-to-artery.md) guide covers the transport change, cluster transition, address changes, Hosting, and bind-address limitations. ([#8913](https://github.com/akkadotnet/akka.net/pull/8913))
+* New [TLS certificate rotation](https://github.com/akkadotnet/akka.net/blob/dev/docs/articles/remoting/certificate-rotation.md) article covers folder, store and callback sources, the once-a-minute re-check, and the error-logging behavior. On v1.6 it applies to the DotNetty transport. ([#8968](https://github.com/akkadotnet/akka.net/pull/8968), relates to [#7663](https://github.com/akkadotnet/akka.net/issues/7663))
 
 **Internal**
 
-* Native AOT verification uses the serviced .NET 10 SDK 10.0.403. ([#8914](https://github.com/akkadotnet/akka.net/pull/8914))
+* `MultiNodeSpec` now terminates a replacement actor system when initialization fails, including on caller cancellation, and preserves the original exception. ([#8955](https://github.com/akkadotnet/akka.net/pull/8955))
+* `RemotePingPong` validates delivery and compares authenticated TCP, and measures latency at a scheduled offered load with per-run reporting that separates generator lateness, dispatch delay, send-to-echo and scheduled-to-echo latency. ([#8953](https://github.com/akkadotnet/akka.net/pull/8953), [#8957](https://github.com/akkadotnet/akka.net/pull/8957))
+* Artery's DeathWatch ACK-loss test now witnesses TCP system-message retries by counting dropped ACKs per peer UID and cumulative sequence. ([#8954](https://github.com/akkadotnet/akka.net/pull/8954))
+* `ShardedDaemonProcessSpecs` waits for sharded daemon restarts with one overall deadline instead of back-to-back 3-second waits, fixing a Windows CI timeout. ([#8981](https://github.com/akkadotnet/akka.net/pull/8981))
+* Slopwatch upgraded to 0.5.0 with a regenerated schema-v2 baseline. ([#8980](https://github.com/akkadotnet/akka.net/pull/8980))
 
-1 contributor since release 1.6.0-beta6
+1 contributor since release 1.6.0-beta7
 
 | COMMITS | LOC+ | LOC- | AUTHOR          |
 |---------|------|------|-----------------|
-| 8       | 5511 | 284  | Aaron Stannard  |</PackageReleaseNotes>
+| 22      | 44500 | 1088 | Aaron Stannard  |</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
