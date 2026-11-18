@@ -447,14 +447,14 @@ namespace Akka.Tests.IO
         {
             using var clientCertificate = CreateCertificate("client", server: false);
             var failure = new InvalidOperationException("no certificate to present");
-            if (reported)
-                TlsCertificateProviderFailure.MarkReported(failure);
+            // A provider that already logged why it failed throws its failure wrapped, as Artery's does.
+            Exception thrown = reported ? new TlsCertificateUnavailableException(failure) : failure;
             var logs = CreateTestProbe();
             Sys.EventStream.Subscribe(logs.Ref, typeof(LogEvent));
             var listenerHandler = CreateTestProbe();
             listenerHandler.Send(Sys.Tcp(), new Tcp.Bind(listenerHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0))
             {
-                Tls = TlsServerSettings.FromProvider((_, _, _) => throw failure, clientValidation: null)
+                Tls = TlsServerSettings.FromProvider((_, _, _) => throw thrown, clientValidation: null)
             });
             var bound = await listenerHandler.ExpectMsgAsync<Tcp.Bound>(TestTimeout);
             var listenerActor = listenerHandler.LastSender;
@@ -463,7 +463,14 @@ namespace Akka.Tests.IO
 
             var log = await FishInitializationFailureAsync(logs);
             log.LogLevel().Should().Be(reported ? LogLevel.DebugLevel : LogLevel.WarningLevel);
-            log.Cause.Should().BeSameAs(failure, "the connection fails with the provider's exception either way");
+            log.Cause.Should().BeSameAs(thrown, "the connection fails with the exception the provider threw");
+            if (reported)
+            {
+                log.Cause!.Message.Should().Be(failure.Message);
+                log.Cause.InnerException.Should().BeSameAs(failure, "the cause chain still holds the original exception");
+            }
+
+            failure.Data.Count.Should().Be(0, "the provider's own exception is not changed");
             listenerHandler.Send(listenerActor, Tcp.Unbind.Instance);
             await listenerHandler.ExpectMsgAsync<Tcp.Unbound>(TestTimeout);
         }

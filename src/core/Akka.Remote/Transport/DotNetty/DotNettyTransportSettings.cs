@@ -23,6 +23,7 @@ using Akka.Util;
 using DotNetty.Buffers;
 using ByteOrder = DotNetty.Buffers.ByteOrder;
 using TlsCertificateRole = Akka.IO.TlsCertificateRole;
+using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 using TlsCertificateSource = Akka.IO.TlsCertificateSource;
 
 #nullable enable
@@ -525,14 +526,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
 
             // Whatever the source throws (it may be a callback that throws anything) stops the node at startup.
-            try
-            {
-                await _source.GetCertificateAsync(SourceRole, log).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (!(ex is ConfigurationException) && !TlsCertificateSource.IsFatal(ex))
-            {
-                throw new ConfigurationException(ex.Message, ex);
-            }
+            await TlsCertificateRotation.CheckAtStartupAsync(_source, SourceRole, log).ConfigureAwait(false);
         }
 
         /// <summary>

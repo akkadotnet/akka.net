@@ -277,28 +277,24 @@ namespace Akka.IO
         ILoggingAdapter log);
 
     /// <summary>
-    /// Internal: marks a certificate provider failure that the provider already reported (logged), so Akka.IO does
-    /// not log it again at Warning for every connection. The mark rides on the exception the provider rethrows, so
-    /// the connection still fails with that exception.
+    /// Internal: what a certificate provider throws when it has no certificate to present and has already logged why.
+    /// It wraps the provider's own failure, with the same message, so Akka.IO can log the failed connection at Debug
+    /// instead of at Warning for every connection. The connection still fails, and the log line's cause chain still
+    /// holds the original exception.
     /// </summary>
-    internal static class TlsCertificateProviderFailure
+    internal sealed class TlsCertificateUnavailableException : Exception
     {
-        private const string ReportedKey = "Akka.IO.TlsCertificateProviderFailure.Reported";
-
-        /// <summary>Marks <paramref name="exception"/> as already reported by the certificate provider.</summary>
-        internal static void MarkReported(Exception exception)
+        /// <summary>Wraps <paramref name="reported"/>, which the provider already logged.</summary>
+        internal TlsCertificateUnavailableException(Exception reported) : base(reported.Message, reported)
         {
-            // A custom exception may have read-only data. It then logs as any other failure does.
-            if (!exception.Data.IsReadOnly)
-                exception.Data[ReportedKey] = true;
         }
 
-        /// <summary>True when <paramref name="exception"/>, or an exception it wraps, was marked by the provider.</summary>
-        internal static bool IsReported(Exception? exception)
+        /// <summary>True when <paramref name="exception"/>, or an exception it wraps, is one of these.</summary>
+        internal static bool IsIn(Exception? exception)
         {
             for (var depth = 0; exception is not null && depth < 8; depth++)
             {
-                if (exception.Data.Contains(ReportedKey))
+                if (exception is TlsCertificateUnavailableException)
                     return true;
                 exception = exception.InnerException;
             }

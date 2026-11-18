@@ -29,7 +29,7 @@ using Akka.Util;
 using Inet = Akka.IO.Inet;
 using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
 using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
-using TlsCertificateSource = Akka.IO.TlsCertificateSource;
+using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 
 namespace Akka.Remote.Artery
 {
@@ -305,10 +305,7 @@ namespace Akka.Remote.Artery
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
         private ArteryTlsSettings? _tlsSettings;
 
-        // A certificate source is asked when a connection is built, and by this timer once a minute, so a node that
-        // builds no connection still looks for a renewed certificate and logs the change. Fixed, with no config key,
-        // the same as the DotNetty transport's.
-        internal static readonly TimeSpan CertificateSourcePollInterval = TimeSpan.FromMinutes(1);
+        // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the DotNetty transport.
         private ICancelable? _certificateSourcePoll;
 
         /// <summary>
@@ -465,7 +462,7 @@ namespace Akka.Remote.Artery
             // Scheduled only once the bind worked, so a failed bind leaves nothing to cancel; Shutdown cancels it.
             if (_tlsSettings?.CertificateSource is { NeedsPolling: true })
                 _certificateSourcePoll = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
-                    CertificateSourcePollInterval, CertificateSourcePollInterval, PollCertificateSource);
+                    TlsCertificateRotation.PollInterval, TlsCertificateRotation.PollInterval, PollCertificateSource);
 
             var boundPort = ((IPEndPoint)_binding.Value.LocalAddress).Port;
             var address = new Address("akka", System.Name, _settings.CanonicalHostname, boundPort);
@@ -546,19 +543,8 @@ namespace Akka.Remote.Artery
                 flowNames: EnumerableActorName.Create("remote"));
         }
 
-        // Runs on the scheduler: it must never throw.
-        private void PollCertificateSource()
-        {
-            try
-            {
-                _tlsSettings?.CertificateSource?.Poll(_log);
-            }
-            catch (Exception ex) when (!TlsCertificateSource.IsFatal(ex))
-            {
-                // The source logs what it expects itself, so this is unexpected.
-                _log.Warning(ex, "The TLS certificate check that runs once a minute failed. The node keeps its current certificate and checks again in a minute.");
-            }
-        }
+        // Runs on the scheduler: it must never throw. Poll logs, and does not rethrow, what the source throws.
+        private void PollCertificateSource() => _tlsSettings?.CertificateSource?.Poll(_log);
 
         /// <inheritdoc/>
         public override async Task Shutdown()
