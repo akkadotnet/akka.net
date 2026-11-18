@@ -20,6 +20,7 @@ public sealed class VirtualClock : IScheduler, IAdvancedScheduler
     public static readonly DateTimeOffset Origin = new(2050, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private readonly object _lock = new();
+    private readonly object _fireLock = new(); // taken before _lock, never inside it
     private readonly List<Item> _items = [];
     private long _seq;
     private DateTimeOffset _now = Origin;
@@ -85,8 +86,16 @@ public sealed class VirtualClock : IScheduler, IAdvancedScheduler
 
     /// <summary>
     /// Runs every live item due at or before now, in due order. Returns how many ran.
+    /// The harness and the actor (a slow storage call fires timers) can both call it. One lock covers
+    /// collect and send, so a later call cannot overtake the sends of an earlier one.
     /// </summary>
     public int FireDue()
+    {
+        lock (_fireLock)
+            return FireDueLocked();
+    }
+
+    private int FireDueLocked()
     {
         List<Item> due;
         lock (_lock)

@@ -36,7 +36,14 @@ public sealed class ModelHost : IAsyncDisposable
 
     public string NextActorName() => $"reminder-scheduler-{Interlocked.Increment(ref _actorCounter)}";
 
-    public static ModelHost Rent() => Pool.TryTake(out var host) ? host : new ModelHost();
+    /// <summary>
+    /// Creating a system blocks until its logger starts, and the logger needs a thread-pool thread. Create
+    /// it on a thread of its own: with every pool thread busy in a caller, creating it there would wait
+    /// for a thread that never frees up.
+    /// </summary>
+    public static Task<ModelHost> RentAsync() => Pool.TryTake(out var host)
+        ? Task.FromResult(host)
+        : Task.Factory.StartNew(() => new ModelHost(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
     public static void Return(ModelHost host) => Pool.Add(host);
 

@@ -302,13 +302,12 @@ public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorag
         CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
-        var reminders = _pendingReminders.Values
+        var reminders = OrderByWhen(_pendingReminders.Values
             .Where(r => IsActivePending(r, now))
             .Concat(_awaitingAckReminders.Values
                 .Select(v => v.Reminder)
                 .Where(r => !r.Deadline.IsExpired(now)))
-            .Where(r => r.Entity.Equals(entity))
-            .OrderBy(r => r.When)
+            .Where(r => r.Entity.Equals(entity)))
             .Skip(skip)
             .Take(take)
             .ToList();
@@ -341,10 +340,9 @@ public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorag
         ReminderBatchSize maxCount,
         CancellationToken ct = default)
     {
-        var dueReminders = _pendingReminders.Values
+        var dueReminders = OrderByWhen(_pendingReminders.Values
             .Where(r => IsActivePending(r, now) && r.When <= untilDeadline
-                        && (r.RetryPolicy != ReminderRetryPolicy.UntilAcknowledged || r.AttemptCount == 0 || r.When <= now))
-            .OrderBy(r => r.When)
+                        && (r.RetryPolicy != ReminderRetryPolicy.UntilAcknowledged || r.AttemptCount == 0 || r.When <= now)))
             .Take(maxCount.Value)
             .ToList();
 
@@ -491,6 +489,10 @@ public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorag
         var timedOut = _awaitingAckReminders.Values
             .Where(v => v.State.AckDeadline <= now)
             .OrderBy(v => v.State.AckDeadline)
+            .ThenBy(v => v.Reminder.Entity.ShardRegionName, StringComparer.Ordinal)
+            .ThenBy(v => v.Reminder.Entity.EntityId, StringComparer.Ordinal)
+            .ThenBy(v => v.Reminder.Key.Name, StringComparer.Ordinal)
+            .ThenBy(v => v.Reminder.DueTimeUtc)
             .Take(maxCount.Value)
             .Select(v => v.Reminder)
             .ToList();
@@ -650,6 +652,19 @@ public sealed class InMemoryReminderStorage : IConditionalReminderMutationStorag
 
         return Task.FromResult<ReminderOccurrenceStatus?>(null);
     }
+
+    /// <summary>
+    /// Orders by <c>When</c>, then by entity, key and due time. Rows with the same <c>When</c> come back
+    /// in the same order in every process; without the tie-break, the order follows hash codes, which differ
+    /// from one process to the next.
+    /// </summary>
+    private static IOrderedEnumerable<ScheduledReminder> OrderByWhen(IEnumerable<ScheduledReminder> reminders)
+        => reminders
+            .OrderBy(r => r.When)
+            .ThenBy(r => r.Entity.ShardRegionName, StringComparer.Ordinal)
+            .ThenBy(r => r.Entity.EntityId, StringComparer.Ordinal)
+            .ThenBy(r => r.Key.Name, StringComparer.Ordinal)
+            .ThenBy(r => r.DueTimeUtc);
 
     private static void ReplaceContents<TValue>(
         ConcurrentDictionary<(ReminderEntity Entity, ReminderKey Key, DateTimeOffset DueTimeUtc), TValue> target,
